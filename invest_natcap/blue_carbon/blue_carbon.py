@@ -18,17 +18,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('blue_carbon')
 
-
-
-##class NoRasterUtils(logging.Filter):
-##    def filter(self, record):
-##        return not record.name == "raster_utils"
-##
-##hdlr = logging.FileHandler("/home/mlacayo/workspace/BlueCarbon/output/log.txt", 'w')
-##hdlr.addFilter(NoRasterUtils())
-##
-##LOGGER.addHandler(hdlr)
-
 def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
@@ -446,7 +435,7 @@ def execute(args):
                                    gdal_type_carbon,
                                    nodata_default_float,
                                    exception_flag="values_required")
-        LOGGER.debug("Created stock above raster.")
+        LOGGER.debug("Created stock above raster: %s", os.path.basename(lulc_base_above_uri))
 
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    below_dict,
@@ -456,7 +445,6 @@ def execute(args):
                                    exception_flag="values_required")
         LOGGER.debug("Created stock below raster.")
 
-        LOGGER.debug(soil_dict)
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    soil_dict,
                                    lulc_base_soil_uri,
@@ -491,183 +479,181 @@ def execute(args):
                                         "union")
         LOGGER.debug("Created stock total raster.")
 
-        if lulc_transition_year == analysis_year:
-            break
+        if not lulc_transition_year == analysis_year:
+            LOGGER.debug("Transition year %i.", lulc_transition_year)
+            lulc_transition_uri = lulc_uri_dict[lulc_transition_year]
 
-        LOGGER.debug("Transition year %i.", lulc_transition_year)
-        lulc_transition_uri = lulc_uri_dict[lulc_transition_year]
+            ##calculate soil accumulation
+            LOGGER.info("Processing soil accumulation.")
+            #get coefficients
+            try:
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                acc_soil_co_op,
+                                                lulc_base_acc_soil_co_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
 
-        ##calculate soil accumulation
-        LOGGER.info("Processing soil accumulation.")
-        #get coefficients
-        try:
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            acc_soil_co_op,
-                                            lulc_base_acc_soil_co_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
+                LOGGER.debug("Accumulation coefficent raster created.")
 
-            LOGGER.debug("Accumulation coefficent raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_acc_soil_co_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Identity raster for soil accumulation coefficent created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_acc_soil_co_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Identity raster for soil accumulation coefficent created.")
+            #multiply by number of years
+            try:
+                raster_utils.vectorize_datasets([lulc_base_acc_soil_co_uri],
+                                                ConstantOp(mul_op,t),
+                                                lulc_base_acc_soil_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Soil accumulation raster created.")
 
-        #multiply by number of years
-        try:
-            raster_utils.vectorize_datasets([lulc_base_acc_soil_co_uri],
-                                            ConstantOp(mul_op,t),
-                                            lulc_base_acc_soil_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Soil accumulation raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_acc_soil_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Zero soil accumulation raster created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_acc_soil_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Zero soil accumulation raster created.")
+            ##calculate biomass accumulation
+            LOGGER.info("Processing biomass accumulation.")
+            #get coefficients
+            try:
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                acc_bio_co_op,
+                                                lulc_base_acc_bio_co_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
 
-        ##calculate biomass accumulation
-        LOGGER.info("Processing biomass accumulation.")
-        #get coefficients
-        try:
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            acc_bio_co_op,
-                                            lulc_base_acc_bio_co_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
+                LOGGER.debug("Accumulation coefficent raster created.")
 
-            LOGGER.debug("Accumulation coefficent raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_acc_bio_co_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Identity raster for biomass accumulation coefficent created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_acc_bio_co_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Identity raster for biomass accumulation coefficent created.")
+            #multiply by number of years
+            try:
+                raster_utils.vectorize_datasets([lulc_base_acc_bio_co_uri],
+                                                ConstantOp(mul_op,t),
+                                                lulc_base_acc_bio_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Biomass accumulation raster created.")
 
-        #multiply by number of years
-        try:
-            raster_utils.vectorize_datasets([lulc_base_acc_bio_co_uri],
-                                            ConstantOp(mul_op,t),
-                                            lulc_base_acc_bio_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Biomass accumulation raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_acc_bio_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Zero biomass accumulation raster created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_acc_bio_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Zero biomass accumulation raster created.")
+            ##calculate biomass disturbance
+            LOGGER.info("Processing biomass disturbance.")
+            #get coefficients
+            try:
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                biomass_disturbance_co_op,
+                                                lulc_base_dis_bio_co_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
 
-        ##calculate biomass disturbance
-        LOGGER.info("Processing biomass disturbance.")
-        #get coefficients
-        try:
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            biomass_disturbance_co_op,
-                                            lulc_base_dis_bio_co_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
+                LOGGER.debug("Biomass disturbance coeffiicent raster created.")
 
-            LOGGER.debug("Biomass disturbance coeffiicent raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_dis_bio_co_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Identity raster for biomass disturbance coefficent created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_dis_bio_co_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Identity raster for biomass disturbance coefficent created.")
+            #multiply coefficients by base biomass carbon
+            try:
+                raster_utils.vectorize_datasets([lulc_base_dis_bio_co_uri, lulc_base_biomass_uri],
+                                                mul_op,
+                                                lulc_base_dis_bio_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Biomass disturbance raster created.")
 
-        #multiply coefficients by base biomass carbon
-        try:
-            raster_utils.vectorize_datasets([lulc_base_dis_bio_co_uri, lulc_base_biomass_uri],
-                                            mul_op,
-                                            lulc_base_dis_bio_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Biomass disturbance raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_dis_bio_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Zero biomass disturbance raster created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_dis_bio_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Zero biomass disturbance raster created.")
+            ##calculate soil disturbance
+            LOGGER.info("Processing soil disturbance.")
+            #get coefficients
+            try:
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                soil_disturbance_co_op,
+                                                lulc_base_dis_soil_co_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Soil disturbance coefficient raster created.")
 
-        ##calculate soil disturbance
-        LOGGER.info("Processing soil disturbance.")
-        #get coefficients
-        try:
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            soil_disturbance_co_op,
-                                            lulc_base_dis_soil_co_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Soil disturbance coefficient raster created.")
-
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_dis_soil_co_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Identity raster for soil disturbance created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_dis_soil_co_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Identity raster for soil disturbance created.")
 
 
-        #multiply coefficients by base soil carbon
-        try:
-            raster_utils.vectorize_datasets([lulc_base_dis_soil_co_uri, lulc_base_soil_uri],
-                                            mul_op,
-                                            lulc_base_dis_soil_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Soil disturbance raster created.")
+            #multiply coefficients by base soil carbon
+            try:
+                raster_utils.vectorize_datasets([lulc_base_dis_soil_co_uri, lulc_base_soil_uri],
+                                                mul_op,
+                                                lulc_base_dis_soil_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Soil disturbance raster created.")
 
-        except:
-            raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_dis_soil_uri,
-                                                  gdal_format,
-                                                  nodata_default_int,
-                                                  gdal_type_identity_raster,
-                                                  fill_value=0)
-            LOGGER.debug("Zero soil disturbance raster created.")
+            except:
+                raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                      lulc_base_dis_soil_uri,
+                                                      gdal_format,
+                                                      nodata_default_int,
+                                                      gdal_type_identity_raster,
+                                                      fill_value=0)
+                LOGGER.debug("Zero soil disturbance raster created.")
 
             #set base to new LULC and year
             lulc_base_year = lulc_transition_year
@@ -864,14 +850,14 @@ def execute(args):
 
 
 ##    ##clean up
-##    driver = gdal.GetDriverByName('GTiff')
-##    for year in lulc_years[1:]:
-##        driver.Delete(os.path.join(workspace_dir, above_name % year))
-##        driver.Delete(os.path.join(workspace_dir, below_name % year))
-##        driver.Delete(os.path.join(workspace_dir, soil_name % year))
-##        driver.Delete(os.path.join(workspace_dir, litter_name % year))
-##        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
-##        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
-##
-##    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
-##        driver.Delete(uri)
+    driver = gdal.GetDriverByName('GTiff')
+    for year in lulc_years[1:]:
+        driver.Delete(os.path.join(workspace_dir, above_name % year))
+        driver.Delete(os.path.join(workspace_dir, below_name % year))
+        driver.Delete(os.path.join(workspace_dir, soil_name % year))
+        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
+        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+
+    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
+        driver.Delete(uri)
