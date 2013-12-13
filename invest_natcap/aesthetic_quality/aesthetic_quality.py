@@ -165,7 +165,7 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
-        # Check whether there is a filed that contains the radius information
+        # Check whether there is a field that contains the radius information
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
