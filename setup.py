@@ -125,6 +125,7 @@ if platform.system() == 'Windows':
             'includes': ['sip',
                          'invest_natcap',
                          'scipy.io.matlab.streams',
+                         'scipy.special',
                          'ctypes',
                          'shapely.geos',
                          'matplotlib.backends.backend_qt4agg',
