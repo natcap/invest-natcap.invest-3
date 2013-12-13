@@ -322,6 +322,7 @@ class Executor(threading.Thread):
             ('Numpy', pkg_ver('numpy')),
             ('Scipy', pkg_ver('scipy')),
             ('OSGEO', pkg_ver('osgeo')),
+            ('Shapely', pkg_ver('shapely')),
             ('InVEST', invest_natcap.__version__),
         ]
 

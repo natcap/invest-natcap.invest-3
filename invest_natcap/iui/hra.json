@@ -94,9 +94,9 @@
                 {
                     "id": "aoi_tables",
                     "args_id": "aoi_tables",
-                    "type": "hideableFileEntry",
-                    "label": "Use Subregions Shapefile?",
-                    "required": false,
+                    "type": "file",
+                    "label": "Subregions Shapefile",
+                    "required": true,
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
