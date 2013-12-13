@@ -23,6 +23,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
+                    "defaultValue": "../Recreation",
                     "required": true,
                     "helpText": "Select a folder to be used as your workspace."                    
                 },                        
@@ -31,9 +32,10 @@
                     "args_id" : "aoi_file_name",
                     "type": "file",
                     "label": "Area of Interest",
-                    "defaultValue": "",
+                    "defaultValue": "../Recreation/Input/BC_AOI.shp",
                     "validateAs": {"type": "OGR"},
                     "required": true,
+                    
                     "helpText": "Select an area of interest where the model will run the analysis."
                 },
                 {
@@ -66,6 +68,7 @@
                     "dataType": "float",
                     "required": true,
                     "enabledBy" : "grid",
+                    "defaultValue": "8000",
                     "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
                 },
                 {
@@ -101,6 +104,7 @@
             "collapsible" : true,
             "args_id" : "global_data",
             "label" : "Use global datasets.",
+            "defaultValue" : true,
             "helpText": "For more information see <a href=\"../documentation/recreation.html#table-99\">Standard Predictors</a>",
             "elements" : [
                 {
@@ -132,6 +136,7 @@
                     "args_id" : "osm",
                     "type" : "container",
                     "collapsible" : true,
+                    "defaultValue" : false,
                     "label" : "Open Street Maps",
                     "elements" : [
                         {
@@ -192,6 +197,7 @@
                     "id" : "lulc",
                     "args_id" : "lulc",
                     "type": "container",
+                    "defaultValue" : true,
                     "collapsible" : true,
                     "label": "Land Use and Land Coverage",
                     "elements" : [
@@ -205,7 +211,7 @@
                                     "args_id": "lulc_1",
                                     "type": "checkbox",
                                     "label": "Agriculture",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -214,7 +220,7 @@
                                     "args_id": "lulc_2",
                                     "type": "checkbox",
                                     "label": "Bare",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -232,7 +238,7 @@
                                     "args_id": "lulc_4",
                                     "type": "checkbox",
                                     "label": "Grassland",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -241,7 +247,7 @@
                                     "args_id": "lulc_5",
                                     "type": "checkbox",
                                     "label": "Shrubland",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -250,7 +256,7 @@
                                     "args_id": "lulc_6",
                                     "type": "checkbox",
                                     "label": "Snow and Ice",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -259,7 +265,7 @@
                                     "args_id": "lulc_7",
                                     "type": "checkbox",
                                     "label": "Urban",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
@@ -268,7 +274,7 @@
                                     "args_id": "lulc_8",
                                     "type": "checkbox",
                                     "label": "Water",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 }
