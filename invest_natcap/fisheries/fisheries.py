@@ -131,14 +131,21 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
     Input:
         mig_folder_uri- The location of the outer folder containing all
             source/sink migration information for any age/stages which migrate.
-    
+        ordered_stages- A list that indicates the order in which the user
+            listed the stages in the main parameters csv. This likely indicates
+            the order in which the stages actually occur. Since we will know
+            from the migration table file name what stage we are currently on,
+            this will tell us what stage we're moving to.
+
     Returns:
         mig_dict- Migration dictionary which will contain all source/sink
             percentage information for each age/stage which is capable of
-            migration.
+            migration. The outermost numerical key is the source, and the
+            keys of the dictionary that points to are the sinks.
 
-            {'2'
-    
+            {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                    '2': {'1': 0.13, '2': 98.06, ...}
+            }
     '''
 
 def parse_main_csv(params_uri, area_count):
