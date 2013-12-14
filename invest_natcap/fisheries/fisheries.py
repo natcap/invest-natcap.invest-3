@@ -116,7 +116,7 @@ def execute(args):
     area_count = aoi_layer.GetFeatureCount()
 
     #Calculate the classes main param info, and add it to the core args dict
-    classes_dict = parse_main_csv(args['class_params_uri'], area_count)
+    classes_dict, ordered_classes = parse_main_csv(args['class_params_uri'], area_count)
     core_args['classes_dict'] = classes_dict
 
     #If migration is desired, get all the info, and add to the core args dict
@@ -224,9 +224,13 @@ def parse_main_csv(params_uri, area_count):
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
+    #Want a list of the stages in order
+    ordered_stages = []
+
     for i in range(len(hybrid_lines)):
         line = hybrid_lines[i]
         stage_name = line.pop(0)
+        ordered_stages.append(stage_name)
 
         #Initialize stage subdictionary with survival subdictionary inside
         main_dict['stage_params'][stage_name] = {'survival':{}}
@@ -284,4 +288,4 @@ def parse_main_csv(params_uri, area_count):
        
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
-    return main_dict
+    return main_dict, ordered_stages
