@@ -65,7 +65,9 @@ def execute(args):
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
         mig_params_uri(*)- If this parameter exists, it means migration is
-            desired. This is  the location of the parameters file for migration.
+            desired. This is  the location of the parameters folder containing
+            files for migration. There should be one for every age class which
+            migrates.
         frac_post_process(*)- This will exist only if valuation is desired for
             the particular species. A double representing the fraction of the
             animal remaining after processing of the whole carcass is complete.
@@ -74,7 +76,8 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-    
+    core_args = {}
+
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
@@ -112,7 +115,38 @@ def execute(args):
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
-    classes_dict = parse_main_csv(args['class_params_uri'], area_count)
+    #Calculate the classes main param info, and add it to the core args dict
+    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
+    core_args['classes_dict'] = classes_dict
+
+    #If migration is desired, get all the info, and add to the core args dict
+    migration_dict = parse_migration_tables(mig_params_uri, ordered_stages)
+
+
+def parse_migration_tables(mig_folder_uri, ordered_stages):
+    '''Want to take all of the files within the migration parameter folder, and
+    glean relavant information from them. Should return a single dictionary
+    containing all migration data for all applicable age/stages.
+    
+    Input:
+        mig_folder_uri- The location of the outer folder containing all
+            source/sink migration information for any age/stages which migrate.
+        ordered_stages- A list that indicates the order in which the user
+            listed the stages in the main parameters csv. This likely indicates
+            the order in which the stages actually occur. Since we will know
+            from the migration table file name what stage we are currently on,
+            this will tell us what stage we're moving to.
+
+    Returns:
+        mig_dict- Migration dictionary which will contain all source/sink
+            percentage information for each age/stage which is capable of
+            migration. The outermost numerical key is the source, and the
+            keys of the dictionary that points to are the sinks.
+
+            {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                    '2': {'1': 0.13, '2': 98.06, ...}
+            }
+    '''
 
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
@@ -197,9 +231,13 @@ def parse_main_csv(params_uri, area_count):
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
+    #Want a list of the stages in order
+    ordered_stages = []
+
     for i in range(len(hybrid_lines)):
         line = hybrid_lines[i]
         stage_name = line.pop(0)
+        ordered_stages.append(stage_name)
 
         #Initialize stage subdictionary with survival subdictionary inside
         main_dict['stage_params'][stage_name] = {'survival':{}}
@@ -257,4 +295,4 @@ def parse_main_csv(params_uri, area_count):
        
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
-    return main_dict
+    return main_dict, ordered_stages
