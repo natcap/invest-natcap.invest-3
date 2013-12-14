@@ -116,14 +116,14 @@ def execute(args):
     area_count = aoi_layer.GetFeatureCount()
 
     #Calculate the classes main param info, and add it to the core args dict
-    classes_dict, ordered_classes = parse_main_csv(args['class_params_uri'], area_count)
+    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
     core_args['classes_dict'] = classes_dict
 
     #If migration is desired, get all the info, and add to the core args dict
-    migration_dict = parse_migration_tables(mig_params_uri)
+    migration_dict = parse_migration_tables(mig_params_uri, ordered_stages)
 
 
-def parse_migration_tables(mig_folder_uri):
+def parse_migration_tables(mig_folder_uri, ordered_stages):
     '''Want to take all of the files within the migration parameter folder, and
     glean relavant information from them. Should return a single dictionary
     containing all migration data for all applicable age/stages.
