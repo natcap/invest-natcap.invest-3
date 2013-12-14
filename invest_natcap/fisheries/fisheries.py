@@ -65,7 +65,9 @@ def execute(args):
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
         mig_params_uri(*)- If this parameter exists, it means migration is
-            desired. This is  the location of the parameters file for migration.
+            desired. This is  the location of the parameters folder containing
+            files for migration. There should be one for every age class which
+            migrates.
         frac_post_process(*)- This will exist only if valuation is desired for
             the particular species. A double representing the fraction of the
             animal remaining after processing of the whole carcass is complete.
@@ -74,7 +76,8 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-    
+    core_args = {}
+
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
@@ -112,7 +115,31 @@ def execute(args):
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
+    #Calculate the classes main param info, and add it to the core args dict
     classes_dict = parse_main_csv(args['class_params_uri'], area_count)
+    core_args['classes_dict'] = classes_dict
+
+    #If migration is desired, get all the info, and add to the core args dict
+    migration_dict = parse_migration_tables(mig_params_uri)
+
+
+def parse_migration_tables(mig_folder_uri):
+    '''Want to take all of the files within the migration parameter folder, and
+    glean relavant information from them. Should return a single dictionary
+    containing all migration data for all applicable age/stages.
+    
+    Input:
+        mig_folder_uri- The location of the outer folder containing all
+            source/sink migration information for any age/stages which migrate.
+    
+    Returns:
+        mig_dict- Migration dictionary which will contain all source/sink
+            percentage information for each age/stage which is capable of
+            migration.
+
+            {'2'
+    
+    '''
 
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
