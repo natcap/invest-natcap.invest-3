@@ -545,7 +545,7 @@ def vectorize_points(
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None, ignore_value_list=[]):
+    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -566,6 +566,7 @@ def aggregate_raster_values_uri(
             aggregate value.  The result will be clamped to zero.
         ignore_value_list - (optional) a list of values to ignore when
             calculating the stats
+        process_pool - (optional) a process pool for multiprocessing
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
@@ -585,7 +586,7 @@ def aggregate_raster_values_uri(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
-        assert_datasets_projected=False)
+        assert_datasets_projected=False, process_pool=process_pool)
     clipped_raster = gdal.Open(clipped_raster_uri)
 
     #This should be a value that's not in shapefile[shapefile_field]
@@ -802,13 +803,15 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     return output_dataset
 
 
-def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
+def calculate_slope(
+        dem_dataset_uri, slope_uri, aoi_uri=None, process_pool=None):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works
 
         dem_dataset_uri - (input) a URI to a  single band raster of z values.
         slope_uri - (input) a path to the output slope uri
         aoi_uri - (optional) a uri to an AOI input
+        process_pool - (optional) a process pool for multiprocessing
 
         returns nothing"""
 
@@ -826,7 +829,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     vectorize_datasets(
         [dem_dataset_uri], float, dem_small_uri,
         gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=aoi_uri)
+        dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool)
 
     LOGGER.debug("calculate slope")
 
@@ -844,7 +847,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
 
 def clip_dataset_uri(
         source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
-        assert_projections):
+        assert_projections, process_pool=None):
     """This function will clip source_dataset to the bounding box of the
         polygons in aoi_datasource and mask out the values in source_dataset
         outside of the AOI with the nodata values in source_dataset.
@@ -854,6 +857,7 @@ def clip_dataset_uri(
         out_dataset_uri - path to disk for the clipped datset
         assert_projections - a boolean value for whether the dataset needs to be
             projected
+        process_pool - (optional) a process pool for multiprocessing
 
         returns nothing"""
     #NOTE: I have altered the signature of this function compared to the
@@ -883,9 +887,10 @@ def clip_dataset_uri(
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
     vectorize_datasets(
-            [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
-            pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
-            assert_datasets_projected=assert_projections)
+        [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
+        pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
+        assert_datasets_projected=assert_projections,
+        process_pool=process_pool)
 
 
 def extract_band_and_nodata(dataset, get_array=False):
@@ -1897,7 +1902,7 @@ def resize_and_resample_dataset_uri(
 def align_dataset_list(
     dataset_uri_list, dataset_out_uri_list, resample_method_list,
     out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index=None,
-    aoi_uri=None, assert_datasets_projected=True):
+    aoi_uri=None, assert_datasets_projected=True, process_pool=None):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -1924,6 +1929,7 @@ def align_dataset_list(
         aoi_uri - (optional) a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
+        process_pool - (optional) a process pool for multiprocessing
 
         returns nothing"""
 
@@ -1998,15 +2004,16 @@ def align_dataset_list(
     #pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
-        dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset_uri(
-            original_dataset_uri, bounding_box, out_pixel_size,
-            out_dataset_uri, resample_method)
-        
-        
-#        result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
-#            args=[original_dataset_uri, bounding_box, out_pixel_size,
-#            out_dataset_uri, resample_method]))
+            dataset_uri_list, dataset_out_uri_list, resample_method_list):
+        if process_pool:
+            result_list.append(process_pool.apply_async(
+                resize_and_resample_dataset_uri, 
+                args=[original_dataset_uri, bounding_box, out_pixel_size,
+                out_dataset_uri, resample_method]))
+        else:
+            resize_and_resample_dataset_uri(
+                original_dataset_uri, bounding_box, out_pixel_size,
+                out_dataset_uri, resample_method)
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
@@ -2073,7 +2080,7 @@ def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True):
+    assert_datasets_projected=True, process_pool=None):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2127,7 +2134,9 @@ def vectorize_datasets(
             to intersect the final bounding box.
         assert_datasets_projected - (optional) if True this operation will
             test if any datasets are not projected and raise an exception
-            if so."""
+            if so.
+        process_pool - (optional) a process pool for multiprocessing            
+            """
     
     if aoi_uri == None:
         assert_file_existance(dataset_uri_list)
@@ -2154,7 +2163,8 @@ def vectorize_datasets(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
         dataset_to_bound_index=dataset_to_bound_index,
-        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
+        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
+        process_pool=process_pool)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]

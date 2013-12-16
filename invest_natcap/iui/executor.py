@@ -17,6 +17,7 @@ import invest_natcap
 import invest_natcap.iui
 from invest_natcap.iui import fileio as iui_fileio
 from invest_natcap.invest_core import fileio as fileio
+from invest_natcap import raster_utils
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()
@@ -514,6 +515,11 @@ class Executor(threading.Thread):
 
             model_start_time = time.time()
             LOGGER.info('Starting %s', model_name)
+            if '_process_pool' in args:
+                raise Exception("There's already a process_pool, aborting!")
+            args['_process_pool'] = None
+            process_pool = raster_utils.PoolNoDaemon()
+            args['_process_pool'] = process_pool
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
