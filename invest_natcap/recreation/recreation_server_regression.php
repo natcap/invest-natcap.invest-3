@@ -14,7 +14,7 @@ $sesspath = $usrpath . $sessid . "/";
 
 $recpath = $config->{'paths'}->{'absolute'}->{'repository'};
 $compath = $config->{'paths'}->{'relative'}->{'computation'};
-$regpath = $recpath . $compath.$config->{'files'}->{'regression'};
+$regpath = $recpath . $compath . $config->{'files'}->{'regression'};
 
 //open log
 $logpath = $sesspath . $config->{'files'}->{'log'};

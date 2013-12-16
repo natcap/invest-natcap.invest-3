@@ -11,7 +11,7 @@
             "predictors": "pred/",
             "download": "download/",
             "core": "invest_natcap/recreation/",
-            "computation": "computation/"
+            "computation": "invest_natcap/recreation/"
         }
     },
     "files": {
