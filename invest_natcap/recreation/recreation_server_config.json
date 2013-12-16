@@ -2,7 +2,7 @@
     "server": "http://ncp-skookum.stanford.edu/~recreation/",
     "paths": {
         "absolute": {
-            "repository": "/usr/local/recreation/workspace/recreation/",
+            "repository": "/usr/local/recreation/workspace/invest3/",
             "userroot": "/usr/local/public_html/",
             "webroot": "/usr/local/recreation/public_html/"
         },
