@@ -112,6 +112,9 @@ def complete_shapefile(shapefile_name):
 def execute(args):
     """The main function called by IUI.
     """
+    #multiprocess cleanup
+    args.pop("_process_pool")
+    
     #disabling protected predictor
     args["protected"] = False
     args["ouoc"] = False
@@ -336,7 +339,7 @@ def execute(args):
         raise ValueError, "A valid mode was not detected."
     
     attachments["json"] = json.dumps(args, indent = 4)
-    
+
     datagen, headers = multipart_encode(attachments)
     
     #constructing server side recreation python script request
