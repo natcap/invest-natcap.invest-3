@@ -816,7 +816,7 @@ if __name__ == "__main__":
                 args["mangroves"] = False
                 args["reefs"] = False
                 args["grass"] = False
-        elif args["version_info"] == "2.5.5":
+        elif args["version_info"] >= "2.5.5":
             if model["global_data"]:
                 args["landscan"] = model["landscan"]
                 args["protected"] = model["protected"]

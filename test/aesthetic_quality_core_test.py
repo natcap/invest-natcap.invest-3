@@ -149,6 +149,59 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Done, return min and max angles
         return (min_angle, (center_angle, max_angle))
 
+    def test_maximum_distance(self):
+        """Test that the maximum distance is properly computed in
+        Python's list_extreme_angles"""
+        def disk(radius):
+            """Create a disk of radius 'radius' around a center pixel"""
+            diameter = radius * 2 + 1
+            A = np.zeros((diameter, diameter))
+            center_r = radius
+            center_c = center_r
+            for r in range(diameter):
+                for c in range(diameter):
+                    if (r == center_r) and (c == center_c):
+                        pass
+                    d = (r-center_r)**2+(c-center_c)**2
+                    if d <= center_r**2:
+                        A[r, c] = 1
+            return A
+
+        # Test for discs of radius 1 to 5
+        for max_dist in range(1, 6):
+            array_shape = (max_dist * 2 + 1, max_dist * 2 + 1)
+            viewpoint = (max_dist, max_dist)
+            # Generate disc from nested function
+            D = disk(max_dist)
+            # Double check that what we have is within the radius
+            I, J = np.where(D > 0)
+            I = I - viewpoint[0]
+            J = J - viewpoint[1]
+            L = I**2 + J**2
+            assert (L <= max_dist**2).all()
+            I, J = np.where(D <= 0)
+            I = I - viewpoint[0]
+            J = J - viewpoint[1]
+            L = I**2 + J**2
+            assert (L > max_dist**2).all()
+            # Adjusting the center to conform with list_extreme_angles
+            D[viewpoint] = 0
+            # Gather extreme angles from efficient algorithm
+            extreme_angles = \
+            aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+            viewpoint, max_dist)
+            A = np.zeros(array_shape)
+            A[extreme_angles[3], extreme_angles[4]] = 1
+            # compare both
+            if np.sum(np.abs(A-D)) > 0:
+                print('expected:')
+                print(D)
+                print('computed:')
+                print(A)
+            message = "Area of extreme angles doesn't form a valid disc."
+            assert np.sum(np.abs(A-D)) == 0, message
+
+
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of the same functionality"""
         max_dist = 10

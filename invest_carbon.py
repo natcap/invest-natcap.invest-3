@@ -1,3 +1,5 @@
 import invest_natcap.iui.modelui
+from invest_natcap import raster_utils
 
-invest_natcap.iui.modelui.main('carbon.json')
+if __name__ == '__main__':
+    invest_natcap.iui.modelui.main('carbon.json')

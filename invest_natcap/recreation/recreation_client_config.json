@@ -1,5 +1,5 @@
 {
-    "server": "http://ncp-skookum.stanford.edu/~recreation/",
+    "server": "http://171.64.63.132/~recreation/",
     "paths": {
         "relative": {
             "data": "data/",
@@ -11,12 +11,12 @@
     },
     "files": {
         "PHP": {
-            "predictor": "predictors.php",
-            "recreation": "recreation.php",
-            "scenario": "scenario.php",
-            "regression": "regression.php",
-            "results": "results.php",
-            "version" : "version.php"
+            "predictor": "recreation_server_predictors.php",
+            "recreation": "recreation_server_initial.php",
+            "scenario": "recreation_server_scenario.php",
+            "regression": "recreation_server_regression.php",
+            "results": "recreation_server_results.php",
+            "version" : "recreation_server_version.php"
         },
         "grid_tmp": {
             "shp": "grid.shp",
