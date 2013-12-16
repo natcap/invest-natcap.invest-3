@@ -120,10 +120,11 @@ def execute(args):
     core_args['classes_dict'] = classes_dict
 
     #If migration is desired, get all the info, and add to the core args dict
-    migration_dict = parse_migration_tables(mig_params_uri, ordered_stages)
+    migration_dict = parse_migration_tables(args['mig_params_uri'])
+    core_args['migrate_dict'] = migration_dict
 
 
-def parse_migration_tables(mig_folder_uri, ordered_stages):
+def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
     glean relavant information from them. Should return a single dictionary
     containing all migration data for all applicable age/stages.
@@ -131,11 +132,6 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
     Input:
         mig_folder_uri- The location of the outer folder containing all
             source/sink migration information for any age/stages which migrate.
-        ordered_stages- A list that indicates the order in which the user
-            listed the stages in the main parameters csv. This likely indicates
-            the order in which the stages actually occur. Since we will know
-            from the migration table file name what stage we are currently on,
-            this will tell us what stage we're moving to.
 
     Returns:
         mig_dict- Migration dictionary which will contain all source/sink
@@ -147,6 +143,40 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
                     '2': {'1': 0.13, '2': 98.06, ...}
             }
     '''
+    mig_dict = {}
+
+    mig_files = listdir(mig_folder_uri)
+
+    for mig_table_uri in mig_files:
+        
+        basename = os.path.splitext(os.path.basename(mig_table_uri))[0]
+        stage_name = basename.split('migration_').pop()
+        mig_dict[stage_name] = {}
+
+        #Now, the actual file reading
+        with open(mig_table_uri, 'rU') as mig_file:
+
+            csv_reader = csv.reader(mig_file)
+
+            headers = csv_reader.next()
+            #First cell of the headers is a blank
+            headers.pop(0)
+
+            for source in headers:
+                mig_dict[stage_name][source] = {}
+
+            while True:
+                try:
+                    line = csv_reader.next()
+                    sink = line.pop(0)
+                    
+                    for i, source in enumerate(headers):
+                        mig_dict[stage_name][source][sink] = line[i]
+                
+                except StopIteration:
+                    break
+
+    return mig_dict
 
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
@@ -296,3 +326,19 @@ def parse_main_csv(params_uri, area_count):
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
     return main_dict, ordered_stages
+
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
