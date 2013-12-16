@@ -27,7 +27,7 @@
         },
         "regression": "recreation_server_regression.r",
         "model": "model.json",
-        "init": "recreation_server_init.py",
+        "init": "recreation_server_initial.py",
         "scenario": "recreation_server_scenario.py",
         "aoi": {
             "shp": "aoi.shp",
