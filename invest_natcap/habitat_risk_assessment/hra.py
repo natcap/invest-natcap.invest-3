@@ -241,7 +241,9 @@ def execute(args):
         if ele in hra_args:
             hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
-    
+
+    LOGGER.info('Rasterizing shapefile layers.')
+
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
     
     #Get all stressor URI's

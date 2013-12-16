@@ -121,6 +121,7 @@ def execute(args):
 
     #If migration is desired, get all the info, and add to the core args dict
     migration_dict = parse_migration_tables(args['mig_params_uri'])
+    core_args['migrate_dict'] = migration_dict
 
 
 def parse_migration_tables(mig_folder_uri):
