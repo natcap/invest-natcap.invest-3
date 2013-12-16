@@ -123,6 +123,20 @@ def execute(args):
     migration_dict = parse_migration_tables(args['mig_params_uri'])
     core_args['migrate_dict'] = migration_dict
 
+    #Recruitment- already know that the correct params exist
+    core_args['rec_eq'] = args['rec_eq']
+    if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
+        core_args['alpha'] = args['alpha']
+        core_args['beta'] = args['beta']
+    elif args['rec_eq'] == 'Fecundity':
+        fec_params_dict = parse_fec_csv(fec_params_uri)
+        core_args['fecundity_dict'] = fec_params_dict
+    else:
+        core_args['fix_param'] = args['fix_param']
+
+    #Direct pass all these variables
+    core_args['maturity_type'] = args['maturity_type']
+    core_args[
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
