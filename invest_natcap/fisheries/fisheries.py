@@ -120,10 +120,10 @@ def execute(args):
     core_args['classes_dict'] = classes_dict
 
     #If migration is desired, get all the info, and add to the core args dict
-    migration_dict = parse_migration_tables(mig_params_uri, ordered_stages)
+    migration_dict = parse_migration_tables(args['mig_params_uri'])
 
 
-def parse_migration_tables(mig_folder_uri, ordered_stages):
+def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
     glean relavant information from them. Should return a single dictionary
     containing all migration data for all applicable age/stages.
@@ -131,11 +131,6 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
     Input:
         mig_folder_uri- The location of the outer folder containing all
             source/sink migration information for any age/stages which migrate.
-        ordered_stages- A list that indicates the order in which the user
-            listed the stages in the main parameters csv. This likely indicates
-            the order in which the stages actually occur. Since we will know
-            from the migration table file name what stage we are currently on,
-            this will tell us what stage we're moving to.
 
     Returns:
         mig_dict- Migration dictionary which will contain all source/sink
@@ -152,11 +147,9 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
     mig_files = listdir(mig_folder_uri)
 
     for mig_table_uri in mig_files:
-    
         
-        basename = os.path.splitext(os.path.basename(mig_table_uri))
+        basename = os.path.splitext(os.path.basename(mig_table_uri))[0]
         stage_name = basename.split('migration_').pop()
-
         mig_dict[stage_name] = {}
 
         #Now, the actual file reading
@@ -175,15 +168,14 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
                 try:
                     line = csv_reader.next()
                     sink = line.pop(0)
-                   
+                    
                     for i, source in enumerate(headers):
                         mig_dict[stage_name][source][sink] = line[i]
                 
                 except StopIteration:
                     break
 
-    return mig_rict
-
+    return mig_dict
 
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
