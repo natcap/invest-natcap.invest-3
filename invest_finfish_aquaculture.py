@@ -1,3 +1,4 @@
 import invest_natcap.iui.modelui
 
-invest_natcap.iui.modelui.main('finfish_aquaculture.json')
+if __name__ == '__main__':
+    invest_natcap.iui.modelui.main('finfish_aquaculture.json')
