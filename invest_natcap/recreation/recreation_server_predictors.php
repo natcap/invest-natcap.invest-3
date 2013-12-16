@@ -59,18 +59,10 @@ else
   fflush($log);
 
   $zip = new ZipArchive;
-  $zip->open($_FILES["zip_file"]["tmp_name"]);
+  $zip->open($_FILES["zip_file"]["tmp_name"], ZipArchive::CHECKCONS);
   $zip->extractTo($sesspath . $predpath );
   $zip->close();
 
-/*  
-  //save uploaded files
-  foreach($_FILES as $file){
-    fwrite($log,",DEBUG,Saving file: " . str_replace("."," ",$file["name"]) . ".\n");
-    fflush($log);
-    move_uploaded_file($file["tmp_name"], $sesspath . $predpath . $file["name"]);
-  }
-*/
 }
 
 echo $sessid;
