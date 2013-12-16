@@ -148,6 +148,10 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
             }
     '''
 
+    
+
+
+
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
@@ -296,3 +300,19 @@ def parse_main_csv(params_uri, area_count):
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
     return main_dict, ordered_stages
+
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
