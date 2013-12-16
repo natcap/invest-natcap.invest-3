@@ -107,7 +107,8 @@ def execute_30(**args):
             raster_utils.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
-                "intersection", dataset_to_align_index=0)
+                "intersection", dataset_to_align_index=0,
+                process_pool=args['_process_pool'])
 
             if do_uncertainty:
                 def map_carbon_pool_variance(lulc):
@@ -122,7 +123,8 @@ def execute_30(**args):
                 raster_utils.vectorize_datasets(
                     [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
                     gdal.GDT_Float32, nodata_out, pixel_size_out,
-                    "intersection", dataset_to_align_index=0)
+                    "intersection", dataset_to_align_index=0,
+                    process_pool=args['_process_pool'])
 
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
@@ -146,8 +148,11 @@ def execute_30(**args):
                         return tmp_c_cur + hwp_cur
 
                     raster_utils.vectorize_datasets(
-                        [temp_c_cur_uri, c_hwp_uri], add_op, outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
-                        pixel_size_out, "intersection", dataset_to_align_index=0)
+                        [temp_c_cur_uri, c_hwp_uri], add_op,
+                        outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
+                        pixel_size_out, "intersection",
+                        dataset_to_align_index=0,
+                        process_pool=args['_process_pool'])
 
                 elif scenario_type == 'fut':
                     hwp_shapes = {}
@@ -171,8 +176,11 @@ def execute_30(**args):
                         return tmp_c_fut + hwp_fut
 
                     raster_utils.vectorize_datasets(
-                        [temp_c_fut_uri, c_hwp_uri], add_op, outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
-                        pixel_size_out, "intersection", dataset_to_align_index=0)
+                        [temp_c_fut_uri, c_hwp_uri], add_op,
+                        outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
+                        pixel_size_out, "intersection",
+                        dataset_to_align_index=0,
+                        process_pool=args['_process_pool'])
 
 
     for fut_type in ['fut', 'redd']:
@@ -190,7 +198,8 @@ def execute_30(**args):
             raster_utils.vectorize_datasets(
                 [outputs['tot_C_cur'], outputs['tot_C_%s' % fut_type]], sub_op,
                 outputs['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
-                pixel_size_out, "intersection", dataset_to_align_index=0)
+                pixel_size_out, "intersection", dataset_to_align_index=0,
+                process_pool=args['_process_pool'])
 
             if do_uncertainty:
                 LOGGER.info('Computing confident cells for %s scenario.', fut_type)
@@ -244,8 +253,10 @@ def execute_30(**args):
                 raster_utils.vectorize_datasets(
                     [outputs[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
                                                        'variance_C_cur', 'variance_C_%s' % fut_type]],
-                    confidence_op, outputs['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
-                    pixel_size_out, "intersection", dataset_to_align_index=0)
+                    confidence_op, outputs['conf_%s' % fut_type],
+                    gdal.GDT_Float32, nodata_out,
+                    pixel_size_out, "intersection", dataset_to_align_index=0,
+                    process_pool=args['_process_pool'])
 
     # Do a Monte Carlo simulation for uncertainty analysis.
     # We only do this if HWP is not enabled, because the simulation
@@ -678,8 +689,10 @@ def _calculate_hwp_storage_fut(
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(raster_uri)
             raster_utils.vectorize_datasets(
-                [cur_raster_uri, temp_filename], add_op, raster_uri, gdal.GDT_Float32, nodata,
-                pixel_size_out, "intersection", dataset_to_align_index=0)
+                [cur_raster_uri, temp_filename], add_op, raster_uri,
+                gdal.GDT_Float32, nodata,
+                pixel_size_out, "intersection", dataset_to_align_index=0,
+                process_pool=args['_process_pool'])
 
 
 def _get_fields(feature):

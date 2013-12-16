@@ -138,7 +138,6 @@ def main(uri, use_gui=True):
     else:
         orig_args = json.loads(open(json_args).read())
         args = getFlatDefaultArgumentsDictionary(orig_args)
-
         thread = executor.Executor()
         thread.addOperation('model', args, orig_args['targetScript'])
 
