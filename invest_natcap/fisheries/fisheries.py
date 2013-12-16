@@ -147,9 +147,42 @@ def parse_migration_tables(mig_folder_uri, ordered_stages):
                     '2': {'1': 0.13, '2': 98.06, ...}
             }
     '''
+    mig_dict = {}
 
+    mig_files = listdir(mig_folder_uri)
+
+    for mig_table_uri in mig_files:
     
+        
+        basename = os.path.splitext(os.path.basename(mig_table_uri))
+        stage_name = basename.split('migration_').pop()
 
+        mig_dict[stage_name] = {}
+
+        #Now, the actual file reading
+        with open(mig_table_uri, 'rU') as mig_file:
+
+            csv_reader = csv.reader(mig_file)
+
+            headers = csv_reader.next()
+            #First cell of the headers is a blank
+            headers.pop(0)
+
+            for source in headers:
+                mig_dict[stage_name][source] = {}
+
+            while True:
+                try:
+                    line = csv_reader.next()
+                    sink = line.pop(0)
+                   
+                    for i, source in enumerate(headers):
+                        mig_dict[stage_name][source][sink] = line[i]
+                
+                except StopIteration:
+                    break
+
+    return mig_rict
 
 
 def parse_main_csv(params_uri, area_count):
