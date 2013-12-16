@@ -16,7 +16,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('raster_stylizing')
 
-def to_grayscale(raster_in_uri, raster_out_uri):
+def grayscale_raster(raster_in_uri, raster_out_uri):
     """Create a grayscale image from 'raster_in_uri' by using linear
         interpolation to transform the float values to byte values
         between 0 and 256.
@@ -71,9 +71,9 @@ def to_grayscale(raster_in_uri, raster_out_uri):
         pixel_size, 'intersection')
            
 def tif_to_png(tiff_uri, png_uri):
-   """Save a tif file as a png file 
+   """Save a tif of type BYTE as a png file 
    
-       raster_in_uri - a URI to a gdal raster
+       raster_in_uri - a URI to a gdal raster of type BYTE
        
        raster_out_uri - a URI to a location on disk to save the output
            png image
@@ -139,16 +139,3 @@ def shape_to_image(shape_in_uri, image_out_uri):
     #raster_utils.rasterize_layer_uri(
     #    raster_uri, shapefile_uri, burn_values=[], option_list=[])
  
-gray_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/gray_tif.tif'
-raster_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/wyield.tif'
- 
-to_grayscale(raster_uri, gray_uri)
- 
-png_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/gray_png.png'
- 
-tif_to_png(gray_uri, png_uri)
-
-shp_image_png = 'C:/InVEST_2_5_6_x86/Hydropower/output/shape_image.png'
-shp_image = 'C:/InVEST_2_5_6_x86/Hydropower/output/wyield_sheds.shp'
-
-shape_to_image(shp_image, shp_image_png)
