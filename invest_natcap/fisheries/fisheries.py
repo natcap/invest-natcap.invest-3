@@ -35,6 +35,12 @@ class MissingVulnFishingParameter(Exception):
     VulnFishing column. It is a required input for the survival equation.'''
     pass
 
+class MissingExpFracParameter(Exception):
+    '''Exception should be raised if the species main parameter CSV is misisng
+    a ExploitationFraction for each AOI subregion included. It is a required
+    input for the survival equation.'''
+    pass
+
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
@@ -357,11 +363,16 @@ def parse_main_csv(params_uri, area_count):
             area_name = '1'
         main_dict['area_params'][area_name] = {}
 
+    exp_frac_exists = False
+
     #The area-specific parameters.
     for m in range(len(area_lines)):
         line = area_lines[m]
         param_name = line.pop(0).lower()
         
+        if param_name == 'ExplotationFraction':
+            exp_frac_exists = True
+
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
@@ -377,6 +388,12 @@ def parse_main_csv(params_uri, area_count):
             param_value = line[n]
        
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
+
+    if not exp_frac_exists:
+        raise MissingExpFracParameter("The main parameter CSV for this species \
+                is missing an ExplotationFraction parameter. Please make sure \
+                that each area provided within the AOI(s) has a corresponding \
+                explotation fraction.")
 
     return main_dict, ordered_stages
 
