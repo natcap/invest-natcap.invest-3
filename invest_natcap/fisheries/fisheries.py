@@ -145,6 +145,19 @@ def execute(args):
         if var in args:
             core_args[var] = args[var]
 
+    hra_core.execute(core_args)
+
+def parse_fec_csv(fec_uri):
+    '''This function will be used if the recruitment equation of choice is 
+    fecundity. The CSV passed in will contain all parameters relevant to
+    fecundity.
+    
+    Input:
+        fec_uri- The location of the CSV file containing all pertinent
+            information for fecundity.
+    '''
+
+
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
     glean relavant information from them. Should return a single dictionary
