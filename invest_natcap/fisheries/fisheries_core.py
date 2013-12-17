@@ -8,6 +8,45 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
-    #Hi Kathryn, it's Rich. I added this so the build wouldn't break
-    #you're welcome!
-    pass
+    '''
+    Input:
+        workspace_uri- Location into which all intermediate and output files
+            should be placed.
+        maturity_type- String specifying whether the model is age-specific or
+            stage-specific. Options will be either "Age Specific" or
+            "Stage Specific" and will change which equation is used in modeling
+            growth.
+        is_gendered- Boolean for whether or not the age and stage classes are
+            separated by gender.
+        rec_eq- The equation to be used in calculation of recruitment. Choices
+            are strings, and will be one of "Beverton-Holt", "Ricker", 
+            "Fecundity", or "Fixed."
+        alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
+            "Ricker" . Parameter that will be used in calculation of
+            recruitment.
+        beta(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
+            "Ricker" . Parameter that will be used in calculation of
+            recruitment.
+        fecundity_dict- Must exist within args if rec_eq == "Fecundity".
+            Dictionary containing all relevant fecundity information for this
+            run of the model.
+        fix_param(*)- Must exist within args if rec_eq == "Fixed". Parameter
+            that will be used in calculation of recruitment. 
+        init_recruits- Int which represents the initial number of recruits that
+            will be used in calculation of population on a per area basis. 
+        migration_dict- Migration dictionary which will contain all source/sink
+            percentage information for each age/stage which is capable of
+            migration. The outermost numerical key is the source, and the
+            keys of the dictionary that points to are the sinks.
+
+            {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                    '2': {'1': 0.13, '2': 98.06, ...}
+            }
+        frac_post_process(*)- This will exist only if valuation is desired for
+            the particular species. A double representing the fraction of the
+            animal remaining after processing of the whole carcass is complete.
+        unit_price(*)- This will exist only if valuation is desired. Double 
+            which represents the price for a single unit of that animal.
+        duration- Int representing the number of time steps that the user
+            desires the model to run.
+

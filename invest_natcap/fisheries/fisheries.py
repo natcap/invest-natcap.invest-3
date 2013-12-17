@@ -137,6 +137,7 @@ def execute(args):
         core_args['fix_param'] = args['fix_param']
 
     #Direct pass all these variables
+    core_args['workspace_uri'] = args['workspace_uri']
     core_args['maturity_type'] = args['maturity_type']
     core_args['is_gendered'] = args['is_gendered']
     core_args['init_recruits'] = args['init_recruits']
@@ -241,6 +242,9 @@ def parse_main_csv(params_uri, area_count):
                     ...
                 }
             }
+        ordered_stages- A list containing all the ages/stages that are being
+            used within the model, in the order they were listed in the CSV,
+            which is presumed to be the order in which they occur.
    '''
     #Create a container list to hold all the line lists
     hybrid_lines = []
