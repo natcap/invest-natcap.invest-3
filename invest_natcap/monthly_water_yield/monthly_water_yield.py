@@ -799,7 +799,7 @@ def mask_impervious_layer_by_streams(
             if pix == pix_nodata: 
                 return out_nodata
             elif stream_pix == 1.0:
-			    return 0.0
+			    return 1.0
             else:
 		        return imperv_pix
     
