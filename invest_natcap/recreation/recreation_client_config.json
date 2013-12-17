@@ -1,5 +1,5 @@
 {
-    "server": "http://171.64.63.132/~recreation/",
+    "server": "http://ncp-skookum.stanford.edu/~recreation/",
     "paths": {
         "relative": {
             "data": "data/",
