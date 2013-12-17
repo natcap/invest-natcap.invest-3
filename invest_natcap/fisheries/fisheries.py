@@ -28,6 +28,12 @@ class MissingRecruitmentParameter(Exception):
     parameters provided, and additional information is needed. That might
     be in the form of alpha/beta, the CSV, or a numerical recruitment number.
     '''
+    pass
+
+class MissingVulnFishingParameter(Exception):
+    '''This should be raised if the species main parameter CSV is missing a
+    VulnFishing column. It is a required input for the survival equation.'''
+    pass
 
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
@@ -296,10 +302,17 @@ def parse_main_csv(params_uri, area_count):
     for param in age_params:
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
-
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
+
+    #Want to make sure that all required parameters exist
+    #Looks like 'VulnFishing' is really the only required one from this set.
+    if 'vulnfishing' not in age_params:
+        raise MissingVulnFishingParameter("The main parameter CSV for this \
+                species is missing a VulnFishing parameter. Please make sure \
+                that each age/stage for the species has a corresponding \
+                proportion that is vulnerable to fishing.")
 
     #Want a list of the stages in order
     ordered_stages = []
