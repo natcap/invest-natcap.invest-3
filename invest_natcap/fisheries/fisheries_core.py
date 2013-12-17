@@ -49,4 +49,8 @@ def execute(args):
             which represents the price for a single unit of that animal.
         duration- Int representing the number of time steps that the user
             desires the model to run.
+    '''
+
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
 
