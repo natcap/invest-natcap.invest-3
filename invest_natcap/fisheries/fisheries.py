@@ -136,7 +136,14 @@ def execute(args):
 
     #Direct pass all these variables
     core_args['maturity_type'] = args['maturity_type']
-    core_args[
+    core_args['is_gendered'] = args['is_gendered']
+    core_args['init_recruits'] = args['init_recruits']
+    core_args['duration'] = args['duration']
+
+    possible_vars = ['frac_post_process', 'unit_price']
+    for var in possible_vars:
+        if var in args:
+            core_args[var] = args[var]
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
