@@ -7,6 +7,7 @@ import shutil
 import csv
 
 from osgeo import ogr
+from invest_natcap.fisheries import fisheries_core
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -118,6 +119,7 @@ def execute(args):
     #Calculate the classes main param info, and add it to the core args dict
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
     core_args['classes_dict'] = classes_dict
+    core_args['ordered_stages'] = ordered_stages
 
     #If migration is desired, get all the info, and add to the core args dict
     migration_dict = parse_migration_tables(args['mig_params_uri'])
@@ -129,7 +131,7 @@ def execute(args):
         core_args['alpha'] = args['alpha']
         core_args['beta'] = args['beta']
     elif args['rec_eq'] == 'Fecundity':
-        fec_params_dict = parse_fec_csv(fec_params_uri)
+        fec_params_dict = parse_fec_csv(args['fec_params_uri'])
         core_args['fecundity_dict'] = fec_params_dict
     else:
         core_args['fix_param'] = args['fix_param']
@@ -145,7 +147,7 @@ def execute(args):
         if var in args:
             core_args[var] = args[var]
 
-    hra_core.execute(core_args)
+    fisheries_core.execute(core_args)
 
 def parse_fec_csv(fec_uri):
     '''This function will be used if the recruitment equation of choice is 
@@ -156,7 +158,7 @@ def parse_fec_csv(fec_uri):
         fec_uri- The location of the CSV file containing all pertinent
             information for fecundity.
     '''
-
+    return
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
