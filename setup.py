@@ -134,7 +134,7 @@ if platform.system() == 'Windows':
             'packages': packages,
             'skip_archive': True,
             'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
-                'msvcp90.dll']
+                'msvcp90.dll', 'geos_c.dll']
             }
          }
 

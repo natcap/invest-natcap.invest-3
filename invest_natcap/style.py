@@ -5,7 +5,6 @@ import Image
 import logging
 from osgeo import gdal
 from osgeo import ogr
-from shapely.geometry import Polygon
 from shapely.wkb import loads
 from matplotlib import pyplot
 
@@ -16,7 +15,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('raster_stylizing')
 
-def to_grayscale(raster_in_uri, raster_out_uri):
+def grayscale_raster(raster_in_uri, raster_out_uri):
     """Create a grayscale image from 'raster_in_uri' by using linear
         interpolation to transform the float values to byte values
         between 0 and 256.
@@ -42,13 +41,13 @@ def to_grayscale(raster_in_uri, raster_out_uri):
     # Get the raster statistics, looking for Min and Max specifcally
     stats = raster_utils.get_statistics_from_uri(raster_in_uri)
     # Get Min, Max values from raster
-    min = stats[0]
-    max = stats[1]
+    raster_min = stats[0]
+    raster_max = stats[1]
 
-    LOGGER.debug('Min:Max : %s:%s', min, max)
+    LOGGER.debug('Min:Max : %s:%s', raster_min, raster_max)
 
     # Set the x ranges to interpolate from
-    x_range = [min, max]
+    x_range = [raster_min, raster_max]
     # Set the y ranges to interpolate to
     y_range = [gray_min, gray_max]
      
@@ -71,22 +70,22 @@ def to_grayscale(raster_in_uri, raster_out_uri):
         pixel_size, 'intersection')
            
 def tif_to_png(tiff_uri, png_uri):
-   """Save a tif file as a png file 
+    """Save a tif of type BYTE as a png file 
    
-       raster_in_uri - a URI to a gdal raster
+       raster_in_uri - a URI to a gdal raster of type BYTE
        
        raster_out_uri - a URI to a location on disk to save the output
            png image
        
        returns - nothing
-   """
+    """
     
-   # If the output URI already exists, remove it
-   if os.path.isfile(png_uri):
-       os.remove(png_uri)
+    # If the output URI already exists, remove it
+    if os.path.isfile(png_uri):
+        os.remove(png_uri)
 
-   img = Image.open(tiff_uri)
-   img.save(png_uri, 'PNG')
+    img = Image.open(tiff_uri)
+    img.save(png_uri, 'PNG')
  
 def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     """Generates a thumbnail image as a PNG file given of size 'size'
@@ -108,47 +107,33 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
-def shape_to_image(shape_in_uri, image_out_uri):
-    """
+#def shape_to_image(shape_in_uri, image_out_uri):
+#   """
 
-    """
-    
-    def drawPolygon(polygon, graph):
-        xLista, yLista = polygon.exterior.xy
-        graph.fill(xLista, yLista, "y")
-        graph.plot(xLista, yLista, "k-")
-    
-    
-    fig = pyplot.figure(figsize=(4, 4), dpi=180)
-    ax = fig.add_subplot(111)
-    
-    ds = ogr.Open(shape_in_uri)
-    layer = ds.GetLayer()
-    for feat in layer:
-        geom = feat.GetGeometryRef()
-        geom_wkt = geom.ExportToWkb()
-        geom_shply = loads(geom_wkt)
-        drawPolygon(geom_shply, ax)
-    
-    pyplot.savefig(image_out_uri)
-    #pixel_size = 30
-    
-    #raster_utils.create_raster_from_vector_extents_uri(
-    #    shape_in_uri, pixel_size, gdal_format, nodata_out_value, output_uri)
-    
-    #raster_utils.rasterize_layer_uri(
-    #    raster_uri, shapefile_uri, burn_values=[], option_list=[])
- 
-gray_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/gray_tif.tif'
-raster_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/wyield.tif'
- 
-to_grayscale(raster_uri, gray_uri)
- 
-png_uri = 'C:/InVEST_2_5_6_x86/Hydropower/output/gray_png.png'
- 
-tif_to_png(gray_uri, png_uri)
+#   """
+#   
+#   def drawPolygon(polygon, graph):
 
-shp_image_png = 'C:/InVEST_2_5_6_x86/Hydropower/output/shape_image.png'
-shp_image = 'C:/InVEST_2_5_6_x86/Hydropower/output/wyield_sheds.shp'
-
-shape_to_image(shp_image, shp_image_png)
+#       graph.plot(xLista, yLista, "k-")
+#   
+#   
+#   fig = pyplot.figure(figsize=(4, 4), dpi=180)
+#   ax = fig.add_subplot(111)
+#   
+#   ds = ogr.Open(shape_in_uri)
+#   layer = ds.GetLayer()
+#   for feat in layer:
+#       geom = feat.GetGeometryRef()
+#       geom_wkt = geom.ExportToWkb()
+#       geom_shply = loads(geom_wkt)
+#       drawPolygon(geom_shply, ax)
+#   
+#   pyplot.savefig(image_out_uri)
+#   #pixel_size = 30
+#   
+#   #raster_utils.create_raster_from_vector_extents_uri(
+#   #    shape_in_uri, pixel_size, gdal_format, nodata_out_value, output_uri)
+#   
+#   #raster_utils.rasterize_layer_uri(
+#   #    raster_uri, shapefile_uri, burn_values=[], option_list=[])
+#

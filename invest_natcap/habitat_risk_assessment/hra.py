@@ -241,7 +241,9 @@ def execute(args):
         if ele in hra_args:
             hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
-    
+
+    LOGGER.info('Rasterizing shapefile layers.')
+
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
     
     #Get all stressor URI's
@@ -761,11 +763,6 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 out_uri_pre_overlap, c_path, 
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
 
-            #lower_attrib['rating'] should give us what rating is called within
-            #this set of features.
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-            
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
             base_uri = h_s_c[pair]['DS']

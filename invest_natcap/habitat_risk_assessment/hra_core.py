@@ -105,10 +105,12 @@ def execute(args):
     '''
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-    
+   
+    LOGGER.info('Applying CSV criteria to rasters.')
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h_s_c'],
                                     args['habitats'], args['h_s_e'])
 
+    LOGGER.info('Calculating risk rasters for individual overlaps.')
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
     risk_dict = make_risk_rasters(args['h_s_c'], args['habitats'],
@@ -120,11 +122,13 @@ def execute(args):
     maps_dir = os.path.join(output_dir, 'Maps')
     os.mkdir(maps_dir)
 
+    LOGGER.info('Calculating habitat risk rasters.')
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_dict, h_s_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
+    LOGGER.info('Making risk shapefiles.')
     #Also want to output a polygonized version of high and low risk areas in 
     #each habitat. Will polygonize everything that falls above a certain 
     #percentage of the total raster risk, or below that threshold. These can 
@@ -132,6 +136,7 @@ def execute(args):
     num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, 
                 h_s_risk_dict, args['max_risk'], args['max_stress'])
 
+    LOGGER.info('Calculating ecosystem risk rasters.')
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_dict)
@@ -141,6 +146,8 @@ def execute(args):
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
     if 'aoi_tables' in args:
+        
+        LOGGER.info('Creating subregion maps and risk plots.')
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle
         #of the file creation.
