@@ -7,6 +7,7 @@ import shutil
 import csv
 
 from osgeo import ogr
+from invest_natcap.fisheries import fisheries_core
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -118,11 +119,46 @@ def execute(args):
     #Calculate the classes main param info, and add it to the core args dict
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
     core_args['classes_dict'] = classes_dict
+    core_args['ordered_stages'] = ordered_stages
 
     #If migration is desired, get all the info, and add to the core args dict
     migration_dict = parse_migration_tables(args['mig_params_uri'])
     core_args['migrate_dict'] = migration_dict
 
+    #Recruitment- already know that the correct params exist
+    core_args['rec_eq'] = args['rec_eq']
+    if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
+        core_args['alpha'] = args['alpha']
+        core_args['beta'] = args['beta']
+    elif args['rec_eq'] == 'Fecundity':
+        fec_params_dict = parse_fec_csv(args['fec_params_uri'])
+        core_args['fecundity_dict'] = fec_params_dict
+    else:
+        core_args['fix_param'] = args['fix_param']
+
+    #Direct pass all these variables
+    core_args['maturity_type'] = args['maturity_type']
+    core_args['is_gendered'] = args['is_gendered']
+    core_args['init_recruits'] = args['init_recruits']
+    core_args['duration'] = args['duration']
+
+    possible_vars = ['frac_post_process', 'unit_price']
+    for var in possible_vars:
+        if var in args:
+            core_args[var] = args[var]
+
+    fisheries_core.execute(core_args)
+
+def parse_fec_csv(fec_uri):
+    '''This function will be used if the recruitment equation of choice is 
+    fecundity. The CSV passed in will contain all parameters relevant to
+    fecundity.
+    
+    Input:
+        fec_uri- The location of the CSV file containing all pertinent
+            information for fecundity.
+    '''
+    return
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
