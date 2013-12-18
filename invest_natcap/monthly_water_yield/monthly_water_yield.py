@@ -787,7 +787,7 @@ def mask_impervious_layer_by_streams(
     for raster_uri in [imperv_uri, streams_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
-   
+ 
     def mask_streams(imperv_pix, stream_pix):
         """A vectorize operation for setting stream pixels to have an
 			impervious values of 1.0
@@ -799,10 +799,12 @@ def mask_impervious_layer_by_streams(
         for pix, pix_nodata in zip([imperv_pix, stream_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
-            elif stream_pix == 1.0:
-			    return 1.0
             else:
-		        return imperv_pix
+                return 1.0
+            #elif stream_pix == 1.0:
+			#    return 1.0
+            #else:
+		    #    return imperv_pix
     
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
@@ -1179,6 +1181,8 @@ def calculate_direct_flow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
+    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)    
+        
     # CALCULATE IN_SOURCE: P(i,t) * in_absorption_rate
     def in_source_op(precip_pix, in_absorption_pix):
         """Vectorize function for computing in source value
@@ -1192,10 +1196,8 @@ def calculate_direct_flow(
             if pix == pix_nodata:
                 return out_nodata
         
-        return precip_pix * in_absorption_pix
+        return precip_pix * (cell_size ** 2)
     
-    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
-
     raster_utils.vectorize_datasets(
             [precip_uri, in_absorption_uri], in_source_op, in_source_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
