@@ -104,7 +104,22 @@ def execute(args, config):
     predictor_srid[config["postgis"]["table"]["names"]
                    ["landscan_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
-                   ["lulc_name"]] = 4326
+                   ["lulc_1_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_2_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_3_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_4_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_5_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_6_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_7_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_8_name"]] = 4326
+    
     predictor_srid[config["postgis"]["table"]["names"]
                    ["mangrove_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
