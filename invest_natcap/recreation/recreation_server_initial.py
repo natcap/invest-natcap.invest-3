@@ -691,11 +691,17 @@ def execute(args, config):
         cur.close()
         database.commit()
         database.close()
-    except Exception, msg:
-        msg = str(msg).replace(", ", "")
+    except Exception as inst:
+        if len(inst.message) > 0
+            msg = copy.copy(inst.message)
+        else:
+            msg = str(type(inst))
+        msg = msg.repalce(",", "").replace(".", "")
         if msg[-1] != ".":
             msg = msg + "."
+            
         LOGGER.error(msg)
+        raise inst
 
     
 if __name__ == "__main__":    
