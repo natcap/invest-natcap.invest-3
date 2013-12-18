@@ -41,13 +41,28 @@ def execute(args, config):
                           config["postgis"]["table"]["names"]["line_name"],
                           config["postgis"]["table"]["names"]["poly_name"],
                           config["postgis"]["table"]["names"]["protected_name"],
-                          config["postgis"]["table"]["names"]["lulc_name"],
+                          config["postgis"]["table"]["names"]["lulc_1_name"],
+                          config["postgis"]["table"]["names"]["lulc_2_name"],
+                          config["postgis"]["table"]["names"]["lulc_3_name"],
+                          config["postgis"]["table"]["names"]["lulc_4_name"],
+                          config["postgis"]["table"]["names"]["lulc_5_name"],
+                          config["postgis"]["table"]["names"]["lulc_6_name"],
+                          config["postgis"]["table"]["names"]["lulc_7_name"],
+                          config["postgis"]["table"]["names"]["lulc_8_name"],                           
                           config["postgis"]["table"]["names"]["mangrove_name"],
                           config["postgis"]["table"]["names"]["reef_name"],
                           config["postgis"]["table"]["names"]["seagrass_name"]]
 
     simple_predictors = [config["postgis"]["table"]["names"]["landscan_name"],
                         config["postgis"]["table"]["names"]["protected_name"],
+                        config["postgis"]["table"]["names"]["lulc_1_name"],
+                        config["postgis"]["table"]["names"]["lulc_2_name"],
+                        config["postgis"]["table"]["names"]["lulc_3_name"],
+                        config["postgis"]["table"]["names"]["lulc_4_name"],
+                        config["postgis"]["table"]["names"]["lulc_5_name"],
+                        config["postgis"]["table"]["names"]["lulc_6_name"],
+                        config["postgis"]["table"]["names"]["lulc_7_name"],
+                        config["postgis"]["table"]["names"]["lulc_8_name"],                                                    
                         config["postgis"]["table"]["names"]["mangrove_name"],
                         config["postgis"]["table"]["names"]["reef_name"],
                         config["postgis"]["table"]["names"]["seagrass_name"]]
@@ -65,8 +80,7 @@ def execute(args, config):
     
     compound_predictors = [config["postgis"]["table"]["names"]["point_name"],
                           config["postgis"]["table"]["names"]["line_name"],
-                          config["postgis"]["table"]["names"]["poly_name"],
-                          config["postgis"]["table"]["names"]["lulc_name"]]
+                          config["postgis"]["table"]["names"]["poly_name"]]
 
     compound_predictor_classes = [4,
                                4,
@@ -165,7 +179,6 @@ def execute(args, config):
     osm_line = args["osm_line"]
     osm_poly = args["osm_poly"]
     protected = args["protected"]
-    lulc = args["lulc"]
     mangroves = args["mangroves"]
     reefs = args["reefs"]
     grass = args["grass"]
@@ -175,7 +188,14 @@ def execute(args, config):
                     osm_line,
                     osm_poly,
                     protected,
-                    lulc,
+                    args["lulc_1"],
+                    args["lulc_2"],
+                    args["lulc_3"],
+                    args["lulc_4"],
+                    args["lulc_5"],
+                    args["lulc_6"],
+                    args["lulc_7"],
+                    args["lulc_8"],                     
                     mangroves,
                     reefs,
                     grass]
@@ -538,39 +558,6 @@ def execute(args, config):
         recreation_server_core.join_results_execute(cur, model_simple_predictors+model_split_predictors, grid_name, results_format, result_column, join_name)
 
         ignore_category = set()
-        #lulc patch
-        SQL = "ALTER TABLE %s DROP COLUMN %s"
-        if args["lulc"]:
-            if not args["lulc_1"]:
-                LOGGER.debug("Removing LULC information for agriculture.")
-                cur.execute(SQL % ("results", "agricult"))
-            if not args["lulc_2"]:
-                LOGGER.debug("Removing LULC information for bare.")
-                cur.execute(SQL % ("results", "bare"))
-                ignore_category.add("bare")
-            if not args["lulc_3"]:
-                LOGGER.debug("Removing LULC information for forest.")
-                cur.execute(SQL % ("results", "forest"))
-                ignore_category.add("forest")
-            if not args["lulc_4"]:
-                LOGGER.debug("Removing LULC information for grassland.")
-                cur.execute(SQL % ("results", "grassland"))
-                ignore_category.add("grassland")
-            if not args["lulc_5"]:
-                LOGGER.debug("Removing LULC information for shrubland.")
-                cur.execute(SQL % ("results", "shrubland"))
-                ignore_category.add("shrubland")
-            if not args["lulc_6"]:
-                LOGGER.debug("Removing LULC information for frozen.")
-                cur.execute(SQL % ("results", "frozen"))
-            if not args["lulc_7"]:
-                LOGGER.debug("Removing LULC information for urban.")
-                cur.execute(SQL % ("results", "urban"))
-                ignore_category.add("urban")
-            if not args["lulc_8"]:
-                LOGGER.debug("Removing LULC information for water.")
-                cur.execute(SQL % ("results", "water"))
-                ignore_category.add("water")
 
         #osm patch
         if args["osm"]:
