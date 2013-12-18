@@ -28,6 +28,18 @@ class MissingRecruitmentParameter(Exception):
     parameters provided, and additional information is needed. That might
     be in the form of alpha/beta, the CSV, or a numerical recruitment number.
     '''
+    pass
+
+class MissingVulnFishingParameter(Exception):
+    '''This should be raised if the species main parameter CSV is missing a
+    VulnFishing column. It is a required input for the survival equation.'''
+    pass
+
+class MissingExpFracParameter(Exception):
+    '''Exception should be raised if the species main parameter CSV is misisng
+    a ExploitationFraction for each AOI subregion included. It is a required
+    input for the survival equation.'''
+    pass
 
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
@@ -137,6 +149,7 @@ def execute(args):
         core_args['fix_param'] = args['fix_param']
 
     #Direct pass all these variables
+    core_args['workspace_uri'] = args['workspace_uri']
     core_args['maturity_type'] = args['maturity_type']
     core_args['is_gendered'] = args['is_gendered']
     core_args['init_recruits'] = args['init_recruits']
@@ -241,6 +254,9 @@ def parse_main_csv(params_uri, area_count):
                     ...
                 }
             }
+        ordered_stages- A list containing all the ages/stages that are being
+            used within the model, in the order they were listed in the CSV,
+            which is presumed to be the order in which they occur.
    '''
     #Create a container list to hold all the line lists
     hybrid_lines = []
@@ -292,10 +308,17 @@ def parse_main_csv(params_uri, area_count):
     for param in age_params:
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
-
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
+
+    #Want to make sure that all required parameters exist
+    #Looks like 'VulnFishing' is really the only required one from this set.
+    if 'vulnfishing' not in age_params:
+        raise MissingVulnFishingParameter("The main parameter CSV for this \
+                species is missing a VulnFishing parameter. Please make sure \
+                that each age/stage for the species has a corresponding \
+                proportion that is vulnerable to fishing.")
 
     #Want a list of the stages in order
     ordered_stages = []
@@ -340,11 +363,16 @@ def parse_main_csv(params_uri, area_count):
             area_name = '1'
         main_dict['area_params'][area_name] = {}
 
+    exp_frac_exists = False
+
     #The area-specific parameters.
     for m in range(len(area_lines)):
         line = area_lines[m]
         param_name = line.pop(0).lower()
         
+        if param_name == 'ExplotationFraction':
+            exp_frac_exists = True
+
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
@@ -360,6 +388,12 @@ def parse_main_csv(params_uri, area_count):
             param_value = line[n]
        
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
+
+    if not exp_frac_exists:
+        raise MissingExpFracParameter("The main parameter CSV for this species \
+                is missing an ExplotationFraction parameter. Please make sure \
+                that each area provided within the AOI(s) has a corresponding \
+                explotation fraction.")
 
     return main_dict, ordered_stages
 
