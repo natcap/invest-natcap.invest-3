@@ -32,7 +32,7 @@
                     "args_id" : "aoi_file_name",
                     "type": "file",
                     "label": "Area of Interest",
-                    "defaultValue": "../Recreation/Input/BC_AOI.shp",
+                    "defaultValue": "../Recreation/input/initial/BC_AOI.shp",
                     "validateAs": {"type": "OGR"},
                     "required": true,
                     
@@ -53,7 +53,7 @@
                     "label": "Grid type",
                     "options":["rectangular", "hexagonal"],
                     "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
-                    "defaultValue": 0,
+                    "defaultValue": 1,
                     "required": true,
                     "enabledBy" : "grid",
                     "helpText": "Select whether the grid should contain rectangular or hexagonal units."
@@ -68,7 +68,7 @@
                     "dataType": "float",
                     "required": true,
                     "enabledBy" : "grid",
-                    "defaultValue": "8000",
+                    "defaultValue": "10000",
                     "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
                 },
                 {
@@ -85,6 +85,7 @@
                     "type": "folder",
                     "label": "Data Directory",
                     "required": false,
+                    "defaultValue": "../Recreation/input/initial/predictors",
                     "helpText": "A directory that contains any data you would like included in the model run."
                 },
                 {
@@ -116,7 +117,7 @@
                             "args_id" : "landscan",
                             "type": "checkbox",
                             "label": "Population",
-                            "defaultValue": false,
+                            "defaultValue": true,
                             "required": false,
                             "helpText": "2010 <a href=\"http://www.ornl.gov/sci/landscan\">Landscan</a> global distribution of ambient population from <a href=\"http://www.ornl.gov\">ORNL</a>"
                         }                   
@@ -197,7 +198,7 @@
                     "id" : "lulc",
                     "args_id" : "lulc",
                     "type": "container",
-                    "defaultValue" : true,
+                    "defaultValue" : false,
                     "collapsible" : true,
                     "label": "Land Use and Land Coverage",
                     "elements" : [
@@ -229,7 +230,7 @@
                                     "args_id": "lulc_3",
                                     "type": "checkbox",
                                     "label": "Forest",
-                                    "defaultValue" : true,
+                                    "defaultValue" : false,
                                     "required" : false,
                                     "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
