@@ -34,7 +34,8 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['do_inter'] = False
         args['do_intra'] = False
         args['do_hubs'] = False
-        args['hubs_uri'] = './invest-data/test/data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
+        args['hubs_uri'] = './invest-data/test/data/overlap_analysis/PopulatedPlaces_WCVI.shp'
+        args['decay_amt'] = 0.0001 
         args['intra_name'] = 'RI'
 
         self.args = args
@@ -54,10 +55,19 @@ class TestOverlapAnalysis(unittest.TestCase):
         overlap_analysis.execute(self.args)
 
     def test_inter_only_smoke(self):
-       '''Want only do_inter to be True. Everything else should be False.'''
-
+        '''Want only do_inter to be True. Everything else should be False.'''
+       
         self.args['do_inter'] = True
         self.args['do_intra'] = False
+        self.args['do_hubs'] = False
+
+        overlap_analysis.execute(self.args)
+    
+    def test_intra_only_smoke(self):
+        '''Want only do_inter to be True. Everything else should be False.'''
+       
+        self.args['do_inter'] = False
+        self.args['do_intra'] = True
         self.args['do_hubs'] = False
 
         overlap_analysis.execute(self.args)
