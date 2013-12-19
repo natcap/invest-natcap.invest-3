@@ -58,8 +58,8 @@ def execute(args):
     Returns nothing.'''
 
     workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'Output')
+    intermediate_dir = os.path.join(workspace, 'Intermediate')
     raster_utils.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
