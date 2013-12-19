@@ -631,7 +631,7 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
     :rtype: None"""
 
     #get spatial extent of AOI
-    sql = "SELECT ST_Box2D(ST_Union(%s)) from %s"
+    sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
     LOGGER.debug("sql query: %s", sql)
     cur.execute(sql)
@@ -686,7 +686,7 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
     """Creates a table with a hexagonal grid contained within an AOI
     """
     #get spatial extent of AOI
-    sql = "SELECT ST_Box2D(ST_Union(%s)) from %s"
+    sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
     LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
@@ -855,17 +855,12 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     """
 
     out_file_name = str(out_file_name)
-    
-    host = socket.gethostname()
-    if host == "ncp-skookum":
-        #geom_oid = 76415
-        geom_oid = 16410
-    elif socket.gethostname() == "ncp-tenas":
-        geom_oid = 19467
-    else:
-        LOGGER.error("Unknown host %s.", host)
-        raise ValueError, "The geometry OID for %s is unknown." % host
-    LOGGER.debug("%s geometry OID set to %i.", host, geom_oid)
+
+    sql = "SELECT atttypid FROM pg_attribute WHERE attrelid =" +\
+    " (SELECT oid FROM pg_class WHERE relname = 'photos_gis')" +\
+    " AND attname = 'way'"
+    cur.execute(sql)
+    geom_oid,=cur.fetchone()
 
     LOGGER.debug("Creating shapefile from %s.", in_table_name)
 

@@ -431,7 +431,7 @@ def execute(args):
             total_streamflow_mn[key] = (
                     shed_mn + (max_dflow[key] / dflow_pixel_count[key]))
 		    
-            # Max direct flow as a volume. Divided by a 1000 to convert toi
+            # Max direct flow as a volume. Divided by a 1000 to convert to
             # meters
             dflow_vol = max_dflow[key] * dflow_pixel_area / 1000.0
             # Volume for interflow + baseflow as the mean times the area of a
@@ -440,8 +440,7 @@ def execute(args):
             shed_vol = shed_mn * comb_pixel_area * shed_pix_count / 1000.0
             # Total streamflow volume is combined interflow + baseflow volume
             # added to direct flow volume
-            total_shed_vol = shed_vol + dflow_vol
-            total_streamflow_vol[key] = total_shed_vol
+            total_streamflow_vol[key] = shed_vol + dflow_vol
 		
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
@@ -508,6 +507,8 @@ def execute(args):
                 total_streamflow_vol[key])
             volume_balance[key] = vol_bal
 
+        LOGGER.debug('VOLUME BALANCE: Precip_vol - evap_vol - storage_change_vol'
+                '- streamflow_vol(inter + baseflow)')
         LOGGER.debug('VOLUME BALANCE: %s', volume_balance)
         LOGGER.debug('STREAMFLOW VOLUME: %s', total_streamflow_vol)
         ######### END DEBUG WATER BALANCE########################
@@ -527,30 +528,30 @@ def execute(args):
         # Write results to the CSV
         add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
 
-        #if sub_shed_present:
-        #    sub_out_dict = {}
-        #    sub_out_dict['Date'] = cur_month
-        #    
-        #    sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
-        #           streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
-        #    
-        #    sub_max_storage = raster_utils.aggregate_raster_values_uri(
-        #            soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
-#
- #           LOGGER.debug('Sub Max_streamflow dict %s', sub_max_streamflow)
-  #          LOGGER.debug('Sub max_storage dict %s', sub_max_storage)
+#       if sub_shed_present:
+#           sub_out_dict = {}
+#           sub_out_dict['Date'] = cur_month
+#           
+#           sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
+#                  streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
+#           
+#           sub_max_storage = raster_utils.aggregate_raster_values_uri(
+#                   soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
 
-            # Given the two output dictionaries build up the final dictionary
-            # that will then be used to right out to the CSV
-   #         for result_dict, field in zip(
-    #                [sub_max_streamflow, sub_max_storage], field_list):
-     #           build_csv_dict(
-      #                  result_dict, sub_shed_field_list, sub_out_dict, field)
+#           LOGGER.debug('Sub Max_streamflow dict %s', sub_max_streamflow)
+#           LOGGER.debug('Sub max_storage dict %s', sub_max_storage)
 
-       #     LOGGER.debug('OUTPUT Sub Shed Dict: %s', sub_out_dict)
-            # Write results to the CSV
-        #    add_row_csv_table(
-         #           sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
+#           # Given the two output dictionaries build up the final dictionary
+#           # that will then be used to right out to the CSV
+#           for result_dict, field in zip(
+#                   [sub_max_streamflow, sub_max_storage], field_list):
+#               build_csv_dict(
+#                       result_dict, sub_shed_field_list, sub_out_dict, field)
+
+#           LOGGER.debug('OUTPUT Sub Shed Dict: %s', sub_out_dict)
+#           # Write results to the CSV
+#           add_row_csv_table(
+#                   sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
         
         # Move on to next month
         break
@@ -786,7 +787,7 @@ def mask_impervious_layer_by_streams(
     for raster_uri in [imperv_uri, streams_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
-   
+ 
     def mask_streams(imperv_pix, stream_pix):
         """A vectorize operation for setting stream pixels to have an
 			impervious values of 1.0
@@ -798,10 +799,12 @@ def mask_impervious_layer_by_streams(
         for pix, pix_nodata in zip([imperv_pix, stream_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
-            elif stream_pix == 1.0:
-			    return 0.0
             else:
-		        return imperv_pix
+                return 1.0
+            #elif stream_pix == 1.0:
+			#    return 1.0
+            #else:
+		    #    return imperv_pix
     
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
@@ -1178,6 +1181,8 @@ def calculate_direct_flow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
+    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)    
+        
     # CALCULATE IN_SOURCE: P(i,t) * in_absorption_rate
     def in_source_op(precip_pix, in_absorption_pix):
         """Vectorize function for computing in source value
@@ -1191,10 +1196,8 @@ def calculate_direct_flow(
             if pix == pix_nodata:
                 return out_nodata
         
-        return precip_pix * in_absorption_pix
+        return precip_pix * (cell_size ** 2)
     
-    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
-
     raster_utils.vectorize_datasets(
             [precip_uri, in_absorption_uri], in_source_op, in_source_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection')

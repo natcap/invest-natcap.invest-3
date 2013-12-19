@@ -1,3 +1,4 @@
 import invest_natcap.iui.modelui
 
-invest_natcap.iui.modelui.main('wind_energy.json')
+if __name__ == '__main__':
+    invest_natcap.iui.modelui.main('wind_energy.json')

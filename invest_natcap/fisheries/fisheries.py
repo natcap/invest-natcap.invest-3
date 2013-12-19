@@ -7,6 +7,7 @@ import shutil
 import csv
 
 from osgeo import ogr
+from invest_natcap.fisheries import fisheries_core
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -27,6 +28,18 @@ class MissingRecruitmentParameter(Exception):
     parameters provided, and additional information is needed. That might
     be in the form of alpha/beta, the CSV, or a numerical recruitment number.
     '''
+    pass
+
+class MissingVulnFishingParameter(Exception):
+    '''This should be raised if the species main parameter CSV is missing a
+    VulnFishing column. It is a required input for the survival equation.'''
+    pass
+
+class MissingExpFracParameter(Exception):
+    '''Exception should be raised if the species main parameter CSV is misisng
+    a ExploitationFraction for each AOI subregion included. It is a required
+    input for the survival equation.'''
+    pass
 
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
@@ -65,7 +78,9 @@ def execute(args):
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
         mig_params_uri(*)- If this parameter exists, it means migration is
-            desired. This is  the location of the parameters file for migration.
+            desired. This is  the location of the parameters folder containing
+            files for migration. There should be one for every age class which
+            migrates.
         frac_post_process(*)- This will exist only if valuation is desired for
             the particular species. A double representing the fraction of the
             animal remaining after processing of the whole carcass is complete.
@@ -74,7 +89,8 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-    
+    core_args = {}
+
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
@@ -112,7 +128,104 @@ def execute(args):
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
-    classes_dict = parse_main_csv(args['class_params_uri'], area_count)
+    #Calculate the classes main param info, and add it to the core args dict
+    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
+    core_args['classes_dict'] = classes_dict
+    core_args['ordered_stages'] = ordered_stages
+
+    #If migration is desired, get all the info, and add to the core args dict
+    migration_dict = parse_migration_tables(args['mig_params_uri'])
+    core_args['migrate_dict'] = migration_dict
+
+    #Recruitment- already know that the correct params exist
+    core_args['rec_eq'] = args['rec_eq']
+    if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
+        core_args['alpha'] = args['alpha']
+        core_args['beta'] = args['beta']
+    elif args['rec_eq'] == 'Fecundity':
+        fec_params_dict = parse_fec_csv(args['fec_params_uri'])
+        core_args['fecundity_dict'] = fec_params_dict
+    else:
+        core_args['fix_param'] = args['fix_param']
+
+    #Direct pass all these variables
+    core_args['workspace_uri'] = args['workspace_uri']
+    core_args['maturity_type'] = args['maturity_type']
+    core_args['is_gendered'] = args['is_gendered']
+    core_args['init_recruits'] = args['init_recruits']
+    core_args['duration'] = args['duration']
+
+    possible_vars = ['frac_post_process', 'unit_price']
+    for var in possible_vars:
+        if var in args:
+            core_args[var] = args[var]
+
+    fisheries_core.execute(core_args)
+
+def parse_fec_csv(fec_uri):
+    '''This function will be used if the recruitment equation of choice is 
+    fecundity. The CSV passed in will contain all parameters relevant to
+    fecundity.
+    
+    Input:
+        fec_uri- The location of the CSV file containing all pertinent
+            information for fecundity.
+    '''
+    return
+
+def parse_migration_tables(mig_folder_uri):
+    '''Want to take all of the files within the migration parameter folder, and
+    glean relavant information from them. Should return a single dictionary
+    containing all migration data for all applicable age/stages.
+    
+    Input:
+        mig_folder_uri- The location of the outer folder containing all
+            source/sink migration information for any age/stages which migrate.
+
+    Returns:
+        mig_dict- Migration dictionary which will contain all source/sink
+            percentage information for each age/stage which is capable of
+            migration. The outermost numerical key is the source, and the
+            keys of the dictionary that points to are the sinks.
+
+            {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                    '2': {'1': 0.13, '2': 98.06, ...}
+            }
+    '''
+    mig_dict = {}
+
+    mig_files = listdir(mig_folder_uri)
+
+    for mig_table_uri in mig_files:
+        
+        basename = os.path.splitext(os.path.basename(mig_table_uri))[0]
+        stage_name = basename.split('migration_').pop()
+        mig_dict[stage_name] = {}
+
+        #Now, the actual file reading
+        with open(mig_table_uri, 'rU') as mig_file:
+
+            csv_reader = csv.reader(mig_file)
+
+            headers = csv_reader.next()
+            #First cell of the headers is a blank
+            headers.pop(0)
+
+            for source in headers:
+                mig_dict[stage_name][source] = {}
+
+            while True:
+                try:
+                    line = csv_reader.next()
+                    sink = line.pop(0)
+                    
+                    for i, source in enumerate(headers):
+                        mig_dict[stage_name][source][sink] = line[i]
+                
+                except StopIteration:
+                    break
+
+    return mig_dict
 
 def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
@@ -141,6 +254,9 @@ def parse_main_csv(params_uri, area_count):
                     ...
                 }
             }
+        ordered_stages- A list containing all the ages/stages that are being
+            used within the model, in the order they were listed in the CSV,
+            which is presumed to be the order in which they occur.
    '''
     #Create a container list to hold all the line lists
     hybrid_lines = []
@@ -192,14 +308,25 @@ def parse_main_csv(params_uri, area_count):
     for param in age_params:
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
-
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
+    #Want to make sure that all required parameters exist
+    #Looks like 'VulnFishing' is really the only required one from this set.
+    if 'vulnfishing' not in age_params:
+        raise MissingVulnFishingParameter("The main parameter CSV for this \
+                species is missing a VulnFishing parameter. Please make sure \
+                that each age/stage for the species has a corresponding \
+                proportion that is vulnerable to fishing.")
+
+    #Want a list of the stages in order
+    ordered_stages = []
+
     for i in range(len(hybrid_lines)):
         line = hybrid_lines[i]
         stage_name = line.pop(0)
+        ordered_stages.append(stage_name)
 
         #Initialize stage subdictionary with survival subdictionary inside
         main_dict['stage_params'][stage_name] = {'survival':{}}
@@ -236,11 +363,16 @@ def parse_main_csv(params_uri, area_count):
             area_name = '1'
         main_dict['area_params'][area_name] = {}
 
+    exp_frac_exists = False
+
     #The area-specific parameters.
     for m in range(len(area_lines)):
         line = area_lines[m]
         param_name = line.pop(0).lower()
         
+        if param_name == 'ExplotationFraction':
+            exp_frac_exists = True
+
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
@@ -257,4 +389,26 @@ def parse_main_csv(params_uri, area_count):
        
             main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
-    return main_dict
+    if not exp_frac_exists:
+        raise MissingExpFracParameter("The main parameter CSV for this species \
+                is missing an ExplotationFraction parameter. Please make sure \
+                that each area provided within the AOI(s) has a corresponding \
+                explotation fraction.")
+
+    return main_dict, ordered_stages
+
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris

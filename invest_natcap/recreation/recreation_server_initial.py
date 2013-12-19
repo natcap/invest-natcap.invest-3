@@ -41,13 +41,28 @@ def execute(args, config):
                           config["postgis"]["table"]["names"]["line_name"],
                           config["postgis"]["table"]["names"]["poly_name"],
                           config["postgis"]["table"]["names"]["protected_name"],
-                          config["postgis"]["table"]["names"]["lulc_name"],
+                          config["postgis"]["table"]["names"]["lulc_1_name"],
+                          config["postgis"]["table"]["names"]["lulc_2_name"],
+                          config["postgis"]["table"]["names"]["lulc_3_name"],
+                          config["postgis"]["table"]["names"]["lulc_4_name"],
+                          config["postgis"]["table"]["names"]["lulc_5_name"],
+                          config["postgis"]["table"]["names"]["lulc_6_name"],
+                          config["postgis"]["table"]["names"]["lulc_7_name"],
+                          config["postgis"]["table"]["names"]["lulc_8_name"],                           
                           config["postgis"]["table"]["names"]["mangrove_name"],
                           config["postgis"]["table"]["names"]["reef_name"],
                           config["postgis"]["table"]["names"]["seagrass_name"]]
 
     simple_predictors = [config["postgis"]["table"]["names"]["landscan_name"],
                         config["postgis"]["table"]["names"]["protected_name"],
+                        config["postgis"]["table"]["names"]["lulc_1_name"],
+                        config["postgis"]["table"]["names"]["lulc_2_name"],
+                        config["postgis"]["table"]["names"]["lulc_3_name"],
+                        config["postgis"]["table"]["names"]["lulc_4_name"],
+                        config["postgis"]["table"]["names"]["lulc_5_name"],
+                        config["postgis"]["table"]["names"]["lulc_6_name"],
+                        config["postgis"]["table"]["names"]["lulc_7_name"],
+                        config["postgis"]["table"]["names"]["lulc_8_name"],                                                    
                         config["postgis"]["table"]["names"]["mangrove_name"],
                         config["postgis"]["table"]["names"]["reef_name"],
                         config["postgis"]["table"]["names"]["seagrass_name"]]
@@ -65,8 +80,7 @@ def execute(args, config):
     
     compound_predictors = [config["postgis"]["table"]["names"]["point_name"],
                           config["postgis"]["table"]["names"]["line_name"],
-                          config["postgis"]["table"]["names"]["poly_name"],
-                          config["postgis"]["table"]["names"]["lulc_name"]]
+                          config["postgis"]["table"]["names"]["poly_name"]]
 
     compound_predictor_classes = [4,
                                4,
@@ -90,7 +104,22 @@ def execute(args, config):
     predictor_srid[config["postgis"]["table"]["names"]
                    ["landscan_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
-                   ["lulc_name"]] = 4326
+                   ["lulc_1_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_2_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_3_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_4_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_5_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_6_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_7_name"]] = 4326
+    predictor_srid[config["postgis"]["table"]["names"]
+                   ["lulc_8_name"]] = 4326
+    
     predictor_srid[config["postgis"]["table"]["names"]
                    ["mangrove_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
@@ -165,7 +194,6 @@ def execute(args, config):
     osm_line = args["osm_line"]
     osm_poly = args["osm_poly"]
     protected = args["protected"]
-    lulc = args["lulc"]
     mangroves = args["mangroves"]
     reefs = args["reefs"]
     grass = args["grass"]
@@ -175,7 +203,14 @@ def execute(args, config):
                     osm_line,
                     osm_poly,
                     protected,
-                    lulc,
+                    args["lulc_1"],
+                    args["lulc_2"],
+                    args["lulc_3"],
+                    args["lulc_4"],
+                    args["lulc_5"],
+                    args["lulc_6"],
+                    args["lulc_7"],
+                    args["lulc_8"],                     
                     mangroves,
                     reefs,
                     grass]
@@ -235,7 +270,7 @@ def execute(args, config):
                             LOGGER.info("Found %s predictor.", file_name)
                             user_simple_predictors.append(file_name)
                     else:
-                        LOGGER.debug("Predictor %s is missing file(s).", data_dir+file_name)
+                        LOGGER.info("Predictor %s is missing file(s).", data_dir+file_name)
                         LOGGER.error("Predictor %s is missing file(s).", file_name)
                         raise ValueError, "Predictor %s is missing file(s)." % (file_name)
 
@@ -279,7 +314,7 @@ def execute(args, config):
             if len(user_categorization):
                 LOGGER.info("Validating categorization tables.")
                 for tsv in user_categorization:
-                    LOGGER.debug("Validating categorization table %s.", tsv)
+                    LOGGER.info("Validating categorization table %s.", tsv)
                     categories, classes = recreation_server_core.category_dict(
                         "%s%s.tsv" % (data_dir, tsv))
                     user_categorization_dict[tsv] = categories
@@ -299,7 +334,7 @@ def execute(args, config):
 
         #loading data into tables        
         LOGGER.debug("Processing user data.")
-        LOGGER.debug("Importing AOI %s.", aoi_file_name)
+        LOGGER.info("Importing AOI %s.", aoi_file_name)
         aoi_srid = recreation_server_core.temp_shapefile_db(cur, aoi_file_name,
                                                             aoi_name)
         LOGGER.info("Imported AOI.")
@@ -325,7 +360,7 @@ def execute(args, config):
             intersects, = cur.fetchone()
             if intersects > count:
                 msg = "Custom grids cannot have overlapping polygons."
-                LOGGER.debug("The custom grid contains %i intersections." % (intersects - count))
+                LOGGER.info("The custom grid contains %i intersections." % (intersects - count))
                 LOGGER.error(msg)
                 raise ValueError, msg 
 
@@ -376,7 +411,7 @@ def execute(args, config):
         #create grid
         if args["grid"]:
             if args["rectangular_grid"]:
-                LOGGER.debug(("Creating recatangular grid %s from %s using "
+                LOGGER.info(("Creating recatangular grid %s from %s using "
                               "cell size %s."), grid_name, aoi_transformed_name,
                              str(cell_size))
                 recreation_server_core.temp_grid_db(cur, aoi_transformed_name,
@@ -384,7 +419,7 @@ def execute(args, config):
                                                     grid_name, grid_column_name,
                                                     cell_size)
             else:
-                LOGGER.debug(("Creating hexagonal grid %s from %s using "
+                LOGGER.info(("Creating hexagonal grid %s from %s using "
                               "cell size %s."), grid_name, aoi_transformed_name,
                              str(cell_size))
                 recreation_server_core.hex_grid(cur, aoi_transformed_name,
@@ -444,12 +479,12 @@ def execute(args, config):
         #clipping predictors
         LOGGER.info("Clipping simple predictors.")
         for predictor in model_simple_predictors:
-            LOGGER.debug("Clipping %s.", predictor)
+            LOGGER.info("Clipping %s.", predictor)
             recreation_server_core.clip_execute(cur, predictor, geometry_column_name, projected_format % (grid_union_name, predictor_srid[predictor]), grid_column_name, clip_format % (predictor))
 
         LOGGER.info("Clipping compound predictors.")
         for predictor in model_compound_predictors:
-            LOGGER.debug("Clipping %s.", predictor)
+            LOGGER.info("Clipping %s.", predictor)
             if predictor == "planet_osm_point" or predictor == "planet_osm_line" or predictor == "planet_osm_polygon":
                 extra_columns = ["osm_id"]
             else:
@@ -466,7 +501,7 @@ def execute(args, config):
 
         #categorizing compound predictors
         for predictor in user_categorization_dict.keys():
-            LOGGER.debug("Categorizing %s.", predictor)
+            LOGGER.info("Categorizing %s.", predictor)
             recreation_server_core.categorize_execute(cur, clip_format % predictor, user_categorization_dict[predictor], user_class_dict[predictor], category_format, class_format)            
 
         #splitting compound predictors            
@@ -502,13 +537,13 @@ def execute(args, config):
         #transforming predictors
         LOGGER.info("Projecting simple predictors.")
         for predictor in model_simple_predictors+model_split_predictors:
-            LOGGER.debug("Projecting %s.", predictor)
+            LOGGER.info("Projecting %s.", predictor)
             recreation_server_core.transform_execute(cur, clip_format % (predictor), projected_format % (predictor, output_srid), geometry_column_name, output_srid)
 
         #aggregating simple predictors
         join_tables = []
         for predictor in model_simple_predictors+model_split_predictors:
-            LOGGER.debug("Aggregating %s.", predictor)
+            LOGGER.info("Aggregating %s.", predictor)
             geo_type = recreation_server_core.dimension_execute(cur, projected_format % (predictor, output_srid), geometry_column_name)
             LOGGER.debug("Predictor %s has dimensionality %i.", predictor, geo_type)
             projected_name = projected_format % (predictor, output_srid)
@@ -520,13 +555,13 @@ def execute(args, config):
                 LOGGER.debug("Executing sql: %s", sql.replace(", ", "|").replace(".", "||"))
                 cur.execute(sql)
             elif geo_type == 0:
-                LOGGER.debug("Processing point predictor %s.", predictor)
+                LOGGER.info("Processing point predictor %s.", predictor)
                 recreation_server_core.grid_point_execute(cur, grid_name, projected_name, results_name)
             elif geo_type == 1:
-                LOGGER.debug("Processing line predictor %s.", predictor)
+                LOGGER.info("Processing line predictor %s.", predictor)
                 recreation_server_core.grid_line_execute(cur, grid_name, projected_name, results_name)
             elif geo_type == 2:
-                LOGGER.debug("Processing polygon predictor %s.", predictor)
+                LOGGER.info("Processing polygon predictor %s.", predictor)
                 recreation_server_core.grid_polygon_execute(cur, grid_name, projected_name, results_name)
             else:
                 raise ValueError, ("Predictor %s has an unknown geometry type." % predictor)
@@ -538,39 +573,6 @@ def execute(args, config):
         recreation_server_core.join_results_execute(cur, model_simple_predictors+model_split_predictors, grid_name, results_format, result_column, join_name)
 
         ignore_category = set()
-        #lulc patch
-        SQL = "ALTER TABLE %s DROP COLUMN %s"
-        if args["lulc"]:
-            if not args["lulc_1"]:
-                LOGGER.debug("Removing LULC information for agriculture.")
-                cur.execute(SQL % ("results", "agricult"))
-            if not args["lulc_2"]:
-                LOGGER.debug("Removing LULC information for bare.")
-                cur.execute(SQL % ("results", "bare"))
-                ignore_category.add("bare")
-            if not args["lulc_3"]:
-                LOGGER.debug("Removing LULC information for forest.")
-                cur.execute(SQL % ("results", "forest"))
-                ignore_category.add("forest")
-            if not args["lulc_4"]:
-                LOGGER.debug("Removing LULC information for grassland.")
-                cur.execute(SQL % ("results", "grassland"))
-                ignore_category.add("grassland")
-            if not args["lulc_5"]:
-                LOGGER.debug("Removing LULC information for shrubland.")
-                cur.execute(SQL % ("results", "shrubland"))
-                ignore_category.add("shrubland")
-            if not args["lulc_6"]:
-                LOGGER.debug("Removing LULC information for frozen.")
-                cur.execute(SQL % ("results", "frozen"))
-            if not args["lulc_7"]:
-                LOGGER.debug("Removing LULC information for urban.")
-                cur.execute(SQL % ("results", "urban"))
-                ignore_category.add("urban")
-            if not args["lulc_8"]:
-                LOGGER.debug("Removing LULC information for water.")
-                cur.execute(SQL % ("results", "water"))
-                ignore_category.add("water")
 
         #osm patch
         if args["osm"]:
@@ -626,7 +628,7 @@ def execute(args, config):
             downloads.discard(config["postgis"]["table"]["names"]["landscan_name"])
             downloads.difference_update(ignore_category)
             for predictor in downloads:
-                LOGGER.debug("Saving predictor %s for downloading.", predictor)
+                LOGGER.info("Saving predictor %s for downloading.", predictor)
                 if column_alias.has_key(predictor):
                     predictor_file_name = os.path.abspath(os.path.join(os.path.dirname(grid_file_name),os.path.join("download","%s.shp") % column_alias[predictor]))
                 else:
@@ -689,11 +691,17 @@ def execute(args, config):
         cur.close()
         database.commit()
         database.close()
-    except Exception, msg:
-        msg = str(msg).replace(", ", "")
+    except Exception as inst:
+        if len(inst.message) > 0:
+            msg = copy.copy(inst.message)
+        else:
+            msg = str(type(inst))
+        msg = msg.repalce(",", "").replace(".", "")
         if msg[-1] != ".":
             msg = msg + "."
+            
         LOGGER.error(msg)
+        raise inst
 
     
 if __name__ == "__main__":    
@@ -816,7 +824,7 @@ if __name__ == "__main__":
                 args["mangroves"] = False
                 args["reefs"] = False
                 args["grass"] = False
-        elif args["version_info"] == "2.5.5":
+        elif args["version_info"] >= "2.5.5":
             if model["global_data"]:
                 args["landscan"] = model["landscan"]
                 args["protected"] = model["protected"]

@@ -24,6 +24,7 @@
                             "type": "folder",
                             "label": "Workspace Directory",
                             "required": true,
+                            "defaultValue": "../Recreation",
                             "helpText": "Select a folder to be used as your workspace."                                                
 		        },
                         {
@@ -31,6 +32,7 @@
                             "args_id" : "json",
                             "type": "file",
                             "label": "init.json",
+                            "defaultValue": "../Recreation/input/scenario/init.json",
                             "required": true,
                             "helpText": "The initial tool configuration file (init.json) from the initial run's results."
                         },					        
@@ -39,6 +41,7 @@
                             "args_id" : "data_dir",
                             "type": "folder",
                             "label": "Data Directory",
+                            "defaultValue": "../Recreation/input/scenario/predictors",
                             "required": true,
                             "helpText": "A directory that contains all the new data for the scenario that you would like to include in the model run."
 		        },
