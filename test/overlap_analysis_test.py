@@ -27,12 +27,13 @@ class TestOverlapAnalysis(unittest.TestCase):
         args = {}
 
         args['workspace_dir'] = './invest-data/test/data/overlap_analysis'
-        args['zone_layer_loc'] = './invest-data/test/data/overlap_analysis/AOI_WCVI.shp'
+        args['zone_layer_uri'] = './invest-data/test/data/overlap_analysis/AOI_WCVI.shp'
         args['grid_size'] = 500 
-        args['overlap_data_dir_loc'] = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
+        args['overlap_data_dir_uri'] = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
         args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         args['do_inter'] = True
         args['do_intra'] = True
+        args['do_hubs'] = False
         args['intra_name'] = 'RI'
 
         self.args = args
