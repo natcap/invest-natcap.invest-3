@@ -19,6 +19,26 @@ def execute(args):
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
         rec_eq- The equation to be used in calculation of recruitment. Choices
+        params_dict- Dictionary containing all information from the csv file.
+            Should have age/stage specific information, as well as area-specific
+            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
+            present are determined by what equations/additional information the
+            user is trying to model.
+
+            {'Stage_Params':
+                {'Age_A':
+                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'weight': 4.42, 'duration': 16},
+                     ...
+                }
+             'Area_Params':
+                {'Area_1':
+                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    ...
+                }
+            }
+        ordered_stages- A list containing all the ages/stages that are being
             are strings, and will be one of "Beverton-Holt", "Ricker", 
             "Fecundity", or "Fixed."
         alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 

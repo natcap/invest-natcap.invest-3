@@ -464,7 +464,7 @@ def create_weighted_raster(
             dataset_to_align_index=0)
     else:
         raster_utils.vectorize_datasets(
-            weighted_raster_uris, combine_weighted_pixels, outgoing_uri,
+            raster_uris, combine_weighted_pixels, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0)
              
