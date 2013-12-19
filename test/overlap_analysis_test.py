@@ -30,13 +30,9 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['zone_layer_uri'] = './invest-data/test/data/overlap_analysis/AOI_WCVI.shp'
         args['grid_size'] = 500 
         args['overlap_data_dir_uri'] = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
-        args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         args['do_inter'] = False
         args['do_intra'] = False
         args['do_hubs'] = False
-        args['hubs_uri'] = './invest-data/test/data/overlap_analysis/PopulatedPlaces_WCVI.shp'
-        args['decay_amt'] = 0.0001 
-        args['intra_name'] = 'RI'
 
         self.args = args
         
@@ -49,8 +45,12 @@ class TestOverlapAnalysis(unittest.TestCase):
         '''All options for do_inter, do_intra, and do_hubs should be on.'''
 
         self.args['do_inter'] = True
+        self.args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         self.args['do_intra'] = True
+        self.args['intra_name'] = 'RI'
         self.args['do_hubs'] = True
+        self.args['hubs_uri'] = './invest-data/test/data/overlap_analysis/PopulatedPlaces_WCVI.shp'
+        self.args['decay_amt'] = 0.0001 
 
         overlap_analysis.execute(self.args)
 
@@ -58,6 +58,7 @@ class TestOverlapAnalysis(unittest.TestCase):
         '''Want only do_inter to be True. Everything else should be False.'''
        
         self.args['do_inter'] = True
+        self.args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         self.args['do_intra'] = False
         self.args['do_hubs'] = False
 
@@ -68,7 +69,19 @@ class TestOverlapAnalysis(unittest.TestCase):
        
         self.args['do_inter'] = False
         self.args['do_intra'] = True
+        self.args['intra_name'] = 'RI'
         self.args['do_hubs'] = False
+
+        overlap_analysis.execute(self.args)
+
+    def test_hubs_only_smoke(self):
+        '''Want only do_inter to be True. Everything else should be False.'''
+       
+        self.args['do_inter'] = True
+        self.args['do_intra'] = False
+        self.args['do_hubs'] = False
+        self.args['hubs_uri'] = './invest-data/test/data/overlap_analysis/PopulatedPlaces_WCVI.shp'
+        self.args['decay_amt'] = 0.0001 
 
         overlap_analysis.execute(self.args)
 
@@ -100,6 +113,8 @@ class TestOverlapAnalysis(unittest.TestCase):
         
         self.args['do_inter'] = True
         self.args['do_intra'] = True
+        self.args['intra_name'] = 'RI'
+        self.args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
 
         overlap_analysis.execute(self.args)
 
