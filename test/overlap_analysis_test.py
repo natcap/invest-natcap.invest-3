@@ -34,6 +34,7 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['do_inter'] = False
         args['do_intra'] = False
         args['do_hubs'] = False
+        args['hubs_uri'] = './invest-data/test/data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
         args['intra_name'] = 'RI'
 
         self.args = args
@@ -42,7 +43,25 @@ class TestOverlapAnalysis(unittest.TestCase):
 
         #This just tests that OA doesn't fail.     
         overlap_analysis.execute(self.args)
-        
+       
+    def test_all_smoke(self):
+        '''All options for do_inter, do_intra, and do_hubs should be on.'''
+
+        self.args['do_inter'] = True
+        self.args['do_intra'] = True
+        self.args['do_hubs'] = True
+
+        overlap_analysis.execute(self.args)
+
+    def test_inter_only_smoke(self):
+       '''Want only do_inter to be True. Everything else should be False.'''
+
+        self.args['do_inter'] = True
+        self.args['do_intra'] = False
+        self.args['do_hubs'] = False
+
+        overlap_analysis.execute(self.args)
+
     def test_format_over_table(self):
         
         output_table = overlap_analysis.format_over_table(self.args['overlap_layer_tbl'])
