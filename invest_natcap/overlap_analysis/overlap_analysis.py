@@ -42,7 +42,8 @@ def execute(args):
         args['do_intra']- Boolean which indicates whether or not intra-activity
             weighting is desired. This will will pull attributes from shapefiles
             passed in in 'zone_layer_uri'
-            
+        args['do_hubs']- Boolean which indicates if human use hubs are desired. 
+
         --Optional--
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
             and identifier data for all layers being passed in within the
