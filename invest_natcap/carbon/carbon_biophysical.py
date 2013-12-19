@@ -164,7 +164,8 @@ def execute_30(**args):
 
                     _calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
-                        vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
+                        vol_hwp_uri, args['lulc_cur_year'], 
+                        args['lulc_fut_year'], args['_process_pool'])
 
                     temp_c_fut_uri = raster_utils.temporary_filename()
                     shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
@@ -503,7 +504,7 @@ def _calculate_hwp_storage_cur(
 
 def _calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
-    yr_cur, yr_fut):
+    yr_cur, yr_fut, process_pool=None):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to
         harvested wood products in parcels on current landscape.
 
@@ -521,6 +522,7 @@ def _calculate_hwp_storage_fut(
              harvested wood products for land cover under interest
         yr_cur - year of the current landcover map
         yr_fut - year of the current landcover map
+        process_pool - a process pool for parallel processing (can be None)
 
         No return value"""
 
@@ -692,7 +694,7 @@ def _calculate_hwp_storage_fut(
                 [cur_raster_uri, temp_filename], add_op, raster_uri,
                 gdal.GDT_Float32, nodata,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
-                process_pool=args['_process_pool'])
+                process_pool=process_pool)
 
 
 def _get_fields(feature):

@@ -1102,12 +1102,14 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
             -tgt_elev: offset for target elevation above the ground. Applied to
                 every point on the raster
             -max_dist: maximum visibility radius. By default infinity (-1), 
-                not used yet
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
             -alg_version: name of the algorithm to be used. Either 'cython'
             (default) or 'python'.
 
         Returns nothing"""
+    # Get the cell size
+    cell_size = raster_utils.get_cell_size_from_uri(input_uri)
+
     # Open the input URI and extract the numpy array
     input_raster = gdal.Open(input_uri)
     message = 'Cannot open file ' + input_uri
@@ -1117,8 +1119,8 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     print('computing viewshed on ' + input_uri, array_shape)
     
     # Compute the viewshed on it
-    output_array = compute_viewshed(input_array, \
-    coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff, alg_version)
+    output_array = compute_viewshed(input_array, coordinates, \
+    obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
     
     # Save the output in the output URI
     if os.path.exists(output_uri):
@@ -1130,8 +1132,8 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
-def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
-    refraction_coeff, alg_version):
+def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist, \
+    cell_size, refraction_coeff, alg_version):
     """Compute the viewshed for a single observer. 
         Inputs: 
             -DEM: a numpy array of terrain elevations
@@ -1164,9 +1166,17 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
     max_dist)
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
-    visibility = \
-    (input_array[(I, J)] - input_array[coordinates[0], \
-    coordinates[1]] - obs_elev) / distances
+    # Computation of the visibility:
+    # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
+    visibility = (input_array[(I, J)] - \
+    input_array[coordinates[0], coordinates[1]] - obs_elev)
+    # 2- Factor the effect of refraction in the elevation.
+    # From the equation on the ArcGIS website:
+    # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
+    D_earth = 12740000 # Diameter of the earth in meters
+    visibility -= (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth
+    # 3- Divide the height by the distance to get a visibility score
+    visibility /= distances
 
     if alg_version is 'python':
         #print('angles', angles)
