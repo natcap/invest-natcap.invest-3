@@ -31,14 +31,14 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['grid_size'] = 500 
         args['overlap_data_dir_uri'] = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
         args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
-        args['do_inter'] = True
-        args['do_intra'] = True
+        args['do_inter'] = False
+        args['do_intra'] = False
         args['do_hubs'] = False
         args['intra_name'] = 'RI'
 
         self.args = args
         
-    def test_execute(self):
+    def test_minimal_smoke(self):
 
         #This just tests that OA doesn't fail.     
         overlap_analysis.execute(self.args)
@@ -68,6 +68,9 @@ class TestOverlapAnalysis(unittest.TestCase):
                 self.fail("Element %s is not a key in the test-created table.", element)
 
     def test_reg_default_data(self):
+        
+        self.args['do_inter'] = True
+        self.args['do_intra'] = True
 
         overlap_analysis.execute(self.args)
 
