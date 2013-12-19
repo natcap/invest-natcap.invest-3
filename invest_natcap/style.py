@@ -7,6 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 from shapely.wkb import loads
 from matplotlib import pyplot
+from kartograph import Kartograph
 
 from invest_natcap import raster_utils
 
@@ -107,33 +108,23 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
-#def shape_to_image(shape_in_uri, image_out_uri):
-#   """
+def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri):
+    """
 
-#   """
-#   
-#   def drawPolygon(polygon, graph):
+    """
 
-#       graph.plot(xLista, yLista, "k-")
-#   
-#   
-#   fig = pyplot.figure(figsize=(4, 4), dpi=180)
-#   ax = fig.add_subplot(111)
-#   
-#   ds = ogr.Open(shape_in_uri)
-#   layer = ds.GetLayer()
-#   for feat in layer:
-#       geom = feat.GetGeometryRef()
-#       geom_wkt = geom.ExportToWkb()
-#       geom_shply = loads(geom_wkt)
-#       drawPolygon(geom_shply, ax)
-#   
-#   pyplot.savefig(image_out_uri)
-#   #pixel_size = 30
-#   
-#   #raster_utils.create_raster_from_vector_extents_uri(
-#   #    shape_in_uri, pixel_size, gdal_format, nodata_out_value, output_uri)
-#   
-#   #raster_utils.rasterize_layer_uri(
-#   #    raster_uri, shapefile_uri, burn_values=[], option_list=[])
-#
+    aoi_sr = raster_utils.get_spatial_ref_uri(shape_in_uri)
+    aoi_wkt = aoi_sr.ExportToWkt()
+
+    # Get the Well Known Text of the shapefile
+    shapefile_sr = raster_utils.get_spatial_ref_uri(lat_long_shape)
+    shapefile_wkt = shapefile_sr.ExportToWkt()
+    
+    # Reproject the AOI to the spatial reference of the shapefile so that the
+    # AOI can be used to clip the shapefile properly
+    raster_utils.reproject_datasource_uri(
+            shape_in_uri, shapefile_wkt, tmp_uri)
+    
+    kart = Kartograph()
+    kart.generate(
+            {"layers":{"mylayer":{"src":tmp_uri}}}, outfile=image_out_uri)
