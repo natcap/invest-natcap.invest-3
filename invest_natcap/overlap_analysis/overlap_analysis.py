@@ -107,6 +107,7 @@ def execute(args):
         hubs_rast = gdal.Open(hubs_out_uri)
     else:
         hubs_rast = None
+        hubs_out_uri = None
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
