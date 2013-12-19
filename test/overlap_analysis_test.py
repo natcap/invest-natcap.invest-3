@@ -65,7 +65,7 @@ class TestOverlapAnalysis(unittest.TestCase):
         overlap_analysis.execute(self.args)
     
     def test_intra_only_smoke(self):
-        '''Want only do_inter to be True. Everything else should be False.'''
+        '''Want only do_intra to be True. Everything else should be False.'''
        
         self.args['do_inter'] = False
         self.args['do_intra'] = True
@@ -75,11 +75,11 @@ class TestOverlapAnalysis(unittest.TestCase):
         overlap_analysis.execute(self.args)
 
     def test_hubs_only_smoke(self):
-        '''Want only do_inter to be True. Everything else should be False.'''
+        '''Want only do_hubs to be True. Everything else should be False.'''
        
-        self.args['do_inter'] = True
+        self.args['do_inter'] = False
         self.args['do_intra'] = False
-        self.args['do_hubs'] = False
+        self.args['do_hubs'] = True
         self.args['hubs_uri'] = './invest-data/test/data/overlap_analysis/PopulatedPlaces_WCVI.shp'
         self.args['decay_amt'] = 0.0001 
 
@@ -87,6 +87,7 @@ class TestOverlapAnalysis(unittest.TestCase):
 
     def test_format_over_table(self):
         
+        self.args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         output_table = overlap_analysis.format_over_table(self.args['overlap_layer_tbl'])
         
         reg_overlap_table = {'CommGF_Fish': 2.00, 'CommSalmonTroll_Fish': 1.50,
