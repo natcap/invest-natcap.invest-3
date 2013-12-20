@@ -68,7 +68,7 @@
                     "dataType": "float",
                     "required": true,
                     "enabledBy" : "grid",
-                    "defaultValue": "10000",
+                    "defaultValue": "5000",
                     "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
                 },
                 {
@@ -105,7 +105,7 @@
             "collapsible" : true,
             "args_id" : "global_data",
             "label" : "Use global datasets.",
-            "defaultValue" : true,
+            "defaultValue" : false,
             "helpText": "For more information see <a href=\"../documentation/recreation.html#table-99\">Standard Predictors</a>",
             "elements" : [
                 {
@@ -117,7 +117,7 @@
                             "args_id" : "landscan",
                             "type": "checkbox",
                             "label": "Population",
-                            "defaultValue": true,
+                            "defaultValue": false,
                             "required": false,
                             "helpText": "2010 <a href=\"http://www.ornl.gov/sci/landscan\">Landscan</a> global distribution of ambient population from <a href=\"http://www.ornl.gov\">ORNL</a>"
                         }                   
@@ -200,7 +200,7 @@
                     "type": "container",
                     "defaultValue" : false,
                     "collapsible" : true,
-                    "label": "Land Use and Land Coverage",
+                    "label": "Land Use and Land Coverage (requires long processing times)",
                     "elements" : [
                         {
                             "id": "lulc_list",
