@@ -3,6 +3,8 @@ import tables as tb
 import gdal
 
 from invest_natcap import raster_utils
+#import pytable_tracer_cython
+
 
 ds_args = {
     'ds1': './test/invest-data/test/data/base_data/terrestrial/lulc_samp_cur',
