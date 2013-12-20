@@ -696,7 +696,7 @@ def execute(args, config):
             msg = copy.copy(inst.message)
         else:
             msg = str(type(inst))
-        msg = msg.repalce(",", "").replace(".", "")
+        msg = msg.replace(",", "").replace(".", "")
         if msg[-1] != ".":
             msg = msg + "."
             
