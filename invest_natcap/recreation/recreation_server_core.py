@@ -1256,7 +1256,7 @@ def clip_sql(in_table_name, in_table_column, mask_name, mask_column,
     """Constructs a SQL query to do a spatial clip using PostGIS.
     """
     columnsql = ",".join(["ST_Intersection(%s.%s,%s.%s) AS %s"] + extra_columns)
-    LOGGER.debug("Constructing sql query for clip.")
+    LOGGER.debug("Constructing SQL query for clip.")
     sql = "CREATE TEMPORARY TABLE %s AS (SELECT "
     sql = sql + columnsql
     sql = sql + (" FROM %s, %s WHERE ST_Intersects(%s.%s,%s.%s) "
@@ -1279,6 +1279,7 @@ def clip_execute(cur, in_table_name, in_table_column, mask_name, mask_column,
     """
     sql = clip_sql(in_table_name, in_table_column, mask_name, mask_column,
                    out_table_name, extra_columns)
+    LOGGER.debug("Executing SQL query for clip.")
     cur.execute(sql)
 
 
@@ -1856,3 +1857,16 @@ def single_area_execute(cur, table_name, geo_column_name):
     area, = cur.fetchone()
 
     return area
+
+def raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name):
+    sql = "CREATE TEMPORARY TABLE %s AS"
+    " (SELECT (ST_Intersection(%s.%s, %s.%s)).*"
+    " FROM %s, %s WHERE ST_Intersects(%s.%s, %s.%s))"
+
+    sql = sql % (clip_name,
+                 raster_name, raster_column_name, aoi_name, geo_column_name,
+                 raster_name, raster_column_name, aoi_name, geo_column_name)
+
+def raster_clip_execute(cur, raster_name, rast_column_name, aoi_name, geo_column_name, clip_name):
+    sql = raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name)
+    cur.execute(sql)
