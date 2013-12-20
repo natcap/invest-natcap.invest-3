@@ -308,6 +308,15 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
+    def assertMatrixes(self, matrix_a, matrix_b, decimal=6):
+        """Tests if the input numpy matrices are equal up to decimal places.
+
+            matrix_a - a numpy matrix
+            matrix_b - a numpy matrix
+            decimal - an integer of the desired precision."""
+
+        numpy.testing.assert_array_almost_equal(matrix_a, matrix_b, decimal)
+
     def assertArchives(self, archive_1_uri, archive_2_uri):
         """Unzip the two archives and compare its contents.  Archives must be
             tar.gz."""
