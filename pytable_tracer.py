@@ -3,7 +3,7 @@ import tables as tb
 import gdal
 
 from invest_natcap import raster_utils
-#import pytable_tracer_cython
+import pytable_tracer_cython
 
 
 ds_args = {
