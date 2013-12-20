@@ -93,7 +93,7 @@
                     "args_id" : "download",
                     "type": "checkbox",
                     "label": "Download Data",
-                    "defaultValue": true,
+                    "defaultValue": false,
                     "required": false,
                     "helpText": "Includes the processed unrestricted data (including from the data directory) in the results, which could be useful for scenarios."
                 }
