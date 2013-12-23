@@ -3,6 +3,7 @@ import tempfile
 import time
 import logging
 import sys
+import tables
 
 import numpy
 cimport numpy
@@ -78,20 +79,32 @@ def calculate_transport(
     source_data_file = tempfile.TemporaryFile()
     absorption_rate_data_file = tempfile.TemporaryFile()
 
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
-        outflow_direction_uri, outflow_direction_data_file)
-
-    #TODO: This is hard-coded because load memory mapped array doesn't return a nodata value
+    outflow_direction_data_uri = raster_utils.temporary_filename()
+    outflow_direction_carray = raster_utils.load_dataset_to_carray(
+        outflow_direction_uri, outflow_direction_data_uri)        
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = (
+        outflow_direction_carray[:])
+    
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = raster_utils.load_memory_mapped_array(
-        outflow_weights_uri, outflow_weights_data_file)
-    cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = raster_utils.load_memory_mapped_array(
-        source_uri, source_data_file, numpy.dtype('float32'))
-    cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
-        absorption_rate_uri, absorption_rate_data_file)
 
+    outflow_weights_data_uri = raster_utils.temporary_filename()
+    outflow_weights_carray = raster_utils.load_dataset_to_carray(
+        outflow_weights_uri, outflow_weights_data_uri)        
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = (
+        outflow_weights_carray[:])
+    
+    cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
+    source_data_uri = raster_utils.temporary_filename()
+    source_carray = raster_utils.load_dataset_to_carray(
+        source_uri, source_data_uri)        
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = source_carray[:]
+    
+    cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
+    absorption_rate_data_uri = raster_utils.temporary_filename()
+    absorption_rate_carray = raster_utils.load_dataset_to_carray(
+        absorption_rate_uri, absorption_rate_data_uri)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = absorption_rate_carray[:]
+    
     #Create output arrays for loss and flux
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
@@ -100,10 +113,18 @@ def calculate_transport(
     loss_data_file = tempfile.TemporaryFile()
     flux_data_file = tempfile.TemporaryFile()
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
-                              shape=(n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
-                              shape=(n_rows, n_cols))
+    
+    loss_data_uri = raster_utils.temporary_filename()
+    loss_carray = raster_utils.create_carray(loss_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = loss_carray[:]
+    #numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
+    #                          shape=(n_rows, n_cols))
+    
+    flux_data_uri = raster_utils.temporary_filename()
+    flux_carray = raster_utils.create_carray(flux_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = flux_carray[:]
+        #numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
+        #                      shape=(n_rows, n_cols))
     loss_array[:] = transport_nodata
     flux_array[:] = transport_nodata
 
