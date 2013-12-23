@@ -2632,23 +2632,23 @@ def load_dataset_to_carray(ds_uri, h5file_uri):
         
         returns chunked array representing the original gdal dataset"""
     
-    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16,
-                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32,
-                      gdal.GDT_Byte]
-    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32,
-                        gdal.GDT_Float64, gdal.GDT_Float32]
-
     ds = gdal.Open(ds_uri)
     band = ds.GetRasterBand(1)
     gdal_type = band.DataType
     
-    if gdal_type in gdal_int_types:
-        table_type = tables.Int32Atom()
-    if gdal_type in gdal_float_types:
-        table_type = tables.Float32Atom()
-  
+    map_gdal_type_to_atom = {
+        gdal.GDT_Int16: tables.Int16Atom(),
+        gdal.GDT_Int32: tables.Int32Atom(),
+        gdal.GDT_UInt16: tables.UInt16Atom(),
+        gdal.GDT_UInt32: tables.UInt32Atom(),
+        gdal.GDT_Byte: tables.Int8Atom(),
+        gdal.GDT_Float64: tables.Float64Atom(), 
+        gdal.GDT_Float32: tables.Float32Atom()
+    }
+    
     carray = create_carray(
-        h5file_uri, table_type, (ds.RasterYSize, ds.RasterXSize))
+        h5file_uri, map_gdal_type_to_atom[gdal_type],
+        (ds.RasterYSize, ds.RasterXSize))
     
     for row_index in xrange(ds.RasterYSize):
         carray[row_index,:] = band.ReadAsArray(
