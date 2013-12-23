@@ -13,6 +13,7 @@ import collections
 import exceptions
 import multiprocessing
 import multiprocessing.pool
+import tables
 
 from osgeo import gdal
 from osgeo import osr
@@ -2580,6 +2581,7 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
 
     return itemfreq
 
+    
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_values=[], option_list=[]):
     """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
@@ -2607,3 +2609,49 @@ def rasterize_layer_uri(
         
     raster = None
     shapefile = None
+
+    
+def create_carray(h5file_uri, type, shape):
+    """Creates an empty pytables chunked array given a file type and size.
+    
+        h5file_uri - a uri to store the carray
+        type - an h5file type
+        shape - a tuple indicating rows/columns"""
+        
+    h5file = tables.openFile(h5file_uri, mode='w')
+    root = h5file.root
+    return h5file.createCArray(
+        root, 'from_create_carray', type, shape=shape)
+
+
+def load_dataset_to_carray(ds_uri, h5file_uri):
+    """Loads a GDAL dataset into a h5file chunked array.
+    
+        ds_uri - uri to a GDAL dataset
+        h5file_uri - uri to a file that the chunked array will exist on disk
+        
+        returns chunked array representing the original gdal dataset"""
+    
+    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16,
+                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32,
+                      gdal.GDT_Byte]
+    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32,
+                        gdal.GDT_Float64, gdal.GDT_Float32]
+
+    ds = gdal.Open(ds_uri)
+    band = ds.GetRasterBand(1)
+    gdal_type = band.DataType
+    
+    if gdal_type in gdal_int_types:
+        table_type = tables.Int32Atom()
+    if gdal_type in gdal_float_types:
+        table_type = tables.Float32Atom()
+  
+    carray = create_carray(
+        h5file_uri, table_type, (ds.RasterYSize, ds.RasterXSize))
+    
+    for row_index in xrange(ds.RasterYSize):
+        carray[row_index,:] = band.ReadAsArray(
+            0, row_index, ds.RasterXSize, 1)[0]
+    
+    return carray
