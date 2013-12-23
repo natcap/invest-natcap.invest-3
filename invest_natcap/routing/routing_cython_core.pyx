@@ -304,14 +304,23 @@ def calculate_flow_graph(
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
 
     outflow_weight_data_file = tempfile.TemporaryFile()
-
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = numpy.memmap(outflow_weight_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+    
+    outflow_weights_data_uri = raster_utils.temporary_filename()
+    outflow_weights_carray = raster_utils.create_carray(
+        outflow_weights_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = (
+        outflow_weights_carray[:])
+        #numpy.memmap(outflow_weight_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
 
     outflow_direction_data_file = tempfile.TemporaryFile()
 
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = numpy.memmap(outflow_direction_data_file, dtype=numpy.byte, mode='w+', shape=(n_rows, n_cols))
+    outflow_direction_data_uri = raster_utils.temporary_filename()
+    outflow_direction_carray = raster_utils.create_carray(
+        outflow_direction_data_uri, tables.Int8Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_carray[:]
+    #numpy.memmap(outflow_direction_data_file, dtype=numpy.byte, mode='w+', shape=(n_rows, n_cols))
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
@@ -326,8 +335,14 @@ def calculate_flow_graph(
     cdef double *angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
 
     flow_direction_memory_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
-        flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+    flow_direction_data_uri = raster_utils.temporary_filename()
+    flow_direction_carray = raster_utils.load_dataset_to_carray(
+        flow_direction_uri, flow_direction_data_uri)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
+        flow_direction_carray[:])
+    
+    #raster_utils.load_memory_mapped_array(
+    #    flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
 
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     cdef int *diagonal_offsets = \
