@@ -335,9 +335,6 @@ def calculate_flow_graph(
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
         flow_direction_carray[:])
     
-    #raster_utils.load_memory_mapped_array(
-    #    flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
-
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     cdef int *diagonal_offsets = \
         [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
@@ -825,9 +822,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     dem_data_file = tempfile.TemporaryFile()
     flow_data_file = tempfile.TemporaryFile()
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
-        raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
+    dem_data_uri = raster_utils.temporary_filename()
+    dem_carray = raster_utils.load_dataset_to_carray(
+        dem_uri, dem_data_uri)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (dem_carray[:]).astype(numpy.float32)
+
+    #these outputs should become carrays
     dem_offset, sink_offset,edge_offset = resolve_flat_regions_for_drainage(dem_array, dem_nodata)
+
     raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
@@ -851,8 +853,11 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     n_cols = dem_dataset.RasterXSize
 
     #This matrix holds the flow direction value, initialize to flow_nodata
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
-        raster_utils.load_memory_mapped_array(flow_direction_uri, flow_data_file, array_type=numpy.float32)
+    flow_data_uri = raster_utils.temporary_filename()
+    flow_carray = raster_utils.load_dataset_to_carray(
+        flow_direction_uri, flow_data_uri)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = flow_carray[:]
+#        raster_utils.load_memory_mapped_array(flow_direction_uri, flow_data_file, array_type=numpy.float32)
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
