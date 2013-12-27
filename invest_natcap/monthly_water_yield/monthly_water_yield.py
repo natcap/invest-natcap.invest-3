@@ -92,17 +92,18 @@ def execute(args):
     # All intermediate and output rasters should be based on the DEM's cell size
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     
-    # Calculate the slope raster from the DEM
-    LOGGER.info("calculating slope")
-    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_uri, slope_uri)
-    
     #Clip the dem and cast to a float
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
     raster_utils.vectorize_datasets(
         [dem_uri], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
         aoi_uri=watershed_uri)
+    
+    # Calculate the slope raster from the DEM
+    LOGGER.info("calculating slope")
+    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
+    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
@@ -141,8 +142,7 @@ def execute(args):
     # Align Datasets call
     raster_utils.align_dataset_list(
         uris_to_align, aligned_uris, ['nearest'] * 6, dem_cell_size,
-        'dataset', 1, dataset_to_bound_index=1,
-        assert_datasets_projected=True)
+        'intersection', 0, assert_datasets_projected=True)
     
     # Set a flag to True if sub watersheds was provided as an input
     try:
@@ -334,20 +334,32 @@ def execute(args):
             # fields
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, tmp_out_uri)
-            # Clipped the new raster to the watersheds
-            raster_utils.clip_dataset_uri(
-                    tmp_out_uri, watershed_uri, out_uri, True)
+                    
+            def mask_slope(pixel, slope_pixel):
+                """Vectorize function that masks input raster to the slope
+                    raster
+
+                    returns - pixel if not slope_nodata else nodata"""
+                if pixel == float_nodata or slope_pixel == slope_nodata:
+                    return float_nodata
+                else:
+                    return pixel
+
+            # Create initial S_t-1 for now. Set all values to 0.0
+            LOGGER.debug("Initialize Soil Storage Raster")
+            raster_utils.vectorize_datasets(
+                    [tmp_out_uri, slope_aligned_uri], mask_slope, out_uri,
+                    gdal.GDT_Float32, float_nodata, dem_cell_size,
+                    'intersection', aoi_uri=watershed_uri)
 
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                dem_uri, precip_uri, absorption_uri, dflow_uri,
+                dem_aligned_uri, precip_uri, absorption_uri, dflow_uri,
                 total_precip_uri, in_source_uri, float_nodata, watershed_uri)
         
         # Calculate water amount (W)
         clean_uri([water_uri])
-        # NOTE: using 'imperv_area_uri' not 'imperv_stream_uri' which has
-        # masked values of 1.0 where there are streams.
         calculate_water_amt(
                 imperv_stream_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
