@@ -340,7 +340,7 @@ def execute(args):
                     raster
 
                     returns - pixel if not slope_nodata else nodata"""
-                if pixel == float_nodata or slope_pixel == slope_nodata:
+                if pixel == float_nodata or slope_pixel == float_nodata:
                     return float_nodata
                 else:
                     return pixel
