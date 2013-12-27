@@ -9,7 +9,6 @@ import logging
 
 import invest_test_core
 
-from invest_natcap.overlap_analysis import overlap_analysis_core
 from invest_natcap.overlap_analysis import overlap_core
 from invest_natcap.overlap_analysis import overlap_analysis
 

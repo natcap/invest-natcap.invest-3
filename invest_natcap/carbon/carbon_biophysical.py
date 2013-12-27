@@ -62,6 +62,9 @@ def execute_30(**args):
 
         returns a dict with the names of all output files."""
 
+    if '_process_pool' not in args:
+        args['_process_pool'] = None
+
     file_suffix = carbon_utils.make_suffix(args)
     dirs = carbon_utils.setup_dirs(args['workspace_dir'],
                                    'output', 'intermediate')

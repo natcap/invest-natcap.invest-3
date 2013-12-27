@@ -42,7 +42,8 @@ def execute(args):
         args['do_intra']- Boolean which indicates whether or not intra-activity
             weighting is desired. This will will pull attributes from shapefiles
             passed in in 'zone_layer_uri'
-            
+        args['do_hubs']- Boolean which indicates if human use hubs are desired. 
+
         --Optional--
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
             and identifier data for all layers being passed in within the
@@ -58,8 +59,8 @@ def execute(args):
     Returns nothing.'''
 
     workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'Output')
+    intermediate_dir = os.path.join(workspace, 'Intermediate')
     raster_utils.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
@@ -107,6 +108,7 @@ def execute(args):
         hubs_rast = gdal.Open(hubs_out_uri)
     else:
         hubs_rast = None
+        hubs_out_uri = None
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
@@ -464,7 +466,7 @@ def create_weighted_raster(
             dataset_to_align_index=0)
     else:
         raster_utils.vectorize_datasets(
-            weighted_raster_uris, combine_weighted_pixels, outgoing_uri,
+            raster_uris, combine_weighted_pixels, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0)
              

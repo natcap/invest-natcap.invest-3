@@ -185,9 +185,8 @@ def calculate_transport(
                 absorption_rate = (
                     absorption_rate_array[current_row, current_col])
                 loss_array[current_row, current_col] = (
-                    (1 - absorption_rate) * flux_array[current_row, current_col])
-                flux_array[current_row, current_col] *= absorption_rate
-
+                    absorption_rate * flux_array[current_row, current_col])
+                flux_array[current_row, current_col] *= (1 - absorption_rate)
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
@@ -227,11 +226,11 @@ def calculate_transport(
                 absorption_rate = \
                     absorption_rate_array[current_row, current_col]
 
-                flux_array[current_row, current_col] += \
-                    outflow_weight * in_flux * (1.0 - absorption_rate)
+                flux_array[current_row, current_col] += (
+                    outflow_weight * in_flux * (1.0 - absorption_rate))
 
-                loss_array[current_row, current_col] += \
-                    outflow_weight * in_flux * absorption_rate
+                loss_array[current_row, current_col] += (
+                    outflow_weight * in_flux * absorption_rate)
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
