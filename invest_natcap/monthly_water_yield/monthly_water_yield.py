@@ -348,7 +348,7 @@ def execute(args):
             # Create initial S_t-1 for now. Set all values to 0.0
             LOGGER.debug("Initialize Soil Storage Raster")
             raster_utils.vectorize_datasets(
-                    [tmp_out_uri, slope_aligned_uri], mask_slope, out_uri,
+                    [tmp_out_uri, absorption_uri], mask_slope, out_uri,
                     gdal.GDT_Float32, float_nodata, dem_cell_size,
                     'intersection', aoi_uri=watershed_uri)
 
@@ -1260,7 +1260,7 @@ def calculate_direct_flow(
     # CALCULATE ROUTE_FLUX
     routing_utils.route_flux(
         dem_uri, precip_uri, in_absorption_uri, temp_uri, dt_out_uri,
-        'source_and_flux')
+        'source_and_flux', aoi_uri = watershed_uri)
 
     #Use Dt and precip to calculate tp (Equation 2)
     monthly_water_yield_cython_core.calculate_tp(
