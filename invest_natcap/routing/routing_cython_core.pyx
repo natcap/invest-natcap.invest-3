@@ -896,11 +896,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef float max_r = numpy.pi / 4.0
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window = dem_array[:]
+
     for col_index in range(1, n_cols - 1):
         for row_index in range(1, n_rows - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_array[row_index, col_index] == dem_nodata:
+            if dem_window[row_index, col_index] == dem_nodata:
                 flow_array[row_index, col_index] = flow_nodata
                 continue
 
@@ -914,12 +917,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             
             for facet_index in range(8):
                 #This defines the three height points
-                e_0 = dem_array[e_0_offsets[facet_index*2+0] + row_index,
-                                e_0_offsets[facet_index*2+1] + col_index]
-                e_1 = dem_array[e_1_offsets[facet_index*2+0] + row_index,
-                                e_1_offsets[facet_index*2+1] + col_index]
-                e_2 = dem_array[e_2_offsets[facet_index*2+0] + row_index,
-                                e_2_offsets[facet_index*2+1] + col_index]
+                e_0 = dem_window[e_0_offsets[facet_index*2+0] + row_index,
+                                 e_0_offsets[facet_index*2+1] + col_index]
+                e_1 = dem_window[e_1_offsets[facet_index*2+0] + row_index,
+                                 e_1_offsets[facet_index*2+1] + col_index]
+                e_2 = dem_window[e_2_offsets[facet_index*2+0] + row_index,
+                                 e_2_offsets[facet_index*2+1] + col_index]
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
