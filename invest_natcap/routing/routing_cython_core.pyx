@@ -117,14 +117,11 @@ def calculate_transport(
     loss_data_uri = raster_utils.temporary_filename()
     loss_carray = raster_utils.create_carray(loss_data_uri, tables.Float32Atom(), (n_rows, n_cols))
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = loss_carray[:]
-    #numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
-    #                          shape=(n_rows, n_cols))
     
     flux_data_uri = raster_utils.temporary_filename()
     flux_carray = raster_utils.create_carray(flux_data_uri, tables.Float32Atom(), (n_rows, n_cols))
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = flux_carray[:]
-        #numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
-        #                      shape=(n_rows, n_cols))
+
     loss_array[:] = transport_nodata
     flux_array[:] = transport_nodata
 
@@ -309,7 +306,6 @@ def calculate_flow_graph(
         outflow_weights_data_uri, tables.Float32Atom(), (n_rows, n_cols))
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = (
         outflow_weights_carray[:])
-        #numpy.memmap(outflow_weight_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
 
@@ -319,7 +315,6 @@ def calculate_flow_graph(
     outflow_direction_carray = raster_utils.create_carray(
         outflow_direction_data_uri, tables.Int8Atom(), (n_rows, n_cols))
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_carray[:]
-    #numpy.memmap(outflow_direction_data_file, dtype=numpy.byte, mode='w+', shape=(n_rows, n_cols))
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
