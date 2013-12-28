@@ -816,7 +816,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     flow_band = flow_direction_dataset.GetRasterBand(1)
 
     LOGGER.info("loading DEM")
-    dem_data_file = tempfile.TemporaryFile()
     flow_data_file = tempfile.TemporaryFile()
 
     dem_data_uri = raster_utils.temporary_filename()
@@ -832,21 +831,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
-    dem_offset_dataset = gdal.Open(flow_direction_uri + 'dem_offest.tif', gdal.GA_Update)
-    dem_offset_band = dem_offset_dataset.GetRasterBand(1)
-    dem_offset_band.WriteArray(dem_offset)
-    raster_utils.new_raster_from_base(
-        dem_dataset, flow_direction_uri + 'sink_offest.tif', 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
-    sink_offset_dataset = gdal.Open(flow_direction_uri + 'sink_offest.tif', gdal.GA_Update)
-    sink_offset_band = sink_offset_dataset.GetRasterBand(1)
-    sink_offset_band.WriteArray(sink_offset)
-    raster_utils.new_raster_from_base(
-        dem_dataset, flow_direction_uri + 'edge_offest.tif', 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
-    edge_offset_dataset = gdal.Open(flow_direction_uri + 'edge_offest.tif', gdal.GA_Update)
-    edge_offset_band = edge_offset_dataset.GetRasterBand(1)
-    edge_offset_band.WriteArray(edge_offset)
     
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
