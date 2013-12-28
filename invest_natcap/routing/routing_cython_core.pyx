@@ -777,7 +777,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
         dem_offset += dem_edge_offset
     
     dem_python_array += dem_offset * numpy.float(1.0/10000.0)
-    return dem_offset, dem_sink_offset, dem_edge_offset
 
     
 def flow_direction_inf(dem_uri, flow_direction_uri):
@@ -824,7 +823,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     #these outputs should become carrays
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_carray[:]
-    dem_offset, sink_offset, edge_offset = resolve_flat_regions_for_drainage(dem_array, dem_nodata)
+    resolve_flat_regions_for_drainage(dem_array, dem_nodata)
     #write the offsets back to the c array
     dem_carray[:] = dem_array[:]
 
