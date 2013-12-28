@@ -2624,17 +2624,20 @@ def create_carray(h5file_uri, type, shape):
         root, 'from_create_carray', type, shape=shape)
 
 
-def load_dataset_to_carray(ds_uri, h5file_uri):
+def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
     """Loads a GDAL dataset into a h5file chunked array.
     
         ds_uri - uri to a GDAL dataset
         h5file_uri - uri to a file that the chunked array will exist on disk
-        
+        array_type - (optional) if specified is a GDAL type for what the output
+            array should be cast to
+
         returns chunked array representing the original gdal dataset"""
     
     ds = gdal.Open(ds_uri)
     band = ds.GetRasterBand(1)
-    gdal_type = band.DataType
+    if array_type is None:
+        array_type = band.DataType
     
     map_gdal_type_to_atom = {
         gdal.GDT_Int16: tables.Int16Atom(),
@@ -2647,7 +2650,7 @@ def load_dataset_to_carray(ds_uri, h5file_uri):
     }
     
     carray = create_carray(
-        h5file_uri, map_gdal_type_to_atom[gdal_type],
+        h5file_uri, map_gdal_type_to_atom[array_type],
         (ds.RasterYSize, ds.RasterXSize))
     
     for row_index in xrange(ds.RasterYSize):
