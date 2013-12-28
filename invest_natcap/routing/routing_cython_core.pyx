@@ -697,9 +697,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef int row_index, col_index
 
-
-    
-
     #Identify sink cells
     LOGGER.info('identify sink cells')
     sink_cell_list = []
@@ -824,11 +821,13 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
-        dem_uri, dem_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (dem_carray[:]).astype(numpy.float32)
+        dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
 
     #these outputs should become carrays
-    dem_offset, sink_offset,edge_offset = resolve_flat_regions_for_drainage(dem_array, dem_nodata)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_carray[:]
+    dem_offset, sink_offset, edge_offset = resolve_flat_regions_for_drainage(dem_array, dem_nodata)
+    #write the offsets back to the c array
+    dem_carray[:] = dem_array[:]
 
     raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
@@ -897,13 +896,36 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window = dem_array[:]
+    cdef int w_n_cols = 10240
+    cdef int w_n_rows = 10240
+    cdef int ul_row = 0
+    cdef int ul_col = 0
+    cdef int w_col_index
+    cdef int w_row_index
 
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window = dem_carray[
+        ul_row:ul_row+w_n_cols, ul_col:ul_col+w_n_cols]
     for col_index in range(1, n_cols - 1):
         for row_index in range(1, n_rows - 1):
+            if (col_index <= ul_col or col_index >= ul_col + w_n_cols - 1 or
+                row_index <= ul_row or row_index >= ul_row + w_n_rows - 1):
+                #we're out of a window, reload DEM
+                LOGGER.debug("we're out of a window, reload DEM original shape %d, %d" % (dem_window.shape[0], dem_window.shape[1]))
+                ul_col = col_index - w_n_cols / 2
+                ul_row = row_index - w_n_rows / 2
+
+                if ul_col < 0: ul_col = 0
+                if ul_row < 0: ul_row = 0
+
+                dem_window = (
+                    dem_carray[ul_row:ul_row+w_n_cols,
+                               ul_col:ul_col+w_n_cols].astype(numpy.float32))
+
+            w_col_index = col_index - ul_col
+            w_row_index = row_index - ul_row
 
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_window[row_index, col_index] == dem_nodata:
+            if dem_window[w_row_index, w_col_index] == dem_nodata:
                 flow_array[row_index, col_index] = flow_nodata
                 continue
 
@@ -917,12 +939,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             
             for facet_index in range(8):
                 #This defines the three height points
-                e_0 = dem_window[e_0_offsets[facet_index*2+0] + row_index,
-                                 e_0_offsets[facet_index*2+1] + col_index]
-                e_1 = dem_window[e_1_offsets[facet_index*2+0] + row_index,
-                                 e_1_offsets[facet_index*2+1] + col_index]
-                e_2 = dem_window[e_2_offsets[facet_index*2+0] + row_index,
-                                 e_2_offsets[facet_index*2+1] + col_index]
+                e_0 = dem_window[e_0_offsets[facet_index*2+0] + w_row_index,
+                                 e_0_offsets[facet_index*2+1] + w_col_index]
+                e_1 = dem_window[e_1_offsets[facet_index*2+0] + w_row_index,
+                                 e_1_offsets[facet_index*2+1] + w_col_index]
+                e_2 = dem_window[e_2_offsets[facet_index*2+0] + w_row_index,
+                                 e_2_offsets[facet_index*2+1] + w_col_index]
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
