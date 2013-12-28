@@ -672,13 +672,13 @@ cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row
     return 0              
         
         
-def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
+def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
         in raster digital elevation models by Garbrecht and Martz (1997)
         
-        dem_array - a numpy floating point array that represents a digital
+        dem_carray - a chunked floating point array that represents a digital
             elevation model.  Any flat regions that would cause an undefined
             flow direction will be adjusted in height so that every pixel
             on the dem has a local defined slope.
@@ -689,7 +689,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
         returns nothing"""
 
     
-    cdef float[:, :] dem_array = dem_python_array
+    cdef float[:, :] dem_array = dem_carray[:]
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int n_rows = dem_array.shape[0]
@@ -776,7 +776,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
         dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
         dem_offset += dem_edge_offset
     
-    dem_python_array += dem_offset * numpy.float(1.0/10000.0)
+    dem_carray[:] += dem_offset * numpy.float(1.0/10000.0)
 
     
 def flow_direction_inf(dem_uri, flow_direction_uri):
@@ -810,8 +810,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     if dem_dataset.GetRasterBand(1).GetNoDataValue() != None:
         dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
     else:
-        #we don't have a nodata value, just make something small
-        dem_nodata = -1e6
+        #we don't have a nodata value, traditional one
+        dem_nodata = -9999
     flow_band = flow_direction_dataset.GetRasterBand(1)
 
     LOGGER.info("loading DEM")
@@ -822,10 +822,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
 
     #these outputs should become carrays
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_carray[:]
-    resolve_flat_regions_for_drainage(dem_array, dem_nodata)
-    #write the offsets back to the c array
-    dem_carray[:] = dem_array[:]
+    resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
     raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
@@ -839,7 +836,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     flow_carray = raster_utils.load_dataset_to_carray(
         flow_direction_uri, flow_data_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = flow_carray[:]
-#        raster_utils.load_memory_mapped_array(flow_direction_uri, flow_data_file, array_type=numpy.float32)
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -879,33 +875,25 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
 
-    cdef int w_n_cols = 10240
-    cdef int w_n_rows = 10240
-    cdef int ul_row = 0
-    cdef int ul_col = 0
+    cdef int w_n_cols = n_cols
+    cdef int w_n_rows = 3
+    cdef int w_ul_row = 0
+    cdef int w_ul_col = 0
     cdef int w_col_index
     cdef int w_row_index
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window = dem_carray[
-        ul_row:ul_row+w_n_cols, ul_col:ul_col+w_n_cols]
-    for col_index in range(1, n_cols - 1):
-        for row_index in range(1, n_rows - 1):
-            if (col_index <= ul_col or col_index >= ul_col + w_n_cols - 1 or
-                row_index <= ul_row or row_index >= ul_row + w_n_rows - 1):
-                #we're out of a window, reload DEM
-                LOGGER.debug("we're out of a window, reload DEM original shape %d, %d" % (dem_window.shape[0], dem_window.shape[1]))
-                ul_col = col_index - w_n_cols / 2
-                ul_row = row_index - w_n_rows / 2
-
-                if ul_col < 0: ul_col = 0
-                if ul_row < 0: ul_row = 0
-
-                dem_window = (
-                    dem_carray[ul_row:ul_row+w_n_cols,
-                               ul_col:ul_col+w_n_cols].astype(numpy.float32))
-
-            w_col_index = col_index - ul_col
-            w_row_index = row_index - ul_row
+        w_ul_row:w_ul_row+w_n_rows, w_ul_col:w_ul_col+w_n_cols]
+    for row_index in range(1, n_rows - 1):
+        if row_index >= w_ul_row + w_n_rows - 1:
+            #we're out of a window, reload DEM
+            w_ul_row = row_index - 1
+            dem_window = (
+                dem_carray[w_ul_row:w_ul_row+w_n_rows,
+                           w_ul_col:w_ul_col+w_n_cols])
+        w_row_index = row_index - w_ul_row
+        for col_index in range(1, n_cols - 1):
+            w_col_index = col_index - w_ul_col
 
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[w_row_index, w_col_index] == dem_nodata:
