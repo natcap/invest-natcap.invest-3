@@ -700,7 +700,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
-    cdef float[:, :] dem_array = dem_carray[:]
+    cdef float[:,:] dem_array
     for row_index in range(n_rows):
         #In general get a 5 row window, but on the upper and lower borders just
         #get a 3 row window
