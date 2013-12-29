@@ -654,7 +654,7 @@ cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row
 cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, float[:, :] dem_array, float nodata_value):
     cdef int neighbor_row_index, neighbor_col_index
     if dem_array[row_index, col_index] == nodata_value: return 0
-            
+    
     if _is_flat(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
         return 0
     
@@ -665,7 +665,7 @@ cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row
         neighbor_col_index = col_index + col_offsets[neighbor_index]
         if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
             continue
-        
+            
         if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
                 _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value)):
             return 1
@@ -689,21 +689,44 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         returns nothing"""
 
     
-    cdef float[:, :] dem_array = dem_carray[:]
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    cdef int n_rows = dem_array.shape[0]
-    cdef int n_cols = dem_array.shape[1]
+    cdef int n_rows = dem_carray.shape[0]
+    cdef int n_cols = dem_carray.shape[1]
     cdef queue[Row_Col_Weight_Tuple] sink_queue
-    cdef int row_index, col_index
+    cdef int row_index, col_index, current_row_index, current_n_rows
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
+    cdef float[:, :] dem_array = dem_carray[:]
     for row_index in range(n_rows):
+        #In general get a 5 row window, but on the upper and lower borders just
+        #get a 3 row window
+        if row_index == 0:
+            dem_array = dem_carray[0:3,:]
+            current_row_index = 0
+            current_n_rows = 3
+        elif row_index == 1:
+            dem_array = dem_carray[0:4,:]
+            current_row_index = 1
+            current_n_rows = 4
+        elif row_index == n_rows - 1:
+            dem_array = dem_carray[n_rows-3:n_rows,:]
+            current_row_index = 2
+            current_n_rows = 3
+        elif row_index == n_rows - 2:
+            dem_array = dem_carray[n_rows-4:n_rows,:]
+            current_row_index = 2
+            current_n_rows = 4
+        else:
+            dem_array = dem_carray[row_index-2:row_index+3,:]
+            current_row_index = 2
+            current_n_rows = 5
+        
         for col_index in range(n_cols):
-            if _is_sink(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
+            if _is_sink(current_row_index, col_index, current_n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
 
@@ -718,6 +741,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
+    
+    #need to memory optimize this dem array
+    dem_array = dem_carray[:]
     while sink_queue.size() > 0:
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
@@ -861,7 +887,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         (1, n_cols), dtype=numpy.float32)
     
     LOGGER.info("calculating d-inf per pixel flows")
-    #This numpy array will be a 3 row window for the whole dem carray so we
+    #This array will be a 3 row window for the whole dem carray so we
     #don't need to hold it in memory, loading 3 rows at a time is almost as 
     #fast as loading the entire array in memory (I timed it)
     cdef float[:, :] dem_window
