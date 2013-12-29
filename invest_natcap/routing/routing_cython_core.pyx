@@ -864,7 +864,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     #This numpy array will be a 3 row window for the whole dem carray so we
     #don't need to hold it in memory, loading 3 rows at a time is almost as 
     #fast as loading the entire array in memory (I timed it)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window
+    cdef float[:, :] dem_window
     
     for row_index in range(1, n_rows - 1):
         #We load 3 rows at a time
