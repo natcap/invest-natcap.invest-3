@@ -813,16 +813,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
     resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
-    #Create a flow carray and respective dataset
-    flow_nodata = -9999
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
-    flow_data_uri = raster_utils.temporary_filename()
-    flow_carray = raster_utils.load_dataset_to_carray(
-        flow_direction_uri, flow_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = flow_carray[:]
-
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
     #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
@@ -858,22 +848,34 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
     d_2 = d_1
     cdef float max_r = numpy.pi / 4.0
+    
+    #Create a flow carray and respective dataset
+    flow_nodata = -9999
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
+    flow_band = flow_direction_dataset.GetRasterBand(1)
+    #we'll write into this array and save every row
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = numpy.empty(
+        (1, n_cols), dtype=numpy.float32)
+    
     LOGGER.info("calculating d-inf per pixel flows")
     #This numpy array will be a 3 row window for the whole dem carray so we
     #don't need to hold it in memory, loading 3 rows at a time is almost as 
     #fast as loading the entire array in memory (I timed it)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window
+    
     for row_index in range(1, n_rows - 1):
         #We load 3 rows at a time
         dem_window = dem_carray[row_index - 1:row_index + 2, :]
+        #clear out the flow array from the previous loop
+        flow_array[:] = flow_nodata
         for col_index in range(1, n_cols - 1):
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[1, col_index] == dem_nodata:
-                flow_array[row_index, col_index] = flow_nodata
                 continue
-            if flow_array[row_index, col_index] != flow_nodata:
-                continue
-
+            
             #Calculate the flow flow_direction for each facet
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
@@ -892,7 +894,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
                     #If any neighbors are nodata, it's contaminated
-                    flow_array[row_index, col_index] = flow_nodata
                     break
 
                 #s_1 is slope along straight edge
@@ -925,14 +926,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 # that caused the above algorithm to break out 
                 #Calculate the global angle depending on the max slope facet
                 if slope_max > 0:
-                    flow_array[row_index, col_index] = \
-                        a_f[max_index] * flow_direction_max_slope + \
-                        a_c[max_index] * 3.14159265 / 2.0
+                    flow_array[0, col_index] = (
+                        a_f[max_index] * flow_direction_max_slope +
+                        a_c[max_index] * 3.14159265 / 2.0)
+        #save the current flow row
+        flow_band.WriteArray(flow_array, 0, row_index)
 
-    LOGGER.info("writing flow data to raster")
-    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
-    flow_band = flow_direction_dataset.GetRasterBand(1)
-    flow_band.WriteArray(flow_array)
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
