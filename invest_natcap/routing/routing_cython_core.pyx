@@ -800,24 +800,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
-    flow_nodata = -1.0
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
-
-    LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
-    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
     #need this if statement because dem_nodata is statically typed
     if raster_utils.get_nodata_from_uri(dem_uri) != None:
         dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     else:
         #we don't have a nodata value, traditional one
         dem_nodata = -9999
-    flow_band = flow_direction_dataset.GetRasterBand(1)
-
+    
     LOGGER.info("loading DEM")
-    flow_data_file = tempfile.TemporaryFile()
-
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
         dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
@@ -826,6 +816,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
     #This matrix holds the flow direction value, initialize to flow_nodata
+    flow_nodata = -1.0
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
     flow_data_uri = raster_utils.temporary_filename()
     flow_carray = raster_utils.load_dataset_to_carray(
         flow_direction_uri, flow_data_uri)
@@ -938,6 +932,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         a_c[max_index] * 3.14159265 / 2.0
 
     LOGGER.info("writing flow data to raster")
+    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
+    flow_band = flow_direction_dataset.GetRasterBand(1)
     flow_band.WriteArray(flow_array)
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
