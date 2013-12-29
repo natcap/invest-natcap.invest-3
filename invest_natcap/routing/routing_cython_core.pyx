@@ -807,16 +807,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         #we don't have a nodata value, traditional one
         dem_nodata = -9999
     
-    LOGGER.info("loading DEM")
+    #Load DEM and resolve plateaus
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
         dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
-
-    #these outputs should become carrays
     resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
-    #This matrix holds the flow direction value, initialize to flow_nodata
-    flow_nodata = -1.0
+    #Create a flow carray and respective dataset
+    flow_nodata = -9999
     raster_utils.new_raster_from_base_uri(
         dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
@@ -867,7 +865,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window
     for row_index in range(1, n_rows - 1):
         #We load 3 rows at a time
-        dem_window = dem_carray[row_index-1:row_index+2,:]
+        dem_window = dem_carray[row_index - 1:row_index + 2, :]
         for col_index in range(1, n_cols - 1):
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[1, col_index] == dem_nodata:
@@ -884,12 +882,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             for facet_index in range(8):
                 #This defines the three height points the +1 comes from the
                 #middle row of the dem_window
-                e_0 = dem_window[e_0_offsets[facet_index*2+0] + 1,
-                                 e_0_offsets[facet_index*2+1] + col_index]
-                e_1 = dem_window[e_1_offsets[facet_index*2+0] + 1,
-                                 e_1_offsets[facet_index*2+1] + col_index]
-                e_2 = dem_window[e_2_offsets[facet_index*2+0] + 1,
-                                 e_2_offsets[facet_index*2+1] + col_index]
+                e_0 = dem_window[e_0_offsets[facet_index * 2 + 0] + 1,
+                                 e_0_offsets[facet_index * 2 + 1] + col_index]
+                e_1 = dem_window[e_1_offsets[facet_index * 2 + 0] + 1,
+                                 e_1_offsets[facet_index * 2 + 1] + col_index]
+                e_2 = dem_window[e_2_offsets[facet_index * 2 + 0] + 1,
+                                 e_2_offsets[facet_index * 2 + 1] + col_index]
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
@@ -904,14 +902,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 
                 flow_direction = atan2(s_2, s_1) #Eqn 3
                 if flow_direction < 0: #Eqn 4
-                        #If the flow direction goes off one side, set flow
-                        #direction to that side and the slope to the straight line
-                        #distance slope
+                    #If the flow direction goes off one side, set flow
+                    #direction to that side and the slope to the straight line
+                    #distance slope
                     flow_direction = 0
                     slope = s_1
                 elif flow_direction > max_r: #Eqn 5
-                        #If the flow direciton goes off the diagonal side, figure
-                        #out what its value is and
+                    #If the flow direciton goes off the diagonal side, figure
+                    #out what its value is and
                     flow_direction = max_r
                     slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
                 else:
