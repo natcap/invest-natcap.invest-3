@@ -782,15 +782,17 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
+        
         Algorithm from: Tarboton, "A new method for the determination of flow
         directions and upslope areas in grid digital elevation models," Water
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
-       dem - (input) a single band GDAL Dataset with elevation values
-       bounding_box - (input) a 4 element array defining the GDAL read window
-           for dem and output on flow
-       flow - (output) a single band float raster of same dimensions as
-           dem.  After the function call it will have flow direction in it 
+        Also resolves flow directions in flat areas of DEM.
+        
+       dem_uri - a uri to a single band GDAL Dataset with elevation values
+       flow_direction_uri - a uri to write a single band float raster of same
+            dimensions.  After the function call it will have flow direction 
+            in it.
        
        returns nothing"""
 
