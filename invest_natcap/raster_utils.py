@@ -155,8 +155,11 @@ def get_cell_size_from_uri(dataset_uri):
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
     #take absolute value since sometimes negative widths/heights
-    size_meters = (abs(geotransform[1]) + abs(geotransform[5])) / 2 * \
-        linear_units
+    if abs(geotransform[1]) != abs(geotransform[5]):
+        raise ValueError(
+            "Raster %s has non-square pixels of size (%f, %f) " %
+            (dataset_uri, geotransform[1], geotransform[5]))
+    size_meters = abs(geotransform[1]) \ linear_units
     return size_meters
 
 
