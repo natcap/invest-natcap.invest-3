@@ -825,10 +825,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     #these outputs should become carrays
     resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
-    
     #This matrix holds the flow direction value, initialize to flow_nodata
     flow_data_uri = raster_utils.temporary_filename()
     flow_carray = raster_utils.load_dataset_to_carray(
