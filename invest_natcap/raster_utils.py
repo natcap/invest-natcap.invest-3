@@ -149,6 +149,14 @@ def get_statistics_from_uri(dataset_uri):
 
 
 def get_cell_size_from_uri(dataset_uri):
+    """Returns the cell size of the dataset in meters.  Raises an exception
+        if the raster is not square since this'll break most of the raster_utils
+        algorithms.
+        
+        dataset_uri - uri to a gdal dataset
+        
+        returns cell size of the dataset in meters"""
+        
     srs = osr.SpatialReference()
     dataset = gdal.Open(dataset_uri)
     srs.SetProjection(dataset.GetProjection())
