@@ -798,17 +798,16 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
-    dem_dataset = gdal.Open(dem_uri)
-
     flow_nodata = -1.0
-    raster_utils.new_raster_from_base(
-        dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
-    if dem_dataset.GetRasterBand(1).GetNoDataValue() != None:
-        dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
+    #need this if statement because dem_nodata is statically typed
+    if raster_utils.get_nodata_from_uri(dem_uri) != None:
+        dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     else:
         #we don't have a nodata value, traditional one
         dem_nodata = -9999
@@ -824,13 +823,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     #these outputs should become carrays
     resolve_flat_regions_for_drainage(dem_carray, dem_nodata)
 
-    raster_utils.new_raster_from_base(
-        dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
     
-    n_rows = dem_dataset.RasterYSize
-    n_cols = dem_dataset.RasterXSize
-
     #This matrix holds the flow direction value, initialize to flow_nodata
     flow_data_uri = raster_utils.temporary_filename()
     flow_carray = raster_utils.load_dataset_to_carray(
@@ -868,38 +864,23 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
-    #Get pixel sizes
-    d_1 = abs(dem_dataset.GetGeoTransform()[1])
-    d_2 = abs(dem_dataset.GetGeoTransform()[5])
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(dem_uri)
+    d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
+    d_2 = d_1
     cdef float max_r = numpy.pi / 4.0
     LOGGER.info("calculating d-inf per pixel flows")
-    #loop through each cell and skip any edge pixels
-
-    cdef int w_n_cols = n_cols
-    cdef int w_n_rows = 3
-    cdef int w_ul_row = 0
-    cdef int w_ul_col = 0
-    cdef int w_col_index
-    cdef int w_row_index
-
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window = dem_carray[
-        w_ul_row:w_ul_row+w_n_rows, w_ul_col:w_ul_col+w_n_cols]
+    #This numpy array will be a 3 row window for the whole dem carray so we
+    #don't need to hold it in memory, loading 3 rows at a time is almost as 
+    #fast as loading the entire array in memory (I timed it)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_window
     for row_index in range(1, n_rows - 1):
-        if row_index >= w_ul_row + w_n_rows - 1:
-            #we're out of a window, reload DEM
-            w_ul_row = row_index - 1
-            dem_window = (
-                dem_carray[w_ul_row:w_ul_row+w_n_rows,
-                           w_ul_col:w_ul_col+w_n_cols])
-        w_row_index = row_index - w_ul_row
+        #We load 3 rows at a time
+        dem_window = dem_carray[row_index-1:row_index+2,:]
         for col_index in range(1, n_cols - 1):
-            w_col_index = col_index - w_ul_col
-
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_window[w_row_index, w_col_index] == dem_nodata:
+            if dem_window[1, col_index] == dem_nodata:
                 flow_array[row_index, col_index] = flow_nodata
                 continue
-
             if flow_array[row_index, col_index] != flow_nodata:
                 continue
 
@@ -909,13 +890,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             max_index = 0 #index to keep track of max slope facet
             
             for facet_index in range(8):
-                #This defines the three height points
-                e_0 = dem_window[e_0_offsets[facet_index*2+0] + w_row_index,
-                                 e_0_offsets[facet_index*2+1] + w_col_index]
-                e_1 = dem_window[e_1_offsets[facet_index*2+0] + w_row_index,
-                                 e_1_offsets[facet_index*2+1] + w_col_index]
-                e_2 = dem_window[e_2_offsets[facet_index*2+0] + w_row_index,
-                                 e_2_offsets[facet_index*2+1] + w_col_index]
+                #This defines the three height points the +1 comes from the
+                #middle row of the dem_window
+                e_0 = dem_window[e_0_offsets[facet_index*2+0] + 1,
+                                 e_0_offsets[facet_index*2+1] + col_index]
+                e_1 = dem_window[e_1_offsets[facet_index*2+0] + 1,
+                                 e_1_offsets[facet_index*2+1] + col_index]
+                e_2 = dem_window[e_2_offsets[facet_index*2+0] + 1,
+                                 e_2_offsets[facet_index*2+1] + col_index]
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
