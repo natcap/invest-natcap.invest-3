@@ -759,20 +759,30 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     dem_array = dem_carray[:]
 
     cdef int weight, w_row_index, w_col_index, hits, misses
-    cdef int window_size, ul_row_index, ul_col_index, lr_col_index, lr_row_index
+    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index, lr_col_index, lr_row_index
 
     #This is as big as the window will get
-    window_size = numpy.sqrt(n_cols * 5)
-    if window_size > n_rows:
-        window_size = n_rows
-    if window_size % 2 == 1:
+    row_window_size = 2**12 #this will create a window of about 50Mb, a reasonable amount of memory
+    col_window_size = row_window_size
+    if row_window_size > n_rows:
+        row_window_size = n_rows
+    if col_window_size > n_cols:
+        col_window_size = n_cols
+    if row_window_size % 2 == 1:
         #keep it even so slices are easy to manage
-        window_size -= 1
+        row_window_size -= 1
+    if col_window_size % 2 == 1:
+        #keep it even so slices are easy to manage
+        col_window_size -= 1
+    if row_window_size < 6:
+        row_window_size = 6
+    if col_window_size < 6:
+        col_window_size = 6
 
     ul_row_index = 0
     ul_col_index = 0
-    lr_row_index = window_size
-    lr_col_index = window_size
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
 
     dem_array = dem_carray[ul_row_index:lr_row_index,
                            ul_col_index:lr_col_index]
@@ -787,18 +797,18 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         col_index = current_cell_tuple.col_index
         weight = current_cell_tuple.weight
 
-        if (row_index < ul_row_index + 2 or
-            row_index >= lr_row_index - 2 or
-            col_index < ul_col_index + 2 or
-            col_index >= lr_col_index - 2):
+        if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
+            ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
+            ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
+            ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
             
             #need to reload the window
             misses += 1
 
-            ul_row_index = row_index-(window_size/2)
-            lr_row_index = row_index+window_size/2
-            ul_col_index = col_index-(window_size/2)
-            lr_col_index = col_index+window_size/2
+            ul_row_index = row_index-(row_window_size/2)
+            lr_row_index = row_index+row_window_size/2
+            ul_col_index = col_index-(col_window_size/2)
+            lr_col_index = col_index+col_window_size/2
 
             if ul_row_index < 0:
                 lr_row_index += -ul_row_index
@@ -835,7 +845,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
             if not _is_flat(
-                w_neighbor_row_index, w_neighbor_col_index, window_size, window_size,
+                w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
                 row_offsets, col_offsets, dem_array, nodata_value):
                 continue
 
