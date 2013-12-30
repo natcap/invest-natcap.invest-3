@@ -758,32 +758,34 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     #need to memory optimize this dem array
     dem_array = dem_carray[:]
 
-    cdef int neighbor_flat, bigger_offset
+    cdef int weight
 
     while sink_queue.size() > 0:
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
-        if dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+        row_index = current_cell_tuple.row_index
+        col_index = current_cell_tuple.col_index
+        weight = current_cell_tuple.weight
+        if (dem_sink_offset[row_index, col_index] <= weight):
             continue
-        dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+
+        dem_sink_offset[row_index, col_index] = weight
 
         for neighbor_index in xrange(8):
-            neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
-            neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
 
             if not _is_flat(
                 neighbor_row_index, neighbor_col_index, n_rows, n_cols,
                 row_offsets, col_offsets, dem_array, nodata_value):
                 continue
-            if not (dem_sink_offset[neighbor_row_index,
-                                    neighbor_col_index] > 
-                    current_cell_tuple.weight + 1):
+            if (dem_sink_offset[neighbor_row_index, neighbor_col_index] <=
+                weight + 1):
                 continue
-            if (dem_array[current_cell_tuple.row_index,
-                          current_cell_tuple.col_index] == 
+            if (dem_array[row_index, col_index] == 
                 dem_array[neighbor_row_index, neighbor_col_index]):
-                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index,
-                                         current_cell_tuple.weight + 1)
+                t = Row_Col_Weight_Tuple(
+                    neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
