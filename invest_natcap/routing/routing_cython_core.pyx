@@ -740,9 +740,13 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 sink_queue.push(t)
 
     LOGGER.info('calculate distances from sinks to other flat cells')
-    dem_sink_offset_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = numpy.memmap(dem_sink_offset_data_file, dtype=numpy.float32, mode='w+',
-                              shape=(n_rows, n_cols))
+    #dem_sink_offset_data_file = tempfile.TemporaryFile()
+    dem_sink_offset_data_uri = raster_utils.temporary_filename()
+    dem_sink_offset_carray = raster_utils.create_carray(
+        dem_sink_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = dem_sink_offset_carray[:]
+#numpy.memmap(dem_sink_offset_data_file, dtype=numpy.float32, mode='w+',
+#                              shape=(n_rows, n_cols))
     dem_offset_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
                               shape=(n_rows, n_cols))                              
@@ -753,6 +757,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     
     #need to memory optimize this dem array
     dem_array = dem_carray[:]
+
+    cdef int neighbor_flat, bigger_offset
+
     while sink_queue.size() > 0:
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
@@ -763,8 +770,20 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         for neighbor_index in xrange(8):
             neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
             neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
-                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
+
+            if not _is_flat(
+                neighbor_row_index, neighbor_col_index, n_rows, n_cols,
+                row_offsets, col_offsets, dem_array, nodata_value):
+                continue
+            if not (dem_sink_offset[neighbor_row_index,
+                                    neighbor_col_index] > 
+                    current_cell_tuple.weight + 1):
+                continue
+            if (dem_array[current_cell_tuple.row_index,
+                          current_cell_tuple.col_index] == 
+                dem_array[neighbor_row_index, neighbor_col_index]):
+                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index,
+                                         current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
