@@ -651,11 +651,15 @@ cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row
     return 1
               
 
-cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, float[:, :] dem_array, float nodata_value):
+cdef int _is_sink(
+    int row_index, int col_index, int n_rows, int n_cols, int* row_offsets,
+    int *col_offsets, float[:, :] dem_array, float nodata_value):
+
     cdef int neighbor_row_index, neighbor_col_index
     if dem_array[row_index, col_index] == nodata_value: return 0
     
-    if _is_flat(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
+    if _is_flat(row_index, col_index, n_rows, n_cols, row_offsets,
+                col_offsets, dem_array, nodata_value):
         return 0
     
     for neighbor_index in xrange(8):
@@ -666,8 +670,11 @@ cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row
         if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
             continue
             
-        if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
-                _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value)):
+        if (dem_array[neighbor_row_index, neighbor_col_index] ==
+            dem_array[row_index, col_index] and
+            _is_flat(neighbor_row_index, neighbor_col_index,
+                     n_rows, n_cols, row_offsets, col_offsets,
+                     dem_array, nodata_value)):
             return 1
     return 0              
         
@@ -725,7 +732,10 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             current_n_rows = 5
         
         for col_index in range(n_cols):
-            if _is_sink(current_row_index, col_index, current_n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
+            if _is_sink(
+                current_row_index, col_index, current_n_rows, n_cols,
+                row_offsets, col_offsets, dem_array, nodata_value):
+
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
 
