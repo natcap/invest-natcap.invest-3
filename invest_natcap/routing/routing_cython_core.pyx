@@ -948,15 +948,19 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         while edge_queue.size() > 0:
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
-            if dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+            row_index = current_cell_tuple.row_index
+            col_index = current_cell_tuple.col_index
+            weight = current_cell_tuple.weight
+
+            if dem_edge_offset[row_index, col_index] <= weight:
                 continue
-            dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+            dem_edge_offset[row_index, col_index] = weight
 
             for neighbor_index in xrange(8):
-                neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
-                neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-                if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
-                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > weight + 1 and dem_array[row_index, col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
+                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                     edge_queue.push(t)
 
         max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
