@@ -703,15 +703,14 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     cdef float[:,:] dem_array
     for row_index in range(n_rows):
         #In general get a 5 row window, but on the upper and lower borders just
-        #get a 3 row window
-        if row_index == 0:
-            dem_array = dem_carray[0:3,:]
-            current_row_index = 0
-            current_n_rows = 3
-        elif row_index == 1:
-            dem_array = dem_carray[0:4,:]
-            current_row_index = 1
-            current_n_rows = 4
+        #get a 3 row window, but if 1 away get a 4 row window. it's complicated
+        #because the edge of the array can be a real edge and we need to 
+        #check the neighbors, if we just get a 3 row array every neighbor will
+        #appear to be on the edge
+        if row_index <= 1:
+            dem_array = dem_carray[0:3+row_index,:]
+            current_row_index = row_index
+            current_n_rows = 3 + row_index
         elif row_index == n_rows - 1:
             dem_array = dem_carray[n_rows-3:n_rows,:]
             current_row_index = 2
