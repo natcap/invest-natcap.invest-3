@@ -758,12 +758,28 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     #need to memory optimize this dem array
     dem_array = dem_carray[:]
 
-    cdef int weight, w_row_index, w_n_rows, ul_row_index, hits, misses
-    dem_array = dem_carray[0:3+row_index,:]
-    w_row_index = 0
+    cdef int weight, w_row_index, w_col_index, hits, misses
+    cdef int window_size, ul_row_index, ul_col_index, lr_col_index, lr_row_index
+
+    #This is as big as the window will get
+    window_size = numpy.sqrt(n_cols * 5)
+    if window_size > n_rows:
+        window_size = n_rows
+    if window_size % 2 == 1:
+        #keep it even so slices are easy to manage
+        window_size -= 1
+
     ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = window_size
+    lr_col_index = window_size
+
+    dem_array = dem_carray[ul_row_index:lr_row_index,
+                           ul_col_index:lr_col_index]
+
     hits = 0
     misses = 0
+
     while sink_queue.size() > 0:
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
@@ -771,28 +787,40 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         col_index = current_cell_tuple.col_index
         weight = current_cell_tuple.weight
 
-        if row_index != ul_row_index:
-            #need to reload the array
+        if (row_index < ul_row_index + 2 or
+            row_index >= lr_row_index - 2 or
+            col_index < ul_col_index + 2 or
+            col_index >= lr_col_index - 2):
+            
+            #need to reload the window
             misses += 1
-            ul_row_index = row_index
-            if row_index <= 1:
-                dem_array = dem_carray[0:3+row_index,:]
-                w_row_index = row_index
-                w_n_rows = 3 + row_index
-            elif row_index == n_rows - 1:
-                dem_array = dem_carray[n_rows-3:n_rows,:]
-                w_row_index = 2
-                w_n_rows = 3
-            elif row_index == n_rows - 2:
-                dem_array = dem_carray[n_rows-4:n_rows,:]
-                w_row_index = 2
-                w_n_rows = 4
-            else:
-                dem_array = dem_carray[row_index-2:row_index+3,:]
-                w_row_index = 2
-                w_n_rows = 5
+
+            ul_row_index = row_index-(window_size/2)
+            lr_row_index = row_index+window_size/2
+            ul_col_index = col_index-(window_size/2)
+            lr_col_index = col_index+window_size/2
+
+            if ul_row_index < 0:
+                lr_row_index += -ul_row_index
+                ul_row_index = 0
+            if ul_col_index < 0:
+                lr_col_index += -ul_col_index
+                ul_col_index = 0
+            if lr_row_index >= n_rows:
+                ul_row_index -= (lr_row_index - (n_rows - 1))
+                lr_row_index = n_rows - 1
+            if lr_col_index >= n_cols:
+                ul_col_index -= (lr_col_index - (n_cols - 1))
+                lr_col_index = n_cols - 1
+
+            dem_array = dem_carray[ul_row_index:lr_row_index,
+                                   ul_col_index:lr_col_index]
+
         else:
             hits += 1
+
+        w_row_index = row_index - ul_row_index
+        w_col_index = col_index - ul_col_index
 
         if (dem_sink_offset[row_index, col_index] <= weight):
             continue
@@ -804,21 +832,23 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             neighbor_col_index = col_index + col_offsets[neighbor_index]
 
             w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+            w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
             if not _is_flat(
-                w_neighbor_row_index, neighbor_col_index, w_n_rows, n_cols,
+                w_neighbor_row_index, w_neighbor_col_index, window_size, window_size,
                 row_offsets, col_offsets, dem_array, nodata_value):
                 continue
+
             if (dem_sink_offset[neighbor_row_index, neighbor_col_index] <=
                 weight + 1):
                 continue
-            if (dem_array[w_row_index, col_index] == 
-                dem_array[w_neighbor_row_index, neighbor_col_index]):
+            if (dem_array[w_row_index, w_col_index] == 
+                dem_array[w_neighbor_row_index, w_neighbor_col_index]):
                 t = Row_Col_Weight_Tuple(
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
 
-    LOGGER.info("hits/misses %d/%d hit ratio %.2f" % (hits, misses, 100.0*hits/float(hits+misses)))
+    LOGGER.info("hits/misses %d/%d miss percent %.2f%%" % (hits, misses, 100.0*misses/float(hits+misses)))
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     numpy.multiply(dem_sink_offset, 2.0, dem_offset)
