@@ -784,8 +784,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     lr_row_index = row_window_size
     lr_col_index = col_window_size
 
-    dem_array = dem_carray[ul_row_index:lr_row_index,
-                           ul_col_index:lr_col_index]
+    dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
 
     hits = 0
     misses = 0
@@ -825,14 +824,13 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
             dem_array = dem_carray[ul_row_index:lr_row_index,
                                    ul_col_index:lr_col_index]
-
         else:
             hits += 1
 
         w_row_index = row_index - ul_row_index
         w_col_index = col_index - ul_col_index
 
-        if (dem_sink_offset[row_index, col_index] <= weight):
+        if dem_sink_offset[row_index, col_index] <= weight:
             continue
 
         dem_sink_offset[row_index, col_index] = weight
@@ -858,7 +856,8 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
 
-    LOGGER.info("hits/misses %d/%d miss percent %.2f%%" % (hits, misses, 100.0*misses/float(hits+misses)))
+    LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
+                (hits, misses, 100.0*misses/float(hits+misses)))
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     numpy.multiply(dem_sink_offset, 2.0, dem_offset)
