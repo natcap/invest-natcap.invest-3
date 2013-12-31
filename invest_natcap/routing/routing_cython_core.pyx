@@ -711,34 +711,40 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
     cdef float[:,:] dem_array
-    for row_index in range(n_rows):
-        #In general get a 5 row window, but on the upper and lower borders just
-        #get a 3 row window, but if 1 away get a 4 row window. it's complicated
-        #because the edge of the array can be a real edge and we need to 
-        #check the neighbors, if we just get a 3 row array every neighbor will
-        #appear to be on the edge
-        if row_index <= 1:
-            dem_array = dem_carray[0:3+row_index,:]
-            current_row_index = row_index
-            current_n_rows = 3 + row_index
-        elif row_index == n_rows - 1:
-            dem_array = dem_carray[n_rows-3:n_rows,:]
-            current_row_index = 2
-            current_n_rows = 3
-        elif row_index == n_rows - 2:
-            dem_array = dem_carray[n_rows-4:n_rows,:]
-            current_row_index = 2
-            current_n_rows = 4
-        else:
-            dem_array = dem_carray[row_index-2:row_index+3,:]
-            current_row_index = 2
-            current_n_rows = 5
-        
-        for col_index in range(n_cols):
-            if _is_sink(
-                current_row_index, col_index, current_n_rows, n_cols,
-                row_offsets, col_offsets, dem_array, nodata_value):
 
+    cdef int weight, w_row_index, w_col_index
+    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
+    cdef int lr_col_index, lr_row_index, hits, misses
+
+    row_window_size = 7
+    col_window_size = n_cols
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
+
+    dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    hits = 0
+    misses = 0
+
+    col_index = 0
+    for row_index in range(n_rows):
+        if _update_window(
+            row_index, col_index, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            row_window_size, col_window_size):
+            #need to reload the window
+            misses += 1
+            dem_array = dem_carray[ul_row_index:lr_row_index,
+                                   ul_col_index:lr_col_index]
+        else:
+            hits += 1
+        w_row_index = row_index - ul_row_index
+        for col_index in range(n_cols):
+            w_col_index = col_index - ul_col_index
+            if _is_sink(
+                w_row_index, w_col_index, row_window_size, col_window_size,
+                row_offsets, col_offsets, dem_array, nodata_value):
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
 
@@ -760,9 +766,6 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     
     #need to memory optimize this dem array
     dem_array = dem_carray[:]
-
-    cdef int weight, w_row_index, w_col_index, hits, misses
-    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index, lr_col_index, lr_row_index
 
     #This is as big as the window will get
     row_window_size = MAX_WINDOW_SIZE
@@ -852,20 +855,19 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     hits = 0
     misses = 0
     for row_index in range(1, n_rows - 1):
+        if _update_window(
+            row_index, col_index, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            row_window_size, col_window_size):
+            #need to reload the window
+            misses += 1
+            dem_array = dem_carray[ul_row_index:lr_row_index,
+                                   ul_col_index:lr_col_index]
+        else:
+            hits += 1
+        w_row_index = row_index - ul_row_index
+
         for col_index in range(1, n_cols - 1):
-
-            if _update_window(
-                row_index, col_index, &ul_row_index, &ul_col_index,
-                &lr_row_index, &lr_col_index, n_rows, n_cols,
-                row_window_size, col_window_size):
-                #need to reload the window
-                misses += 1
-                dem_array = dem_carray[ul_row_index:lr_row_index,
-                                       ul_col_index:lr_col_index]
-            else:
-                hits += 1
-
-            w_row_index = row_index - ul_row_index
             w_col_index = col_index - ul_col_index
 
             #only consider flat cells
