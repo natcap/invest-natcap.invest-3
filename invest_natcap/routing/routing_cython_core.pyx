@@ -27,7 +27,7 @@ LOGGER = logging.getLogger('routing cython core')
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
-
+cdef int MAX_WINDOW_SIZE = 2**5
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -762,7 +762,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index, lr_col_index, lr_row_index
 
     #This is as big as the window will get
-    row_window_size = 2**5 #2**12 #this will create a window of about 50Mb, a reasonable amount of memory
+    row_window_size = MAX_WINDOW_SIZE
     col_window_size = row_window_size
     if row_window_size > n_rows:
         row_window_size = n_rows
@@ -944,6 +944,34 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     if edge_queue.size() > 0:
         LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
         dem_edge_offset[:] = numpy.inf
+
+        #This is as big as the window will get
+        row_window_size = MAX_WINDOW_SIZE
+        col_window_size = row_window_size
+        if row_window_size > n_rows:
+            row_window_size = n_rows
+        if col_window_size > n_cols:
+            col_window_size = n_cols
+        if row_window_size % 2 == 1:
+            #keep it even so slices are easy to manage
+            row_window_size -= 1
+        if col_window_size % 2 == 1:
+            #keep it even so slices are easy to manage
+            col_window_size -= 1
+        if row_window_size < 6:
+            row_window_size = 6
+        if col_window_size < 6:
+            col_window_size = 6
+
+        ul_row_index = 0
+        ul_col_index = 0
+        lr_row_index = row_window_size
+        lr_col_index = col_window_size
+
+        dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+
+        hits = 0
+        misses = 0
         
         while edge_queue.size() > 0:
             current_cell_tuple = edge_queue.front()
@@ -952,6 +980,40 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             col_index = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
 
+            if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
+                ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
+                ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
+                ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
+
+                #need to reload the window
+                misses += 1
+
+                ul_row_index = row_index-(row_window_size/2)
+                lr_row_index = row_index+row_window_size/2+row_window_size%2
+                ul_col_index = col_index-(col_window_size/2)
+                lr_col_index = col_index+col_window_size/2+col_window_size%2
+
+                if ul_row_index < 0:
+                    lr_row_index += -ul_row_index
+                    ul_row_index = 0
+                if ul_col_index < 0:
+                    lr_col_index += -ul_col_index
+                    ul_col_index = 0
+                if lr_row_index > n_rows:
+                    ul_row_index -= (lr_row_index - n_rows)
+                    lr_row_index = n_rows
+                if lr_col_index > n_cols:
+                    ul_col_index -= (lr_col_index - n_cols)
+                    lr_col_index = n_cols
+
+                dem_array = dem_carray[ul_row_index:lr_row_index,
+                                       ul_col_index:lr_col_index]
+            else:
+                hits += 1
+
+            w_row_index = row_index - ul_row_index
+            w_col_index = col_index - ul_col_index
+
             if dem_edge_offset[row_index, col_index] <= weight:
                 continue
             dem_edge_offset[row_index, col_index] = weight
@@ -959,11 +1021,15 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
+
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+
                 if (_is_flat(
-                        neighbor_row_index, neighbor_col_index, n_rows, n_cols,
+                        w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
                         row_offsets, col_offsets, dem_array, nodata_value) and
                     dem_edge_offset[neighbor_row_index, neighbor_col_index] > weight + 1 and
-                    dem_array[row_index, col_index] == dem_array[neighbor_row_index, neighbor_col_index]):
+                    dem_array[w_row_index, w_col_index] == dem_array[w_neighbor_row_index, w_neighbor_col_index]):
 
                     t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                     edge_queue.push(t)
