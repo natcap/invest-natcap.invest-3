@@ -853,32 +853,13 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     misses = 0
     for row_index in range(1, n_rows - 1):
         for col_index in range(1, n_cols - 1):
-            if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
-                ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
-                ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
-                ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
 
+            if _update_window(
+                row_index, col_index, &ul_row_index, &ul_col_index,
+                &lr_row_index, &lr_col_index, n_rows, n_cols,
+                row_window_size, col_window_size):
                 #need to reload the window
                 misses += 1
-
-                ul_row_index = row_index-(row_window_size/2)
-                lr_row_index = row_index+row_window_size/2+row_window_size%2
-                ul_col_index = col_index-(col_window_size/2)
-                lr_col_index = col_index+col_window_size/2+col_window_size%2
-
-                if ul_row_index < 0:
-                    lr_row_index += -ul_row_index
-                    ul_row_index = 0
-                if ul_col_index < 0:
-                    lr_col_index += -ul_col_index
-                    ul_col_index = 0
-                if lr_row_index > n_rows:
-                    ul_row_index -= (lr_row_index - n_rows)
-                    lr_row_index = n_rows
-                if lr_col_index > n_cols:
-                    ul_col_index -= (lr_col_index - n_cols)
-                    lr_col_index = n_cols
-
                 dem_array = dem_carray[ul_row_index:lr_row_index,
                                        ul_col_index:lr_col_index]
             else:
@@ -1164,7 +1145,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
 
-cdef inline int _update_window(
+cdef inline  int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
     int row_window_size, int col_window_size):
