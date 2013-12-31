@@ -959,7 +959,12 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > weight + 1 and dem_array[row_index, col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
+                if (_is_flat(
+                        neighbor_row_index, neighbor_col_index, n_rows, n_cols,
+                        row_offsets, col_offsets, dem_array, nodata_value) and
+                    dem_edge_offset[neighbor_row_index, neighbor_col_index] > weight + 1 and
+                    dem_array[row_index, col_index] == dem_array[neighbor_row_index, neighbor_col_index]):
+
                     t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                     edge_queue.push(t)
 
