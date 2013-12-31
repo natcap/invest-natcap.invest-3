@@ -768,16 +768,6 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         row_window_size = n_rows
     if col_window_size > n_cols:
         col_window_size = n_cols
-    if row_window_size % 2 == 1:
-        #keep it even so slices are easy to manage
-        row_window_size -= 1
-    if col_window_size % 2 == 1:
-        #keep it even so slices are easy to manage
-        col_window_size -= 1
-    if row_window_size < 6:
-        row_window_size = 6
-    if col_window_size < 6:
-        col_window_size = 6
 
     ul_row_index = 0
     ul_col_index = 0
@@ -800,14 +790,14 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
             ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
             ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
-            
+
             #need to reload the window
             misses += 1
 
             ul_row_index = row_index-(row_window_size/2)
-            lr_row_index = row_index+row_window_size/2
+            lr_row_index = row_index+row_window_size/2+row_window_size%2
             ul_col_index = col_index-(col_window_size/2)
-            lr_col_index = col_index+col_window_size/2
+            lr_col_index = col_index+col_window_size/2+col_window_size%2
 
             if ul_row_index < 0:
                 lr_row_index += -ul_row_index
@@ -815,12 +805,12 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             if ul_col_index < 0:
                 lr_col_index += -ul_col_index
                 ul_col_index = 0
-            if lr_row_index >= n_rows:
-                ul_row_index -= (lr_row_index - (n_rows - 1))
-                lr_row_index = n_rows - 1
-            if lr_col_index >= n_cols:
-                ul_col_index -= (lr_col_index - (n_cols - 1))
-                lr_col_index = n_cols - 1
+            if lr_row_index > n_rows:
+                ul_row_index -= (lr_row_index - n_rows)
+                lr_row_index = n_rows
+            if lr_col_index > n_cols:
+                ul_col_index -= (lr_col_index - n_cols)
+                lr_col_index = n_cols
 
             dem_array = dem_carray[ul_row_index:lr_row_index,
                                    ul_col_index:lr_col_index]
@@ -952,16 +942,6 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             row_window_size = n_rows
         if col_window_size > n_cols:
             col_window_size = n_cols
-        if row_window_size % 2 == 1:
-            #keep it even so slices are easy to manage
-            row_window_size -= 1
-        if col_window_size % 2 == 1:
-            #keep it even so slices are easy to manage
-            col_window_size -= 1
-        if row_window_size < 6:
-            row_window_size = 6
-        if col_window_size < 6:
-            col_window_size = 6
 
         ul_row_index = 0
         ul_col_index = 0
