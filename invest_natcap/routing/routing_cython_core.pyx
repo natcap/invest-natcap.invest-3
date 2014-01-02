@@ -907,19 +907,19 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
-    dem_edge_offset_data_uri = raster_utils.temporary_filename()
-    dem_edge_offset_carray = raster_utils.create_carray(
-        dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
     cdef int max_distance
  
+    #do this calculation with tables
     dem_sink_offset = dem_sink_offset_carray[:]
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     numpy.multiply(dem_sink_offset, 2.0, dem_offset)
      
     if edge_queue.size() > 0:
         LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
+        dem_edge_offset_data_uri = raster_utils.temporary_filename()
+        dem_edge_offset_carray = raster_utils.create_carray(
+            dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
         dem_edge_offset_carray[:] = numpy.inf
 
         #This is as big as the window will get
@@ -1010,6 +1010,8 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
         #save final dem edge offset off
         dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+        
+        #do this calculation with tables
         dem_edge_offset = dem_edge_offset_carray[:]
         max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
         dem_edge_offset = max_distance + 1 - dem_edge_offset
