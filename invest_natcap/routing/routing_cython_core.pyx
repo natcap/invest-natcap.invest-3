@@ -851,12 +851,6 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
     dem_offset = dem_offset_carray[:]
-    dem_sink_offset = dem_sink_offset_carray[:]
-    
-    dem_sink_offset[dem_sink_offset == numpy.inf] = 0
-    numpy.multiply(dem_sink_offset, 2.0, dem_offset)
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_sink_offset
-    cdef int max_distance
     
     LOGGER.info('calculate distances from edge to center of flat regions')
     edge_cell_list = []
@@ -913,8 +907,12 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
-    dem_array = dem_carray[:]
-
+    dem_sink_offset = dem_sink_offset_carray[:]
+    dem_sink_offset[dem_sink_offset == numpy.inf] = 0
+    numpy.multiply(dem_sink_offset, 2.0, dem_offset)
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_sink_offset
+    cdef int max_distance
+    
     if edge_queue.size() > 0:
         LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
         dem_edge_offset[:] = numpy.inf
