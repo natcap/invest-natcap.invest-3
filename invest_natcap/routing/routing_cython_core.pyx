@@ -749,24 +749,22 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 sink_queue.push(t)
 
     LOGGER.info('calculate distances from sinks to other flat cells')
-    #dem_sink_offset_data_file = tempfile.TemporaryFile()
     dem_sink_offset_data_uri = raster_utils.temporary_filename()
     dem_sink_offset_carray = raster_utils.create_carray(
         dem_sink_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = dem_sink_offset_carray[:]
-#numpy.memmap(dem_sink_offset_data_file, dtype=numpy.float32, mode='w+',
-#                              shape=(n_rows, n_cols))
-    dem_offset_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
-                              shape=(n_rows, n_cols))                              
+#    dem_offset_data_file = tempfile.TemporaryFile()
+    dem_offset_data_uri = raster_utils.temporary_filename()
+    dem_offset_carray = raster_utils.create_carray(
+        dem_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = dem_offset_carray[:]
+    #numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
+    #                          shape=(n_rows, n_cols))                              
     dem_sink_offset[:] = numpy.inf
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
     
-    #need to memory optimize this dem array
-    dem_array = dem_carray[:]
-
     #This is as big as the window will get
     row_window_size = MAX_WINDOW_SIZE
     col_window_size = row_window_size
