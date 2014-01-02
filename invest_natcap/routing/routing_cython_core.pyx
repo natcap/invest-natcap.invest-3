@@ -920,7 +920,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
      
     if edge_queue.size() > 0:
         LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
-        dem_edge_offset[:] = numpy.inf
+        dem_edge_offset_carray[:] = numpy.inf
 
         #This is as big as the window will get
         row_window_size = MAX_WINDOW_SIZE
@@ -936,7 +936,8 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         lr_col_index = col_window_size
 
         dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-
+        dem_edge_offset = dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+        
         hits = 0
         misses = 0
         
@@ -955,6 +956,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 #need to reload the window
                 misses += 1
 
+                #save edge offset off
+                dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+        
                 ul_row_index = row_index-(row_window_size/2)
                 lr_row_index = row_index+row_window_size/2+row_window_size%2
                 ul_col_index = col_index-(col_window_size/2)
@@ -975,15 +979,18 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
                 dem_array = dem_carray[ul_row_index:lr_row_index,
                                        ul_col_index:lr_col_index]
+                dem_edge_offset = dem_edge_offset_carray[
+                    ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+        
             else:
                 hits += 1
 
             w_row_index = row_index - ul_row_index
             w_col_index = col_index - ul_col_index
 
-            if dem_edge_offset[row_index, col_index] <= weight:
+            if dem_edge_offset[w_row_index, w_col_index] <= weight:
                 continue
-            dem_edge_offset[row_index, col_index] = weight
+            dem_edge_offset[w_row_index, w_col_index] = weight
 
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
@@ -995,12 +1002,15 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 if (_is_flat(
                         w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
                         row_offsets, col_offsets, dem_array, nodata_value) and
-                    dem_edge_offset[neighbor_row_index, neighbor_col_index] > weight + 1 and
+                    dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] > weight + 1 and
                     dem_array[w_row_index, w_col_index] == dem_array[w_neighbor_row_index, w_neighbor_col_index]):
 
                     t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                     edge_queue.push(t)
 
+        #save final dem edge offset off
+        dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+        dem_edge_offset = dem_edge_offset_carray[:]
         max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
         dem_edge_offset = max_distance + 1 - dem_edge_offset
         dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
