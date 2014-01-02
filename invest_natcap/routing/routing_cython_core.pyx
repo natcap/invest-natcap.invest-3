@@ -715,7 +715,8 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     cdef int weight, w_row_index, w_col_index
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses
-
+    cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
+    
     row_window_size = 7
     col_window_size = n_cols
     ul_row_index = 0
@@ -752,16 +753,14 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     dem_sink_offset_data_uri = raster_utils.temporary_filename()
     dem_sink_offset_carray = raster_utils.create_carray(
         dem_sink_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = dem_sink_offset_carray[:]
+    dem_sink_offset_carray[:] = numpy.inf
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset
 #    dem_offset_data_file = tempfile.TemporaryFile()
     dem_offset_data_uri = raster_utils.temporary_filename()
     dem_offset_carray = raster_utils.create_carray(
         dem_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = dem_offset_carray[:]
-    #numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
-    #                          shape=(n_rows, n_cols))                              
-    dem_sink_offset[:] = numpy.inf
-
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset
+    
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
     
@@ -779,7 +778,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     lr_col_index = col_window_size
 
     dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-
+    dem_sink_offset = dem_sink_offset_carray[:]#dem_sink_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
     hits = 0
     misses = 0
 
@@ -790,14 +789,28 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         col_index = current_cell_tuple.col_index
         weight = current_cell_tuple.weight
 
+        old_ul_row_index = ul_row_index
+        old_ul_col_index = ul_col_index
+        old_lr_row_index = lr_row_index
+        old_lr_col_index = lr_col_index
+        
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
             row_window_size, col_window_size):
             #need to reload the window
             misses += 1
+            
+            #write back the old window
+            #dem_sink_offset_carray[old_ul_row_index:old_lr_row_index,
+            #    old_ul_col_index:old_lr_col_index] = dem_sink_offset
+            
+            #load the new windows
             dem_array = dem_carray[ul_row_index:lr_row_index,
-                                   ul_col_index:lr_col_index]
+                ul_col_index:lr_col_index]
+            #dem_sink_offset = dem_sink_offset_carray[ul_row_index:lr_row_index,
+            #    ul_col_index:lr_col_index]
+    
         else:
             hits += 1
 
@@ -830,9 +843,16 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
 
+        
+        #write back the old window
+    #dem_sink_offset_carray[ul_row_index:lr_row_index,
+    #    ul_col_index:lr_col_index] = dem_sink_offset
     LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
+    dem_offset = dem_offset_carray[:]
+    #dem_sink_offset = dem_sink_offset_carray[:]
+    
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     numpy.multiply(dem_sink_offset, 2.0, dem_offset)
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_sink_offset
