@@ -911,7 +911,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     dem_edge_offset_carray = raster_utils.create_carray(
         dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
     
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_edge_offset_carray[:]
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
     cdef int max_distance
  
     dem_sink_offset = dem_sink_offset_carray[:]
