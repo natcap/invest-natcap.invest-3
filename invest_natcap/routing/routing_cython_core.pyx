@@ -778,7 +778,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     lr_col_index = col_window_size
 
     dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-    dem_sink_offset = dem_sink_offset_carray[:]#dem_sink_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    dem_sink_offset = dem_sink_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
     hits = 0
     misses = 0
 
@@ -802,14 +802,14 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             misses += 1
             
             #write back the old window
-            #dem_sink_offset_carray[old_ul_row_index:old_lr_row_index,
-            #    old_ul_col_index:old_lr_col_index] = dem_sink_offset
+            dem_sink_offset_carray[old_ul_row_index:old_lr_row_index,
+                old_ul_col_index:old_lr_col_index] = dem_sink_offset
             
             #load the new windows
             dem_array = dem_carray[ul_row_index:lr_row_index,
                 ul_col_index:lr_col_index]
-            #dem_sink_offset = dem_sink_offset_carray[ul_row_index:lr_row_index,
-            #    ul_col_index:lr_col_index]
+            dem_sink_offset = dem_sink_offset_carray[ul_row_index:lr_row_index,
+                ul_col_index:lr_col_index]
     
         else:
             hits += 1
@@ -817,10 +817,10 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         w_row_index = row_index - ul_row_index
         w_col_index = col_index - ul_col_index
 
-        if dem_sink_offset[row_index, col_index] <= weight:
+        if dem_sink_offset[w_row_index, w_col_index] <= weight:
             continue
 
-        dem_sink_offset[row_index, col_index] = weight
+        dem_sink_offset[w_row_index, w_col_index] = weight
 
         for neighbor_index in xrange(8):
             neighbor_row_index = row_index + row_offsets[neighbor_index]
@@ -834,7 +834,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 row_offsets, col_offsets, dem_array, nodata_value):
                 continue
 
-            if (dem_sink_offset[neighbor_row_index, neighbor_col_index] <=
+            if (dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] <=
                 weight + 1):
                 continue
             if (dem_array[w_row_index, w_col_index] == 
@@ -845,13 +845,13 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
         
         #write back the old window
-    #dem_sink_offset_carray[ul_row_index:lr_row_index,
-    #    ul_col_index:lr_col_index] = dem_sink_offset
+    dem_sink_offset_carray[ul_row_index:lr_row_index,
+        ul_col_index:lr_col_index] = dem_sink_offset
     LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
     dem_offset = dem_offset_carray[:]
-    #dem_sink_offset = dem_sink_offset_carray[:]
+    dem_sink_offset = dem_sink_offset_carray[:]
     
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     numpy.multiply(dem_sink_offset, 2.0, dem_offset)
