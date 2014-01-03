@@ -908,120 +908,132 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 (hits, misses, 100.0*misses/float(hits+misses)))
 
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
-    cdef int max_distance
  
-    if edge_queue.size() > 0:
-        LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
-        dem_edge_offset_data_uri = raster_utils.temporary_filename()
-        dem_edge_offset_carray = raster_utils.create_carray(
-            dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-        dem_edge_offset_carray[:] = numpy.inf
+    dem_edge_offset_data_uri = raster_utils.temporary_filename()
+    dem_edge_offset_carray = raster_utils.create_carray(
+        dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
+    dem_edge_offset_carray[:] = numpy.inf
 
-        #This is as big as the window will get
-        row_window_size = MAX_WINDOW_SIZE
-        col_window_size = row_window_size
-        if row_window_size > n_rows:
-            row_window_size = n_rows
-        if col_window_size > n_cols:
-            col_window_size = n_cols
 
-        ul_row_index = 0
-        ul_col_index = 0
-        lr_row_index = row_window_size
-        lr_col_index = col_window_size
+    #This is as big as the window will get
+    row_window_size = MAX_WINDOW_SIZE
+    col_window_size = row_window_size
+    if row_window_size > n_rows:
+        row_window_size = n_rows
+    if col_window_size > n_cols:
+        col_window_size = n_cols
 
-        dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-        dem_edge_offset = dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-        
-        hits = 0
-        misses = 0
-        
-        while edge_queue.size() > 0:
-            current_cell_tuple = edge_queue.front()
-            edge_queue.pop()
-            row_index = current_cell_tuple.row_index
-            col_index = current_cell_tuple.col_index
-            weight = current_cell_tuple.weight
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
 
-            if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
-                ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
-                ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
-                ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
+    dem_array = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    dem_edge_offset = dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    
+    hits = 0
+    misses = 0
+    
+    while edge_queue.size() > 0:
+        current_cell_tuple = edge_queue.front()
+        edge_queue.pop()
+        row_index = current_cell_tuple.row_index
+        col_index = current_cell_tuple.col_index
+        weight = current_cell_tuple.weight
 
-                #need to reload the window
-                misses += 1
+        if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
+            ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
+            ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
+            ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
 
-                #save edge offset off
-                dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
-        
-                ul_row_index = row_index-(row_window_size/2)
-                lr_row_index = row_index+row_window_size/2+row_window_size%2
-                ul_col_index = col_index-(col_window_size/2)
-                lr_col_index = col_index+col_window_size/2+col_window_size%2
+            #need to reload the window
+            misses += 1
 
-                if ul_row_index < 0:
-                    lr_row_index += -ul_row_index
-                    ul_row_index = 0
-                if ul_col_index < 0:
-                    lr_col_index += -ul_col_index
-                    ul_col_index = 0
-                if lr_row_index > n_rows:
-                    ul_row_index -= (lr_row_index - n_rows)
-                    lr_row_index = n_rows
-                if lr_col_index > n_cols:
-                    ul_col_index -= (lr_col_index - n_cols)
-                    lr_col_index = n_cols
+            #save edge offset off
+            dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+    
+            ul_row_index = row_index-(row_window_size/2)
+            lr_row_index = row_index+row_window_size/2+row_window_size%2
+            ul_col_index = col_index-(col_window_size/2)
+            lr_col_index = col_index+col_window_size/2+col_window_size%2
 
-                dem_array = dem_carray[ul_row_index:lr_row_index,
-                                       ul_col_index:lr_col_index]
-                dem_edge_offset = dem_edge_offset_carray[
-                    ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-        
-            else:
-                hits += 1
+            if ul_row_index < 0:
+                lr_row_index += -ul_row_index
+                ul_row_index = 0
+            if ul_col_index < 0:
+                lr_col_index += -ul_col_index
+                ul_col_index = 0
+            if lr_row_index > n_rows:
+                ul_row_index -= (lr_row_index - n_rows)
+                lr_row_index = n_rows
+            if lr_col_index > n_cols:
+                ul_col_index -= (lr_col_index - n_cols)
+                lr_col_index = n_cols
 
-            w_row_index = row_index - ul_row_index
-            w_col_index = col_index - ul_col_index
+            dem_array = dem_carray[ul_row_index:lr_row_index,
+                                   ul_col_index:lr_col_index]
+            dem_edge_offset = dem_edge_offset_carray[
+                ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    
+        else:
+            hits += 1
 
-            if dem_edge_offset[w_row_index, w_col_index] <= weight:
-                continue
-            dem_edge_offset[w_row_index, w_col_index] = weight
+        w_row_index = row_index - ul_row_index
+        w_col_index = col_index - ul_col_index
 
-            for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
+        if dem_edge_offset[w_row_index, w_col_index] <= weight:
+            continue
+        dem_edge_offset[w_row_index, w_col_index] = weight
 
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+        for neighbor_index in xrange(8):
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
 
-                if (_is_flat(
-                        w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
-                        row_offsets, col_offsets, dem_array, nodata_value) and
-                    dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] > weight + 1 and
-                    dem_array[w_row_index, w_col_index] == dem_array[w_neighbor_row_index, w_neighbor_col_index]):
+            w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+            w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
-                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
-                    edge_queue.push(t)
+            if (_is_flat(
+                    w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
+                    row_offsets, col_offsets, dem_array, nodata_value) and
+                dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] > weight + 1 and
+                dem_array[w_row_index, w_col_index] == dem_array[w_neighbor_row_index, w_neighbor_col_index]):
 
-        #save final dem edge offset off
-        dem_edge_offset_carray[
-            ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
-        
-        #do this calculation with tables
-        
-        #do this calculation with tables
-        dem_sink_offset = dem_sink_offset_carray[:]
-        dem_sink_offset[dem_sink_offset == numpy.inf] = 0
-        numpy.multiply(dem_sink_offset, 2.0, dem_offset)
-        
-        dem_edge_offset = dem_edge_offset_carray[:]
-        max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
-        dem_edge_offset = max_distance + 1 - dem_edge_offset
-        dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
-        dem_offset += dem_edge_offset
+                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
+                edge_queue.push(t)
 
-    dem_carray[:] += dem_offset * numpy.float(1.0/10000.0)
-
+    #save final dem edge offset off
+    dem_edge_offset_carray[
+        ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+    
+    #Find max distance
+    LOGGER.debug('calculating max distance')
+    cdef numpy.ndarray[numpy.npy_float, ndim=1] row_array
+    cdef int max_distance = -1
+    
+    for row_index in range(n_rows):
+        row_array = dem_edge_offset_carray[row_index,:]
+        try:
+            max_distance = max(
+                max_distance, numpy.max(row_array[row_array!=numpy.inf]))
+        except ValueError:
+            #no non-infinity elements, that's normal
+            pass
+    
+    #Add the final offsets to the dem array
+    operation=('dem_carray + ('
+        'where(dem_sink_offset_carray!=inf,dem_sink_offset_carray*2.0,0.0) + '
+        'where(dem_edge_offset_carray!=inf,max_distance+1-dem_edge_offset_carray,0.0)) * 1.0/10000.0')
+    user_args = {
+        'dem_carray': dem_carray,
+        'dem_sink_offset_carray': dem_sink_offset_carray,
+        'dem_edge_offset_carray': dem_edge_offset_carray,
+        'inf': numpy.inf,
+        'max_distance': max_distance
+        }
+    expr = tables.Expr(operation, uservars=user_args)
+    expr.set_output(dem_carray)
+    expr.eval() 
+    
     
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
