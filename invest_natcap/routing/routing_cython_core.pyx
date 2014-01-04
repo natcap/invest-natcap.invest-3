@@ -30,7 +30,8 @@ LOGGER = logging.getLogger('routing cython core')
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
-cdef int MAX_WINDOW_SIZE = 2**12
+
+cdef int MAX_WINDOW_SIZE = 2**13
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
