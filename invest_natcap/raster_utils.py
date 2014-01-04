@@ -163,7 +163,7 @@ def get_cell_size_from_uri(dataset_uri):
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
     #take absolute value since sometimes negative widths/heights
-    if abs(geotransform[1]) != abs(geotransform[5]):
+    if not nearly_equal(abs(geotransform[1]), abs(geotransform[5])):
         raise ValueError(
             "Raster %s has non-square pixels of size (%f, %f) " %
             (dataset_uri, geotransform[1], geotransform[5]))
@@ -2669,3 +2669,15 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
             0, row_index, ds.RasterXSize, 1)[0]
     
     return carray
+
+def nearly_equal(a, b, sig_fig=5):
+    """Test if two floats are equal to each other within a tolerance
+    
+        a - numeric input
+        b - numeric input
+        sig_fig - (optional) an integer describing the number of significant
+            digits default is 5
+            
+        returns True if a and b are equal to each other within a given 
+            tolerance"""
+    return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
