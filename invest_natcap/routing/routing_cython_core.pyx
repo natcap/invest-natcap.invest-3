@@ -848,8 +848,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         #write back the old window
     dem_sink_offset_carray[ul_row_index:lr_row_index,
         ul_col_index:lr_col_index] = dem_sink_offset
-    LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
-                (hits, misses, 100.0*misses/float(hits+misses)))
+    if hits+misses != 0:
+        LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
+                    (hits, misses, 100.0*misses/float(hits+misses)))
 
     dem_offset = dem_offset_carray[:]
     
@@ -905,8 +906,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     edge_queue.push(t)
                     break
-    LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
-                (hits, misses, 100.0*misses/float(hits+misses)))
+    if hits+misses != 0:
+        LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
+                    (hits, misses, 100.0*misses/float(hits+misses)))
 
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
  
