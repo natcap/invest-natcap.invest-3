@@ -13,6 +13,7 @@ import collections
 import exceptions
 import multiprocessing
 import multiprocessing.pool
+import tables
 
 from osgeo import gdal
 from osgeo import osr
@@ -148,14 +149,25 @@ def get_statistics_from_uri(dataset_uri):
 
 
 def get_cell_size_from_uri(dataset_uri):
+    """Returns the cell size of the dataset in meters.  Raises an exception
+        if the raster is not square since this'll break most of the raster_utils
+        algorithms.
+        
+        dataset_uri - uri to a gdal dataset
+        
+        returns cell size of the dataset in meters"""
+        
     srs = osr.SpatialReference()
     dataset = gdal.Open(dataset_uri)
     srs.SetProjection(dataset.GetProjection())
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
     #take absolute value since sometimes negative widths/heights
-    size_meters = (abs(geotransform[1]) + abs(geotransform[5])) / 2 * \
-        linear_units
+    if not nearly_equal(abs(geotransform[1]), abs(geotransform[5])):
+        raise ValueError(
+            "Raster %s has non-square pixels of size (%f, %f) " %
+            (dataset_uri, geotransform[1], geotransform[5]))
+    size_meters = abs(geotransform[1]) * linear_units
     return size_meters
 
 
@@ -2580,6 +2592,7 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
 
     return itemfreq
 
+    
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_values=[], option_list=[]):
     """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
@@ -2607,3 +2620,64 @@ def rasterize_layer_uri(
         
     raster = None
     shapefile = None
+
+    
+def create_carray(h5file_uri, type, shape):
+    """Creates an empty pytables chunked array given a file type and size.
+    
+        h5file_uri - a uri to store the carray
+        type - an h5file type
+        shape - a tuple indicating rows/columns"""
+        
+    h5file = tables.openFile(h5file_uri, mode='w')
+    root = h5file.root
+    return h5file.createCArray(
+        root, 'from_create_carray', type, shape=shape)
+
+
+def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
+    """Loads a GDAL dataset into a h5file chunked array.
+    
+        ds_uri - uri to a GDAL dataset
+        h5file_uri - uri to a file that the chunked array will exist on disk
+        array_type - (optional) if specified is a GDAL type for what the output
+            array should be cast to
+
+        returns chunked array representing the original gdal dataset"""
+    
+    ds = gdal.Open(ds_uri)
+    band = ds.GetRasterBand(1)
+    if array_type is None:
+        array_type = band.DataType
+    
+    map_gdal_type_to_atom = {
+        gdal.GDT_Int16: tables.Int16Atom(),
+        gdal.GDT_Int32: tables.Int32Atom(),
+        gdal.GDT_UInt16: tables.UInt16Atom(),
+        gdal.GDT_UInt32: tables.UInt32Atom(),
+        gdal.GDT_Byte: tables.Int8Atom(),
+        gdal.GDT_Float64: tables.Float64Atom(), 
+        gdal.GDT_Float32: tables.Float32Atom()
+    }
+    
+    carray = create_carray(
+        h5file_uri, map_gdal_type_to_atom[array_type],
+        (ds.RasterYSize, ds.RasterXSize))
+    
+    for row_index in xrange(ds.RasterYSize):
+        carray[row_index,:] = band.ReadAsArray(
+            0, row_index, ds.RasterXSize, 1)[0]
+    
+    return carray
+
+def nearly_equal(a, b, sig_fig=5):
+    """Test if two floats are equal to each other within a tolerance
+    
+        a - numeric input
+        b - numeric input
+        sig_fig - (optional) an integer describing the number of significant
+            digits default is 5
+            
+        returns True if a and b are equal to each other within a given 
+            tolerance"""
+    return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)

@@ -547,7 +547,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
                                     ']_E_Risk_Raster.tif')
 
         e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+                e_rast_uri, cp_aoi_uri, 'BURN_ID', 
+                ignore_value_list = [0]).pixel_mean)
 
         #Now, we are going to modify the e value by the spatial overlap value.
         #Get S.O value first.
@@ -565,8 +566,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
                                 ']_C_Risk_Raster.tif')
 
-        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
-                            cp_aoi_uri, 'BURN_ID').pixel_mean)
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                c_rast_uri, cp_aoi_uri, 'BURN_ID', 
+                ignore_value_list=[0]).pixel_mean)
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can

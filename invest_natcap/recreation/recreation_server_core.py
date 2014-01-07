@@ -217,6 +217,7 @@ def categorize_execute(cur, table_name, category_dictionary, classes_dictionary,
     LOGGER.info("Checking column types.")
     delimiter = {}
     sql = "SELECT * FROM %s LIMIT 0" % table_name
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     for desc in cur.description:
         if desc[0] in category_dictionary:
@@ -248,7 +249,7 @@ def categorize_execute(cur, table_name, category_dictionary, classes_dictionary,
            "field VARCHAR(10), "
            "PRIMARY KEY(id))")
     sql = sql % (class_format % table_name)
-    LOGGER.debug(sql)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     classes = [(classes_dictionary[key], key)
@@ -256,6 +257,7 @@ def categorize_execute(cur, table_name, category_dictionary, classes_dictionary,
     sql = "INSERT INTO %s VALUES " + ','.join([str(classes_element)
                                                for classes_element in classes])
     sql = sql % (class_format % table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -287,6 +289,7 @@ def categorize_execute(cur, table_name, category_dictionary, classes_dictionary,
     LOGGER.info("Creating category table.")
     sql = "CREATE TEMPORARY TABLE %s AS (SELECT id, " + sql + " AS cat FROM %s AS layer)"
     sql = sql % (category_format%table_name, table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -589,8 +592,7 @@ def temp_shapefile_db(
     LOGGER.info("Creating database table.")
     sql = "CREATE TEMPORARY TABLE %s (%s)"
     sql = sql % (table_name, ', '.join(fields + ["way geometry"]))
-    LOGGER.debug("Executing sql statement : %s",
-                 sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     #insert features
@@ -609,6 +611,7 @@ def temp_shapefile_db(
                 sql = "INSERT INTO %s VALUES(ST_GeomFromText(\'%s\',%s))"
                 sql = sql % (table_name, geom.ExportToWkt(), str(srid))
             LOGGER.debug("Inserting feature %i", id_number)
+            LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
             cur.execute(sql)
 
     return int(srid)
@@ -633,10 +636,10 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
     #get spatial extent of AOI
     sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     bbox, = cur.fetchone()
-    LOGGER.debug("sql result: %s", bbox)
+    LOGGER.debug("SQL result: %s", bbox)
     (min_x, min_y), (max_x, max_y) = [(float(x_extrema), float(y_extrema))
                                       for (x_extrema, y_extrema)
                                       in [point.split(" ")
@@ -650,15 +653,15 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
 
     #get AOI projection
     sql = "SELECT ST_srid(%s) FROM %s LIMIT 1" % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     srid, = cur.fetchone()
-    LOGGER.debug("sql result: %s", srid)
+    LOGGER.debug("SQL result: %s", srid)
 
     #create grid table
     sql = "CREATE TEMPORARY TABLE %s (%s geometry, id integer)"
     sql = sql % (out_table_name, out_column_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
     #insert grid cells if covered by AOI
@@ -674,8 +677,9 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
                   (in_table_name, in_table_name, in_column_name,
                    out_column_name)
 
-            LOGGER.debug("sql query: %s",
-                         sql.replace(",", "|").replace(".", "||"))
+##            LOGGER.debug("Executing SQL: %s",
+##                         sql.replace(",", "|").replace(".", "||"))
+            LOGGER.debug("Checking if extent grid cell %i in AOI." % (i * rows) + j)
             cur.execute(sql)
 
     sort_grid(cur, out_table_name, out_column_name)
@@ -688,10 +692,10 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
     #get spatial extent of AOI
     sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     bbox, = cur.fetchone()
-    LOGGER.debug("sql result: %s", bbox)
+    LOGGER.debug("SQL result: %s", bbox)
     (min_x, min_y), (max_x, max_y) = [(float(x_extrema), float(y_extrema))
                                       for (x_extrema, y_extrema)
                                       in [point.split(" ")
@@ -710,15 +714,15 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
 
     #get AOI projection
     sql = "SELECT ST_srid(%s) FROM %s LIMIT 1" % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     srid, = cur.fetchone()
-    LOGGER.debug("sql result: %s", srid)
+    LOGGER.debug("SQL result: %s", srid)
 
     #create grid table
     sql = "CREATE TEMPORARY TABLE %s (%s geometry, id INTEGER)" % \
     (out_table_name, out_column_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
     #insert grid cells if covered by AOI
@@ -746,8 +750,9 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
              (j * rows) + i, hexagonsql, out_column_name)
             sql = sql + " %s WHERE ST_Covers(%s.%s,%s)" % \
             (in_table_name, in_table_name, in_column_name, out_column_name)
-            LOGGER.debug("sql query: %s",
-                         sql.replace(",", "|").replace(".", "||"))
+##            LOGGER.debug("Executing SQL: %s",
+##                         sql.replace(",", "|").replace(".", "||"))
+            LOGGER.debug("Checking if extent grid cell %i in AOI." % (i * rows) + j)            
             cur.execute(sql)
 
     sort_grid(cur, out_table_name, out_column_name)
@@ -760,23 +765,29 @@ def sort_grid(cur, out_table_name, out_column_name):
            "row_number() OVER (ORDER BY ST_YMin(box2d(%s)), "
            "ST_XMin(box2d(%s)) ASC) FROM %s")
     sql = sql % ("id", out_column_name, out_column_name, out_table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     renumber = cur.fetchall()
 
     sql = "ALTER TABLE %s ADD new_id integer"
     sql = sql % (out_table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     sql = "UPDATE %s SET new_id = %i WHERE id = %i"
     for old_id, new_id in renumber:
+        #LOGGER.debug("Executing SQL: %s." % (sql % (out_table_name, new_id, old_id)).replace(".", "||").replace(",", "|"))
+        LOGGER.debug("Renumbering cell %i to %i." % (old_id, new_id))
         cur.execute(sql % (out_table_name, new_id, old_id))
 
     sql = "ALTER TABLE %s DROP COLUMN %s"
     sql = sql % (out_table_name, "id")
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     sql = "ALTER TABLE %s RENAME COLUMN %s to %s"
     sql = sql % (out_table_name, "new_id", "id")
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -827,6 +838,7 @@ def table_shapefile(cur, sql, column_names, ogr_type_list, out_file_name,
     feature_defn = layer.GetLayerDefn()
 
     #create each feature from the sql query
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     for row in cur:
         row = list(row)
@@ -859,6 +871,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     sql = "SELECT atttypid FROM pg_attribute WHERE attrelid =" +\
     " (SELECT oid FROM pg_class WHERE relname = 'photos_gis')" +\
     " AND attname = 'way'"
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     geom_oid,=cur.fetchone()
 
@@ -867,6 +880,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     #check for empty table
     sql = "SELECT * FROM %s LIMIT 1"
     sql = sql % in_table_name
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     empty = not len(cur.fetchall())
     if empty:
@@ -876,6 +890,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     #get table description
     sql = "SELECT * FROM %s LIMIT 0"
     sql = sql % in_table_name
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))    
     cur.execute(sql)
 
     column_names = []
@@ -917,6 +932,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     #get geometry type
     sql = "SELECT ST_Dimension(%s) FROM %s LIMIT 1"
     sql = sql % (geometry_column_name, in_table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     results = cur.fetchone()
     LOGGER.debug("Results: %s.", repr(results))
@@ -941,6 +957,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
     #get projection
     sql = "SELECT ST_srid(%s) FROM %s LIMIT 1"
     sql = sql % (geometry_column_name, in_table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     results = cur.fetchone()
     LOGGER.debug("Results: %s.", repr(results))
@@ -949,7 +966,7 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
 
     sql = "SELECT ST_AsText(%s),* FROM %s"
     sql = sql % (geometry_column_name, in_table_name)
-    LOGGER.debug("Executing sql: %s.", sql)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     LOGGER.debug("Loading OGR ESRI Shapefile driver.")
@@ -987,32 +1004,32 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
 
     LOGGER.debug("Creating features.")
     #create each feature from the sql query
-    for row in cur:
+    for i, row in enumerate(cur):
         row = list(row)
 
-        LOGGER.debug("Creating shape.")
+        LOGGER.debug("Creating shape %i." % i)
         row.pop(geometry_column_index + 1)
         geom = row.pop(0)
-        LOGGER.debug("Found geometry %s.", geom)
+        #LOGGER.debug("Found geometry %s.", geom)
         polygon = ogr.CreateGeometryFromWkt(geom)
 
 
-        LOGGER.debug("Creating feature.")
+        #LOGGER.debug("Creating feature.")
         # create a new feature
         feature = ogr.Feature(feature_defn)
         feature.SetGeometry(polygon)
 
-        LOGGER.debug("Setting attributes.")
+        #LOGGER.debug("Setting attributes.")
         #set field values
         for field, value in enumerate(row):
             feature.SetField(field, value)
 
-        LOGGER.debug("Saving feature.")
+        #LOGGER.debug("Saving feature.")
         layer.CreateFeature(feature)
 
-        LOGGER.debug("Shape garbage collection.")
+        #LOGGER.debug("Shape garbage collection.")
         polygon.Destroy()
-        LOGGER.debug("Feature garbage collection.")
+        #LOGGER.debug("Feature garbage collection.")
         feature.Destroy()
 
     #write the shapefile
@@ -1054,6 +1071,7 @@ def raster_table(cur, in_file_name, table_name, srid = -1):
             raise ValueError, "The raster should contain exactly 1 band"
 
         sql = "CREATE TEMPORARY TABLE %s (pixel integer, way geometry)" % (table_name)
+        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))        
         cur.execute(sql)
 
         band = dataset.GetRasterBand(1)
@@ -1084,6 +1102,7 @@ def raster_table(cur, in_file_name, table_name, srid = -1):
 
                 sql = "INSERT INTO %s VALUES(%s, %s)"
                 sql = sql % (table_name, str(pixel), waysql)
+                LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
                 cur.execute(sql)
 
     else:
@@ -1157,6 +1176,7 @@ def grid_union(cur, grid_name, grid_union_name):
            "ST_Union(grid.cell) AS cell "
            "FROM %s AS grid)")
     sql = sql % (grid_union_name, grid_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1182,6 +1202,7 @@ def grid_transform(cur, grid_name, grid_transform_name, srid):
            "FROM INFORMATION_SCHEMA.TABLES "
            "WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = '%s')")
     sql = sql % (grid_transform_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     exists, = cur.fetchone()
 
@@ -1191,6 +1212,7 @@ def grid_transform(cur, grid_name, grid_transform_name, srid):
                "ST_Transform(grid.cell,%s) as cell "
                "FROM %s AS grid)")
         sql = sql % (grid_transform_name, srid, grid_name)
+        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
         cur.execute(sql)
     else:
         LOGGER.debug("Attempted to create additional table name %s",
@@ -1217,6 +1239,7 @@ def transform(cur, osm_name, transform_name, srid):
            "ST_Transform(layer.way,%s) as way "
            "FROM %s AS layer)")
     sql = sql % (transform_name, srid, osm_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1238,7 +1261,7 @@ def transform_execute(cur, in_table_name, out_table_name, geometry_column, srid,
     """
     sql = transform_sql(in_table_name, out_table_name, geometry_column, srid,
                         extra_columns)
-    LOGGER.debug("Executin sql: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
 
@@ -1248,6 +1271,7 @@ def union_execute(cur, in_table_name, out_table_name, geometry_column):
     sql = "CREATE TEMPORARY TABLE %s AS (SELECT ST_Union(%s.%s) as %s FROM %s)"
     sql = sql % (out_table_name, in_table_name, geometry_column,
                  geometry_column, in_table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1279,7 +1303,7 @@ def clip_execute(cur, in_table_name, in_table_column, mask_name, mask_column,
     """
     sql = clip_sql(in_table_name, in_table_column, mask_name, mask_column,
                    out_table_name, extra_columns)
-    LOGGER.debug("Executing SQL query for clip.")
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1300,6 +1324,7 @@ def osm_point_clip(cur, aoi_name, point_name):
     " FROM planet_osm_point as osm, %s as aoi"
     " WHERE ST_Intersects(aoi.cell, osm.way))")
     sql = sql % (point_name, aoi_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1321,6 +1346,7 @@ def osm_line_clip(cur, aoi_name, line_name):
     " FROM planet_osm_line as osm, %s as aoi"
     " WHERE ST_Intersects(aoi.cell, osm.way))")
     sql = sql % (line_name, aoi_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1342,6 +1368,7 @@ def osm_poly_clip(cur, aoi_name, poly_name):
     " FROM planet_osm_polygon as osm, %s as aoi"
     " WHERE ST_Intersects(aoi.cell, osm.way) AND ST_IsValid(osm.way))")
     sql = sql % (poly_name, aoi_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1494,7 +1521,7 @@ def join_results_execute(cur, predictors, grid, results_format, result_column,
     """
     sql = join_results_sql(predictors, grid, results_format, result_column,
                            results_name, attributes)
-    LOGGER.debug("Executin sql: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
 
@@ -1579,6 +1606,7 @@ def flickr_grid_table(cur, grid_name, flickr_name, out_file_name,
     " GROUP BY \"gridID\", date_taken"
     " ORDER BY \"gridID\", date_taken ASC")
     sql = sql % (grid_name, flickr_name, before_year)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     out_file = open(out_file_name, 'w')
@@ -1604,7 +1632,7 @@ def wkt_to_srid(cur, wkt):
 
     #check if WKT projection is already known
     sql = "SELECT COUNT(*) FROM prj_srid WHERE wkt = %s"
-    print sql % (wkt, )
+    LOGGER.debug("Executing SQL: %s." % (sql % wkt).replace(".", "||").replace(",", "|"))
     cur.execute(sql, (wkt,))
     known, = cur.fetchone()
 
@@ -1614,6 +1642,7 @@ def wkt_to_srid(cur, wkt):
         #check srid_name
         name = wkt.split("\"")[1]
         sql = "SELECT COUNT(*) FROM srid_name WHERE name = %s"
+        LOGGER.debug("Executing SQL: %s." % (sql % name).replace(".", "||").replace(",", "|"))
         cur.execute(sql, (name,))
         known, = cur.fetchone()
 
@@ -1622,10 +1651,12 @@ def wkt_to_srid(cur, wkt):
             raise ValueError, ("WKT %s unknown." % repr(wkt).replace(",", "|").replace(".", "||"))
         else:
             sql = "SELECT srid FROM srid_name WHERE name = %s"
+            LOGGER.debug("Executing SQL: %s." % (sql % name).replace(".", "||").replace(",", "|"))
             cur.execute(sql, (name,))
             srid, = cur.fetchone()
 
             sql = "INSERT INTO prj_srid VALUES(%s,%s,'user')"
+            LOGGER.debug("Executing SQL: %s." % (sql % (wkt, srid)).replace(".", "||").replace(",", "|"))
             cur.execute(sql, (wkt, srid))
 
 ##        query = urlencode({
@@ -1648,6 +1679,7 @@ def wkt_to_srid(cur, wkt):
     else:
         LOGGER.debug("Found matching WKT.")
         sql = "SELECT auth_srid FROM prj_srid WHERE wkt = %s"
+        LOGGER.debug("Executing SQL: %s." % (sql % wkt).replace(".", "||").replace(",", "|"))
         cur.execute(sql, (wkt,))
         srid, = cur.fetchone()
         LOGGER.debug("Found corresponding SRID %i.", srid)
@@ -1656,6 +1688,7 @@ def wkt_to_srid(cur, wkt):
     #srid2sql(cur, auth_srid)
 
     sql = "SELECT COUNT(*) FROM spatial_ref_sys WHERE auth_srid = %s"
+    LOGGER.debug("Executing SQL: %s." % (sql % srid).replace(".", "||").replace(",", "|"))
     cur.execute(sql, (srid,))
     known, = cur.fetchone()
 
@@ -1681,14 +1714,16 @@ def srid2sql(cur, auth_srid):
     :return: None
     :rtype: None"""
 
-    cur.execute("SELECT COUNT(*) FROM spatial_ref_sys WHERE auth_srid = %i",
-                (auth_srid,))
+    sql = "SELECT COUNT(*) FROM spatial_ref_sys WHERE auth_srid = %i"
+    LOGGER.debug("Executing SQL: %s." % (sql % auth_srid).replace(".", "||").replace(",", "|"))
+    cur.execute(sql, (auth_srid,))
     known, = cur.fetchone()
     if not known:
         webpage = urlopen("http://spatialreference.org/ref/epsg/%i/postgis/" %
                     (auth_srid))
         sql = webpage.read()
         webpage.close()
+        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
         cur.execute(sql)
 
 
@@ -1701,7 +1736,7 @@ def utm_geography_table(cur):
     :return: None
     :rtype: None"""
     geography_srid = 4326
-    sql = "CREATE TEMPORARY TABLE srid_geom (srid integer PRIMARY KEY, geom geometry)"
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
     for i, srid in enumerate(range(32601, 32661)):
@@ -1747,6 +1782,7 @@ def destination_srid(cur, aoi_name):
            "%s AS aoi "
            "WHERE ST_Covers(projections.geom, aoi.way)")
     sql = sql % ("srid_geom", aoi_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))    
     cur.execute(sql)
     srid, = cur.fetchone()
 
@@ -1762,6 +1798,7 @@ def get_utm_srid(cur, aoi_table, geom_table):
            "%s as aoi "
            "WHERE ST_Intersects(aoi.way, zones.geom)")
     sql = sql % (geom_table, aoi_table)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     utmsrid = cur.fetchall()
 
@@ -1776,6 +1813,7 @@ def get_intersects_covers(cur, aoi_name, borders_name):
            "%s AS borders "
            "WHERE ST_Intersects(aoi.way, borders.way)")
     sql = sql % (aoi_name, borders_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     intersects, = cur.fetchone()
 
@@ -1784,6 +1822,7 @@ def get_intersects_covers(cur, aoi_name, borders_name):
            "%s AS borders "
            "WHERE ST_Covers(borders.way, aoi.way)")
     sql = sql % (aoi_name, borders_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     covers, = cur.fetchone()
 
@@ -1801,6 +1840,7 @@ def grid_point_execute(cur, grid, point_name, results_name):
     " WHERE ST_Intersects(grid.cell, layer.way)"
     " GROUP BY id)")
     sql = sql % (results_name, grid, point_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1815,6 +1855,7 @@ def grid_line_execute(cur, grid, line_name, results_name):
     " WHERE ST_Intersects(grid.cell, layer.way)"
     " GROUP BY id)")
     sql = sql % (results_name, grid, line_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1829,6 +1870,7 @@ def grid_polygon_execute(cur, grid, polygon_name, results_name):
     " WHERE ST_Intersects(grid.cell, layer.way)"
     " GROUP BY id)")
     sql = sql % (results_name, grid, polygon_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
@@ -1838,6 +1880,7 @@ def dimension_execute(cur, table_name, geo_column_name):
     """
     sql = "SELECT ST_Dimension(%s) FROM %s LIMIT 1"
     sql = sql % (geo_column_name, table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     dim = cur.fetchone()
 
@@ -1853,6 +1896,7 @@ def single_area_execute(cur, table_name, geo_column_name):
     """
     sql = "SELECT ST_Area(%s) FROM %s"
     sql = sql % (geo_column_name, table_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     area, = cur.fetchone()
 
@@ -1869,4 +1913,5 @@ def raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, cl
 
 def raster_clip_execute(cur, raster_name, rast_column_name, aoi_name, geo_column_name, clip_name):
     sql = raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)

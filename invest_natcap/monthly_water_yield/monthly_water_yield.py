@@ -98,11 +98,12 @@ def execute(args):
         [dem_uri], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
         aoi_uri=watershed_uri)
-   
+    
     # Calculate the slope raster from the DEM
     LOGGER.info("calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
@@ -124,7 +125,7 @@ def execute(args):
             clipped_dem_uri, lulc_uri, smax_uri, soil_text_uri, slope_uri, v_stream_uri]
 
     dem_aligned_uri = os.path.join(
-            intermediate_dir, 'dem_aligned%s.tif' % file_suffix)
+            intermediate_dir, 'dem_aligned%s.tif' % file_suffix)        
     lulc_aligned_uri = os.path.join(
             intermediate_dir, 'lulc_aligned%s.tif' % file_suffix)
     smax_aligned_uri = os.path.join(
@@ -141,8 +142,7 @@ def execute(args):
     # Align Datasets call
     raster_utils.align_dataset_list(
         uris_to_align, aligned_uris, ['nearest'] * 6, dem_cell_size,
-        'intersection', 0, aoi_uri=watershed_uri, 
-        assert_datasets_projected=True)
+        'intersection', 0, assert_datasets_projected=True)
     
     # Set a flag to True if sub watersheds was provided as an input
     try:
@@ -334,9 +334,23 @@ def execute(args):
             # fields
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, tmp_out_uri)
-            # Clipped the new raster to the watersheds
-            raster_utils.clip_dataset_uri(
-                    tmp_out_uri, watershed_uri, out_uri, True)
+                    
+            def mask_slope(pixel, slope_pixel):
+                """Vectorize function that masks input raster to the slope
+                    raster
+
+                    returns - pixel if not slope_nodata else nodata"""
+                if pixel == float_nodata or slope_pixel == float_nodata:
+                    return float_nodata
+                else:
+                    return pixel
+
+            # Create initial S_t-1 for now. Set all values to 0.0
+            LOGGER.debug("Initialize Soil Storage Raster")
+            raster_utils.vectorize_datasets(
+                    [tmp_out_uri, absorption_uri], mask_slope, out_uri,
+                    gdal.GDT_Float32, float_nodata, dem_cell_size,
+                    'intersection', aoi_uri=watershed_uri)
 
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
@@ -346,8 +360,6 @@ def execute(args):
         
         # Calculate water amount (W)
         clean_uri([water_uri])
-        # NOTE: using 'imperv_area_uri' not 'imperv_stream_uri' which has
-        # masked values of 1.0 where there are streams.
         calculate_water_amt(
                 imperv_stream_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
@@ -380,9 +392,9 @@ def execute(args):
         # Calculate Baseflow + Interflow. This is the first step in calculating
         # streamflow. Baseflow and Interflow are per pixel values, so after
         # these are added up then Direct Flow is added in later.
-        #clean_uri([non_runoff_flow_uri])
-        #combine_baseflow_interflow(
-        #        interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
+        clean_uri([non_runoff_flow_uri])
+        combine_baseflow_interflow(
+                interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
 		# Aggregate direct flow values over the watersheds
         dflow_agg = raster_utils.aggregate_raster_values_uri(
@@ -415,7 +427,7 @@ def execute(args):
         # Get the pixel area for direct flow cells
         dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
         # Get the pixel area for combined interflow and baseflow cells
-        comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
+        #comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
 	
         # Aggregate combined interflow and baseflow over the watersheds
         #combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
@@ -434,8 +446,13 @@ def execute(args):
         # Get the keys from one of our dictionaries to use in making per
         # watershed calculations
         #shed_keys = combined_flow_mn.keys()
-        
-        
+    
+        # Calculate Soil Moisture for current time step, to be used as
+        # previous time step in the next iteration
+        clean_uri([prev_soil_uri])
+        shutil.copy(soil_storage_uri, prev_soil_uri)
+        clean_uri([soil_storage_uri])
+	    
         # If everything is routed just get the max pixel values for computing
         # storage
         water_max = raster_utils.aggregate_raster_values_uri(
@@ -476,15 +493,8 @@ def execute(args):
 		
             total_storage_dict[key] = (
                     water_max[key] + prev_soil_max[key] -
-                    max_interflow[key] - max_baseflow[key])
-        
-            
-        # Calculate Soil Moisture for current time step, to be used as
-        # previous time step in the next iteration
-        clean_uri([prev_soil_uri])
-        shutil.copy(soil_storage_uri, prev_soil_uri)
-        clean_uri([soil_storage_uri])
-		
+                    max_interflow[key] - max_baseflow[key])        
+    
         # Calcluate the soil storage
         calculate_soil_storage(
             prev_soil_uri, water_uri, evap_uri, non_runoff_flow_uri, smax_uri, 
@@ -1250,7 +1260,7 @@ def calculate_direct_flow(
     # CALCULATE ROUTE_FLUX
     routing_utils.route_flux(
         dem_uri, precip_uri, in_absorption_uri, temp_uri, dt_out_uri,
-        'source_and_flux', watershed_uri)
+        'source_and_flux', aoi_uri = watershed_uri)
 
     #Use Dt and precip to calculate tp (Equation 2)
     monthly_water_yield_cython_core.calculate_tp(
