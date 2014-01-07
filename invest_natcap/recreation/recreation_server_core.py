@@ -633,10 +633,10 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
     #get spatial extent of AOI
     sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql)
+    LOGGER.debug("SQL query: %s", sql)
     cur.execute(sql)
     bbox, = cur.fetchone()
-    LOGGER.debug("sql result: %s", bbox)
+    LOGGER.debug("SQL result: %s", bbox)
     (min_x, min_y), (max_x, max_y) = [(float(x_extrema), float(y_extrema))
                                       for (x_extrema, y_extrema)
                                       in [point.split(" ")
@@ -650,15 +650,15 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
 
     #get AOI projection
     sql = "SELECT ST_srid(%s) FROM %s LIMIT 1" % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     srid, = cur.fetchone()
-    LOGGER.debug("sql result: %s", srid)
+    LOGGER.debug("SQL result: %s", srid)
 
     #create grid table
     sql = "CREATE TEMPORARY TABLE %s (%s geometry, id integer)"
     sql = sql % (out_table_name, out_column_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
     #insert grid cells if covered by AOI
@@ -674,7 +674,7 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name,
                   (in_table_name, in_table_name, in_column_name,
                    out_column_name)
 
-            LOGGER.debug("sql query: %s",
+            LOGGER.debug("Executing SQL: %s",
                          sql.replace(",", "|").replace(".", "||"))
             cur.execute(sql)
 
@@ -688,10 +688,10 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
     #get spatial extent of AOI
     sql = "SELECT Box2D(ST_Union(%s)) from %s"
     sql = sql % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     bbox, = cur.fetchone()
-    LOGGER.debug("sql result: %s", bbox)
+    LOGGER.debug("SQL result: %s", bbox)
     (min_x, min_y), (max_x, max_y) = [(float(x_extrema), float(y_extrema))
                                       for (x_extrema, y_extrema)
                                       in [point.split(" ")
@@ -710,15 +710,15 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
 
     #get AOI projection
     sql = "SELECT ST_srid(%s) FROM %s LIMIT 1" % (in_column_name, in_table_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
     srid, = cur.fetchone()
-    LOGGER.debug("sql result: %s", srid)
+    LOGGER.debug("SQL result: %s", srid)
 
     #create grid table
     sql = "CREATE TEMPORARY TABLE %s (%s geometry, id INTEGER)" % \
     (out_table_name, out_column_name)
-    LOGGER.debug("sql query: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
     #insert grid cells if covered by AOI
@@ -746,7 +746,7 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
              (j * rows) + i, hexagonsql, out_column_name)
             sql = sql + " %s WHERE ST_Covers(%s.%s,%s)" % \
             (in_table_name, in_table_name, in_column_name, out_column_name)
-            LOGGER.debug("sql query: %s",
+            LOGGER.debug("Executing SQL: %s",
                          sql.replace(",", "|").replace(".", "||"))
             cur.execute(sql)
 
@@ -1238,7 +1238,7 @@ def transform_execute(cur, in_table_name, out_table_name, geometry_column, srid,
     """
     sql = transform_sql(in_table_name, out_table_name, geometry_column, srid,
                         extra_columns)
-    LOGGER.debug("Executin sql: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
 
@@ -1494,7 +1494,7 @@ def join_results_execute(cur, predictors, grid, results_format, result_column,
     """
     sql = join_results_sql(predictors, grid, results_format, result_column,
                            results_name, attributes)
-    LOGGER.debug("Executin sql: %s", sql.replace(",", "|").replace(".", "||"))
+    LOGGER.debug("Executing SQL: %s", sql.replace(",", "|").replace(".", "||"))
     cur.execute(sql)
 
 
