@@ -1128,12 +1128,43 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_carray=None):
     #fast as loading the entire array in memory (I timed it)
     cdef float[:, :] dem_window
     
-    for row_index in range(1, n_rows - 1):
+    cdef int row_offset, col_offset
+
+    cdef int weight, w_row_index, w_col_index
+    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
+    cdef int lr_col_index, lr_row_index, hits, misses
+    cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index, window_buffer
+    cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
+    
+    row_window_size = 3
+    col_window_size = n_cols
+    window_buffer = 1
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
+
+    dem_window = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    hits = 0
+    misses = 0
+
+    for row_index in range(n_rows):
         #We load 3 rows at a time
-        dem_window = dem_carray[row_index - 1:row_index + 2, :]
+
+        if _update_window(
+            row_index, col_index, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            row_window_size, col_window_size, window_buffer):
+            #need to reload the window
+            misses += 1
+            dem_window = dem_carray[ul_row_index:lr_row_index,
+                                   ul_col_index:lr_col_index]
+        else:
+            hits += 1
+
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
-        for col_index in range(1, n_cols - 1):
+        for col_index in range(n_cols):
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[1, col_index] == dem_nodata:
                 continue
@@ -1142,17 +1173,32 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_carray=None):
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
-            
+
+            w_row_index = row_index - ul_row_index
+            w_col_index = col_index - ul_col_index
+
             for facet_index in range(8):
-                #This defines the three height points the +1 comes from the
-                #middle row of the dem_window
-                e_0 = dem_window[e_0_offsets[facet_index * 2 + 0] + 1,
-                                 e_0_offsets[facet_index * 2 + 1] + col_index]
-                e_1 = dem_window[e_1_offsets[facet_index * 2 + 0] + 1,
-                                 e_1_offsets[facet_index * 2 + 1] + col_index]
-                e_2 = dem_window[e_2_offsets[facet_index * 2 + 0] + 1,
-                                 e_2_offsets[facet_index * 2 + 1] + col_index]
-                
+                #This defines the three points the facet
+                e_0_row_index = e_0_offsets[facet_index * 2 + 0] + w_row_index
+                e_0_col_index = e_0_offsets[facet_index * 2 + 1] + w_col_index
+                e_1_row_index = e_1_offsets[facet_index * 2 + 0] + w_row_index
+                e_1_col_index = e_1_offsets[facet_index * 2 + 1] + w_col_index
+                e_2_row_index = e_2_offsets[facet_index * 2 + 0] + w_row_index
+                e_2_col_index = e_2_offsets[facet_index * 2 + 1] + w_col_index
+
+                if (e_0_row_index < 0 or e_0_col_index < 0 or
+                    e_1_row_index < 0 or e_1_col_index < 0 or
+                    e_2_row_index < 0 or e_2_col_index < 0):
+                    continue
+
+                try:
+                    e_0 = dem_window[e_0_row_index, e_0_col_index]
+                    e_1 = dem_window[e_1_row_index, e_1_col_index]
+                    e_2 = dem_window[e_2_row_index, e_2_col_index]
+
+                except IndexError:
+                    #This facet isn't defined because it's on the edge
+                    continue
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
                     #If any neighbors are nodata, it's contaminated
