@@ -54,7 +54,7 @@ def execute(args):
             that will be used in calculation of recruitment. 
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
-        migration_dict- Migration dictionary which will contain all source/sink
+        migration_dict(*)- Migration dictionary which will contain all source/sink
             percentage information for each age/stage which is capable of
             migration. The outermost numerical key is the source, and the
             keys of the dictionary that points to are the sinks.
@@ -74,4 +74,25 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-    
+    if args['maturity_type'] == "Age Specific":
+        timestep_dict = \
+            age_cycle(inter_dir, args['is_gendered'], args['rec_eq'], 
+                args['params_dict'], args['ordered_stages'],
+                args['alpha'] if 'alpha' in args else None,
+                args['beta'] if 'beta' in args else None,
+                args['fecundity_dict'] if 'fecundity_dict' in args else None,
+                args['fix_param'] if 'fix_param' in args else None,
+                args['migration_dict'] if 'migration_dict' in args else None,
+                args['init_recruits'], args['duration'])
+
+    elif args['maturity_type'] == "Stage Specific":
+        timestep_dict = \
+            stage_cycle(inter_dir, args['is_gendered'], args['rec_eq'], 
+                args['params_dict'], args['ordered_stages'],
+                args['alpha'] if 'alpha' in args else None,
+                args['beta'] if 'beta' in args else None,
+                args['fecundity_dict'] if 'fecundity_dict' in args else None,
+                args['fix_param'] if 'fix_param' in args else None,
+                args['migration_dict'] if 'migration_dict' in args else None,
+                args['init_recruits'], args['duration'])
+
