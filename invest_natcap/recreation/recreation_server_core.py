@@ -1629,7 +1629,7 @@ def wkt_to_srid(cur, wkt):
 
     #check if WKT projection is already known
     sql = "SELECT COUNT(*) FROM prj_srid WHERE wkt = %s"
-    LOGGER.debung("Executing SQL: %s." % (sql % wkt).replace(".", "||").replace(",", "|"))
+    LOGGER.debug("Executing SQL: %s." % (sql % wkt).replace(".", "||").replace(",", "|"))
     cur.execute(sql, (wkt,))
     known, = cur.fetchone()
 
@@ -1653,7 +1653,7 @@ def wkt_to_srid(cur, wkt):
             srid, = cur.fetchone()
 
             sql = "INSERT INTO prj_srid VALUES(%s,%s,'user')"
-            LOGGER.debung("Executing SQL: %s." % (sql % (wkt, srid)).replace(".", "||").replace(",", "|"))
+            LOGGER.debug("Executing SQL: %s." % (sql % (wkt, srid)).replace(".", "||").replace(",", "|"))
             cur.execute(sql, (wkt, srid))
 
 ##        query = urlencode({
