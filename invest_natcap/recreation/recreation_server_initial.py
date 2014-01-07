@@ -379,6 +379,10 @@ def execute(args, config):
             predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
 
+        for table_name in user_simple_predictors + user_compound_predictors:
+            geo_type = recreation_server_core.dimension_execute(cur, table_name, geometry_column_name)
+            LOGGER.debug("User predictor %s has dimensionality %i." % (table_name, geo_type))
+
         #processing AOI
         #merge multiple parts
         LOGGER.info("Merging AOI if multiple parts.")
