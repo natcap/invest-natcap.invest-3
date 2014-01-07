@@ -750,8 +750,9 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name,
              (j * rows) + i, hexagonsql, out_column_name)
             sql = sql + " %s WHERE ST_Covers(%s.%s,%s)" % \
             (in_table_name, in_table_name, in_column_name, out_column_name)
-            LOGGER.debug("Executing SQL: %s",
-                         sql.replace(",", "|").replace(".", "||"))
+##            LOGGER.debug("Executing SQL: %s",
+##                         sql.replace(",", "|").replace(".", "||"))
+            LOGGER.debug("Checking if extent grid cell %i in AOI." % (i * rows) + j)            
             cur.execute(sql)
 
     sort_grid(cur, out_table_name, out_column_name)
