@@ -1001,32 +1001,32 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias = {}):
 
     LOGGER.debug("Creating features.")
     #create each feature from the sql query
-    for row in cur:
+    for i, row in enumerate(cur):
         row = list(row)
 
-        LOGGER.debug("Creating shape.")
+        LOGGER.debug("Creating shape %i." % i)
         row.pop(geometry_column_index + 1)
         geom = row.pop(0)
-        LOGGER.debug("Found geometry %s.", geom)
+        #LOGGER.debug("Found geometry %s.", geom)
         polygon = ogr.CreateGeometryFromWkt(geom)
 
 
-        LOGGER.debug("Creating feature.")
+        #LOGGER.debug("Creating feature.")
         # create a new feature
         feature = ogr.Feature(feature_defn)
         feature.SetGeometry(polygon)
 
-        LOGGER.debug("Setting attributes.")
+        #LOGGER.debug("Setting attributes.")
         #set field values
         for field, value in enumerate(row):
             feature.SetField(field, value)
 
-        LOGGER.debug("Saving feature.")
+        #LOGGER.debug("Saving feature.")
         layer.CreateFeature(feature)
 
-        LOGGER.debug("Shape garbage collection.")
+        #LOGGER.debug("Shape garbage collection.")
         polygon.Destroy()
-        LOGGER.debug("Feature garbage collection.")
+        #LOGGER.debug("Feature garbage collection.")
         feature.Destroy()
 
     #write the shapefile
