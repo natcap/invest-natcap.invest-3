@@ -734,7 +734,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size):
+            row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
             dem_array = dem_carray[ul_row_index:lr_row_index,
@@ -798,7 +798,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size):
+            row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
             
@@ -871,7 +871,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size):
+            row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
             dem_array = dem_carray[ul_row_index:lr_row_index,
@@ -1201,11 +1201,15 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_carray=None):
 cdef inline  int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
-    int row_window_size, int col_window_size):
-    if (((row_index < ul_row_index[0] + 2) and (ul_row_index[0] > 0))  or
-        ((row_index >= lr_row_index[0] - 2) and (lr_row_index[0] < n_rows - 1)) or
-        ((col_index < ul_col_index[0] + 2) and (ul_col_index[0] > 0)) or
-        ((col_index >= lr_col_index[0] - 2) and (lr_col_index[0] < n_cols - 1))):
+    int row_window_size, int col_window_size, int window_buffer):
+#    if (((row_index <  ul_row_index[0] + 2) and (ul_row_index[0] >= 0))  or
+#        ((row_index >= lr_row_index[0] - 2) and (lr_row_index[0] < n_rows - 1)) or
+#        ((col_index <  ul_col_index[0] + 2) and (ul_col_index[0] > 0)) or
+#        ((col_index >= lr_col_index[0] - 2) and (lr_col_index[0] < n_cols - 1))):
+    if ((row_index <  ul_row_index[0] + window_buffer) or
+        (row_index >= lr_row_index[0] - window_buffer) or
+        (col_index <  ul_col_index[0] + window_buffer) or
+        (col_index >= lr_col_index[0] - window_buffer)):
 
         ul_row_index[0] = row_index-(row_window_size/2)
         lr_row_index[0] = row_index+row_window_size/2+row_window_size%2
@@ -1243,18 +1247,19 @@ def find_sinks(dem_carray, dem_nodata):
     cdef int w_row_index, w_col_index
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, neighbor_index
-    cdef int neighbor_row_index, neighbor_col_index
+    cdef int neighbor_row_index, neighbor_col_index, w_neighbor_row_index, w_neighbor_col_index
     cdef int n_cols = dem_carray.shape[1]
     cdef int n_rows = dem_carray.shape[0]
     cdef float nodata_value = dem_nodata
     
-    row_window_size = 7
+    LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
+
+    row_window_size = 3
     col_window_size = n_cols
     ul_row_index = 0
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-    
 
     cdef float[:,:] dem_array = (
         dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index])
@@ -1264,10 +1269,11 @@ def find_sinks(dem_carray, dem_nodata):
     col_index = 0
     sink_set = set()
     for row_index in range(n_rows):
+        #the col index will be 0 since we go row by row
         if _update_window(
-            row_index, col_index, &ul_row_index, &ul_col_index,
+            row_index, 0, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size):
+            row_window_size, col_window_size, 1):
             #need to reload the window
             misses += 1
             dem_array = dem_carray[ul_row_index:lr_row_index,
@@ -1279,29 +1285,27 @@ def find_sinks(dem_carray, dem_nodata):
             w_col_index = col_index - ul_col_index
             if dem_array[w_row_index, w_col_index] == nodata_value:
                 continue
-            
             for neighbor_index in range(8):
-                neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
                 if neighbor_row_index < ul_row_index or neighbor_row_index >= lr_row_index:
                     continue
-                neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_col_index < ul_col_index or neighbor_col_index >= lr_col_index:
                     continue
-            
-                try:
-                    if (dem_array[neighbor_row_index, neighbor_col_index] == 
-                        nodata_value):
-                        continue
-                except IndexError as e:
-                    LOGGER.error('neighbor_row_index, neighbor_col_index, ul_col_index, lr_col_index, ul_row_index, lr_row_index %d %d %d %d %d %d' % (neighbor_row_index, neighbor_col_index, ul_col_index, lr_col_index, ul_row_index, lr_row_index))
-                    raise e
+
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+
+                if dem_array[w_neighbor_row_index, w_neighbor_col_index] == nodata_value:
+                    continue
                 
-                if (dem_array[neighbor_row_index, neighbor_col_index] < 
-                    dem_array[w_row_index, w_col_index]):
+                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] < dem_array[w_row_index, w_col_index]):
                     #this cell can drain into another
                     break
             else: #else for the for loop
                 #every cell we encountered was nodata or higher than current
                 #cell, must be a sink
                 sink_set.add(row_index * n_cols + col_index)
+
+    LOGGER.info("hit ratio %d %d %f" % (misses, hits, hits/float(misses+hits)))
     return sink_set
