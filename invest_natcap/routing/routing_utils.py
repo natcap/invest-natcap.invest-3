@@ -94,7 +94,7 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         dem_uri)
     LOGGER.debug('sizes: sink_cell_set, sink_cell_set %d %d' % (len(sink_cell_set), len(sink_cell_set_old)))
     routing_cython_core.calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, sink_cell_set_old,
+        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
 
 
