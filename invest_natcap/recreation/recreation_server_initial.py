@@ -471,7 +471,7 @@ def execute(args, config):
 
         #project grid for clips
         LOGGER.info("Projecting the grid for clips.")
-        LOGGER.debug("_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
+        LOGGER.debug("predictor_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
         for srid in set([predictor_srid[predictor_key] for predictor_key in predictor_srid]):
             LOGGER.debug("Projecting grid to SRID %i.", srid)
             recreation_server_core.transform_execute(cur, grid_union_name, projected_format % (grid_union_name, srid), grid_column_name, srid)
