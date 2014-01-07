@@ -774,7 +774,7 @@ def sort_grid(cur, out_table_name, out_column_name):
 
     sql = "UPDATE %s SET new_id = %i WHERE id = %i"
     for old_id, new_id in renumber:
-        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
+        LOGGER.debug("Executing SQL: %s." % (sql % (out_table_name, new_id, old_id)).replace(".", "||").replace(",", "|"))
         cur.execute(sql % (out_table_name, new_id, old_id))
 
     sql = "ALTER TABLE %s DROP COLUMN %s"
