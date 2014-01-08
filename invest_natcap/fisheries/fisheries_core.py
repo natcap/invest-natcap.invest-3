@@ -2,6 +2,7 @@
 arguments from non-core and do the calculation side of the model.'''
 import logging
 import os
+import copy
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -93,9 +94,10 @@ def execute(args):
     cycle_dict = {1:{}}
 
     initialize_pop(args['maturity_type'], args['params_dict'], 
-        args['ordered_stages'], args['init_recruits'], cycle_dict)
+        args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
+        cycle_dict)
 
-def initialize_pop(maturity_type, params_dict, order, init_recruits, 
+def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
                     cycle_dict):
     '''Set the initial population numbers within cycling dictionary.
 
@@ -138,18 +140,51 @@ def initialize_pop(maturity_type, params_dict, order, init_recruits,
             Modified version of cycle_dict which contains initial pop counts by
             area and age group.
     '''
+    #Need to know if we're using gendered ages, b/c it changes the age
+    #specific initialization equation. We need to know the two last stages
+    #that we have to look out for to switch the EQ that we use.
+    if is_gendered == True:
+        first_stage = [order[0], order[len(order)/2]]
+        final_stage = [order[len(order)/2-1], order[len(order)-1]]
+    else:
+        first_stage = [order[0]]
+        final_stage = [order[len(order)-1]]
+
+    revised_order = copy.copy(order)
 
     if maturity_type == 'Stage Specific':
         
         for area in params_dict['Area_Params'].keys():
-            #The first one should be set to the initial recruits, the rest should
-            #be 1.
-            cycle_dict[1][area] = {order[0]:init_recruits}
+            #The first stage should be set to the initial recruits, the rest 
+            #should be 1.
+            for stage in first_stage:
+                cycle_dict[1][area] = {stage:init_recruits}
+                revised_order.remove(stage)
 
-            for stage in order[1::]
-
+            for stage in revised_order:
                 cycle_dict[1][area][stage] = 1
 
     elif maturity_type == 'Age Specific':
         
+        for area in params_dict['Area_Params'].keys():
+            #For age = 0, count = init_recruits
+            for age in first_stage:
+                cycle_dict[1][area] = {age:init_recruits}
+                revised_order.remove(age)
+            
+            #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
+            for age in revised_order:
+                #Can use order to check previous, since we know we will not be
+                #getting the first of any age group.
+                prev_age = order[order.index(age)-1]
+                prev_count = cycle_dict[1][area][prev_age]
+                
+                surv = calc_survival_mortal(params_dict, area, age)
 
+                if age in final_stage:
+                    count = (prev_count * surv)/ (1- surv)
+                else:
+                    count = prev_count * surv
+                
+                cycle_dict[1][area][age] = count
+                   
