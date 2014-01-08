@@ -337,7 +337,7 @@ def execute(args, config):
         LOGGER.info("Importing AOI %s.", aoi_file_name)
         aoi_srid = recreation_server_core.temp_shapefile_db(cur, aoi_file_name,
                                                             aoi_name)
-        if recreation_server_core.not_valid_count_execute(cur, aoi_name, geo_column_name) > 0:
+        if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
             msg = "The AOI contains invalid geometry."
             LOGGER.error(msg)
             raise ValueError, msg
@@ -386,7 +386,7 @@ def execute(args, config):
 
         halt = False
         for table_name in user_simple_predictors + user_compound_predictors:
-            if recreation_server_core.not_valid_count_execute(cur, table_name, geo_column_name) > 0:
+            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
                 LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
                 halt = True
         if halt:
