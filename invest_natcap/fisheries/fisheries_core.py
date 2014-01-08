@@ -148,7 +148,8 @@ def initialize_pop(maturity_type, params_dict, order, init_recruits,
 
             for stage in order[1::]
 
-                cycle_dict[1][area][stage] = init_recruits
+                cycle_dict[1][area][stage] = 1
 
-
+    elif maturity_type == 'Age Specific':
+        
 
