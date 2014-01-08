@@ -39,8 +39,8 @@ def execute(args):
                 }
             }
         ordered_stages- A list containing all the ages/stages that are being
-            are strings, and will be one of "Beverton-Holt", "Ricker", 
-            "Fecundity", or "Fixed."
+            used within this run of the model, in the order in which they
+            should occur naturally.
         alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
             "Ricker" . Parameter that will be used in calculation of
             recruitment.
@@ -54,7 +54,7 @@ def execute(args):
             that will be used in calculation of recruitment. 
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
-        migration_dict- Migration dictionary which will contain all source/sink
+        migration_dict(*)- Migration dictionary which will contain all source/sink
             percentage information for each age/stage which is capable of
             migration. The outermost numerical key is the source, and the
             keys of the dictionary that points to are the sinks.
@@ -74,4 +74,82 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
+    #Going to start cycling here. 
+    #Three possible stages: age = 0, age<maxAge, age=maxAge.
     
+    '''This dictionary will contain all counts of individuals for each
+    combination of cycle, age/stage, and area. The final dictionary will look
+    like the following:
+    
+    {Cycle_#:
+        {'Area_1':
+            {'Age_A': 1000,
+                ...
+            },
+        }
+    }
+    '''
+    #Initialize the first cycle, since we know we will start at least one.
+    cycle_dict = {1:{}}
+
+    initialize_pop(args['maturity_type'], args['params_dict'], 
+        args['ordered_stages'], args['init_recruits'], cycle_dict)
+
+def initialize_pop(maturity_type, params_dict, order, init_recruits, 
+                    cycle_dict):
+    '''Set the initial population numbers within cycling dictionary.
+
+    Input:
+        maturity_type- String specifying whether the model is age-specific or
+            stage-specific. Options will be either "Age Specific" or
+            "Stage Specific" and will change which equation is used in modeling
+            growth.
+        params_dict- Dictionary containing all information from the csv file.
+            Should have age/stage specific information, as well as area-specific
+            information.
+
+            {'Stage_Params':
+                {'Age_A':
+                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'weight': 4.42, 'duration': 16},
+                     ...
+                }
+             'Area_Params':
+                {'Area_1':
+                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    ...
+                }
+            }
+        ordered_stages- A list containing all the ages/stages that are being
+            used within this run of the model, in the order in which they
+            should occur naturally.
+        init_recruits- Int which represents the initial number of recruits that
+            will be used in calculation of population on a per area basis. 
+        cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+        Returns:
+            Modified version of cycle_dict which contains initial pop counts by
+            area and age group.
+    '''
+
+    if maturity_type == 'Stage Specific':
+        
+        for area in params_dict['Area_Params'].keys():
+            #The first one should be set to the initial recruits, the rest should
+            #be 1.
+            cycle_dict[1][area] = {order[0]:init_recruits}
+
+            for stage in order[1::]
+
+                cycle_dict[1][area][stage] = 1
+
+    elif maturity_type == 'Age Specific':
+        
+
