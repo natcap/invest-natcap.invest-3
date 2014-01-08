@@ -379,10 +379,6 @@ def execute(args, config):
             predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
 
-        if "parks" in user_simple_predictors:
-            geo_type = recreation_server_core.dimension_execute(cur, "parks", geometry_column_name)
-            LOGGER.debug("User predictor %s has dimensionality %i." % ("parks", geo_type))
-
         #processing AOI
         #merge multiple parts
         LOGGER.info("Merging AOI if multiple parts.")
@@ -486,10 +482,6 @@ def execute(args, config):
             LOGGER.info("Clipping %s.", predictor)
             recreation_server_core.clip_execute(cur, predictor, geometry_column_name, projected_format % (grid_union_name, predictor_srid[predictor]), grid_column_name, clip_format % (predictor))
 
-        if "parks" in user_simple_predictors:
-            geo_type = recreation_server_core.dimension_execute(cur, clip_format % "parks", geometry_column_name)
-            LOGGER.debug("User predictor %s has dimensionality %i." % (clip_format % "parks", geo_type))
-        
         LOGGER.info("Clipping compound predictors.")
         for predictor in model_compound_predictors:
             LOGGER.info("Clipping %s.", predictor)
@@ -547,10 +539,6 @@ def execute(args, config):
         for predictor in model_simple_predictors+model_split_predictors:
             LOGGER.info("Projecting %s.", predictor)
             recreation_server_core.transform_execute(cur, clip_format % (predictor), projected_format % (predictor, output_srid), geometry_column_name, output_srid)
-
-        if "parks" in user_simple_predictors:
-            geo_type = recreation_server_core.dimension_execute(cur, projected_format % ("parks", output_srid), geometry_column_name)
-            LOGGER.debug("User predictor %s has dimensionality %i." % (projected_format % ("parks", output_srid), geo_type))            
 
         #aggregating simple predictors
         join_tables = []
