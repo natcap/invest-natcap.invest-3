@@ -737,14 +737,13 @@ def execute(args):
     #construct list of rasters for totals
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
-    lulc_years.pop(-1)
 
     acc_soil_uri_list = []
     acc_bio_uri_list = []
     dis_soil_uri_list = []
     dis_bio_uri_list = []
 
-    for year in lulc_years:
+    for year in lulc_years[:-1]:
         acc_soil_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
         acc_bio_uri_list.append(os.path.join(workspace_dir, acc_bio_name % year))
         dis_soil_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
@@ -818,7 +817,7 @@ def execute(args):
                                       nodata_default_int,
                                       gdal_type_identity_raster,
                                       fill_value=0)
-    LOGGER.debug("Cumilative biomass disturbance raster created.")       
+    LOGGER.debug("Cumilative biomass disturbance raster created.")
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")
@@ -897,12 +896,13 @@ def execute(args):
 ##    ##clean up
     driver = gdal.GetDriverByName('GTiff')
     for year in lulc_years[1:]:
+        LOGGER.debug("Cleaning up intermediates for year %i." % year)
         driver.Delete(os.path.join(workspace_dir, above_name % year))
         driver.Delete(os.path.join(workspace_dir, below_name % year))
         driver.Delete(os.path.join(workspace_dir, soil_name % year))
-        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+        #driver.Delete(os.path.join(workspace_dir, litter_name % year))
         driver.Delete(os.path.join(workspace_dir, biomass_name % year))
-        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+        #driver.Delete(os.path.join(workspace_dir, carbon_name % year))
 
     for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
         driver.Delete(uri)
