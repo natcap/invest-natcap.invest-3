@@ -91,14 +91,17 @@ def execute(args):
     }
     '''
     #Initialize the first cycle, since we know we will start at least one.
-    cycle_dict = {1:{}}
+    cycle_dict = {}
 
     initialize_pop(args['maturity_type'], args['params_dict'], 
         args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
-        cycle_dict)
+        cycle_dict, 1)
+
+    
+
 
 def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
-                    cycle_dict):
+                    cycle_dict, cycle_count):
     '''Set the initial population numbers within cycling dictionary.
 
     Input:
@@ -144,18 +147,18 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             #The first stage should be set to the initial recruits, the rest 
             #should be 1.
             for stage in first_stage:
-                cycle_dict[1][area] = {stage:init_recruits}
+                cycle_dict[cycle_count][area] = {stage:init_recruits}
                 revised_order.remove(stage)
 
             for stage in revised_order:
-                cycle_dict[1][area][stage] = 1
+                cycle_dict[cycle_count][area][stage] = 1
 
     elif maturity_type == 'Age Specific':
         
         for area in params_dict['Area_Params'].keys():
             #For age = 0, count = init_recruits
             for age in first_stage:
-                cycle_dict[1][area] = {age:init_recruits}
+                cycle_dict[cycle_count][area] = {age:init_recruits}
                 revised_order.remove(age)
             
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
@@ -163,7 +166,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 #Can use order to check previous, since we know we will not be
                 #getting the first of any age group.
                 prev_age = order[order.index(age)-1]
-                prev_count = cycle_dict[1][area][prev_age]
+                prev_count = cycle_dict[cycle_count][area][prev_age]
                 
                 surv = calc_survival_mortal(params_dict, area, age)
 
@@ -172,7 +175,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 else:
                     count = prev_count * surv
                 
-                cycle_dict[1][area][age] = count
+                cycle_dict[cycle_count][area][age] = count
 
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
@@ -211,3 +214,4 @@ def calc_survival_mortal(params_dict, area, stage):
     surv_mort = surv_frac * (1 - exp_frac * vuln)
 
     return surv_mort
+               
