@@ -337,6 +337,11 @@ def execute(args, config):
         LOGGER.info("Importing AOI %s.", aoi_file_name)
         aoi_srid = recreation_server_core.temp_shapefile_db(cur, aoi_file_name,
                                                             aoi_name)
+        if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
+            msg = "The AOI contains invalid geometry."
+            LOGGER.error(msg)
+            raise ValueError, msg
+        
         LOGGER.info("Imported AOI.")
         LOGGER.debug("Imported AOI with SRID %i", aoi_srid)
 
@@ -378,6 +383,16 @@ def execute(args, config):
             LOGGER.debug("Creating table %s from %s.", table_name, table_file_name)
             predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
+
+        halt = False
+        for table_name in user_simple_predictors + user_compound_predictors:
+            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+                LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
+                halt = True
+        if halt:
+            msg = "One or more predictors contain invalid geometry."
+            LOGGER.error(msg)
+            raise ValueError, msg
 
         #processing AOI
         #merge multiple parts

@@ -1915,3 +1915,19 @@ def raster_clip_execute(cur, raster_name, rast_column_name, aoi_name, geo_column
     sql = raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name)
     LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
+
+def not_valid_count_sql(table_name, geo_column_name):
+    sql = "SELECT COUNT(*) FROM %s WHERE NOT ST_IsValid(%s)"
+
+    sql = sql % (table_name, geo_column_name)
+
+    return sql
+
+def not_valid_count_execute(cur, table_name, geo_column_name):
+    sql = not_valid_count_sql(table_name, geo_column_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
+    cur.execute(sql)
+    n, = cur.fetchone()
+
+    return n
+    
