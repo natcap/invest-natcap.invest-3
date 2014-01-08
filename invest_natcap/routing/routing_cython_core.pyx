@@ -286,9 +286,7 @@ def calculate_flow_graph(
         dem_uri - (optional) if present, returns a sink cell list sorted by
             "lowest" height to highest.  useful for flow accumulation sorting
 
-        returns sink_cell_set, source_cell_set
-            where these sets indicate the cells with only inflow (sinks) or
-            only outflow (source)"""
+        returns nothing"""
 
     LOGGER.info('Calculating flow graph')
     start = time.clock()
@@ -321,11 +319,6 @@ def calculate_flow_graph(
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_carray[:]
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
-
-    #These will be used to determine inflow and outflow later
-
-    inflow_cell_set = set()
-    outflow_cell_set = set()
 
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
@@ -362,8 +355,6 @@ def calculate_flow_graph(
                 if flow_angle_to_neighbor < PI/4.0:
                     found = True
 
-                    #Something flows out of this cell, remember that
-                    outflow_cell_set.add(current_index)
 
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
@@ -397,14 +388,12 @@ def calculate_flow_graph(
                     #so figure out the neighbor then add to inflow set
                     outflow_index = current_index + \
                         diagonal_offsets[neighbor_direction_index]
-                    inflow_cell_set.add(outflow_index)
 
                     #if there is non-zero flow to the next cell clockwise then
                     #add it to the inflow set
                     if outflow_weight != 1.0:
                         next_outflow_index = current_index + \
                             diagonal_offsets[(neighbor_direction_index + 1) % 8]
-                        inflow_cell_set.add(next_outflow_index)
 
                     #we found the outflow direction
                     break
@@ -426,14 +415,11 @@ def calculate_flow_graph(
     outflow_direction_band.WriteArray(outflow_direction)
 
     LOGGER.debug("Calculating sink and source cells")
-    sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
-    source_cell_set = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.debug('n_cols n_rows %s %s' % (n_cols, n_rows))
 
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))
-    return sink_cell_set, source_cell_set
 
 
 def calculate_flow_direction(dem_uri, flow_direction_uri):
@@ -1315,7 +1301,8 @@ def find_sinks(dem_carray, dem_nodata):
     misses = 0
 
     col_index = 0
-    sink_set = set()
+    cdef int sink_set_index = 0
+    sink_set = numpy.empty((10,), dtype=numpy.int32)
     for row_index in range(n_rows):
         #the col index will be 0 since we go row by row
         if _update_window(
@@ -1353,7 +1340,11 @@ def find_sinks(dem_carray, dem_nodata):
             else: #else for the for loop
                 #every cell we encountered was nodata or higher than current
                 #cell, must be a sink
-                sink_set.add(row_index * n_cols + col_index)
+                if sink_set_index >= sink_set.shape[0]:
+                    sink_set.resize((sink_set.shape[0] * 2,))
+                sink_set[sink_set_index] = row_index * n_cols + col_index
+                sink_set_index += 1
 
     LOGGER.info("hit ratio %d %d %f" % (misses, hits, hits/float(misses+hits)))
+    sink_set.resize((sink_set_index,))
     return sink_set
