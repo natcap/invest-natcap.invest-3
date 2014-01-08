@@ -138,3 +138,17 @@ def initialize_pop(maturity_type, params_dict, order, init_recruits,
             Modified version of cycle_dict which contains initial pop counts by
             area and age group.
     '''
+
+    if maturity_type == 'Stage Specific':
+        
+        for area in params_dict['Area_Params'].keys():
+            #The first one should be set to the initial recruits, the rest should
+            #be 1.
+            cycle_dict[1][area] = {order[0]:init_recruits}
+
+            for stage in order[1::]
+
+                cycle_dict[1][area][stage] = init_recruits
+
+
+
