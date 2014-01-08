@@ -147,7 +147,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
         first_stage = [order[0], order[len(order)/2]]
         final_stage = [order[len(order)/2-1], order[len(order)-1]]
     else:
-        first stage = [order[0]]
+        first_stage = [order[0]]
         final_stage = [order[len(order)-1]]
 
     revised_order = copy.copy(order)
