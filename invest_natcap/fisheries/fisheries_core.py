@@ -106,9 +106,7 @@ def initialize_pop(maturity_type, params_dict, order, init_recruits,
             growth.
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
-            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
-            present are determined by what equations/additional information the
-            user is trying to model.
+            information.
 
             {'Stage_Params':
                 {'Age_A':
