@@ -932,3 +932,7 @@ def execute(args):
 
     for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
         driver.Delete(uri)
+
+    datasource = ogr.Open(extent_uri, 1)
+    datasource.DeleteLayer(0)
+    datasource = None
