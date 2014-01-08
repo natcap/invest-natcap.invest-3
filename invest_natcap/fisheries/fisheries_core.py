@@ -107,22 +107,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             "Stage Specific" and will change which equation is used in modeling
             growth.
         params_dict- Dictionary containing all information from the csv file.
-            Should have age/stage specific information, as well as area-specific
+            Contains  age/stage specific information, as well as area-specific
             information.
-
-            {'Stage_Params':
-                {'Age_A':
-                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
-                     'weight': 4.42, 'duration': 16},
-                     ...
-                }
-             'Area_Params':
-                {'Area_1':
-                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
-                    ...
-                }
-            }
         ordered_stages- A list containing all the ages/stages that are being
             used within this run of the model, in the order in which they
             should occur naturally.
@@ -187,4 +173,42 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                     count = prev_count * surv
                 
                 cycle_dict[1][area][age] = count
-                   
+
+def calc_survival_mortal(params_dict, area, stage):
+    '''Calculate survival from natural and fishing mortality
+
+    Input:
+        params_dict- Dictionary which we will use to get survival values,
+            exploitation fraction, and vulnerability to fishing.
+
+            {'Stage_Params':
+                {'Age_A':
+                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'weight': 4.42, 'duration': 16},
+                     ...
+                }
+             'Area_Params':
+                {'Area_1':
+                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    ...
+                }
+            }
+        area- A string that can be used to index into params_dict describing
+            the area that we are calculating for.
+        stage- A string that can be used to index into params_dict describing
+            the age/stage that we're calculating for.
+
+    Returns:
+        The survival fraction, which is described by the equation
+        S = surv{a,s,x} * (1-exp{x} * vuln{a,s})
+    '''
+
+    surv_frac = params_dict['Stage_Params'][age]['survival'][area]
+    exp_frac = params_dict['Area_Params'][area]['exploit_frac']
+    vuln = params_dict['Stage_Params'][age]['vuln_fishing']
+
+    surv_mort = surv_frac * (1 - exp_frac * vuln)
+
+    return surv_mort
+               
