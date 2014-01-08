@@ -265,6 +265,7 @@ def execute(args):
     total_acc_bio_name = "total_bio_acc_%i_%i.tif"
     total_dis_soil_name = "total_soil_dis_%i_%i.tif"
     total_dis_bio_name = "total_bio_dis_%i_%i.tif"
+    net_sequestration_name = "sequest_%i_%i.tif"
 
     #uri
     total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name % (lulc_years[0], analysis_year))
@@ -818,6 +819,31 @@ def execute(args):
                                       gdal_type_identity_raster,
                                       fill_value=0)
     LOGGER.debug("Cumilative biomass disturbance raster created.")
+
+    def net_sequestration_op(bio_acc, bio_dis, soil_acc, soil_dis):
+        if nodata_default_float in [bio_acc, bio_dis, soil_acc, soil_dis]:
+            return nodata_default_float
+        else:
+            return ((bio_acc + soil_acc) - (bio_dis + soil_dis))
+
+    net_sequestration_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], lulc_years[-1]))
+    try:                                              
+        raster_utils.vectorize_datasets([total_acc_bio_uri, total_dis_bio_uri, total_acc_soil_uri, total_dis_soil_uri],
+                                        net_sequestration_op,
+                                        net_sequestration_uri,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
+                                        cell_size,
+                                        "union")
+    except:
+        raster_utils.new_raster_from_base_uri(total_acc_bio_uri,
+                                              net_sequestration_uri,
+                                              gdal_format,
+                                              nodata_default_int,
+                                              gdal_type_identity_raster,
+                                              fill_value=0)
+    LOGGER.debug("Net sequestration raster created.")
+    
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")
