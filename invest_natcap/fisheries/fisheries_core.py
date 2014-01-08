@@ -204,11 +204,10 @@ def calc_survival_mortal(params_dict, area, stage):
         S = surv{a,s,x} * (1-exp{x} * vuln{a,s})
     '''
 
-    surv_frac = params_dict['Stage_Params'][age]['survival'][area]
+    surv_frac = params_dict['Stage_Params'][stage]['survival'][area]
     exp_frac = params_dict['Area_Params'][area]['exploit_frac']
-    vuln = params_dict['Stage_Params'][age]['vuln_fishing']
+    vuln = params_dict['Stage_Params'][stage]['vuln_fishing']
 
     surv_mort = surv_frac * (1 - exp_frac * vuln)
 
     return surv_mort
-               
