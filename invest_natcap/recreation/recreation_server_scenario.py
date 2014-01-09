@@ -279,6 +279,16 @@ def execute(args):
             LOGGER.error("Scenario runs must have additional data.")
             raise ValueError, "Scenario runs must have additional data."
 
+        halt = False
+        for table_name in user_simple_predictors + user_compound_predictors:
+            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+                LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
+                halt = True
+        if halt:
+            msg = "One or more predictors contain invalid geometry."
+            LOGGER.error(msg)
+            raise ValueError, msg        
+
         LOGGER.debug("The following simple predictors will be updated: %s.",
                      loggify(repr(user_simple_predictors)))
         LOGGER.debug("The following compound predictors will be updated: %s.",

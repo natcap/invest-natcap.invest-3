@@ -77,14 +77,23 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         ["nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
-    flow_direction_uri = raster_utils.temporary_filename()
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    flow_direction_uri = 'flow_direction.tif'#raster_utils.temporary_filename()
+    outflow_weights_uri = 'outflow_weights.tif'#raster_utils.temporary_filename()
+    outflow_direction_uri = 'outflow_direction.tif' #raster_utils.temporary_filename()
 
-    routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
-    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
+    dem_data_uri = raster_utils.temporary_filename()
+    dem_carray = raster_utils.load_dataset_to_carray(
+        dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
+
+    routing_cython_core.flow_direction_inf(
+        dem_uri, flow_direction_uri, dem_carray)
+    dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+    sink_cell_set = routing_cython_core.find_sinks(dem_carray, dem_nodata)
+    routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
         dem_uri)
+
+    LOGGER.debug('sinks: %s' % str(sink_cell_set))
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)

@@ -337,6 +337,11 @@ def execute(args, config):
         LOGGER.info("Importing AOI %s.", aoi_file_name)
         aoi_srid = recreation_server_core.temp_shapefile_db(cur, aoi_file_name,
                                                             aoi_name)
+        if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
+            msg = "The AOI contains invalid geometry."
+            LOGGER.error(msg)
+            raise ValueError, msg
+        
         LOGGER.info("Imported AOI.")
         LOGGER.debug("Imported AOI with SRID %i", aoi_srid)
 
@@ -378,6 +383,16 @@ def execute(args, config):
             LOGGER.debug("Creating table %s from %s.", table_name, table_file_name)
             predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
+
+        halt = False
+        for table_name in user_simple_predictors + user_compound_predictors:
+            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+                LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
+                halt = True
+        if halt:
+            msg = "One or more predictors contain invalid geometry."
+            LOGGER.error(msg)
+            raise ValueError, msg
 
         #processing AOI
         #merge multiple parts
@@ -471,7 +486,7 @@ def execute(args, config):
 
         #project grid for clips
         LOGGER.info("Projecting the grid for clips.")
-        LOGGER.debug("_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
+        LOGGER.debug("predictor_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
         for srid in set([predictor_srid[predictor_key] for predictor_key in predictor_srid]):
             LOGGER.debug("Projecting grid to SRID %i.", srid)
             recreation_server_core.transform_execute(cur, grid_union_name, projected_format % (grid_union_name, srid), grid_column_name, srid)

@@ -265,6 +265,7 @@ def execute(args):
     total_acc_bio_name = "total_bio_acc_%i_%i.tif"
     total_dis_soil_name = "total_soil_dis_%i_%i.tif"
     total_dis_bio_name = "total_bio_dis_%i_%i.tif"
+    net_sequestration_name = "sequest_%i_%i.tif"
 
     #uri
     total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name % (lulc_years[0], analysis_year))
@@ -737,14 +738,13 @@ def execute(args):
     #construct list of rasters for totals
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
-    lulc_years.pop(-1)
 
     acc_soil_uri_list = []
     acc_bio_uri_list = []
     dis_soil_uri_list = []
     dis_bio_uri_list = []
 
-    for year in lulc_years:
+    for year in lulc_years[:-1]:
         acc_soil_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
         acc_bio_uri_list.append(os.path.join(workspace_dir, acc_bio_name % year))
         dis_soil_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
@@ -818,7 +818,32 @@ def execute(args):
                                       nodata_default_int,
                                       gdal_type_identity_raster,
                                       fill_value=0)
-    LOGGER.debug("Cumilative biomass disturbance raster created.")       
+    LOGGER.debug("Cumilative biomass disturbance raster created.")
+
+    def net_sequestration_op(bio_acc, bio_dis, soil_acc, soil_dis):
+        if nodata_default_float in [bio_acc, bio_dis, soil_acc, soil_dis]:
+            return nodata_default_float
+        else:
+            return ((bio_acc + soil_acc) - (bio_dis + soil_dis))
+
+    net_sequestration_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], lulc_years[-1]))
+    try:                                              
+        raster_utils.vectorize_datasets([total_acc_bio_uri, total_dis_bio_uri, total_acc_soil_uri, total_dis_soil_uri],
+                                        net_sequestration_op,
+                                        net_sequestration_uri,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
+                                        cell_size,
+                                        "union")
+    except:
+        raster_utils.new_raster_from_base_uri(total_acc_bio_uri,
+                                              net_sequestration_uri,
+                                              gdal_format,
+                                              nodata_default_int,
+                                              gdal_type_identity_raster,
+                                              fill_value=0)
+    LOGGER.debug("Net sequestration raster created.")
+    
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")
@@ -897,12 +922,17 @@ def execute(args):
 ##    ##clean up
     driver = gdal.GetDriverByName('GTiff')
     for year in lulc_years[1:]:
+        LOGGER.debug("Cleaning up intermediates for year %i." % year)
         driver.Delete(os.path.join(workspace_dir, above_name % year))
         driver.Delete(os.path.join(workspace_dir, below_name % year))
         driver.Delete(os.path.join(workspace_dir, soil_name % year))
-        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+        #driver.Delete(os.path.join(workspace_dir, litter_name % year))
         driver.Delete(os.path.join(workspace_dir, biomass_name % year))
-        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+        #driver.Delete(os.path.join(workspace_dir, carbon_name % year))
 
     for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
         driver.Delete(uri)
+
+    datasource = ogr.Open(extent_uri, 1)
+    datasource.DeleteLayer(0)
+    datasource = None
