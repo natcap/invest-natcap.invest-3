@@ -113,6 +113,11 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
 
     """
 
+    if os.path.isfile(tmp_uri):
+        os.remove(tmp_uri)
+    if os.path.isfile(image_out_uri):
+        os.remove(image_out_uri)
+        
     aoi_sr = raster_utils.get_spatial_ref_uri(shape_in_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
@@ -136,11 +141,13 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
     config = {"layers":
                 {"mylayer":
                     {"src":tmp_uri,
-                    "export":{"width":300, "height": 500},
-                    "attributes":["ws_id"]
-                    }
-                    }}
-    
+                     "labeling": {"ws_id": "ws_id"}}
+                 }
+              }
+                #"export":{"width":500, "height": 400},
+                    #"attributes":["ws_id"],
+                    #"labeling": {"key": "ws_id"}
+        
     kart.generate(config, outfile=image_out_uri, stylesheet=css)
 
             
