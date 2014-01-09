@@ -138,15 +138,23 @@ def execute(args):
     core_args['migrate_dict'] = migration_dict
 
     #Recruitment- already know that the correct params exist
-    core_args['rec_eq'] = args['rec_eq']
+    '''Want to make a single dictionary to pass with the correct arguments.
+    Dictionary will look like one of the following:
+        {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
+        {'Ricker': {'alpha': 0.02, 'beta': 3}}
+        {'Fecundity': {FECUNDITY DICT}}
+        {'Fixed': 0.5}
+   ''' 
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
-        core_args['alpha'] = args['alpha']
-        core_args['beta'] = args['beta']
+        key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
+        rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
     elif args['rec_eq'] == 'Fecundity':
-        fec_params_dict = parse_fec_csv(args['fec_params_uri'])
-        core_args['fecundity_dict'] = fec_params_dict
+        rec_dict = {'Fecundity': fec_params_dict}}
     else:
-        core_args['fix_param'] = args['fix_param']
+        rec_dict = {'Fixed': args['fix_param']}
+    
+    core_args['rec_dict'] = rec_dict
+
 
     #Direct pass all these variables
     core_args['workspace_uri'] = args['workspace_uri']
