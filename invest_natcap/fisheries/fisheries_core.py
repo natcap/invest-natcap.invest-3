@@ -143,7 +143,7 @@ def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
     
-    do_migration = False if migration_dict is None else False
+    do_migration = False if migration_dict is None else True
 
     for cycle in range(1, duration):
         for area in params_dict['Area_Params'].keys():
@@ -205,11 +205,14 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     if maturity_type == 'Stage Specific':
         
         for area in params_dict['Area_Params'].keys():
-            #The first stage should be set to the initial recruits, the rest 
-            #should be 1.
+
+            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+            
+            #The first stage should be set to the initial recruits equation, the
+            #rest should be 1.
             for stage in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
-                cycle_dict[cycle_count][area] = {stage:inital_pop}
+                cycle_dict[cycle_count][area] = {stage:initial_pop}
                 revised_order.remove(stage)
 
             for stage in revised_order:
