@@ -96,15 +96,63 @@ def execute(args):
 
     if args['maturity_type'] == "Age Specific":
         age_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['rec_dict'], cycle_dict, migration_dict, 
-                    args['duration'])
+                    args['ordered_stages'], args['rec_dict'], cycle_dict, 
+                    migration_dict, args['duration'])
     else:
         stage_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['rec_dict'], cycle_dict, migration_dict, 
-                    args['duration'])
+                    args['ordered_stages'], args['rec_dict'], cycle_dict, 
+                    migration_dict, args['duration'])
 
 def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
                     migration_dict, duration):
+    '''cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+        params_dict- Dictionary containing all information from the csv file.
+            Should have age/stage specific information, as well as area-specific
+            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
+            present are determined by what equations/additional information the
+            user is trying to model.
+
+            {'Stage_Params':
+                {'Age_A':
+                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'weight': 4.42, 'duration': 16},
+                     ...
+                }
+             'Area_Params':
+                {'Area_1':
+                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    ...
+                }
+            }
+    '''
+    #Need to know if we're using gendered ages, b/c it changes the age
+    #specific initialization equation. We need to know the two last stages
+    #that we have to look out for to switch the EQ that we use.
+    if is_gendered == True:
+        first_age = [order[0], order[len(order)/2]]
+        final_agee = [order[len(order)/2-1], order[len(order)-1]]
+    else:
+        first_age = [order[0]]
+        final_age = [order[len(order)-1]]
+    
+    do_migration = False if migration_dict is None else False
+
+    for cycle in range(1, duration):
+        for area in params_dict['Area_Params'].keys():
+            for age in params_dict['Stage_Params'].keys():
+
+                #If a = 0
+                if age in first_age:
+                    pass 
+
     pass
 
 def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
@@ -152,6 +200,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
         final_stage = [order[len(order)-1]]
 
     revised_order = copy.copy(order)
+    gender_var = 2 if is_gendered else 1
 
     if maturity_type == 'Stage Specific':
         
@@ -159,7 +208,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             #The first stage should be set to the initial recruits, the rest 
             #should be 1.
             for stage in first_stage:
-                cycle_dict[cycle_count][area] = {stage:init_recruits}
+                initial_pop = init_recruits * larval_disp / gender_var
+                cycle_dict[cycle_count][area] = {stage:inital_pop}
                 revised_order.remove(stage)
 
             for stage in revised_order:
@@ -168,9 +218,13 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     elif maturity_type == 'Age Specific':
         
         for area in params_dict['Area_Params'].keys():
+
+            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+
             #For age = 0, count = init_recruits
             for age in first_stage:
-                cycle_dict[cycle_count][area] = {age:init_recruits}
+                initial_pop = init_recruits * larval_disp / gender_var
+                cycle_dict[cycle_count][area] = {age:initial_pop}
                 revised_order.remove(age)
             
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
