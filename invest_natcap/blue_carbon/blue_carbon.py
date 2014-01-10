@@ -12,6 +12,7 @@ import os
 import random
 
 import operator
+import math
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -914,12 +915,49 @@ def execute(args):
         d = 0
         
     report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, d])))
+    report.write("\n</TABLE>")
+    
+    #totals
+    report.write("\n<P><P><B>Totals</B>")
+    column_name_list = ["Year", "Amount"]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for year in lulc_years:
+        report.write("\n<TR><TD>%i</TD><TD>%s</TD></TR>" % (year, str(sum_uri(os.path.join(workspace_dir, carbon_name % year), extent_uri))))
+
+    report.write("\n</TABLE>")
+
+    #lulc statistics
+    report.write("\n<P><P><B>LULC Counts</B>")
+    lulc_types = carbon.keys()
+    lulc_types.sort()
+
+    counts = {}
+    count_max = 0
+    for year in lulc_years:
+        counts[year] = raster_utils.unique_raster_values_count(lulc_uri_dict[year])
+        count_max = max([count_max] + [counts[year][k] for k in counts[year]])
+
+    width = int(math.ceil(math.log10(count_max)))
+
+    column_name_list = ["Year"] + [str(lulc).ljust(width, "#").replace("#", "&ensp;") for lulc in lulc_types]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for year in lulc_years:
+        report.write("<P><TR align=\"right\"><TD>%i</TD>" % year)
+        for lulc in lulc_types:
+            try:
+                report.write("<TD>%i</TD>" % counts[year][lulc])
+            except KeyError:
+                report.write("<TD>%i</TD>" % 0)
+        report.write("</TR>")
+
+    report.write("\n</TABLE>")
 
     #close report
     report.close()
 
-
-##    ##clean up
+    ##clean up
     driver = gdal.GetDriverByName('GTiff')
     for year in lulc_years[1:]:
         LOGGER.debug("Cleaning up intermediates for year %i." % year)
