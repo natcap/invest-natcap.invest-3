@@ -664,6 +664,55 @@ def execute(args):
             lulc_base_uri = lulc_uri_dict[lulc_base_year]
             LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
+##    ##analysis year operations
+##    lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (lulc_transition_year, analysis_year))
+##    LOGGER.debug("Calculated soil accumulation coefficient.")
+##    
+##    lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_transition_year)
+##    LOGGER.debug("Calculated soil accumulation.")
+##    
+##    lulc_base_acc_bio_co_uri = os.path.join(workspace_dir, acc_bio_co_name % (lulc_transition_year, analysis_year))
+##    LOGGER.debug("Calculated biomass accumulation coefficient.)
+##                 
+##    lulc_base_acc_bio_uri = os.path.join(workspace_dir, acc_bio_name % lulc_transition_year)        
+##    LOGGER.debug("Calculated biomass accumulation.")
+##    
+##    lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (lulc_transition_year, analysis_year))
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_bio_co_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)    
+##    LOGGER.debug("Calculated biomass disturbance coefficient.")
+##
+##    lulc_base_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % lulc_transition_year)
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_bio_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)        
+##    LOGGER.debug("Calculated biomass disturbance.")
+##    
+##    lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % (lulc_transition_year, analysis_year))
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_soil_co_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)
+##    LOGGER.debug("Calculated soil disturbance coefficient.")
+##    
+##    lulc_base_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % lulc_transition_year)
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_soil_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)    
+##    LOGGER.debug("Calculated soil disturbance.")        
+
     ##calculate adjusted pools
     LOGGER.debug(str(lulc_years))
     LOGGER.info("Calculating adjusted pools.")
@@ -677,7 +726,9 @@ def execute(args):
     transition_year = lulc_years[1]
     adj_bio_uri = os.path.join(workspace_dir,adj_bio_name % transition_year)
     adj_soil_uri = os.path.join(workspace_dir, adj_soil_name % transition_year)
-    raster_utils.vectorize_datasets([os.path.join(workspace_dir, above_name % base_year),
+
+    #calculate adjusted soil
+    raster_utils.vectorize_datasets([os.path.join(workspace_dir, soil_name % base_year),
                                      os.path.join(workspace_dir,acc_soil_name % base_year),
                                      os.path.join(workspace_dir,dis_soil_name % base_year)],
                                     adj_op,
@@ -702,14 +753,14 @@ def execute(args):
 
 
     base_year = transition_year
-    for transition_year in lulc_years[2:]:
+    for transition_year in lulc_years[2:-1]:
         adj_bio_uri = os.path.join(workspace_dir,adj_bio_name % transition_year)
         adj_soil_uri = os.path.join(workspace_dir,adj_soil_name % transition_year)
 
         #calculate adjusted soil
         raster_utils.vectorize_datasets([os.path.join(workspace_dir,adj_soil_name % base_year),
-                                         os.path.join(workspace_dir,acc_soil_name % base_year),
-                                         os.path.join(workspace_dir,dis_soil_name % base_year)],
+                                         os.path.join(workspace_dir,acc_soil_name % transition_year),
+                                         os.path.join(workspace_dir,dis_soil_name % transition_year)],
                                         adj_op,
                                         adj_soil_uri,
                                         gdal_type_carbon,
@@ -720,8 +771,8 @@ def execute(args):
 
         #calculate adjusted biomass
         raster_utils.vectorize_datasets([os.path.join(workspace_dir,adj_bio_name % base_year),
-                                         os.path.join(workspace_dir,acc_bio_name % base_year),
-                                         os.path.join(workspace_dir,dis_bio_name % base_year)],
+                                         os.path.join(workspace_dir,acc_bio_name % transition_year),
+                                         os.path.join(workspace_dir,dis_bio_name % transition_year)],
                                         adj_op,
                                         adj_bio_uri,
                                         gdal_type_carbon,
