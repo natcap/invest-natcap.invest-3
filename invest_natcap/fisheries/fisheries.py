@@ -130,7 +130,7 @@ def execute(args):
     area_count = aoi_layer.GetFeatureCount()
 
     #Calculate the classes main param info, and add it to the core args dict
-    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count
+    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
                                 args['rec_eq'])
     core_args['classes_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
@@ -328,7 +328,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
                 species is missing a VulnFishing parameter. Please make sure \
                 that each age/stage for the species has a corresponding \
                 proportion that is vulnerable to fishing.")
-    if 'maturity' not in age_params and 
+    if 'maturity' not in age_params and \
                         rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
         raise MissingMaturityParameter("The main parameter CSV for this \
                 species is missing a Maturity parameter. Please make sure \
