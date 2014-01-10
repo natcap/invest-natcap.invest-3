@@ -298,7 +298,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Soil accumulation table valid.")
     else:
-        msg = "Soil accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in soil the accumulation table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -306,7 +306,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Soil disturbance table valid.")
     else:
-        msg = "Soil disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the soil disturbance table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -314,7 +314,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Biomass accumulation table valid.")
     else:
-        msg = "Biomass accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the biomass accumulation table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -322,7 +322,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Biomass disturbance table valid.")
     else:
-        msg = "Biomass disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the biomass disturbance table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
