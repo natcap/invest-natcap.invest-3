@@ -87,7 +87,7 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
 
     LOGGER.info("calculating flow_direction_inf")
     routing_cython_core.flow_direction_inf(
-        dem_uri, flow_direction_uri, dem_carray)
+        dem_uri, flow_direction_uri, dem_carray=None)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     sink_cell_set = routing_cython_core.find_sinks(dem_carray, dem_nodata)
     LOGGER.info("calculating flow_graph")
