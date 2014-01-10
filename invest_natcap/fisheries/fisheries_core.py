@@ -96,17 +96,19 @@ def execute(args):
 
     if args['maturity_type'] == "Age Specific":
         age_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['rec_dict'], cycle_dict, migration_dict, duration)
+                    args['rec_dict'], cycle_dict, migration_dict, 
+                    args['duration'])
     else:
         stage_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['rec_dict'], cycle_dict, migration_dict, duration)
+                    args['rec_dict'], cycle_dict, migration_dict, 
+                    args['duration'])
 
 def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
-                    migration_dict, duration)
+                    migration_dict, duration):
     pass
 
 def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
-                    migration_dict, duration)
+                    migration_dict, duration):
     pass
 
 
