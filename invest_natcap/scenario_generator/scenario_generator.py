@@ -100,7 +100,23 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = N
 
 
 def execute(args):
+    ###
+    #overiding, non-standard field names
+    ###
 
+    #transition fields
+    args["transition_id"] = "ID"
+    args["percent_field"] = "Percent Change"
+    args["area_field"] = "Area Change"
+    args["priority_field"] = "Priority"
+    args["proximity_field"] = "Proximity"
+
+    #factors fields
+    args["suitability_id"] =  "ID"
+    args["suitability_layer"] = "Layer"
+    args["suitability_field"] = "Suitfield"
+    args["distance_field"] = "Dist"
+    
     ###
     #get parameters, set outputs
     ###
