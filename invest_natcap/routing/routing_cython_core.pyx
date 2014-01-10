@@ -701,7 +701,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
 
     cdef int weight, w_row_index, w_col_index
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
-    cdef int lr_col_index, lr_row_index, hits, misses
+    cdef int lr_col_index, lr_row_index, hits, misses, steps
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
     
     row_window_size = 7
@@ -769,7 +769,12 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
     hits = 0
     misses = 0
 
+    steps = 0
+
     while sink_queue.size() > 0:
+        if steps % 1000 == 0:
+            LOGGER.debug("sink queue size: %d" % (sink_queue.size()))
+        steps += 1
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
         row_index = current_cell_tuple.row_index
@@ -787,7 +792,9 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
             row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
-            
+            LOGGER.debug('miss')
+
+
             #write back the old window
             dem_sink_offset_carray[old_ul_row_index:old_lr_row_index,
                 old_ul_col_index:old_lr_col_index] = dem_sink_offset
@@ -804,9 +811,8 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
         w_row_index = row_index - ul_row_index
         w_col_index = col_index - ul_col_index
 
-        if dem_sink_offset[w_row_index, w_col_index] <= weight:
+        if dem_sink_offset[w_row_index, w_col_index] < weight:
             continue
-
         dem_sink_offset[w_row_index, w_col_index] = weight
 
         for neighbor_index in xrange(8):
@@ -829,6 +835,7 @@ def resolve_flat_regions_for_drainage(dem_carray, float nodata_value):
                 t = Row_Col_Weight_Tuple(
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
+                dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
 
         
         #write back the old window
