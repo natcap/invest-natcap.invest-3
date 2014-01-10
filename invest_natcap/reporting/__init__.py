@@ -2,6 +2,7 @@
 functionality."""
 
 import os
+import shutil
 import logging
 import csv
 import json
@@ -136,7 +137,7 @@ def generate_report(reporting_args):
         # handles them. As of now, the easiest / maybe best way is to add a key
         # in the 'elements' dictionary being passed along
         if fun_type == 'head':
-            elements['out_uri'] = reporting_args['out_uri']
+            element['out_uri'] = reporting_args['out_uri']
 
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
@@ -335,22 +336,25 @@ def add_head_element(param_args):
     output_uri = param_args['out_uri']
     # Initialize the destination URI to be the same as how it comes in, in the
     # case where the destination URI is already in the proper directory
-    dst = src
+    #dst = src
 
     # Copy the source file to the location of the output directory
-    if not os.path.isfile(src):
-        # Get the script files basename
-        basename = os.path.basename(src)
-        # Get the output_uri directory location
-        dirname = os.path.dirname(output_uri)
-        # Set the destination URI for copying the script
-        dst = os.path.join(dirname, basename)
+    # Get the script files basename
+    basename = os.path.basename(src)
+    # Get the output_uri directory location
+    dirname = os.path.dirname(output_uri)
+    # Set the destination URI for copying the script
+    dst = os.path.join(dirname, basename)
+    
+    if not os.path.isfile(dst):
         shutil.copyfile(src, dst)
 
+    relative_dst = './' + basename
+
     if form == 'link':
-        html_str = '<link rel=stylesheet type=text/css href=%s>' % dst
+        html_str = '<link rel=stylesheet type=text/css href=%s>' % relative_dst
     elif form == 'script':
-        html_str = '<script type=text/javascript src=%s></script>' % dst
+        html_str = '<script type=text/javascript src=%s></script>' % relative_dst
     else:
         raise Exception('Currently this type of head element is not supported')
 
