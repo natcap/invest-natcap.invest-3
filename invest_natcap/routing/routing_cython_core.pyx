@@ -794,7 +794,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     misses = 0
     steps = 0
     while sink_queue.size() > 0:
-        if steps % 1000 == 0:
+        if steps % 10000 == 0:
             LOGGER.debug("sink queue size: %d" % (sink_queue.size()))
         steps += 1
         current_cell_tuple = sink_queue.front()
@@ -956,7 +956,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     misses = 0
     steps = 0
     while edge_queue.size() > 0:
-        if steps % 1000 == 0:
+        if steps % 10000 == 0:
             LOGGER.debug("edge queue size: %d" % (edge_queue.size()))
         steps += 1
         current_cell_tuple = edge_queue.front()
