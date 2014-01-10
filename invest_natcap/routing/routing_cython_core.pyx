@@ -881,7 +881,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         #write back the old window
     dem_sink_offset_band.WriteArray(
-        dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+        dem_sink_offset, xoff=ul_col_index, yoff=ul_row_index)
 #    dem_sink_offset_carray[ul_row_index:lr_row_index,
 #        ul_col_index:lr_col_index] = dem_sink_offset
 
@@ -1130,7 +1130,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 #    expr.eval() 
     
     
-def flow_direction_inf(dem_uri, flow_direction_uri, dem_carray=None):
+def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         
@@ -1161,12 +1161,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_carray=None):
         dem_nodata = -9999
     
     #Load DEM and resolve plateaus
-    dem_offset_uri = 'dem_offset_uri.tif'
     resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
-    if dem_carray is None:
-        dem_data_uri = raster_utils.temporary_filename()
-        dem_carray = raster_utils.load_dataset_to_carray(
-            dem_offset_uri, dem_data_uri, array_type=gdal.GDT_Float32)
+    dem_data_uri = raster_utils.temporary_filename()
+    dem_carray = raster_utils.load_dataset_to_carray(
+        dem_offset_uri, dem_data_uri, array_type=gdal.GDT_Float32)
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -1374,11 +1372,10 @@ cdef inline  int _update_window(
         return 0
 
         
-def find_sinks(dem_carray, dem_nodata):
+def find_sinks(dem_uri):
     """Discover and return the sinks in the dem array
     
-        dem_carray - a carray with a dem
-        dem_nodata - the nodata value for dem_carray
+        dem_carray - a uri to a gdal dataset
         
         returns a set of flat integer index indicating the sinks in the region"""
         
@@ -1389,9 +1386,12 @@ def find_sinks(dem_carray, dem_nodata):
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, neighbor_index
     cdef int neighbor_row_index, neighbor_col_index, w_neighbor_row_index, w_neighbor_col_index
-    cdef int n_cols = dem_carray.shape[1]
-    cdef int n_rows = dem_carray.shape[0]
-    cdef float nodata_value = dem_nodata
+
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
+    cdef int n_cols = dem_band.XSize
+    cdef int n_rows = dem_band.YSize
+    cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     
     LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
 
@@ -1402,8 +1402,9 @@ def find_sinks(dem_carray, dem_nodata):
     lr_row_index = row_window_size
     lr_col_index = col_window_size
 
-    cdef float[:,:] dem_array = (
-        dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index])
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+        win_ysize=row_window_size)
     hits = 0
     misses = 0
 
@@ -1418,8 +1419,9 @@ def find_sinks(dem_carray, dem_nodata):
             row_window_size, col_window_size, 1):
             #need to reload the window
             misses += 1
-            dem_array = dem_carray[ul_row_index:lr_row_index,
-                                   ul_col_index:lr_col_index]
+            dem_band.ReadAsArray(
+                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                win_ysize=row_window_size, buf_obj=dem_array)
         else:
             hits += 1
         w_row_index = row_index - ul_row_index
