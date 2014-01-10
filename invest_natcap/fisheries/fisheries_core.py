@@ -19,7 +19,6 @@ def execute(args):
             growth.
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
-        rec_eq- The equation to be used in calculation of recruitment. Choices
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
             information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
@@ -42,17 +41,13 @@ def execute(args):
         ordered_stages- A list containing all the ages/stages that are being
             used within this run of the model, in the order in which they
             should occur naturally.
-        alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
-            recruitment.
-        beta(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
-            recruitment.
-        fecundity_dict- Must exist within args if rec_eq == "Fecundity".
-            Dictionary containing all relevant fecundity information for this
-            run of the model.
-        fix_param(*)- Must exist within args if rec_eq == "Fixed". Parameter
-            that will be used in calculation of recruitment. 
+        rec_dict- A dictionary containing the chosen recruitment equation and
+            the parameters that are needed to use that equation. Dictionary will
+            look like one of the following:
+            {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
+            {'Ricker': {'alpha': 0.02, 'beta': 3}}
+            {'Fecundity': {FECUNDITY DICT}}
+            {'Fixed': 0.5}
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
         migration_dict(*)- Migration dictionary which will contain all source/sink
@@ -91,14 +86,34 @@ def execute(args):
     }
     '''
     #Initialize the first cycle, since we know we will start at least one.
-    cycle_dict = {1:{}}
+    cycle_dict = {}
 
     initialize_pop(args['maturity_type'], args['params_dict'], 
         args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
-        cycle_dict)
+        cycle_dict, 0)
+
+    migration_dict = args['migration_dict'] if 'migration_dict' in args else None
+
+    if args['maturity_type'] == "Age Specific":
+        age_structured_cycle(args['params_dict'], args['is_gendered'],
+                    args['rec_dict'], cycle_dict, migration_dict, 
+                    args['duration'])
+    else:
+        stage_structured_cycle(args['params_dict'], args['is_gendered'],
+                    args['rec_dict'], cycle_dict, migration_dict, 
+                    args['duration'])
+
+def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+                    migration_dict, duration):
+    pass
+
+def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+                    migration_dict, duration):
+    pass
+
 
 def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
-                    cycle_dict):
+                    cycle_dict, cycle_count):
     '''Set the initial population numbers within cycling dictionary.
 
     Input:
@@ -144,18 +159,18 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             #The first stage should be set to the initial recruits, the rest 
             #should be 1.
             for stage in first_stage:
-                cycle_dict[1][area] = {stage:init_recruits}
+                cycle_dict[cycle_count][area] = {stage:init_recruits}
                 revised_order.remove(stage)
 
             for stage in revised_order:
-                cycle_dict[1][area][stage] = 1
+                cycle_dict[cycle_count][area][stage] = 1
 
     elif maturity_type == 'Age Specific':
         
         for area in params_dict['Area_Params'].keys():
             #For age = 0, count = init_recruits
             for age in first_stage:
-                cycle_dict[1][area] = {age:init_recruits}
+                cycle_dict[cycle_count][area] = {age:init_recruits}
                 revised_order.remove(age)
             
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
@@ -163,7 +178,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 #Can use order to check previous, since we know we will not be
                 #getting the first of any age group.
                 prev_age = order[order.index(age)-1]
-                prev_count = cycle_dict[1][area][prev_age]
+                prev_count = cycle_dict[cycle_count][area][prev_age]
                 
                 surv = calc_survival_mortal(params_dict, area, age)
 
@@ -172,7 +187,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 else:
                     count = prev_count * surv
                 
-                cycle_dict[1][area][age] = count
+                cycle_dict[cycle_count][area][age] = count
 
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
