@@ -149,7 +149,7 @@ def execute(args):
         key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
         rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
     elif args['rec_eq'] == 'Fecundity':
-        rec_dict = {'Fecundity': fec_params_dict}}
+        rec_dict = {'Fecundity': args['fec_params_dict']}
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
