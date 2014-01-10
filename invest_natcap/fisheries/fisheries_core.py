@@ -19,7 +19,6 @@ def execute(args):
             growth.
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
-        rec_eq- The equation to be used in calculation of recruitment. Choices
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
             information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
@@ -42,17 +41,13 @@ def execute(args):
         ordered_stages- A list containing all the ages/stages that are being
             used within this run of the model, in the order in which they
             should occur naturally.
-        alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
-            recruitment.
-        beta(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
-            recruitment.
-        fecundity_dict- Must exist within args if rec_eq == "Fecundity".
-            Dictionary containing all relevant fecundity information for this
-            run of the model.
-        fix_param(*)- Must exist within args if rec_eq == "Fixed". Parameter
-            that will be used in calculation of recruitment. 
+        rec_dict- A dictionary containing the chosen recruitment equation and
+            the parameters that are needed to use that equation. Dictionary will
+            look like one of the following:
+            {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
+            {'Ricker': {'alpha': 0.02, 'beta': 3}}
+            {'Fecundity': {FECUNDITY DICT}}
+            {'Fixed': 0.5}
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
         migration_dict(*)- Migration dictionary which will contain all source/sink
@@ -95,9 +90,24 @@ def execute(args):
 
     initialize_pop(args['maturity_type'], args['params_dict'], 
         args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
-        cycle_dict, 1)
+        cycle_dict, 0)
 
-    
+    migration_dict = args['migration_dict'] if 'migration_dict' in args else None
+
+    if args['maturity_type'] == "Age Specific":
+        age_structured_cycle(args['params_dict'], args['is_gendered'],
+                    args['rec_dict'], cycle_dict, migration_dict, duration)
+    else:
+        stage_structured_cycle(args['params_dict'], args['is_gendered'],
+                    args['rec_dict'], cycle_dict, migration_dict, duration)
+
+def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+                    migration_dict, duration)
+    pass
+
+def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+                    migration_dict, duration)
+    pass
 
 
 def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
@@ -214,4 +224,3 @@ def calc_survival_mortal(params_dict, area, stage):
     surv_mort = surv_frac * (1 - exp_frac * vuln)
 
     return surv_mort
-               

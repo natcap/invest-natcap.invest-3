@@ -155,7 +155,6 @@ def execute(args):
     
     core_args['rec_dict'] = rec_dict
 
-
     #Direct pass all these variables
     core_args['workspace_uri'] = args['workspace_uri']
     core_args['maturity_type'] = args['maturity_type']
