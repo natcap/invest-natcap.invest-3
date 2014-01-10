@@ -702,7 +702,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
-    #cdef float[:,:] dem_array
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
     cdef int weight, w_row_index, w_col_index
@@ -729,7 +728,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
-    dem_array = numpy.empty((row_window_size, col_window_size), dtype=numpy.float32)#dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
+    dem_array = numpy.empty((row_window_size, col_window_size), dtype=numpy.float32)
     dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size, buf_obj=dem_array)
@@ -760,16 +759,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 sink_queue.push(t)
 
     LOGGER.info('calculate distances from sinks to other flat cells')
-
-#    dem_sink_offset_data_uri = raster_utils.temporary_filename()
-#    dem_sink_offset_carray = raster_utils.create_carray(
-#        dem_sink_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-#    dem_sink_offset_carray[:] = numpy.inf
-#    dem_offset_data_file = tempfile.TemporaryFile()
-#    dem_offset_data_uri = raster_utils.temporary_filename()
-#    dem_offset_carray = raster_utils.create_carray(
-#        dem_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
     
@@ -787,7 +776,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     lr_col_index = col_window_size
 
     #Load the dem_offset raster/band/array
-    dem_sink_offset_uri = 'dem_sink_offset.tif'
+    dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         numpy.inf)
@@ -804,7 +793,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     hits = 0
     misses = 0
     steps = 0
-
     while sink_queue.size() > 0:
         if steps % 1000 == 0:
             LOGGER.debug("sink queue size: %d" % (sink_queue.size()))
@@ -831,8 +819,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             #write back the old window
             dem_sink_offset_band.WriteArray(
                 dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-#            dem_sink_offset_carray[old_ul_row_index:old_lr_row_index,
-#                old_ul_col_index:old_lr_col_index] = dem_sink_offset
             
             #load the new windows
             dem_out_band.ReadAsArray(
@@ -841,12 +827,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             dem_sink_offset_band.ReadAsArray(
                 xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                 win_ysize=row_window_size, buf_obj=dem_sink_offset)
-
-#           dem_array = dem_carray[ul_row_index:lr_row_index,
-#                ul_col_index:lr_col_index]
-#            dem_sink_offset = dem_sink_offset_carray[ul_row_index:lr_row_index,
-#                ul_col_index:lr_col_index]
-    
         else:
             hits += 1
 
@@ -879,12 +859,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 sink_queue.push(t)
                 dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
 
-        #write back the old window
+    #write back the remaning open window
     dem_sink_offset_band.WriteArray(
         dem_sink_offset, xoff=ul_col_index, yoff=ul_row_index)
-#    dem_sink_offset_carray[ul_row_index:lr_row_index,
-#        ul_col_index:lr_col_index] = dem_sink_offset
-
     if hits+misses != 0:
         LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                     (hits, misses, 100.0*misses/float(hits+misses)))
@@ -899,7 +876,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
@@ -949,13 +925,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                     (hits, misses, 100.0*misses/float(hits+misses)))
 
-
-    dem_edge_offset_data_uri = raster_utils.temporary_filename()
-#    dem_edge_offset_carray = raster_utils.create_carray(
-#        dem_edge_offset_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-#    dem_edge_offset_carray[:] = numpy.inf
-
-
     #This is as big as the window will get
     row_window_size = MAX_WINDOW_SIZE
     col_window_size = row_window_size
@@ -968,9 +937,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-
  
-    dem_edge_offset_uri = 'dem_edge_offset.tif'
+    dem_edge_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         numpy.inf)
@@ -980,18 +948,17 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_edge_offset_band.ReadAsArray(
             xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
             win_ysize=row_window_size))
-#   dem_edge_offset = dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
-    #dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-
-
    
     hits = 0
     misses = 0
-    
+    steps = 0
     while edge_queue.size() > 0:
+        if steps % 1000 == 0:
+            LOGGER.debug("edge queue size: %d" % (edge_queue.size()))
+        steps += 1
         current_cell_tuple = edge_queue.front()
         edge_queue.pop()
         row_index = current_cell_tuple.row_index
@@ -1005,12 +972,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             #need to reload the window
             misses += 1
+            LOGGER.debug('miss')
 
             #save edge offset off
             dem_edge_offset_band.WriteArray(
                 dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-#            dem_edge_offset_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
-    
+
+            #Get a window centered on the current pixel
             ul_row_index = row_index-(row_window_size/2)
             lr_row_index = row_index+row_window_size/2+row_window_size%2
             ul_col_index = col_index-(col_window_size/2)
@@ -1035,12 +1003,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             dem_edge_offset_band.ReadAsArray(
                 xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                 win_ysize=row_window_size, buf_obj=dem_edge_offset)
-
-            #dem_array = dem_carray[ul_row_index:lr_row_index,
-            #                       ul_col_index:lr_col_index]
-            #dem_edge_offset = dem_edge_offset_carray[
-            #    ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-    
         else:
             hits += 1
 
@@ -1069,20 +1031,18 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #save final dem edge offset off
     dem_edge_offset_band.WriteArray(
-        dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-#    dem_edge_offset_carray[
-#        ul_row_index:lr_row_index, ul_col_index:lr_col_index] = dem_edge_offset
+        dem_edge_offset, xoff=ul_col_index, yoff=ul_row_index)
     
     #Find max distance
     LOGGER.debug('calculating max distance')
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] row_array = numpy.empty((1, n_cols), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] row_array = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
     cdef int max_distance = -1
     
     for row_index in range(n_rows):
         dem_edge_offset_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
             buf_obj=row_array)
-#        row_array = dem_edge_offset_carray[row_index,:]
         try:
             max_distance = max(
                 max_distance, numpy.max(row_array[row_array!=numpy.inf]))
@@ -1092,10 +1052,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     
     #Add the final offsets to the dem array
     dem_array = numpy.empty((1, n_cols), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float, ndim=2]dem_sink_offset_array = numpy.empty((1, n_cols), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float, ndim=2]dem_edge_offset_array = numpy.empty((1, n_cols), dtype=numpy.float32)
-#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] mask_array
-#    cdef numpy.ndarray[numpy., ndim=2] mask_array
+    cdef numpy.ndarray[numpy.npy_float, ndim=2]dem_sink_offset_array = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2]dem_edge_offset_array = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
     for row_index in range(n_rows):
         dem_out_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
@@ -1106,28 +1066,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_edge_offset_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
             buf_obj=dem_edge_offset_array)
-        mask_array = ((dem_sink_offset_array != numpy.inf) & (dem_edge_offset_array != numpy.inf))
+        mask_array = ((dem_sink_offset_array != numpy.inf) &
+                      (dem_edge_offset_array != numpy.inf))
         dem_array[mask_array] = (dem_array[mask_array] + 
-            (dem_sink_offset_array[mask_array] * 2.0 + (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
+                                 (dem_sink_offset_array[mask_array] * 2.0 +
+                                  (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
-
-#    dem_out_array = dem_out_band.ReadAsArray(
-#        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-#        win_ysize=row_window_size)
-
-#    operation=('dem_carray + ('
-#        'where(dem_sink_offset_carray!=inf,dem_sink_offset_carray*2.0,0.0) + '
-#        'where(dem_edge_offset_carray!=inf,max_distance+1-dem_edge_offset_carray,0.0)) * 1.0/10000.0')
-#    user_args = {
-#        'dem_carray': dem_carray,
-#        'dem_sink_offset_carray': dem_sink_offset_carray,
-#        'dem_edge_offset_carray': dem_edge_offset_carray,
-#        'inf': numpy.inf,
-#        'max_distance': max_distance
-#        }
-#    expr = tables.Expr(operation, uservars=user_args)
-#    expr.set_output(dem_carray)
-#    expr.eval() 
     
     
 def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
