@@ -261,11 +261,14 @@ def build_table(param_args):
     if data_type == 'shapefile':
         key = param_args['key']
         data_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
+        data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
         data_dict = raster_utils.get_lookup_from_csv(input_data, key)
+        data_list = data_dict_to_list(data_dict)
     else:
-        data_dict = input_data
+        #data_dict = input_data
+        data_list = input_data
 
     LOGGER.debug('Data Collected from Input Source: %s', data_dict)
 
@@ -275,7 +278,8 @@ def build_table(param_args):
 
     # Add the properly formatted data dictionary to the final dictionary that is
     # to be passed to the table generator
-    table_dict['rows'] = data_dict
+    #table_dict['rows'] = data_dict
+    table_dict['rows'] = data_list
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
@@ -295,6 +299,16 @@ def build_table(param_args):
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
+
+def data_dict_to_list(data_dict):
+    data_list = []
+    data_keys = data_dict.keys()
+    data_keys.sort()
+    for key in data_keys:
+        data = data_dict[key]
+        data_list.append(data)
+
+    return data_list
 
 def add_text_element(param_args):
     """Generates a string that represents a html text block. The input string
