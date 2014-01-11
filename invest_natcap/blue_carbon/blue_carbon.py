@@ -327,12 +327,14 @@ def execute(args):
         raise ValueError, msg
 
     #construct dictionaries for single parameter lookups
-    above_dict = dict([(k, float(carbon[k][carbon_field_above])) for k in carbon])
-    below_dict = dict([(k, float(carbon[k][carbon_field_below])) for k in carbon])
-    soil_dict = dict([(k, float(carbon[k][carbon_field_soil])) for k in carbon])
-    litter_dict = dict([(k, float(carbon[k][carbon_field_litter])) for k in carbon])
-    depth_dict = dict([(k, float(carbon[k][carbon_field_depth])) for k in carbon])
-
+    conversion = raster_utils.get_cell_size_from_uri(lulc_uri_dict[lulc_years[0]]) ** 2 / 10000.0 #convert to Ha
+    
+    above_dict = dict([(k, float(carbon[k][carbon_field_above]) * conversion) for k in carbon])
+    below_dict = dict([(k, float(carbon[k][carbon_field_below]) * conversion) for k in carbon])
+    litter_dict = dict([(k, float(carbon[k][carbon_field_litter]) * conversion) for k in carbon])
+    depth_dict = dict([(k, float(carbon[k][carbon_field_depth]) * conversion) for k in carbon])
+    soil_dict = dict([(k, float(carbon[k][carbon_field_soil]) * conversion * depth_dict[k]) for k in carbon])
+    
     #validating data
     nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(nodata_lulc) == 1:
