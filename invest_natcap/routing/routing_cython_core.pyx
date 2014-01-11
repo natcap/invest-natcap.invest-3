@@ -1,3 +1,5 @@
+# cython: profile=True
+
 import collections
 import tempfile
 import time
@@ -7,6 +9,7 @@ import tables
 
 import numpy
 cimport numpy
+cimport cython
 import scipy.sparse
 import osgeo
 from osgeo import gdal
@@ -625,7 +628,7 @@ cdef struct Row_Col_Weight_Tuple:
     int weight
 
     
-cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, float[:, :] dem_array, float nodata_value):
+cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, numpy.ndarray[numpy.npy_float32, ndim=2] dem_array, float nodata_value):
     cdef int neighbor_row_index, neighbor_col_index
     if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
         return 0
@@ -643,7 +646,7 @@ cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row
 
 cdef int _is_sink(
     int row_index, int col_index, int n_rows, int n_cols, int* row_offsets,
-    int *col_offsets, float[:, :] dem_array, float nodata_value):
+    int *col_offsets, numpy.ndarray[numpy.npy_float32, ndim=2] dem_array, float nodata_value):
 
     cdef int neighbor_row_index, neighbor_col_index
     if dem_array[row_index, col_index] == nodata_value: return 0
@@ -1281,14 +1284,11 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
 
-cdef inline  int _update_window(
+cdef int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
     int row_window_size, int col_window_size, int window_buffer):
-#    if (((row_index <  ul_row_index[0] + 2) and (ul_row_index[0] >= 0))  or
-#        ((row_index >= lr_row_index[0] - 2) and (lr_row_index[0] < n_rows - 1)) or
-#        ((col_index <  ul_col_index[0] + 2) and (ul_col_index[0] > 0)) or
-#        ((col_index >= lr_col_index[0] - 2) and (lr_col_index[0] < n_cols - 1))):
+
     if ((row_index <  ul_row_index[0] + window_buffer) or
         (row_index >= lr_row_index[0] - window_buffer) or
         (col_index <  ul_col_index[0] + window_buffer) or
