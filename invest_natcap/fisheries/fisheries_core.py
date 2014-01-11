@@ -3,6 +3,7 @@ arguments from non-core and do the calculation side of the model.'''
 import logging
 import os
 import copy
+import cmath
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -103,7 +104,7 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'])
 
-def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     '''cycle_dict- Contains all counts of individuals for each combination of 
             cycle, age/stage, and area.
@@ -151,7 +152,7 @@ def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
 
         #This will be used for each 0 age in the cycle. 
         rec_sans_disp = calc_area_indifferent_rec(cycle_dict, params_dict,
-                                                rec_dict, gender_vari, cycle)
+                                                rec_dict, gender_var, cycle)
                             
         for area in params_dict['Area_Params'].keys():
 
@@ -176,18 +177,33 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
     each area with the cycle.'''
 
     #We know there's only the one key, value pair within the dictionary.
-    rec_eq, info_dict = rec_dict.popitem()
+    rec_eq, add_info = rec_dict.popitem()
 
     if rec_eq in ['Beverton-Holt', 'Ricker']:
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
         spawners = spawner_count(cycle_dict, params_dict)
 
+    #Now, run equation for each of the recruitment equation possibilities.
+    if rec_eq == 'Beverton-Holt':
+        rec = add_info['alpha'] * spawners / 
+                                    (add_info['beta'] + spawners) / gender_var
+    elif rec_eq == 'Ricker':
+        rec = add_info['alpha'] * spawners * 
+                    (cmath.e ** (-add_info['beta']*spawners)) / gender_var
+    elif rec_eq == 'Fecundity':
+        pass
+    elif rec_eq == 'Fixed':
+        #In this case, add_info is a fixed recruitment
+        rec = add_info / gender_var
+
+    return rec
+
 def spawner_count(cycle_dict, params_dict):
     pass
 
 
-def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
+def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     pass
 
