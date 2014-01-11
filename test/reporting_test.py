@@ -50,7 +50,7 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'html_test_dict.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_dict.html')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
@@ -102,7 +102,7 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_csv.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_csv.html')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         columns = {
             0 : {'name': 'ws_id', 'total':False},
@@ -149,7 +149,7 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_shp.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_shp.html')
         shape_uri = os.path.join(REPORTING_DATA, 'shape_test.shp')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         columns = {
             0 : {'name': 'ws_id', 'total':False},
@@ -196,8 +196,8 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'html_test_sorttable.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_sortable.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
@@ -287,10 +287,10 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'html_test_checkbox.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_checkbox.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':100, 'product':'chips'},
@@ -368,10 +368,10 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_javascript_totals.html')
         reg_uri = os.path.join(
                 REGRESSION_DATA, 'regres_html_test_javascript_totals.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
 
         sample_dict = {
                     0: {'date':'13', 'price':'1', 'product':'chips'},
@@ -446,10 +446,10 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_multi_tables.html')
         reg_uri = os.path.join(
                 REGRESSION_DATA, 'regres_html_test_multi_tables.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
         sample_dict = {
