@@ -186,10 +186,10 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
-        rec = add_info['alpha'] * spawners / 
-                                    (add_info['beta'] + spawners) / gender_var
+        rec = add_info['alpha'] * spawners / \
+                    (add_info['beta'] + spawners) / gender_var
     elif rec_eq == 'Ricker':
-        rec = add_info['alpha'] * spawners * 
+        rec = add_info['alpha'] * spawners * \
                     (cmath.e ** (-add_info['beta']*spawners)) / gender_var
     elif rec_eq == 'Fecundity':
         pass
