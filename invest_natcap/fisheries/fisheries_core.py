@@ -178,8 +178,13 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
     #We know there's only the one key, value pair within the dictionary.
     rec_eq, info_dict = rec_dict.popitem()
 
+    if rec_eq in ['Beverton-Holt', 'Ricker']:
+        #If weight is a parameter in params_dict, spawners will be biomass, not
+        #number of spawners. Otherwise, just a count.
+        spawners = spawner_count(cycle_dict, params_dict)
 
-        
+def spawner_count(cycle_dict, params_dict):
+    pass
 
 
 def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
