@@ -108,11 +108,16 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
-def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri):
+def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri):
     """
 
     """
 
+    if os.path.isfile(tmp_uri):
+        os.remove(tmp_uri)
+    if os.path.isfile(image_out_uri):
+        os.remove(image_out_uri)
+        
     aoi_sr = raster_utils.get_spatial_ref_uri(shape_in_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
@@ -120,11 +125,42 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri):
     shapefile_sr = raster_utils.get_spatial_ref_uri(lat_long_shape)
     shapefile_wkt = shapefile_sr.ExportToWkt()
     
+    # NOTE: I think that kartograph is supposed to do the projection
+    # adjustment on the fly but it does not seem to be working for
+    # me. 
+    
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
     raster_utils.reproject_datasource_uri(
             shape_in_uri, shapefile_wkt, tmp_uri)
     
+    css = open(css_uri).read()
+    
     kart = Kartograph()
-    kart.generate(
-            {"layers":{"mylayer":{"src":tmp_uri}}}, outfile=image_out_uri)
+    
+    config = {"layers":
+                {"mylayer":
+                    {"src":tmp_uri,
+                     "labeling": {"ws_id": "ws_id"}}
+                 }
+              }
+                #"export":{"width":500, "height": 400},
+                    #"attributes":["ws_id"],
+                    #"labeling": {"key": "ws_id"}
+        
+    kart.generate(config, outfile=image_out_uri, stylesheet=css)
+
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
