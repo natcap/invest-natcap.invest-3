@@ -138,22 +138,49 @@ def age_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
     #that we have to look out for to switch the EQ that we use.
     if is_gendered == True:
         first_age = [order[0], order[len(order)/2]]
-        final_agee = [order[len(order)/2-1], order[len(order)-1]]
+        final_age = [order[len(order)/2-1], order[len(order)-1]]
     else:
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
-    
+   
+    revised_order = copy.copy(order)
     do_migration = False if migration_dict is None else True
+    gender_var = 2 if is_gendered else 1
 
     for cycle in range(1, duration):
+
+        #This will be used for each 0 age in the cycle. 
+        rec_sans_disp = calc_area_indifferent_rec(cycle_dict, params_dict,
+                                                rec_dict, gender_vari, cycle)
+                            
         for area in params_dict['Area_Params'].keys():
+
+            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+
             for age in params_dict['Stage_Params'].keys():
 
                 #If a = 0
                 if age in first_age:
-                    pass 
+                    cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
+                #If a = maxAge
+                elif age in final_age:
+                    pass
+                else:
+                    pass
 
-    pass
+def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
+    '''This is ht eportion of the recruitment equiation which does not include
+    the larval dispersal. Since L_D is multiplied against everything else for
+    all recruitment equations, we can calculate a location independent portion
+    of recruitment first, then just multiply it against larval dispersal for
+    each area with the cycle.'''
+
+    #We know there's only the one key, value pair within the dictionary.
+    rec_eq, info_dict = rec_dict.popitem()
+
+
+        
+
 
 def stage_structured_cycle(params_dict, is_gendered, rec_dict, cycle_dict,
                     migration_dict, duration):
