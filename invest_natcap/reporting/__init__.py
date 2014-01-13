@@ -2,6 +2,7 @@
 functionality."""
 
 import os
+import shutil
 import logging
 import csv
 import json
@@ -131,6 +132,13 @@ def generate_report(reporting_args):
         section = element.pop('section')
         position = element.pop('position')
 
+        # In order to copy any script files to where the output html file is to
+        # be saved, the out_uri needs to be passed along into the function that
+        # handles them. As of now, the easiest / maybe best way is to add a key
+        # in the 'elements' dictionary being passed along
+        if fun_type == 'head':
+            element['out_uri'] = reporting_args['out_uri']
+
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
         # in write_html
@@ -253,11 +261,14 @@ def build_table(param_args):
     if data_type == 'shapefile':
         key = param_args['key']
         data_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
+        data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
         data_dict = raster_utils.get_lookup_from_csv(input_data, key)
+        data_list = data_dict_to_list(data_dict)
     else:
-        data_dict = input_data
+        #data_dict = input_data
+        data_list = input_data
 
     LOGGER.debug('Data Collected from Input Source: %s', data_dict)
 
@@ -267,7 +278,8 @@ def build_table(param_args):
 
     # Add the properly formatted data dictionary to the final dictionary that is
     # to be passed to the table generator
-    table_dict['rows'] = data_dict
+    #table_dict['rows'] = data_dict
+    table_dict['rows'] = data_list
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
@@ -287,6 +299,16 @@ def build_table(param_args):
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
+
+def data_dict_to_list(data_dict):
+    data_list = []
+    data_keys = data_dict.keys()
+    data_keys.sort()
+    for key in data_keys:
+        data = data_dict[key]
+        data_list.append(data)
+
+    return data_list
 
 def add_text_element(param_args):
     """Generates a string that represents a html text block. The input string
@@ -313,6 +335,9 @@ def add_head_element(param_args):
 
             param_args['src'] - a string URI path for the external source of the
                 element (required)
+            
+            param_args['out_uri'] - a string URI path for the html page
+                (required)
 
         returns - a string representation of the html head element"""
 
@@ -320,11 +345,30 @@ def add_head_element(param_args):
     form = param_args['format']
     # Get the external file location for either the link or script reference
     src = param_args['src']
+    # The destination on disk for the html page to be written to. This will be
+    # used to get the directory name so as to locate the scripts properly
+    output_uri = param_args['out_uri']
+    # Initialize the destination URI to be the same as how it comes in, in the
+    # case where the destination URI is already in the proper directory
+    #dst = src
+
+    # Copy the source file to the location of the output directory
+    # Get the script files basename
+    basename = os.path.basename(src)
+    # Get the output_uri directory location
+    dirname = os.path.dirname(output_uri)
+    # Set the destination URI for copying the script
+    dst = os.path.join(dirname, basename)
+    
+    if not os.path.isfile(dst):
+        shutil.copyfile(src, dst)
+
+    relative_dst = './' + basename
 
     if form == 'link':
-        html_str = '<link rel=stylesheet type=text/css href=%s>' % src
+        html_str = '<link rel=stylesheet type=text/css href=%s>' % relative_dst
     elif form == 'script':
-        html_str = '<script type=text/javascript src=%s></script>' % src
+        html_str = '<script type=text/javascript src=%s></script>' % relative_dst
     else:
         raise Exception('Currently this type of head element is not supported')
 

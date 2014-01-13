@@ -2633,8 +2633,9 @@ def create_carray(h5file_uri, type, shape):
         
     h5file = tables.openFile(h5file_uri, mode='w')
     root = h5file.root
+    filters = tables.Filters(complevel=0)
     return h5file.createCArray(
-        root, 'from_create_carray', type, shape=shape)
+        root, 'from_create_carray', type, shape=shape, filters=filters)
 
 
 def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
@@ -2661,6 +2662,8 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
         gdal.GDT_Float64: tables.Float64Atom(), 
         gdal.GDT_Float32: tables.Float32Atom()
     }
+
+
     
     carray = create_carray(
         h5file_uri, map_gdal_type_to_atom[array_type],

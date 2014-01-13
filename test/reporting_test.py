@@ -22,7 +22,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for creating a html report with no elements passed
             in. Expecting a blank html page created."""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -43,14 +43,14 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for creating a html report with a table element
             from a dictionary and an external css file"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'html_test_dict.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_dict.html')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
@@ -94,7 +94,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for creating a html report with a table element
             from a CSV file and an external css file"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -102,7 +102,7 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_csv.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_csv.html')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         columns = {
             0 : {'name': 'ws_id', 'total':False},
@@ -141,7 +141,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for creating a html report with a table element
             from a shapefile and an external css file"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -149,7 +149,7 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_shp.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_shp.html')
         shape_uri = os.path.join(REPORTING_DATA, 'shape_test.shp')
-        css_uri = '../reporting_data/table_style.css'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
         columns = {
             0 : {'name': 'ws_id', 'total':False},
@@ -189,15 +189,15 @@ class TestReportingPackage(testing.GISTest):
             element from a dictionary, css style, and javascript source.
             This table should be sortable"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'html_test_sorttable.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_sortable.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
@@ -250,7 +250,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_link(self):
         """Unit test for adding link head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
 
         args = {'format':'link', 'src':'example_style.css'}
 
@@ -263,7 +263,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
 
         args = {'format':'script', 'src':'example_script.js'}
 
@@ -280,17 +280,17 @@ class TestReportingPackage(testing.GISTest):
             and enable checkbox column. This table should be sortable
             with a checkbox column that does selected totals"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'html_test_checkbox.html')
         reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_checkbox.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
 
         sample_dict = {
                     0: {'date':'9/13', 'price':100, 'product':'chips'},
@@ -360,7 +360,7 @@ class TestReportingPackage(testing.GISTest):
             This table should be sortable with a checkbox column that
             does selected totals"""
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -368,10 +368,10 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_javascript_totals.html')
         reg_uri = os.path.join(
                 REGRESSION_DATA, 'regres_html_test_javascript_totals.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
 
         sample_dict = {
                     0: {'date':'13', 'price':'1', 'product':'chips'},
@@ -438,7 +438,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for making a html page with multiple tables.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -446,10 +446,10 @@ class TestReportingPackage(testing.GISTest):
         output_uri = os.path.join(TEST_OUT, 'html_test_multi_tables.html')
         reg_uri = os.path.join(
                 REGRESSION_DATA, 'regres_html_test_multi_tables.html')
-        css_uri = '../reporting_data/table_style.css'
-        jsc_uri = '../reporting_data/sorttable.js'
-        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_functions.js'
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
         sample_dict = {
@@ -468,6 +468,99 @@ class TestReportingPackage(testing.GISTest):
             1 : {'name': 'precip_mn', 'total':False},
             2 : {'name': 'wyield_mn', 'total':False},
             3 : {'name': 'wyield_vol', 'total':True}}
+
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': sample_dict,
+                        'position': 1},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'csv',
+                        'columns':columns_csv,
+                        'key':'ws_id',
+                        'data': csv_uri,
+                        'position': 2},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'position': 0,
+                        'text': '<p>Here is a sortable table!</p>'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 1,
+                        'src': jsc_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 2,
+                        'src': jquery_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 3,
+                        'src': jsc_fun_uri}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+    
+    def test_generate_html_multiple_tables_lists(self):
+        """Regression test for making a html page with multiple tables.
+        """
+
+        #raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        output_uri = os.path.join(TEST_OUT, 'html_test_multi_tables_list.html')
+        reg_uri = os.path.join(
+                REGRESSION_DATA, 'regres_html_test_multi_tables.html')
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
+        csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
+
+        sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
+                       {'date':'3', 'price':'2.25', 'product':'peanuts'},
+                       {'date':'5', 'price':'3.2', 'product':'mints'}]
+
+        columns = [{'name': 'product', 'total':False},
+                   {'name': 'date', 'total':False},
+                   {'name': 'price', 'total':True}]
+
+        columns_csv = [
+                {'name': 'ws_id', 'total':False},
+                {'name': 'precip_mn', 'total':False},
+                {'name': 'wyield_mn', 'total':False},
+                {'name': 'wyield_vol', 'total':True}]
 
         report_args = {
                 'title': 'Sortable Table',

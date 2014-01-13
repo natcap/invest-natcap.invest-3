@@ -57,8 +57,10 @@ def generate_table(table_dict, attributes=None):
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
         # Get a copy of the column and row dictionaries to pass into checkbox
         # funtion
-        cols_copy = table_dict['cols'].copy()
-        rows_copy = table_dict['rows'].copy()
+        #cols_copy = table_dict['cols'].copy()
+        #rows_copy = table_dict['rows'].copy()
+        cols_copy = list(table_dict['cols'])
+        rows_copy = list(table_dict['rows'])
         # Get the updated column and row dictionaries
         table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
         add_checkbox_total = True
@@ -185,15 +187,18 @@ def get_dictionary_values_ordered(base_dict, sub_key_name):
     # Initiate an empty list to store values
     ordered_value_list = []
     # Get a list of the keys
-    keys = base_dict.keys()
+    #keys = base_dict.keys()
     # Sort the keys so that the values can be added to the list in proper order
-    keys.sort()
+    #keys.sort()
 
-    for key in keys:
+    #for key in keys:
         # Get the desired value from each keys dictionary
-        value = base_dict[key][sub_key_name]
+    #    value = base_dict[key][sub_key_name]
         # Add the value to the list
-        ordered_value_list.append(value)
+    #    ordered_value_list.append(value)
+
+    for item in base_dict:
+        ordered_value_list.append(item[sub_key_name])
 
     return ordered_value_list
 
@@ -225,36 +230,41 @@ def add_checkbox_column(col_dict, row_dict):
 
     # Get the keys from the column dictionary which will be unique id's
     # represting the order the column should be displayed
-    col_ids = col_dict.keys()
+    #col_ids = col_dict.keys()
     # Sort he id's
-    col_ids.sort()
+    #col_ids.sort()
 
     # Since the checkbox column will be added as the second column, get a list
     # of all the keys starting at the second
-    col_sub = col_ids[1:]
+    #col_sub = col_ids[1:]
     # Save the second key's id as this will be set to the checkbox column later
-    check_col_id = col_sub[0]
+    #check_col_id = col_sub[0]
     # In order to add the checkbox column in as the second row, all key id's
     # from the second on will be incremented by 1. Thus we want to reverse the
     # order of the id's so that they are changed last first, to avoid duplicate
     # id conficts
-    col_sub.reverse()
+    #col_sub.reverse()
 
-    for col_id in col_sub:
+    col_dict.insert(1, {'name':'Select', 'total':False})
+
+    #for col_id in col_sub:
         # Increment each key id by 1 and set to the formers value
-        col_dict[col_id + 1] = col_dict[col_id]
+    #    col_dict[col_id + 1] = col_dict[col_id]
         # Delete the previous key from the dictionary
-        del col_dict[col_id]
+    #    del col_dict[col_id]
 
     # Add the checkbox column as the second column using the old second column
     # id
-    col_dict[check_col_id] = {'name':'Select', 'total':False}
+    #col_dict[check_col_id] = {'name':'Select', 'total':False}
 
     LOGGER.debug('Columns with Checkboxes: %s', col_dict)
 
     # For each row in the row dictionary add a 'Select' key which refers to the
     # new column and set the value as a checkbox
-    for val in row_dict.itervalues():
+    #for val in row_dict.itervalues():
+    #    val['Select'] = '<input type=checkbox name=cb value=1>'
+
+    for val in row_dict:
         val['Select'] = '<input type=checkbox name=cb value=1>'
 
     LOGGER.debug('Rows with Checkboxes: %s', row_dict)
@@ -286,16 +296,23 @@ def get_row_data(row_dict, col_headers):
     row_data = []
 
     try:
-        for row_values in row_dict.itervalues():
+        #for row_values in row_dict.itervalues():
             # Initialize a list to store our individual row values
-            row = []
+        #    row = []
             # Iterate over col_headers to ensure that the row values are
             # properly placed with the correct column header
-            for col in col_headers:
+        #    for col in col_headers:
                 # Add value of row to list
-                row.append(row_values[col])
+        #        row.append(row_values[col])
             # Add the row to the list of rows
+        #    row_data.append(row)
+        
+        for row_values in row_dict:
+            row = []
+            for col in col_headers:
+                row.append(row_values[col])
             row_data.append(row)
+        
     except Exception as e:
         raise Exception(str(e) + ' The dictionary is not constructed correctly')
 

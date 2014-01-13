@@ -12,6 +12,7 @@ import os
 import random
 
 import operator
+import math
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -297,7 +298,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Soil accumulation table valid.")
     else:
-        msg = "Soil accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in soil the accumulation table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -305,7 +306,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Soil disturbance table valid.")
     else:
-        msg = "Soil disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the soil disturbance table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -313,7 +314,7 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Biomass accumulation table valid.")
     else:
-        msg = "Biomass accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the biomass accumulation table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
@@ -321,17 +322,19 @@ def execute(args):
     if change_columns.issuperset(change_types):
         LOGGER.debug("Biomass disturbance table valid.")
     else:
-        msg = "Biomass disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        msg = "The transition matrix contains the following value(s) not in the biomass disturbance table: %s", str(change_types.difference(change_columns))
         LOGGER.error(msg)
         raise ValueError, msg
 
     #construct dictionaries for single parameter lookups
-    above_dict = dict([(k, float(carbon[k][carbon_field_above])) for k in carbon])
-    below_dict = dict([(k, float(carbon[k][carbon_field_below])) for k in carbon])
-    soil_dict = dict([(k, float(carbon[k][carbon_field_soil])) for k in carbon])
-    litter_dict = dict([(k, float(carbon[k][carbon_field_litter])) for k in carbon])
-    depth_dict = dict([(k, float(carbon[k][carbon_field_depth])) for k in carbon])
-
+    conversion = raster_utils.get_cell_size_from_uri(lulc_uri_dict[lulc_years[0]]) ** 2 / 10000.0 #convert to Ha
+    
+    above_dict = dict([(k, float(carbon[k][carbon_field_above]) * conversion) for k in carbon])
+    below_dict = dict([(k, float(carbon[k][carbon_field_below]) * conversion) for k in carbon])
+    litter_dict = dict([(k, float(carbon[k][carbon_field_litter]) * conversion) for k in carbon])
+    depth_dict = dict([(k, float(carbon[k][carbon_field_depth]) * conversion) for k in carbon])
+    soil_dict = dict([(k, float(carbon[k][carbon_field_soil]) * conversion * depth_dict[k]) for k in carbon])
+    
     #validating data
     nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(nodata_lulc) == 1:
@@ -663,6 +666,55 @@ def execute(args):
             lulc_base_uri = lulc_uri_dict[lulc_base_year]
             LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
+##    ##analysis year operations
+##    lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (lulc_transition_year, analysis_year))
+##    LOGGER.debug("Calculated soil accumulation coefficient.")
+##    
+##    lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_transition_year)
+##    LOGGER.debug("Calculated soil accumulation.")
+##    
+##    lulc_base_acc_bio_co_uri = os.path.join(workspace_dir, acc_bio_co_name % (lulc_transition_year, analysis_year))
+##    LOGGER.debug("Calculated biomass accumulation coefficient.)
+##                 
+##    lulc_base_acc_bio_uri = os.path.join(workspace_dir, acc_bio_name % lulc_transition_year)        
+##    LOGGER.debug("Calculated biomass accumulation.")
+##    
+##    lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (lulc_transition_year, analysis_year))
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_bio_co_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)    
+##    LOGGER.debug("Calculated biomass disturbance coefficient.")
+##
+##    lulc_base_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % lulc_transition_year)
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_bio_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)        
+##    LOGGER.debug("Calculated biomass disturbance.")
+##    
+##    lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % (lulc_transition_year, analysis_year))
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_soil_co_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)
+##    LOGGER.debug("Calculated soil disturbance coefficient.")
+##    
+##    lulc_base_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % lulc_transition_year)
+##    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+##                                          lulc_base_dis_soil_uri,
+##                                          gdal_format,
+##                                          nodata_default_int,
+##                                          gdal_type_identity_raster,
+##                                          fill_value=0)    
+##    LOGGER.debug("Calculated soil disturbance.")        
+
     ##calculate adjusted pools
     LOGGER.debug(str(lulc_years))
     LOGGER.info("Calculating adjusted pools.")
@@ -676,7 +728,9 @@ def execute(args):
     transition_year = lulc_years[1]
     adj_bio_uri = os.path.join(workspace_dir,adj_bio_name % transition_year)
     adj_soil_uri = os.path.join(workspace_dir, adj_soil_name % transition_year)
-    raster_utils.vectorize_datasets([os.path.join(workspace_dir, above_name % base_year),
+
+    #calculate adjusted soil
+    raster_utils.vectorize_datasets([os.path.join(workspace_dir, soil_name % base_year),
                                      os.path.join(workspace_dir,acc_soil_name % base_year),
                                      os.path.join(workspace_dir,dis_soil_name % base_year)],
                                     adj_op,
@@ -701,14 +755,14 @@ def execute(args):
 
 
     base_year = transition_year
-    for transition_year in lulc_years[2:]:
+    for transition_year in lulc_years[2:-1]:
         adj_bio_uri = os.path.join(workspace_dir,adj_bio_name % transition_year)
         adj_soil_uri = os.path.join(workspace_dir,adj_soil_name % transition_year)
 
         #calculate adjusted soil
         raster_utils.vectorize_datasets([os.path.join(workspace_dir,adj_soil_name % base_year),
-                                         os.path.join(workspace_dir,acc_soil_name % base_year),
-                                         os.path.join(workspace_dir,dis_soil_name % base_year)],
+                                         os.path.join(workspace_dir,acc_soil_name % transition_year),
+                                         os.path.join(workspace_dir,dis_soil_name % transition_year)],
                                         adj_op,
                                         adj_soil_uri,
                                         gdal_type_carbon,
@@ -719,8 +773,8 @@ def execute(args):
 
         #calculate adjusted biomass
         raster_utils.vectorize_datasets([os.path.join(workspace_dir,adj_bio_name % base_year),
-                                         os.path.join(workspace_dir,acc_bio_name % base_year),
-                                         os.path.join(workspace_dir,dis_bio_name % base_year)],
+                                         os.path.join(workspace_dir,acc_bio_name % transition_year),
+                                         os.path.join(workspace_dir,dis_bio_name % transition_year)],
                                         adj_op,
                                         adj_bio_uri,
                                         gdal_type_carbon,
@@ -914,12 +968,49 @@ def execute(args):
         d = 0
         
     report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, d])))
+    report.write("\n</TABLE>")
+    
+    #totals
+    report.write("\n<P><P><B>Totals</B>")
+    column_name_list = ["Year", "Amount"]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for year in lulc_years:
+        report.write("\n<TR><TD>%i</TD><TD>%s</TD></TR>" % (year, str(sum_uri(os.path.join(workspace_dir, carbon_name % year), extent_uri))))
+
+    report.write("\n</TABLE>")
+
+    #lulc statistics
+    report.write("\n<P><P><B>LULC Counts</B>")
+    lulc_types = carbon.keys()
+    lulc_types.sort()
+
+    counts = {}
+    count_max = 0
+    for year in lulc_years:
+        counts[year] = raster_utils.unique_raster_values_count(lulc_uri_dict[year])
+        count_max = max([count_max] + [counts[year][k] for k in counts[year]])
+
+    width = int(math.ceil(math.log10(count_max)))
+
+    column_name_list = ["Year"] + [str(lulc).ljust(width, "#").replace("#", "&ensp;") for lulc in lulc_types]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for year in lulc_years:
+        report.write("<P><TR align=\"right\"><TD>%i</TD>" % year)
+        for lulc in lulc_types:
+            try:
+                report.write("<TD>%i</TD>" % counts[year][lulc])
+            except KeyError:
+                report.write("<TD>%i</TD>" % 0)
+        report.write("</TR>")
+
+    report.write("\n</TABLE>")
 
     #close report
     report.close()
 
-
-##    ##clean up
+    ##clean up
     driver = gdal.GetDriverByName('GTiff')
     for year in lulc_years[1:]:
         LOGGER.debug("Cleaning up intermediates for year %i." % year)

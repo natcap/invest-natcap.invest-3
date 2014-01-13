@@ -17,28 +17,29 @@ class ImproperStageParameter(Exception):
     '''This exception will occur if the stage-specific headings in the main 
     parameter CSV are not included in the set of known parameters.'''
     pass
-
 class ImproperAreaParameter(Exception):
     '''This exception will occur if the area-specific headings in the main 
     parameter CSV are not included in the set of known parameters.'''
     pass
-
 class MissingRecruitmentParameter(Exception):
     '''This should be raised if the dropdown equation does not match the
     parameters provided, and additional information is needed. That might
     be in the form of alpha/beta, the CSV, or a numerical recruitment number.
     '''
     pass
-
 class MissingVulnFishingParameter(Exception):
     '''This should be raised if the species main parameter CSV is missing a
     VulnFishing column. It is a required input for the survival equation.'''
     pass
-
 class MissingExpFracParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is misisng
+    '''Exception should be raised if the species main parameter CSV is missing
     a ExploitationFraction for each AOI subregion included. It is a required
     input for the survival equation.'''
+    pass
+class MissingMaturityParameter(Exception):
+    '''Exception should be raised if the species main parameter CSV is missing
+    a Maturity parameter for ages/stages. It is a required paramater if the
+    recruitment equation being used is B-H, Ricker, or Fecundity.'''
     pass
 
 def execute(args):
@@ -129,7 +130,8 @@ def execute(args):
     area_count = aoi_layer.GetFeatureCount()
 
     #Calculate the classes main param info, and add it to the core args dict
-    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count)
+    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
+                                args['rec_eq'])
     core_args['classes_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
 
@@ -138,15 +140,22 @@ def execute(args):
     core_args['migrate_dict'] = migration_dict
 
     #Recruitment- already know that the correct params exist
-    core_args['rec_eq'] = args['rec_eq']
+    '''Want to make a single dictionary to pass with the correct arguments.
+    Dictionary will look like one of the following:
+        {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
+        {'Ricker': {'alpha': 0.02, 'beta': 3}}
+        {'Fecundity': {FECUNDITY DICT}}
+        {'Fixed': 0.5}
+   ''' 
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
-        core_args['alpha'] = args['alpha']
-        core_args['beta'] = args['beta']
+        key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
+        rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
     elif args['rec_eq'] == 'Fecundity':
-        fec_params_dict = parse_fec_csv(args['fec_params_uri'])
-        core_args['fecundity_dict'] = fec_params_dict
+        rec_dict = {'Fecundity': args['fec_params_dict']}
     else:
-        core_args['fix_param'] = args['fix_param']
+        rec_dict = {'Fixed': args['fix_param']}
+    
+    core_args['rec_dict'] = rec_dict
 
     #Direct pass all these variables
     core_args['workspace_uri'] = args['workspace_uri']
@@ -227,7 +236,7 @@ def parse_migration_tables(mig_folder_uri):
 
     return mig_dict
 
-def parse_main_csv(params_uri, area_count):
+def parse_main_csv(params_uri, area_count, rec_eq):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
@@ -319,6 +328,12 @@ def parse_main_csv(params_uri, area_count):
                 species is missing a VulnFishing parameter. Please make sure \
                 that each age/stage for the species has a corresponding \
                 proportion that is vulnerable to fishing.")
+    if 'maturity' not in age_params and \
+                        rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
+        raise MissingMaturityParameter("The main parameter CSV for this \
+                species is missing a Maturity parameter. Please make sure \
+                that each age/stage for the species is assigned a proportion \
+                between 0 and 1 (inclusive) which would be considered mature.")
 
     #Want a list of the stages in order
     ordered_stages = []
