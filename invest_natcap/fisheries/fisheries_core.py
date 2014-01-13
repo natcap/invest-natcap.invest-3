@@ -170,7 +170,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     pass
 
 def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
-    '''This is ht eportion of the recruitment equiation which does not include
+    '''This is is the portion of the recruitment equiation which does not include
     the larval dispersal. Since L_D is multiplied against everything else for
     all recruitment equations, we can calculate a location independent portion
     of recruitment first, then just multiply it against larval dispersal for
@@ -182,7 +182,7 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
     if rec_eq in ['Beverton-Holt', 'Ricker']:
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
-        spawners = spawner_count(cycle_dict, params_dict)
+        spawners = spawner_count(cycle_dict, params_dict, cycle)
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
@@ -199,9 +199,21 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
 
     return rec
 
-def spawner_count(cycle_dict, params_dict):
-    pass
+def spawner_count(cycle_dict, params_dict, cycle):
+    '''For a given cycle, does a SUMPRODUCT of the individuals and the maturity
+    for a given pairing of age, area.'''
 
+    spawner_sum = 0
+
+    for area, ages_dict in cycle_dict[cycle-1].items():
+        for age, indiv_count in ages_dict.items():
+
+            maturity = params_dict['Stage_Params'][age]['maturity']
+            product = indiv_count * maturity
+
+            spawner_sum += product
+
+    return spawner_sum
 
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
