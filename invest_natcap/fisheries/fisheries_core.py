@@ -167,11 +167,11 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 elif age in final_age:
                     pass
                 else:
-                    survival = 
+                    survival = calc_survival_mortal(params_dict, area, stage)
                     num_indivs = \
-                        calc_prev_indiv_count(params_dict, cycle_dict
+                        calc_prev_indiv_count(cycle_dict, migration_dict, area, age)
 
-                    cycle_dict[cycle][area][age] = \
+                    cycle_dict[cycle][area][age] = num_indivs * survival
 
 def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
