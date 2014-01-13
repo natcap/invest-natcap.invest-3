@@ -151,7 +151,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     for cycle in range(1, duration):
 
         #This will be used for each 0 age in the cycle. 
-        rec_sans_disp = calc_area_indifferent_rec(cycle_dict, params_dict,
+        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
                             
         for area in params_dict['Area_Params'].keys():
@@ -169,11 +169,35 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 else:
                     survival = calc_survival_mortal(params_dict, area, stage)
                     num_indivs = \
-                        calc_prev_indiv_count(cycle_dict, migration_dict, area, age)
+                        calc_prev_indiv_count(cycle_dict, migration_dict, area, 
+                                                age, cycle)
 
                     cycle_dict[cycle][area][age] = num_indivs * survival
 
-def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
+def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age):
+    '''Want to get the indiviual count for the previous cycle, including the 
+    amount of incoming migration.
+    
+    N{a} = (N{a-1,x,t} * Mig{stays X} + SUM{x!=x'}(N{a-1, x'} * Mig{a-1, x->x'})
+    
+    migration_dict(*)- Contains source/sink info for each age/stage
+        capable of migration. Outer key is source, inner is sink.
+
+        {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                '2': {'1': 0.13, '2': 98.06, ...}
+        }
+    cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+    '''
+    
+
+def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
     the larval dispersal. Since L_D is multiplied against everything else for
     all recruitment equations, we can calculate a location independent portion
