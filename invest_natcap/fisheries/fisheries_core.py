@@ -167,7 +167,11 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 elif age in final_age:
                     pass
                 else:
-                    pass
+                    survival = 
+                    num_indivs = \
+                        calc_prev_indiv_count(params_dict, cycle_dict
+
+                    cycle_dict[cycle][area][age] = num_indivs * survival
 
 def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
@@ -297,7 +301,9 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 prev_age = order[order.index(age)-1]
                 prev_count = cycle_dict[cycle_count][area][prev_age]
                 
-                surv = calc_survival_mortal(params_dict, area, age)
+                surv = \
+                    calc_survival_mortal(params_dict['Stage_Params'][age], 
+                        params_dict['Area_Params'][area])
 
                 if age in final_stage:
                     count = (prev_count * surv)/ (1- surv)
@@ -306,39 +312,31 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 
                 cycle_dict[cycle_count][area][age] = count
 
-def calc_survival_mortal(params_dict, area, stage):
+def calc_survival_mortal(stage_params, area_params):
     '''Calculate survival from natural and fishing mortality
 
     Input:
-        params_dict- Dictionary which we will use to get survival values,
-            exploitation fraction, and vulnerability to fishing.
-
-            {'Stage_Params':
-                {'Age_A':
-                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
-                     'weight': 4.42, 'duration': 16},
-                     ...
-                }
-             'Area_Params':
-                {'Area_1':
-                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
-                    ...
-                }
+        stage_params- Dictionary which comes from params_dict and contains
+            information specific to the stage for which we are calculating
+            survival.
+            
+            {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+             'maturity': 0.0007, 'vuln_fishing': 0.993, 
+             'weight': 4.42, 'duration': 16},
+        area_params- Dictionary from params_dict which contains info
+            specific to the area for which we are calculating survival.
+            {'Area_1':
+                {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                ...
             }
-        area- A string that can be used to index into params_dict describing
-            the area that we are calculating for.
-        stage- A string that can be used to index into params_dict describing
-            the age/stage that we're calculating for.
-
     Returns:
         The survival fraction, which is described by the equation
         S = surv{a,s,x} * (1-exp{x} * vuln{a,s})
     '''
 
-    surv_frac = params_dict['Stage_Params'][stage]['survival'][area]
-    exp_frac = params_dict['Area_Params'][area]['exploit_frac']
-    vuln = params_dict['Stage_Params'][stage]['vuln_fishing']
+    surv_frac = stage_params['survival'][area]
+    exp_frac = area_params['exploit_frac']
+    vuln = stage_params['vuln_fishing']
 
     surv_mort = surv_frac * (1 - exp_frac * vuln)
 
