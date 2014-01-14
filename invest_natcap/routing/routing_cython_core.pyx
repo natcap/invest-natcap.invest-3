@@ -958,10 +958,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if w_row_index >= n_rows:
                 LOGGER.error("warning w_row_index > n_rows %d %d" % (w_row_index, n_rows))
 
-            if not _is_flat(
-                w_row_index, w_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
+            flat_index = row_index * n_cols + col_index
+            #If the neighbor is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
                 continue
+
             for neighbor_index in xrange(8):
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
