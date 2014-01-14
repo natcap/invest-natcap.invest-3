@@ -59,25 +59,27 @@ def generate_report(reporting_args):
                     'shapefile'|'csv'|'dictionary'. Depicts the type of data
                     structure to build the table from (required)
 
-                'data' - either a dictionary if 'data_type' is 'dictionary' or
-                    a URI to a CSV table or shapefile if 'data_type' is
-                    'shapefile' or 'csv' (required). If a dictionary it should
-                    be formatted as follows:
-                    {row_id_0: {col_name_1: value, col_name_2: value, ...},
-                     row_id_1: {col_name_1: value, col_name_2: value, ...},
-                     ...
-                    }
+                'data' - either a list of dictionaries if 'data_type' is
+                    'dictionary' or a URI to a CSV table or shapefile if
+                    'data_type' is 'shapefile' or 'csv' (required). If a
+                    list of dictionaries, each dictionary should have
+                    keys that represent the columns, where each dictionary
+                    is a row. How the rows are ordered are defined by their
+                    index in the list. Formatted example:
+                    [{col_name_1: value, col_name_2: value, ...},
+                     {col_name_1: value, col_name_2: value, ...},
+                     ...]
 
                 'key' - a string that defines which column or field should be
                     used as the keys for extracting data from a shapefile or csv
                     table 'key_field'.
                     (required for 'data_type' = 'shapefile' | 'csv')
 
-                'columns'- a dictionary that defines the column structure for
-                    the table (required). The dictionary has unique numeric
-                    keys that determine the left to right order of the columns.
-                    Each key has a dictionary value with the following
-                    arguments:
+                'columns'- a list of dictionaries that defines the column
+                    structure for the table (required). The order of the
+                    columns from left to right is depicted by the index
+                    of the column dictionary in the list. Each dictionary
+                    in the list has the following keys and values: 
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
