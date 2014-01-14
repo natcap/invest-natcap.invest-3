@@ -365,11 +365,7 @@ def add_head_element(param_args):
     # The destination on disk for the html page to be written to. This will be
     # used to get the directory name so as to locate the scripts properly
     output_uri = param_args['out_uri']
-    # Initialize the destination URI to be the same as how it comes in, in the
-    # case where the destination URI is already in the proper directory
-    #dst = src
-
-    # Copy the source file to the location of the output directory
+    
     # Get the script files basename
     basename = os.path.basename(src)
     # Get the output_uri directory location
@@ -377,9 +373,11 @@ def add_head_element(param_args):
     # Set the destination URI for copying the script
     dst = os.path.join(dirname, basename)
     
+    # Copy the source file to the location of the output directory
     if not os.path.isfile(dst):
         shutil.copyfile(src, dst)
 
+    # Set a relative path for the script file so that the html page can find it
     relative_dst = './' + basename
 
     if form == 'link':
