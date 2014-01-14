@@ -199,6 +199,8 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
     prev_indiv_in_area = cycle_dict[cycle-1][area][prev_age]
     prev_mig_in_area = 1 if mig_dict == None else mig_dict[prev_age][area][area]
 
+    indivs_in_area = prev_indiv_in_area * prev_mig_in_area
+
     incoming_pop = 0
 
     #For the individuals incoming from other areas.
@@ -206,8 +208,13 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
         
         #Couldn't think of anything better to call this. Refers to x != x'
         if area_prime is not area:
-            prev_indivs_prime =  cycle_dict[cycle-1][prev_age
-                
+            prev_indivs_prime =  cycle_dict[cycle-1][area_prime][prev_age]
+            mig_prime_to_area = mig_dict[prev_age][area_prime][area]
+
+            incoming_pop += prev_indivs_prime * mig_prime_to_area
+    
+    return indivs_in_area + incoming_pop
+
 def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
     the larval dispersal. Since L_D is multiplied against everything else for
