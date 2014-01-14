@@ -53,23 +53,25 @@ def generate_table(table_dict, attributes=None):
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
-        # Get a copy of the column and row dictionaries to pass into checkbox
-        # funtion
-        #cols_copy = table_dict['cols'].copy()
-        #rows_copy = table_dict['rows'].copy()
+        # Get a copy of the column and row lists of dictionaries
+        # to pass into checkbox function
         cols_copy = list(table_dict['cols'])
         rows_copy = list(table_dict['rows'])
-        # Get the updated column and row dictionaries
+        # Get the updated column and row data after adding a 
+        # checkbox column
         table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
         add_checkbox_total = True
     else:
-        # The column and row dictionaries need to update so get the originals
+        # The column and row lists of dictionaries need to update,
+        # so get the originals
         table_cols = table_dict['cols']
         table_rows = table_dict['rows']
         add_checkbox_total = False
 
     # Get the column headers
     col_headers = get_dictionary_values_ordered(table_cols, 'name')
+    # Get a list of booleans indicating whether the above column
+    # headers should be allowed to be totaled
     total_cols = get_dictionary_values_ordered(table_cols, 'total')
 
     # Write table header tag followed by table row tag
