@@ -204,9 +204,8 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
     incoming_pop = 0
 
     #For the individuals incoming from other areas.
-    for inc_area in cycle_dict[cycle].keys():
-        
-        #Couldn't think of anything better to call this. Refers to x != x'
+    #Couldn't think of anything better to call this. Refers to x != x'
+    for area_prime in cycle_dict[cycle].keys():
         if area_prime is not area:
             prev_indivs_prime =  cycle_dict[cycle-1][area_prime][prev_age]
 
