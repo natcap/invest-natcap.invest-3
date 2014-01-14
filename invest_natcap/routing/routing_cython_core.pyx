@@ -896,9 +896,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
             w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
-            if not _is_flat(
-                w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
+
+            flat_index = neighbor_row_index * n_cols + neighbor_col_index
+            #If the neighbor is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
                 continue
 
             if (dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] <=
