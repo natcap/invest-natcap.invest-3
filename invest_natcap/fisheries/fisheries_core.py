@@ -209,7 +209,11 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
         #Couldn't think of anything better to call this. Refers to x != x'
         if area_prime is not area:
             prev_indivs_prime =  cycle_dict[cycle-1][area_prime][prev_age]
-            mig_prime_to_area = mig_dict[prev_age][area_prime][area]
+
+            if mig_dict is not None and prev_age in mig_dict:
+                mig_prime_to_area = mig_dict[prev_age][area_prime][area]
+            else:
+                mig_prime_to_area = 0
 
             incoming_pop += prev_indivs_prime * mig_prime_to_area
     
