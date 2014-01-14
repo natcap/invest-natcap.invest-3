@@ -171,11 +171,11 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     survival = calc_survival_mortal(params_dict, area, age)
                     num_indivs = \
                         calc_prev_indiv_count(cycle_dict, migration_dict, area, 
-                                                age, prev_age, cycle)
+                                                prev_age, cycle)
 
                     cycle_dict[cycle][area][age] = num_indivs * survival
 
-def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age, prev_age, cycle):
+def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
     amount of incoming migration.
     
@@ -201,13 +201,13 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age, prev_age, cycle):
 
     incoming_pop = 0
 
+    #For the individuals incoming from other areas.
     for inc_area in cycle_dict[cycle].keys():
         
+        #Couldn't think of anything better to call this. Refers to x != x'
         if area_prime is not area:
-            if area_prime is not area:
+            prev_indivs_prime =  cycle_dict[cycle-1][prev_age
                 
-                pass
-
 def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
     the larval dispersal. Since L_D is multiplied against everything else for
