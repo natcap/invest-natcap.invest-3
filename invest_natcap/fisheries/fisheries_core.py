@@ -164,18 +164,25 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
-                    pass
+                    prev_age = order[i-1] 
+                
+                    prev_survival = calc_survival_mortal(params_dict, area, prev_age)
+                    prev_num_indivs = \
+                        calc_indiv_count(cycle_dict, migration_dict, area, 
+                                                prev_age, cycle)
+
+
                 else:
                     prev_age = order[i-1] 
                 
-                    survival = calc_survival_mortal(params_dict, area, prev_age)
-                    num_indivs = \
-                        calc_prev_indiv_count(cycle_dict, migration_dict, area, 
+                    prev_survival = calc_survival_mortal(params_dict, area, prev_age)
+                    prev_num_indivs = \
+                        calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_age, cycle)
 
-                    cycle_dict[cycle][area][age] = num_indivs * survival
+                    cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
-def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
+def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
     amount of incoming migration.
     
@@ -196,8 +203,8 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
                 }
             }
     '''
-    prev_indiv_in_area = cycle_dict[cycle-1][area][prev_age]
-    prev_mig_in_area = 1 if mig_dict == None else mig_dict[prev_age][area][area]
+    prev_indiv_in_area = cycle_dict[cycle-1][area][age]
+    prev_mig_in_area = 1 if mig_dict == None else mig_dict[age][area][area]
 
     indivs_in_area = prev_indiv_in_area * prev_mig_in_area
 
@@ -207,10 +214,10 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, prev_age, cycle):
     #Couldn't think of anything better to call this. Refers to x != x'
     for area_prime in cycle_dict[cycle].keys():
         if area_prime is not area:
-            prev_indivs_prime =  cycle_dict[cycle-1][area_prime][prev_age]
+            prev_indivs_prime =  cycle_dict[cycle-1][area_prime][age]
 
-            if mig_dict is not None and prev_age in mig_dict:
-                mig_prime_to_area = mig_dict[prev_age][area_prime][area]
+            if mig_dict is not None and age in mig_dict:
+                mig_prime_to_area = mig_dict[age][area_prime][area]
             else:
                 mig_prime_to_area = 0
 
