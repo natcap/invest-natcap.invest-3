@@ -168,7 +168,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 else:
                     prev_age = order[i-1] 
                 
-                    survival = calc_survival_mortal(params_dict, area, age)
+                    survival = calc_survival_mortal(params_dict, area, prev_age)
                     num_indivs = \
                         calc_prev_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_age, cycle)
@@ -254,7 +254,7 @@ def spawner_count(cycle_dict, params_dict, cycle):
 
     spawner_sum = 0
 
-    for area, ages_dict in cycle_dict[cycle-1].items():
+    for ages_dict in cycle_dict[cycle-1].items():
         for age, indiv_count in ages_dict.items():
 
             maturity = params_dict['Stage_Params'][age]['maturity']
