@@ -310,6 +310,14 @@ def build_table(param_args):
     return table_generator.generate_table(table_dict, attr)
 
 def data_dict_to_list(data_dict):
+    """Abstract out inner dictionaries from data_dict into a list, where
+        the inner dictionaries are added to the list in the order of
+        their sorted keys
+
+        data_dict - a dictionary with unique keys pointing to dictionaries
+
+        returns - a list of dictionaries"""
+    
     data_list = []
     data_keys = data_dict.keys()
     data_keys.sort()
