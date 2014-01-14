@@ -137,14 +137,13 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
-    if is_gendered == True:
+    if is_gendered:
         first_age = [order[0], order[len(order)/2]]
         final_age = [order[len(order)/2-1], order[len(order)-1]]
     else:
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
    
-    revised_order = copy.copy(order)
     do_migration = False if migration_dict is None else True
     gender_var = 2 if is_gendered else 1
 
@@ -158,8 +157,8 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 
             larval_disp = params_dict['Area_Params'][area]['larval_disp']
 
-            for age in params_dict['Stage_Params'].keys():
-
+            for i, age in enumerate(order):
+    
                 #If a = 0
                 if age in first_age:
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
@@ -167,14 +166,16 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 elif age in final_age:
                     pass
                 else:
-                    survival = calc_survival_mortal(params_dict, area, stage)
+                    prev_age = order[i-1] 
+                
+                    survival = calc_survival_mortal(params_dict, area, age)
                     num_indivs = \
                         calc_prev_indiv_count(cycle_dict, migration_dict, area, 
-                                                age, cycle)
+                                                age, prev_age, cycle)
 
                     cycle_dict[cycle][area][age] = num_indivs * survival
 
-def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age):
+def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age, prev_age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
     amount of incoming migration.
     
@@ -195,7 +196,17 @@ def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age):
                 }
             }
     '''
-    
+    prev_indiv_in_area = cycle_dict[cycle-1][area][prev_age]
+    prev_mig_in_area = 1 if mig_dict == None else mig_dict[prev_age][area][area]
+
+    incoming_pop = 0
+
+    for inc_area in cycle_dict[cycle].keys():
+        
+        if area_prime is not area:
+            if area_prime is not area:
+                
+                pass
 
 def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
     '''This is is the portion of the recruitment equiation which does not include
