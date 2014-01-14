@@ -137,29 +137,28 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
-    if is_gendered == True:
+    if is_gendered:
         first_age = [order[0], order[len(order)/2]]
         final_age = [order[len(order)/2-1], order[len(order)-1]]
     else:
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
    
-    revised_order = copy.copy(order)
     do_migration = False if migration_dict is None else True
     gender_var = 2 if is_gendered else 1
 
     for cycle in range(1, duration):
 
         #This will be used for each 0 age in the cycle. 
-        rec_sans_disp = calc_area_indifferent_rec(cycle_dict, params_dict,
+        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
                             
         for area in params_dict['Area_Params'].keys():
 
             larval_disp = params_dict['Area_Params'][area]['larval_disp']
 
-            for age in params_dict['Stage_Params'].keys():
-
+            for i, age in enumerate(order):
+    
                 #If a = 0
                 if age in first_age:
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
@@ -167,10 +166,50 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 elif age in final_age:
                     pass
                 else:
-                    pass
+                    prev_age = order[i-1] 
+                
+                    survival = calc_survival_mortal(params_dict, area, age)
+                    num_indivs = \
+                        calc_prev_indiv_count(cycle_dict, migration_dict, area, 
+                                                age, prev_age, cycle)
 
-def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
-    '''This is ht eportion of the recruitment equiation which does not include
+                    cycle_dict[cycle][area][age] = num_indivs * survival
+
+def  calc_prev_indiv_count(cycle_dict, mig_dict, area, age, prev_age, cycle):
+    '''Want to get the indiviual count for the previous cycle, including the 
+    amount of incoming migration.
+    
+    N{a} = (N{a-1,x,t} * Mig{stays X} + SUM{x!=x'}(N{a-1, x'} * Mig{a-1, x->x'})
+    
+    migration_dict(*)- Contains source/sink info for each age/stage
+        capable of migration. Outer key is source, inner is sink.
+
+        {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
+                '2': {'1': 0.13, '2': 98.06, ...}
+        }
+    cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+    '''
+    prev_indiv_in_area = cycle_dict[cycle-1][area][prev_age]
+    prev_mig_in_area = 1 if mig_dict == None else mig_dict[prev_age][area][area]
+
+    incoming_pop = 0
+
+    for inc_area in cycle_dict[cycle].keys():
+        
+        if area_prime is not area:
+            if area_prime is not area:
+                
+                pass
+
+def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle):
+    '''This is is the portion of the recruitment equiation which does not include
     the larval dispersal. Since L_D is multiplied against everything else for
     all recruitment equations, we can calculate a location independent portion
     of recruitment first, then just multiply it against larval dispersal for
@@ -182,7 +221,7 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
     if rec_eq in ['Beverton-Holt', 'Ricker']:
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
-        spawners = spawner_count(cycle_dict, params_dict)
+        spawners = spawner_count(cycle_dict, params_dict, cycle)
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
@@ -199,9 +238,21 @@ def calc_area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cyc
 
     return rec
 
-def spawner_count(cycle_dict, params_dict):
-    pass
+def spawner_count(cycle_dict, params_dict, cycle):
+    '''For a given cycle, does a SUMPRODUCT of the individuals and the maturity
+    for a given pairing of age, area.'''
 
+    spawner_sum = 0
+
+    for area, ages_dict in cycle_dict[cycle-1].items():
+        for age, indiv_count in ages_dict.items():
+
+            maturity = params_dict['Stage_Params'][age]['maturity']
+            product = indiv_count * maturity
+
+            spawner_sum += product
+
+    return spawner_sum
 
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
