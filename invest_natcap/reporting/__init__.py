@@ -221,21 +221,26 @@ def build_table(param_args):
                 build the table from. Either 'shapefile', 'csv', or 'dictionary'
                 (required)
 
-            param_args['data'] - a URI to a csv or shapefile OR a dictionary
-                (required)
+            param_args['data'] - a URI to a csv or shapefile OR a list of 
+                dictionaries. If a list of dictionaries the data should be
+                represented in the following format: (required)
+                    [{col_name_1: value, col_name_2: value, ...},
+                     {col_name_1: value, col_name_2: value, ...},
+                     ...]
 
             param_args['key'] - a string that depicts which column (csv) or
                 field (shapefile) will be the unique key to use in extracting
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
-
-            param_args['columns'] - a dictionary where the keys are the ids of
-                the columns (representing how the order they should be
-                displayed) and the values are dictionaries that have the
-                following attributes represented by key-value pairs (required):
-                'name' - a string for the name of the column (required)
-                'total' - a boolean that determines whether the column
-                    entries should be summed in a total row (required)
+                
+            param_args['columns'] - a list of dictionaries that defines the column
+                    structure for the table (required). The order of the
+                    columns from left to right is depicted by the index
+                    of the column dictionary in the list. Each dictionary
+                    in the list has the following keys and values: 
+                        'name' - a string for the column name (required)
+                        'total' - a boolean for whether the column should be
+                            totaled (required)
 
             param_args['total'] - a boolean value where if True a constant
                 total row will be placed at the bottom of the table that sums the
@@ -256,31 +261,33 @@ def build_table(param_args):
     data_type = param_args['data_type']
 
     # Get a handle on the input data being passed in, whether it a URI to a
-    # shapefile / csv file or a dictionary
+    # shapefile / csv file or a list of dictionaries
     input_data = param_args['data']
 
     # Depending on the type of input being passed in, pre-process it accordingly
     if data_type == 'shapefile':
         key = param_args['key']
         data_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
+        # Convert the data_dict to a list of dictionaries where each dictionary
+        # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
         data_dict = raster_utils.get_lookup_from_csv(input_data, key)
+        # Convert the data_dict to a list of dictionaries where each dictionary
+        # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
     else:
-        #data_dict = input_data
         data_list = input_data
 
-    LOGGER.debug('Data Collected from Input Source: %s', data_dict)
+    LOGGER.debug('Data Collected from Input Source: %s', data_list)
 
-    # Add the columns dictionary to the final dictionary that is to be passed
+    # Add the columns data to the final dictionary that is to be passed
     # off to the table generator
     table_dict['cols'] = param_args['columns']
 
-    # Add the properly formatted data dictionary to the final dictionary that is
+    # Add the properly formatted row data to the final dictionary that is
     # to be passed to the table generator
-    #table_dict['rows'] = data_dict
     table_dict['rows'] = data_list
 
     # If a totals row is present, add it to the final dictionary
