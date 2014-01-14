@@ -8,23 +8,21 @@ def generate_table(table_dict, attributes=None):
         the the table in the form of hmtl
 
         table_dict - a dictionary with the following arguments:
-            'cols'- a dictionary that defines the column structure for
-                the table (required). The dictionary has unique numeric
-                keys that determine the left to right order of the columns.
-                Each key has a dictionary value with the following
-                arguments:
+            'cols'- a list of dictionaries that defines the column
+                structure for the table (required). The order of the
+                columns from left to right is depicted by the index
+                of the column dictionary in the list. Each dictionary
+                in the list has the following keys and values: 
                     'name' - a string for the column name (required)
                     'total' - a boolean for whether the column should be
                         totaled (required)
-
-            'rows' - a dictionary with keys that have sub dictionaries as
-                values. The sub dictionaries have column names that match
-                the names in 'cols' as keys and the corresponding entry for
-                the column/row pair as a value. (required) Example:
-                {row_id_0: {col_name_1: value, col_name_2: value, ...},
-                 row_id_1: {col_name_1: value, col_name_2: value, ...},
-                 ...
-                }
+            
+            'rows' - a list of dictionaries that represent the rows. Each
+                dictionaries keys should match the column names found in 
+                'cols' (required) Example:
+                [{col_name_1: value, col_name_2: value, ...},
+                 {col_name_1: value, col_name_2: value, ...},
+                 ...]
 
             'checkbox' - a boolean value for whether there should be a
                 checkbox column. If True a 'selected total' row will be added
