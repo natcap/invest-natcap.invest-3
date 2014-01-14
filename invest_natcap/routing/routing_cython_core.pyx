@@ -17,6 +17,7 @@ from cython.operator cimport dereference as deref
 
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
+from libcpp.set cimport set as c_set
 from libc.math cimport atan
 from libc.math cimport atan2
 from libc.math cimport tan
@@ -669,9 +670,9 @@ cdef int _is_sink(
                      n_rows, n_cols, row_offsets, col_offsets,
                      dem_array, nodata_value)):
             return 1
-    return 0              
-        
-        
+    return 0
+
+
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -711,13 +712,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, steps
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
-    
-    row_window_size = 7
-    col_window_size = n_cols
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
+    cdef int neighbor_row_index, neighbor_col_index
 
     #copy the dem to a copy so we know the type
     dem_band = dem_ds.GetRasterBand(1)
@@ -731,6 +726,38 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
+
+    #search for flat areas, iterate through the array 3 rows at a time
+    cdef c_set[int] flat_set
+    dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
+    for row_index in range(1, n_rows - 1):
+        dem_out_band.ReadAsArray(
+            xoff=0, yoff=row_index-1, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
+        for col_index in range(1, n_cols - 1):
+            #nodata values aren't flat
+            if dem_array[1, col_index] == nodata_value:
+                continue
+            #check all the neighbors, if nodata or lower, this isn't flat
+            for neighbor_index in xrange(8):
+                neighbor_row_index = 1 + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                
+                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
+                    break
+                if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[1, col_index]:
+                    break
+            else:
+                #This is a flat element
+                flat_set.insert(row_index * n_cols + col_index)
+
+    #find sinks
+    row_window_size = 3
+    col_window_size = n_cols
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
     dem_array = numpy.empty((row_window_size, col_window_size), dtype=numpy.float32)
     dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
@@ -738,8 +765,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     hits = 0
     misses = 0
-
     col_index = 0
+    cdef int flat_index
     for row_index in range(n_rows):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
@@ -755,11 +782,33 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         w_row_index = row_index - ul_row_index
         for col_index in range(n_cols):
             w_col_index = col_index - ul_col_index
-            if _is_sink(
-                w_row_index, w_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
-                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
-                sink_queue.push(t)
+            if dem_array[w_row_index, w_col_index] == nodata_value:
+                continue
+
+            #if current cell is flat, it's not a sink
+            flat_index = row_index * n_cols + col_index
+            if flat_set.find(flat_index) != flat_set.end():
+                continue
+
+            for neighbor_index in xrange(8):
+                neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                if neighbor_row_index < 0 or neighbor_row_index >= row_window_size:
+                    continue
+                if neighbor_col_index < 0 or neighbor_col_index >= col_window_size:
+                    continue
+
+                if (dem_array[neighbor_row_index, neighbor_col_index] !=
+                    dem_array[w_row_index, w_col_index]):
+                    #won't sink the neighbor at a different height
+                    continue
+                #Test if the currentr  
+                flat_index = (row_index + row_offsets[neighbor_index]) * n_cols + neighbor_col_index
+                #If the neighbor is flat then the current cell is a sink!
+                if flat_set.find(flat_index) != flat_set.end():
+                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                    sink_queue.push(t)
+                    break
 
     LOGGER.info('calculate distances from sinks to other flat cells')
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
