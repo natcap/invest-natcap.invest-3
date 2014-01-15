@@ -35,7 +35,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**13
+cdef int MAX_WINDOW_SIZE = 2**10#2**13
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -703,7 +703,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
 
     #Identify sink cells
-    LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
@@ -727,6 +726,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
 
+    LOGGER.info('identify flat cells')
+    start = time.time()
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
     dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
@@ -767,6 +768,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     misses = 0
     col_index = 0
     cdef int flat_index
+    end = time.time()
+    print 'total time ', end-start, 's'
+    LOGGER.info('identify sink cells')
     for row_index in range(n_rows):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
@@ -810,6 +814,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     sink_queue.push(t)
                     break
 
+    LOGGER.debug('Finished finding flats and sinks')
+    end = time.time()
+    print 'total time ', end-start, 's'
+
     LOGGER.info('calculate distances from sinks to other flat cells')
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
@@ -848,6 +856,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     while sink_queue.size() > 0:
         if steps % 10000 == 0:
             LOGGER.debug("sink queue size: %d" % (sink_queue.size()))
+            if steps != 0:
+                sys.exit(-1)
         steps += 1
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
@@ -866,7 +876,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
-            LOGGER.debug('miss')
+            LOGGER.info("MISS hits/misses %d/%d miss percent %.2f%%" %
+                        (hits, misses, 100.0*misses/float(hits+misses)))
 
             #write back the old window
             dem_sink_offset_band.WriteArray(
