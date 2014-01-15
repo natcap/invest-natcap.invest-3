@@ -354,8 +354,12 @@ def add_head_element(param_args):
     
     # Copy the source file to the location of the output directory
     if not os.path.isfile(dst):
-        shutil.copyfile(src, dst)
-
+        try:
+            shutil.copyfile(src, dst)
+        except IOError:
+            raise IOError('The head element script could not be copied properly'
+                    ', check the location of the file as well as output'
+                    ' destination. Script source : %s' % src)
     # Set a relative path for the script file so that the html page can find it
     relative_dst = './' + basename
 
