@@ -39,13 +39,6 @@ def generate_report(reporting_args):
                     in the body or head of the html page.
                     Values: 'body' | 'head' (required)
 
-                'position' - a positive integer that depicts where the element
-                    should be placed on the html page. Elements will be written
-                    in ascending order with sections 'body' and 'head'
-                    separately defined. If two elements have the same position,
-                    the following repeated positions will be bumped up
-                    (required)
-
             Table element dictionary has at least the following additional arguments:
                 'sortable' - a boolean value for whether the tables columns
                     should be sortable (required)
@@ -113,7 +106,7 @@ def generate_report(reporting_args):
     # for proper ordering later in 'write_html'.
     # Initialize head's first element to be the title where the -1 position
     # ensures it will be the first element
-    html_obj = {'head':([html_title],[-1]), 'body':([],[])}
+    html_obj = {'head':[html_title], 'body':[]}
 
     # A dictionary of 'types' that point to corresponding functions. When an
     # 'element' is passed in the 'type' will be one of the defined types below
@@ -126,13 +119,12 @@ def generate_report(reporting_args):
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
-        # There are 3 general purpose arguments that each element will have,
-        # 'type', 'section', and 'position'. Get and remove these from the
+        # There are 2 general purpose arguments that each element will have,
+        # 'type' and 'section'. Get and remove these from the
         # elements dictionary (they should not be added weight passed to the
         # individual element functions)
         fun_type = element.pop('type')
         section = element.pop('section')
-        position = element.pop('position')
 
         # In order to copy any script files to where the output html file is to
         # be saved, the out_uri needs to be passed along into the function that
@@ -144,10 +136,7 @@ def generate_report(reporting_args):
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
         # in write_html
-        html_obj[section][0].append(report[fun_type](element))
-        # Append the position of the element to the html dictionary so the
-        # elements can be written in order in write_html
-        html_obj[section][1].append(position)
+        html_obj[section].append(report[fun_type](element))
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
@@ -159,12 +148,10 @@ def write_html(html_obj, out_uri):
         in 'html_obj'
 
         html_obj - a dictionary with two keys, 'head' and 'body', that point to
-            a tuple of two lists. The first list in the tuple for each key is a
-            list of the htmls elements as strings. The second is a list of the
-            position those elements should be written with respect to the their
-            key (required)
-            example: {'head':(['elem_1', 'elem_2',...],[pos_1, pos_2,...]),
-                      'body':(['elem_1', 'elem_2',...],[pos_1, pos_2,...])}
+            lists. The list for each key is a list of the htmls elements as
+            strings (required)
+            example: {'head':['elem_1', 'elem_2',...],
+                      'body':['elem_1', 'elem_2',...]}
 
         out_uri - a URI for the output html file
 
@@ -179,19 +166,11 @@ def write_html(html_obj, out_uri):
         # Get the list of html string elements for this section
         sect_elements = html_obj[section][0]
         # Get the list of positions for the elements
-        sect_order = html_obj[section][1]
+        #sect_order = html_obj[section][1]
 
-        # Check to make sure the lists are not empty because it is possible no
-        # elements were were added
-        if len(sect_elements) > 0 and len(sect_order) > 0:
-            # The position and element string are related in the two lists by
-            # the index they are found. Sorting the position order list and
-            # keep the relation of the element list.
-            sect_order, sect_elements = zip(*sorted(zip(sect_order, sect_elements)))
-
-            for sect_elem in sect_elements:
-                # Add each element to the html string
-                html_str += sect_elem
+        for element in sect_elements:
+            # Add each element to the html string
+            html_str += element
 
         # Add the closing tag for the section
         html_str += '</%s>' % section

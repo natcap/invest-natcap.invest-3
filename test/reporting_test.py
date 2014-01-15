@@ -574,8 +574,7 @@ class TestReportingPackage(testing.GISTest):
                         'data_type':'dictionary',
                         'columns':columns,
                         'key':'ws_id',
-                        'data': sample_dict,
-                        'position': 1},
+                        'data': sample_dict},
                     {
                         'type': 'table',
                         'section': 'body',
@@ -585,36 +584,30 @@ class TestReportingPackage(testing.GISTest):
                         'data_type':'csv',
                         'columns':columns_csv,
                         'key':'ws_id',
-                        'data': csv_uri,
-                        'position': 2},
+                        'data': csv_uri},
                     {
                         'type': 'text',
                         'section': 'body',
-                        'position': 0,
                         'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'link',
-                        'position': 0,
                         'src': css_uri},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'position': 1,
                         'src': jsc_uri},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'position': 2,
                         'src': jquery_uri},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'position': 3,
                         'src': jsc_fun_uri}
                     ],
                 'out_uri': output_uri}
