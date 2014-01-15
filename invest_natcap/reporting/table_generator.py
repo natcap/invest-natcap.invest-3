@@ -238,20 +238,20 @@ def add_checkbox_column(col_list, row_list):
     # dictionaries
     return (col_list, row_list)
 
-def get_row_data(row_dict, col_headers):
-    """Construct the rows in a 2D List from the dictionary, using col_headers to
-        properly order the row data.
+def get_row_data(row_list, col_headers):
+    """Construct the rows in a 2D List from the list of dictionaries,
+        using col_headers to properly order the row data.
 
-        row_dict - a dictionary represting the row data in the following form:
-            {row_key_0: {'col_name_1':'9/13', 'col_name_3':'expensive',
-                         'col_name_2':'chips'},
-             row_key_1: {'col_name_1':'3/13', 'col_name_2':'cheap',
-                         'col_name_3':'peanuts'},
-             row_key_2: {'col_name_1':'5/12', 'col_name_2':'moderate',
-                         'col_name_3':'mints'}}
-
-            Where the row_keys determine the order of how the rows will be
-            written and col_names match the names provided in col_headers
+        'row_list' - a list of dictionaries that represent the rows. Each
+            dictionaries keys should match the column names found in 
+            'col_headers'. The rows will be ordered the same as they are found
+            in the dictionary list (required) Example:
+            [{'col_name_1':'9/13', 'col_name_3':'expensive',
+                'col_name_2':'chips'},
+             {'col_name_1':'3/13', 'col_name_2':'cheap',
+                'col_name_3':'peanuts'},
+             {'col_name_1':'5/12', 'col_name_2':'moderate',
+                'col_name_3':'mints'}]
 
         col_headers - a List of the names of the column headers in order
             example : [col_name_1, col_name_2, col_name_3...]
@@ -261,25 +261,13 @@ def get_row_data(row_dict, col_headers):
     # Initialize a list to hold output rows represented as lists
     row_data = []
 
-    try:
-        #for row_values in row_dict.itervalues():
-            # Initialize a list to store our individual row values
-        #    row = []
-            # Iterate over col_headers to ensure that the row values are
-            # properly placed with the correct column header
-        #    for col in col_headers:
-                # Add value of row to list
-        #        row.append(row_values[col])
-            # Add the row to the list of rows
-        #    row_data.append(row)
-        
-        for row_values in row_dict:
-            row = []
-            for col in col_headers:
-                row.append(row_values[col])
-            row_data.append(row)
-        
-    except Exception as e:
-        raise Exception(str(e) + ' The dictionary is not constructed correctly')
+    # Iterate over each dictionary in the row_list and append the values to a
+    # list in the order the keys are found in 'col_headers'. Add each generated
+    # list to 'row_data'
+    for row_dict in row_list:
+        row = []
+        for col in col_headers:
+            row.append(row_dict[col])
+        row_data.append(row)
 
     return row_data
