@@ -17,6 +17,7 @@ from cython.operator cimport dereference as deref
 
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
+from libcpp.set cimport set as c_set
 from libc.math cimport atan
 from libc.math cimport atan2
 from libc.math cimport tan
@@ -35,6 +36,7 @@ cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
 cdef int MAX_WINDOW_SIZE = 2**13
+cdef float INF = numpy.inf
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -669,9 +671,9 @@ cdef int _is_sink(
                      n_rows, n_cols, row_offsets, col_offsets,
                      dem_array, nodata_value)):
             return 1
-    return 0              
-        
-        
+    return 0
+
+
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -702,7 +704,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
 
     #Identify sink cells
-    LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
@@ -711,19 +712,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, steps
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
-    
-    row_window_size = 7
-    col_window_size = n_cols
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
+    cdef int neighbor_row_index, neighbor_col_index
 
     #copy the dem to a copy so we know the type
     dem_band = dem_ds.GetRasterBand(1)
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        numpy.inf)
+        INF)
     dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
     dem_out_band = dem_out_ds.GetRasterBand(1)
     for row_index in range(n_rows):
@@ -731,39 +726,228 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
+
+    LOGGER.info('identify flat cells')
+    start = time.time()
+    #search for flat areas, iterate through the array 3 rows at a time
+    cdef c_set[int] flat_set
+    dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
+    for row_index in range(1, n_rows - 1):
+        dem_out_band.ReadAsArray(
+            xoff=0, yoff=row_index-1, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
+        for col_index in range(1, n_cols - 1):
+            #nodata values aren't flat
+            if dem_array[1, col_index] == nodata_value:
+                continue
+            #check all the neighbors, if nodata or lower, this isn't flat
+            for neighbor_index in xrange(8):
+                neighbor_row_index = 1 + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                
+                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
+                    break
+                if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[1, col_index]:
+                    break
+            else:
+                #This is a flat element
+                flat_set.insert(row_index * n_cols + col_index)
+
+    #find sinks
+    #Load the dem_offset raster/band/array
+    cdef Row_Col_Weight_Tuple current_cell_tuple
+    row_window_size = MAX_WINDOW_SIZE
+    col_window_size = row_window_size
+    if row_window_size > n_rows:
+        row_window_size = n_rows
+    if col_window_size > n_cols:
+        col_window_size = n_cols
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
     dem_array = numpy.empty((row_window_size, col_window_size), dtype=numpy.float32)
     dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size, buf_obj=dem_array)
 
+    dem_sink_offset_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
+        INF)
+    dem_sink_offset_ds = gdal.Open(dem_sink_offset_uri, gdal.GA_Update)
+    dem_sink_offset_band = dem_sink_offset_ds.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = (
+        dem_sink_offset_band.ReadAsArray(
+            xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+            win_ysize=row_window_size))
+    dem_array = dem_out_band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+        win_ysize=row_window_size)
+
+
     hits = 0
     misses = 0
-
     col_index = 0
+    cdef int flat_index
+    cdef int dirty_dem_sink_offset = False
+
+    old_ul_row_index = ul_row_index
+    old_ul_col_index = ul_col_index
+    old_lr_row_index = lr_row_index
+    old_lr_col_index = lr_col_index
+
+
+    end = time.time()
+    print 'total time ', end-start, 's'
+    LOGGER.info('identify sink cells')
     for row_index in range(n_rows):
-        if _update_window(
-            row_index, col_index, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 2):
-            #need to reload the window
-            misses += 1
-            dem_out_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
-        else:
-            hits += 1
-        w_row_index = row_index - ul_row_index
+        LOGGER.debug('sink cells row index %d' % row_index)
         for col_index in range(n_cols):
+            if _update_window(
+                row_index, col_index, &ul_row_index, &ul_col_index,
+                &lr_row_index, &lr_col_index, n_rows, n_cols,
+                row_window_size, col_window_size, 2):
+                #need to reload the window
+                misses += 1
+
+                #write back the old window
+                if dirty_dem_sink_offset:
+                    dem_sink_offset_band.WriteArray(
+                        dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                    dirty_dem_sink_offset = False
+
+                #load the new windows
+                dem_out_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_array)
+                dem_sink_offset_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_sink_offset)
+
+                old_ul_row_index = ul_row_index
+                old_ul_col_index = ul_col_index
+                old_lr_row_index = lr_row_index
+                old_lr_col_index = lr_col_index
+
+            else:
+                hits += 1
+            w_row_index = row_index - ul_row_index
             w_col_index = col_index - ul_col_index
-            if _is_sink(
-                w_row_index, w_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
-                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
-                sink_queue.push(t)
+            if dem_array[w_row_index, w_col_index] == nodata_value:
+                continue
+
+            #if current cell is flat, it's not a sink
+            flat_index = row_index * n_cols + col_index
+            if flat_set.find(flat_index) != flat_set.end():
+                continue
+
+            for neighbor_index in xrange(8):
+                neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                if neighbor_row_index < 0 or neighbor_row_index >= row_window_size:
+                    continue
+                if neighbor_col_index < 0 or neighbor_col_index >= col_window_size:
+                    continue
+
+                if (dem_array[neighbor_row_index, neighbor_col_index] !=
+                    dem_array[w_row_index, w_col_index]):
+                    #won't sink the neighbor at a different height
+                    continue
+                #Test if the currentr
+                flat_index = (row_index + row_offsets[neighbor_index]) * n_cols + neighbor_col_index
+                #If the neighbor is flat then the current cell is a sink!
+                if flat_set.find(flat_index) != flat_set.end():
+                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                    sink_queue.push(t)
+                    hits = 0
+                    misses = 0
+                    break
+                    
+            while sink_queue.size() > 0:
+                current_cell_tuple = sink_queue.front()
+                sink_queue.pop()
+                row_index = current_cell_tuple.row_index
+                col_index = current_cell_tuple.col_index
+                weight = current_cell_tuple.weight
+
+                if _update_window(
+                    row_index, col_index, &ul_row_index, &ul_col_index,
+                    &lr_row_index, &lr_col_index, n_rows, n_cols,
+                    row_window_size, col_window_size, 2):
+                    #need to reload the window
+                    misses += 1
+                    LOGGER.info("SINK MISS hits/misses %d/%d miss percent %.2f%%" %
+                                (hits, misses, 100.0*misses/float(hits+misses)))
+
+                    #write back the old window
+                    if dirty_dem_sink_offset:
+                        dem_sink_offset_band.WriteArray(
+                            dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                        dirty_dem_sink_offset = False
+
+                    #load the new windows
+                    dem_out_band.ReadAsArray(
+                        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                        win_ysize=row_window_size, buf_obj=dem_array)
+                    dem_sink_offset_band.ReadAsArray(
+                        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                        win_ysize=row_window_size, buf_obj=dem_sink_offset)
+
+                    old_ul_row_index = ul_row_index
+                    old_ul_col_index = ul_col_index
+                    old_lr_row_index = lr_row_index
+                    old_lr_col_index = lr_col_index
+
+                else:
+                    hits += 1
+
+                w_row_index = row_index - ul_row_index
+                w_col_index = col_index - ul_col_index
+
+                if dem_sink_offset[w_row_index, w_col_index] < weight:
+                    continue
+                dem_sink_offset[w_row_index, w_col_index] = weight
+                dirty_dem_sink_offset = True
+
+                for neighbor_index in xrange(8):
+                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+
+                    w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                    w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+
+                    flat_index = neighbor_row_index * n_cols + neighbor_col_index
+                    #If the neighbor is not flat then skip
+                    if flat_set.find(flat_index) == flat_set.end():
+                        continue
+
+                    if (dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] <=
+                        weight + 1):
+                        continue
+                    if (dem_array[w_row_index, w_col_index] == 
+                        dem_array[w_neighbor_row_index, w_neighbor_col_index]):
+                        t = Row_Col_Weight_Tuple(
+                            neighbor_row_index, neighbor_col_index, weight + 1)
+                        sink_queue.push(t)
+                        dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
+                        break
+    #write back the remaning open window
+    if dirty_dem_sink_offset:
+        dem_sink_offset_band.WriteArray(
+            dem_sink_offset, xoff=ul_col_index, yoff=ul_row_index)
+        dirty_dem_sink_offset = False
+        if hits+misses != 0:
+            LOGGER.info("SINK hits/misses %d/%d miss percent %.2f%%" %
+                        (hits, misses, 100.0*misses/float(hits+misses)))
+
+
+    LOGGER.debug('Finished finding flats and sinks')
+    end = time.time()
+    print 'total time ', end-start, 's'
 
     LOGGER.info('calculate distances from sinks to other flat cells')
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
-    cdef Row_Col_Weight_Tuple current_cell_tuple
     
     #This is as big as the window will get
     row_window_size = MAX_WINDOW_SIZE
@@ -778,96 +962,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     lr_row_index = row_window_size
     lr_col_index = col_window_size
 
-    #Load the dem_offset raster/band/array
-    dem_sink_offset_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        numpy.inf)
-    dem_sink_offset_ds = gdal.Open(dem_sink_offset_uri, gdal.GA_Update)
-    dem_sink_offset_band = dem_sink_offset_ds.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = (
-        dem_sink_offset_band.ReadAsArray(
-            xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-            win_ysize=row_window_size))
-    dem_array = dem_out_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
-
-    hits = 0
-    misses = 0
-    steps = 0
-    while sink_queue.size() > 0:
-        if steps % 10000 == 0:
-            LOGGER.debug("sink queue size: %d" % (sink_queue.size()))
-        steps += 1
-        current_cell_tuple = sink_queue.front()
-        sink_queue.pop()
-        row_index = current_cell_tuple.row_index
-        col_index = current_cell_tuple.col_index
-        weight = current_cell_tuple.weight
-
-        old_ul_row_index = ul_row_index
-        old_ul_col_index = ul_col_index
-        old_lr_row_index = lr_row_index
-        old_lr_col_index = lr_col_index
-        
-        if _update_window(
-            row_index, col_index, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 2):
-            #need to reload the window
-            misses += 1
-            LOGGER.debug('miss')
-
-            #write back the old window
-            dem_sink_offset_band.WriteArray(
-                dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-            
-            #load the new windows
-            dem_out_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
-            dem_sink_offset_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_sink_offset)
-        else:
-            hits += 1
-
-        w_row_index = row_index - ul_row_index
-        w_col_index = col_index - ul_col_index
-
-        if dem_sink_offset[w_row_index, w_col_index] < weight:
-            continue
-        dem_sink_offset[w_row_index, w_col_index] = weight
-
-        for neighbor_index in xrange(8):
-            neighbor_row_index = row_index + row_offsets[neighbor_index]
-            neighbor_col_index = col_index + col_offsets[neighbor_index]
-
-            w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-            w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
-            if not _is_flat(
-                w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
-                continue
-
-            if (dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] <=
-                weight + 1):
-                continue
-            if (dem_array[w_row_index, w_col_index] == 
-                dem_array[w_neighbor_row_index, w_neighbor_col_index]):
-                t = Row_Col_Weight_Tuple(
-                    neighbor_row_index, neighbor_col_index, weight + 1)
-                sink_queue.push(t)
-                dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
-
-    #write back the remaning open window
-    dem_sink_offset_band.WriteArray(
-        dem_sink_offset, xoff=ul_col_index, yoff=ul_row_index)
-    if hits+misses != 0:
-        LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
-                    (hits, misses, 100.0*misses/float(hits+misses)))
 
     LOGGER.info('calculate distances from edge to center of flat regions')
     edge_cell_list = []
@@ -908,10 +1002,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if w_row_index >= n_rows:
                 LOGGER.error("warning w_row_index > n_rows %d %d" % (w_row_index, n_rows))
 
-            if not _is_flat(
-                w_row_index, w_col_index, row_window_size, col_window_size,
-                row_offsets, col_offsets, dem_array, nodata_value):
+            flat_index = row_index * n_cols + col_index
+            #If the neighbor is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
                 continue
+
             for neighbor_index in xrange(8):
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
@@ -944,7 +1039,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        numpy.inf)
+        INF)
     dem_edge_offset_ds = gdal.Open(dem_edge_offset_uri, gdal.GA_Update)
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = (
@@ -1023,10 +1118,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
             w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
-            if (_is_flat(
-                    w_neighbor_row_index, w_neighbor_col_index, row_window_size, col_window_size,
-                    row_offsets, col_offsets, dem_array, nodata_value) and
-                dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] > weight + 1 and
+            flat_index = neighbor_row_index * n_cols + neighbor_col_index
+            #If the neighbor is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
+                continue
+
+            if (dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] > weight + 1 and
                 dem_array[w_row_index, w_col_index] == dem_array[w_neighbor_row_index, w_neighbor_col_index]):
 
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
@@ -1048,7 +1145,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             buf_obj=row_array)
         try:
             max_distance = max(
-                max_distance, numpy.max(row_array[row_array!=numpy.inf]))
+                max_distance, numpy.max(row_array[row_array!=INF]))
         except ValueError:
             #no non-infinity elements, that's normal
             pass
@@ -1069,8 +1166,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_edge_offset_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
             buf_obj=dem_edge_offset_array)
-        mask_array = ((dem_sink_offset_array != numpy.inf) &
-                      (dem_edge_offset_array != numpy.inf))
+        mask_array = ((dem_sink_offset_array != INF) &
+                      (dem_edge_offset_array != INF))
         dem_array[mask_array] = (dem_array[mask_array] + 
                                  (dem_sink_offset_array[mask_array] * 2.0 +
                                   (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
@@ -1283,7 +1380,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
-
+@cython.profile(False)
 cdef int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
