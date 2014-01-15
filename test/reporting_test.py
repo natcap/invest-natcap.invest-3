@@ -558,7 +558,7 @@ class TestReportingPackage(testing.GISTest):
 
         columns_csv = [
                 {'name': 'ws_id', 'total':False},
-                {'name': 'precip_mn', 'total':False},
+                {'name': 'precip_mn', 'total':True},
                 {'name': 'wyield_mn', 'total':False},
                 {'name': 'wyield_vol', 'total':True}]
 

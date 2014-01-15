@@ -192,8 +192,8 @@ def get_dictionary_values_ordered(dict_list, key_name):
     
     # Iterate over the list and extract the wanted value from each dictionaries
     # 'key_name'. Append the value to the new list
-    for item in base_dict:
-        ordered_value_list.append(item[sub_key_name])
+    for item in dict_list:
+        ordered_value_list.append(item[key_name])
 
     return ordered_value_list
 
@@ -229,7 +229,7 @@ def add_checkbox_column(col_list, row_list):
 
     # For each dictionary in the row list add a 'Select' key which
     # refers to the new column and set the value as a checkbox
-    for val in row_dict:
+    for val in row_list:
         val['Select'] = '<input type=checkbox name=cb value=1>'
 
     LOGGER.debug('Rows with Checkboxes: %s', row_list)
