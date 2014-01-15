@@ -949,9 +949,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.debug('Finished finding flats and sinks')
     end = time.time()
     print 'total time ', end-start, 's'
-
-    LOGGER.info('calculate distances from sinks to other flat cells')
-    LOGGER.info('sink queue size %s' % (sink_queue.size()))
     
     #This is as big as the window will get
     row_window_size = MAX_WINDOW_SIZE
@@ -966,17 +963,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     lr_row_index = row_window_size
     lr_col_index = col_window_size
 
+    old_ul_row_index = ul_row_index
+    old_ul_col_index = ul_col_index
+    old_lr_row_index = lr_row_index
+    old_lr_col_index = lr_col_index
+
 
     LOGGER.info('calculate distances from edge to center of flat regions')
-    edge_cell_list = []
     cdef queue[Row_Col_Weight_Tuple] edge_queue
 
-    row_window_size = 5
-    col_window_size = n_cols
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
@@ -984,20 +979,20 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     hits = 0
     misses = 0
     for row_index in range(1, n_rows - 1):
-        if _update_window(
-            row_index, col_index, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 2):
-            #need to reload the window
-            misses += 1
-            dem_out_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
-        else:
-            hits += 1
-        w_row_index = row_index - ul_row_index
-
         for col_index in range(1, n_cols - 1):
+            if _update_window(
+                row_index, col_index, &ul_row_index, &ul_col_index,
+                &lr_row_index, &lr_col_index, n_rows, n_cols,
+                row_window_size, col_window_size, 2):
+                #need to reload the window
+                misses += 1
+                dem_out_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_array)
+            else:
+                hits += 1
+
+            w_row_index = row_index - ul_row_index
             w_col_index = col_index - ul_col_index
 
             #only consider flat cells
@@ -1023,6 +1018,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     edge_queue.push(t)
                     break
+
     if hits+misses != 0:
         LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
                     (hits, misses, 100.0*misses/float(hits+misses)))
