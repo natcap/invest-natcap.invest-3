@@ -697,7 +697,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
-    cdef stack[Row_Col_Weight_Tuple] sink_stack
+    cdef queue[Row_Col_Weight_Tuple] sink_stack
     cdef int row_index, col_index, current_row_indebx, current_n_rows, sink_row_index, sink_col_index, edge_row_index, edge_col_index
 
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
@@ -864,7 +864,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     break
 
             while sink_stack.size() > 0:
-                current_cell_tuple = sink_stack.top()
+                current_cell_tuple = sink_stack.front()
                 sink_stack.pop()
                 sink_row_index = current_cell_tuple.row_index
                 sink_col_index = current_cell_tuple.col_index
@@ -934,7 +934,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     t = Row_Col_Weight_Tuple(
                         neighbor_row_index, neighbor_col_index, weight + 1)
                     sink_stack.push(t)
-                    dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
+                    dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 2
                     dirty_dem_sink_offset = True
 
     #write back the remaning open window
@@ -986,7 +986,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
 
     LOGGER.info('calculate distances from edge to center of flat regions')
-    cdef stack[Row_Col_Weight_Tuple] edge_stack
+    cdef queue[Row_Col_Weight_Tuple] edge_stack
 
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
@@ -1060,78 +1060,78 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 break
 
 
-            while edge_stack.size() > 0:
-                if steps % 10000 == 0:
-                    LOGGER.debug("edge queue size: %d, steps %d" % (edge_stack.size(), steps))
-                steps += 1
-                current_cell_tuple = edge_stack.top()
-                edge_stack.pop()
-                edge_row_index = current_cell_tuple.row_index
-                edge_col_index = current_cell_tuple.col_index
-                weight = current_cell_tuple.weight
+    while edge_stack.size() > 0:
+        if steps % 10000 == 0:
+            LOGGER.debug("edge queue size: %d, steps %d" % (edge_stack.size(), steps))
+        steps += 1
+        current_cell_tuple = edge_stack.front()
+        edge_stack.pop()
+        edge_row_index = current_cell_tuple.row_index
+        edge_col_index = current_cell_tuple.col_index
+        weight = current_cell_tuple.weight
 
-                if _update_window(
-                    edge_row_index, edge_col_index, &ul_row_index, &ul_col_index,
-                    &lr_row_index, &lr_col_index, n_rows, n_cols,
-                    row_window_size, col_window_size, 2):
-                    #need to reload the window
-                    misses += 1
+        if _update_window(
+            edge_row_index, edge_col_index, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            row_window_size, col_window_size, 2):
+            #need to reload the window
+            misses += 1
 
-                    if dirty_dem_edge_offset:
-                        dem_edge_offset_band.WriteArray(
-                            dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-                        dirty_dem_edge_offset = False
+            if dirty_dem_edge_offset:
+                dem_edge_offset_band.WriteArray(
+                    dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                dirty_dem_edge_offset = False
 
-                    dem_out_band.ReadAsArray(
-                        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                        win_ysize=row_window_size, buf_obj=dem_array)
-                    dem_edge_offset_band.ReadAsArray(
-                        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                        win_ysize=row_window_size, buf_obj=dem_edge_offset)
+            dem_out_band.ReadAsArray(
+                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                win_ysize=row_window_size, buf_obj=dem_array)
+            dem_edge_offset_band.ReadAsArray(
+                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                win_ysize=row_window_size, buf_obj=dem_edge_offset)
 
-                    old_ul_row_index = ul_row_index
-                    old_ul_col_index = ul_col_index
-                    old_lr_row_index = lr_row_index
-                    old_lr_col_index = lr_col_index
+            old_ul_row_index = ul_row_index
+            old_ul_col_index = ul_col_index
+            old_lr_row_index = lr_row_index
+            old_lr_col_index = lr_col_index
 
-                else:
-                    hits += 1
+        else:
+            hits += 1
 
-                w_row_index = edge_row_index - ul_row_index
-                w_col_index = edge_col_index - ul_col_index
+        w_row_index = edge_row_index - ul_row_index
+        w_col_index = edge_col_index - ul_col_index
 
-                #if current offset is less than the weight, skip
-                if dem_edge_offset[w_row_index, w_col_index] <= weight:
-                    continue
-                dem_edge_offset[w_row_index, w_col_index] = weight
-                dirty_dem_edge_offset = True
+        #if current offset is less than the weight, skip
+        if dem_edge_offset[w_row_index, w_col_index] <= weight:
+            continue
+        dem_edge_offset[w_row_index, w_col_index] = weight
+        dirty_dem_edge_offset = True
 
-                for neighbor_index in xrange(8):
-                    neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
-                    neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
+        for neighbor_index in xrange(8):
+            neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
+            neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
 
-                    w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                    w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+            w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+            w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
-                    #If the neighbor is not at the same height, skip
-                    if (dem_array[w_row_index, w_col_index] !=
-                        dem_array[w_neighbor_row_index, w_neighbor_col_index]):
-                        continue
+            #If the neighbor is not at the same height, skip
+            if (dem_array[w_row_index, w_col_index] !=
+                dem_array[w_neighbor_row_index, w_neighbor_col_index]):
+                continue
 
-                    flat_index = neighbor_row_index * n_cols + neighbor_col_index
-                    #If the neighbor is not flat then skip
-                    if flat_set.find(flat_index) == flat_set.end():
-                        continue
+            flat_index = neighbor_row_index * n_cols + neighbor_col_index
+            #If the neighbor is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
+                continue
 
-                    #if the neighbors weight is less than the weight we'll project, skip
-                    if dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] <= weight + 1:
-                        continue
+            #if the neighbors weight is less than the weight we'll project, skip
+            if dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] <= weight + 1:
+                continue
 
-                    dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
-                    dirty_dem_edge_offset = True
-                    #otherwise project the current weight to the neighbor
-                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
-                    edge_stack.push(t)
+            dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 2
+            dirty_dem_edge_offset = True
+            #otherwise project the current weight to the neighbor
+            t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
+            edge_stack.push(t)
 
 
     if hits+misses != 0:
