@@ -27,8 +27,8 @@ dem_offset_uri = './offset_dem.tif'
 
 start = time.time()
 #routing_utils.flow_accumulation('./test_input_10x10/test_dem_10x10.tif', out_uri)
-#cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')
-cProfile.run('routing_utils.flow_accumulation(dem_uri, out_uri)', 'flowstats')
+cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')
+#cProfile.run('routing_utils.flow_accumulation(dem_uri, out_uri)', 'flowstats')
 p = pstats.Stats('flowstats')
 p.sort_stats('time').print_stats(10)
 p.sort_stats('cumulative').print_stats(10)
