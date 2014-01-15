@@ -25,6 +25,15 @@ def get_transition_set_from_uri(dataset_uri_list):
     
     return transitions
 
+def get_transition_count_from_uri(dataset_uri_list):
+    #reclass rasters to compact bit space
+    #create bit shifted rasters for transiton to rasters
+    #numpy.left_shift
+    #multiplex / add transtion from rasters to bit shifted rasters
+    #get unique counts
+    #demultiplex
+    pass
+
 def execute(args):
     transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
     values_matrix_uri = args["preprocessor_key_uri"]
