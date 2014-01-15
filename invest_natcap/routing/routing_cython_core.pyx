@@ -969,73 +969,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     old_lr_col_index = lr_col_index
 
 
-    LOGGER.info('calculate distances from edge to center of flat regions')
-    cdef queue[Row_Col_Weight_Tuple] edge_queue
-
-    dem_array = dem_out_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
-
-    hits = 0
-    misses = 0
-    for row_index in range(1, n_rows - 1):
-        for col_index in range(1, n_cols - 1):
-            if _update_window(
-                row_index, col_index, &ul_row_index, &ul_col_index,
-                &lr_row_index, &lr_col_index, n_rows, n_cols,
-                row_window_size, col_window_size, 2):
-                #need to reload the window
-                misses += 1
-                dem_out_band.ReadAsArray(
-                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                    win_ysize=row_window_size, buf_obj=dem_array)
-            else:
-                hits += 1
-
-            w_row_index = row_index - ul_row_index
-            w_col_index = col_index - ul_col_index
-
-            #only consider flat cells
-            if w_col_index >= n_cols:
-                LOGGER.error("warning w_col_index > n_cols %d %d" % (w_col_index, n_cols))
-            if w_row_index >= n_rows:
-                LOGGER.error("warning w_row_index > n_rows %d %d" % (w_row_index, n_rows))
-
-            flat_index = row_index * n_cols + col_index
-            #If the neighbor is not flat then skip
-            if flat_set.find(flat_index) == flat_set.end():
-                continue
-
-            for neighbor_index in xrange(8):
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
-                if ((dem_array[w_neighbor_row_index, w_neighbor_col_index] != 
-                    nodata_value) and
-                    (dem_array[w_row_index, w_col_index] <
-                     dem_array[w_neighbor_row_index, w_neighbor_col_index])):
-
-                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
-                    edge_queue.push(t)
-                    break
-
-    if hits+misses != 0:
-        LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
-                    (hits, misses, 100.0*misses/float(hits+misses)))
-
-    #This is as big as the window will get
-    row_window_size = MAX_WINDOW_SIZE
-    col_window_size = row_window_size
-    if row_window_size > n_rows:
-        row_window_size = n_rows
-    if col_window_size > n_cols:
-        col_window_size = n_cols
-
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
- 
     dem_edge_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
@@ -1049,10 +982,83 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
-   
+
+
+    LOGGER.info('calculate distances from edge to center of flat regions')
+    cdef queue[Row_Col_Weight_Tuple] edge_queue
+
+    dem_array = dem_out_band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+        win_ysize=row_window_size)
+
     hits = 0
     misses = 0
+    cdef int dirty_dem_edge_offset = False
     steps = 0
+
+    for row_index in range(1, n_rows - 1):
+        for col_index in range(1, n_cols - 1):
+            if _update_window(
+                row_index, col_index, &ul_row_index, &ul_col_index,
+                &lr_row_index, &lr_col_index, n_rows, n_cols,
+                row_window_size, col_window_size, 2):
+                #need to reload the window
+                misses += 1
+
+                if dirty_dem_edge_offset:
+                    dem_edge_offset_band.WriteArray(
+                        dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                    dirty_dem_edge_offset = False
+
+                dem_out_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_array)
+                dem_edge_offset_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_edge_offset)
+
+                old_ul_row_index = ul_row_index
+                old_ul_col_index = ul_col_index
+                old_lr_row_index = lr_row_index
+                old_lr_col_index = lr_col_index
+
+            else:
+                hits += 1
+
+            w_row_index = row_index - ul_row_index
+            w_col_index = col_index - ul_col_index
+
+            #only consider flat cells
+            if w_col_index >= n_cols:
+                LOGGER.error("warning w_col_index > n_cols %d %d" % (w_col_index, n_cols))
+            if w_row_index >= n_rows:
+                LOGGER.error("warning w_row_index > n_rows %d %d" % (w_row_index, n_rows))
+
+            flat_index = row_index * n_cols + col_index
+            #If the current cell is not flat then skip
+            if flat_set.find(flat_index) == flat_set.end():
+                continue
+
+            for neighbor_index in xrange(8):
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+
+                #ignore nodata
+                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] == 
+                    nodata_value):
+                    continue
+
+                #if we don't abut a higher pixel then skip
+                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] <=
+                    dem_array[w_row_index, w_col_index]):
+                    continue
+
+                #otherwise we're next to an uphill pixel
+                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                edge_queue.push(t)
+                break
+
+
     while edge_queue.size() > 0:
         if steps % 10000 == 0:
             LOGGER.debug("edge queue size: %d" % (edge_queue.size()))
@@ -1063,36 +1069,17 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         col_index = current_cell_tuple.col_index
         weight = current_cell_tuple.weight
 
-        if (((row_index < ul_row_index + 2) and (ul_row_index > 0))  or
-            ((row_index >= lr_row_index - 2) and (lr_row_index < n_rows - 1)) or
-            ((col_index < ul_col_index + 2) and (ul_col_index > 0)) or
-            ((col_index >= lr_col_index - 2) and (lr_col_index < n_cols - 1))):
-
+        if _update_window(
+            row_index, col_index, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            row_window_size, col_window_size, 2):
             #need to reload the window
             misses += 1
 
-            #save edge offset off
-            dem_edge_offset_band.WriteArray(
-                dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
-
-            #Get a window centered on the current pixel
-            ul_row_index = row_index-(row_window_size/2)
-            lr_row_index = row_index+row_window_size/2+row_window_size%2
-            ul_col_index = col_index-(col_window_size/2)
-            lr_col_index = col_index+col_window_size/2+col_window_size%2
-
-            if ul_row_index < 0:
-                lr_row_index += -ul_row_index
-                ul_row_index = 0
-            if ul_col_index < 0:
-                lr_col_index += -ul_col_index
-                ul_col_index = 0
-            if lr_row_index > n_rows:
-                ul_row_index -= (lr_row_index - n_rows)
-                lr_row_index = n_rows
-            if lr_col_index > n_cols:
-                ul_col_index -= (lr_col_index - n_cols)
-                lr_col_index = n_cols
+            if dirty_dem_edge_offset:
+                dem_edge_offset_band.WriteArray(
+                    dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                dirty_dem_edge_offset = False
 
             dem_out_band.ReadAsArray(
                 xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
@@ -1100,6 +1087,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             dem_edge_offset_band.ReadAsArray(
                 xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                 win_ysize=row_window_size, buf_obj=dem_edge_offset)
+
+            old_ul_row_index = ul_row_index
+            old_ul_col_index = ul_col_index
+            old_lr_row_index = lr_row_index
+            old_lr_col_index = lr_col_index
+
         else:
             hits += 1
 
@@ -1109,6 +1102,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         if dem_edge_offset[w_row_index, w_col_index] <= weight:
             continue
         dem_edge_offset[w_row_index, w_col_index] = weight
+        dirty_dem_edge_offset = True
 
         for neighbor_index in xrange(8):
             neighbor_row_index = row_index + row_offsets[neighbor_index]
@@ -1127,6 +1121,16 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                 edge_queue.push(t)
+
+
+
+
+
+    if hits+misses != 0:
+        LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
+                    (hits, misses, 100.0*misses/float(hits+misses)))
+
+   
 
     #save final dem edge offset off
     dem_edge_offset_band.WriteArray(
