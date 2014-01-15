@@ -172,31 +172,26 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
 
     return html_str
 
-def get_dictionary_values_ordered(base_dict, sub_key_name):
-    """Generate a list, ordered from the unique keys in 'base_dict', from a
-        specific value retrieved from the sub dictionaries key 'sub_key_name'
+def get_dictionary_values_ordered(dict_list, key_name):
+    """Generate a list, with values from 'key_name' found in each dictionary
+        in the list of dictionaries 'dict_list'. The order of the values in the
+        returned list match the order they are retrieved from 'dict_list'
 
-        base_dict - a dictionary that has unique sortable keys where the keys
-            in ascending order represent the order of the constructed list.
-            Each key points to a dictionary that has at least one key:value pair
-            with the key being 'sub_key_name' (required)
+        dict_list - a list of dictionaries where each dictionary has the same
+            keys. Each dictionary should have at least one key:value pair
+            with the key being 'key_name' (required)
 
-        return - a list of values from 'sub_key_name' in ascending order based
-            on 'base_dict's keys"""
+        key_name - a String or Int for the key name of interest in the
+            dictionaries (required)
+
+        return - a list of values from 'key_name' in ascending order based
+            on 'dict_list' keys"""
 
     # Initiate an empty list to store values
     ordered_value_list = []
-    # Get a list of the keys
-    #keys = base_dict.keys()
-    # Sort the keys so that the values can be added to the list in proper order
-    #keys.sort()
-
-    #for key in keys:
-        # Get the desired value from each keys dictionary
-    #    value = base_dict[key][sub_key_name]
-        # Add the value to the list
-    #    ordered_value_list.append(value)
-
+    
+    # Iterate over the list and extract the wanted value from each dictionaries
+    # 'key_name'. Append the value to the new list
     for item in base_dict:
         ordered_value_list.append(item[sub_key_name])
 
