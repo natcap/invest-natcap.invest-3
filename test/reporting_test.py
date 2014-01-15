@@ -100,7 +100,7 @@ class TestReportingPackage(testing.GISTest):
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
         css_uri = os.path.join(REPORTING_DATA,'table_style.css')
 
-        columns = {{'name': 'ws_id', 'total':False},
+        columns = [{'name': 'ws_id', 'total':False},
                     {'name': 'precip_mn', 'total':False},
                     {'name': 'wyield_mn', 'total':False},
                     {'name': 'wyield_vol', 'total':True}]
@@ -234,9 +234,11 @@ class TestReportingPackage(testing.GISTest):
     def test_add_head_element_link(self):
         """Unit test for adding link head elements to html file"""
         #raise SkipTest
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
-        example_style_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        example_style_uri = os.path.join(REPORTING_DATA, 'table_style.css')
         
         args = {'format':'link', 'src':example_style_uri, 'out_uri':output_uri}
 
@@ -247,14 +249,16 @@ class TestReportingPackage(testing.GISTest):
 
         self.assertEqual(expected_result, result)
         
-        os.remove(os.path.join(output_uri, 'table_style.css')) 
+        os.remove(os.path.join(TEST_OUT, 'table_style.css')) 
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
         #raise SkipTest
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
-        example_script_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        example_script_uri = os.path.join(REPORTING_DATA, 'sorttable.js')
         
         args = {'format':'script', 'src':example_script_uri,
                 'out_uri':output_uri}
@@ -266,15 +270,17 @@ class TestReportingPackage(testing.GISTest):
 
         self.assertEqual(expected_result, result)
 
-        os.remove(os.path.join(output_uri, 'sorttable.js')) 
+        os.remove(os.path.join(TEST_OUT, 'sorttable.js')) 
     
     def test_add_head_element_script_exception(self):
         """Unit test for adding script head elements to html file with a faulty
             script URI. Should raise an IOError with a nice message"""
         #raise SkipTest
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
-        example_script_uri = os.path.join(REPORTING_DATA,'foo_bar.js')
+        example_script_uri = os.path.join(REPORTING_DATA, 'foo_bar.js')
         
         args = {'format':'script', 'src':example_script_uri,
                 'out_uri':output_uri}
