@@ -26,7 +26,6 @@ from libc.math cimport sqrt
 from invest_natcap import raster_utils
 
 
-
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -35,7 +34,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**13
+cdef int MAX_WINDOW_SIZE = 2**12
 cdef float INF = numpy.inf
 
 def calculate_transport(
@@ -797,7 +796,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     old_lr_row_index = lr_row_index
     old_lr_col_index = lr_col_index
 
-
     end = time.time()
     print 'total time ', end-start, 's'
     LOGGER.info('identify sink cells')
@@ -808,16 +806,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 row_index, col_index, &ul_row_index, &ul_col_index,
                 &lr_row_index, &lr_col_index, n_rows, n_cols,
                 row_window_size, col_window_size, 2):
-                #need to reload the window
-                misses += 1
-                LOGGER.debug('row_index %d, col_index %d, ul_row_index %d, ul_col_index %d,'
-                         'lr_row_index %d, lr_col_index %d, n_rows %d, n_cols %d,'
-                         'row_window_size %d, col_window_size %d, 2' % (
-                    row_index, col_index, ul_row_index, ul_col_index,
-                    lr_row_index, lr_col_index, n_rows, n_cols,
-                    row_window_size, col_window_size))
 
-                LOGGER.debug('missed on the row/col index')
+                misses += 1
                 #write back the old window
                 if dirty_dem_sink_offset:
                     dem_sink_offset_band.WriteArray(
@@ -849,6 +839,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if flat_set.find(flat_index) != flat_set.end():
                 continue
 
+            #Search the neighborhood for flat cells, if we find one that's at the same
+            #height as the current cell, the current cell is a sink
             for neighbor_index in xrange(8):
                 neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 neighbor_col_index = w_col_index + col_offsets[neighbor_index]
@@ -861,18 +853,16 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     dem_array[w_row_index, w_col_index]):
                     #won't sink the neighbor at a different height
                     continue
-                #Test if the currentr
+
+                #If the neighbor is flat then the current cell is a sink!
                 flat_index = ((row_index + row_offsets[neighbor_index]) * n_cols
                               + col_index + col_offsets[neighbor_index])
-                #If the neighbor is flat then the current cell is a sink!
                 if flat_set.find(flat_index) != flat_set.end():
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     sink_queue.push(t)
                     sink_cell_hits += 1
-                    hits = 0
-                    misses = 0
                     break
-                    
+
             while sink_queue.size() > 0:
                 current_cell_tuple = sink_queue.front()
                 sink_queue.pop()
@@ -886,8 +876,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     row_window_size, col_window_size, 2):
                     #need to reload the window
                     misses += 1
-                    LOGGER.info("SINK MISS hits/misses %d/%d miss percent %.2f%%" %
-                                (hits, misses, 100.0*misses/float(hits+misses)))
 
                     #write back the old window
                     if dirty_dem_sink_offset:
@@ -931,16 +919,23 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     if flat_set.find(flat_index) == flat_set.end():
                         continue
 
+                    #If the neighbor is at a different height, then skip
+                    if (dem_array[w_row_index, w_col_index] != 
+                        dem_array[w_neighbor_row_index, w_neighbor_col_index]):
+                        continue
+
+                    #if the neighbor's weight is less than the weight we'd project to it
+                    #no need to update it, we're done w/ that direction
                     if (dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] <=
                         weight + 1):
                         continue
-                    if (dem_array[w_row_index, w_col_index] == 
-                        dem_array[w_neighbor_row_index, w_neighbor_col_index]):
-                        t = Row_Col_Weight_Tuple(
-                            neighbor_row_index, neighbor_col_index, weight + 1)
-                        sink_queue.push(t)
-                        dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
-                        break
+
+                    #otherwise, project onto the neighbor
+                    t = Row_Col_Weight_Tuple(
+                        neighbor_row_index, neighbor_col_index, weight + 1)
+                    sink_queue.push(t)
+                    dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
+
     #write back the remaning open window
     if dirty_dem_sink_offset:
         dem_sink_offset_band.WriteArray(
@@ -1079,7 +1074,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             #need to reload the window
             misses += 1
-            LOGGER.debug('miss')
 
             #save edge offset off
             dem_edge_offset_band.WriteArray(
