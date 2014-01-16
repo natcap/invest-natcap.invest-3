@@ -799,7 +799,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     end = time.time()
     print 'total time ', end-start, 's'
     LOGGER.info('identify sink cells')
-    cdef int sink_cell_hits = 0
+    cdef int sink_cell_hits = 0, edge_cell_hits = 0
     for row_index in range(n_rows):
         for col_index in range(n_cols):
             if _update_window(
@@ -857,13 +857,16 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 #If the neighbor is flat then the current cell is a sink!
                 flat_index = ((row_index + row_offsets[neighbor_index]) * n_cols
                               + col_index + col_offsets[neighbor_index])
+                #if we found a flat neighbor, we're on a sink
                 if flat_set.find(flat_index) != flat_set.end():
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     sink_stack.push(t)
-                    sink_cell_hits += 1
+                    dem_sink_offset[w_row_index, w_col_index] = 0
+                    dirty_dem_sink_offset = True
                     break
 
             while sink_stack.size() > 0:
+                sink_cell_hits += 1
                 current_cell_tuple = sink_stack.front()
                 sink_stack.pop()
                 sink_row_index = current_cell_tuple.row_index
@@ -902,23 +905,23 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 w_row_index = sink_row_index - ul_row_index
                 w_col_index = sink_col_index - ul_col_index
 
-                if dem_sink_offset[w_row_index, w_col_index] <= weight:
-                    continue
-                dem_sink_offset[w_row_index, w_col_index] = weight
-                dirty_dem_sink_offset = True
+#                if dem_sink_offset[w_row_index, w_col_index] < weight:
+#                    continue
+#                dem_sink_offset[w_row_index, w_col_index] = weight
+#                dirty_dem_sink_offset = True
 
                 for neighbor_index in xrange(8):
                     neighbor_row_index = sink_row_index + row_offsets[neighbor_index]
                     neighbor_col_index = sink_col_index + col_offsets[neighbor_index]
-
-                    w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                    w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
+                    
                     flat_index = neighbor_row_index * n_cols + neighbor_col_index
                     #If the neighbor is not flat then skip
                     if flat_set.find(flat_index) == flat_set.end():
                         continue
 
+                    w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                    w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                    
                     #If the neighbor is at a different height, then skip
                     if (dem_array[w_row_index, w_col_index] != 
                         dem_array[w_neighbor_row_index, w_neighbor_col_index]):
@@ -934,7 +937,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     t = Row_Col_Weight_Tuple(
                         neighbor_row_index, neighbor_col_index, weight + 1)
                     sink_stack.push(t)
-                    dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 2
+                    dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
                     dirty_dem_sink_offset = True
 
     #write back the remaning open window
@@ -1061,8 +1064,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
 
     while edge_stack.size() > 0:
-        if steps % 10000 == 0:
-            LOGGER.debug("edge queue size: %d, steps %d" % (edge_stack.size(), steps))
+        edge_cell_hits += 1
         steps += 1
         current_cell_tuple = edge_stack.front()
         edge_stack.pop()
@@ -1133,6 +1135,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
             edge_stack.push(t)
 
+    LOGGER.debug('sink cell hits %d, total cells %d' % (edge_cell_hits, n_cols * n_rows))
 
     if hits+misses != 0:
         LOGGER.info("hits/misses %d/%d miss percent %.2f%%" %
