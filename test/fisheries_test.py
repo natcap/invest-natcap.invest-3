@@ -68,3 +68,20 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
+    def test_age_no_gender_smoke(self):
+
+        #Going to use Blue Crab for testing.
+        args = {}
+        args['workspace_uri'] = './invest_data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest_data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest_data/Fisheries/Input/blue_crap_main_params.csv'
+        args['maturity_type'] = "Age Specific"
+        args['num_classes'] = 4
+        args['is_gendered'] = False
+        args['rec_eq'] = "Ricker"
+        args['alpha'] = 6050000
+        args['beta'] = 0.00000004140
+        args['init_recruits'] = 200000
+        args['duration'] = 100
+
+        fisheries.execute(args)
