@@ -74,7 +74,7 @@
                 {
                     "id": "transition_fields",
                     "args_id": "transition_fields",
-                    "type": "container",
+                    "type": "hiddenElement",
                     "collapsible": true,
                     "label": "Non-standard field names",
                     "defaultValue": true,
@@ -279,7 +279,7 @@
                 {
                     "id": "factors_field_container",
                     "args_id": "factors_field_container",
-                    "type": "container",
+                    "type": "hiddenElement",
                     "collapsible": true,
                     "label": "Non-standard fields",
                     "elements": [

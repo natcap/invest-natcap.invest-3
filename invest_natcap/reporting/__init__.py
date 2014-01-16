@@ -2,6 +2,7 @@
 functionality."""
 
 import os
+import shutil
 import logging
 import csv
 import json
@@ -38,13 +39,6 @@ def generate_report(reporting_args):
                     in the body or head of the html page.
                     Values: 'body' | 'head' (required)
 
-                'position' - a positive integer that depicts where the element
-                    should be placed on the html page. Elements will be written
-                    in ascending order with sections 'body' and 'head'
-                    separately defined. If two elements have the same position,
-                    the following repeated positions will be bumped up
-                    (required)
-
             Table element dictionary has at least the following additional arguments:
                 'sortable' - a boolean value for whether the tables columns
                     should be sortable (required)
@@ -58,25 +52,27 @@ def generate_report(reporting_args):
                     'shapefile'|'csv'|'dictionary'. Depicts the type of data
                     structure to build the table from (required)
 
-                'data' - either a dictionary if 'data_type' is 'dictionary' or
-                    a URI to a CSV table or shapefile if 'data_type' is
-                    'shapefile' or 'csv' (required). If a dictionary it should
-                    be formatted as follows:
-                    {row_id_0: {col_name_1: value, col_name_2: value, ...},
-                     row_id_1: {col_name_1: value, col_name_2: value, ...},
-                     ...
-                    }
+                'data' - either a list of dictionaries if 'data_type' is
+                    'dictionary' or a URI to a CSV table or shapefile if
+                    'data_type' is 'shapefile' or 'csv' (required). If a
+                    list of dictionaries, each dictionary should have
+                    keys that represent the columns, where each dictionary
+                    is a row. How the rows are ordered are defined by their
+                    index in the list. Formatted example:
+                    [{col_name_1: value, col_name_2: value, ...},
+                     {col_name_1: value, col_name_2: value, ...},
+                     ...]
 
                 'key' - a string that defines which column or field should be
                     used as the keys for extracting data from a shapefile or csv
                     table 'key_field'.
                     (required for 'data_type' = 'shapefile' | 'csv')
 
-                'columns'- a dictionary that defines the column structure for
-                    the table (required). The dictionary has unique numeric
-                    keys that determine the left to right order of the columns.
-                    Each key has a dictionary value with the following
-                    arguments:
+                'columns'- a list of dictionaries that defines the column
+                    structure for the table (required). The order of the
+                    columns from left to right is depicted by the index
+                    of the column dictionary in the list. Each dictionary
+                    in the list has the following keys and values: 
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
@@ -110,7 +106,7 @@ def generate_report(reporting_args):
     # for proper ordering later in 'write_html'.
     # Initialize head's first element to be the title where the -1 position
     # ensures it will be the first element
-    html_obj = {'head':([html_title],[-1]), 'body':([],[])}
+    html_obj = {'head':[html_title], 'body':[]}
 
     # A dictionary of 'types' that point to corresponding functions. When an
     # 'element' is passed in the 'type' will be one of the defined types below
@@ -123,21 +119,24 @@ def generate_report(reporting_args):
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
-        # There are 3 general purpose arguments that each element will have,
-        # 'type', 'section', and 'position'. Get and remove these from the
+        # There are 2 general purpose arguments that each element will have,
+        # 'type' and 'section'. Get and remove these from the
         # elements dictionary (they should not be added weight passed to the
         # individual element functions)
         fun_type = element.pop('type')
         section = element.pop('section')
-        position = element.pop('position')
+
+        # In order to copy any script files to where the output html file is to
+        # be saved, the out_uri needs to be passed along into the function that
+        # handles them. As of now, the easiest / maybe best way is to add a key
+        # in the 'elements' dictionary being passed along
+        if fun_type == 'head':
+            element['out_uri'] = reporting_args['out_uri']
 
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
         # in write_html
-        html_obj[section][0].append(report[fun_type](element))
-        # Append the position of the element to the html dictionary so the
-        # elements can be written in order in write_html
-        html_obj[section][1].append(position)
+        html_obj[section].append(report[fun_type](element))
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
@@ -149,12 +148,10 @@ def write_html(html_obj, out_uri):
         in 'html_obj'
 
         html_obj - a dictionary with two keys, 'head' and 'body', that point to
-            a tuple of two lists. The first list in the tuple for each key is a
-            list of the htmls elements as strings. The second is a list of the
-            position those elements should be written with respect to the their
-            key (required)
-            example: {'head':(['elem_1', 'elem_2',...],[pos_1, pos_2,...]),
-                      'body':(['elem_1', 'elem_2',...],[pos_1, pos_2,...])}
+            lists. The list for each key is a list of the htmls elements as
+            strings (required)
+            example: {'head':['elem_1', 'elem_2',...],
+                      'body':['elem_1', 'elem_2',...]}
 
         out_uri - a URI for the output html file
 
@@ -167,21 +164,11 @@ def write_html(html_obj, out_uri):
         # Write the tag for the section
         html_str += '<%s>' % section
         # Get the list of html string elements for this section
-        sect_elements = html_obj[section][0]
-        # Get the list of positions for the elements
-        sect_order = html_obj[section][1]
+        sect_elements = html_obj[section]
 
-        # Check to make sure the lists are not empty because it is possible no
-        # elements were were added
-        if len(sect_elements) > 0 and len(sect_order) > 0:
-            # The position and element string are related in the two lists by
-            # the index they are found. Sorting the position order list and
-            # keep the relation of the element list.
-            sect_order, sect_elements = zip(*sorted(zip(sect_order, sect_elements)))
-
-            for sect_elem in sect_elements:
-                # Add each element to the html string
-                html_str += sect_elem
+        for element in sect_elements:
+            # Add each element to the html string
+            html_str += element
 
         # Add the closing tag for the section
         html_str += '</%s>' % section
@@ -189,6 +176,8 @@ def write_html(html_obj, out_uri):
     # Finish the html tag
     html_str += '</html>'
 
+    LOGGER.debug('HTML Complete String : %s', html_str)
+    
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
         os.remove(out_uri)
@@ -211,21 +200,26 @@ def build_table(param_args):
                 build the table from. Either 'shapefile', 'csv', or 'dictionary'
                 (required)
 
-            param_args['data'] - a URI to a csv or shapefile OR a dictionary
-                (required)
+            param_args['data'] - a URI to a csv or shapefile OR a list of 
+                dictionaries. If a list of dictionaries the data should be
+                represented in the following format: (required)
+                    [{col_name_1: value, col_name_2: value, ...},
+                     {col_name_1: value, col_name_2: value, ...},
+                     ...]
 
             param_args['key'] - a string that depicts which column (csv) or
                 field (shapefile) will be the unique key to use in extracting
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
-
-            param_args['columns'] - a dictionary where the keys are the ids of
-                the columns (representing how the order they should be
-                displayed) and the values are dictionaries that have the
-                following attributes represented by key-value pairs (required):
-                'name' - a string for the name of the column (required)
-                'total' - a boolean that determines whether the column
-                    entries should be summed in a total row (required)
+                
+            param_args['columns'] - a list of dictionaries that defines the column
+                    structure for the table (required). The order of the
+                    columns from left to right is depicted by the index
+                    of the column dictionary in the list. Each dictionary
+                    in the list has the following keys and values: 
+                        'name' - a string for the column name (required)
+                        'total' - a boolean for whether the column should be
+                            totaled (required)
 
             param_args['total'] - a boolean value where if True a constant
                 total row will be placed at the bottom of the table that sums the
@@ -246,28 +240,34 @@ def build_table(param_args):
     data_type = param_args['data_type']
 
     # Get a handle on the input data being passed in, whether it a URI to a
-    # shapefile / csv file or a dictionary
+    # shapefile / csv file or a list of dictionaries
     input_data = param_args['data']
 
     # Depending on the type of input being passed in, pre-process it accordingly
     if data_type == 'shapefile':
         key = param_args['key']
         data_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
+        # Convert the data_dict to a list of dictionaries where each dictionary
+        # in the list represents a row of the table
+        data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
         data_dict = raster_utils.get_lookup_from_csv(input_data, key)
+        # Convert the data_dict to a list of dictionaries where each dictionary
+        # in the list represents a row of the table
+        data_list = data_dict_to_list(data_dict)
     else:
-        data_dict = input_data
+        data_list = input_data
 
-    LOGGER.debug('Data Collected from Input Source: %s', data_dict)
+    LOGGER.debug('Data Collected from Input Source: %s', data_list)
 
-    # Add the columns dictionary to the final dictionary that is to be passed
+    # Add the columns data to the final dictionary that is to be passed
     # off to the table generator
     table_dict['cols'] = param_args['columns']
 
-    # Add the properly formatted data dictionary to the final dictionary that is
+    # Add the properly formatted row data to the final dictionary that is
     # to be passed to the table generator
-    table_dict['rows'] = data_dict
+    table_dict['rows'] = data_list
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
@@ -287,6 +287,24 @@ def build_table(param_args):
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
+
+def data_dict_to_list(data_dict):
+    """Abstract out inner dictionaries from data_dict into a list, where
+        the inner dictionaries are added to the list in the order of
+        their sorted keys
+
+        data_dict - a dictionary with unique keys pointing to dictionaries
+
+        returns - a list of dictionaries"""
+    
+    data_list = []
+    data_keys = data_dict.keys()
+    data_keys.sort()
+    for key in data_keys:
+        data = data_dict[key]
+        data_list.append(data)
+
+    return data_list
 
 def add_text_element(param_args):
     """Generates a string that represents a html text block. The input string
@@ -313,6 +331,9 @@ def add_head_element(param_args):
 
             param_args['src'] - a string URI path for the external source of the
                 element (required)
+            
+            param_args['out_uri'] - a string URI path for the html page
+                (required)
 
         returns - a string representation of the html head element"""
 
@@ -320,11 +341,32 @@ def add_head_element(param_args):
     form = param_args['format']
     # Get the external file location for either the link or script reference
     src = param_args['src']
+    # The destination on disk for the html page to be written to. This will be
+    # used to get the directory name so as to locate the scripts properly
+    output_uri = param_args['out_uri']
+    
+    # Get the script files basename
+    basename = os.path.basename(src)
+    # Get the output_uri directory location
+    dirname = os.path.dirname(output_uri)
+    # Set the destination URI for copying the script
+    dst = os.path.join(dirname, basename)
+    
+    # Copy the source file to the location of the output directory
+    if not os.path.isfile(dst):
+        try:
+            shutil.copyfile(src, dst)
+        except IOError:
+            raise IOError('The head element script could not be copied properly'
+                    ', check the location of the file as well as output'
+                    ' destination. Script source : %s' % src)
+    # Set a relative path for the script file so that the html page can find it
+    relative_dst = './' + basename
 
     if form == 'link':
-        html_str = '<link rel=stylesheet type=text/css href=%s>' % src
+        html_str = '<link rel=stylesheet type=text/css href=%s>' % relative_dst
     elif form == 'script':
-        html_str = '<script type=text/javascript src=%s></script>' % src
+        html_str = '<script type=text/javascript src=%s></script>' % relative_dst
     else:
         raise Exception('Currently this type of head element is not supported')
 

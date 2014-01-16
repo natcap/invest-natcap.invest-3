@@ -74,6 +74,8 @@ then
         coastal_vulnerability_test.py
     	marine_water_quality_regression_test.py
         fisheries_test.py
+        reporting_test.py
+        tabel_generator_test.py
 #        coastal_vulnerability_core_test.py
         )
     echo "Testing " ${test_files[*]}

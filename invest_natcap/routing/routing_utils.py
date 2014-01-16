@@ -85,15 +85,19 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
     dem_carray = raster_utils.load_dataset_to_carray(
         dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
 
+    LOGGER.info("calculating flow_direction_inf")
+    dem_offset_uri = 'dem_offset_uri.tif'
     routing_cython_core.flow_direction_inf(
-        dem_uri, flow_direction_uri, dem_carray)
-    dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
-    sink_cell_set = routing_cython_core.find_sinks(dem_carray, dem_nodata)
+        dem_uri, flow_direction_uri, dem_offset_uri)
+    dem_nodata = raster_utils.get_nodata_from_uri(dem_offset_uri)
+    sink_cell_set = routing_cython_core.find_sinks(dem_offset_uri)
+    LOGGER.info("calculating flow_graph")
     routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
         dem_uri)
 
     LOGGER.debug('sinks: %s' % str(sink_cell_set))
+    LOGGER.info("calculating transport")
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
@@ -107,15 +111,18 @@ def flow_accumulation(dem_uri, flux_output_uri):
         flux_output_uri - location to dump the raster represetning flow
             accumulation"""
 
+    LOGGER.debug("starting flow_accumulation")
     constant_flux_source_uri = raster_utils.temporary_filename()
     zero_absorption_source_uri = raster_utils.temporary_filename()
     loss_uri = raster_utils.temporary_filename()
 
+    LOGGER.debug("creating constant rasters")
     make_constant_raster_from_base(
         dem_uri, 1.0, constant_flux_source_uri)
     make_constant_raster_from_base(
         dem_uri, 0.0, zero_absorption_source_uri)
 
+    LOGGER.debug("routing flux")
     route_flux(
         dem_uri, constant_flux_source_uri,
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only')

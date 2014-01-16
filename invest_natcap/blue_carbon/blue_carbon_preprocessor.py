@@ -5,30 +5,115 @@ import os
 
 import logging
 
+import math
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('blue_carbon_preprocessor')
 
-def get_transition_set_from_uri(dataset_uri_list):
-    transitions = set([])
-
-    def unique_pair_op(*pixel_list):
-        transitions.update(zip(pixel_list, pixel_list[1:]))
-        return 0
-
-    pixel_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
-    dataset_garbage_out_uri = raster_utils.temporary_filename()
-    raster_utils.vectorize_datasets(
-        dataset_uri_list, unique_pair_op, dataset_garbage_out_uri,
-        gdal.GDT_Byte, 0, pixel_size, 'intersection')
+def get_transition_set_count_from_uri(dataset_uri_list):
+    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
+    lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
+    nodata = 0
     
-    return transitions
+    #reclass rasters to compact bit space
+    lulc_codes = set()
+    unique_raster_values_count = {}
+    
+    for dataset_uri in dataset_uri_list:
+        unique_raster_values_count[dataset_uri] = raster_utils.unique_raster_values_count(dataset_uri)
+        lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
+        
+    lulc_codes = list(lulc_codes)
+    lulc_codes.sort()
 
+    if len(lulc_codes) < 2 ** 8:
+        data_type = gdal.GDT_UInt16
+        shift = 8
+    elif len(lulc_codes) < 2 ** 16:
+        data_type = gdal.GDT_UInt32
+        shift = 16
+    else:
+        raise ValueError, "Too many LULC codes."
+
+    #renumber and reclass rasters
+    reclass_orig_dict = dict(zip(lulc_codes,range(1,len(lulc_codes)+1)))
+    print reclass_orig_dict
+    reclass_dest_dict = {}
+    for key in reclass_orig_dict:
+        reclass_dest_dict[key] = reclass_orig_dict[key] << shift
+    print reclass_dest_dict
+
+    def add_op(orig, dest):
+        return orig + dest
+
+    counts={}
+    for i in range(len(dataset_uri_list)-1):
+        orig_uri = raster_utils.temporary_filename()
+        dest_uri = raster_utils.temporary_filename()
+        multi_uri = raster_utils.temporary_filename()
+
+        #reclass orig values
+        raster_utils.reclassify_dataset_uri(dataset_uri_list[i],
+                                            reclass_orig_dict,
+                                            orig_uri,
+                                            data_type,
+                                            nodata,
+                                            exception_flag="values_required")
+
+        #reclass dest values
+        raster_utils.reclassify_dataset_uri(dataset_uri_list[i+1],
+                                            reclass_dest_dict,
+                                            dest_uri,
+                                            data_type,
+                                            nodata,
+                                            exception_flag="values_required")
+
+        #multiplex orig with dest
+        raster_utils.vectorize_datasets([orig_uri, dest_uri],
+                                        add_op,
+                                        multi_uri,
+                                        data_type,
+                                        nodata,
+                                        cell_size,
+                                        "union")
+    
+        #get unique counts
+        counts[i]=raster_utils.unique_raster_values_count(multi_uri, False)
+
+    restore_classes = {}
+    for key in reclass_orig_dict:
+        restore_classes[reclass_orig_dict[key]] = key
+    restore_classes[nodata] = lulc_nodata
+
+    LOGGER.debug("Decoding transition table.")
+    transitions = {}
+    for key in counts:
+        transitions[key]={}
+        for k in counts[key]:
+            try:
+                orig = restore_classes[k % (2**shift)]
+            except KeyError:
+                orig = lulc_nodata
+            try:
+                dest = restore_classes[k >> shift]
+            except KeyError:
+                dest = lulc_nodata
+                
+            try:
+                transitions[key][orig][dest] = counts[key][k]
+            except KeyError:
+                transitions[key][orig] = {dest : counts[key][k]}
+
+    return unique_raster_values_count, transitions
+                
 def execute(args):
     transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
     values_matrix_uri = args["preprocessor_key_uri"]
     values_matrix_id = "Id"
+
+    report_uri = os.path.join(args["workspace_dir"], "preprocessor_report.htm")
     
     nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
 
@@ -54,31 +139,35 @@ def execute(args):
 ##        LOGGER.debug("No imbedded category names found.")
 
     LOGGER.info("Reading all transitions.")
-    transitions = get_transition_set_from_uri(args["lulc"])
-    if (nodata, nodata) in transitions:
-        LOGGER.debug("Removing nodata transitions.")
-        transitions.remove((nodata, nodata))
-
-    LOGGER.debug("Validating transitions.")
-    from_no_data_msg = "Transition from no data to LULC unsupported."
-    to_no_data_msg = "Transition from LULC unsupported to no data."
+    unique_raster_values_count, transition_counts = get_transition_set_count_from_uri(args["lulc"])
+    count_max = 0
+    for key in unique_raster_values_count:
+        for value in unique_raster_values_count[key]:
+            if unique_raster_values_count[key][value] > count_max:
+                count_max = unique_raster_values_count[key][value]
+    count_width = int(math.log10(count_max))
+                
+    transitions = set()
     original_values = set([])
     final_values = set([])
-    for transition in transitions:
-        original, final = transition
+    transition_width = 0
+    no_data_msg = "No data values cannot change."
+    for transition in transition_counts:
+        for orig in transition_counts[transition]:
+            for dest in transition_counts[transition][orig]:
+                if (orig == nodata) != (dest == nodata):
+                    LOGGER.error(no_data_msg)
+                    raise ValueError, no_data_msg
 
-        original_values.add(int(original))
-        final_values.add(int(final))
-        
-        if original == nodata:
-            if not final == nodata:
-                LOGGER.error(from_no_data_msg)
-                raise ValueError, from_no_data_msg
-        elif final == nodata:
-            LOGGER.error(to_no_data_msg)
-            raise ValueError, to_no_data_msg
-    transitions = set(transitions)
+                original_values.add(orig)
+                final_values.add(dest)
+                if (orig != nodata) and (dest != nodata):
+                    transitions.add((orig, dest))
 
+                width = int(math.log10(transition_counts[transition][orig][dest]))
+                if width > transition_width:
+                    transition_width = width
+    
     LOGGER.info("Creating transition matrix.")
     original_values = list(original_values)
     final_values = list(final_values)
@@ -113,3 +202,41 @@ def execute(args):
             else:
                 transition_matrix.write(",%s" % "None")
     transition_matrix.close()
+
+    #open report
+    report = open(report_uri, 'w')
+    report.write("<HTML><TITLE>InVEST - Blue Carbon Preprocessor Report</TITLE><BODY>")
+
+    #summary table
+    all_values = list(set(original_values + final_values))
+    all_values.sort()
+    report.write("\n<P><P><B>LULC Summary</B>")
+    column_name_list = ["Name"] + [str(val).ljust(count_width, "#").replace("#", "&ensp;") for val in all_values]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    for dataset_uri in args["lulc"]:
+        report.write("\n<TR align=\"right\"><TD>%s</TD>" % os.path.basename(dataset_uri))
+        for val in all_values:
+            try:
+                report.write("<TD>%i</TD>" % unique_raster_values_count[dataset_uri][val])
+            except KeyError:
+                report.write("<TD>%i</TD>" % 0)
+        report.write("</TR>")
+    report.write("\n</TABLE>")
+    
+    #transition count tables    
+    for transition in transition_counts:
+        report.write("\n<P><P><B>Transition %i</B>" % (transition + 1))
+        column_name_list = [""] + [str(val).ljust(transition_width, "#").replace("#", "&ensp;") for val in final_values]
+        report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+        for orig in original_values:
+            report.write("\n<TR align=\"right\"><TD><B>%i<B></TD>" % orig)
+            for dest in final_values:
+                try:
+                    report.write("<TD>%i</TD>" % transition_counts[transition][orig][dest])
+                except KeyError:
+                    report.write("<TD><font color=lightgray>%i</font></TD>" % 0)
+                
+        report.write("\n</TABLE>")
+
+    #close report
+    report.close()
