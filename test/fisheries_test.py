@@ -30,7 +30,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         lobster_area_count = 9
         
         #Smoke test the single area and multi area files.
-        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count)
+        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count, 'Fixed')
         dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count, 'Beverton-Holt')
 
         #Check that exceptions are properly raised when expected.
