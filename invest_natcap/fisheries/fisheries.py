@@ -385,7 +385,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         line = area_lines[m]
         param_name = line.pop(0).lower()
         
-        if param_name == 'exploitationfraction':
+        if param_name == 'ExplotationFraction':
             exp_frac_exists = True
 
         try:
