@@ -34,7 +34,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**8
+cdef int MAX_WINDOW_SIZE = 2**12
 cdef float INF = numpy.inf
 
 def calculate_transport(
@@ -760,6 +760,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef Row_Col_Weight_Tuple current_cell_tuple
     row_window_size = MAX_WINDOW_SIZE
     col_window_size = row_window_size
+    cdef int window_buffer_size = 2
     if row_window_size > n_rows:
         row_window_size = n_rows
     if col_window_size > n_cols:
@@ -822,7 +823,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         if _update_window(
             row_index, col_index, &ul_row_index, &ul_col_index,
             &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 2):
+            row_window_size, col_window_size, window_buffer_size):
 
             misses += 1
             #write back the old window
@@ -888,7 +889,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if _update_window(
                 flat_row_index, flat_col_index, &ul_row_index, &ul_col_index,
                 &lr_row_index, &lr_col_index, n_rows, n_cols,
-                row_window_size, col_window_size, 2):
+                row_window_size, col_window_size, window_buffer_size):
                 #need to reload the window
                 misses += 1
 
@@ -999,7 +1000,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if _update_window(
                 sink_row_index, sink_col_index, &ul_row_index, &ul_col_index,
                 &lr_row_index, &lr_col_index, n_rows, n_cols,
-                row_window_size, col_window_size, 2):
+                row_window_size, col_window_size, window_buffer_size):
                 #need to reload the window
                 misses += 1
 
@@ -1082,7 +1083,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if _update_window(
                 edge_row_index, edge_col_index, &ul_row_index, &ul_col_index,
                 &lr_row_index, &lr_col_index, n_rows, n_cols,
-                row_window_size, col_window_size, 2):
+                row_window_size, col_window_size, window_buffer_size):
                 #need to reload the window
                 misses += 1
 
@@ -1196,7 +1197,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
     
     
-def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
+def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         
@@ -1210,7 +1211,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
        flow_direction_uri - a uri to write a single band float raster of same
             dimensions.  After the function call it will have flow direction 
             in it.
-        dem_carray - (optional) a CArray the same dimensions as dem_uri that
+        dem_offset_uri - (optional) a uri to dump the dem offset.  If left as none
+            a temporary CArray the same dimensions as dem_uri that
             will contain the flat region resolved regions of the dem_carray
        
        returns nothing"""
@@ -1227,6 +1229,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri):
         dem_nodata = -9999
     
     #Load DEM and resolve plateaus
+    if dem_offset_uri is None:
+        dem_offset_uri = raster_utils.temporary_filename()
     resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
