@@ -117,8 +117,56 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
         os.remove(tmp_uri)
     if os.path.isfile(image_out_uri):
         os.remove(image_out_uri)
+
+    # Copy the datasource to make some preprocessing adjustments
+    shape_copy_uri = 'shape_copy.shp'
+    
+    def convert_ogr_fields_to_strings(orig_shape_uri, shape_copy_uri):
+        """Converts an OGR Shapefile's fields to String values by 
+            creating a new OGR Shapefile, building it from the
+            originals definitions
+            
+            orig_shape_uri - 
+            
+            shape_copy_uri - 
+            
+            returns - nothing"""
+            
+        orig_shape = ogr.Open(orig_shape_uri)
+        orig_layer = orig_shape.GetLayer()
         
-    aoi_sr = raster_utils.get_spatial_ref_uri(shape_in_uri)
+        if os.path.isfile(shape_copy_uri):
+            os.remove(shape_copy_uri)
+        
+        out_driver = ogr.GetDriverByName('ESRI Shapefile')
+        out_ds = out_driver.CreateDataSource(shape_copy_uri)
+        orig_layer_dfn = orig_layer.GetLayerDefn()
+        out_layer = out_ds.CreateLayer(
+            orig_layer_dfn.GetName(), orig_layer.GetSpatialRef(),
+            orig_layer_dfn.GetGeomType())
+        
+        orig_field_count = orig_layer_dfn.GetFieldCount()
+        
+        for fld_index in range(orig_field_count):
+            orig_field = orig_layer_dfn.GetFieldDefn(fld_index)
+            out_field = ogr.FieldDefn(orig_field.GetName(), ogr.OFTString)
+            out_layer.CreateField(out_field)
+            
+        for orig_feat in orig_layer:
+            out_feat = ogr.Feature(feature_def = out_layer.GetLayerDefn())
+            geom = orig_feat.GetGeometryRef()
+            out_feat.SetGeometry(geom)
+            
+            for fld_index in range(orig_field_count):
+                field = orig_feat.GetField(fld_index)
+                out_feat.SetField(fld_index, str(field))
+            
+            out_layer.CreateFeature(out_feat)
+            out_feat = None
+   
+    convert_ogr_fields_to_strings(shape_in_uri, shape_copy_uri)
+    
+    aoi_sr = raster_utils.get_spatial_ref_uri(shape_copy_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the shapefile
@@ -132,7 +180,7 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
     raster_utils.reproject_datasource_uri(
-            shape_in_uri, shapefile_wkt, tmp_uri)
+            shape_copy_uri, shapefile_wkt, tmp_uri)
     
     css = open(css_uri).read()
     
@@ -141,13 +189,12 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
     config = {"layers":
                 {"mylayer":
                     {"src":tmp_uri,
-                     "labeling": {"ws_id": "ws_id"}}
+                     "labeling": {"ws_id": "ws_id"},
+                     "export":{"width":500, "height": 400},
+                     "attributes":["ws_id"]}
                  }
               }
-                #"export":{"width":500, "height": 400},
-                    #"attributes":["ws_id"],
-                    #"labeling": {"key": "ws_id"}
-        
+                
     kart.generate(config, outfile=image_out_uri, stylesheet=css)
 
             
