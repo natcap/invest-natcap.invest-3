@@ -999,15 +999,17 @@ def calculate_evaporation(
 def calculate_direct_flow(
         dem_uri, precip_uri, in_absorption_uri, dt_out_uri, tp_out_uri,
         in_source_uri, out_nodata, watershed_uri):
-    """This function calculates the direct flow over the catchment
+    """This function calculates the direct flow over the catchment which is the
+        routed precipitation over the landscape to the outlet
     
-        dem_uri - a URI to a gdal dataset of an elevation map
+        dem_uri - a URI to a gdal dataset of an elevation map. Should be 
+            projected in meters (required)
         
         precip_uri - a URI to a gdal dataset of the precipitation over the
-            landscape
+            landscape. Should be projected in meters (required)
        
         in_absorption_uri - a URI to a gdal dataset of the in absorption rate
-            values
+            values. Should be projected in meters (required)
 
         in_source_uri - a URI path for the in source output as a gdal dataset
 
@@ -1021,13 +1023,6 @@ def calculate_direct_flow(
 
         returns - Nothing
     """
-    no_data_list = []
-    # Build up a list of nodata values to check against
-    for raster_uri in [precip_uri, in_absorption_uri]:
-        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
-        no_data_list.append(uri_nodata)
-
-    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)    
         
     temp_uri = raster_utils.temporary_filename()
 
@@ -1036,7 +1031,8 @@ def calculate_direct_flow(
         dem_uri, precip_uri, in_absorption_uri, temp_uri, dt_out_uri,
         'source_and_flux', aoi_uri = watershed_uri)
 
-    #Use Dt and precip to calculate tp (Equation 2)
+    # Use Dt (direct flow) and precip to calculate tp (total precipitation)
+    # (Equation 2 in Users Guide)
     monthly_water_yield_cython_core.calculate_tp(
         dem_uri, precip_uri, dt_out_uri, tp_out_uri)
 
