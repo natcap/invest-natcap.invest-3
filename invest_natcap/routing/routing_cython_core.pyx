@@ -1,4 +1,4 @@
-# cython: profile=True
+# cython: profile=False
 
 import collections
 import tempfile
@@ -34,7 +34,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**12
+cdef int MAX_WINDOW_SIZE = 2**8
 cdef float INF = numpy.inf
 
 def calculate_transport(
@@ -631,7 +631,8 @@ cdef struct Row_Col_Weight_Tuple:
     
 cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, numpy.ndarray[numpy.npy_float32, ndim=2] dem_array, float nodata_value):
     cdef int neighbor_row_index, neighbor_col_index
-    if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
+    if (row_index <= 0 or row_index >= n_rows - 1 or 
+        col_index <= 0 or col_index >= n_cols - 1):
         return 0
     if dem_array[row_index, col_index] == nodata_value: return 0    
     for neighbor_index in xrange(8):
@@ -1036,16 +1037,19 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             w_col_index = sink_col_index - ul_col_index
 
             for neighbor_index in xrange(8):
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                    continue
+                if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                    continue
+                
                 neighbor_row_index = sink_row_index + row_offsets[neighbor_index]
                 neighbor_col_index = sink_col_index + col_offsets[neighbor_index]
-
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
-
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
                 #If the neighbor is at a different height, then skip
                 if (dem_array[w_row_index, w_col_index] != 
@@ -1106,17 +1110,20 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             w_col_index = edge_col_index - ul_col_index
 
             for neighbor_index in xrange(8):
-                neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
-                neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
-
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
+                if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                    continue
+                if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                    continue
+                
                 #If the neighbor is not at the same height, skip
                 if (dem_array[w_row_index, w_col_index] !=
                     dem_array[w_neighbor_row_index, w_neighbor_col_index]):
                     continue
 
+                neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
+                neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
