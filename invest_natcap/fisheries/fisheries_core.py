@@ -104,6 +104,8 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'])
 
+    LOGGER.debug(cycle_dict)
+
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     '''cycle_dict- Contains all counts of individuals for each combination of 
