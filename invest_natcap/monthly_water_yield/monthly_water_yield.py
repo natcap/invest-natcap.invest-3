@@ -228,8 +228,6 @@ def execute(args):
     # Create a list of columns for the CSV ouput table. Each watershed will have
     # a column from 'field_list' with the watersheds ID appended to the end. 
     # Example: 'Streamflow_vol_0', 'Streamflow_mn_0', 'Streamflow_vol_1', etc
-    #field_list = [
-    #        'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
     field_list = [
             'Streamflow_tot', 'Storage_tot', 'precip_mn']    
     
@@ -337,24 +335,6 @@ def execute(args):
             # fields
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, tmp_out_uri)
-            
-            #NOTE : the function below is an attempt to handle edge pixels
-            #       Currently routing doesn't account for edge pixels so this
-            #       is an attempt to not count those precip/eto values
-            #def mask_slope(pixel, slope_pixel):
-            #    """Vectorize function that masks input raster to the slope
-            #        raster
-
-            #        returns - pixel if not slope_nodata else nodata"""
-            #    if pixel == float_nodata or slope_pixel == float_nodata:
-            #        return float_nodata
-            #    else:
-            #        return pixel
-            
-            #raster_utils.vectorize_datasets(
-            #        [tmp_out_uri, absorption_uri], mask_slope, out_uri,
-            #        gdal.GDT_Float32, float_nodata, dem_cell_size,
-            #        'intersection', aoi_uri=watershed_uri)
 
             # Clip the output dataset to the watershed
             raster_utils.clip_dataset_uri(
@@ -397,13 +377,6 @@ def execute(args):
                 soil_storage_uri, evap_uri, baseflow_uri, smax_aligned_uri,
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
-        
-        # Calculate Baseflow + Interflow. This is the first step in calculating
-        # streamflow. Baseflow and Interflow are per pixel values, so after
-        # these are added up then Direct Flow is added in later.
-        #clean_uri([non_runoff_flow_uri])
-        #combine_baseflow_interflow(
-        #        interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
 		# Aggregate direct flow values over the watersheds
         dflow_agg = raster_utils.aggregate_raster_values_uri(
@@ -435,26 +408,9 @@ def execute(args):
 		
         # Get the pixel area for direct flow cells
         dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
-        # Get the pixel area for combined interflow and baseflow cells
-        #comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
 	
-        # Aggregate combined interflow and baseflow over the watersheds
-        #combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
-        #        non_runoff_flow_uri, watershed_uri, 'ws_id',
-        #        ignore_nodata=False)
-	    
-        # A dictionary of combined interflow + baseflow pixel means 
-        #combined_flow_mn = combined_flow_aggregates.pixel_mean
-        # A dictionary of combined interflow + baseflow pixel counts found
-        # under the watersheds
-        #combined_flow_pixel_count = combined_flow_aggregates.n_pixels
-        # Dictionary declarations for the streamflow volume and mean
+        # Dictionary declarations for the streamflow total
         total_streamflow_vol = {}
-        total_streamflow_mn = {}
-		
-        # Get the keys from one of our dictionaries to use in making per
-        # watershed calculations
-        #shed_keys = combined_flow_mn.keys()
     
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
@@ -473,47 +429,15 @@ def execute(args):
         
         total_storage_dict = {}
         
-        # Compute the Streamflow mean and volume
+        # Compute the Streamflow nd Storage Totals
         for key in shed_dict:
-            # The interflow + baseflow mean
-            #shed_mn = combined_flow_mn[key]
-            # The number of pixels used to calculate the above mean
-            #shed_pix_count = combined_flow_pixel_count[key]
-            # Calculate streamflow mean by adding the mean for the
-            # interflow + baseflow to the direct flow mean. Direct flow
-            # mean is calculated by taking the max direct flow accumulated
-            # and dividing by the pixel count
-            #total_streamflow_mn[key] = (
-            #       shed_mn + (max_dflow[key] / dflow_pixel_count[key]))
-		    
-            # Max direct flow as a volume. Divided by a 1000 to convert to
-            # meters
-            #dflow_vol = max_dflow[key] * dflow_pixel_area / 1000.0
-            # Volume for interflow + baseflow as the mean times the area of a
-            # pixel times the pixel count divided by a 1000.0 to convert to
-            # meters
-            #shed_vol = shed_mn * comb_pixel_area * shed_pix_count / 1000.0
-            # Total streamflow volume is combined interflow + baseflow volume
-            # added to direct flow volume
-            #total_streamflow_vol[key] = shed_vol + dflow_vol
-
             total_streamflow_vol[key] = (
                     max_dflow[key] + max_interflow[key] + max_baseflow[key])
             
             total_storage_dict[key] = (
                     water_max[key] + prev_soil_max[key] -
                     max_interflow[key] - max_baseflow[key])        
-    
-        # Calcluate the soil storage
-        #calculate_soil_storage(
-        #    prev_soil_uri, water_uri, evap_uri, non_runoff_flow_uri, smax_uri, 
-        #    soil_storage_uri, float_nodata)
-        # The mean values for watershed for storage by aggregating the soil
-        # storage raster over the watersheds
-        #storage_mn = raster_utils.aggregate_raster_values_uri(
-        #        soil_storage_uri, watershed_uri, 'ws_id',
-        #        ignore_nodata=False).pixel_mean
-        
+            
         # Aggregate over the precipitation raster. This will be useful in
         # comparing results and debugging
         precip_agg_dict = raster_utils.aggregate_raster_values_uri(
@@ -522,47 +446,8 @@ def execute(args):
         LOGGER.debug('PRECIP TOTALS: %s', precip_totals)
 
         #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
-#       def compute_volume(raster_uri, aoi_uri, field, shed_keys):
-#           raster_agg = raster_utils.aggregate_raster_values_uri(
-#                   raster_uri, aoi_uri, field, ignore_nodata=False)
-#           raster_mn = raster_agg.pixel_mean
-#           raster_pix_count = raster_agg.n_pixels
-#           raster_pix_area = raster_utils.get_cell_size_from_uri(raster_uri) ** 2
-#           volume_dict = {}
-
-#           for key in shed_keys:
-#               LOGGER.debug(
-#                   'AREA : COUNT : %s : %s', raster_pix_area,
-#                   raster_pix_count[key])
-#               vol = (
-#                   raster_mn[key] * raster_pix_area * 
-#                   raster_pix_count[key] / 1000.0)
-#               
-#               volume_dict[key] = vol
-
-#           LOGGER.debug('MEANS: %s', raster_mn)
-#           return volume_dict
-#       
-#       precip_vol = compute_volume(
-#               precip_uri, watershed_uri, 'ws_id', shed_keys)
-#       LOGGER.debug('VOLUME PRECIP: %s', precip_vol)
-#       evap_vol = compute_volume(evap_uri, watershed_uri, 'ws_id', shed_keys)
-#       LOGGER.debug('VOLUME EVAP: %s', evap_vol)
-#       prev_store_vol = compute_volume(
-#               prev_soil_uri, watershed_uri, 'ws_id', shed_keys)
-#       LOGGER.debug('VOLUME PREV_STORE: %s', prev_store_vol)
-#       store_vol = compute_volume(
-#               soil_storage_uri, watershed_uri, 'ws_id', shed_keys)
-#       LOGGER.debug('VOLUME STORAGE: %s', store_vol)
-#       inter_base_vol = compute_volume(
-#               non_runoff_flow_uri, watershed_uri, 'ws_id', shed_keys)
-#       LOGGER.debug('VOLUME INTER + BASE: %s', inter_base_vol)
-
         volume_balance = {}
         for key in shed_dict:
-            #store_change = store_vol[key] - prev_store_vol[key]
-            #vol_bal = (precip_vol[key] - evap_vol[key] - store_change -
-            #    total_streamflow_vol[key])
             store_change = total_storage_dict[key] - prev_soil_max[key]
             vol_bal = (
                     precip_totals[key] - evap_max[key] - store_change -
