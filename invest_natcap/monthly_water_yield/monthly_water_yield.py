@@ -92,7 +92,7 @@ def execute(args):
     # All intermediate and output rasters should be based on the DEM's cell size
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     
-    #Clip the dem and cast to a float
+    # Clip the DEM and cast to a float
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
     raster_utils.vectorize_datasets(
         [dem_uri], float, clipped_dem_uri,
@@ -228,8 +228,11 @@ def execute(args):
     # Create a list of columns for the CSV ouput table. Each watershed will have
     # a column from 'field_list' with the watersheds ID appended to the end. 
     # Example: 'Streamflow_vol_0', 'Streamflow_mn_0', 'Streamflow_vol_1', etc
+    #field_list = [
+    #        'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
     field_list = [
-            'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
+            'Streamflow_tot', 'Storage_tot', 'precip_mn']    
+    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
         for field in field_list:
@@ -262,7 +265,7 @@ def execute(args):
     # Create a URI to hold the previous months soil storage
     prev_soil_uri = os.path.join(
             intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
-    # Construct resusable URIs for each month
+    # Construct reusable URIs for each month
     precip_uri = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
     eto_uri = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
     dflow_uri = os.path.join(intermediate_dir, 'dflow%s.tif' % file_suffix)
@@ -334,24 +337,30 @@ def execute(args):
             # fields
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, tmp_out_uri)
-                    
-            def mask_slope(pixel, slope_pixel):
-                """Vectorize function that masks input raster to the slope
-                    raster
+            
+            #NOTE : the function below is an attempt to handle edge pixels
+            #       Currently routing doesn't account for edge pixels so this
+            #       is an attempt to not count those precip/eto values
+            #def mask_slope(pixel, slope_pixel):
+            #    """Vectorize function that masks input raster to the slope
+            #        raster
 
-                    returns - pixel if not slope_nodata else nodata"""
-                if pixel == float_nodata or slope_pixel == float_nodata:
-                    return float_nodata
-                else:
-                    return pixel
+            #        returns - pixel if not slope_nodata else nodata"""
+            #    if pixel == float_nodata or slope_pixel == float_nodata:
+            #        return float_nodata
+            #    else:
+            #        return pixel
+            
+            #raster_utils.vectorize_datasets(
+            #        [tmp_out_uri, absorption_uri], mask_slope, out_uri,
+            #        gdal.GDT_Float32, float_nodata, dem_cell_size,
+            #        'intersection', aoi_uri=watershed_uri)
 
-            # Create initial S_t-1 for now. Set all values to 0.0
-            LOGGER.debug("Initialize Soil Storage Raster")
-            raster_utils.vectorize_datasets(
-                    [tmp_out_uri, absorption_uri], mask_slope, out_uri,
-                    gdal.GDT_Float32, float_nodata, dem_cell_size,
-                    'intersection', aoi_uri=watershed_uri)
-
+            # Clip the output dataset to the watershed
+            raster_utils.clip_dataset_uri(
+                tmp_out_uri, watershed_uri, out_uri, True)
+            
+            
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
@@ -392,9 +401,9 @@ def execute(args):
         # Calculate Baseflow + Interflow. This is the first step in calculating
         # streamflow. Baseflow and Interflow are per pixel values, so after
         # these are added up then Direct Flow is added in later.
-        clean_uri([non_runoff_flow_uri])
-        combine_baseflow_interflow(
-                interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
+        #clean_uri([non_runoff_flow_uri])
+        #combine_baseflow_interflow(
+        #        interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
 		# Aggregate direct flow values over the watersheds
         dflow_agg = raster_utils.aggregate_raster_values_uri(
@@ -490,20 +499,20 @@ def execute(args):
 
             total_streamflow_vol[key] = (
                     max_dflow[key] + max_interflow[key] + max_baseflow[key])
-		
+            
             total_storage_dict[key] = (
                     water_max[key] + prev_soil_max[key] -
                     max_interflow[key] - max_baseflow[key])        
     
         # Calcluate the soil storage
-        calculate_soil_storage(
-            prev_soil_uri, water_uri, evap_uri, non_runoff_flow_uri, smax_uri, 
-            soil_storage_uri, float_nodata)
+        #calculate_soil_storage(
+        #    prev_soil_uri, water_uri, evap_uri, non_runoff_flow_uri, smax_uri, 
+        #    soil_storage_uri, float_nodata)
         # The mean values for watershed for storage by aggregating the soil
         # storage raster over the watersheds
-        storage_mn = raster_utils.aggregate_raster_values_uri(
-                soil_storage_uri, watershed_uri, 'ws_id',
-                ignore_nodata=False).pixel_mean
+        #storage_mn = raster_utils.aggregate_raster_values_uri(
+        #        soil_storage_uri, watershed_uri, 'ws_id',
+        #        ignore_nodata=False).pixel_mean
         
         # Aggregate over the precipitation raster. This will be useful in
         # comparing results and debugging
@@ -573,7 +582,7 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [total_streamflow_vol, total_streamflow_mn, storage_mn,
+                [total_streamflow_vol, total_storage_dict,
                     precip_agg_dict.pixel_mean], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
