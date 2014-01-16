@@ -698,7 +698,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
     cdef int MAX_DISTANCE = n_rows * n_cols #no distance will be greater than this
-    cdef queue[Row_Col_Weight_Tuple] sink_stack
+    cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     cdef int row_index, col_index, current_row_indebx, current_n_rows, sink_row_index, sink_col_index, edge_row_index, edge_col_index
 
@@ -709,7 +709,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
-    cdef int weight, w_row_index, w_col_index
+    cdef int weight, w_row_index, w_col_index, region_count
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, steps
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
@@ -814,7 +814,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
-    cdef queue[int] edge_stack
 
     for flat_index in flat_set:
         row_index = flat_index / n_cols
@@ -873,8 +872,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_sink_offset[w_row_index, w_col_index] = MAX_DISTANCE
         dirty_dem_sink_offset = True
         flat_region_queue.push(flat_index)
-
-        LOGGER.info('starting a new region')
+        region_count += 1
+        if region_count % 100 == 0:
+            LOGGER.info('working on plateau #%d (reports every 100 plateaus)' % region_count)
 
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
@@ -949,14 +949,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     #otherwise we're next to an uphill pixel, that means we're an edge
                     t = Row_Col_Weight_Tuple(flat_row_index, flat_col_index, 0)
                     edge_queue.push(t)
-#                    dem_edge_offset[w_row_index, w_col_index] = 0
+                    dem_edge_offset[w_row_index, w_col_index] = 0
                     dirty_dem_edge_offset = True
                     break
             else:
                 #it's been pushed onto the plateau queue, so we know it's in the same
                 #region, but it's not flat, so it must be a sink
                 t = Row_Col_Weight_Tuple(flat_row_index, flat_col_index, 0)
-                sink_stack.push(t)
+                sink_queue.push(t)
                 dem_sink_offset[w_row_index, w_col_index] = 0
                 dirty_dem_sink_offset = True
 
@@ -987,10 +987,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 dirty_dem_sink_offset = True
 
         #process sink offsets for region
-        while sink_stack.size() > 0:
+        while sink_queue.size() > 0:
             sink_cell_hits += 1
-            current_cell_tuple = sink_stack.front()
-            sink_stack.pop()
+            current_cell_tuple = sink_queue.front()
+            sink_queue.pop()
             sink_row_index = current_cell_tuple.row_index
             sink_col_index = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
@@ -1061,7 +1061,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 #otherwise, project onto the neighbor
                 t = Row_Col_Weight_Tuple(
                     neighbor_row_index, neighbor_col_index, weight + 1)
-                sink_stack.push(t)
+                sink_queue.push(t)
                 dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
                 dirty_dem_sink_offset = True
 
@@ -1105,12 +1105,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             w_row_index = edge_row_index - ul_row_index
             w_col_index = edge_col_index - ul_col_index
 
-            #if current offset is less than the weight, skip
-            if dem_edge_offset[w_row_index, w_col_index] <= weight:
-                continue
-            dem_edge_offset[w_row_index, w_col_index] = weight
-            dirty_dem_edge_offset = True
-
             for neighbor_index in xrange(8):
                 neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
                 neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
@@ -1132,7 +1126,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 if dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] <= weight + 1:
                     continue
 
-                dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 2
+                dem_edge_offset[w_neighbor_row_index, w_neighbor_col_index] = weight + 1
                 dirty_dem_edge_offset = True
                 #otherwise project the current weight to the neighbor
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
