@@ -72,9 +72,9 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         #Going to use Blue Crab for testing.
         args = {}
-        args['workspace_uri'] = './invest_data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest_data/test/data/fisheries/BC_temp_aoi.shp'
-        args['class_params_uri'] = './invest_data/Fisheries/Input/blue_crap_main_params.csv'
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
         args['num_classes'] = 4
         args['is_gendered'] = False
