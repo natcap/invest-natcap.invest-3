@@ -178,6 +178,15 @@
                                                 "required": true
                                             },
                                             {
+                                                "id": "half_life_uri",
+                                                "args_id": "half_life_uri",
+                                                "type": "file",
+                                                "label": "Carbon pools",
+                                                "defaultValue": "../BlueCarbon/input/half_life.csv",
+                                                "helpText": "",
+                                                "required": true
+                                            },                                            
+                                            {
                                                 "id": "transition_matrix_uri",
                                                 "args_id": "transition_matrix_uri",
                                                 "type": "file",
