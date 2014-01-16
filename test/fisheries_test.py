@@ -31,14 +31,14 @@ class TestHRA(invest_natcap.testing.GISTest):
         
         #Smoke test the single area and multi area files.
         fisheries.parse_main_csv(shrimp_correct, shrimp_area_count)
-        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count)
+        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count, 'Beverton-Holt')
 
         #Check that exceptions are properly raised when expected.
         self.assertRaises(fisheries.ImproperStageParameter,
-                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count)
+                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed')
 
         self.assertRaises(fisheries.ImproperAreaParameter,
-                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count)
+                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed')
     
     def test_recruitment_errors(self):
         '''One of the first things we want to check is whether the necessary
