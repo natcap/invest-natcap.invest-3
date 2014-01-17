@@ -352,10 +352,10 @@ def parse_main_csv(params_uri, area_count, rec_eq):
            
             #If there is only one area, user may instead choose to not write an
             #area name, but instead just put "Survival". If that's the case, 
-            #replace it with '1'. Because 'Survival'['Survival'] is confusing.
+            #replace it with 'AOI'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
             if curr_area_name.lower() == 'survival':
-                curr_area_name = '1'
+                curr_area_name = 'AOI'
 
             area_surv = line[j]
 
