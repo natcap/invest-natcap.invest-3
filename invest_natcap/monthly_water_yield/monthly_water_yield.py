@@ -231,29 +231,16 @@ def execute(args):
     field_list = [
             'Streamflow_tot', 'Storage_tot', 'precip_mn']    
     
-    shed_field_list = ['Date']
-    for key in shed_dict.iterkeys():
-        for field in field_list:
-            shed_field_list.append(field + ' ' + str(key))
+    shed_field_list = build_table_headers(field_list, shed_dict)
     
-    LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
-
     if sub_shed_present:
         # Get a dictionary from the sub-watershed by the id so that we can
         # have a handle on the id values for each sub-shed
         sub_shed_dict = raster_utils.extract_datasource_table_by_key(
             sub_shed_uri, 'subws_id')
+                
+        sub_shed_field_list = build_table_headers(field_list, sub_shed_dict)
         
-        # Create individual CSV URIs for each sub-shed based on the watershed
-        # ID's. Store these URIs in a dictionary mapping to their respective
-        # sub-shed ID's
-        sub_shed_field_list = ['Date']
-        for key in sub_shed_dict.iterkeys():
-            for field in field_list:
-                sub_shed_field_list.append(field + ' ' + str(key))
-        
-        LOGGER.debug('Automatically Gen Sub Field List %s', sub_shed_field_list)
-
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
     list_of_months = precip_data_dict.keys()
@@ -502,7 +489,31 @@ def execute(args):
         
         # Move on to next month
         break
-		
+
+def build_table_headers(header_list, id_dict):
+    """Create a list that combines each item in 'header_list' with each
+        key in 'id_dict'
+        
+        header_list - a list of strings
+        
+        id_dict - a dictionary with Integer keys
+        
+        returns - a list of strings            
+        """
+    output_list = ['Date']
+    # Create individual CSV URIs for each sub-shed based on the watershed
+    # ID's. Store these URIs in a dictionary mapping to their respective
+    # sub-shed ID's
+    for key in id_dict.iterkeys():
+        for field in header_list:
+            output_list.append(field + ' ' + str(key))
+    
+    LOGGER.debug('Automatically Gen Field List %s', output_list)
+    
+    return output_list
+    
+	
+	
 def build_csv_dict(new_dict, columns, out_dict, field):
     """Combines a single level dictionary to an existing or non existing single
         level dicitonary
@@ -523,8 +534,8 @@ def build_csv_dict(new_dict, columns, out_dict, field):
             if (re.search(key_str, col_name) != None and 
                     re.match(field, col_name) != None):
                 out_dict[col_name] = value
-    return out_dict
-
+    return out_dict    
+    
 def add_row_csv_table(csv_uri, column_header, single_dict):
     """Write a new row to a CSV file if it already exists or creates a new one
         with that row.
@@ -570,7 +581,6 @@ def clean_uri(in_uri_list):
     for uri in in_uri_list:
         if os.path.isfile(uri):
             os.remove(uri)
-
 
 def calculate_in_absorption_rate(
         imperv_uri, alpha_one_uri, out_uri, out_nodata):
