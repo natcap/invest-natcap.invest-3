@@ -98,7 +98,13 @@
                     "label": "Watersheds",
                     "defaultValue": "",
                     "required": true,
-                    "validateAs": {"type": "OGR"}
+                    "validateAs": {"type": "OGR",
+                                    "layers": [{"name": {"inheritFrom": "file"}, 
+                                                               "type": "polygons",
+                                           "projection": {"exists": true}
+                                                             }],
+                                                   "fieldsExist": ["ws_id"]                                    
+                                    }
                  },
                  {
                     "id" : "subwatersheds",
@@ -107,7 +113,13 @@
                     "label": "Sub Watersheds (optional)",
                     "defaultValue": "",
                     "required": false,
-                    "validateAs": {"type": "OGR"},
+                    "validateAs": {"type": "OGR",
+                                    "layers": [{"name": {"inheritFrom": "file"}, 
+                                                               "type": "polygons",
+                                           "projection": {"exists": true}
+                                                             }],
+                                                   "fieldsExist": ["subws_id"]
+                                   },
                     "returns": {"ifEmpty": "pass"}
                  },
                  {        
