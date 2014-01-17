@@ -735,31 +735,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
     cdef c_set[int] flat_set_for_looping
-    dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
-    for row_index in range(1, n_rows - 1):
-        dem_out_band.ReadAsArray(
-            xoff=0, yoff=row_index-1, win_xsize=n_cols,
-            win_ysize=3, buf_obj=dem_array)
-        for col_index in range(1, n_cols - 1):
-            #nodata values aren't flat
-            if dem_array[1, col_index] == nodata_value:
-                continue
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                neighbor_row_index = 1 + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                
-                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
-                    break
-                if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[1, col_index]:
-                    break
-            else:
-                #This is a flat element
-                flat_set.insert(row_index * n_cols + col_index)
-                flat_set_for_looping.insert(row_index * n_cols + col_index)
-
-    #Load the dem_offset raster/band/array
-    cdef Row_Col_Weight_Tuple current_cell_tuple
+    
     row_window_size = MAX_WINDOW_SIZE
     col_window_size = row_window_size
     cdef int window_buffer_size = 2
@@ -774,6 +750,48 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
+    cdef int window_row_index, window_col_index
+    
+    #get the ceiling of the integer division
+    for window_row_index in range(int(numpy.ceil(float(n_rows)/row_window_size))):
+        for window_col_index in range(int(numpy.ceil(float(n_cols)/col_window_size))):    
+            for row_index in range(window_row_index * row_window_size, min((window_row_index + 1) * row_window_size, n_rows)):
+                for col_index in range(window_col_index * col_window_size, min((window_col_index + 1) * col_window_size, n_cols)):
+                    if _update_window(
+                        row_index, col_index, &ul_row_index, &ul_col_index,
+                        &lr_row_index, &lr_col_index, n_rows, n_cols,
+                        row_window_size, col_window_size, window_buffer_size):
+                        dem_out_band.ReadAsArray(
+                            xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                            win_ysize=row_window_size, buf_obj=dem_array)
+                
+                    w_row_index = row_index - ul_row_index
+                    w_col_index = col_index - ul_col_index
+                    
+                    #nodata values aren't flat
+                    if dem_array[w_row_index, w_col_index] == nodata_value:
+                        continue
+                    #check all the neighbors, if nodata or lower, this isn't flat
+                    for neighbor_index in xrange(8):
+                        w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                        w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
+                        
+                        if w_neighbor_row_index < 0 or w_neighbor_row_index >= lr_row_index - ul_row_index:
+                            continue
+                        if w_neighbor_col_index < 0 or w_neighbor_col_index >= lr_col_index - ul_col_index:
+                            continue
+                            
+                        if dem_array[w_neighbor_row_index, w_neighbor_col_index] == nodata_value:
+                            break
+                        if dem_array[w_neighbor_row_index, w_neighbor_col_index] < dem_array[w_row_index, w_col_index]:
+                            break
+                    else:
+                        #This is a flat element
+                        flat_set.insert(row_index * n_cols + col_index)
+                        flat_set_for_looping.insert(row_index * n_cols + col_index)
+
+    #Load the dem_offset raster/band/array
+    cdef Row_Col_Weight_Tuple current_cell_tuple
 
     dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
