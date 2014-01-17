@@ -29,7 +29,7 @@ def execute(args):
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993, 
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -121,7 +121,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993, 
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -381,7 +381,7 @@ def calc_survival_mortal(params_dict, area, stage):
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993, 
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -403,7 +403,7 @@ def calc_survival_mortal(params_dict, area, stage):
 
     surv_frac = params_dict['Stage_Params'][stage]['survival'][area]
     exp_frac = params_dict['Area_Params'][area]['exploit_frac']
-    vuln = params_dict['Stage_Params'][stage]['vuln_fishing']
+    vuln = params_dict['Stage_Params'][stage]['vulnfishing']
 
     surv_mort = surv_frac * (1 - exp_frac * vuln)
 
