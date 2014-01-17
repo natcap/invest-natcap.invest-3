@@ -276,6 +276,11 @@ def execute(args):
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
     # If the CSV file already exists, delete it
     clean_uri([watershed_table_uri])	
+
+    if sub_shed_present:
+        subwatershed_table_uri = os.path.join(
+            intermediate_dir, 'sub_wshed_table%s.csv' % file_suffix)
+        clean_uri([subwatershed_table_uri])
 	
 	# Use the stream layer to set the impervious area values where a stream 
 	# occurs to 1.0. This ensures that when routing Direct Flow over a
@@ -365,65 +370,40 @@ def execute(args):
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
 
-		# Aggregate direct flow values over the watersheds
-        dflow_agg = raster_utils.aggregate_raster_values_uri(
-                dflow_uri, watershed_uri, 'ws_id')
-		
-        # Aggregate over interflow and baseflow to get the maximum values,
-        # because since they are a function on Water which is a function of Tp
-        # they should be routed
-        # Aggregate interflow values over the watersheds
-        interflow_agg = raster_utils.aggregate_raster_values_uri(
-                interflow_uri, watershed_uri, 'ws_id')
-		# Aggregate baseflow values over the watersheds
-        baseflow_agg = raster_utils.aggregate_raster_values_uri(
-                baseflow_uri, watershed_uri, 'ws_id')
-        
-        # A dictionary with maximum direct flow for each watershed
-        max_dflow = dflow_agg.pixel_max
-        LOGGER.debug('DFLOW MAX VALUES: %s', max_dflow)
-        
-        # A dictionary with maximum interflow for each watershed
-        max_interflow = interflow_agg.pixel_max
-        LOGGER.debug('INTERFLOW MAX VALUES: %s', max_interflow)
-        # A dictionary with maximum baseflow for each watershed
-        max_baseflow = baseflow_agg.pixel_max
-        LOGGER.debug('BASEFLOW MAX VALUES: %s', max_baseflow)
-        
-        # A dictionary with the pixel count for each watershed
-        dflow_pixel_count = dflow_agg.n_pixels
-		
-        # Get the pixel area for direct flow cells
-        dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
-	
-        # Dictionary declarations for the streamflow total
-        total_streamflow_vol = {}
-    
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
-        clean_uri([soil_storage_uri])
-	    
-        # If everything is routed just get the max pixel values for computing
-        # storage
-        water_max = raster_utils.aggregate_raster_values_uri(
-                water_uri, watershed_uri, 'ws_id').pixel_max
-        prev_soil_max = raster_utils.aggregate_raster_values_uri(
-                prev_soil_uri, watershed_uri, 'ws_id').pixel_max
-        evap_max = raster_utils.aggregate_raster_values_uri(
-                evap_uri, watershed_uri, 'ws_id').pixel_max
+        clean_uri([soil_storage_uri])  
         
+        max_agg_dict = {}
+        # Aggregate direct flow values over the watersheds
+        # Aggregate over interflow and baseflow to get the maximum values,
+        # because since they are a function on Water which is a function of Tp
+        # they should be routed
+        # Aggregate interflow values over the watersheds
+        max_agg_list = ['max_dflow', 'max_interflow', 'max_baseflow', 
+                        'max_water', 'max_prev_soil', 'max_evap']
+        uri_agg_list = [dflow_uri, interflow_uri, baseflow_uri, 
+                        water_uri, prev_soil_uri, evap_uri]
+        for agg_name, agg_uri in zip(max_agg_list, uri_agg_list):
+            max_agg_dict[agg_name] = raster_utils.aggregate_raster_values_uri(
+                agg_uri, watershed_uri, 'ws_id').pixel_max
+            LOGGER.debug(agg_name + ' %s ', max_agg_dict[agg_name])
+        
+	    # Dictionary declarations for the streamflow total
+        total_streamflow_vol = {}        
         total_storage_dict = {}
         
         # Compute the Streamflow nd Storage Totals
         for key in shed_dict:
             total_streamflow_vol[key] = (
-                    max_dflow[key] + max_interflow[key] + max_baseflow[key])
+                    max_agg_dict['max_dflow'][key] + max_agg_dict['max_interflow'][key] + 
+                    max_agg_dict['max_baseflow'][key])
             
             total_storage_dict[key] = (
-                    water_max[key] + prev_soil_max[key] -
-                    max_interflow[key] - max_baseflow[key])        
+                    max_agg_dict['max_water'][key] + max_agg_dict['max_prev_soil'][key] -
+                    max_agg_dict['max_interflow'][key] - max_agg_dict['max_baseflow'[key])        
             
         # Aggregate over the precipitation raster. This will be useful in
         # comparing results and debugging
@@ -435,9 +415,9 @@ def execute(args):
         #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
         volume_balance = {}
         for key in shed_dict:
-            store_change = total_storage_dict[key] - prev_soil_max[key]
+            store_change = total_storage_dict[key] - max_agg_dict['max_prev_soil'][key]
             vol_bal = (
-                    precip_totals[key] - evap_max[key] - store_change -
+                    precip_totals[key] - max_agg_dict['max_evap'][key] - store_change -
                     total_streamflow_vol[key])
             volume_balance[key] = vol_bal
 
@@ -461,32 +441,76 @@ def execute(args):
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         # Write results to the CSV
         add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
+                    
+        ### SUB WATERSHED CALCULATIONS ###
+        if sub_shed_present:
+                
+            max_agg_sub_dict = {}
+            # Aggregate direct flow values over the watersheds
+            # Aggregate over interflow and baseflow to get the maximum values,
+            # because since they are a function on Water which is a function of Tp
+            # they should be routed
+            # Aggregate interflow values over the watersheds
+            max_agg_list = ['max_dflow', 'max_interflow', 'max_baseflow', 
+                            'max_water', 'max_prev_soil', 'max_evap']
+            uri_agg_list = [dflow_uri, interflow_uri, baseflow_uri, 
+                            water_uri, prev_soil_uri, evap_uri]
+            for agg_name, agg_uri in zip(max_agg_list, uri_agg_list):
+                max_agg_sub_dict[agg_name] = raster_utils.aggregate_raster_values_uri(
+                    agg_uri, sub_shed_uri, 'subws_id').pixel_max
+                LOGGER.debug(agg_name + ' %s ', max_agg_sub_dict[agg_name])        
+            
+            # Dictionary declarations for the streamflow total
+            total_streamflow_sub_vol = {}        
+            total_storage_sub_dict = {}
+            
+            # Compute the Streamflow and Storage Totals
+            for key in sub_shed_dict:
+                total_streamflow_sub_vol[key] = (
+                        max_agg_sub_dict['max_dflow'][key] + max_agg_sub_dict['max_interflow'][key] + 
+                        max_agg_sub_dict['max_baseflow'][key])
+                
+                total_storage_sub_dict[key] = (
+                        max_agg_sub_dict['max_water'][key] + max_agg_sub_dict['max_prev_soil'][key] -
+                        max_agg_sub_dict['max_interflow'][key] - max_agg_sub_dict['max_baseflow'[key])        
+                
+                # Aggregate over the precipitation raster. This will be useful in
+                # comparing results and debugging
+                precip_agg_sub_dict = raster_utils.aggregate_raster_values_uri(
+                        precip_uri, sub_shed_uri, 'subws_id', ignore_nodata=False)
+                precip_sub_totals = precip_agg_sub_dict.total
+                LOGGER.debug('PRECIP SUB TOTALS: %s', precip_sub_totals)
 
-#       if sub_shed_present:
-#           sub_out_dict = {}
-#           sub_out_dict['Date'] = cur_month
-#           
-#           sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
-#                  streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
-#           
-#           sub_max_storage = raster_utils.aggregate_raster_values_uri(
-#                   soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
+                #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
+                sub_volume_balance = {}
+                for key in sub_shed_dict:
+                    sub_store_change = total_storage_sub_dict[key] - max_agg_sub_dict['max_prev_soil'][key]
+                    sub_vol_bal = (
+                            precip_sub_totals[key] - max_agg_sub_dict['max_evap'][key] - sub_store_change -
+                            total_streamflow_sub_vol[key])
+                    sub_volume_balance[key] = sub_vol_bal
 
-#           LOGGER.debug('Sub Max_streamflow dict %s', sub_max_streamflow)
-#           LOGGER.debug('Sub max_storage dict %s', sub_max_storage)
+                LOGGER.debug('SUB VOLUME BALANCE: Precip_vol - evap_vol - storage_change_vol'
+                        '- streamflow_vol(inter + baseflow)')
+                LOGGER.debug('SUB VOLUME BALANCE: %s', sub_volume_balance)
+                LOGGER.debug('SUB STREAMFLOW VOLUME: %s', total_streamflow_sub_vol)
+                ######### END DEBUG WATER BALANCE########################
+                
+                # Dictionary to build up the outputs for the CSV tables
+                out_sub_dict = {}
+                out_sub_dict['Date'] = cur_month
+               
+                # Given the two output dictionaries build up the final dictionary that
+                # will then be used to right out to the CSV
+                for result_dict, field in zip(
+                        [total_streamflow_sub_vol, total_storage_sub_dict,
+                            precip_agg_sub_dict.pixel_mean], sub_field_list):
+                    build_csv_dict(result_dict, sub_shed_field_list, out_sub_dict, field)
 
-#           # Given the two output dictionaries build up the final dictionary
-#           # that will then be used to right out to the CSV
-#           for result_dict, field in zip(
-#                   [sub_max_streamflow, sub_max_storage], field_list):
-#               build_csv_dict(
-#                       result_dict, sub_shed_field_list, sub_out_dict, field)
-
-#           LOGGER.debug('OUTPUT Sub Shed Dict: %s', sub_out_dict)
-#           # Write results to the CSV
-#           add_row_csv_table(
-#                   sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
-        
+                LOGGER.debug('OUTPUT Sub Shed Dict: %s', out_sub_dict)
+                # Write results to the CSV
+                add_row_csv_table(subwatershed_table_uri, sub_shed_field_list, out_sub_dict)
+                 
         # Move on to next month
         break
 
