@@ -136,8 +136,9 @@ def execute(args):
     core_args['ordered_stages'] = ordered_stages
 
     #If migration is desired, get all the info, and add to the core args dict
-    migration_dict = parse_migration_tables(args['mig_params_uri'])
-    core_args['migrate_dict'] = migration_dict
+    if 'mig_params_uri' in args:
+        migration_dict = parse_migration_tables(args['mig_params_uri'])
+        core_args['migrate_dict'] = migration_dict
 
     #Recruitment- already know that the correct params exist
     '''Want to make a single dictionary to pass with the correct arguments.
