@@ -18,10 +18,9 @@ class TestTableGenerator(unittest.TestCase):
 
         #raise SkipTest
 
-        sample_dict = {
-                0 : {'name': 'col_1'},
-                2 : {'name': 'col_2'},
-                1 : {'name': 'col_3'}}
+        sample_dict = [{'name': 'col_1'},
+                       {'name': 'col_3'},
+                       {'name': 'col_2'}]
 
         expected_result = ['col_1', 'col_3', 'col_2']
 
@@ -36,11 +35,10 @@ class TestTableGenerator(unittest.TestCase):
 
         #raise SkipTest
 
-        sample_dict = {
-                1 : {'name': 'date', 'time':'day'},
-                6 : {'name': 'price', 'price':'expensive'},
-                0 : {'name': 'product', 'product':'chips'},
-                2 : {'name': 'comments', 'comment':'bad product'}}
+        sample_dict = [{'name': 'product', 'product':'chips'},
+                       {'name': 'date', 'time':'day'},
+                       {'name': 'comments', 'comment':'bad product'},
+                       {'name': 'price', 'price':'expensive'}]
 
         expected_result = ['product', 'date', 'comments', 'price']
 
@@ -55,11 +53,10 @@ class TestTableGenerator(unittest.TestCase):
 
         #raise SkipTest
 
-        sample_dict = {
-                1 : {'name': 'date', 'total':False},
-                6 : {'name': 'price', 'total':True},
-                0 : {'name': 'product', 'total':False},
-                2 : {'name': 'comments', 'total':True}}
+        sample_dict = [{'name': 'product', 'total':False},
+                       {'name': 'date', 'total':False},
+                       {'name': 'comments', 'total':True},
+                       {'name': 'price', 'total':True}]
 
         expected_result = [False, False, True, True]
 
@@ -73,10 +70,9 @@ class TestTableGenerator(unittest.TestCase):
 
         #raise SkipTest
 
-        sample_dict = {
-                    0: {'col_1':'value_1', 'col_2':'value_4'},
-                    1: {'col_1':'value_2', 'col_2':'value_5'},
-                    2: {'col_1':'value_3', 'col_2':'value_6'}}
+        sample_dict = [{'col_1':'value_1', 'col_2':'value_4'},
+                       {'col_1':'value_2', 'col_2':'value_5'},
+                       {'col_1':'value_3', 'col_2':'value_6'}]
 
         col_headers = ['col_1', 'col_2']
 
@@ -95,11 +91,10 @@ class TestTableGenerator(unittest.TestCase):
 
         #raise SkipTest
 
-        sample_dict = {
-                3: {'date':'09-13', 'price':.54, 'product':'chips'},
-                0: {'date':'08-14', 'price':23.4, 'product':'mustard'},
-                1: {'date':'04-13', 'price':100, 'product':'hats'},
-                2: {'date':'06-12', 'price':56.50, 'product':'gloves'}}
+        sample_dict = [{'date':'08-14', 'price':23.4, 'product':'mustard'},
+                       {'date':'04-13', 'price':100, 'product':'hats'},
+                       {'date':'06-12', 'price':56.50, 'product':'gloves'},
+                       {'date':'09-13', 'price':.54, 'product':'chips'}]
 
         col_headers = ['product', 'price', 'date']
 
@@ -120,19 +115,18 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
 
         sample_dict = {
-                'cols':{
-                   1 : {'name':'date', 'total':False},
-                   2 : {'name': 'price', 'total':False},
-                   0 : {'name':'product', 'total':False}},
-                'rows':{
-                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips'},
-                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
-                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints'}},
+                'cols':[{'name':'product', 'total':False},
+                        {'name':'date', 'total':False},
+                        {'name': 'price', 'total':False}],
+                'rows':[
+                   {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                   {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                   {'date':'5/12', 'price':'moderate', 'product':'mints'}],
                 'checkbox':False,
                 'total':False
                 }
 
-        expected_result = ("<table id=my_table><thead><tr><th>product</th>"
+        expected_result = ("<table><thead><tr><th>product</th>"
                 "<th>date</th><th>price</th></tr></thead>"
                 "<tbody><tr><td>chips</td><td>9/13</td><td>expensive</td></tr>"
                 "<tr><td>peanuts</td><td>3/13</td><td>cheap</td></tr>"
@@ -150,21 +144,19 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
 
         sample_dict = {
-                'cols':{
-                    1: {'name':'date', 'total':False},
-                    2: {'name': 'price', 'total':False},
-                    0: {'name':'product', 'total':False}},
-                'rows':{
-                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
-                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
-                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}},
+                'cols':[{'name':'product', 'total':False},
+                        {'name':'date', 'total':False},
+                        {'name': 'price', 'total':False}],
+                'rows':[{'date':'9/13', 'price':'expensive', 'product':'chips'},
+                        {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                        {'date':'5/12', 'price':'moderate', 'product':'mints'}],
                 'checkbox':False,
                 'total':False
                 }
 
         attributes= {'class':'sortable', 'border':'1'}
 
-        expected_result = ("<table id=my_table border=1 class=sortable><thead><tr>"
+        expected_result = ("<table border=1 class=sortable><thead><tr>"
                 "<th>product</th><th>date</th><th>price</th></tr></thead>"
                 "<tbody><tr><td>chips</td><td>9/13</td><td>expensive</td></tr>"
                 "<tr><td>peanuts</td><td>3/13</td><td>cheap</td></tr>"
@@ -181,29 +173,27 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
 
         sample_dict = {
-                'cols':{
-                   1 : {'name':'date', 'total':False},
-                   2 : {'name': 'price', 'total':True},
-                   0 : {'name':'product', 'total':False}},
-                'rows':{
-                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips'},
-                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
-                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints'}}
+                'cols':[{'name':'product', 'total':False},
+                        {'name':'date', 'total':False},
+                        {'name': 'price', 'total':True}],
+                'rows':[{'date':'9/13', 'price':'expensive', 'product':'chips'},
+                        {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                        {'date':'5/12', 'price':'moderate', 'product':'mints'}]
                 }
 
-        expected_rows = {
-                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips',
+        expected_rows = [
+                   {'date':'9/13', 'price':'expensive', 'product':'chips',
                        'Select':'<input type=checkbox name=cb value=1>'},
-                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts',
+                   {'date':'3/13', 'price':'cheap', 'product':'peanuts',
                        'Select':'<input type=checkbox name=cb value=1>'},
-                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints',
-                       'Select':'<input type=checkbox name=cb value=1>'}}
+                   {'date':'5/12', 'price':'moderate', 'product':'mints',
+                       'Select':'<input type=checkbox name=cb value=1>'}]
 
-        expected_cols = {
-                1 : {'name':'Select', 'total':False},
-                2 : {'name': 'date', 'total':False},
-                3 : {'name': 'price', 'total':True},
-                0 : {'name':'product', 'total':False}}
+        expected_cols = [
+                {'name':'product', 'total':False},
+                {'name':'Select', 'total':False},
+                {'name': 'date', 'total':False},
+                {'name': 'price', 'total':True}]
 
         col_dict, row_dict = table_generator.add_checkbox_column(
                 sample_dict['cols'], sample_dict['rows'])
@@ -251,21 +241,21 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
 
         sample_dict = {
-                'cols':{
-                    1: {'name':'date', 'total':False},
-                    2: {'name': 'price', 'total':True},
-                    0: {'name':'product', 'total':False}},
-                'rows':{
-                    0: {'date':'9/13', 'price':100, 'product':'chips'},
-                    1: {'date':'3/13', 'price':50, 'product':'peanuts'},
-                    2: {'date':'5/12', 'price':75, 'product':'mints'}},
+                'cols':[
+                    {'name':'product', 'total':False},
+                    {'name':'date', 'total':False},
+                    {'name': 'price', 'total':True}],
+                'rows':[
+                    {'date':'9/13', 'price':100, 'product':'chips'},
+                    {'date':'3/13', 'price':50, 'product':'peanuts'},
+                    {'date':'5/12', 'price':75, 'product':'mints'}],
                 'checkbox':True,
                 'total':True
                 }
 
         attributes= {'class':'sortable', 'border':'1'}
 
-        expected_result = ("<table id=my_table border=1 class=sortable><thead>"
+        expected_result = ("<table border=1 class=sortable><thead>"
                 "<tr><th>product</th><th>Select</th><th>date</th><th>price</th>"
                 "</tr></thead><tfoot><tr class=checkTotal><td>Selected Total</td>"
                 "<td>--</td><td>--</td><td class=checkTot>--</td>"
