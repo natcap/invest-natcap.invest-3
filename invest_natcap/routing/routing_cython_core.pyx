@@ -710,7 +710,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
-    cdef int weight, w_row_index, w_col_index, region_count
+    cdef int weight, w_row_index, w_col_index, region_count = 0
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
     cdef int lr_col_index, lr_row_index, hits, misses, steps
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
@@ -755,7 +755,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 #This is a flat element
                 flat_set.insert(row_index * n_cols + col_index)
 
-    #find sinks
     #Load the dem_offset raster/band/array
     cdef Row_Col_Weight_Tuple current_cell_tuple
     row_window_size = MAX_WINDOW_SIZE
@@ -769,10 +768,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-    dem_array = numpy.empty((row_window_size, col_window_size), dtype=numpy.float32)
-    dem_out_band.ReadAsArray(
+    dem_array = dem_out_band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size, buf_obj=dem_array)
+        win_ysize=row_window_size)
 
     dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
@@ -784,9 +782,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_sink_offset_band.ReadAsArray(
             xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
             win_ysize=row_window_size))
-    dem_array = dem_out_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
+
     dem_edge_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
@@ -933,9 +929,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                     w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
                     
-                    if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                    if w_neighbor_row_index < 0 or w_neighbor_row_index >= lr_row_index - ul_row_index:
                         continue
-                    if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                    if w_neighbor_col_index < 0 or w_neighbor_col_index >= lr_col_index - ul_col_index:
                         continue
 
                     #ignore nodata
@@ -967,15 +963,22 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
 
-                if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                if w_neighbor_row_index < 0 or w_neighbor_row_index >= lr_row_index - ul_row_index:
                     continue
-                if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                if w_neighbor_col_index < 0 or w_neighbor_col_index >= lr_col_index - ul_col_index:
                     continue
 
                 #skip if we're not on the same plateau
-                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] !=
-                    dem_array[w_row_index, w_col_index]):
-                    continue
+                try:
+                    if (dem_array[w_neighbor_row_index, w_neighbor_col_index] !=
+                        dem_array[w_row_index, w_col_index]):
+                        continue
+                except IndexError as e:
+                    LOGGER.error(e)
+                    LOGGER.error('w_neighbor_row_index, w_neighbor_col_index, %d, %d' % (w_neighbor_row_index, w_neighbor_col_index))
+                    LOGGER.error('lr_row_index, lr_col_index, %d, %d' % (lr_row_index, lr_col_index))
+                    LOGGER.error('lr_row_index, lr_col_index, %d, %d' % (lr_row_index, lr_col_index))
+                    raise e
 
                 #ignore if we've already visited the neighbor
                 if dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] != INF:
@@ -1040,9 +1043,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             for neighbor_index in xrange(8):
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-                if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                if w_neighbor_row_index < 0 or w_neighbor_row_index >= lr_row_index - ul_row_index:
                     continue
-                if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                if w_neighbor_col_index < 0 or w_neighbor_col_index >= lr_col_index - ul_col_index:
                     continue
                 
                 neighbor_row_index = sink_row_index + row_offsets[neighbor_index]
@@ -1113,9 +1116,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             for neighbor_index in xrange(8):
                 w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
                 w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-                if w_neighbor_row_index < 0 or w_neighbor_row_index >= row_window_size:
+                if w_neighbor_row_index < 0 or w_neighbor_row_index >= lr_row_index - ul_row_index:
                     continue
-                if w_neighbor_col_index < 0 or w_neighbor_col_index >= col_window_size:
+                if w_neighbor_col_index < 0 or w_neighbor_col_index >= lr_col_index - ul_col_index:
                     continue
                 
                 #If the neighbor is not at the same height, skip
@@ -1140,7 +1143,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                 edge_queue.push(t)
 
-
+    LOGGER.debug('region_count: %d' % region_count)
     LOGGER.info('edge cell hits %d' % edge_cell_hits)
     LOGGER.info('sink cell hits %d' % sink_cell_hits)
 
