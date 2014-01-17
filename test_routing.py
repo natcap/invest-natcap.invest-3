@@ -10,23 +10,23 @@ import routing_cython_core
 import pyximport
 pyximport.install()
 
-#base_uri = 'regression_peru_dem_out.tif'
+base_uri = 'regression_peru_dem_out.tif'
 #base_uri = 'regression_claybark_flux_out.tif'
-base_uri = 'regression_willamate_flux_out.tif'
+#base_uri = 'regression_willamate_flux_out.tif'
 #base_uri = 'regression_10x10_flux_out.tif'
-#out_uri = 'peru_dem_out.tif'
+out_uri = 'peru_dem_out.tif'
 #out_uri = 'claybark_flux_out.tif'
-out_uri = 'willamate_flux_out.tif'
+#out_uri = 'willamate_flux_out.tif'
 #out_uri = '10x10_flux_out.tif'
-#dem_uri = 'Peru_for_Rich/dem_50km'
+dem_uri = 'Peru_for_Rich/dem_50km'
 #dem_uri = './test/invest-data/Base_Data/Marine/DEMs/claybark_dem'
-dem_uri = './test/invest-data/Base_Data/Freshwater/dem'
+#dem_uri = './test/invest-data/Base_Data/Freshwater/dem'
 #dem_uri = './test_input_10x10/test_dem_10x10.tif'
 
-regression_dem_offset_uri = './regression_offset_willamate_flux_out.tif'
-#regression_dem_offset_uri = 'regression_peru_dem_offset.tif'
-dem_offset_uri = './offset_willamate_flux_out.tif'
-#dem_offset_uri = 'peru_dem_offset.tif'
+#regression_dem_offset_uri = './regression_offset_willamate_flux_out.tif'
+regression_dem_offset_uri = 'regression_peru_dem_offset.tif'
+#dem_offset_uri = './offset_willamate_flux_out.tif'
+dem_offset_uri = 'peru_dem_offset.tif'
 start = time.time()
 #routing_utils.flow_accumulation('./test_input_10x10/test_dem_10x10.tif', out_uri)
 cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')

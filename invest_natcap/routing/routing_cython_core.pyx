@@ -815,14 +815,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
-    cdef int flat_index_count = 0
     while flat_set_for_looping.size() > 0:
         flat_index = deref(flat_set_for_looping.begin())
         flat_set_for_looping.erase(flat_index)
-    #for flat_index in flat_set:
-        flat_index_count += 1
-        if flat_index_count % 1000 == 1 or flat_index_count == flat_set.size():
-            LOGGER.info('visiting flat index %d of %d' % (flat_index_count, flat_set.size()))
         row_index = flat_index / n_cols
         col_index = flat_index % n_cols
         if _update_window(
@@ -881,8 +876,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         flat_region_queue.push(flat_index)
         region_count += 1
         if region_count % 100 == 0:
-            LOGGER.info('working on plateau #%d (reports every 100 plateaus)' % region_count)
-
+            LOGGER.info('working on plateau #%d (reports every 100 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+            
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
             flat_index = flat_region_queue.front()
