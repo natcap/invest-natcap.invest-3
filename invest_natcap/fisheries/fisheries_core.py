@@ -71,9 +71,7 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_uri'], 'Intermediate')
     output_dir = os.path.join(args['workspace_uri'], 'Output')
 
-    #Going to start cycling here. 
-    #Three possible stages: age = 0, age<maxAge, age=maxAge.
-    
+    LOGGER.debug(args['params_dict'])
     '''This dictionary will contain all counts of individuals for each
     combination of cycle, age/stage, and area. The final dictionary will look
     like the following:
