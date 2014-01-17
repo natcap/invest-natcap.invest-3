@@ -30,15 +30,15 @@ class TestHRA(invest_natcap.testing.GISTest):
         lobster_area_count = 9
         
         #Smoke test the single area and multi area files.
-        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count)
-        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count)
+        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count, 'Fixed')
+        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count, 'Beverton-Holt')
 
         #Check that exceptions are properly raised when expected.
         self.assertRaises(fisheries.ImproperStageParameter,
-                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count)
+                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed')
 
         self.assertRaises(fisheries.ImproperAreaParameter,
-                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count)
+                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed')
     
     def test_recruitment_errors(self):
         '''One of the first things we want to check is whether the necessary
@@ -68,3 +68,20 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
+    def test_age_no_gender_smoke(self):
+
+        #Going to use Blue Crab for testing.
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
+        args['maturity_type'] = "Age Specific"
+        args['num_classes'] = 4
+        args['is_gendered'] = False
+        args['rec_eq'] = "Ricker"
+        args['alpha'] = 6050000
+        args['beta'] = 0.00000004140
+        args['init_recruits'] = 200000
+        args['duration'] = 100
+
+        fisheries.execute(args)
