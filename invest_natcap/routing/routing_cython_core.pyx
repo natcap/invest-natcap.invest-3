@@ -34,7 +34,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**12
+cdef int MAX_WINDOW_SIZE = 2**8
 cdef float INF = numpy.inf
 
 def calculate_transport(
@@ -991,6 +991,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = MAX_DISTANCE
                 dirty_dem_sink_offset = True
 
+        ##for debugging
+        #while (not flat_region_queue.empty()):
+        #    flat_region_queue.pop()            
+        #while (not sink_queue.empty()):
+        #    sink_queue.pop()
+        #while (not edge_queue.empty()):
+        #    edge_queue.pop()
+        
+        
         #process sink offsets for region
         while sink_queue.size() > 0:
             sink_cell_hits += 1
@@ -1094,10 +1103,18 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     dem_edge_offset_band.WriteArray(
                         dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
                     dirty_dem_edge_offset = False
+                    
+                if dirty_dem_sink_offset:
+                    dem_sink_offset_band.WriteArray(
+                        dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                    dirty_dem_sink_offset = False
 
                 dem_out_band.ReadAsArray(
                     xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                     win_ysize=row_window_size, buf_obj=dem_array)
+                dem_sink_offset_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_sink_offset)
                 dem_edge_offset_band.ReadAsArray(
                     xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                     win_ysize=row_window_size, buf_obj=dem_edge_offset)
