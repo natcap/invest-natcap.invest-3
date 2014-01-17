@@ -153,7 +153,8 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                             
         for area in params_dict['Area_Params'].keys():
 
-            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+            area_params = params_dict['Area_Params'][area]
+            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
 
             for i, age in enumerate(order):
     
@@ -325,7 +326,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
         
         for area in params_dict['Area_Params'].keys():
 
-            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+            area_params = params_dict['Area_Params'][area]
+            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
             
             #The first stage should be set to the initial recruits equation, the
             #rest should be 1.
@@ -341,7 +343,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
         
         for area in params_dict['Area_Params'].keys():
 
-            larval_disp = params_dict['Area_Params'][area]['larval_disp']
+            area_params = params_dict['Area_Params'][area]
+            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
 
             #For age = 0, count = init_recruits
             for age in first_stage:
