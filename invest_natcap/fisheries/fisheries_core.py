@@ -68,8 +68,8 @@ def execute(args):
             desires the model to run.
     '''
 
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_uri'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_uri'], 'Output')
 
     #Going to start cycling here. 
     #Three possible stages: age = 0, age<maxAge, age=maxAge.
