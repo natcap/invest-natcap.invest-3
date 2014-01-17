@@ -886,6 +886,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
             flat_index = flat_region_queue.front()
+            flat_set_for_looping.erase(flat_index)
             flat_region_queue.pop()
             flat_row_index = flat_index / n_cols
             flat_col_index = flat_index % n_cols
