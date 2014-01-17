@@ -24,8 +24,9 @@ dem_uri = './test/invest-data/Base_Data/Freshwater/dem'
 #dem_uri = './test_input_10x10/test_dem_10x10.tif'
 
 regression_dem_offset_uri = './regression_offset_willamate_flux_out.tif'
+#regression_dem_offset_uri = 'regression_peru_dem_offset.tif'
 dem_offset_uri = './offset_willamate_flux_out.tif'
-
+#dem_offset_uri = 'peru_dem_offset.tif'
 start = time.time()
 #routing_utils.flow_accumulation('./test_input_10x10/test_dem_10x10.tif', out_uri)
 cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')

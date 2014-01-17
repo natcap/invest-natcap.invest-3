@@ -34,7 +34,7 @@ LOGGER = logging.getLogger('routing cython core')
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double EPS = 1e-6
 
-cdef int MAX_WINDOW_SIZE = 2**8
+cdef int MAX_WINDOW_SIZE = 2**12
 cdef float INF = numpy.inf
 
 def calculate_transport(
@@ -812,8 +812,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
-
+    cdef int flat_index_count = 0
     for flat_index in flat_set:
+        flat_index_count += 1
+        if flat_index_count % 1000 == 1 or flat_index_count == flat_set.size():
+            LOGGER.info('visiting flat index %d of %d' % (flat_index_count, flat_set.size()))
         row_index = flat_index / n_cols
         col_index = flat_index % n_cols
         if _update_window(
@@ -1174,6 +1177,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     if dirty_dem_edge_offset:
         dem_edge_offset_band.WriteArray(
             dem_edge_offset, xoff=ul_col_index, yoff=ul_row_index)
+        dirty_dem_edge_offset = False
 
     
     #Find max distance
