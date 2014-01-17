@@ -15,6 +15,7 @@ import osgeo
 from osgeo import gdal
 from cython.operator cimport dereference as deref
 
+
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libcpp.set cimport set as c_set
@@ -733,6 +734,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     start = time.time()
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
+    cdef c_set[int] flat_set_for_looping
     dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
     for row_index in range(1, n_rows - 1):
         dem_out_band.ReadAsArray(
@@ -754,6 +756,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             else:
                 #This is a flat element
                 flat_set.insert(row_index * n_cols + col_index)
+                flat_set_for_looping.insert(row_index * n_cols + col_index)
 
     #Load the dem_offset raster/band/array
     cdef Row_Col_Weight_Tuple current_cell_tuple
@@ -813,7 +816,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
     cdef int flat_index_count = 0
-    for flat_index in flat_set:
+    while flat_set_for_looping.size() > 0:
+        flat_index = deref(flat_set_for_looping.begin())
+        flat_set_for_looping.erase(flat_index)
+    #for flat_index in flat_set:
         flat_index_count += 1
         if flat_index_count % 1000 == 1 or flat_index_count == flat_set.size():
             LOGGER.info('visiting flat index %d of %d' % (flat_index_count, flat_set.size()))
