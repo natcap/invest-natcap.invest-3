@@ -359,7 +359,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
 
             area_surv = line[j]
 
-            main_dict['Stage_Params'][stage_name]['survival'][curr_area_name] = area_surv
+            main_dict['Stage_Params'][stage_name]['survival'][curr_area_name] = float(area_surv)
 
         #The rest of the age-specific params.
         for k in range(len(age_params)):
@@ -369,7 +369,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
             #relative to the end of that set.
             param_value = line[k+len(area_names)] 
 
-            main_dict['Stage_Params'][stage_name][param_name] = param_value
+            main_dict['Stage_Params'][stage_name][param_name] = float(param_value)
 
     area_param_short = {'exploitationfraction': 'exploit_frac', 
                         'larvaldispersal': 'larv_disp'}
@@ -403,7 +403,8 @@ def parse_main_csv(params_uri, area_count, rec_eq):
             
             param_value = line[n]
        
-            main_dict['Area_Params'][curr_area_name][short_param_name] = param_value
+            main_dict['Area_Params'][curr_area_name][short_param_name] = float(param_value)
+
 
     if not exp_frac_exists:
         raise MissingExpFracParameter("The main parameter CSV for this species \
