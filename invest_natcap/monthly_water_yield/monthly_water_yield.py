@@ -839,7 +839,9 @@ def calculate_intermediate_interflow(
         if evap_pix + baseflow_pix < soil_pix + water_pix:
             inter_value = alpha_pix * ((soil_pix + water_pix - evap_pix -
                 baseflow_pix) ** beta)
-            # Constraint / bound check
+            # Constraint / bound check. This is here because beta could be
+            # quite large and if alpha 2 is closer to one then we could see
+            # a case where the interflow value is larger than the constraint
             if inter_value > constraint:
                 return constraint
             else:
