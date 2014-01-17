@@ -375,7 +375,7 @@ def execute(args):
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])  
-        
+               
         max_agg_dict = {}
         # Aggregate direct flow values over the watersheds
         # Aggregate over interflow and baseflow to get the maximum values,
@@ -389,60 +389,20 @@ def execute(args):
         for agg_name, agg_uri in zip(max_agg_list, uri_agg_list):
             max_agg_dict[agg_name] = raster_utils.aggregate_raster_values_uri(
                 agg_uri, watershed_uri, 'ws_id').pixel_max
-            LOGGER.debug(agg_name + ' %s ', max_agg_dict[agg_name])
+            LOGGER.debug(agg_name + ' %s ', max_agg_dict[agg_name])        
         
-	    # Dictionary declarations for the streamflow total
-        total_streamflow_vol = {}        
-        total_storage_dict = {}
-        
-        # Compute the Streamflow nd Storage Totals
-        for key in shed_dict:
-            total_streamflow_vol[key] = (
-                    max_agg_dict['max_dflow'][key] + max_agg_dict['max_interflow'][key] + 
-                    max_agg_dict['max_baseflow'][key])
-            
-            total_storage_dict[key] = (
-                    max_agg_dict['max_water'][key] + max_agg_dict['max_prev_soil'][key] -
-                    max_agg_dict['max_interflow'][key] - max_agg_dict['max_baseflow'][key])        
-            
         # Aggregate over the precipitation raster. This will be useful in
         # comparing results and debugging
         precip_agg_dict = raster_utils.aggregate_raster_values_uri(
                 precip_uri, watershed_uri, 'ws_id', ignore_nodata=False)
-        precip_totals = precip_agg_dict.total
-        LOGGER.debug('PRECIP TOTALS: %s', precip_totals)
-
-        #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
-        volume_balance = {}
-        for key in shed_dict:
-            store_change = total_storage_dict[key] - max_agg_dict['max_prev_soil'][key]
-            vol_bal = (
-                    precip_totals[key] - max_agg_dict['max_evap'][key] - store_change -
-                    total_streamflow_vol[key])
-            volume_balance[key] = vol_bal
-
-        LOGGER.debug('VOLUME BALANCE: Precip_vol - evap_vol - storage_change_vol'
-                '- streamflow_vol(inter + baseflow)')
-        LOGGER.debug('VOLUME BALANCE: %s', volume_balance)
-        LOGGER.debug('STREAMFLOW VOLUME: %s', total_streamflow_vol)
-        ######### END DEBUG WATER BALANCE########################
         
-        # Dictionary to build up the outputs for the CSV tables
-        out_dict = {}
-        out_dict['Date'] = cur_month
-       
-        # Given the two output dictionaries build up the final dictionary that
-        # will then be used to right out to the CSV
-        for result_dict, field in zip(
-                [total_streamflow_vol, total_storage_dict,
-                    precip_agg_dict.pixel_mean], field_list):
-            build_csv_dict(result_dict, shed_field_list, out_dict, field)
-
+        out_dict = calculate_streamflow_storage(
+                max_agg_dict, precip_agg_dict, field_list, shed_field_list)
+        
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         # Write results to the CSV
         add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
                     
-        ### SUB WATERSHED CALCULATIONS ###
         if sub_shed_present:
                 
             max_agg_sub_dict = {}
@@ -456,53 +416,14 @@ def execute(args):
                     agg_uri, sub_shed_uri, 'subws_id').pixel_max
                 LOGGER.debug(agg_name + ' %s ', max_agg_sub_dict[agg_name])        
             
-            # Dictionary declarations for the streamflow total
-            total_streamflow_sub_vol = {}        
-            total_storage_sub_dict = {}
-            
-            # Compute the Streamflow and Storage Totals
-            for key in sub_shed_dict:
-                total_streamflow_sub_vol[key] = (
-                        max_agg_sub_dict['max_dflow'][key] + max_agg_sub_dict['max_interflow'][key] + 
-                        max_agg_sub_dict['max_baseflow'][key])
-                
-                total_storage_sub_dict[key] = (
-                        max_agg_sub_dict['max_water'][key] + max_agg_sub_dict['max_prev_soil'][key] -
-                        max_agg_sub_dict['max_interflow'][key] - max_agg_sub_dict['max_baseflow'][key])        
-                
             # Aggregate over the precipitation raster. This will be useful in
             # comparing results and debugging
             precip_agg_sub_dict = raster_utils.aggregate_raster_values_uri(
                     precip_uri, sub_shed_uri, 'subws_id', ignore_nodata=False)
-            precip_sub_totals = precip_agg_sub_dict.total
-            LOGGER.debug('PRECIP SUB TOTALS: %s', precip_sub_totals)
-
-            #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
-            sub_volume_balance = {}
-            for key in sub_shed_dict:
-                sub_store_change = total_storage_sub_dict[key] - max_agg_sub_dict['max_prev_soil'][key]
-                sub_vol_bal = (
-                        precip_sub_totals[key] - max_agg_sub_dict['max_evap'][key] - sub_store_change -
-                        total_streamflow_sub_vol[key])
-                sub_volume_balance[key] = sub_vol_bal
-
-            LOGGER.debug('SUB VOLUME BALANCE: Precip_vol - evap_vol - storage_change_vol'
-                    '- streamflow_vol(inter + baseflow)')
-            LOGGER.debug('SUB VOLUME BALANCE: %s', sub_volume_balance)
-            LOGGER.debug('SUB STREAMFLOW VOLUME: %s', total_streamflow_sub_vol)
-            ######### END DEBUG WATER BALANCE########################
             
-            # Dictionary to build up the outputs for the CSV tables
-            out_sub_dict = {}
-            out_sub_dict['Date'] = cur_month
-           
-            # Given the two output dictionaries build up the final dictionary that
-            # will then be used to right out to the CSV
-            for result_dict, field in zip(
-                    [total_streamflow_sub_vol, total_storage_sub_dict,
-                        precip_agg_sub_dict.pixel_mean], field_list):
-                build_csv_dict(result_dict, sub_shed_field_list, out_sub_dict, field)
-
+            out_sub_dict = calculate_streamflow_storage(
+                    max_agg_sub_dict, precip_agg_sub_dict, field_list, sub_shed_field_list)
+                        
             LOGGER.debug('OUTPUT Sub Shed Dict: %s', out_sub_dict)
             # Write results to the CSV
             add_row_csv_table(subwatershed_table_uri, sub_shed_field_list, out_sub_dict)
@@ -510,6 +431,56 @@ def execute(args):
         # Move on to next month
         break
 
+def calculate_streamflow_storage(max_agg_dict, precip_agg_dict, field_list, shed_list):
+    """ """
+    # Dictionary declarations for the streamflow total
+    total_streamflow_dict = {}        
+    total_storage_dict = {}
+    
+    key_ids = max_agg_dict['max_dflow'].keys()
+    
+    # Compute the Streamflow and Storage Totals
+    for key in key_ids:
+        total_streamflow_dict[key] = (
+                max_agg_dict['max_dflow'][key] + max_agg_dict['max_interflow'][key] + 
+                max_agg_dict['max_baseflow'][key])
+        
+        total_storage_dict[key] = (
+                max_agg_dict['max_water'][key] + max_agg_dict['max_prev_soil'][key] -
+                max_agg_dict['max_interflow'][key] - max_agg_dict['max_baseflow'][key])        
+        
+    precip_totals = precip_agg_dict.total
+    LOGGER.debug('PRECIP SUB TOTALS: %s', precip_totals)
+
+    #### DEBUG FUNCTION : TESTING FOR WATER BALANCE #####
+    water_volume_balance = {}
+    for key in key_ids:
+        store_change = total_storage_dict[key] - max_agg_dict['max_prev_soil'][key]
+        vol_bal = (
+                precip_totals[key] - max_agg_dict['max_evap'][key] - store_change -
+                total_streamflow_dict[key])
+        water_volume_balance[key] = vol_bal
+
+    LOGGER.debug('VOLUME BALANCE: Precip_vol - evap_vol - storage_change_vol'
+            '- streamflow_vol(inter + baseflow)')
+    LOGGER.debug('VOLUME BALANCE: %s', water_volume_balance)
+    LOGGER.debug('STREAMFLOW VOLUME: %s', total_streamflow_dict)
+    ######### END DEBUG WATER BALANCE########################
+    
+    # Dictionary to build up the outputs for the CSV tables
+    out_dict = {}
+    out_dict['Date'] = cur_month
+   
+    # Given the two output dictionaries build up the final dictionary that
+    # will then be used to right out to the CSV
+    for result_dict, field in zip(
+            [total_streamflow_dict, total_storage_dict,
+                precip_agg_dict.pixel_mean], field_list):
+        build_csv_dict(result_dict, shed_list, out_dict, field)           
+
+    return out_dict
+        
+        
 def build_table_headers(header_list, id_dict):
     """Create a list that combines each item in 'header_list' with each
         key in 'id_dict'
