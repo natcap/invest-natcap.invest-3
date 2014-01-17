@@ -13,7 +13,7 @@
             "elements":[
                 {
                     "id" : "workspace",
-                    "args_id" : "workspace_dir",
+                    "args_id" : "workspace_uri",
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../Fisheries",
@@ -150,7 +150,7 @@
                             "args_id" : "mig_params_uri",
                             "type": "folder",
                             "label": "Migration Matrix CSV Folder",
-                            "required": true,
+                            "required": false,
                             "validateAs": {"type": "folder"},
                             "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
                         }
