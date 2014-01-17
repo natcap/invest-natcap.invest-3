@@ -173,7 +173,7 @@
                             "args_id" : "frac_post_proc",
                             "type": "text",
                             "label": "Fraction After Processing",
-                            "required": false,
+                            "required": true,
                             "dataType": "float",
                             "validateAs": {"type":"number"},
                             "helpText": "This is the fraction of the meat left over from the animal after processing is complete."
@@ -183,7 +183,7 @@
                             "args_id" : "unit_price",
                             "type": "text",
                             "label": "Unit Price",
-                            "required": false,
+                            "required": true,
                             "dataType": "float",
                             "validateAs": {"type": "number"},
                             "helpText": "Price for the desired measurable unit of the animal."
