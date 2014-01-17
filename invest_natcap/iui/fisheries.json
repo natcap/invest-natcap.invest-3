@@ -150,7 +150,7 @@
                             "args_id" : "mig_params_uri",
                             "type": "folder",
                             "label": "Migration Matrix CSV Folder",
-                            "required": true,
+                            "required": false,
                             "validateAs": {"type": "folder"},
                             "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
                         }
@@ -173,7 +173,7 @@
                             "args_id" : "frac_post_proc",
                             "type": "text",
                             "label": "Fraction After Processing",
-                            "required": true,
+                            "required": false,
                             "dataType": "float",
                             "validateAs": {"type":"number"},
                             "helpText": "This is the fraction of the meat left over from the animal after processing is complete."
@@ -183,7 +183,7 @@
                             "args_id" : "unit_price",
                             "type": "text",
                             "label": "Unit Price",
-                            "required": true,
+                            "required": false,
                             "dataType": "float",
                             "validateAs": {"type": "number"},
                             "helpText": "Price for the desired measurable unit of the animal."
