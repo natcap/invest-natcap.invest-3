@@ -747,24 +747,26 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-    dem_array = dem_out_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
+    dem_array = numpy.empty((row_window_size + window_buffer_size * 2, col_window_size + window_buffer_size * 2), dtype=numpy.float32)
     cdef int window_row_index, window_col_index
     
     #get the ceiling of the integer division
     for window_row_index in range(int(numpy.ceil(float(n_rows)/row_window_size))):
-        for window_col_index in range(int(numpy.ceil(float(n_cols)/col_window_size))):    
-            for row_index in range(window_row_index * row_window_size, min((window_row_index + 1) * row_window_size, n_rows)):
-                for col_index in range(window_col_index * col_window_size, min((window_col_index + 1) * col_window_size, n_cols)):
-                    if _update_window(
-                        row_index, col_index, &ul_row_index, &ul_col_index,
-                        &lr_row_index, &lr_col_index, n_rows, n_cols,
-                        row_window_size, col_window_size, window_buffer_size):
-                        dem_out_band.ReadAsArray(
-                            xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                            win_ysize=row_window_size, buf_obj=dem_array)
-                
+        for window_col_index in range(int(numpy.ceil(float(n_cols)/col_window_size))):  
+            #Load the square that is the current window with a buffer around it
+            ul_row_index = max(0, window_row_index * row_window_size - window_buffer_size)
+            ul_col_index = max(0, window_col_index * col_window_size - window_buffer_size)
+            lr_row_index = ul_row_index + min(row_window_size + window_buffer_size * 2, n_rows - ul_row_index)
+            lr_col_index = ul_col_index + min(col_window_size + window_buffer_size * 2, n_cols - ul_col_index)
+
+            dem_array = dem_out_band.ReadAsArray(
+                xoff=ul_col_index, 
+                yoff=ul_row_index,
+                win_xsize=lr_col_index - ul_col_index,
+                win_ysize=lr_row_index - ul_row_index)
+            
+            for row_index in range(window_row_index * row_window_size, min((window_row_index + 1) * row_window_size, lr_row_index)):
+                for col_index in range(window_col_index * col_window_size, min((window_col_index + 1) * col_window_size, lr_col_index)):
                     w_row_index = row_index - ul_row_index
                     w_col_index = col_index - ul_col_index
                     
@@ -792,7 +794,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #Load the dem_offset raster/band/array
     cdef Row_Col_Weight_Tuple current_cell_tuple
-
+    LOGGER.info('finished flat cell detection, now identify plateaus')
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
+    dem_array =  dem_out_band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+        win_ysize=row_window_size)
+    
     dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
