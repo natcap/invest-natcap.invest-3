@@ -843,6 +843,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
+    gdal.SetCacheMax(2**30)
     while flat_set_for_looping.size() > 0:
         flat_index = deref(flat_set_for_looping.begin())
         flat_set_for_looping.erase(flat_index)
