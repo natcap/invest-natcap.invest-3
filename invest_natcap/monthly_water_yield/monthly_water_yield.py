@@ -27,16 +27,20 @@ def execute(args):
         args[workspace_dir] - a URI to the workspace directory where outputs
             will be written to disk (required)
 
+        args[dem_uri] - a URI to a gdal raster for the digital elevation.
+            Should be project in linear units of meters (required)
+
         args[precip_data_uri] - a URI to a CSV file that has time step data for
             precipitation (required)
 
         args[eto_data_uri] - a URI to a CSV file that has time step data for
             ETo (average annual reference evapostranspiration) (required)
 
-        args[soil_max_uri] - a URI to a gdal raster for soil max (required)
+        args[soil_max_uri] - a URI to a gdal raster for soil max.
+            Should be project in linear units of meters (required)
 
-        args[soil_texture_uri] - a URI to a gdal raster for soil texture
-            (required)
+        args[soil_texture_uri] - a URI to a gdal raster for soil texture.
+            Should be project in linear units of meters (required)
 
         args[lulc_uri] - a URI to a gdal raster for the landuse landcover map.
             Should be project in linear units of meters (required)
@@ -60,7 +64,7 @@ def execute(args):
 
         returns - nothing
     """
-    LOGGER.debug('Start Executing Monthly Water Yield')
+    LOGGER.info('Executing Monthly Water Yield')
 
     # Set up directories for model outputs
     workspace = args['workspace_dir']
@@ -88,8 +92,8 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    # Get DEM WKT, Nodata. 'dem_wkt' is used later to properly project the point
-    # shapefiles made from precipitation and evaporation
+    # Get DEM WKT and Nodata. 'dem_wkt' is used later to properly project the
+    # point shapefiles made from precipitation and evaporation data
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     # All intermediate and output rasters should be based on the DEM's cell size
@@ -102,19 +106,20 @@ def execute(args):
         gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
         aoi_uri=watershed_uri)
 
-    # Calculate the slope raster from the DEM
-    LOGGER.info("calculating slope")
+    # Calculate the slope raster from the DEM to use in later alpha
+    # calculations
+    LOGGER.debug("calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
 
 	# Calculate flow accumulation in order to build up our streams layer
-    LOGGER.info("calculating flow accumulation")
+    LOGGER.debug("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
             intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
     routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
 
     # Classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
+    LOGGER.debug("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(
             intermediate_dir, 'v_stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
@@ -143,6 +148,7 @@ def execute(args):
             dem_aligned_uri, lulc_aligned_uri, smax_aligned_uri,
             soil_text_aligned_uri, slope_aligned_uri, stream_aligned_uri]
     # Align Datasets call
+    LOGGER.info('Aligning Datasets')
     raster_utils.align_dataset_list(
         uris_to_align, aligned_uris, ['nearest'] * 6, dem_cell_size,
         'intersection', 0, assert_datasets_projected=True)
@@ -156,6 +162,7 @@ def execute(args):
             intermediate_dir, 'imperv_area%s.tif' % file_suffix)
     etk_uri = os.path.join(intermediate_dir, 'etk%s.tif' % file_suffix)
 
+    LOGGER.debug('Reclassifying imperv_fract and etk')
     for code_uri, field in zip(
             [imperv_area_uri, etk_uri],['imperv_fract', 'etk']):
         # Map the field to the lulc code in a dictionary
@@ -167,6 +174,7 @@ def execute(args):
 
     def zero_op(pixel):
         """Vectorize function that sets all non nodata values to 0.0
+
             pixel - incoming pixel value from the raster
 
             returns - 0.0 if not equal to nodata, else returns nodata"""
@@ -197,21 +205,20 @@ def execute(args):
 
     # Get the parameters and coefficients to calculate the alpha rasters
     model_param_dict = model_parameters_to_dict(model_params_uri)
-    LOGGER.debug('MODEL PARAMETERS: %s', model_param_dict)
     beta = model_param_dict['beta']['beta']
+    LOGGER.debug('MODEL PARAMETERS: %s', model_param_dict)
 
     # Calculate the Alpha Rasters
+    LOGGER.debug('Construct Alpha Rasters')
     calculate_alphas(
         slope_aligned_uri, soil_text_aligned_uri, smax_aligned_uri,
         model_param_dict, float_nodata, alpha_uri_list)
 
     # Construct a dictionary from the precipitation time step data
     precip_data_dict = construct_time_step_data(precip_data_uri, 'p')
-    LOGGER.debug('Constructed PRECIP DATA : %s', precip_data_dict)
 
     # Construct a dictionary from the ETo time step data
     eto_data_dict = construct_time_step_data(eto_data_uri, 'eto')
-    LOGGER.debug('Constructed ETo DATA : %s', eto_data_dict)
 
     # Get a dictionary from the watershed by the id so that we can
     # have a handle on the id values for each shed
@@ -227,7 +234,8 @@ def execute(args):
     shed_field_list = build_table_headers(field_list, shed_dict)
 
     # Set a flag to True if sub watersheds was provided as an input
-    try:
+    if 'sub_watersheds_uri' in args:
+        LOGGER.info('Sub Watersheds Provided')
         sub_shed_uri = args['sub_watersheds_uri']
         subwatershed_table_uri = os.path.join(
                 intermediate_dir, 'sub_shed_table%s.csv' % file_suffix)
@@ -240,15 +248,22 @@ def execute(args):
         sub_shed_field_list = build_table_headers(field_list, sub_shed_dict)
 
         sub_shed_present = True
-    except KeyError:
+    else:
         LOGGER.info('Sub Watersheds Not Provided')
         sub_shed_present = False
 
-    # Get the keys from the time step dictionary, which will be the month/year
-    # signature
+    # Get the keys from the precip and eto time step dictionaries,
+    # which will be the month/year signature. Compare them first to make
+    # sure the data properly correlates
     list_of_months = precip_data_dict.keys()
+    eto_months = eto_data_dict.keys()
     # Sort the list of months taken from the precipitation dictionaries keys
     list_of_months.sort()
+    eto_months.sort()
+
+    if eto_months != list_of_months:
+        raise Exception("The dates for Precipitation and ETo do not match, "
+            "please check the two CSV tables")
 
     # Create a URI to hold the previous months soil storage
     prev_soil_uri = os.path.join(
@@ -292,6 +307,7 @@ def execute(args):
 
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
+        LOGGER.info('Calculating Current Month : %s', cur_month)
         # Create a tuple for precip and eto of the current months values
         # (represented as a dictionary), the field, and uri for raster output
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
@@ -324,7 +340,6 @@ def execute(args):
             # Clip the output dataset to the watershed
             raster_utils.clip_dataset_uri(
                 tmp_out_uri, watershed_uri, out_uri, True)
-
 
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
