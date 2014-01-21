@@ -384,20 +384,23 @@ def execute(args):
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
 
+        # Dictionary to store maximum aggregated values
         max_agg_dict = {}
-        # Aggregate direct flow values over the watersheds
-        # Aggregate over interflow and baseflow to get the maximum values,
-        # because since they are a function on Water which is a function of Tp
-        # they should be routed
-        # Aggregate interflow values over the watersheds
+        # List of keys to add to 'max_agg_dict' to correlate to their
+        # respected values
         max_agg_list = ['max_dflow', 'max_interflow', 'max_baseflow',
                         'max_water', 'max_prev_soil', 'max_evap']
+        # List of URIs to match the above keys of which to aggregate over
         uri_agg_list = [dflow_uri, interflow_uri, baseflow_uri,
                         water_uri, prev_soil_uri, evap_uri]
+        # Aggregate direct flow, interflow, baseflow, water, evap, and previous
+        # soil storage over the watersheds getting maximum values.
+        # Aggregating over interflow and baseflow to get the maximum values,
+        # because they are a function on Water which is a function of Tp
+        # which is routed
         for agg_name, agg_uri in zip(max_agg_list, uri_agg_list):
             max_agg_dict[agg_name] = raster_utils.aggregate_raster_values_uri(
                 agg_uri, watershed_uri, 'ws_id').pixel_max
-            LOGGER.debug(agg_name + ' %s ', max_agg_dict[agg_name])
 
         # Aggregate over the precipitation raster. This will be useful in
         # comparing results and debugging
@@ -408,22 +411,21 @@ def execute(args):
                 max_agg_dict, precip_agg_dict, field_list, shed_field_list,
                 cur_month)
 
-        LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
+        LOGGER.debug('Result Dictionary for Watersheds: %s', out_dict)
         # Write results to the CSV
         add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
 
         if sub_shed_present:
-
+            # Dictionary to store maximum aggregated values
             max_agg_sub_dict = {}
-            # Aggregate direct flow values over the watersheds
-            # Aggregate over interflow and baseflow to get the maximum values,
-            # because since they are a function on Water which is a function
-            # of Tp they should be routed. Aggregate interflow values over
-            # the watersheds
+            # Aggregate direct flow, interflow, baseflow, water, evap, and previous
+            # soil storage over the sub watersheds getting maximum values.
+            # Aggregating over interflow and baseflow to get the maximum values,
+            # because they are a function on Water which is a function of Tp
+            # which is routed
             for agg_name, agg_uri in zip(max_agg_list, uri_agg_list):
                 max_agg_sub_dict[agg_name] = raster_utils.aggregate_raster_values_uri(
                     agg_uri, sub_shed_uri, 'subws_id').pixel_max
-                LOGGER.debug(agg_name + ' %s ', max_agg_sub_dict[agg_name])
 
             # Aggregate over the precipitation raster. This will be useful in
             # comparing results and debugging
@@ -434,7 +436,8 @@ def execute(args):
                     max_agg_sub_dict, precip_agg_sub_dict, field_list,
                     sub_shed_field_list, cur_month)
 
-            LOGGER.debug('OUTPUT Sub Shed Dict: %s', out_sub_dict)
+            LOGGER.debug(
+                'Result Dictionary for Sub Watersheds: %s', out_sub_dict)
             # Write results to the CSV
             add_row_csv_table(
                 subwatershed_table_uri, sub_shed_field_list, out_sub_dict)
