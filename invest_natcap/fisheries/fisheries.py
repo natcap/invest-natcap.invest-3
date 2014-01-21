@@ -156,7 +156,9 @@ def execute(args):
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
+    LOGGER.debug(rec_dict)
     core_args['rec_dict'] = rec_dict
+
 
     #Direct pass all these variables
     core_args['workspace_uri'] = args['workspace_uri']
