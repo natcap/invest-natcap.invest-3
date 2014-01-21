@@ -679,9 +679,9 @@ def mask_impervious_layer_by_streams(
             if pix == pix_nodata:
                 return out_nodata
             elif stream_pix == 1.0:
-			    return 1.0
+                return 1.0
             else:
-		        return imperv_pix
+                return imperv_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
