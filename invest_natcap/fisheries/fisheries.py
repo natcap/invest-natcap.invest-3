@@ -376,7 +376,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
     #pre-populate with area names
     for area_name in area_names:
         if area_name.lower() == 'survival':
-            area_name = '1'
+            area_name = 'AOI'
         main_dict['Area_Params'][area_name] = {}
 
     exp_frac_exists = False
