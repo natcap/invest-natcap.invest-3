@@ -465,10 +465,10 @@ def calculate_streamflow_storage(
 
         returns - a dictionary with the streamflow and storage totals
     """
-    # Dictionary declarations for the streamflow total
+    # Dictionary declarations for the streamflow and storage total
     total_streamflow_dict = {}
     total_storage_dict = {}
-
+    # Get a handle on the keys for the watershed / sub watershed
     key_ids = max_agg_dict['max_dflow'].keys()
 
     # Compute the Streamflow and Storage Totals
@@ -533,8 +533,6 @@ def build_table_headers(header_list, id_dict):
     for key in id_dict.iterkeys():
         for field in header_list:
             output_list.append(field + ' ' + str(key))
-
-    LOGGER.debug('Automatically Gen Field List %s', output_list)
 
     return output_list
 
@@ -680,12 +678,10 @@ def mask_impervious_layer_by_streams(
         for pix, pix_nodata in zip([imperv_pix, stream_pix], no_data_list):
             if pix == pix_nodata:
                 return out_nodata
+            elif stream_pix == 1.0:
+			    return 1.0
             else:
-                return 1.0
-            #elif stream_pix == 1.0:
-			#    return 1.0
-            #else:
-		    #    return imperv_pix
+		        return imperv_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
@@ -1106,7 +1102,6 @@ def calculate_alphas(
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
     soil_text_nodata = raster_utils.get_nodata_from_uri(soil_text_uri)
-    LOGGER.debug('Soil Text Nodata: %s', soil_text_nodata)
     cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
 
     def alpha_one_op(slope_pix, soil_text_pix):
@@ -1169,8 +1164,7 @@ def model_parameters_to_dict(csv_uri):
 
         csv_uri - a URI to a CSV file for the model parameters
 
-        returns - a dictionary with the following structure:
-
+        returns - a dictionary with the following structure
     """
     data_file = open(csv_uri)
     data_handler = csv.DictReader(data_file)
