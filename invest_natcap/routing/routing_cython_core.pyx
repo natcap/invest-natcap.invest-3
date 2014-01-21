@@ -746,7 +746,6 @@ cdef void _build_flat_set(
                 deref(flat_set).insert(row_index * n_cols + col_index)
 
 
-
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -772,14 +771,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
     cdef int MAX_DISTANCE = n_rows * n_cols #no distance will be greater than this
+
+    #this will keep track of the indices for traversing the sink and edge cells
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
-    cdef int row_index, col_index, current_row_indebx, current_n_rows, sink_row_index, sink_col_index, edge_row_index, edge_col_index
 
+    cdef int row_index, col_index, sink_row_index, sink_col_index, edge_row_index, edge_col_index
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
 
     #Identify sink cells
-    sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
@@ -830,15 +830,24 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #search for flat cells
     _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
-    sys.exit(-1)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
     cdef int flat_index, neighbor_flat_index
+    #make a copy of the flat index so we can break it down for iteration but
+    #keep the old one for rapid testing of flat cells
     for flat_index in flat_set:
         flat_set_for_looping.insert(flat_set_for_looping.end(), flat_index)
 
     #Load the dem_offset raster/band/array
     cdef Row_Col_Weight_Tuple current_cell_tuple
     LOGGER.info('finished flat cell detection, now identify plateaus')
+
+    row_window_size = MAX_WINDOW_SIZE
+    col_window_size = MAX_WINDOW_SIZE
+    if row_window_size > n_rows:
+        row_window_size = n_rows
+    if col_window_size > n_cols:
+        col_window_size = n_cols
+
     ul_row_index = 0
     ul_col_index = 0
     lr_row_index = row_window_size
