@@ -256,8 +256,6 @@ def execute(args):
     dflow_uri = os.path.join(intermediate_dir, 'dflow%s.tif' % file_suffix)
     total_precip_uri = os.path.join(
             intermediate_dir, 'total_precip%s.tif' % file_suffix)
-    in_source_uri = os.path.join(
-            intermediate_dir, 'in_source%s.tif' % file_suffix)
     water_uri = os.path.join(intermediate_dir, 'water_amt%s.tif' % file_suffix)
     evap_uri = os.path.join(intermediate_dir, 'evaporation%s.tif' % file_suffix)
     etc_uri = os.path.join(intermediate_dir, 'etc%s.tif' % file_suffix)
@@ -389,7 +387,8 @@ def execute(args):
                 precip_uri, watershed_uri, 'ws_id', ignore_nodata=False)
 
         out_dict = calculate_streamflow_storage(
-                max_agg_dict, precip_agg_dict, field_list, shed_field_list, cur_month)
+                max_agg_dict, precip_agg_dict, field_list, shed_field_list,
+                cur_month)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         # Write results to the CSV
@@ -428,21 +427,21 @@ def execute(args):
 def calculate_streamflow_storage(
         max_agg_dict, precip_agg_dict, field_list, shed_list, cur_month):
     """Calculates the streamflow and storage totals into a dictionary
-    
+
         max_agg_dict - a dictionary with keys of type String which have
             values that are maximums for the raster associated with the
             key name
-        
+
         precip_agg_dict - a dictionary of aggregated precipitation
             data
-        
+
         field_list - a list of Strings for the column headers
-        
+
         shed_list - a list of Strings for the output column headers
             with the shed id factored in
-        
+
         cur_month - a String for the current month / year being processed
-        
+
         returns - a dictionary with the streamflow and storage totals
     """
     # Dictionary declarations for the streamflow total
