@@ -399,7 +399,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         for n in range(len(area_names)):
             curr_area_name = area_names[n]
             if curr_area_name.lower() == 'survival':
-                curr_area_name = '1'
+                curr_area_name = 'AOI'
             
             param_value = line[n]
        
