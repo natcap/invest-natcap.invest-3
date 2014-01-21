@@ -147,11 +147,17 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 
     for cycle in range(1, duration):
 
+        #Initialize this current cycle
+        cycle_dict[cycle] = {}
+
         #This will be used for each 0 age in the cycle. 
         rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
                             
         for area in params_dict['Area_Params'].keys():
+
+            #Initialize current area within cycle.
+            cycle_dict[cycle][area] = {}
 
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
@@ -265,7 +271,9 @@ def spawner_count(cycle_dict, params_dict, cycle):
 
     spawner_sum = 0
 
-    for ages_dict in cycle_dict[cycle-1].items():
+    LOGGER.debug(cycle_dict)
+
+    for ages_dict in cycle_dict[cycle-1].values():
         for age, indiv_count in ages_dict.items():
 
             maturity = params_dict['Stage_Params'][age]['maturity']
