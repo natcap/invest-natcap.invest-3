@@ -100,7 +100,8 @@ def execute(args):
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
 
     # Clip the DEM and cast to a float
-    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
+    clipped_dem_uri = os.path.join(
+        intermediate_dir, 'clipped_dem%s.tif' % file_suffix)
     raster_utils.vectorize_datasets(
         [dem_uri], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
@@ -238,7 +239,7 @@ def execute(args):
         LOGGER.info('Sub Watersheds Provided')
         sub_shed_uri = args['sub_watersheds_uri']
         subwatershed_table_uri = os.path.join(
-                intermediate_dir, 'sub_shed_table%s.csv' % file_suffix)
+                output_dir, 'sub_shed_table%s.csv' % file_suffix)
         clean_uri([subwatershed_table_uri])
         # Get a dictionary from the sub-watershed by the id so that we can
         # have a handle on the id values for each sub-shed
@@ -286,7 +287,7 @@ def execute(args):
 
     # Output URI for the watershed table
     watershed_table_uri = os.path.join(
-            intermediate_dir, 'wshed_table%s.csv' % file_suffix)
+            output_dir, 'wshed_table%s.csv' % file_suffix)
     # If the CSV file already exists, delete it
     clean_uri([watershed_table_uri])
 
@@ -315,10 +316,12 @@ def execute(args):
 
         # For precip and eto create rasters respectively
         for data_dict, field, out_uri in [precip_params, eto_params]:
-            tmp_out_uri = os.path.join(intermediate_dir, 'temp_point_ds.tif')
-            cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
+            tmp_out_uri = os.path.join(
+                intermediate_dir, 'temp_point_ds%s.tif' % file_suffix)
+            cur_point_uri = os.path.join(
+                intermediate_dir, 'points%s.shp' % file_suffix)
             projected_point_uri = os.path.join(
-                    intermediate_dir, 'proj_points.shp')
+                    intermediate_dir, 'proj_points%s.shp' % file_suffix)
             # Since we are recycling URIs for each month clean these URIs up
             clean_uri(
                     [cur_point_uri, projected_point_uri, out_uri, tmp_out_uri])
