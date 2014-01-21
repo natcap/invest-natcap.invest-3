@@ -389,7 +389,7 @@ def execute(args):
                 precip_uri, watershed_uri, 'ws_id', ignore_nodata=False)
 
         out_dict = calculate_streamflow_storage(
-                max_agg_dict, precip_agg_dict, field_list, shed_field_list)
+                max_agg_dict, precip_agg_dict, field_list, shed_field_list, cur_month)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         # Write results to the CSV
@@ -415,7 +415,7 @@ def execute(args):
 
             out_sub_dict = calculate_streamflow_storage(
                     max_agg_sub_dict, precip_agg_sub_dict, field_list,
-                    sub_shed_field_list)
+                    sub_shed_field_list, cur_month)
 
             LOGGER.debug('OUTPUT Sub Shed Dict: %s', out_sub_dict)
             # Write results to the CSV
@@ -426,8 +426,25 @@ def execute(args):
         break
 
 def calculate_streamflow_storage(
-        max_agg_dict, precip_agg_dict, field_list, shed_list):
-    """ """
+        max_agg_dict, precip_agg_dict, field_list, shed_list, cur_month):
+    """Calculates the streamflow and storage totals into a dictionary
+    
+        max_agg_dict - a dictionary with keys of type String which have
+            values that are maximums for the raster associated with the
+            key name
+        
+        precip_agg_dict - a dictionary of aggregated precipitation
+            data
+        
+        field_list - a list of Strings for the column headers
+        
+        shed_list - a list of Strings for the output column headers
+            with the shed id factored in
+        
+        cur_month - a String for the current month / year being processed
+        
+        returns - a dictionary with the streamflow and storage totals
+    """
     # Dictionary declarations for the streamflow total
     total_streamflow_dict = {}
     total_storage_dict = {}
@@ -478,7 +495,6 @@ def calculate_streamflow_storage(
         build_csv_dict(result_dict, shed_list, out_dict, field)
 
     return out_dict
-
 
 def build_table_headers(header_list, id_dict):
     """Create a list that combines each item in 'header_list' with each
