@@ -24,29 +24,32 @@ def execute(args):
 
         args - a Python dictionary with the following keys and values:
 
-        args[workspace_dir] - a uri to the workspace directory where outputs
-            will be written to disk
+        args[workspace_dir] - a URI to the workspace directory where outputs
+            will be written to disk (required)
 
-        args[precip_data_uri] - a uri to a CSV file that has time step data for
-            precipitation
+        args[precip_data_uri] - a URI to a CSV file that has time step data for
+            precipitation (required)
 
-        args[eto_data_uri] - a uri to a CSV file that has time step data for
-            ETo
+        args[eto_data_uri] - a URI to a CSV file that has time step data for
+            ETo (average annual reference evapostranspiration) (required)
 
-        args[soil_max_uri] - a uri to a gdal raster for soil max
+        args[soil_max_uri] - a URI to a gdal raster for soil max (required)
 
-        args[soil_texture_uri] - a uri to a gdal raster for soil texture
+        args[soil_texture_uri] - a URI to a gdal raster for soil texture
+            (required)
 
-        args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
+        args[lulc_uri] - a URI to a gdal raster for the landuse landcover map.
+            Should be project in linear units of meters (required)
 
         args[lulc_data_uri] - a URI to a CSV file for the land cover code lookup
-            table
+            table with the following columns : 'LULC', 'IMPERV_FRACT', and 'etk'
+            (required)
 
         args[watersheds_uri] - a URI to an ogr shapefile of polygon geometry
-            type
+            type. Should be projected in linear units of meters (required)
 
         args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
-            type
+            type. Should be projected in linear units of meters (optional)
 
         args[threshold_flow_accumulation] - an Integer value for the number of
             upstream cells that must flow into a cell before it's considered
