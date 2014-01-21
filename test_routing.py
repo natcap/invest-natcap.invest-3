@@ -10,7 +10,7 @@ import routing_cython_core
 import pyximport
 pyximport.install()
 
-test = 'willamate'
+test = 'peru'
 
 if test == 'peru':
     base_uri = 'regression_peru_dem_out.tif'

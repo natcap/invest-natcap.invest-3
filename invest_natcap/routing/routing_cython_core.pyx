@@ -675,6 +675,78 @@ cdef int _is_sink(
     return 0
 
 @cython.boundscheck(False)
+cdef void _build_flat_set(
+    band, float nodata_value, int n_rows, int n_cols,
+    int *row_offsets, int *col_offsets, c_set[int] *flat_set):
+
+    cdef float dem_value, neighbor_dem_value
+    #get the ceiling of the integer division
+    cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
+
+    cdef int row_index, col_index
+    cdef int ul_row_index = 0, ul_col_index = 0
+    cdef int lr_col_index = n_cols, lr_row_index = 3
+    cdef int w_row_index, w_col_index
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
+        win_ysize=3)
+
+    for row_index in range(n_rows):
+        #Grab three rows at a time
+        if _update_window(
+            row_index, 0, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            3, n_cols, 1):
+            band.ReadAsArray(
+                xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
+                win_ysize=3, buf_obj=dem_array)
+
+        for col_index in range(n_cols):
+            w_row_index = row_index - ul_row_index
+            dem_value = dem_array[w_row_index, col_index]
+            if dem_value == nodata_value:
+                continue
+
+            for neighbor_index in xrange(8):
+                allowed_neighbor[neighbor_index] = 1
+            if w_row_index == 0:
+                #don't allow top row 1 2 3
+                allowed_neighbor[1] = 0
+                allowed_neighbor[2] = 0
+                allowed_neighbor[3] = 0
+            elif w_row_index == n_rows - 1:
+                #don't allow bottom row 5 6 7
+                allowed_neighbor[5] = 0
+                allowed_neighbor[6] = 0
+                allowed_neighbor[7] = 0
+
+            if col_index == 0:
+                #don't allow left column 3 4 5
+                allowed_neighbor[3] = 0
+                allowed_neighbor[4] = 0
+                allowed_neighbor[5] = 0
+            elif col_index == n_cols - 1:
+                #don't allow right column 0 1 7
+                allowed_neighbor[0] = 0
+                allowed_neighbor[1] = 0
+                allowed_neighbor[7] = 0
+
+            #check all the neighbors, if nodata or lower, this isn't flat
+            for neighbor_index in xrange(8):
+                if not allowed_neighbor[neighbor_index]:
+                    continue
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = col_index + col_offsets[neighbor_index]
+                neighbor_dem_value = dem_array[w_neighbor_row_index, w_neighbor_col_index]
+                if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
+                    break
+            else:
+                #This is a flat element
+                deref(flat_set).insert(row_index * n_cols + col_index)
+
+
+
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -755,59 +827,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef float dem_value, neighbor_dem_value
     #get the ceiling of the integer division
     cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
-    for row_index in range(n_rows):
-        if _update_window(
-            row_index, 0, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, window_buffer_size):
-            dem_out_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
 
-        for col_index in range(n_cols):
-            w_row_index = row_index - ul_row_index
-            w_col_index = col_index - ul_col_index
-            dem_value = dem_array[w_row_index, w_col_index]
-            if dem_value == nodata_value:
-                continue
-
-            for neighbor_index in xrange(8):
-                allowed_neighbor[neighbor_index] = 1
-            if w_row_index == 0:
-                #don't allow top row 1 2 3
-                allowed_neighbor[1] = 0
-                allowed_neighbor[2] = 0
-                allowed_neighbor[3] = 0
-            elif w_row_index == n_rows - 1:
-                #don't allow bottom row 5 6 7
-                allowed_neighbor[5] = 0
-                allowed_neighbor[6] = 0
-                allowed_neighbor[7] = 0
-
-            if w_col_index == 0:
-                #don't allow left column 3 4 5
-                allowed_neighbor[3] = 0
-                allowed_neighbor[4] = 0
-                allowed_neighbor[5] = 0
-            elif w_col_index == n_cols - 1:
-                #don't allow right column 0 1 7
-                allowed_neighbor[0] = 0
-                allowed_neighbor[1] = 0
-                allowed_neighbor[7] = 0
-
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                if not allowed_neighbor[neighbor_index]:
-                    continue
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-                neighbor_dem_value = dem_array[w_neighbor_row_index, w_neighbor_col_index]
-                if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
-                    break
-            else:
-                #This is a flat element
-                flat_set.insert(row_index * n_cols + col_index)
-
+    #search for flat cells
+    _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
+    sys.exit(-1)
+    LOGGER.debug("flat_set size %d" % (flat_set.size()))
     cdef int flat_index, neighbor_flat_index
     for flat_index in flat_set:
         flat_set_for_looping.insert(flat_set_for_looping.end(), flat_index)
