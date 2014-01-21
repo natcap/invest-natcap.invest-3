@@ -182,7 +182,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     num_indivs = \
                         calc_indiv_count(cycle_dict, migration_dict, area, age,
                                             cycle)
-                    cycle_dict[age] = (prev_num_indivs * prev_survival) + \
+                    cycle_dict[cycle][area][age] = (prev_num_indivs * prev_survival) + \
                                             (num_indivs * survival)
                 else:
                     prev_age = order[i-1] 
