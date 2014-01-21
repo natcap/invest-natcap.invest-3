@@ -103,7 +103,6 @@ def execute(args):
     LOGGER.info("calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
 
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
@@ -330,7 +329,7 @@ def execute(args):
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
                 dem_aligned_uri, precip_uri, absorption_uri, dflow_uri,
-                total_precip_uri, in_source_uri, float_nodata, watershed_uri)
+                total_precip_uri, watershed_uri)
 
         # Calculate water amount (W)
         clean_uri([water_uri])
@@ -1003,7 +1002,7 @@ def calculate_evaporation(
 
 def calculate_direct_flow(
         dem_uri, precip_uri, in_absorption_uri, dt_out_uri, tp_out_uri,
-        in_source_uri, out_nodata, watershed_uri):
+        watershed_uri):
     """This function calculates the direct flow over the catchment which is the
         routed precipitation over the landscape to the outlet
 
@@ -1016,13 +1015,9 @@ def calculate_direct_flow(
         in_absorption_uri - a URI to a gdal dataset of the in absorption rate
             values. Should be projected in meters (required)
 
-        in_source_uri - a URI path for the in source output as a gdal dataset
-
         dt_out_uri - a URI path for the direct flow output as a gdal dataset
 
         tp_out_uri - a URI path for the total precip output as a gdal dataset
-
-        out_nodata - a float for the output nodata value
 
         watershed_uri - a URI to an OGR shapefile for the watershed
 
