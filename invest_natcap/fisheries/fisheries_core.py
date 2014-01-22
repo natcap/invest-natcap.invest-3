@@ -71,7 +71,6 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_uri'], 'Intermediate')
     output_dir = os.path.join(args['workspace_uri'], 'Output')
 
-    LOGGER.debug(args['params_dict'])
     '''This dictionary will contain all counts of individuals for each
     combination of cycle, age/stage, and area. The final dictionary will look
     like the following:
@@ -150,8 +149,6 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         #Initialize this current cycle
         cycle_dict[cycle] = {}
 
-        LOGGER.debug(rec_dict)
-
         #This will be used for each 0 age in the cycle. 
         rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
@@ -193,6 +190,8 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                                                 prev_age, cycle)
 
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
+
+    LOGGER.debug(cycle_dict)
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
@@ -272,8 +271,6 @@ def spawner_count(cycle_dict, params_dict, cycle):
     for a given pairing of age, area.'''
 
     spawner_sum = 0
-
-    LOGGER.debug(cycle_dict)
 
     for ages_dict in cycle_dict[cycle-1].values():
         for age, indiv_count in ages_dict.items():
@@ -372,7 +369,9 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 prev_age = order[order.index(age)-1]
                 prev_count = cycle_dict[0][area][prev_age]
                 
-                surv = calc_survival_mortal(params_dict, area, age)
+                surv = calc_survival_mortal(params_dict, area, prev_age)
+                LOGGER.debug("Survival for Prev Age %s is: %s" % (prev_age, surv))
+            
 
                 if age in final_stage:
                     count = (prev_count * surv)/ (1- surv)
