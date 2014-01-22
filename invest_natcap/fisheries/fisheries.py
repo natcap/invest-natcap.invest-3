@@ -320,8 +320,6 @@ def parse_main_csv(params_uri, area_count, rec_eq):
     for param in age_params:
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
-            
-            LOGGER.debug("The problematic parameter is %s." % param)
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")

@@ -329,12 +329,18 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
         first_stage = [order[0]]
         final_stage = [order[len(order)-1]]
 
+    LOGGER.debug(first_stage)
+    LOGGER.debug(final_stage)
+
+
     revised_order = copy.copy(order)
     gender_var = 2 if is_gendered else 1
 
     if maturity_type == 'Stage Specific':
         
         for area in params_dict['Area_Params'].keys():
+
+            cycle_dict[0][area] = {}
 
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
@@ -343,7 +349,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             #rest should be 1.
             for stage in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
-                cycle_dict[0][area] = {stage:initial_pop}
+                cycle_dict[0][area][stage] = initial_pop
                 revised_order.remove(stage)
 
             for stage in revised_order:
@@ -353,15 +359,19 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
        
         for area in params_dict['Area_Params'].keys():
 
+            cycle_dict[0][area] = {}
+
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
 
             #For age = 0, count = init_recruits
             for age in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
-                cycle_dict[0][area] = {age:initial_pop}
+                cycle_dict[0][area][age] = initial_pop
                 revised_order.remove(age)
             
+                LOGGER.debug(cycle_dict)
+
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
             for age in revised_order:
                 #Can use order to check previous, since we know we will not be
