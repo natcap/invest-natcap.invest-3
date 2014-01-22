@@ -318,6 +318,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     '''
     #Since we know this is the initialization cycle.
     cycle_dict[0] = {}
+    revised_order = copy.copy(order)
 
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
@@ -325,15 +326,16 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     if is_gendered == True:
         first_stage = [order[0], order[len(order)/2]]
         final_stage = [order[len(order)/2-1], order[len(order)-1]]
+        #Want to make sure that the order we will use for later iteration does
+        #contain the two first ages.
+        revised_order.pop(len(order)/2)
+        revised_order.pop(0)
     else:
         first_stage = [order[0]]
         final_stage = [order[len(order)-1]]
+        #Want to remove the first age from the order through which we will cycle
+        revised_order.pop(0)
 
-    LOGGER.debug(first_stage)
-    LOGGER.debug(final_stage)
-
-
-    revised_order = copy.copy(order)
     gender_var = 2 if is_gendered else 1
 
     if maturity_type == 'Stage Specific':
@@ -350,7 +352,6 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             for stage in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
                 cycle_dict[0][area][stage] = initial_pop
-                revised_order.remove(stage)
 
             for stage in revised_order:
                 cycle_dict[0][area][stage] = 1
@@ -368,10 +369,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             for age in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
                 cycle_dict[0][area][age] = initial_pop
-                revised_order.remove(age)
             
-                LOGGER.debug(cycle_dict)
-
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
             for age in revised_order:
                 #Can use order to check previous, since we know we will not be
@@ -380,8 +378,6 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 prev_count = cycle_dict[0][area][prev_age]
                 
                 surv = calc_survival_mortal(params_dict, area, prev_age)
-                LOGGER.debug("Survival for Prev Age %s is: %s" % (prev_age, surv))
-            
 
                 if age in final_stage:
                     count = (prev_count * surv)/ (1- surv)
@@ -389,6 +385,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                     count = prev_count * surv
                 
                 cycle_dict[0][area][age] = count
+
+    LOGGER.debug(cycle_dict)
 
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
