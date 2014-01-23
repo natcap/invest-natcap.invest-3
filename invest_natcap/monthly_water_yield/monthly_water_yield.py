@@ -446,7 +446,7 @@ def execute(args):
                 subwatershed_table_uri, sub_shed_field_list, out_sub_dict)
 
         # Move on to next month
-        break
+        #break
 
 def calculate_streamflow_storage(
         max_agg_dict, precip_agg_dict, field_list, shed_list, cur_month):
@@ -606,6 +606,47 @@ def clean_uri(in_uri_list):
     for uri in in_uri_list:
         if os.path.isfile(uri):
             os.remove(uri)
+
+def calculate_streamflow(
+        dflow_uri, interflow_uri, baseflow_uri, out_uri, out_nodata):
+    """Creates a streamflow dataset at the pixel level
+
+        dflow_uri - a URI to a gdal dataset for the direct flow
+
+        interflow_uri - a URI to a gdal dataset for the interflow
+
+        baseflow_uri - a URI to a gdal dataset for the baseflow
+
+        out_uri - URI to the output streamflow dataset
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+    no_data_list = []
+    # Build up a list of nodata values to check against
+    for raster_uri in [dflow_uri, interflow_uri, baseflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def streamflow_op(dflow_pix, interflow_pix, baseflow_pix):
+        """A vectorize operation for calculating the in absorption rate value
+
+            imperv_pix - a float value for the impervious area in fraction
+            alpha_pix - a float value for the alpha coefficients
+
+            returns - in absorption rate value"""
+        for pix, pix_nodata in zip([dflow_pix, interflow_pix, baseflow_pix], no_data_list):
+            if pix == pix_nodata:
+                return out_nodata
+            else:
+                dflow_pix + interflow_pix + baseflow_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+
+    raster_utils.vectorize_datasets(
+            [dflow_uri, interflow_uri, baseflow_uri], streamflow_op,
+            out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_in_absorption_rate(
         imperv_uri, alpha_one_uri, out_uri, out_nodata):
