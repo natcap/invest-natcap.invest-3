@@ -607,6 +607,54 @@ def clean_uri(in_uri_list):
         if os.path.isfile(uri):
             os.remove(uri)
 
+def calculate_soil_storage(
+        water_uri, prev_soil_uri, interflow_uri, baseflow_uri, out_uri, out_nodata):
+    """Creates a soil storage dataset at the pixel level
+
+        water_uri - a URI to a gdal dataset for the total water on the
+            landscape
+
+        prev_soil_uri - a URI to a gdal dataset for the previous soil storage
+            amounts
+
+        interflow_uri - a URI to a gdal dataset for the interflow
+
+        baseflow_uri - a URI to a gdal dataset for the baseflow
+
+        out_uri - URI to the output streamflow dataset
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+    no_data_list = []
+    # Build up a list of nodata values to check against
+    for raster_uri in [water_uri, prev_soil_uri, interflow_uri, baseflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def storage_op(water_pix, prev_soil_pix, interflow_pix, baseflow_pix):
+        """A vectorize operation for calculating the soil storage
+
+            water_pix - a float value for the impervious area in fraction
+            prev_soil_pix - a float value for the alpha coefficients
+            interflow_pix - a float value for the impervious area in fraction
+            baseflow_pix - a float value for the alpha coefficients
+
+            returns - in absorption rate value"""
+        for pix, pix_nodata in zip(
+            [water_pix, prev_soil_pix, interflow_pix, baseflow_pix], no_data_list):
+            if pix == pix_nodata:
+                return out_nodata
+            else:
+                water_pix + prev_soil_pix - interflow_pix - baseflow_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+
+    raster_utils.vectorize_datasets(
+            [water_uri, prev_soil_uri, interflow_uri, baseflow_uri], storage_op,
+            out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+
 def calculate_streamflow(
         dflow_uri, interflow_uri, baseflow_uri, out_uri, out_nodata):
     """Creates a streamflow dataset at the pixel level
