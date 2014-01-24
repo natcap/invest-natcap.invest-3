@@ -59,7 +59,8 @@ row_cache = odict()
 
 for row_index in xrange(30):
     for row_offset in xrange(3):
-        offset_row_index = row_index + row_offset
+        offset_row_inde
+        x = row_index + row_offset
 
         if offset_row_index < 0 or offset_row_index >= n_rows:
             continue
