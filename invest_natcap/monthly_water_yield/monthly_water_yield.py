@@ -185,13 +185,13 @@ def execute(args):
             return 0.0
 
     # URI for initial soil_storage
-    soil_storage_uri = os.path.join(
-            intermediate_dir, 'soil_storage%s.tif' % file_suffix)
+    prev_storage_uri = os.path.join(
+            intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
 
     # Create initial S_t-1 for now. Set all values to 0.0
     LOGGER.debug("Initialize Soil Storage Raster")
     raster_utils.vectorize_datasets(
-            [dem_aligned_uri], zero_op, soil_storage_uri,
+            [dem_aligned_uri], zero_op, prev_storage_uri,
             gdal.GDT_Float32, float_nodata, dem_cell_size,
             'intersection', aoi_uri=watershed_uri)
 
@@ -267,8 +267,8 @@ def execute(args):
             "please check the two CSV tables")
 
     # Create a URI to hold the previous months soil storage
-    prev_soil_uri = os.path.join(
-            intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
+    cur_storage_uri = os.path.join(
+            intermediate_dir, 'soil_storage_cur%s.tif' % file_suffix)
     # Construct reusable URIs for each month
     precip_uri = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
     eto_uri = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
@@ -305,6 +305,8 @@ def execute(args):
     # Calculate the absorption raster
     calculate_in_absorption_rate(
             imperv_stream_uri, alpha_one_uri, absorption_uri, float_nodata)
+
+    counter = 0
 
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
@@ -359,33 +361,31 @@ def execute(args):
         # Calculate Evaporation
         clean_uri([evap_uri, etc_uri])
         calculate_evaporation(
-                soil_storage_uri, smax_aligned_uri, water_uri, eto_uri, etk_uri,
+                prev_storage_uri, smax_aligned_uri, water_uri, eto_uri, etk_uri,
                 evap_uri, etc_uri, float_nodata)
 
         # Calculate Baseflow
         clean_uri([baseflow_uri])
         calculate_baseflow(
-                alpha_three_uri, soil_storage_uri, evap_uri, beta, baseflow_uri,
+                alpha_three_uri, prev_storage_uri, evap_uri, beta, baseflow_uri,
                 float_nodata)
 
         # Calculate Intermediate Interflow
         clean_uri([intermed_interflow_uri])
         calculate_intermediate_interflow(
-                alpha_two_uri, soil_storage_uri, water_uri, evap_uri,
+                alpha_two_uri, prev_storage_uri, water_uri, evap_uri,
                 baseflow_uri, beta, intermed_interflow_uri, float_nodata)
 
         # Calculate Final Interflow
         clean_uri([interflow_uri])
         calculate_final_interflow(
-                soil_storage_uri, evap_uri, baseflow_uri, smax_aligned_uri,
+                prev_storage_uri, evap_uri, baseflow_uri, smax_aligned_uri,
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
 
-        # Calculate Soil Moisture for current time step, to be used as
-        # previous time step in the next iteration
-        clean_uri([prev_soil_uri])
-        shutil.copy(soil_storage_uri, prev_soil_uri)
-        clean_uri([soil_storage_uri])
+        calculate_soil_storage(
+            water_uri, prev_storage_uri, interflow_uri, baseflow_uri,
+            cur_storage_uri, float_nodata)
 
         # Dictionary to store maximum aggregated values
         max_agg_dict = {}
@@ -395,7 +395,7 @@ def execute(args):
                         'max_water', 'max_prev_soil', 'max_evap']
         # List of URIs to match the above keys of which to aggregate over
         uri_agg_list = [dflow_uri, interflow_uri, baseflow_uri,
-                        water_uri, prev_soil_uri, evap_uri]
+                        water_uri, prev_storage_uri, evap_uri]
         # Aggregate direct flow, interflow, baseflow, water, evap, and previous
         # soil storage over the watersheds getting maximum values.
         # Aggregating over interflow and baseflow to get the maximum values,
@@ -445,8 +445,13 @@ def execute(args):
             add_row_csv_table(
                 subwatershed_table_uri, sub_shed_field_list, out_sub_dict)
 
+        # Calculate Soil Moisture for current time step, to be used as
+        # previous time step in the next iteration
+        clean_uri([prev_storage_uri])
+        shutil.copy(cur_storage_uri, prev_storage_uri)
+        clean_uri([cur_storage_uri])
+
         # Move on to next month
-        #break
 
 def calculate_streamflow_storage(
         max_agg_dict, precip_agg_dict, field_list, shed_list, cur_month):
@@ -647,9 +652,9 @@ def calculate_soil_storage(
             if pix == pix_nodata:
                 return out_nodata
             else:
-                water_pix + prev_soil_pix - interflow_pix - baseflow_pix
+                return water_pix + prev_soil_pix - interflow_pix - baseflow_pix
 
-    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(water_uri)
 
     raster_utils.vectorize_datasets(
             [water_uri, prev_soil_uri, interflow_uri, baseflow_uri], storage_op,
@@ -688,9 +693,9 @@ def calculate_streamflow(
             if pix == pix_nodata:
                 return out_nodata
             else:
-                dflow_pix + interflow_pix + baseflow_pix
+                return dflow_pix + interflow_pix + baseflow_pix
 
-    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(dflow_uri)
 
     raster_utils.vectorize_datasets(
             [dflow_uri, interflow_uri, baseflow_uri], streamflow_op,
