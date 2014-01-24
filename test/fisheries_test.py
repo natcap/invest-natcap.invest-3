@@ -4,6 +4,7 @@ import os
 import logging
 import glob
 import filecmp
+from nose.plugins.skip import SkipTest
 
 import invest_natcap.testing
 
@@ -68,7 +69,9 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
+
     def test_age_no_gender_smoke(self):
+        raise SkipTest
 
         #Going to use Blue Crab for testing.
         args = {}
@@ -82,6 +85,24 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['alpha'] = 6050000
         args['beta'] = 0.00000004140
         args['init_recruits'] = 200000
+        args['duration'] = 100
+
+        fisheries.execute(args)
+
+    def test_age_gendered_smoke(self):
+
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
+        args['maturity_type'] = "Age Specific"
+        #Are counting each gender/age combo as an age class?
+        args['num_classes'] = 10
+        args['is_gendered'] = True
+        args['rec_eq'] = "Ricker"
+        args['alpha'] = 2000000
+        args['beta'] = 0.00000030912
+        args['init_recruits'] = 2249339326901.15
         args['duration'] = 100
 
         fisheries.execute(args)
