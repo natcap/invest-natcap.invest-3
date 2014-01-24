@@ -15,6 +15,7 @@ import osgeo
 from osgeo import gdal
 from cython.operator cimport dereference as deref
 
+
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libcpp.set cimport set as c_set
@@ -673,6 +674,77 @@ cdef int _is_sink(
             return 1
     return 0
 
+@cython.boundscheck(False)
+cdef void _build_flat_set(
+    band, float nodata_value, int n_rows, int n_cols,
+    int *row_offsets, int *col_offsets, c_set[int] *flat_set):
+
+    cdef float dem_value, neighbor_dem_value
+    #get the ceiling of the integer division
+    cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
+
+    cdef int row_index, col_index
+    cdef int ul_row_index = 0, ul_col_index = 0
+    cdef int lr_col_index = n_cols, lr_row_index = 3
+    cdef int w_row_index, w_col_index
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
+        win_ysize=3)
+
+    for row_index in range(n_rows):
+        #Grab three rows at a time
+        if _update_window(
+            row_index, 0, &ul_row_index, &ul_col_index,
+            &lr_row_index, &lr_col_index, n_rows, n_cols,
+            3, n_cols, 1):
+            band.ReadAsArray(
+                xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
+                win_ysize=3, buf_obj=dem_array)
+
+        for col_index in range(n_cols):
+            w_row_index = row_index - ul_row_index
+            dem_value = dem_array[w_row_index, col_index]
+            if dem_value == nodata_value:
+                continue
+
+            for neighbor_index in xrange(8):
+                allowed_neighbor[neighbor_index] = 1
+            if w_row_index == 0:
+                #don't allow top row 1 2 3
+                allowed_neighbor[1] = 0
+                allowed_neighbor[2] = 0
+                allowed_neighbor[3] = 0
+            elif w_row_index == n_rows - 1:
+                #don't allow bottom row 5 6 7
+                allowed_neighbor[5] = 0
+                allowed_neighbor[6] = 0
+                allowed_neighbor[7] = 0
+
+            if col_index == 0:
+                #don't allow left column 3 4 5
+                allowed_neighbor[3] = 0
+                allowed_neighbor[4] = 0
+                allowed_neighbor[5] = 0
+            elif col_index == n_cols - 1:
+                #don't allow right column 0 1 7
+                allowed_neighbor[0] = 0
+                allowed_neighbor[1] = 0
+                allowed_neighbor[7] = 0
+
+            #check all the neighbors, if nodata or lower, this isn't flat
+            for neighbor_index in xrange(8):
+                if not allowed_neighbor[neighbor_index]:
+                    continue
+                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
+                w_neighbor_col_index = col_index + col_offsets[neighbor_index]
+                neighbor_dem_value = dem_array[w_neighbor_row_index, w_neighbor_col_index]
+                if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
+                    break
+            else:
+                #This is a flat element
+                deref(flat_set).insert(row_index * n_cols + col_index)
+
 
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
@@ -699,14 +771,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
     cdef int MAX_DISTANCE = n_rows * n_cols #no distance will be greater than this
+
+    #this will keep track of the indices for traversing the sink and edge cells
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
-    cdef int row_index, col_index, current_row_indebx, current_n_rows, sink_row_index, sink_col_index, edge_row_index, edge_col_index
 
+    cdef int row_index, col_index, sink_row_index, sink_col_index, edge_row_index, edge_col_index
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
 
     #Identify sink cells
-    sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
@@ -733,33 +806,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     start = time.time()
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
-    dem_array = numpy.empty((3, n_cols), dtype=numpy.float32)
-    for row_index in range(1, n_rows - 1):
-        dem_out_band.ReadAsArray(
-            xoff=0, yoff=row_index-1, win_xsize=n_cols,
-            win_ysize=3, buf_obj=dem_array)
-        for col_index in range(1, n_cols - 1):
-            #nodata values aren't flat
-            if dem_array[1, col_index] == nodata_value:
-                continue
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                neighbor_row_index = 1 + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                
-                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
-                    break
-                if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[1, col_index]:
-                    break
-            else:
-                #This is a flat element
-                flat_set.insert(row_index * n_cols + col_index)
-
-    #Load the dem_offset raster/band/array
-    cdef Row_Col_Weight_Tuple current_cell_tuple
-    row_window_size = MAX_WINDOW_SIZE
-    col_window_size = row_window_size
-    cdef int window_buffer_size = 2
+    cdef c_set[int] flat_set_for_looping
+    
+    row_window_size = 3
+    col_window_size = n_cols
+    cdef int window_buffer_size = 1
     if row_window_size > n_rows:
         row_window_size = n_rows
     if col_window_size > n_cols:
@@ -772,6 +823,39 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
         win_ysize=row_window_size)
 
+    cdef int window_row_index, window_col_index
+    cdef float dem_value, neighbor_dem_value
+    #get the ceiling of the integer division
+    cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
+
+    #search for flat cells
+    _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
+    LOGGER.debug("flat_set size %d" % (flat_set.size()))
+    cdef int flat_index, neighbor_flat_index
+    #make a copy of the flat index so we can break it down for iteration but
+    #keep the old one for rapid testing of flat cells
+    for flat_index in flat_set:
+        flat_set_for_looping.insert(flat_set_for_looping.end(), flat_index)
+
+    #Load the dem_offset raster/band/array
+    cdef Row_Col_Weight_Tuple current_cell_tuple
+    LOGGER.info('finished flat cell detection, now identify plateaus')
+
+    row_window_size = MAX_WINDOW_SIZE
+    col_window_size = MAX_WINDOW_SIZE
+    if row_window_size > n_rows:
+        row_window_size = n_rows
+    if col_window_size > n_cols:
+        col_window_size = n_cols
+
+    ul_row_index = 0
+    ul_col_index = 0
+    lr_row_index = row_window_size
+    lr_col_index = col_window_size
+    dem_array =  dem_out_band.ReadAsArray(
+        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+        win_ysize=row_window_size)
+    
     dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
@@ -810,10 +894,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.info('identify sink cells')
     cdef int sink_cell_hits = 0, edge_cell_hits = 0
 
-    cdef int flat_index, neighbor_flat_index
     cdef queue[int] flat_region_queue
-
-    for flat_index in flat_set:
+    gdal.SetCacheMax(2**30)
+    while flat_set_for_looping.size() > 0:
+        flat_index = deref(flat_set_for_looping.begin())
+        flat_set_for_looping.erase(flat_index)
         row_index = flat_index / n_cols
         col_index = flat_index % n_cols
         if _update_window(
@@ -872,11 +957,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         flat_region_queue.push(flat_index)
         region_count += 1
         if region_count % 100 == 0:
-            LOGGER.info('working on plateau #%d (reports every 100 plateaus)' % region_count)
-
+            LOGGER.info('working on plateau #%d (reports every 100 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+            
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
             flat_index = flat_region_queue.front()
+            flat_set_for_looping.erase(flat_index)
             flat_region_queue.pop()
             flat_row_index = flat_index / n_cols
             flat_col_index = flat_index % n_cols
@@ -991,6 +1077,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 dem_sink_offset[w_neighbor_row_index, w_neighbor_col_index] = MAX_DISTANCE
                 dirty_dem_sink_offset = True
 
+        ##for debugging
+        #while (not flat_region_queue.empty()):
+        #    flat_region_queue.pop()            
+        #while (not sink_queue.empty()):
+        #    sink_queue.pop()
+        #while (not edge_queue.empty()):
+        #    edge_queue.pop()
+        
+        
         #process sink offsets for region
         while sink_queue.size() > 0:
             sink_cell_hits += 1
@@ -1094,10 +1189,18 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     dem_edge_offset_band.WriteArray(
                         dem_edge_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
                     dirty_dem_edge_offset = False
+                    
+                if dirty_dem_sink_offset:
+                    dem_sink_offset_band.WriteArray(
+                        dem_sink_offset, xoff=old_ul_col_index, yoff=old_ul_row_index)
+                    dirty_dem_sink_offset = False
 
                 dem_out_band.ReadAsArray(
                     xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                     win_ysize=row_window_size, buf_obj=dem_array)
+                dem_sink_offset_band.ReadAsArray(
+                    xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+                    win_ysize=row_window_size, buf_obj=dem_sink_offset)
                 dem_edge_offset_band.ReadAsArray(
                     xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
                     win_ysize=row_window_size, buf_obj=dem_edge_offset)
@@ -1157,6 +1260,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     if dirty_dem_edge_offset:
         dem_edge_offset_band.WriteArray(
             dem_edge_offset, xoff=ul_col_index, yoff=ul_row_index)
+        dirty_dem_edge_offset = False
 
     
     #Find max distance
