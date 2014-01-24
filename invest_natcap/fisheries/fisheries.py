@@ -156,7 +156,9 @@ def execute(args):
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
+    LOGGER.debug(rec_dict)
     core_args['rec_dict'] = rec_dict
+
 
     #Direct pass all these variables
     core_args['workspace_uri'] = args['workspace_uri']
@@ -376,7 +378,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
     #pre-populate with area names
     for area_name in area_names:
         if area_name.lower() == 'survival':
-            area_name = '1'
+            area_name = 'AOI'
         main_dict['Area_Params'][area_name] = {}
 
     exp_frac_exists = False
@@ -399,7 +401,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         for n in range(len(area_names)):
             curr_area_name = area_names[n]
             if curr_area_name.lower() == 'survival':
-                curr_area_name = '1'
+                curr_area_name = 'AOI'
             
             param_value = line[n]
        
