@@ -24,16 +24,16 @@ class AestheticQualityTest(unittest.TestCase):
 ##        args['overlap_uri'] = 'data/aesthetic_quality/BC_parks.shp'
 ##        aesthetic_quality.execute(args)
 
-    def test_reclassify_quantile_dataset_uri(self):
-        dataset_uri = "/home/mlacayo/Desktop/aq_tif/vshed.tif"
-        quantile_list = [25, 50, 75, 100]
-        dataset_out_uri = "/home/mlacayo/Desktop/vshed_qual.tif"
-        datatype_out = gdal.GDT_Int32
-        nodata_out = -1
+#    def test_reclassify_quantile_dataset_uri(self):
+#        dataset_uri = "/home/mlacayo/Desktop/aq_tif/vshed.tif"
+#        quantile_list = [25, 50, 75, 100]
+#        dataset_out_uri = "/home/mlacayo/Desktop/vshed_qual.tif"
+#        datatype_out = gdal.GDT_Int32
+#        nodata_out = -1
         
-        aesthetic_quality.reclassify_quantile_dataset_uri(dataset_uri,
-                                                          quantile_list,
-                                                          dataset_out_uri,
-                                                          datatype_out,
-                                                          nodata_out)
+#        aesthetic_quality.reclassify_quantile_dataset_uri(dataset_uri,
+#                                                          quantile_list,
+#                                                          dataset_out_uri,
+#                                                          datatype_out,
+#                                                          nodata_out)
 
