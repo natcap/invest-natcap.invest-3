@@ -102,7 +102,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['rec_eq'] = "Ricker"
         args['alpha'] = 2000000
         args['beta'] = 0.00000030912
-        args['init_recruits'] = 200000
+        args['init_recruits'] = 2249339326901.15
         args['duration'] = 100
 
         fisheries.execute(args)

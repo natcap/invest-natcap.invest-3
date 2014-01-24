@@ -191,7 +191,41 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
-    LOGGER.debug(cycle_dict)
+def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
+                    migration_dict, duration):
+    
+    #Need to know if we're using gendered ages, b/c it changes the age
+    #specific initialization equation. We need to know the two last stages
+    #that we have to look out for to switch the EQ that we use.
+    if is_gendered:
+        first_age = [order[0], order[len(order)/2]]
+        final_age = [order[len(order)/2-1], order[len(order)-1]]
+    else:
+        first_age = [order[0]]
+        final_age = [order[len(order)-1]]
+    
+    for cycle in range(1, duration):
+
+        #Initialize this current cycle
+        cycle_dict[cycle] = {}
+
+        #This will be used for each 0 age in the cycle. 
+        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
+                                                rec_dict, gender_var, cycle)
+   
+        for area in params_dict['Area_Params'].keys():
+
+            #Initialize current area within cycle.
+            cycle_dict[cycle][area] = {}
+
+            area_params = params_dict['Area_Params'][area]
+            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
+
+            for i, age in enumerate(order):
+                
+                #a = 0
+                if age in first_age:
+                    pass
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
@@ -282,11 +316,6 @@ def spawner_count(cycle_dict, params_dict, cycle):
 
     return spawner_sum
 
-def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
-                    migration_dict, duration):
-    pass
-
-
 def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
                     cycle_dict):
     '''Set the initial population numbers within cycling dictionary.
@@ -363,8 +392,10 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             cycle_dict[0][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
+            LOGGER.debug("The larval dispersal for %s is %s." % (area, larval_disp))
+            LOGGER.debug(area_params)
             #For age = 0, count = init_recruits
             for age in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
