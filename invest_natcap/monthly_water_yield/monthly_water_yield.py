@@ -586,16 +586,15 @@ def add_row_csv_table(csv_uri, column_header, single_dict):
     # to the file
     if not os.path.isfile(csv_uri):
         csv_file = open(csv_uri, 'wb')
-
-        csv_writer = csv.DictWriter(csv_file, column_header)
-        # Write the columns as the first row in the table
-        csv_writer.writerow(dict((fn, fn) for fn in column_header))
-
+        csv_writer = csv.DictWriter(
+            csv_file, fieldnames=column_header, lineterminator = '\n')
+        csv_writer.writeheader()
     else:
         # Open the CSV file in append mode 'a'. This will allow us to just tack
         # on a new row
         csv_file = open(csv_uri, 'a')
-        csv_writer = csv.DictWriter(csv_file, column_header)
+        csv_writer = csv.DictWriter(
+            csv_file, fieldnames=column_header, lineterminator = '\n')
 
     csv_writer.writerow(single_dict)
 
