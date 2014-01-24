@@ -40,6 +40,9 @@ class odict(DictMixin):
         copyDict._keys = self._keys[:]
         return copyDict
 
+
+
+
     
 nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
 raster_utils.new_raster_from_base_uri(
@@ -76,4 +79,4 @@ for row_index in xrange(30):
             print 'loading row %d' % offset_row_index
             row_cache[offset_row_index] = (row_data, False)
         else:
-            print "we've got row %d loaded" % (offset_row_index)
+            print "we've got row %d loaded update order" % (offset_row_index)
