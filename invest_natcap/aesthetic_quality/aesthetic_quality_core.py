@@ -1165,6 +1165,9 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist, \
     add_events, center_events, remove_events, I, J = \
     aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
     max_dist)
+    # I and J are relative to the viewshed_shape. Make them absolute
+    I += row_min
+    J += col_min
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
