@@ -41,11 +41,12 @@ class odict(DictMixin):
         return copyDict
 
 
+
+
     
 nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
-#raster_utils.new_raster_from_base_uri(
-#    dem_uri, out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-#    INF)
+raster_utils.new_raster_from_base_uri(
+    dem_uri, out_uri, 'GTiff', nodata_value, gdal.GDT_Float32)
 
 dem_ds = gdal.Open(dem_uri)
 dem_band = dem_ds.GetRasterBand(1)
@@ -58,15 +59,15 @@ cache_rows = 10
 row_cache = odict()
 
 for row_index in xrange(30):
+    print len(row_cache)
     for row_offset in xrange(3):
         offset_row_inde
         x = row_index + row_offset
 
         if offset_row_index < 0 or offset_row_index >= n_rows:
             continue
-
         if offset_row_index not in row_cache:
-            if len(row_cache) > cache_rows:
+            if len(row_cache) >= cache_rows:
                 #we need to bump something out of the cache
                 cached_row_index, (row_data, cache_dirty) = row_cache.popitem()
                 if cache_dirty:
@@ -76,6 +77,7 @@ for row_index in xrange(30):
             
             row_data = dem_band.ReadAsArray(
                 xoff=0, yoff=offset_row_index, win_xsize=n_cols, win_ysize=1)
+            print 'loading row %d' % offset_row_index
             row_cache[offset_row_index] = (row_data, False)
         else:
-            print "we've got row %d loaded" % (offset_row_index)
+            print "we've got row %d loaded update order" % (offset_row_index)
