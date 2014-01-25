@@ -1116,10 +1116,12 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     assert input_raster is not None, message
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
     array_shape = input_array.shape
+    input_raster = None
+    nodata = raster_utils.get_nodata_from_uri(input_uri)
     print('computing viewshed on ' + input_uri, array_shape)
     
     # Compute the viewshed on it
-    output_array = compute_viewshed(input_array, coordinates, \
+    output_array = compute_viewshed(input_array, nodata, coordinates, \
     obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
     
     # Save the output in the output URI
@@ -1132,16 +1134,26 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
-def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist, \
-    cell_size, refraction_coeff, alg_version):
+def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
+    tgt_elev, max_dist, cell_size, refraction_coeff, alg_version):
     """Compute the viewshed for a single observer. 
         Inputs: 
-            -DEM: a numpy array of terrain elevations
-            -for a detailed explanation of the rest of the parameters, 
-            see viewshed's docstring as they are passed as-is to this function
-        
+            -input_array: a numpy array of terrain elevations
+            -nodata: input_array's nodata value
+            -coordinates: tuple (east, north) of coordinates of viewing
+                position
+            -obs_elev: observer elevation above the raster map.
+            -tgt_elev: offset for target elevation above the ground. Applied to
+                every point on the raster
+            -max_dist: maximum visibility radius. By default infinity (-1), 
+            -cell_size: cell size in meters (integer)
+            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
+            -alg_version: name of the algorithm to be used. Either 'cython'
+            (default) or 'python'.
+
         Returns the visibility map for the DEM as a numpy array"""
-    visibility_map = np.ones(input_array.shape, dtype=np.int8)
+    visibility_map = np.zeros(input_array.shape, dtype=np.int8)
+    visibility_map[input_array == nodata] = 255
     array_shape = input_array.shape
     # 1- get perimeter cells
     # TODO: Make this function return 10 scalars instead of 2 arrays 
