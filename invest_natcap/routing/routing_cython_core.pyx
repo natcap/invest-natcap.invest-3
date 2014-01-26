@@ -767,21 +767,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
     dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
-
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
-    cdef int MAX_DISTANCE = n_rows * n_cols #no distance will be greater than this
-
-    #this will keep track of the indices for traversing the sink and edge cells
-    cdef queue[Row_Col_Weight_Tuple] sink_queue
-    cdef queue[Row_Col_Weight_Tuple] edge_queue
-
+    
     cdef int row_index, col_index, sink_row_index, sink_col_index, edge_row_index, edge_col_index
-    cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
-
+    
     #Identify sink cells
     cdef Row_Col_Weight_Tuple t
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
 
     cdef int weight, w_row_index, w_col_index, region_count = 0
     cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
@@ -789,8 +781,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index
     cdef int neighbor_row_index, neighbor_col_index
 
-    #copy the dem to a copy so we know the type
+    #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)
+    cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         INF)
@@ -801,12 +794,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
-
     LOGGER.info('identify flat cells')
     start = time.time()
-    #search for flat areas, iterate through the array 3 rows at a time
-    cdef c_set[int] flat_set
-    cdef c_set[int] flat_set_for_looping
     
     row_window_size = 3
     col_window_size = n_cols
@@ -819,16 +808,17 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     ul_col_index = 0
     lr_row_index = row_window_size
     lr_col_index = col_window_size
-    dem_array = dem_out_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
+        dem_out_band.ReadAsArray(
+            xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
+            win_ysize=row_window_size))
 
     cdef int window_row_index, window_col_index
-    cdef float dem_value, neighbor_dem_value
-    #get the ceiling of the integer division
-    cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
-
+    
     #search for flat cells
+    #search for flat areas, iterate through the array 3 rows at a time
+    cdef c_set[int] flat_set
+    cdef c_set[int] flat_set_for_looping
     _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
     cdef int flat_index, neighbor_flat_index
@@ -895,7 +885,28 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int sink_cell_hits = 0, edge_cell_hits = 0
 
     cdef queue[int] flat_region_queue
-    gdal.SetCacheMax(2**30)
+    
+    #no path in the raster will will be greater than this
+    cdef int MAX_DISTANCE = n_rows * n_cols
+    
+    #these queues will keep track of the indices for traversing the sink and edge cells
+    cdef queue[Row_Col_Weight_Tuple] sink_queue
+    cdef queue[Row_Col_Weight_Tuple] edge_queue
+    
+    cdef CACHE_ROWS = 2**8
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
+        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
+        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+        
+        
+        
     while flat_set_for_looping.size() > 0:
         flat_index = deref(flat_set_for_looping.begin())
         flat_set_for_looping.erase(flat_index)
@@ -952,6 +963,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             continue
 
         #mark the cell as visited
+        
         dem_sink_offset[w_row_index, w_col_index] = MAX_DISTANCE
         dirty_dem_sink_offset = True
         flat_region_queue.push(flat_index)
@@ -1513,6 +1525,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
+    
 @cython.profile(False)
 cdef int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
