@@ -128,6 +128,16 @@ def get_data_type_uri(ds_uri):
     return raster_data_type
 
 def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+    """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
+    
+        -in_dem_uri: URI to input surface raster
+        -out_viewshed_uri: URI to the output raster
+        -in_structure_uri: URI to a point shapefile that contains the location
+        of the observers and the viewshed radius in (negative) meters
+        -curvature_correction: flag for the curvature of the earth. Either
+        FLAT_EARTH or CURVED_EARTH. Not used yet.
+        -refraction: refraction index between 0 (max effect) and 1 (no effect).
+        Default is 0.13."""
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
     obs_elev = 1.75 # Observator's elevation in meters
