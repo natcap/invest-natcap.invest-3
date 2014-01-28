@@ -130,10 +130,10 @@ def get_data_type_uri(ds_uri):
 def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
-    obs_elev = 1.00 # Observator's elevation in meters
+    obs_elev = 1.75 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    refr_coeff = 0.13 # Refractivity coefficient
+    #refr_coeff = 0.13 # Refractivity coefficient
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
@@ -172,7 +172,7 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             if field_name == 'RADIUS2':
                 field_type = field_def.GetType()
                 message = 'Wrong field type ' + str(field_type) + \
-                    ' expected 0 (ogr.OFTInteger)'
+                ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
                 max_dist = -feature.GetFieldAsInteger(field)
                 max_dist = int(max_dist/cell_size)
