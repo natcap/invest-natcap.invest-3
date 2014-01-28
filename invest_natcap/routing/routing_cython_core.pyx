@@ -833,7 +833,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     
-    cdef int CACHE_ROWS = 2**12
+    cdef int CACHE_ROWS = 2**8
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_cache = (
@@ -880,9 +880,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if cache_dirty[cache_row_index]:
                 old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
                 dem_sink_offset_band.WriteArray(
-                    dem_sink_offset_cache[cache_row_index], xoff=0, yoff=old_row_index)
+                    dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
                 dem_edge_offset_band.WriteArray(
-                    dem_edge_offset_cache[cache_row_index], xoff=0, yoff=old_row_index)
+                    dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
                 cache_dirty[cache_row_index] = 0
                 
             #load a new row
