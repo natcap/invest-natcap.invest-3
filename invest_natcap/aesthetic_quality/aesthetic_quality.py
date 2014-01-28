@@ -127,7 +127,8 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
+curvature_correction, refr_coeff):
     """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
     
         -in_dem_uri: URI to input surface raster
@@ -143,7 +144,6 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     obs_elev = 1.75 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    #refr_coeff = 0.13 # Refractivity coefficient
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
