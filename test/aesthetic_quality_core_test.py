@@ -1172,11 +1172,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         pixel_visibility = (np.ones(array_shape) * 2).astype(np.int16)
 
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
-        viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
+        255, viewpoint, 1.75, 0.0, -1.0, 100, 0.13, 'python')
 
 
         pixel_visibility_cython = aesthetic_quality_core.compute_viewshed( \
-        DEM, viewpoint, 1.75, 0.0, -1.0, 1.0, 'cython')
+        DEM, 255, viewpoint, 1.75, 0.0, -1.0, 100, 0.13, 'cython')
         
         difference = np.sum(np.absolute(pixel_visibility - pixel_visibility_cython))
         if difference > 0:
