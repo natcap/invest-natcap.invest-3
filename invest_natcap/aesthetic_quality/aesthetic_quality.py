@@ -141,7 +141,7 @@ curvature_correction, refr_coeff):
         Default is 0.13."""
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
-    obs_elev = 1.75 # Observator's elevation in meters
+    obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
 
@@ -194,8 +194,8 @@ curvature_correction, refr_coeff):
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        j = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
