@@ -1191,7 +1191,8 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     D_earth = 12740000 # Diameter of the earth in meters
     # 
     difference = (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth 
-    print("difference", np.sum(np.absolute(difference)), \
+    print("refraction coeff", refraction_coeff)
+    print("abs diff", np.sum(np.absolute(difference)), "rel diff" \
     np.sum(np.absolute(difference))/ np.sum(np.absolute(visibility)))
     visibility += difference 
     # 3- Divide the height by the distance to get a visibility score
