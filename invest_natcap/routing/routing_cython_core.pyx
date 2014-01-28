@@ -745,7 +745,6 @@ cdef void _build_flat_set(
                 #This is a flat element
                 deref(flat_set).insert(row_index * n_cols + col_index)
 
-
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -784,7 +783,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         INF)
     dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
     dem_out_band = dem_out_ds.GetRasterBand(1)
-    cdef int row_index
+    cdef int row_index, col_index
     for row_index in range(n_rows):
         dem_out_array = dem_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
@@ -850,8 +849,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
 
     cdef Row_Col_Weight_Tuple current_cell_tuple
-    cdef int cache_row_offset, cache_row_index, cache_row_tag, cache_row_offset_index, flat_row_index, flat_col_index
-    cdef int col_index, sink_row_index, sink_col_index, edge_row_index, edge_col_index
+    cdef int cache_row_offset, cache_row_index, cache_row_tag, cache_row_offset_index
     cdef int neighbor_cache_row_index, neighbor_row_index, neighbor_col_index
 
     while flat_set_for_looping.size() > 0:
@@ -918,13 +916,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             flat_index = flat_region_queue.front()
             flat_set_for_looping.erase(flat_index)
             flat_region_queue.pop()
-            flat_row_index = flat_index / n_cols
-            flat_col_index = flat_index % n_cols
+            
+            row_index = flat_index / n_cols
+            col_index = flat_index % n_cols
 
-            #load a new window if necessary
             #see if we need to update the row cache
-            for cache_row_offset_index in range(-1, 2):
-                neighbor_row_index = flat_row_index + cache_row_offset_index
+            for cache_row_offset in range(-1, 2):
+                neighbor_row_index = row_index + cache_row_offset
                 #see if that row is out of bounds
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
@@ -957,14 +955,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                     win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
 
-            cache_row_index = flat_row_index % CACHE_ROWS
+            cache_row_index = row_index % CACHE_ROWS
             
             #test if this point is an edge
             #if it's flat it could be an edge
             if flat_set.find(flat_index) != flat_set.end():
                 for neighbor_index in xrange(8):
-                    neighbor_row_index = flat_row_index + row_offsets[neighbor_index]
-                    neighbor_col_index = flat_col_index + col_offsets[neighbor_index]
+                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                    neighbor_col_index = col_index + col_offsets[neighbor_index]
                     
                     if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                         continue
@@ -980,27 +978,27 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
                     #if we don't abut a higher pixel then skip
                     if (dem_cache[neighbor_cache_row_index, neighbor_col_index] <=
-                        dem_cache[cache_row_index, flat_col_index]):
+                        dem_cache[cache_row_index, col_index]):
                         continue
 
                     #otherwise we're next to an uphill pixel, that means we're an edge
-                    t = Row_Col_Weight_Tuple(flat_row_index, flat_col_index, 0)
+                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     edge_queue.push(t)
-                    dem_edge_offset_cache[cache_row_index, flat_col_index] = 0
-                    dirty_dem_edge_offset = True
+                    dem_edge_offset_cache[cache_row_index, col_index] = 0
+                    cache_dirty[cache_row_index] = 1
                     break
             else:
                 #it's been pushed onto the plateau queue, so we know it's in the same
                 #region, but it's not flat, so it must be a sink
-                t = Row_Col_Weight_Tuple(flat_row_index, flat_col_index, 0)
+                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
-                dem_sink_offset_cache[cache_row_index, flat_col_index] = 0
+                dem_sink_offset_cache[cache_row_index, col_index] = 0
                 cache_dirty[cache_row_index] = 1
 
             #loop neighbor and test to see if we can extend
             for neighbor_index in xrange(8):
-                neighbor_row_index = flat_row_index + row_offsets[neighbor_index]
-                neighbor_col_index = flat_col_index + col_offsets[neighbor_index]
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
@@ -1011,7 +1009,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     
                 #skip if we're not on the same plateau
                 if (dem_cache[neighbor_cache_row_index, neighbor_col_index] !=
-                    dem_cache[cache_row_index, flat_col_index]):
+                    dem_cache[cache_row_index, col_index]):
                     continue
 
                 #ignore if we've already visited the neighbor
@@ -1020,8 +1018,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
                 #otherwise extend our search
                 flat_region_queue.push(
-                    (flat_row_index + row_offsets[neighbor_index]) * n_cols +
-                    flat_col_index + col_offsets[neighbor_index])
+                    (row_index + row_offsets[neighbor_index]) * n_cols +
+                    col_index + col_offsets[neighbor_index])
                 dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] = MAX_DISTANCE
                 cache_dirty[neighbor_cache_row_index] = 1
 
@@ -1030,14 +1028,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             sink_cell_hits += 1
             current_cell_tuple = sink_queue.front()
             sink_queue.pop()
-            sink_row_index = current_cell_tuple.row_index
-            sink_col_index = current_cell_tuple.col_index
+            
+            row_index = current_cell_tuple.row_index
+            col_index = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
 
-            #load a new window if necessary
             #see if we need to update the row cache
-            for cache_row_offset_index in range(-1, 2):
-                neighbor_row_index = sink_row_index + cache_row_offset_index
+            for cache_row_offset in range(-1, 2):
+                neighbor_row_index = row_index + cache_row_offset
                 #see if that row is out of bounds
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
@@ -1070,11 +1068,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                     win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
 
-            cache_row_index = sink_row_index % CACHE_ROWS
+            cache_row_index = row_index % CACHE_ROWS
 
             for neighbor_index in xrange(8):
-                neighbor_row_index = sink_row_index + row_offsets[neighbor_index]
-                neighbor_col_index = sink_col_index + col_offsets[neighbor_index]
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
@@ -1088,7 +1086,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
                 #If the neighbour is at a different height, then skip
-                if (dem_cache[cache_row_index, sink_col_index] != 
+                if (dem_cache[cache_row_index, col_index] != 
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
@@ -1111,14 +1109,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             steps += 1
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
-            edge_row_index = current_cell_tuple.row_index
-            edge_col_index = current_cell_tuple.col_index
+            
+            row_index = current_cell_tuple.row_index
+            col_index = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
 
-            #load a new window if necessary
             #see if we need to update the row cache
-            for cache_row_offset_index in range(-1, 2):
-                neighbor_row_index = edge_row_index + cache_row_offset_index
+            for cache_row_offset in range(-1, 2):
+                neighbor_row_index = row_index + cache_row_offset
                 #see if that row is out of bounds
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
@@ -1151,11 +1149,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                     win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
 
-            cache_row_index = edge_row_index % CACHE_ROWS
+            cache_row_index = row_index % CACHE_ROWS
 
             for neighbor_index in xrange(8):
-                neighbor_row_index = edge_row_index + row_offsets[neighbor_index]
-                neighbor_col_index = edge_col_index + col_offsets[neighbor_index]
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
@@ -1164,7 +1162,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
                 #If the neighbour is not at the same height, skip
-                if (dem_cache[cache_row_index, edge_col_index] !=
+                if (dem_cache[cache_row_index, col_index] !=
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
@@ -1242,6 +1240,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     cdef int w_col_index, w_neighbor_row_index, w_neighbor_col_index
     cdef int row_window_size, col_window_size
+    cdef int sink_row_index, sink_col_index, edge_row_index, edge_col_index, flat_row_index, flat_col_index
+    
     
     
 def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
