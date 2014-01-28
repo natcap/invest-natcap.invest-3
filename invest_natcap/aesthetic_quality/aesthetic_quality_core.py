@@ -1193,7 +1193,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     difference = (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth 
     print("difference", np.sum(np.absolute(difference)), \
     np.sum(np.absolute(difference))/ np.sum(np.absolute(visibility)))
-    visibility *= difference 
+    visibility += difference 
     # 3- Divide the height by the distance to get a visibility score
     visibility /= distances
 
