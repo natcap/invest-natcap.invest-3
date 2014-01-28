@@ -918,7 +918,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         return
 
     pixel = active_pixels['closest']
-    max_visibility = -1.
+    max_visibility = -1000000.
     while pixel is not None:
         # Pixel is visible
         if pixel['visibility'] > max_visibility:
