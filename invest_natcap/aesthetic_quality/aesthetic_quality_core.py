@@ -1189,7 +1189,11 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
-    visibility -= (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth
+    # 
+    difference = (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth 
+    print("difference", np.sum(np.absolute(difference)), \
+    np.sum(np.absolute(difference))/ np.sum(np.absolute(visibility)))
+    visibility *= difference 
     # 3- Divide the height by the distance to get a visibility score
     visibility /= distances
 
