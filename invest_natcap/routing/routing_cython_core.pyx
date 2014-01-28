@@ -674,7 +674,7 @@ cdef int _is_sink(
             return 1
     return 0
 
-@cython.boundscheck(False)
+    
 cdef void _build_flat_set(
     band, float nodata_value, int n_rows, int n_cols,
     int *row_offsets, int *col_offsets, c_set[int] *flat_set):
@@ -761,20 +761,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             
         returns nothing"""
 
-    
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-
     dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
         
-    #Identify sink cells
-    cdef Row_Col_Weight_Tuple t
-
-    cdef int weight, region_count = 0
-    cdef int hits, misses, steps
-    
     #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)
     cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
@@ -790,15 +780,16 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
     LOGGER.info('identify flat cells')
-    start = time.time()
     
     #search for flat cells
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
     cdef c_set[int] flat_set_for_looping
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
-    cdef int flat_index, neighbor_flat_index
+    cdef int flat_index
     #make a copy of the flat index so we can break it down for iteration but
     #keep the old one for rapid testing of flat cells
     for flat_index in flat_set:
@@ -821,7 +812,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
     LOGGER.info('identify sink cells')
-    cdef int sink_cell_hits = 0, edge_cell_hits = 0
+    cdef int sink_cell_hits = 0, edge_cell_hits = 0, steps = 0
 
     cdef queue[int] flat_region_queue
     
@@ -849,8 +840,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
 
     cdef Row_Col_Weight_Tuple current_cell_tuple
-    cdef int cache_row_offset, cache_row_index, cache_row_tag, cache_row_offset_index
+    cdef int cache_row_offset, cache_row_index, cache_row_tag
     cdef int neighbor_cache_row_index, neighbor_row_index, neighbor_col_index
+    
+    cdef Row_Col_Weight_Tuple t
+    cdef int weight, region_count = 0
+    
+
 
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
@@ -1197,6 +1193,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.debug('region_count: %d' % region_count)
     LOGGER.info('edge cell hits %d' % edge_cell_hits)
     LOGGER.info('sink cell hits %d' % sink_cell_hits)
+    LOGGER.info('cell steps %d' % steps)
 
     #Find max distance
     LOGGER.debug('calculating max distance')
@@ -1238,11 +1235,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                                   (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
 
-    cdef int w_col_index, w_neighbor_row_index, w_neighbor_col_index
-    cdef int row_window_size, col_window_size
-    cdef int sink_row_index, sink_col_index, edge_row_index, edge_col_index, flat_row_index, flat_col_index
-    
-    
     
 def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     """Calculates the D-infinity flow algorithm.  The output is a float
