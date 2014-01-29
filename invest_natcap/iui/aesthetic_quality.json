@@ -7,82 +7,98 @@
     "height": 600,
     "width" : 700,
     "elements": [
-            {
-            "id" : "workspace_list",
-            "type": "list",	        
-		    "elements": [
-                                {
-                                    "id" : "workspace_dir",
-                                    "args_id" : "workspace_dir",
-                                    "type": "folder",
-                                    "label": "Workspace",
-                                    "required": true
-                                },                        
-                                {
-                                    "id" : "aoi_uri",
-                                    "args_id" : "aoi_uri",
-                                    "type": "file",
-                                    "label": "Area of Interest",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": true
-                                },
-                                {
-                                    "id" : "structure_uri",
-                                    "args_id" : "structure_uri",
-                                    "type": "file",
-                                    "label": "Structures",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": true
-                                },
-                                {
-                                    "id" : "dem_uri",
-                                    "args_id" : "dem_uri",
-                                    "type": "file",
-                                    "label": "Digital Elevation Model",
-                                    "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
-                                    "validateAs": {"type": "GDAL"},
-                                    "required": true
-                                },                                
-                                {
-                                    "id" : "refraction",
-                                    "args_id" : "refraction",
-                                    "type": "text",
-                                    "label": "Refractivity Coefficient",
-                                    "defaultValue": "0.13",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": true
-                                },                                
-                                {
-                                    "id" : "cell_size",
-                                    "args_id" : "cell_size",
-                                    "type": "text",
-                                    "label": "Cell Size (meters)",
-                                    "defaultValue": "500",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": false
-                                },
-                                {
-                                    "id" : "pop_uri",
-                                    "args_id" : "pop_uri",
-                                    "type": "file",
-                                    "label": "Population Raster",
-                                    "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
-                                    "validateAs": {"type": "GDAL"},
-                                    "required": true
-                                },
-                                {
-                                    "id" : "overlap_uri",
-                                    "args_id" : "overlap_uri",
-                                    "type": "file",
-                                    "label": "Overlap Analysis Features",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": false
-                                }
+                {
+                "id": "aesthetic_quality_tab_group",
+                "type": "tabbedGroup",
+                "elements": 
+                [
+                    {
+                        "id": "general_tab",
+                        "label": "General",
+                        "type": "tab",
+                        "enabled": true,
+                        "elements":
+                        [
+                        {
+                        "id" : "workspace_list",
+                        "type": "list",	        
+		                "elements": [
+                            {
+                                "id" : "workspace_dir",
+                                "args_id" : "workspace_dir",
+                                "type": "folder",
+                                "label": "Workspace",
+                                "required": true
+                            },                        
+                            {
+                                "id" : "aoi_uri",
+                                "args_id" : "aoi_uri",
+                                "type": "file",
+                                "label": "Area of Interest",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": true
+                            },
+                            {
+                                "id" : "structure_uri",
+                                "args_id" : "structure_uri",
+                                "type": "file",
+                                "label": "Structures",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": true
+                            },
+                            {
+                                "id" : "dem_uri",
+                                "args_id" : "dem_uri",
+                                "type": "file",
+                                "label": "Digital Elevation Model",
+                                "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
+                                "validateAs": {"type": "GDAL"},
+                                "required": true
+                            },                                
+                            {
+                                "id" : "refraction",
+                                "args_id" : "refraction",
+                                "type": "text",
+                                "label": "Refractivity Coefficient",
+                                "defaultValue": "0.13",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": true
+                            },                                
+                            {
+                                "id" : "cell_size",
+                                "args_id" : "cell_size",
+                                "type": "text",
+                                "label": "Cell Size (meters)",
+                                "defaultValue": "500",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": false
+                            },
+                            {
+                                "id" : "pop_uri",
+                                "args_id" : "pop_uri",
+                                "type": "file",
+                                "label": "Population Raster",
+                                "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
+                                "validateAs": {"type": "GDAL"},
+                                "required": true
+                            },
+                            {
+                                "id" : "overlap_uri",
+                                "args_id" : "overlap_uri",
+                                "type": "file",
+                                "label": "Overlap Analysis Features",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": false
+                            }
+                        ]
+                    }
+                ]
+                }
 		   ]
 		   }
     ]
