@@ -686,64 +686,41 @@ cdef void _build_flat_set(
     cdef int row_index, col_index
     cdef int ul_row_index = 0, ul_col_index = 0
     cdef int lr_col_index = n_cols, lr_row_index = 3
-    cdef int w_row_index, w_col_index
+    
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
         win_ysize=3)
+    cdef int y_offset, local_y_offset
+    
+    #not flat on the edges of the raster, could be a sink
+    for row_index in range(1, n_rows-1):
+        #Grab three rows at a time and be careful of the top and bottom edge
+        y_offset = row_index - 1
+            
+        band.ReadAsArray(
+            xoff=0, yoff=y_offset, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
 
-    for row_index in range(n_rows):
-        #Grab three rows at a time
-        if _update_window(
-            row_index, 0, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            3, n_cols, 1):
-            band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
-                win_ysize=3, buf_obj=dem_array)
-
-        for col_index in range(n_cols):
-            w_row_index = row_index - ul_row_index
-            dem_value = dem_array[w_row_index, col_index]
+        #not flat on the edges of the raster
+        for col_index in range(1, n_cols - 1):
+            dem_value = dem_array[1, col_index]
             if dem_value == nodata_value:
                 continue
 
+            #check all the neighbours, if nodata or lower, this isn't flat
             for neighbor_index in xrange(8):
-                allowed_neighbor[neighbor_index] = 1
-            if w_row_index == 0:
-                #don't allow top row 1 2 3
-                allowed_neighbor[1] = 0
-                allowed_neighbor[2] = 0
-                allowed_neighbor[3] = 0
-            elif w_row_index == n_rows - 1:
-                #don't allow bottom row 5 6 7
-                allowed_neighbor[5] = 0
-                allowed_neighbor[6] = 0
-                allowed_neighbor[7] = 0
-
-            if col_index == 0:
-                #don't allow left column 3 4 5
-                allowed_neighbor[3] = 0
-                allowed_neighbor[4] = 0
-                allowed_neighbor[5] = 0
-            elif col_index == n_cols - 1:
-                #don't allow right column 0 1 7
-                allowed_neighbor[0] = 0
-                allowed_neighbor[1] = 0
-                allowed_neighbor[7] = 0
-
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                if not allowed_neighbor[neighbor_index]:
-                    continue
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = col_index + col_offsets[neighbor_index]
-                neighbor_dem_value = dem_array[w_neighbor_row_index, w_neighbor_col_index]
+                neighbor_row_index = 1 + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                
+                neighbor_dem_value = dem_array[neighbor_row_index, neighbor_col_index]
                 if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
                     break
             else:
                 #This is a flat element
                 deref(flat_set).insert(row_index * n_cols + col_index)
+    
+    cdef int w_row_index, w_col_index
 
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
