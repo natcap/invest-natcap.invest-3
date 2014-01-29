@@ -95,11 +95,36 @@
                                 "validateAs": {"type": "OGR"},
                                 "required": false
                             }
+                            ]
+                        }
+                        ]
+                    },
+                    {
+                        "id": "valuation_tab",
+                        "label": "Valuation",
+                        "type": "tab",
+                        "enabled": true,
+                        "elements":
+                        [
+                        {
+                        "id" : "workspace_list",
+                        "type": "list",	        
+		                "elements": [
+                            {
+                                "id" : "coefficient",
+                                "args_id" : "coefficient",
+                                "type": "text",
+                                "label": "Valuation function coefficient",
+                                "defaultValue": "1.0",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": false
+                            }                               
+                            ]
+                        }
                         ]
                     }
-                ]
-                }
-		   ]
+		        ]
 		   }
     ]
 }
