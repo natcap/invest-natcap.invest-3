@@ -1208,6 +1208,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
         center_events, remove_events, I, J, distances_sq, visibility, \
         visibility_map)
 
+    # Set the viewpoint visible as a convention
+    visibility_map[coordinates] = 1
+
     return visibility_map
 
 def sweep_through_angles(angles, add_events, center_events, remove_events, \
