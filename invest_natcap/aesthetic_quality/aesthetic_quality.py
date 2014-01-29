@@ -127,13 +127,23 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
+curvature_correction, refr_coeff):
+    """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
+    
+        -in_dem_uri: URI to input surface raster
+        -out_viewshed_uri: URI to the output raster
+        -in_structure_uri: URI to a point shapefile that contains the location
+        of the observers and the viewshed radius in (negative) meters
+        -curvature_correction: flag for the curvature of the earth. Either
+        FLAT_EARTH or CURVED_EARTH. Not used yet.
+        -refraction: refraction index between 0 (max effect) and 1 (no effect).
+        Default is 0.13."""
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
-    obs_elev = 1.75 # Observator's elevation in meters
+    obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    #refr_coeff = 0.13 # Refractivity coefficient
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
@@ -184,9 +194,10 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        j = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
-        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
+        'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
         (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
     

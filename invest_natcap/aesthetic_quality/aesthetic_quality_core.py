@@ -918,7 +918,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         return
 
     pixel = active_pixels['closest']
-    max_visibility = -1.
+    max_visibility = -1000000.
     while pixel is not None:
         # Pixel is visible
         if pixel['visibility'] > max_visibility:
@@ -1180,7 +1180,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
     J += col_min
-    distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
+    distances_sq = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
@@ -1189,24 +1189,27 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
-    # 
-    correction = (distances*cell_size)**2 * (1 - refraction_coeff) / D_earth 
+    correction = distances_sq*cell_size**2 * (1 - refraction_coeff) / D_earth 
     print("refraction coeff", refraction_coeff)
     print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
     np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
     visibility += correction
     # 3- Divide the height by the distance to get a visibility score
-    visibility /= distances
+    visibility /= np.sqrt(distances_sq)
 
     if alg_version is 'python':
         #print('angles', angles)
         #print('viewshed shape', viewshed_shape)
         #print('center_events', center_events)
         sweep_through_angles(angles, add_events, center_events, remove_events,\
-        I, J, distances, visibility, visibility_map)
+        I, J, distances_sq, visibility, visibility_map)
     else:
         aesthetic_quality_cython_core.sweep_through_angles(angles, add_events,\
-        center_events, remove_events, I, J, distances, visibility, visibility_map)
+        center_events, remove_events, I, J, distances_sq, visibility, \
+        visibility_map)
+
+    # Set the viewpoint visible as a convention
+    visibility_map[coordinates] = 1
 
     return visibility_map
 
