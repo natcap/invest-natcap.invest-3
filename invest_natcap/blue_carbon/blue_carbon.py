@@ -312,11 +312,23 @@ def execute(args):
     adj_bio_name = os.path.join(intermediate_dir, "%i_adj_bio.tif")
     adj_soil_name = os.path.join(intermediate_dir, "%i_adj_soil.tif")
 
+    adj_dis_soil_veg_name = os.path.join(intermediate_dir, "%i_adj_dis_soil_veg_%i.tif")
+    adj_dis_bio_veg_name = os.path.join(intermediate_dir, "%i_adj_dis_bio_veg_%i.tif")
+
+    adj_undis_soil_veg_name = os.path.join(intermediate_dir, "%i_adj_undis_soil_veg_%i.tif")
+    adj_undis_bio_veg_name = os.path.join(intermediate_dir, "%i_adj_undis_bio_veg_%i.tif")
+
     #emission file names
     veg_mask_name = os.path.join(intermediate_dir, "%i_veg_mask_%i.tif")
-    dis_veg_name = os.path.join(intermediate_dir, "%i_dis_veg_%i.tif")
-    undis_veg_name = os.path.join(intermediate_dir, "%i_undis_veg_%i.tif")
-    em_veg_name = os.path.join(intermediate_dir, "%i_%i_em_veg_%i.tif")
+
+    dis_bio_veg_name = os.path.join(intermediate_dir, "%i_dis_bio_veg_%i.tif")
+    dis_soil_veg_name = os.path.join(intermediate_dir, "%i_dis_soil_veg_%i.tif")
+
+    undis_bio_veg_name = os.path.join(intermediate_dir, "%i_undis_bio_veg_%i.tif")
+    undis_soil_veg_name = os.path.join(intermediate_dir, "%i_undis_soil_veg_%i.tif")
+
+    em_soil_veg_name = os.path.join(intermediate_dir, "%i_%i_em_soil_veg_%i.tif")
+    em_bio_veg_name = os.path.join(intermediate_dir, "%i_%i_em_bio_veg_%i.tif")
 
     #totals
     total_acc_soil_name = "total_soil_acc_%i_%i.tif"
@@ -423,7 +435,12 @@ def execute(args):
     def add_op(*values):
         if nodata_default_int in values:
             return nodata_default_int
-        return reduce(operator.add,values)
+        return reduce(operator.add, values)
+
+    def sub_op(*values):
+        if nodata_default_int in values:
+            return nodata_default_int
+        return reduce(operator.sub, values)
 
     def mul_op(*values):
         if nodata_default_int in values:
@@ -539,22 +556,13 @@ def execute(args):
     this_dis_soil_adj_uri = os.path.join(workspace_dir, dis_soil_adj_name)
 
     for veg_type in veg_type_list:
-        this_dis_veg_uri = os.path.join(workspace_dir, dis_veg_name % (this_year, veg_type))
-        this_undis_veg_uri = os.path.join(workspace_dir, undis_veg_name % (this_year, veg_type))
-
-        raster_utils.new_raster_from_base_uri(this_uri,
-                                              this_dis_veg_uri,
-                                              "GTiff",
-                                              nodata_default_float,
-                                              gdal_type_carbon,
-                                              0)
-                                 
-        raster_utils.new_raster_from_base_uri(this_uri,
-                                              this_dis_veg_uri,
-                                              "GTiff",
-                                              nodata_default_float,
-                                              gdal_type_carbon,
-                                              0)
+        for name in [dis_bio_veg_name, undis_bio_veg_name, dis_soil_veg_name, undis_soil_veg_name]:
+            raster_utils.new_raster_from_base_uri(this_uri,
+                                                  os.path.join(workspace_dir, name % (this_year, veg_type)),
+                                                  "GTiff",
+                                                  nodata_default_float,
+                                                  gdal_type_carbon,
+                                                  0)
 
     ##loop over lulc years
     for next_year in lulc_years[1:] + [analysis_year]:
@@ -695,9 +703,24 @@ def execute(args):
 
         for veg_type in veg_type_list:
             this_veg_mask_uri = os.path.join(workspace_dir, veg_mask_name % (this_year, veg_type))
-            next_dis_veg_uri = os.path.join(workspace_dir, dis_veg_name % (next_year, veg_type))
-            next_undis_veg_uri = os.path.join(workspace_dir, undis_veg_name % (next_year, veg_type))
-            next_em_veg_uri = os.path.join(workspace_dir, em_veg_name % (this_year, next_year, veg_type))
+
+            this_dis_bio_veg_uri = os.path.join(workspace_dir, dis_bio_veg_name % (this_year, veg_type))
+            this_undis_bio_veg_uri = os.path.join(workspace_dir, undis_bio_veg_name % (this_year, veg_type))
+
+            this_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (this_year, veg_type))
+            this_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (this_year, veg_type))
+
+            this_adj_dis_bio_veg_uri = os.path.join(workspace_dir, adj_dis_bio_veg_name % (this_year, veg_type))
+            this_adj_dis_soil_veg_uri = os.path.join(workspace_dir, adj_dis_soil_veg_name % (this_year, veg_type))
+
+            next_dis_bio_veg_uri = os.path.join(workspace_dir, dis_bio_veg_name % (next_year, veg_type))
+            next_undis_bio_veg_uri = os.path.join(workspace_dir, undis_bio_veg_name % (next_year, veg_type))
+
+            next_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (next_year, veg_type))
+            next_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (next_year, veg_type))
+            
+            next_em_soil_veg_uri = os.path.join(workspace_dir, em_soil_veg_name % (this_year, next_year, veg_type))
+            next_em_bio_veg_uri = os.path.join(workspace_dir, em_bio_veg_name % (this_year, next_year, veg_type))
             
             veg_mask_dict = {}
             for k in carbon:
@@ -711,52 +734,114 @@ def execute(args):
                                                 nodata_default_int,
                                                 exception_flag="values_required")                                                
                                             
-            #adjust disturbed vegetation pools
-            raster_utils.vectorize_datasets([this_dis_veg_uri, this_dis_soil_uri, this_veg_mask_uri],
+            #adjust vegetation specific disturbed soil pool by masked soil disturbance
+            raster_utils.vectorize_datasets([this_dis_soil_veg_uri, this_dis_soil_uri, this_veg_mask_uri],
                                             veg_adj_op,
-                                            next_dis_veg_uri,
+                                            this_adj_dis_soil_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
 
-            #adjust undisturbed vegetation pools
-            raster_utils.vectorize_datasets([this_dis_veg_uri, this_acc_soil_uri, this_veg_mask_uri],
+            #adjust vegetation specific disturbed biomass pool by masked biomass disturbance
+            raster_utils.vectorize_datasets([this_dis_bio_veg_uri, this_dis_bio_uri, this_veg_mask_uri],
                                             veg_adj_op,
-                                            next_undis_veg_uri,
+                                            this_adj_dis_bio_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
 
-            #calculate emitted carbon
+            #adjust vegetation specific undisturbed soil pool by masked soil accumulation
+            raster_utils.vectorize_datasets([this_undis_soil_veg_uri, this_acc_soil_uri, this_veg_mask_uri],
+                                            veg_adj_op,
+                                            next_undis_soil_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")
 
-            #adjust disturbed vegetation pools?
+            #adjust vegetation specific undisturbed biomass pool by masked biomass accumulation
+            raster_utils.vectorize_datasets([this_undis_bio_veg_uri, this_acc_bio_uri, this_veg_mask_uri],
+                                            veg_adj_op,
+                                            next_undis_bio_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")
 
-        ##calculate adjusted carbon
-        #calculate adjusted soil
-        raster_utils.vectorize_datasets([this_adj_soil_uri,
-                                         this_acc_soil_uri,
-                                         this_dis_soil_uri],
-                                         adj_op,
-                                         next_adj_soil_uri,
-                                         gdal_type_carbon,
-                                         nodata_default_float,
-                                         cell_size,
-                                         "union")
-        LOGGER.debug("Calculated adjusted soil carbon.")
+            ##calculate emitted carbon
+            #half life vectorize datasets operator
+            def half_life_op(alpha, alpha_t):
+                def h_l_op(c):
+                    try:
+                        return (0.5 ** (alpha_t/(float(alpha)))) * c
+                    except ValueError:
+                        #return 0 if alpha is None
+                        return 0
+                return h_l_op
 
-        #calculate adjusted biomass
-        raster_utils.vectorize_datasets([this_adj_bio_uri,
-                                         this_acc_soil_uri,
-                                         this_dis_soil_uri],
-                                         adj_op,
-                                         next_adj_bio_uri,
-                                         gdal_type_carbon,
-                                         nodata_default_float,
-                                         cell_size,
-                                        "union")
-        LOGGER.debug("Calculated adjusted biomass carbon.")         
+            #calculate vegetation specific emitted carbon from soil
+            raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri],
+                                            half_life_op(half_life[veg_type][half_life_field_soil], t),
+                                            next_em_soil_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")
+
+            #calculate vegetation specific emitted carbon from biomass
+            raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri],
+                                            half_life_op(half_life[veg_type][half_life_field_bio], t),
+                                            next_em_bio_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")
+
+            ##adjust carbon pools
+            #adjust disturbed soil pool by emissions
+            raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri, next_em_soil_veg_uri],
+                                            sub_op,
+                                            next_dis_soil_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")                                            
+
+            #adjust bisturbed biomass pool by emissions
+            raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
+                                            sub_op,
+                                            next_dis_bio_veg_uri,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
+                                            cell_size,
+                                            "union")                                            
+            
+##        ##calculate adjusted carbon
+##        #calculate adjusted soil
+##        raster_utils.vectorize_datasets([this_adj_soil_uri,
+##                                         this_acc_soil_uri,
+##                                         this_dis_soil_uri],
+##                                         adj_op,
+##                                         next_adj_soil_uri,
+##                                         gdal_type_carbon,
+##                                         nodata_default_float,
+##                                         cell_size,
+##                                         "union")
+##        LOGGER.debug("Calculated adjusted soil carbon.")
+##
+##        #calculate adjusted biomass
+##        raster_utils.vectorize_datasets([this_adj_bio_uri,
+##                                         this_acc_soil_uri,
+##                                         this_dis_soil_uri],
+##                                         adj_op,
+##                                         next_adj_bio_uri,
+##                                         gdal_type_carbon,
+##                                         nodata_default_float,
+##                                         cell_size,
+##                                        "union")
+##        LOGGER.debug("Calculated adjusted biomass carbon.")         
 
         ##change base year variables
         this_year = next_year
