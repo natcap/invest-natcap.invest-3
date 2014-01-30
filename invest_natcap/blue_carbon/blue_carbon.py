@@ -34,7 +34,7 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
 
 class ConstantOp:
     """A class that allows constants to be added to function calls"""
-    
+
     def __init__(self, op, *c):
         """Constructor for ConstantOp class
 
@@ -87,13 +87,13 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 
     if os.path.exists(datasource_uri):
         driver.DeleteDataSource(datasource_uri)
-    
+
     datasource = driver.CreateDataSource(datasource_uri)
     if datasource is None:
         msg = "Could not create %s." % datasource_uri
         LOGGER.error(msg)
         raise IOError, msg
-    
+
     dataset = gdal.Open(dataset_uri)
 
     field_name = "Id"
@@ -125,7 +125,7 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 
     # create a new feature
     feature = ogr.Feature(feature_defn)
-    feature.SetGeometry(polygon)    
+    feature.SetGeometry(polygon)
     feature.SetField(field_name, field_value)
 
     layer.CreateFeature(feature)
@@ -147,14 +147,14 @@ def sum_uri(dataset_uri, datasource_uri):
     """
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
-    
+
 def sum_by_category_uri(category_uri, value_uri,categories=None):
     if categories == None:
         categories = raster_utils.unique_raster_values_count(category_uri).keys()
 
     category_src = gdal.Open(category_uri)
     category_band = category_src.GetRasterBand(1)
-    
+
     values_src = gdal.Open(value_uri)
     values_band = values_src.GetRasterBand(1)
 
@@ -166,7 +166,7 @@ def sum_by_category_uri(category_uri, value_uri,categories=None):
 
             category_sum[category]+=numpy.sum(values_array[category_array == category])
 
-    return category_sum            
+    return category_sum
 
 def execute(args):
     """Entry point for the blue carbon model.
@@ -193,7 +193,7 @@ def execute(args):
     :type args["lulc_uri_5"]: str
     :param args["year_5"]: The year for the land use land cover raster for time 5.
     :type args["year_5"]: int
-    
+
     """
     ##preprocess args for possible ease of adoption of future IUI features
     #this creates a hypothetical IUI element from existing element
@@ -225,7 +225,7 @@ def execute(args):
     debug_log = logging.StreamHandler(debug_log_file)
     debug_log.setFormatter(logging.Formatter(fmt='%(asctime)s %(message)s', datefmt="%M:%S"))
     LOGGER.addHandler(debug_log)
-    
+
     #copy LULC for analysis year
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
@@ -256,7 +256,7 @@ def execute(args):
     acc_soil_csv_uri = args["soil_accumulation_csv_uri"]
     acc_soil_field_key = "veg type"
     acc_bio_csv_uri = args["biomass_accumulation_csv_uri"]
-    acc_bio_field_key = "veg type"    
+    acc_bio_field_key = "veg type"
 
     #half-life table
     half_life_csv_uri = args["half_life_csv_uri"]
@@ -275,7 +275,7 @@ def execute(args):
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
         os.makedirs(os.path.join(workspace_dir, intermediate_dir))
-    
+
     #carbon pool file names
     above_name = os.path.join(intermediate_dir, "%i_stock_above.tif")
     below_name = os.path.join(intermediate_dir, "%i_stock_below.tif")
@@ -289,7 +289,7 @@ def execute(args):
     acc_soil_co_name = os.path.join(intermediate_dir, "%i_%i_acc_soil_co.tif")
     acc_bio_name = os.path.join(intermediate_dir, "%i_acc_bio.tif")
     acc_bio_co_name = os.path.join(intermediate_dir, "%i_%i_acc_bio_co.tif")
-    
+
 
     #carbon disturbance file names
     dis_bio_co_name = os.path.join(intermediate_dir, "%i_%i_dis_bio_co.tif")
@@ -305,7 +305,7 @@ def execute(args):
     dis_soil_half_name = os.path.join(intermediate_dir, "%i_%i_dis_soil_half.tif")
     dis_soil_em_name = os.path.join(intermediate_dir, "%i_dis_soil_em.tif")
     dis_soil_adj_name = os.path.join(intermediate_dir, "%i_dis_soil_adj.tif")
-    
+
     #adjusted carbon file names
     adj_above_name = os.path.join(intermediate_dir, "%i_adj_above.tif")
     adj_below_name = os.path.join(intermediate_dir, "%i_adj_below.tif")
@@ -345,7 +345,7 @@ def execute(args):
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
-    
+
     ##process inputs
     #load tables from files
     acc_soil = raster_utils.get_lookup_from_csv(acc_soil_csv_uri, acc_soil_field_key)
@@ -408,7 +408,7 @@ def execute(args):
     veg_dict = dict([(k, int(carbon[k][carbon_field_veg])) for k in carbon])
 
     veg_type_list = list(set([veg_dict[k] for k in veg_dict]))
-    
+
     #validating data
     nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(nodata_lulc) == 1:
@@ -546,7 +546,7 @@ def execute(args):
 
     this_adj_soil_uri = this_soil_uri
     this_adj_bio_uri = this_bio_uri
-    
+
     this_dis_bio_half_uri = os.path.join(workspace_dir, dis_bio_half_name)
     this_dis_bio_em_uri = os.path.join(workspace_dir, dis_bio_em_name)
     this_dis_bio_adj_uri = os.path.join(workspace_dir, dis_bio_adj_name)
@@ -566,18 +566,18 @@ def execute(args):
 
     ##loop over lulc years
     for next_year in lulc_years[1:] + [analysis_year]:
-        
+
         t = next_year - this_year
 
         #local variable names
         this_litter_uri = os.path.join(workspace_dir, litter_name % this_year)
         this_adj_uri = os.path.join(workspace_dir, carbon_name % this_year)
-        
+
         this_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (this_year, next_year))
         this_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % this_year)
 
         this_acc_bio_co_uri = os.path.join(workspace_dir, acc_bio_co_name % (this_year, next_year))
-        this_acc_bio_uri = os.path.join(workspace_dir, acc_bio_name % this_year)        
+        this_acc_bio_uri = os.path.join(workspace_dir, acc_bio_name % this_year)
 
         this_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (this_year, next_year))
         this_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % this_year)
@@ -718,22 +718,22 @@ def execute(args):
 
             next_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (next_year, veg_type))
             next_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (next_year, veg_type))
-            
+
             next_em_soil_veg_uri = os.path.join(workspace_dir, em_soil_veg_name % (this_year, next_year, veg_type))
             next_em_bio_veg_uri = os.path.join(workspace_dir, em_bio_veg_name % (this_year, next_year, veg_type))
-            
+
             veg_mask_dict = {}
             for k in carbon:
                 veg_mask_dict[k] = (carbon[k][carbon_field_veg] == veg_type)
 
             #create vegetation masks
-            raster_utils.reclassify_dataset_uri(this_uri,                                                
+            raster_utils.reclassify_dataset_uri(this_uri,
                                                 veg_mask_dict,
                                                 this_veg_mask_uri,
                                                 gdal_type_identity_raster,
                                                 nodata_default_int,
-                                                exception_flag="values_required")                                                
-                                            
+                                                exception_flag="values_required")
+
             #adjust vegetation specific disturbed soil pool by masked soil disturbance
             raster_utils.vectorize_datasets([this_dis_soil_veg_uri, this_dis_soil_uri, this_veg_mask_uri],
                                             veg_adj_op,
@@ -807,7 +807,7 @@ def execute(args):
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
-                                            "union")                                            
+                                            "union")
 
             #adjust bisturbed biomass pool by emissions
             raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
@@ -816,8 +816,8 @@ def execute(args):
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
-                                            "union")                                            
-            
+                                            "union")
+
 ##        ##calculate adjusted carbon
 ##        #calculate adjusted soil
 ##        raster_utils.vectorize_datasets([this_adj_soil_uri,
@@ -841,7 +841,7 @@ def execute(args):
 ##                                         nodata_default_float,
 ##                                         cell_size,
 ##                                        "union")
-##        LOGGER.debug("Calculated adjusted biomass carbon.")         
+##        LOGGER.debug("Calculated adjusted biomass carbon.")
 
         ##change base year variables
         this_year = next_year
@@ -861,7 +861,7 @@ def execute(args):
     for this_year in range(lulc_years[0], analysis_year +1):
         emission_bio[this_year]={}
         emission_soil[this_year]={}
-        
+
         if this_year in lulc_years:
             LOGGER.debug("Carbon activity %i.", this_year)
             #reclass LULC by vegetation type
@@ -891,7 +891,7 @@ def execute(args):
             for veg in this_dis_soil:
                 dis_soil[veg] += this_dis_soil[veg]
 
-        #apply half-life to generate 
+        #apply half-life to generate
         for veg in veg_types:
             try:
                 alpha = float(half_life[veg][half_life_field_bio])
@@ -926,7 +926,7 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Created total carbon raster.")  
+    LOGGER.debug("Created total carbon raster.")
 
     ##calculate totals
     LOGGER.info("Calculating totals.")
@@ -952,7 +952,7 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Cumilative biomass accumulation raster created.")        
+    LOGGER.debug("Cumilative biomass accumulation raster created.")
 
     raster_utils.vectorize_datasets(dis_soil_uri_list,
                                     add_op,
@@ -971,8 +971,8 @@ def execute(args):
                                     cell_size,
                                     "union")
     LOGGER.debug("Cumilative biomass disturbance raster created.")
-    
-    net_sequestration_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], analysis_year))                               
+
+    net_sequestration_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], analysis_year))
     raster_utils.vectorize_datasets([total_acc_bio_uri, total_dis_bio_uri, total_acc_soil_uri, total_dis_soil_uri],
                                     net_sequestration_op,
                                     net_sequestration_uri,
@@ -981,7 +981,7 @@ def execute(args):
                                     cell_size,
                                     "union")
     LOGGER.debug("Net sequestration raster created.")
-    
+
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")
@@ -997,7 +997,7 @@ def execute(args):
     column_name_list = ["Year", "Disturbance", "Accumulation", "Net", "Total"]
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
     d_total = 0
-    a_total = 0    
+    a_total = 0
     total = 0
     for year, d_uri, a_uri in zip(lulc_years, dis_soil_uri_list, acc_soil_uri_list):
         try:
@@ -1010,7 +1010,7 @@ def execute(args):
             a = 0
 
         d_total += d
-        a_total += a        
+        a_total += a
 
         net = a - d
         total += net
@@ -1025,7 +1025,7 @@ def execute(args):
         a = sum_uri(total_acc_soil_uri, extent_uri)
     except Exception:
         a = 0
-    net = a - d        
+    net = a - d
     total = net
     report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, a, net, total])))
     report.write("\n</TABLE>")
@@ -1035,7 +1035,7 @@ def execute(args):
     column_name_list = ["Year", "Disturbance", "Accumulation", "Net", "Total"]
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
     d_total = 0
-    a_total = 0    
+    a_total = 0
     total = 0
     for year, d_uri, a_uri in zip(lulc_years, dis_bio_uri_list, acc_bio_uri_list):
         try:
@@ -1048,7 +1048,7 @@ def execute(args):
             a = 0
 
         d_total += d
-        a_total += a        
+        a_total += a
 
         net = a - d
         total += net
@@ -1063,10 +1063,10 @@ def execute(args):
         a = sum_uri(total_acc_soil_uri, extent_uri)
     except Exception:
         a = 0
-    net = a - d        
+    net = a - d
     total = net
     report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, a, net, total])))
-    report.write("\n</TABLE>")    
+    report.write("\n</TABLE>")
 
     #totals
     report.write("\n<P><P><B>Totals</B>")
@@ -1096,7 +1096,7 @@ def execute(args):
 ##            report.write("<TD>%s</TD>" % str(emission_soil[this_year][veg]))
 ##        report.write("</TR>")
 
-    report.write("\n</TABLE>")        
+    report.write("\n</TABLE>")
 
     #lulc statistics
     report.write("\n<P><P><B>LULC Counts</B>")
