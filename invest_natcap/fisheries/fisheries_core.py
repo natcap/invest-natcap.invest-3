@@ -443,6 +443,14 @@ def calc_prob_surv_stay(params_dict, stage, area):
 
     return numerator / denom
 
+def calc_prob_surv_grow(params_dict, stage, area):
+
+    surv = calc_survival_mortal(params_dict, area, stage)
+    duration = params_dict['Stage_Params'][stage]['duration']
+
+    numerator = (surv ** duration) * (1 - surv)
+    denom = 1 - (surv ** duration)
+
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
 
