@@ -201,10 +201,8 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
     
     if is_gendered:
         first_age = [order[0], order[len(order)/2]]
-        final_age = [order[len(order)/2-1], order[len(order)-1]]
     else:
         first_age = [order[0]]
-        final_age = [order[len(order)-1]]
     
     for cycle in range(1, duration):
 
