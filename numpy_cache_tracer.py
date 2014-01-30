@@ -2,46 +2,12 @@ import numpy
 import gdal
 
 from invest_natcap import raster_utils
+from invest_natcap.raster_utils import OrderedDict
 
 dem_uri = './test/invest-data/Base_Data/Freshwater/dem'
 out_uri = 'out.tif'
 
 from UserDict import DictMixin
-
-class odict(DictMixin):
-    
-    def __init__(self):
-        self._keys = []
-        self._data = {}
-        
-        
-    def __setitem__(self, key, value):
-        if key not in self._data:
-            self._keys.append(key)
-        self._data[key] = value
-        
-        
-    def __getitem__(self, key):
-        return self._data[key]
-    
-    
-    def __delitem__(self, key):
-        del self._data[key]
-        self._keys.remove(key)
-        
-        
-    def keys(self):
-        return list(self._keys)
-    
-    
-    def copy(self):
-        copyDict = odict()
-        copyDict._data = self._data.copy()
-        copyDict._keys = self._keys[:]
-        return copyDict
-
-
-
 
     
 nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
@@ -56,13 +22,12 @@ n_rows = dem_ds.RasterYSize
 
 cache_rows = 10
 
-row_cache = odict()
+row_cache = OrderedDict()
 
 for row_index in xrange(30):
     print len(row_cache)
     for row_offset in xrange(3):
-        offset_row_inde
-        x = row_index + row_offset
+        offset_row_index = row_index + row_offset
 
         if offset_row_index < 0 or offset_row_index >= n_rows:
             continue

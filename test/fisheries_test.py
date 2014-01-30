@@ -71,6 +71,7 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
+        raise SkipTest
 
         #Going to use Blue Crab for testing.
         args = {}

@@ -575,7 +575,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
             Returns nothing"""
     cdef ActivePixel *pixel = NULL
     cdef ActivePixel p
-    cdef double max_visibility = -1.
+    cdef double max_visibility = -1000000.
     cdef short visibility = 0
     cdef int index = -1
  
