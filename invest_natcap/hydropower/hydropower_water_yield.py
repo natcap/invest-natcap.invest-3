@@ -376,7 +376,7 @@ def execute(args):
         # List of wanted fields to output in the subwatershed CSV table
         field_list_sws = [
                 'subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                'wyield_mn', 'wyield_vol', 'wyield_ha']
+                'wyield_mn', 'wyield_vol']
     
         # Get a dictionary from the sub-watershed shapefiles attributes based
         # on the fields to be outputted to the CSV table
@@ -423,7 +423,7 @@ def execute(args):
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
             'ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-            'wyield_mn', 'wyield_vol', 'wyield_ha']
+            'wyield_mn', 'wyield_vol']
     
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
@@ -798,8 +798,7 @@ def write_new_table(filename, fields, data):
     csv_file.close()
 
 def compute_water_yield_volume(shape_uri, pixel_area):
-    """Calculate the water yield volume per sub-watershed or watershed and
-        the water yield volume per hectare per sub-watershed or watershed.
+    """Calculate the water yield volume per sub-watershed or watershed.
         Add results to shape_uri, units are cubic meters
 
         shape_uri - a URI path to an ogr datasource for the sub-watershed
@@ -815,12 +814,10 @@ def compute_water_yield_volume(shape_uri, pixel_area):
     
     # The field names for the new attributes
     vol_name = 'wyield_vol'
-    ha_name = 'wyield_ha'
 
-    # Add the new fields to the shapefile
-    for new_field in [vol_name, ha_name]:
-        field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
-        layer.CreateField(field_defn)
+    # Add the new field to the shapefile
+    field_defn = ogr.FieldDefn(vol_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
     # Iterate over the number of features (polygons) and compute volume
@@ -840,13 +837,6 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)
         feat.SetField(vol_index, vol)
-
-        # Calculate water yield volume per hectare
-        hectare_mn = (wyield_mn * pixel_count) / (feat_area * 10000)
-        vol_ha = hectare_mn * (0.0001 * feat_area)
-        # Get the hectare field index and add value
-        ha_index = feat.GetFieldIndex(ha_name)
-        feat.SetField(ha_index, vol_ha)
         
         layer.SetFeature(feat)
         
