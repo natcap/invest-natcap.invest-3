@@ -289,9 +289,10 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         #to switch over to area specific stuff.
         
         while line[0] != '':
+            LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
-
+        
         #Once we get here, know that we've hit the space between hybrid vars
         #and area specific vars. Run until we hit the end.
         while True:
@@ -302,6 +303,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
 
     main_dict = {'Stage_Params':{}, 'Area_Params':{}}
 
+    LOGGER.debug("Hybrid_Lines: %s" % hybrid_lines)
     headers = hybrid_lines.pop(0)
 
     #Know that for headers, the first is actually just a notation that areas are
@@ -326,6 +328,8 @@ def parse_main_csv(params_uri, area_count, rec_eq):
 
     #Want to make sure that all required parameters exist
     #Looks like 'VulnFishing' is really the only required one from this set.
+    
+    LOGGER.debug(age_params)
     if 'vulnfishing' not in age_params:
         raise MissingVulnFishingParameter("The main parameter CSV for this \
                 species is missing a VulnFishing parameter. Please make sure \
