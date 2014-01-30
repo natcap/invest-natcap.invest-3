@@ -10,7 +10,7 @@ import routing_cython_core
 import pyximport
 pyximport.install()
 
-test_region = 'willamate' #peru|willamate
+test_region = 'peru' #peru|willamate
 test_mode = 'flow_accumulation' #flat_resolve|flow_accumulation
 
 if test_region == 'peru':

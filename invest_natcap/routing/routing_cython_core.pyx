@@ -1303,27 +1303,13 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
         (1, n_cols), dtype=numpy.float32)
     
     LOGGER.info("calculating d-inf per pixel flows")
-    #This array will be a 3 row window for the whole dem carray so we
-    #don't need to hold it in memory, loading 3 rows at a time is almost as 
-    #fast as loading the entire array in memory (I timed it)
-   
     
     cdef int row_offset, col_offset
 
-    
     cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     
-    #not flat on the edges of the raster, could be a sink
-    #for row_index in range(1, n_rows-1):
-        #Grab three rows at a time and be careful of the top and bottom edge
-    #    y_offset = row_index - 1
-            
-    #    band.ReadAsArray(
-    #        xoff=0, yoff=y_offset, win_xsize=n_cols,
-    #        win_ysize=3, buf_obj=dem_array)
-
     for row_index in range(n_rows):
         #We load 3 rows at a time
         y_offset = row_index - 1
