@@ -71,6 +71,7 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
     source_uri = raster_utils.temporary_filename()
     absorption_rate_uri = raster_utils.temporary_filename()
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+    LOGGER.info('starting route_flux by aligning datasets')
     raster_utils.align_dataset_list(
         [in_dem_uri, in_source_uri, in_absorption_rate_uri],
         [dem_uri, source_uri, absorption_rate_uri],
@@ -90,6 +91,7 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
     routing_cython_core.flow_direction_inf(
         dem_uri, flow_direction_uri, dem_offset_uri)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_offset_uri)
+    LOGGER.info("finding sinks")
     sink_cell_set = routing_cython_core.find_sinks(dem_offset_uri)
     LOGGER.info("calculating flow_graph")
     routing_cython_core.calculate_flow_graph(
@@ -108,7 +110,7 @@ def flow_accumulation(dem_uri, flux_output_uri):
         intermediate rasters for future calculation.
 
         dem_uri - a uri to a gdal dataset representing a DEM
-        flux_output_uri - location to dump the raster represetning flow
+        flux_output_uri - location to dump the raster representing flow
             accumulation"""
 
     LOGGER.debug("starting flow_accumulation")
