@@ -225,7 +225,15 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                 
                 #a = 0
                 if age in first_age:
-                    pass
+                    gender_var = 2 if is_gendered else 1
+                    total_recruits = area_indifferent_rec(cycle_dict, params_dict, 
+                                            rec_dict, gender_var, cycle)
+                    area_rec = larval_disp * total_recruits 
+                    
+                    num_indivs = calc_indiv_count(cycle_dict, mig_dict, area, age, cycle)
+                    prob_surv = calc_prob_surv(params_dict, age, area) 
+                
+
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 
@@ -418,6 +426,16 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 cycle_dict[0][area][age] = count
 
     LOGGER.debug(cycle_dict)
+
+def calc_prob_surv(params_dict, age, area):
+    
+    surv = calc_survival_mortal(params_dict, area, age)
+    duration = params['Stage_Params'][stage]['duration']
+
+    numerator = surv * (1 - (surv ** (duration-1)))
+    denom = 1 - (surv ** duration)
+
+    return numerator / denom
 
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
