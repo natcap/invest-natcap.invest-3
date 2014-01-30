@@ -233,7 +233,8 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                     
                     num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, age, cycle)
                     prob_surv = calc_prob_surv(params_dict, age, area) 
-                
+               
+                    cycle_dict[cycle][area][age] = (num_indivs * prob_surv) + area_rec
 
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
