@@ -1446,11 +1446,6 @@ def find_sinks(dem_uri):
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     
-    cdef int w_row_index, w_col_index
-    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
-    cdef int lr_col_index, lr_row_index, hits, misses, neighbor_index
-    cdef int neighbor_row_index, neighbor_col_index, w_neighbor_row_index, w_neighbor_col_index
-
     dem_ds = gdal.Open(dem_uri)
     dem_band = dem_ds.GetRasterBand(1)
     cdef int n_cols = dem_band.XSize
@@ -1459,55 +1454,49 @@ def find_sinks(dem_uri):
     
     LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
 
-    row_window_size = 3
-    col_window_size = n_cols
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
+        numpy.zeros((3, n_cols), dtype=numpy.float32))
+   
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
-    hits = 0
-    misses = 0
-
-    col_index = 0
+    cdef int col_index, row_index
     cdef int sink_set_index = 0
+    cdef int y_offset, local_y_offset, neighbor_index
+    cdef int neighbor_row_index, neighbor_col_index
+    
     sink_set = numpy.empty((10,), dtype=numpy.int32)
     for row_index in range(n_rows):
         #the col index will be 0 since we go row by row
-        if _update_window(
-            row_index, 0, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 1):
-            #need to reload the window
-            misses += 1
-            dem_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
-        else:
-            hits += 1
-        w_row_index = row_index - ul_row_index
+         #We load 3 rows at a time
+        y_offset = row_index - 1
+        local_y_offset = 1
+        if y_offset < 0:
+            y_offset = 0
+            local_y_offset = 0
+        if y_offset >= n_rows - 2:
+            #could be 0 or 1
+            local_y_offset = 2
+            y_offset = n_rows - 3
+        
+        dem_band.ReadAsArray(
+            xoff=0, yoff=y_offset, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
+        
         for col_index in range(n_cols):
-            w_col_index = col_index - ul_col_index
-            if dem_array[w_row_index, w_col_index] == nodata_value:
+            
+            if dem_array[local_y_offset, col_index] == nodata_value:
                 continue
             for neighbor_index in range(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                if neighbor_row_index < ul_row_index or neighbor_row_index >= lr_row_index:
+                neighbor_row_index = local_y_offset + row_offsets[neighbor_index]
+                if neighbor_row_index < 0 or neighbor_row_index > 2:
                     continue
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_col_index < ul_col_index or neighbor_col_index >= lr_col_index:
+                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
 
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
-                if dem_array[w_neighbor_row_index, w_neighbor_col_index] == nodata_value:
+                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
                     continue
                 
-                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] < dem_array[w_row_index, w_col_index]):
+                if (dem_array[neighbor_row_index, neighbor_col_index] < dem_array[local_y_offset, col_index]):
                     #this cell can drain into another
                     break
             else: #else for the for loop
@@ -1518,6 +1507,10 @@ def find_sinks(dem_uri):
                 sink_set[sink_set_index] = row_index * n_cols + col_index
                 sink_set_index += 1
 
-    LOGGER.info("hit ratio %d %d %f" % (misses, hits, hits/float(misses+hits)))
     sink_set.resize((sink_set_index,))
+    
+    cdef int w_row_index, w_col_index
+    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
+    cdef int lr_col_index, lr_row_index, hits, misses, w_neighbor_row_index, w_neighbor_col_index
+    
     return sink_set
