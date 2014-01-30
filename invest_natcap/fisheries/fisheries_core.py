@@ -232,13 +232,26 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                     area_rec = larval_disp * total_recruits 
                     
                     num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, age, cycle)
-                    prob_surv = calc_prob_surv_stay(params_dict, age, area) 
+                    prob_surv_stay = calc_prob_surv_stay(params_dict, age, area) 
                
-                    cycle_dict[cycle][area][age] = (num_indivs * prob_surv) + area_rec
+                    cycle_dict[cycle][area][age] = (num_indivs * prob_surv_stay) + area_rec
 
-                # a = A
-                elif age in final_age:
+                # 1 <= a
+                else:
+                    prev_stage = order[i-1] 
                     
+                    prev_num_indivs = \
+                        calc_indiv_count(cycle_dict, migration_dict, area, 
+                                                prev_stage, cycle)
+                    curr_num_indivs = \
+                        calc_indiv_count(cycle_dict, migration_dict, area, age,
+                                            cycle)
+                    prob_surv_stay = calc_prob_surv_stay(params_dict, prev_stage, area) 
+                    prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
+
+                    cycle_dict[cycle][area][age] = (prev_num_indivs * prob_surv_grow) + \
+                                                    (curr_num_indivs * prob_surv_stay)
+
 
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
