@@ -197,6 +197,8 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
+    gender_var = 2 if is_gendered else 1
+    
     if is_gendered:
         first_age = [order[0], order[len(order)/2]]
         final_age = [order[len(order)/2-1], order[len(order)-1]]
@@ -225,12 +227,11 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                 
                 #a = 0
                 if age in first_age:
-                    gender_var = 2 if is_gendered else 1
                     total_recruits = area_indifferent_rec(cycle_dict, params_dict, 
                                             rec_dict, gender_var, cycle)
                     area_rec = larval_disp * total_recruits 
                     
-                    num_indivs = calc_indiv_count(cycle_dict, mig_dict, area, age, cycle)
+                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, age, cycle)
                     prob_surv = calc_prob_surv(params_dict, age, area) 
                 
 
@@ -427,10 +428,10 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
 
     LOGGER.debug(cycle_dict)
 
-def calc_prob_surv(params_dict, age, area):
+def calc_prob_surv(params_dict, stage, area):
     
-    surv = calc_survival_mortal(params_dict, area, age)
-    duration = params['Stage_Params'][stage]['duration']
+    surv = calc_survival_mortal(params_dict, area, stage)
+    duration = params_dict['Stage_Params'][stage]['duration']
 
     numerator = surv * (1 - (surv ** (duration-1)))
     denom = 1 - (surv ** duration)
