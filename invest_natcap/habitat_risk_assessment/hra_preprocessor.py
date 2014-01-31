@@ -229,7 +229,6 @@ def execute(args):
     default_row = [default_dq_message, default_weight_message]
     default_rating = ['<enter (3) high, (2) medium, (1) low, (0) no score>']
 
-
     #Create habitat-specific CSV's
     for habitat_name in hab_list:
 
