@@ -144,7 +144,8 @@ curvature_correction, refr_coeff):
     obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    coefficient = 1.0 # Coefficient used to weight the values 
+    coefficient = 1.0 # Used to weight the importance of individual viewsheds
+    height = 0.0 # Per viewoint height offset
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
@@ -183,17 +184,23 @@ curvature_correction, refr_coeff):
             if (field_name.upper() == 'RADIUS2') or \
                 (field_name.upper() == 'RADIUS'):
                 field_type = field_def.GetType()
-                message = 'Wrong field type ' + str(field_type) + \
+                message = 'Wrong field type for radius: ' + str(field_type) + \
                 ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
                 max_dist = abs(feature.GetFieldAsInteger(field))
                 max_dist = int(max_dist/cell_size)
             if field_name.lower() == 'coefficient':
                 field_type = field_def.GetType()
-                message = 'Wrong field type ' + str(field_type) + \
+                message = 'Wrong field type for coefficient: ' + str(field_type) + \
                 ' expected 2 (ogr.OFTReal)'
                 assert field_type == ogr.OFTReal, message
-                coefficient = feature.GetFieldAsDouble(field)
+                coefficient = feature.GetFieldAsDouble(field)    
+            if field_name.lower() == 'height':
+                field_type = field_def.GetType()
+                message = 'Wrong field type for height: ' + str(field_type) + \
+                ' expected 2 (ogr.OFTReal)'
+                assert field_type == ogr.OFTReal, message
+                height = feature.GetFieldAsDouble(field)
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
@@ -207,8 +214,12 @@ curvature_correction, refr_coeff):
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
-        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
-    
+        (i,j), obs_elevi + height, tgt_elev, max_dist, refr_coeff)
+        # Multiply the viewshed by its coefficient
+        # Apply the valuation function to the distance
+        # Combine everything
+
+        # Accumulate result to combined raster
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
