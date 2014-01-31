@@ -686,64 +686,41 @@ cdef void _build_flat_set(
     cdef int row_index, col_index
     cdef int ul_row_index = 0, ul_col_index = 0
     cdef int lr_col_index = n_cols, lr_row_index = 3
-    cdef int w_row_index, w_col_index
+    
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
         win_ysize=3)
+    cdef int y_offset, local_y_offset
+    
+    #not flat on the edges of the raster, could be a sink
+    for row_index in range(1, n_rows-1):
+        #Grab three rows at a time and be careful of the top and bottom edge
+        y_offset = row_index - 1
+            
+        band.ReadAsArray(
+            xoff=0, yoff=y_offset, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
 
-    for row_index in range(n_rows):
-        #Grab three rows at a time
-        if _update_window(
-            row_index, 0, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            3, n_cols, 1):
-            band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
-                win_ysize=3, buf_obj=dem_array)
-
-        for col_index in range(n_cols):
-            w_row_index = row_index - ul_row_index
-            dem_value = dem_array[w_row_index, col_index]
+        #not flat on the edges of the raster
+        for col_index in range(1, n_cols - 1):
+            dem_value = dem_array[1, col_index]
             if dem_value == nodata_value:
                 continue
 
+            #check all the neighbours, if nodata or lower, this isn't flat
             for neighbor_index in xrange(8):
-                allowed_neighbor[neighbor_index] = 1
-            if w_row_index == 0:
-                #don't allow top row 1 2 3
-                allowed_neighbor[1] = 0
-                allowed_neighbor[2] = 0
-                allowed_neighbor[3] = 0
-            elif w_row_index == n_rows - 1:
-                #don't allow bottom row 5 6 7
-                allowed_neighbor[5] = 0
-                allowed_neighbor[6] = 0
-                allowed_neighbor[7] = 0
-
-            if col_index == 0:
-                #don't allow left column 3 4 5
-                allowed_neighbor[3] = 0
-                allowed_neighbor[4] = 0
-                allowed_neighbor[5] = 0
-            elif col_index == n_cols - 1:
-                #don't allow right column 0 1 7
-                allowed_neighbor[0] = 0
-                allowed_neighbor[1] = 0
-                allowed_neighbor[7] = 0
-
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                if not allowed_neighbor[neighbor_index]:
-                    continue
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = col_index + col_offsets[neighbor_index]
-                neighbor_dem_value = dem_array[w_neighbor_row_index, w_neighbor_col_index]
+                neighbor_row_index = 1 + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                
+                neighbor_dem_value = dem_array[neighbor_row_index, neighbor_col_index]
                 if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
                     break
             else:
                 #This is a flat element
                 deref(flat_set).insert(row_index * n_cols + col_index)
+    
+    cdef int w_row_index, w_col_index
 
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
@@ -1270,7 +1247,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     #Load DEM and resolve plateaus
     if dem_offset_uri is None:
         dem_offset_uri = raster_utils.temporary_filename()
+        
+    LOGGER.info('resolving flat directions')
     resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
+        
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
         dem_offset_uri, dem_data_uri, array_type=gdal.GDT_Float32)
@@ -1323,85 +1303,62 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
         (1, n_cols), dtype=numpy.float32)
     
     LOGGER.info("calculating d-inf per pixel flows")
-    #This array will be a 3 row window for the whole dem carray so we
-    #don't need to hold it in memory, loading 3 rows at a time is almost as 
-    #fast as loading the entire array in memory (I timed it)
-    cdef float[:, :] dem_window
     
     cdef int row_offset, col_offset
 
-    cdef int weight, w_row_index, w_col_index
-    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
-    cdef int lr_col_index, lr_row_index, hits, misses
-    cdef int old_ul_row_index, old_ul_col_index, old_lr_row_index, old_lr_col_index, window_buffer
     cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
+    cdef float[:, :] dem_window
+    cdef int y_offset, local_y_offset
     
-    row_window_size = 3
-    col_window_size = n_cols
-    window_buffer = 1
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
-
-    dem_window = dem_carray[ul_row_index:lr_row_index, ul_col_index:lr_col_index]
-    hits = 0
-    misses = 0
-
     for row_index in range(n_rows):
         #We load 3 rows at a time
+        y_offset = row_index - 1
+        local_y_offset = 1
+        if y_offset < 0:
+            y_offset = 0
+            local_y_offset = 0
+        if y_offset >= n_rows - 2:
+            #could be 0 or 1
+            local_y_offset = 2
+            y_offset = n_rows - 3
 
-        if _update_window(
-            row_index, col_index, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, window_buffer):
-            #need to reload the window
-            misses += 1
-            dem_window = dem_carray[ul_row_index:lr_row_index,
-                                   ul_col_index:lr_col_index]
-        else:
-            hits += 1
-
+        dem_window = dem_carray[y_offset:y_offset+3,:]
+        
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
         for col_index in range(n_cols):
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_window[1, col_index] == dem_nodata:
+            if dem_window[local_y_offset, col_index] == dem_nodata:
                 continue
-            
             #Calculate the flow flow_direction for each facet
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
 
-            w_row_index = row_index - ul_row_index
-            w_col_index = col_index - ul_col_index
-
             for facet_index in range(8):
                 #This defines the three points the facet
-                e_0_row_index = e_0_offsets[facet_index * 2 + 0] + w_row_index
-                e_0_col_index = e_0_offsets[facet_index * 2 + 1] + w_col_index
-                e_1_row_index = e_1_offsets[facet_index * 2 + 0] + w_row_index
-                e_1_col_index = e_1_offsets[facet_index * 2 + 1] + w_col_index
-                e_2_row_index = e_2_offsets[facet_index * 2 + 0] + w_row_index
-                e_2_col_index = e_2_offsets[facet_index * 2 + 1] + w_col_index
+                e_0_row_index = e_0_offsets[facet_index * 2 + 0] + local_y_offset
+                e_0_col_index = e_0_offsets[facet_index * 2 + 1] + col_index
+                e_1_row_index = e_1_offsets[facet_index * 2 + 0] + local_y_offset
+                e_1_col_index = e_1_offsets[facet_index * 2 + 1] + col_index
+                e_2_row_index = e_2_offsets[facet_index * 2 + 0] + local_y_offset
+                e_2_col_index = e_2_offsets[facet_index * 2 + 1] + col_index
 
-                if (e_0_row_index < 0 or e_0_col_index < 0 or
-                    e_1_row_index < 0 or e_1_col_index < 0 or
-                    e_2_row_index < 0 or e_2_col_index < 0):
+                if (e_0_row_index < 0 or e_0_row_index > 2 or
+                    e_1_row_index < 0 or e_1_row_index > 2 or
+                    e_2_row_index < 0 or e_2_row_index > 2 or
+                    e_0_col_index < 0 or e_0_col_index >= n_cols or
+                    e_1_col_index < 0 or e_1_col_index >= n_cols or
+                    e_2_col_index < 0 or e_2_col_index >= n_cols):
                     continue
+            
+                e_0 = dem_window[e_0_row_index, e_0_col_index]
+                e_1 = dem_window[e_1_row_index, e_1_col_index]
+                e_2 = dem_window[e_2_row_index, e_2_col_index]
 
-                try:
-                    e_0 = dem_window[e_0_row_index, e_0_col_index]
-                    e_1 = dem_window[e_1_row_index, e_1_col_index]
-                    e_2 = dem_window[e_2_row_index, e_2_col_index]
-
-                except IndexError:
-                    #This facet isn't defined because it's on the edge
-                    continue
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
-                    #If any neighbors are nodata, it's contaminated
+                    #If any neighbours are nodata, it's contaminated
                     break
 
                 #s_1 is slope along straight edge
@@ -1444,7 +1401,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
-
+    
     
 @cython.profile(False)
 cdef int _update_window(
@@ -1489,11 +1446,6 @@ def find_sinks(dem_uri):
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     
-    cdef int w_row_index, w_col_index
-    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
-    cdef int lr_col_index, lr_row_index, hits, misses, neighbor_index
-    cdef int neighbor_row_index, neighbor_col_index, w_neighbor_row_index, w_neighbor_col_index
-
     dem_ds = gdal.Open(dem_uri)
     dem_band = dem_ds.GetRasterBand(1)
     cdef int n_cols = dem_band.XSize
@@ -1502,55 +1454,49 @@ def find_sinks(dem_uri):
     
     LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
 
-    row_window_size = 3
-    col_window_size = n_cols
-    ul_row_index = 0
-    ul_col_index = 0
-    lr_row_index = row_window_size
-    lr_col_index = col_window_size
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
+        numpy.zeros((3, n_cols), dtype=numpy.float32))
+   
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = dem_band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-        win_ysize=row_window_size)
-    hits = 0
-    misses = 0
-
-    col_index = 0
+    cdef int col_index, row_index
     cdef int sink_set_index = 0
+    cdef int y_offset, local_y_offset, neighbor_index
+    cdef int neighbor_row_index, neighbor_col_index
+    
     sink_set = numpy.empty((10,), dtype=numpy.int32)
     for row_index in range(n_rows):
         #the col index will be 0 since we go row by row
-        if _update_window(
-            row_index, 0, &ul_row_index, &ul_col_index,
-            &lr_row_index, &lr_col_index, n_rows, n_cols,
-            row_window_size, col_window_size, 1):
-            #need to reload the window
-            misses += 1
-            dem_band.ReadAsArray(
-                xoff=ul_col_index, yoff=ul_row_index, win_xsize=col_window_size,
-                win_ysize=row_window_size, buf_obj=dem_array)
-        else:
-            hits += 1
-        w_row_index = row_index - ul_row_index
+         #We load 3 rows at a time
+        y_offset = row_index - 1
+        local_y_offset = 1
+        if y_offset < 0:
+            y_offset = 0
+            local_y_offset = 0
+        if y_offset >= n_rows - 2:
+            #could be 0 or 1
+            local_y_offset = 2
+            y_offset = n_rows - 3
+        
+        dem_band.ReadAsArray(
+            xoff=0, yoff=y_offset, win_xsize=n_cols,
+            win_ysize=3, buf_obj=dem_array)
+        
         for col_index in range(n_cols):
-            w_col_index = col_index - ul_col_index
-            if dem_array[w_row_index, w_col_index] == nodata_value:
+            
+            if dem_array[local_y_offset, col_index] == nodata_value:
                 continue
             for neighbor_index in range(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                if neighbor_row_index < ul_row_index or neighbor_row_index >= lr_row_index:
+                neighbor_row_index = local_y_offset + row_offsets[neighbor_index]
+                if neighbor_row_index < 0 or neighbor_row_index > 2:
                     continue
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_col_index < ul_col_index or neighbor_col_index >= lr_col_index:
+                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
 
-                w_neighbor_row_index = w_row_index + row_offsets[neighbor_index]
-                w_neighbor_col_index = w_col_index + col_offsets[neighbor_index]
-
-                if dem_array[w_neighbor_row_index, w_neighbor_col_index] == nodata_value:
+                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
                     continue
                 
-                if (dem_array[w_neighbor_row_index, w_neighbor_col_index] < dem_array[w_row_index, w_col_index]):
+                if (dem_array[neighbor_row_index, neighbor_col_index] < dem_array[local_y_offset, col_index]):
                     #this cell can drain into another
                     break
             else: #else for the for loop
@@ -1561,6 +1507,10 @@ def find_sinks(dem_uri):
                 sink_set[sink_set_index] = row_index * n_cols + col_index
                 sink_set_index += 1
 
-    LOGGER.info("hit ratio %d %d %f" % (misses, hits, hits/float(misses+hits)))
     sink_set.resize((sink_set_index,))
+    
+    cdef int w_row_index, w_col_index
+    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
+    cdef int lr_col_index, lr_row_index, hits, misses, w_neighbor_row_index, w_neighbor_col_index
+    
     return sink_set
