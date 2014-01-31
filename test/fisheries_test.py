@@ -72,7 +72,6 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
-        raise SkipTest
 
         #Going to use Blue Crab for testing.
         args = {}
@@ -91,11 +90,10 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
 
     def test_age_gendered_smoke(self):
-        raise SkipTest
 
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_temp_aoi.shp'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
         #Are counting each gender/age combo as an age class?
