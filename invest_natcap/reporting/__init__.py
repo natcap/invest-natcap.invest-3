@@ -86,8 +86,11 @@ def generate_report(reporting_args):
                     added. Currently 'script' (javascript) and 'link' (css
                     style) accepted (required)
 
-                'src'- a URI to the location of the external file for either
-                    the 'script' or the 'link' (required)
+                'data_src'- a URI to the location of the external file for either
+                    the 'script' or the 'link' OR a String representing the
+                    entire html script or style (required)
+                
+                'input_type' - 'File' or 'Text' (required). 
 
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
@@ -327,11 +330,14 @@ def add_head_element(param_args):
         param_args - a dictionary that holds the following arguments:
 
             param_args['format'] - a string representing the type of element to
-                be added. Currently : 'script', 'link' (required)
+                be added. Currently : 'script', 'style' (required)
 
-            param_args['src'] - a string URI path for the external source of the
-                element (required)
-            
+            param_args['data_src'] - a string URI path for the external source of the
+                element OR a String representing the html (required)
+
+            param_args['input_type'] - 'Text' or 'File'. Determines how the
+                input from 'data_src' is handled (required)
+
             param_args['out_uri'] - a string URI path for the html page
                 (required)
 
@@ -340,36 +346,21 @@ def add_head_element(param_args):
     # Get the type of element to add
     form = param_args['format']
     # Get the external file location for either the link or script reference
-    src = param_args['src']
-    # The destination on disk for the html page to be written to. This will be
-    # used to get the directory name so as to locate the scripts properly
-    output_uri = param_args['out_uri']
-    
-    # Get the script files basename
-    basename = os.path.basename(src)
-    # Get the output_uri directory location
-    dirname = os.path.dirname(output_uri)
-    # Set the destination URI for copying the script
-    dst = os.path.join(dirname, basename)
-    
-    # Copy the source file to the location of the output directory
-    if not os.path.isfile(dst):
-        try:
-            shutil.copyfile(src, dst)
-        except IOError:
-            raise IOError('The head element script could not be copied properly'
-                    ', check the location of the file as well as output'
-                    ' destination. Script source : %s' % src)
-    # Set a relative path for the script file so that the html page can find it
-    relative_dst = './' + basename
-
-    if form == 'link':
-        html_str = '<link rel=stylesheet type=text/css href=%s>' % relative_dst
-    elif form == 'script':
-        html_str = '<script type=text/javascript src=%s></script>' % relative_dst
+    src = param_args['data_src']
+    input_type = param_args['input_type']
+    if input_type == 'File':
+        # read in file and save as string
+        head_file = codecs.open(src, 'rb', 'latin1')
+        file_str = head_file.read()
     else:
-        raise Exception('Currently this type of head element is not supported')
+        file_str = src
 
-    LOGGER.debug('HEAD STRING : %s', html_str)
+    if form == 'style':
+        html_str = '''<style type=text/css> %s </style>''' % file_str
+    elif form == 'script':
+        html_str = '''<script type=text/javascript> %s </script>''' % file_str
+    else:
+        raise Exception('Currently this type of head element is not supported'
+                ' : %s' % form)
 
     return html_str
