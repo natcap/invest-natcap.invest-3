@@ -156,7 +156,6 @@ def execute(args):
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
-    LOGGER.debug(rec_dict)
     core_args['rec_dict'] = rec_dict
 
 
@@ -291,7 +290,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         while line[0] != '':
             hybrid_lines.append(line)
             line = csv_reader.next()
-
+        
         #Once we get here, know that we've hit the space between hybrid vars
         #and area specific vars. Run until we hit the end.
         while True:
@@ -326,6 +325,7 @@ def parse_main_csv(params_uri, area_count, rec_eq):
 
     #Want to make sure that all required parameters exist
     #Looks like 'VulnFishing' is really the only required one from this set.
+    
     if 'vulnfishing' not in age_params:
         raise MissingVulnFishingParameter("The main parameter CSV for this \
                 species is missing a VulnFishing parameter. Please make sure \
