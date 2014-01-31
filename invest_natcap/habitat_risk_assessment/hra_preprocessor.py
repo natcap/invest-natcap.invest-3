@@ -302,8 +302,8 @@ def execute(args):
                     curr_row = default_row
 
                     if 'crit_shapes' in locals() and \
-                            ((habitat_name, stressor_name) in crit_shapes['h_s_e'] and \
-                            c_name in crit_shapes['h_s_e'][(habitat_name, stressor_name)]):
+                        ((habitat_name, stressor_name) in crit_shapes['h_s_e'] and \
+                        c_name in crit_shapes['h_s_e'][(habitat_name, stressor_name)]):
 
                         curr_row = [c_name] + ['SHAPE'] + curr_row + ['E']
                     elif c_name in crit_descriptions:
@@ -417,9 +417,10 @@ def make_crit_shape_dict(crit_uri):
         #habitatName and the stressorName, but want the criteria name to be
         #self contained.
         parts = filename.split('_', 2)
+        
         hab_name = parts[0]
         stress_name = parts[1]
-        crit_name = parts[2].replace('_', ' ')
+        crit_name = parts[2].replace('_', ' ').lower()
 
         if (hab_name, stress_name) not in c_shape_dict['h_s_e']:
             c_shape_dict['h_s_e'][(hab_name, stress_name)] = {}
@@ -447,7 +448,7 @@ def make_crit_shape_dict(crit_uri):
         parts = filename.split('_', 2)
         hab_name = parts[0]
         stress_name = parts[1]
-        crit_name = parts[2].replace('_', ' ')
+        crit_name = parts[2].replace('_', ' ').lower()
 
         if (hab_name, stress_name) not in c_shape_dict['h_s_c']:
             c_shape_dict['h_s_c'][(hab_name, stress_name)] = {}
