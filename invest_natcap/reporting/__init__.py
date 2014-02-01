@@ -325,8 +325,8 @@ def add_text_element(param_args):
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section of
-        an html file. Currently handles 'link' and 'script' elements, where both
-        the script and link point to an external source
+        an html file. Currently handles 'style' and 'script' elements, where both
+        the script and style are locally embedded
 
         param_args - a dictionary that holds the following arguments:
 
@@ -334,7 +334,8 @@ def add_head_element(param_args):
                 be added. Currently : 'script', 'style' (required)
 
             param_args['data_src'] - a string URI path for the external source of the
-                element OR a String representing the html (required)
+                element OR a String representing the html. If a URI the file is
+                read in as a String (required)
 
             param_args['input_type'] - 'Text' or 'File'. Determines how the
                 input from 'data_src' is handled (required)
@@ -346,18 +347,23 @@ def add_head_element(param_args):
 
     # Get the type of element to add
     form = param_args['format']
-    # Get the external file location for either the link or script reference
+    # Get a handle on the data whether it be a String or URI
     src = param_args['data_src']
+    # Get the input type of the data, 'File' or 'Text'
     input_type = param_args['input_type']
     if input_type == 'File':
-        # read in file and save as string
+        # Read in file and save as string. Using latin1 to decode, seems to work
+        # on the current javascript / css files
         head_file = codecs.open(src, 'rb', 'latin1')
         file_str = head_file.read()
     else:
         file_str = src
     
+    # List of regular expression strings to search against
     reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
+    # Iterate over the String object to make sure there are no conflicting html
+    # tags
     for exp in reg_list:
         if re.search(exp, file_str) != None:
             raise Exception('The following html tag was found in header'
