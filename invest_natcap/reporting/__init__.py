@@ -84,14 +84,15 @@ def generate_report(reporting_args):
 
             Head element dictionary has at least the following additional arguments:
                 'format' - a string representing the type of head element being
-                    added. Currently 'script' (javascript) and 'link' (css
+                    added. Currently 'script' (javascript) and 'style' (css
                     style) accepted (required)
 
                 'data_src'- a URI to the location of the external file for either
-                    the 'script' or the 'link' OR a String representing the
+                    the 'script' or the 'style' OR a String representing the
                     entire html script or style (required)
                 
-                'input_type' - 'File' or 'Text' (required). 
+                'input_type' -  a String, 'File' or 'Text' that refers to how
+                    'data_src' is being passed in (URI vs String) (required). 
 
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
@@ -129,13 +130,6 @@ def generate_report(reporting_args):
         # individual element functions)
         fun_type = element.pop('type')
         section = element.pop('section')
-
-        # In order to copy any script files to where the output html file is to
-        # be saved, the out_uri needs to be passed along into the function that
-        # handles them. As of now, the easiest / maybe best way is to add a key
-        # in the 'elements' dictionary being passed along
-        if fun_type == 'head':
-            element['out_uri'] = reporting_args['out_uri']
 
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
