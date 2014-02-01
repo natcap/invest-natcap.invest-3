@@ -194,22 +194,19 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     
-    #Need to know if we're using gendered ages, b/c it changes the age
-    #specific initialization equation. We need to know the two last stages
-    #that we have to look out for to switch the EQ that we use.
     gender_var = 2 if is_gendered else 1
     
     if is_gendered:
-        first_age = [order[0], order[len(order)/2]]
+        first_stage = [order[0], order[len(order)/2]]
     else:
-        first_age = [order[0]]
+        first_stage = [order[0]]
     
     for cycle in range(1, duration):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
 
-        #This will be used for each 0 age in the cycle. 
+        #This will be used for each 0 stage in the cycle. 
         rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
    
@@ -221,18 +218,20 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
 
-            for i, age in enumerate(order):
-                
+            for i, stage in enumerate(order):
+               
+                p_g_dict = {}
+
                 #a = 0
-                if age in first_age:
+                if stage in first_stage:
                     total_recruits = area_indifferent_rec(cycle_dict, params_dict, 
                                             rec_dict, gender_var, cycle)
                     area_rec = larval_disp * total_recruits 
                     
-                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, age, cycle)
-                    prob_surv_stay = calc_prob_surv_stay(params_dict, age, area) 
+                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, stage, cycle)
+                    prob_surv_stay = calc_prob_surv_stay(params_dict, stage, area) 
                
-                    cycle_dict[cycle][area][age] = (num_indivs * prob_surv_stay) + area_rec
+                    cycle_dict[cycle][area][stage] = (num_indivs * prob_surv_stay) + area_rec
 
                 # 1 <= a
                 else:
@@ -242,15 +241,17 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                         calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_stage, cycle)
                     curr_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, age,
+                        calc_indiv_count(cycle_dict, migration_dict, area, stage,
                                             cycle)
                     prob_surv_stay = calc_prob_surv_stay(params_dict, prev_stage, area) 
                     prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
 
-                    cycle_dict[cycle][area][age] = (prev_num_indivs * prob_surv_grow) + \
+                    LOGGER.debug("P for %s is: %s" % (stage, prob_surv_stay))
+                    LOGGER.debug("G for %s is: %s" % (stage, prob_surv_grow))
+                    cycle_dict[cycle][area][stage] = (prev_num_indivs * prob_surv_grow) + \
                                                     (curr_num_indivs * prob_surv_stay)
 
-
+    print cycle_dict
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 

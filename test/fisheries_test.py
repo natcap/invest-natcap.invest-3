@@ -17,6 +17,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestHRA(invest_natcap.testing.GISTest):
 
     def test_main_csv_parse(self):
+        raise SkipTest
         '''Want to make sure that the main CSV parsing function is working as
         expected. Should run through fine on the sample CSV, but throw errors
         for both types of incorrect parameter names.'''
@@ -90,6 +91,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
 
     def test_age_gendered_smoke(self):
+        raise SkipTest
 
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
@@ -106,3 +108,21 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['duration'] = 100
 
         fisheries.execute(args)
+    
+    def test_stage_no_gender_smoke(self):
+       
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
+        args['maturity_type'] = "Stage Specific"
+        #Are counting each gender/age combo as an age class?
+        args['num_classes'] = 5
+        args['is_gendered'] = False
+        args['rec_eq'] = "Fixed"
+        args['fix_param'] = 216000000000
+        args['init_recruits'] = 100000
+        args['duration'] = 300
+
+        fisheries.execute(args)
+        

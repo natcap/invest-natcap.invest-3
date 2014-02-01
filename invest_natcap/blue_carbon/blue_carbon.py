@@ -271,6 +271,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "report.htm"
+    blue_carbon_csv_name = "blue_carbon.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -345,6 +346,7 @@ def execute(args):
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
+    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
 
     ##process inputs
     #load tables from files
@@ -988,6 +990,51 @@ def execute(args):
     #create extent shapefile
     datasource_from_dataset_bounding_box_uri(total_acc_soil_uri, extent_uri)
 
+    #open csv
+    csv = open(blue_carbon_csv_uri, 'w')
+
+    acc_bio_veg_cols = ["Acc Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Bio Total"]
+    acc_soil_veg_cols = ["Acc Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Soil Total"]
+
+    dis_bio_veg_cols = ["Dis Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Dis Bio Total"]
+    dis_soil_veg_cols = ["Dis Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Dis Soil Total"]
+
+    em_bio_veg_cols = ["Em Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Em Bio Total"]
+    em_soil_veg_cols = ["Em Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Em Soil Total"]
+
+    csv.write(",".join(["Year"] + acc_bio_veg_cols + acc_soil_veg_cols +\
+                       dis_bio_veg_cols + dis_soil_veg_cols +\
+                       em_bio_veg_cols + em_soil_veg_cols ))
+
+    #row_format = "\n%s" + (",%s" * (len(veg_type_list) + 1) * 2)
+
+    for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
+        row = [this_year]
+
+        #tabulate accumulation and disturbance
+        for source_veg_name in [undis_bio_veg_name, undis_soil_veg_name, dis_bio_veg_name, dis_soil_veg_name]:
+            total = 0
+            for veg_type in veg_type_list:
+                this_source_veg_uri = os.path.join(workspace_dir, source_veg_name % (this_year, veg_type))
+                v = sum_uri(this_source_veg_uri, extent_uri)
+                total += v
+                row.append(v)
+            row.append(total)
+
+        #tabulate emissions
+        for source_veg_name in [em_bio_veg_name, em_soil_veg_name]:
+            total = 0
+            for veg_type in veg_type_list:
+                this_source_veg_uri = os.path.join(workspace_dir,  source_veg_name % (this_year, next_year, veg_type))
+                v = sum_uri(this_source_veg_uri, extent_uri)
+                total += v
+                row.append(v)
+            row.append(total)
+
+        csv.write("\n" + ",".join([str(s) for s in row]))
+
+    csv.close()
+
     #open report
     report = open(report_uri, 'w')
     report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
@@ -1077,8 +1124,6 @@ def execute(args):
         report.write("\n<TR><TD>%i</TD><TD>%s</TD></TR>" % (year, str(sum_uri(os.path.join(workspace_dir, carbon_name % year), extent_uri))))
 
     report.write("\n</TABLE>")
-
-    print emission_bio
 
     #emission table
     report.write("\n<P><P><B>Net Emissions</B>")
