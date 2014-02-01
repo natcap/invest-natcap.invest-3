@@ -7,6 +7,7 @@ import logging
 import csv
 import json
 import codecs
+import re
 
 import numpy as np
 from osgeo import gdal
@@ -354,6 +355,14 @@ def add_head_element(param_args):
         file_str = head_file.read()
     else:
         file_str = src
+    
+    reg_list = [r'<script', r'/script>', r'<style', r'/style>']
+
+    for exp in reg_list:
+        if re.search(exp, file_str) != None:
+            raise Exception('The following html tag was found in header'
+                    ' string : %s. Please do not place any html tags in'
+                    ' the header elements' % exp)
 
     if form == 'style':
         html_str = '''<style type=text/css> %s </style>''' % file_str
