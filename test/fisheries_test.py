@@ -93,7 +93,7 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_HoodCanal_Subregions.shp'
+        args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
         #Are counting each gender/age combo as an age class?
