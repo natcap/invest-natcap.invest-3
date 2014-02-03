@@ -106,6 +106,8 @@ def execute(args):
 
     hrv_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
 
+    LOGGER.debug("Harvest_Dict: %s" % hrv_dict)
+
 def calc_harvest(cycle_dict, params_dict, do_weight):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
@@ -121,7 +123,32 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
                 {'Area_2': ...}
             }    
             '''
-    return None 
+    hrv_dict = {}
+    
+    for cycle, areas_dict in cycle_dict.items():
+        hrv_dict[cycle] = {}
+
+        for area, stages_dict in areas_dict.items():
+            exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
+
+            hrv_total = 0
+            for stage, indivs in stages_dict.items():
+                
+                vuln = params_dict['Stage_Params'][stage]['vulnfishing']
+
+                #If user desires harvest by biomass, use this eq
+                if do_weight:
+                    weight = params_dict['Stage_Params'][stage]['weight']
+                    curr_ax_hrv = indivs * exploit_frac * vuln * weight
+                else:
+                    curr_ax_hrv = indivs * exploit_frac * vuln
+
+                #Adding to the total for that area
+                hrv_total += curr_ax_hrv
+            
+            hrv_dict[cycle][area] = hrv_total
+    
+    return hrv_dict
     
 
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
