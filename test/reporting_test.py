@@ -444,12 +444,69 @@ class TestReportingPackage(testing.GISTest):
         css_uri = os.path.join(REPORTING_DATA,'table_style.css')
         jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
-        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
+        #jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
-        sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
-                       {'date':'3', 'price':'2.25', 'product':'peanuts'},
-                       {'date':'5', 'price':'3.2', 'product':'mints'}]
+        js_string = '''
+            $(document).ready(function()
+                    {
+                        sum_constant_total();
+                    });
+
+            $(function(){
+
+                $('[name="cb"]').change(function() {
+
+                    $table = $(this).closest('table');
+
+                    //$('.checkTot').html("0");
+                    $table.find('.checkTot').html("0");
+                    //$('[name="cb"]:checked').closest('tr').find('.rowDataSd').each(function() {
+                    $table.find('[name="cb"]:checked').closest('tr').find('.rowDataSd').each(function() {
+                        var $td = $(this);
+                        //var $sumColumn = $(this).find('tr.checkTotal td:eq(' + $td.index() + ')');
+                        var $sumColumn = $table.find('tr.checkTotal td:eq(' + $td.index() + ')');
+                        var currVal = $sumColumn.html() || 0;
+                        currVal = +currVal + +$td.html();
+                        $sumColumn.html(currVal);
+                        });
+
+                    });
+            });
+
+            function sum_constant_total() {
+
+                $('table').each(function(){
+
+                    var totals_array = new Array();
+
+                    //var $dataRows=$("#my_table tr:not('.totalColumn')");
+                    var $dataRows=$(this).find("tr:not('.totalColumn')");
+
+                    $dataRows.each(function() {
+                        $(this).find('.rowDataSd').each(function(i){
+                            totals_array[i] = 0;
+                        });
+                    });
+
+                    $dataRows.each(function() {
+                        $(this).find('.rowDataSd').each(function(i){
+                            totals_array[i]+=parseFloat( $(this).html());
+                        });
+                    });
+
+                    //$("#my_table td.totalCol").each(function(i){
+                    $(this).find("td.totalCol").each(function(i){
+                        $(this).html(totals_array[i]);
+                    });
+                });
+            }'''
+
+        #sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
+        #               {'date':'3', 'price':'2.25', 'product':'peanuts'},
+        #               {'date':'5', 'price':'3.2', 'product':'mints'}]
+        
+        sample_dict = []
 
         columns = [{'name': 'product', 'total':False},
                    {'name': 'date', 'total':False},
@@ -468,8 +525,8 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'table',
                         'section': 'body',
                         'sortable': True,
-                        'checkbox': True,
-                        'total':True,
+                        'checkbox': False,
+                        'total':False,
                         'data_type':'dictionary',
                         'columns':columns,
                         'key':'ws_id',
@@ -491,23 +548,27 @@ class TestReportingPackage(testing.GISTest):
                     {
                         'type': 'head',
                         'section': 'head',
-                        'format': 'link',
-                        'src': css_uri},
+                        'format': 'style',
+                        'data_src': css_uri,
+                        'input_type': 'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_uri},
+                        'data_src': jsc_uri,
+                        'input_type': 'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jquery_uri},
+                        'data_src': jquery_uri,
+                        'input_type': 'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_fun_uri}
+                        'data_src': js_string,
+                        'input_type': 'Text'}
                     ],
                 'out_uri': output_uri}
 

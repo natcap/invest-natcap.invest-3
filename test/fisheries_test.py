@@ -71,7 +71,6 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
-        raise SkipTest
 
         #Going to use Blue Crab for testing.
         args = {}
@@ -93,7 +92,7 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_temp_aoi.shp'
+        args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
         #Are counting each gender/age combo as an age class?
@@ -106,3 +105,21 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['duration'] = 100
 
         fisheries.execute(args)
+    
+    def test_stage_no_gender_smoke(self):
+       
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
+        args['maturity_type'] = "Stage Specific"
+        #Are counting each gender/age combo as an age class?
+        args['num_classes'] = 5
+        args['is_gendered'] = False
+        args['rec_eq'] = "Fixed"
+        args['fix_param'] = 216000000000
+        args['init_recruits'] = 100000
+        args['duration'] = 300
+
+        fisheries.execute(args)
+        

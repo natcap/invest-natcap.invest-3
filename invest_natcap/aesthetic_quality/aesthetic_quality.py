@@ -127,13 +127,25 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
+curvature_correction, refr_coeff):
+    """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
+    
+        -in_dem_uri: URI to input surface raster
+        -out_viewshed_uri: URI to the output raster
+        -in_structure_uri: URI to a point shapefile that contains the location
+        of the observers and the viewshed radius in (negative) meters
+        -curvature_correction: flag for the curvature of the earth. Either
+        FLAT_EARTH or CURVED_EARTH. Not used yet.
+        -refraction: refraction index between 0 (max effect) and 1 (no effect).
+        Default is 0.13."""
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
-    obs_elev = 1.00 # Observator's elevation in meters
+    obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    refr_coeff = 0.13 # Refractivity coefficient
+    coefficient = 1.0 # Used to weight the importance of individual viewsheds
+    height = 0.0 # Per viewoint height offset
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
@@ -165,17 +177,30 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
-        # Check whether there is a field that contains the radius information
+        # Check for feature information (radius and coefficient)
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
-            if field_name == 'RADIUS2':
+            if (field_name.upper() == 'RADIUS2') or \
+                (field_name.upper() == 'RADIUS'):
                 field_type = field_def.GetType()
-                message = 'Wrong field type ' + str(field_type) + \
-                    ' expected 0 (ogr.OFTInteger)'
+                message = 'Wrong field type for radius: ' + str(field_type) + \
+                ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
-                max_dist = -feature.GetFieldAsInteger(field)
+                max_dist = abs(feature.GetFieldAsInteger(field))
                 max_dist = int(max_dist/cell_size)
+            if field_name.lower() == 'coefficient':
+                field_type = field_def.GetType()
+                message = 'Wrong field type for coefficient: ' + str(field_type) + \
+                ' expected 2 (ogr.OFTReal)'
+                assert field_type == ogr.OFTReal, message
+                coefficient = feature.GetFieldAsDouble(field)    
+            if field_name.lower() == 'height':
+                field_type = field_def.GetType()
+                message = 'Wrong field type for height: ' + str(field_type) + \
+                ' expected 2 (ogr.OFTReal)'
+                assert field_type == ogr.OFTReal, message
+                height = feature.GetFieldAsDouble(field)
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
@@ -184,12 +209,17 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        j = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
-        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
+        'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
-        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
-    
+        (i,j), obs_elevi + height, tgt_elev, max_dist, refr_coeff)
+        # Multiply the viewshed by its coefficient
+        # Apply the valuation function to the distance
+        # Combine everything
+
+        # Accumulate result to combined raster
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
