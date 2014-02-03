@@ -221,6 +221,30 @@ curvature_correction, refr_coeff):
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
         # Multiply the viewshed by its coefficient
         # Apply the valuation function to the distance
+        def polynomial(a, b, c, d):
+            def compute(x, v):
+                return a + b*x + c*x**2 + d*x**3
+            return compute
+
+        def logarithmic(a, b):
+            def compute(x, v):
+                return a + b*math.log(x)
+            return compute
+
+        a = args["a_coefficient"]
+        b = args["b_coefficient"]
+        c = args["c_coefficient"]
+        d = args["d_coefficient"]
+        valuation_function = None
+        if "polynomial" in args["valuation_function"]:
+            print("Polynomial")
+            valuation_function = polynomial(a, b, c, d)
+        elif "logarithmic" in args['valuation_function']:
+            print("logarithmic")
+            valuation_function = logarithmic(a, b)
+
+        assert valuation_function is not None
+            
         # Combine everything
 
         # Accumulate result to combined raster
