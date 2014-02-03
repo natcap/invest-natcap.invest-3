@@ -61,6 +61,17 @@
                     "required": true,
                     "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
                 }
+                {
+                    "id" : "harvest_type",
+                    "args_id" : "hrv_type",
+                    "type": "dropdown",
+                    "label": "Harvest by Weight or Numbers?",
+                    "required": true,
+                    "options" : ["Weight", "Numbers"],
+                    "returns": "strings",
+                    "dataType": "string",
+                    "helpText": "This dropdown specifies whether the harvest numbers returned should be given in number of individuals harvested, or by the weight being harvested. If using the weight, there must be a corresponding 'weight' column in the CSV, with information about the weight of each maturity class."
+                }
             ]
         },
         {
