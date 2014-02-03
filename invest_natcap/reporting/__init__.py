@@ -89,7 +89,7 @@ def generate_report(reporting_args):
 
                 'data_src'- a URI to the location of the external file for either
                     the 'script' or the 'style' OR a String representing the
-                    entire html script or style (required)
+                    html script or style (DO NOT include the tags) (required)
                 
                 'input_type' -  a String, 'File' or 'Text' that refers to how
                     'data_src' is being passed in (URI vs String) (required). 
@@ -328,14 +328,12 @@ def add_head_element(param_args):
                 be added. Currently : 'script', 'style' (required)
 
             param_args['data_src'] - a string URI path for the external source of the
-                element OR a String representing the html. If a URI the file is
-                read in as a String (required)
+                element OR a String representing the html (DO NOT include html
+                tags, tags are automatically generated). If a URI the file is
+                read in as a String. (required)
 
             param_args['input_type'] - 'Text' or 'File'. Determines how the
                 input from 'data_src' is handled (required)
-
-            param_args['out_uri'] - a string URI path for the html page
-                (required)
 
         returns - a string representation of the html head element"""
 
