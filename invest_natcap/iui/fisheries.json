@@ -65,7 +65,7 @@
                     "id" : "harvest_type",
                     "args_id" : "hrv_type",
                     "type": "dropdown",
-                    "label": "Harvest by Weight or Numbers?",
+                    "label": "Biomass and Harvest by Weight or Numbers?",
                     "required": true,
                     "options" : ["Numbers", "Weight"],
                     "returns": "strings",
