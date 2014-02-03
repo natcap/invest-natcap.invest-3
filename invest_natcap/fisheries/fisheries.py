@@ -41,6 +41,11 @@ class MissingMaturityParameter(Exception):
     a Maturity parameter for ages/stages. It is a required paramater if the
     recruitment equation being used is B-H, Ricker, or Fecundity.'''
     pass
+class MissingWeightParameter(Exception):
+    '''Exception should be raised if the species main parameter CSV is missing
+    a Weight parameter for ages/stages. It is a required paramater if the
+    recruitment equation being used is B-H, Ricker, or Fecundity.'''
+    pass
 
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
@@ -58,6 +63,9 @@ def execute(args):
             stage-specific. Options will be either "Age Specific" or
             "Stage Specific" and will change which equation is used in modeling
             growth.
+        hrv_type- String specifiying how the user wants to get the harvest
+            data. Options are either "Numbers" or "Weight", and will change the
+            harvest equation used in core.
         num_classes- The number of maturity classes that the user will be
             providing within the main parameter csv.
         is_gendered- Boolean for whether or not the age and stage classes are
@@ -130,8 +138,10 @@ def execute(args):
     area_count = aoi_layer.GetFeatureCount()
 
     #Calculate the classes main param info, and add it to the core args dict
+    do_weight = True if args['hrv_type'] == 'Weight' else False
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
-                                args['rec_eq'])
+                                args['rec_eq'], do_weight)
+    core_args['do_weight'] = do_weight
     core_args['params_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
 
@@ -238,7 +248,7 @@ def parse_migration_tables(mig_folder_uri):
 
     return mig_dict
 
-def parse_main_csv(params_uri, area_count, rec_eq):
+def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
@@ -268,6 +278,8 @@ def parse_main_csv(params_uri, area_count, rec_eq):
         ordered_stages- A list containing all the ages/stages that are being
             used within the model, in the order they were listed in the CSV,
             which is presumed to be the order in which they occur.
+        do_weight- A boolean indication whether the harvest type is 'Weight'
+            and thus requires a weight parameter for each age/stage.
    '''
     #Create a container list to hold all the line lists
     hybrid_lines = []
@@ -337,7 +349,11 @@ def parse_main_csv(params_uri, area_count, rec_eq):
                 species is missing a Maturity parameter. Please make sure \
                 that each age/stage for the species is assigned a proportion \
                 between 0 and 1 (inclusive) which would be considered mature.")
-
+    if 'weight' not in age_params and do_weight:
+        raise MissingWeightParameter("The main parameter CSV for this species\
+                is missing a Weight parameter, but you have indicated that you\
+                would like to view species harvest by weight. Please make sure\
+                that each age/stage in for the species is assigned a weight.")
     #Want a list of the stages in order
     ordered_stages = []
 
