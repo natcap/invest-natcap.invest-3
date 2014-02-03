@@ -141,6 +141,7 @@ def execute(args):
     do_weight = True if args['hrv_type'] == 'Weight' else False
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
                                 args['rec_eq'], do_weight)
+    core_args['do_weight'] = do_weight
     core_args['params_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
 
