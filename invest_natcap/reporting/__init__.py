@@ -58,7 +58,8 @@ def generate_report(reporting_args):
                     'data_type' is 'shapefile' or 'csv' (required). If a
                     list of dictionaries, each dictionary should have
                     keys that represent the columns, where each dictionary
-                    is a row. How the rows are ordered are defined by their
+                    is a row (list could be empty)
+                    How the rows are ordered are defined by their
                     index in the list. Formatted example:
                     [{col_name_1: value, col_name_2: value, ...},
                      {col_name_1: value, col_name_2: value, ...},
@@ -291,9 +292,10 @@ def data_dict_to_list(data_dict):
         the inner dictionaries are added to the list in the order of
         their sorted keys
 
-        data_dict - a dictionary with unique keys pointing to dictionaries
+        data_dict - a dictionary with unique keys pointing to dictionaries.
+            Could be empty (required)
 
-        returns - a list of dictionaries"""
+        returns - a list of dictionaries, or empty list if data_dict is empty"""
     
     data_list = []
     data_keys = data_dict.keys()

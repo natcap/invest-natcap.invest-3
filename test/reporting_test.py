@@ -502,9 +502,11 @@ class TestReportingPackage(testing.GISTest):
                 });
             }'''
 
-        sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
-                       {'date':'3', 'price':'2.25', 'product':'peanuts'},
-                       {'date':'5', 'price':'3.2', 'product':'mints'}]
+        #sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
+        #               {'date':'3', 'price':'2.25', 'product':'peanuts'},
+        #               {'date':'5', 'price':'3.2', 'product':'mints'}]
+        
+        sample_dict = []
 
         columns = [{'name': 'product', 'total':False},
                    {'name': 'date', 'total':False},
@@ -523,8 +525,8 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'table',
                         'section': 'body',
                         'sortable': True,
-                        'checkbox': True,
-                        'total':True,
+                        'checkbox': False,
+                        'total':False,
                         'data_type':'dictionary',
                         'columns':columns,
                         'key':'ws_id',
