@@ -17,7 +17,6 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestHRA(invest_natcap.testing.GISTest):
 
     def test_main_csv_parse(self):
-        raise SkipTest
         '''Want to make sure that the main CSV parsing function is working as
         expected. Should run through fine on the sample CSV, but throw errors
         for both types of incorrect parameter names.'''
