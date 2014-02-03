@@ -20,6 +20,9 @@ def execute(args):
             growth.
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
+        do_weight- Boolean for whether harvesting and biomass should be done by
+            weight or not. If weight is desired, there will be a 'weight' 
+            parameter in the params_dict['Stage_Params'] subdictionary.
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
             information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
@@ -100,6 +103,26 @@ def execute(args):
         stage_structured_cycle(args['params_dict'], args['is_gendered'],
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'])
+
+    hrv_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
+
+def calc_harvest(cycle_dict, params_dict, do_weight):
+    '''Function to calculate harvest of an area on a cycle basis. If do_weight
+    is True, then this will be done on the basis of biomass, otherwise the
+    results represent the number of individuals.
+    
+    
+    
+    Returns:
+        hrv_dict- Dictionary containing all harvest information on a per area
+            per cycle basis. This will have the following structure.
+            {Cycle #:
+                {'Area_1': 3001},
+                {'Area_2': ...}
+            }    
+            '''
+    return None 
+    
 
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
