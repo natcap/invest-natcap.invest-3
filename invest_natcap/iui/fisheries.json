@@ -67,7 +67,7 @@
                     "type": "dropdown",
                     "label": "Harvest by Weight or Numbers?",
                     "required": true,
-                    "options" : ["Weight", "Numbers"],
+                    "options" : ["Numbers", "Weight"],
                     "returns": "strings",
                     "dataType": "string",
                     "helpText": "This dropdown specifies whether the harvest numbers returned should be given in number of individuals harvested, or by the weight being harvested. If using the weight, there must be a corresponding 'weight' column in the CSV, with information about the weight of each maturity class."
