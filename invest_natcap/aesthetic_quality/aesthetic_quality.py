@@ -175,6 +175,7 @@ curvature_correction, refr_coeff):
     feature_count = layer.GetFeatureCount()
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(1): #feature_count):
+        print("feature " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         # Check for feature information (radius and coefficient)
@@ -188,19 +189,22 @@ curvature_correction, refr_coeff):
                 ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
                 max_dist = abs(feature.GetFieldAsInteger(field))
+                assert max_dist is not None, "max distance can't be None"
                 max_dist = int(max_dist/cell_size)
-            if field_name.lower() == 'coefficient':
+            if field_name.lower() == 'coeff':
                 field_type = field_def.GetType()
-                message = 'Wrong field type for coefficient: ' + str(field_type) + \
+                message = 'Wrong field type for coeff: ' + str(field_type) + \
                 ' expected 2 (ogr.OFTReal)'
                 assert field_type == ogr.OFTReal, message
                 coefficient = feature.GetFieldAsDouble(field)    
+                assert coefficient is not None, "feature coeff can't be None"
             if field_name.lower() == 'height':
                 field_type = field_def.GetType()
                 message = 'Wrong field type for height: ' + str(field_type) + \
                 ' expected 2 (ogr.OFTReal)'
                 assert field_type == ogr.OFTReal, message
                 height = feature.GetFieldAsDouble(field)
+                assert height is not None, "height can't be None"
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
@@ -214,7 +218,7 @@ curvature_correction, refr_coeff):
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
-        (i,j), obs_elevi + height, tgt_elev, max_dist, refr_coeff)
+        (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
         # Multiply the viewshed by its coefficient
         # Apply the valuation function to the distance
         # Combine everything
