@@ -168,6 +168,50 @@ def sum_by_category_uri(category_uri, value_uri,categories=None):
 
     return category_sum
 
+def alignment_check_uri(dataset_uri_list):
+    dataset_uri = dataset_uri_list[0]
+    dataset = gdal.Open(dataset_uri)
+    srs = osr.SpatialReference()
+    srs.SetProjection(dataset.GetProjection())
+
+    base_n_rows = dataset.RasterYSize
+    base_n_cols = dataset.RasterXSize
+    base_linear_units = srs.GetLinearUnits()
+    base_geotransform = dataset.GetGeoTransform()
+
+    dataset = None
+
+    for dataset_uri in dataset_uri_list[1:]:
+        dataset = gdal.Open(dataset_uri)
+        srs.SetProjection(dataset.GetProjection())       
+
+        LOGGER.debug("Checking linear units.")
+        if srs.GetLinearUnits() != base_linear_units:
+            msg = "Linear unit mismatch."
+            LOGGER.error(msg)
+            raise ValueError, msg
+        
+        LOGGER.debug("Checking origin, cell size, and rotation of pixels.")
+        if dataset.GetGeoTransform() != base_geotransform:
+            msg = "Geotransform mismatch."
+            LOGGER.error(msg)
+            raise ValueError, msg
+        
+        LOGGER.debug("Checking extents.")
+        if dataset.RasterYSize != base_n_rows:
+            msg = "Number or rows mismatch."
+            LOGGER.error(msg)
+            raise ValueError, msg
+
+        if dataset.RasterXSize != base_n_cols:
+            msg = "Number of columns mismatch."
+            LOGGER.error(msg)
+            raise ValueError, msg
+            
+        dataset = None
+
+    return True    
+
 def execute(args):
     """Entry point for the blue carbon model.
 
@@ -423,14 +467,20 @@ def execute(args):
 
     cell_size = set([raster_utils.get_cell_size_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(cell_size) == 1:
-        LOGGER.debug("All masters have the same cell size.")
+        LOGGER.debug("All rasters have the same cell size.")
         cell_size = cell_size.pop()
     else:
         msg = "All rasters must have the same cell size."
         LOGGER.error(msg)
         raise ValueError, msg
 
-    LOGGER.debug("Check for alignment missing...")
+    LOGGER.debug("Checking alignment.")
+    try:
+        alignment_check_uri([lulc_uri_dict[k] for k in lulc_uri_dict])
+    except ValueError, msg:
+        LOGGER.error("Alignment check FAILED.")
+        LOGGER.error(msg)
+        raise ValueError, msg
 
     ##vectorize datasets operations
     #standard ops
@@ -557,6 +607,7 @@ def execute(args):
     this_dis_soil_em_uri = os.path.join(workspace_dir, dis_soil_em_name)
     this_dis_soil_adj_uri = os.path.join(workspace_dir, dis_soil_adj_name)
 
+    #creating stock rasters for vegetation specific carbon
     for veg_type in veg_type_list:
         for name in [dis_bio_veg_name, undis_bio_veg_name, dis_soil_veg_name, undis_soil_veg_name]:
             raster_utils.new_raster_from_base_uri(this_uri,
@@ -735,6 +786,7 @@ def execute(args):
                                                 gdal_type_identity_raster,
                                                 nodata_default_int,
                                                 exception_flag="values_required")
+            LOGGER.debug("Created vegetation mask for %i.", veg_type)
 
             #adjust vegetation specific disturbed soil pool by masked soil disturbance
             raster_utils.vectorize_datasets([this_dis_soil_veg_uri, this_dis_soil_uri, this_veg_mask_uri],
@@ -744,6 +796,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Allocated new disturbance for soil.")
 
             #adjust vegetation specific disturbed biomass pool by masked biomass disturbance
             raster_utils.vectorize_datasets([this_dis_bio_veg_uri, this_dis_bio_uri, this_veg_mask_uri],
@@ -753,6 +806,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Allocated new disturbance for biomass.")
 
             #adjust vegetation specific undisturbed soil pool by masked soil accumulation
             raster_utils.vectorize_datasets([this_undis_soil_veg_uri, this_acc_soil_uri, this_veg_mask_uri],
@@ -762,6 +816,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Allocated new accumulation for soil.")
 
             #adjust vegetation specific undisturbed biomass pool by masked biomass accumulation
             raster_utils.vectorize_datasets([this_undis_bio_veg_uri, this_acc_bio_uri, this_veg_mask_uri],
@@ -771,6 +826,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Allocated new accumulation for biomass.")
 
             ##calculate emitted carbon
             #half life vectorize datasets operator
@@ -791,6 +847,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Calculated new emissions from soil.")
 
             #calculate vegetation specific emitted carbon from biomass
             raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri],
@@ -800,6 +857,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Calculated new emissions from biomass.")
 
             ##adjust carbon pools
             #adjust disturbed soil pool by emissions
@@ -810,6 +868,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Adjusted disturbed carbon by new emissions from soil.")
 
             #adjust bisturbed biomass pool by emissions
             raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
@@ -819,6 +878,7 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
+            LOGGER.debug("Adjusted disturbed carbon by new emissions from biomass.")
 
 ##        ##calculate adjusted carbon
 ##        #calculate adjusted soil
@@ -1125,10 +1185,10 @@ def execute(args):
 
     report.write("\n</TABLE>")
 
-    #emission table
-    report.write("\n<P><P><B>Net Emissions</B>")
-    column_name_list = ["Year", "Biomass", "Emitted Biomass", "Net Bio","Total Bio" ,"Acc Soil", "Dis Soil", "Net Soil", "Total Soil", "Total Carbon"]
-    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+##    #emission table
+##    report.write("\n<P><P><B>Net Emissions</B>")
+##    column_name_list = ["Year", "Biomass", "Emitted Biomass", "Net Bio","Total Bio" ,"Acc Soil", "Dis Soil", "Net Soil", "Total Soil", "Total Carbon"]
+##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 ##    for this_year in range(lulc_years[0], analysis_year +1):
 ##        report.write("\n<TR>")
 ##        if this_year in lulc_years:
