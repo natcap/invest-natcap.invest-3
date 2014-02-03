@@ -753,7 +753,8 @@ def execute(args):
         LOGGER.debug("Soil disturbance raster created.")
 
         ##calculate emission
-
+        adj_bio_uri_list = []
+        adj_soil_uri_list = []
         for veg_type in veg_type_list:
             this_veg_mask_uri = os.path.join(workspace_dir, veg_mask_name % (this_year, veg_type))
 
@@ -869,6 +870,7 @@ def execute(args):
                                             cell_size,
                                             "union")
             LOGGER.debug("Adjusted disturbed carbon by new emissions from soil.")
+            adj_soil_uri_list.append(next_dis_soil_veg_uri)
 
             #adjust bisturbed biomass pool by emissions
             raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
@@ -879,31 +881,28 @@ def execute(args):
                                             cell_size,
                                             "union")
             LOGGER.debug("Adjusted disturbed carbon by new emissions from biomass.")
+            adj_bio_uri_list.append(next_dis_bio_veg_uri)
 
-##        ##calculate adjusted carbon
-##        #calculate adjusted soil
-##        raster_utils.vectorize_datasets([this_adj_soil_uri,
-##                                         this_acc_soil_uri,
-##                                         this_dis_soil_uri],
-##                                         adj_op,
-##                                         next_adj_soil_uri,
-##                                         gdal_type_carbon,
-##                                         nodata_default_float,
-##                                         cell_size,
-##                                         "union")
-##        LOGGER.debug("Calculated adjusted soil carbon.")
-##
-##        #calculate adjusted biomass
-##        raster_utils.vectorize_datasets([this_adj_bio_uri,
-##                                         this_acc_soil_uri,
-##                                         this_dis_soil_uri],
-##                                         adj_op,
-##                                         next_adj_bio_uri,
-##                                         gdal_type_carbon,
-##                                         nodata_default_float,
-##                                         cell_size,
-##                                        "union")
-##        LOGGER.debug("Calculated adjusted biomass carbon.")
+        ##calculate adjusted carbon
+        #calculate adjusted soil
+        raster_utils.vectorize_datasets(adj_soil_uri_list,
+                                        add_op,
+                                        next_adj_soil_uri,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
+                                        cell_size,
+                                        "union")
+        LOGGER.debug("Calculated adjusted soil carbon.")
+
+        #calculate adjusted biomass
+        raster_utils.vectorize_datasets(adj_bio_uri_list,
+                                        add_op,
+                                        next_adj_bio_uri,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
+                                        cell_size,
+                                        "union")
+        LOGGER.debug("Calculated adjusted biomass carbon.")
 
         ##change base year variables
         this_year = next_year
