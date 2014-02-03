@@ -60,7 +60,7 @@
                     "defaultValue": false,
                     "required": true,
                     "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
-                }
+                },
                 {
                     "id" : "harvest_type",
                     "args_id" : "hrv_type",
