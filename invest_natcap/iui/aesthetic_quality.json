@@ -107,61 +107,97 @@
                         "elements":
                         [
                         {
-                        "id": "equation_parameters",
-                        "label": "Parameters for the valuation function a + bx + cx^d",
-                        "collapsible": false,
-                        "type": "container",
-                        "elements":
-                        [
-                        {
-                        "id" : "workspace_list",
-                        "type": "list",	        
-		                "elements": [
+                            "id": "quadratic_finction_parameters",
+                            "label": "Parameters for the valuation function a + bx + cx^2 + dx^3",
+                            "collapsible": true,
+                            "type": "container",
+                            "elements":
+                            [
                             {
-                                "id" : "a_coefficient",
-                                "args_id" : "a_coefficient",
-                                "type": "text",
-                                "label": "'a' coefficient",
-                                "defaultValue": "0.0",
-                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                "dataType": "float",
-                                "required": false
-                            },                              
-                            {
-                                "id" : "b_coefficient",
-                                "args_id" : "b_coefficient",
-                                "type": "text",
-                                "label": "'b' coefficient",
-                                "defaultValue": "0.0",
-                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                "dataType": "float",
-                                "required": false
-                            },                              
-                            {
-                                "id" : "c_coefficient",
-                                "args_id" : "c_coefficient",
-                                "type": "text",
-                                "label": "'c' coefficient",
-                                "defaultValue": "0.0",
-                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                "dataType": "float",
-                                "required": false
-                            },                              
-                            {
-                                "id" : "d_coefficient",
-                                "args_id" : "d_coefficient",
-                                "type": "text",
-                                "label": "'d' coefficient",
-                                "defaultValue": "0.0",
-                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                "dataType": "float",
-                                "required": false
-                            }                               
+                                "id" : "workspace_list",
+                                "type": "list",	        
+		                        "elements": 
+                                [
+                                {
+                                    "id" : "a_coefficient",
+                                    "args_id" : "a_coefficient",
+                                    "type": "text",
+                                    "label": "'a' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },                              
+                                {
+                                    "id" : "b_coefficient",
+                                    "args_id" : "b_coefficient",
+                                    "type": "text",
+                                    "label": "'b' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },                              
+                                {
+                                    "id" : "c_coefficient",
+                                    "args_id" : "c_coefficient",
+                                    "type": "text",
+                                    "label": "'c' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },                              
+                                {
+                                    "id" : "d_coefficient",
+                                    "args_id" : "d_coefficient",
+                                    "type": "text",
+                                    "label": "'d' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                }                               
+                                ]
+                            }
                             ]
-                        }
-                        ]
-                        }
-                        ]
+                        },
+                        {
+                            "id": "logarithmic_function_parameters",
+                            "label": "Parameters for the valuation function a + b ln(x)",
+                            "collapsible": true,
+                            "type": "container",
+                            "elements":
+                            [
+                            {
+                                "id" : "workspace_list",
+                                "type": "list",	        
+		                        "elements": 
+                                [
+                                {
+                                    "id" : "a_coefficient",
+                                    "args_id" : "a_coefficient",
+                                    "type": "text",
+                                    "label": "'a' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },                              
+                                {
+                                    "id" : "b_coefficient",
+                                    "args_id" : "b_coefficient",
+                                    "type": "text",
+                                    "label": "'b' coefficient",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                }                               
+                                ]
+                            }
+                            ]
+                        }                        ]
                     }
 		        ]
 		   }
