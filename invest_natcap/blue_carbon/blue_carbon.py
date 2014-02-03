@@ -910,63 +910,63 @@ def execute(args):
         this_adj_soil_uri = next_adj_soil_uri
         this_adj_bio_uri = next_adj_bio_uri
 
-    ##calculate emission
-    veg_types = list(set([carbon[k][carbon_field_veg] for k in carbon]))
-    veg_types.sort()
-
-    emission_bio = {}
-    emission_soil = {}
-    dis_bio = dict(zip(veg_types, [0] * len(veg_types)))
-    dis_soil = dict(zip(veg_types, [0] * len(veg_types)))
-    LOGGER.debug("Calculating net emissions.")
-    for this_year in range(lulc_years[0], analysis_year +1):
-        emission_bio[this_year]={}
-        emission_soil[this_year]={}
-
-        if this_year in lulc_years:
-            LOGGER.debug("Carbon activity %i.", this_year)
-            #reclass LULC by vegetation type
-            this_uri = lulc_uri_dict[this_year]
-            this_veg_uri = os.path.join(workspace_dir, "%i_veg.tif" % this_year)
-
-            raster_utils.reclassify_dataset_uri(this_uri,
-                                       veg_dict,
-                                       this_veg_uri,
-                                       gdal_type_identity_raster,
-                                       nodata_default_int,
-                                       exception_flag="values_required")
-
-            this_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % this_year)
-            this_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % this_year)
-
-            #tabulate disturbed carbon by vegetation type
-            LOGGER.debug("Summing %s by %s.", this_dis_bio_uri, this_veg_uri)
-            this_dis_bio = sum_by_category_uri(this_veg_uri, this_dis_bio_uri)
-            LOGGER.debug("Biomass disturbance: %s.", str(this_dis_bio))
-            for veg in this_dis_bio:
-                dis_bio[veg] += this_dis_bio[veg]
-
-            LOGGER.debug("Summing %s by %s.", this_dis_soil_uri, this_veg_uri)
-            this_dis_soil = sum_by_category_uri(this_veg_uri, this_dis_soil_uri)
-            LOGGER.debug("Soil disturbance: %s.", str(this_dis_soil))
-            for veg in this_dis_soil:
-                dis_soil[veg] += this_dis_soil[veg]
-
-        #apply half-life to generate
-        for veg in veg_types:
-            try:
-                alpha = float(half_life[veg][half_life_field_bio])
-                emission_bio[this_year][veg]=dis_bio[veg] * (0.5 ** (1 / alpha))
-            except ValueError:
-                emission_bio[this_year][veg]=0
-            dis_bio[veg]-=emission_bio[this_year][veg]
-
-            try:
-                alpha = float(half_life[veg][half_life_field_soil])
-                emission_soil[this_year][veg]=dis_soil[veg] * (0.5 ** (1 / alpha))
-            except ValueError:
-                emission_soil[this_year][veg]=0
-            dis_soil[veg]-=emission_soil[this_year][veg]
+##    ##calculate emission
+##    veg_types = list(set([carbon[k][carbon_field_veg] for k in carbon]))
+##    veg_types.sort()
+##
+##    emission_bio = {}
+##    emission_soil = {}
+##    dis_bio = dict(zip(veg_types, [0] * len(veg_types)))
+##    dis_soil = dict(zip(veg_types, [0] * len(veg_types)))
+##    LOGGER.debug("Calculating net emissions.")
+##    for this_year in range(lulc_years[0], analysis_year +1):
+##        emission_bio[this_year]={}
+##        emission_soil[this_year]={}
+##
+##        if this_year in lulc_years:
+##            LOGGER.debug("Carbon activity %i.", this_year)
+##            #reclass LULC by vegetation type
+##            this_uri = lulc_uri_dict[this_year]
+##            this_veg_uri = os.path.join(workspace_dir, "%i_veg.tif" % this_year)
+##
+##            raster_utils.reclassify_dataset_uri(this_uri,
+##                                       veg_dict,
+##                                       this_veg_uri,
+##                                       gdal_type_identity_raster,
+##                                       nodata_default_int,
+##                                       exception_flag="values_required")
+##
+##            this_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % this_year)
+##            this_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % this_year)
+##
+##            #tabulate disturbed carbon by vegetation type
+##            LOGGER.debug("Summing %s by %s.", this_dis_bio_uri, this_veg_uri)
+##            this_dis_bio = sum_by_category_uri(this_veg_uri, this_dis_bio_uri)
+##            LOGGER.debug("Biomass disturbance: %s.", str(this_dis_bio))
+##            for veg in this_dis_bio:
+##                dis_bio[veg] += this_dis_bio[veg]
+##
+##            LOGGER.debug("Summing %s by %s.", this_dis_soil_uri, this_veg_uri)
+##            this_dis_soil = sum_by_category_uri(this_veg_uri, this_dis_soil_uri)
+##            LOGGER.debug("Soil disturbance: %s.", str(this_dis_soil))
+##            for veg in this_dis_soil:
+##                dis_soil[veg] += this_dis_soil[veg]
+##
+##        #apply half-life to generate
+##        for veg in veg_types:
+##            try:
+##                alpha = float(half_life[veg][half_life_field_bio])
+##                emission_bio[this_year][veg]=dis_bio[veg] * (0.5 ** (1 / alpha))
+##            except ValueError:
+##                emission_bio[this_year][veg]=0
+##            dis_bio[veg]-=emission_bio[this_year][veg]
+##
+##            try:
+##                alpha = float(half_life[veg][half_life_field_soil])
+##                emission_soil[this_year][veg]=dis_soil[veg] * (0.5 ** (1 / alpha))
+##            except ValueError:
+##                emission_soil[this_year][veg]=0
+##            dis_soil[veg]-=emission_soil[this_year][veg]
 
     ##analysis year calculations
     #copy litter for analysis year
