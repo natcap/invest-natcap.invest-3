@@ -19,7 +19,7 @@ def generate_table(table_dict, attributes=None):
             
             'rows' - a list of dictionaries that represent the rows. Each
                 dictionaries keys should match the column names found in 
-                'cols' (required) Example:
+                'cols' (possibly empty list) (required) Example:
                 [{col_name_1: value, col_name_2: value, ...},
                  {col_name_1: value, col_name_2: value, ...},
                  ...]

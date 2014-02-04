@@ -20,6 +20,9 @@ def execute(args):
             growth.
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
+        do_weight- Boolean for whether harvesting and biomass should be done by
+            weight or not. If weight is desired, there will be a 'weight' 
+            parameter in the params_dict['Stage_Params'] subdictionary.
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
             information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
@@ -101,6 +104,53 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'])
 
+    hrv_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
+
+    LOGGER.debug("Harvest_Dict: %s" % hrv_dict)
+
+def calc_harvest(cycle_dict, params_dict, do_weight):
+    '''Function to calculate harvest of an area on a cycle basis. If do_weight
+    is True, then this will be done on the basis of biomass, otherwise the
+    results represent the number of individuals.
+    
+    
+    
+    Returns:
+        hrv_dict- Dictionary containing all harvest information on a per area
+            per cycle basis. This will have the following structure.
+            {Cycle #:
+                {'Area_1': 3001},
+                {'Area_2': ...}
+            }    
+            '''
+    hrv_dict = {}
+    
+    for cycle, areas_dict in cycle_dict.items():
+        hrv_dict[cycle] = {}
+
+        for area, stages_dict in areas_dict.items():
+            exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
+
+            hrv_total = 0
+            for stage, indivs in stages_dict.items():
+                
+                vuln = params_dict['Stage_Params'][stage]['vulnfishing']
+
+                #If user desires harvest by biomass, use this eq
+                if do_weight:
+                    weight = params_dict['Stage_Params'][stage]['weight']
+                    curr_ax_hrv = indivs * exploit_frac * vuln * weight
+                else:
+                    curr_ax_hrv = indivs * exploit_frac * vuln
+
+                #Adding to the total for that area
+                hrv_total += curr_ax_hrv
+            
+            hrv_dict[cycle][area] = hrv_total
+    
+    return hrv_dict
+    
+
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     '''cycle_dict- Contains all counts of individuals for each combination of 
@@ -141,7 +191,6 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
    
-    do_migration = False if migration_dict is None else True
     gender_var = 2 if is_gendered else 1
 
     for cycle in range(1, duration):
@@ -194,23 +243,20 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration):
     
-    #Need to know if we're using gendered ages, b/c it changes the age
-    #specific initialization equation. We need to know the two last stages
-    #that we have to look out for to switch the EQ that we use.
     gender_var = 2 if is_gendered else 1
     
     if is_gendered:
-        first_age = [order[0], order[len(order)/2]]
+        first_stage = [order[0], order[len(order)/2]]
     else:
-        first_age = [order[0]]
+        first_stage = [order[0]]
     
     for cycle in range(1, duration):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
 
-        #This will be used for each 0 age in the cycle. 
-        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
+        #This will be used for each 0 stage in the cycle. 
+        total_recruits = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
    
         for area in params_dict['Area_Params'].keys():
@@ -221,18 +267,16 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
 
-            for i, age in enumerate(order):
-                
+            for i, stage in enumerate(order):
+               
                 #a = 0
-                if age in first_age:
-                    total_recruits = area_indifferent_rec(cycle_dict, params_dict, 
-                                            rec_dict, gender_var, cycle)
+                if stage in first_stage:
                     area_rec = larval_disp * total_recruits 
                     
-                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, age, cycle)
-                    prob_surv_stay = calc_prob_surv_stay(params_dict, age, area) 
+                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, stage, cycle)
+                    prob_surv_stay = calc_prob_surv_stay(params_dict, stage, area) 
                
-                    cycle_dict[cycle][area][age] = (num_indivs * prob_surv_stay) + area_rec
+                    cycle_dict[cycle][area][stage] = (num_indivs * prob_surv_stay) + area_rec
 
                 # 1 <= a
                 else:
@@ -242,15 +286,17 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                         calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_stage, cycle)
                     curr_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, age,
+                        calc_indiv_count(cycle_dict, migration_dict, area, stage,
                                             cycle)
                     prob_surv_stay = calc_prob_surv_stay(params_dict, prev_stage, area) 
                     prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
 
-                    cycle_dict[cycle][area][age] = (prev_num_indivs * prob_surv_grow) + \
+                    LOGGER.debug("P for %s is: %s" % (stage, prob_surv_stay))
+                    LOGGER.debug("G for %s is: %s" % (stage, prob_surv_grow))
+                    cycle_dict[cycle][area][stage] = (prev_num_indivs * prob_surv_grow) + \
                                                     (curr_num_indivs * prob_surv_stay)
 
-
+    print cycle_dict
 
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     '''Want to get the indiviual count for the previous cycle, including the 

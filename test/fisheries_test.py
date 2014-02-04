@@ -31,15 +31,15 @@ class TestHRA(invest_natcap.testing.GISTest):
         lobster_area_count = 9
         
         #Smoke test the single area and multi area files.
-        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count, 'Fixed')
-        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count, 'Beverton-Holt')
+        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count, 'Fixed', True)
+        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count, 'Beverton-Holt', True)
 
         #Check that exceptions are properly raised when expected.
         self.assertRaises(fisheries.ImproperStageParameter,
-                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed')
+                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed', True)
 
         self.assertRaises(fisheries.ImproperAreaParameter,
-                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed')
+                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed', True)
     
     def test_recruitment_errors(self):
         '''One of the first things we want to check is whether the necessary
@@ -71,7 +71,6 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
-        raise SkipTest
 
         #Going to use Blue Crab for testing.
         args = {}
@@ -79,6 +78,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Numbers'
         args['num_classes'] = 4
         args['is_gendered'] = False
         args['rec_eq'] = "Ricker"
@@ -91,11 +91,13 @@ class TestHRA(invest_natcap.testing.GISTest):
 
     def test_age_gendered_smoke(self):
 
+        #Using DC for gendered testing.
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/test/data/fisheries/DC_temp_aoi.shp'
+        args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Numbers'
         #Are counting each gender/age combo as an age class?
         args['num_classes'] = 10
         args['is_gendered'] = True
@@ -106,3 +108,23 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['duration'] = 100
 
         fisheries.execute(args)
+    
+    def test_stage_no_gender_smoke(self):
+       
+        #Using white shrimp for stage testing.
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
+        args['maturity_type'] = "Stage Specific"
+        args['hrv_type'] = 'Weight'
+        #Are counting each gender/age combo as an age class?
+        args['num_classes'] = 5
+        args['is_gendered'] = False
+        args['rec_eq'] = "Fixed"
+        args['fix_param'] = 216000000000
+        args['init_recruits'] = 100000
+        args['duration'] = 300
+
+        fisheries.execute(args)
+        
