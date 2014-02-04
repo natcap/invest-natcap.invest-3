@@ -104,9 +104,10 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'])
 
-    hrv_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
-
+    hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
+    
     LOGGER.debug("Harvest_Dict: %s" % hrv_dict)
+    LOGGER.debug("Totals_Dict: %s" % totals_dict)
 
 def calc_harvest(cycle_dict, params_dict, do_weight):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
@@ -124,12 +125,17 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
             }    
             '''
     hrv_dict = {}
-    
+    totals_dict = {}
+
     for cycle, areas_dict in cycle_dict.items():
         hrv_dict[cycle] = {}
 
         for area, stages_dict in areas_dict.items():
             exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
+
+            #Want the total across all age groups for a single area
+            if area not in totals_dict:
+                totals_dict[area] = 0
 
             hrv_total = 0
             for stage, indivs in stages_dict.items():
@@ -145,10 +151,11 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
 
                 #Adding to the total for that area
                 hrv_total += curr_ax_hrv
-            
+
             hrv_dict[cycle][area] = hrv_total
-    
-    return hrv_dict
+            totals_dict[area] += hrv_total
+
+    return hrv_dict, totals_dict
     
 
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
