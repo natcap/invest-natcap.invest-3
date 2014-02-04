@@ -106,9 +106,6 @@ def execute(args):
 
     hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
     
-    LOGGER.debug("Harvest_Dict: %s" % hrv_dict)
-    LOGGER.debug("Totals_Dict: %s" % totals_dict)
-
 def calc_harvest(cycle_dict, params_dict, do_weight):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
@@ -298,8 +295,6 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                     prob_surv_stay = calc_prob_surv_stay(params_dict, prev_stage, area) 
                     prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
 
-                    LOGGER.debug("P for %s is: %s" % (stage, prob_surv_stay))
-                    LOGGER.debug("G for %s is: %s" % (stage, prob_surv_grow))
                     cycle_dict[cycle][area][stage] = (prev_num_indivs * prob_surv_grow) + \
                                                     (curr_num_indivs * prob_surv_stay)
 
@@ -472,8 +467,6 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             area_params = params_dict['Area_Params'][area]
             larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
-            LOGGER.debug("The larval dispersal for %s is %s." % (area, larval_disp))
-            LOGGER.debug(area_params)
             #For age = 0, count = init_recruits
             for age in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
@@ -486,12 +479,13 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 prev_age = order[order.index(age)-1]
                 prev_count = cycle_dict[0][area][prev_age]
                 
-                surv = calc_survival_mortal(params_dict, area, prev_age)
+                prev_surv = calc_survival_mortal(params_dict, area, prev_age)
+                surv = calc_survival_mortal(params_dict, area, age)
 
                 if age in final_stage:
                     count = (prev_count * surv)/ (1- surv)
                 else:
-                    count = prev_count * surv
+                    count = prev_count * prev_surv
                 
                 cycle_dict[0][area][age] = count
 
