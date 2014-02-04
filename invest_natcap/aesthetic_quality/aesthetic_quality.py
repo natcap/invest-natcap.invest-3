@@ -145,21 +145,21 @@ curvature_correction, refr_coeff):
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
-    height = 0.0 # Per viewoint height offset
+    height = 0.0 # Per viewpoint height offset--updated as we read file info
 
-    src_filename = \
-    "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
-    dst_filename = out_viewshed_uri
-
-    in_dem_raster = gdal.Open(in_dem_uri)
-    assert in_dem_raster is not None
-    src_ds = gdal.Open( src_filename )
-    driver = gdal.GetDriverByName("GTiff")
-    dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
-
-    # Once we're done, close properly the dataset
-    dst_ds = None
-    src_ds = None
+    # Build I and J arrays, and save them to disk
+    rows, cols = raster_util.get_row_col_from_uri(in_dem_uri)
+    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    I_uri = raster_utils.temporary_filename()
+    J_uri = raster_utils.temporary_filename()
+    shutil.copy(in_dem_uri, I_uri)
+    shutil.copy(in_dem_uri, J_uri)
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_raster.GetRasterBand(1).Write(I)
+    I_raster = None
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_raster.GetRasterBand(1).Write(J)
+    J_raster = None
 
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
@@ -170,7 +170,7 @@ curvature_correction, refr_coeff):
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    GT = in_dem_raster.GetGeoTransform()
+    GT = raster_utils.get_geotransform_uri(in_dem_uri)
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     uri_list = []
@@ -227,12 +227,13 @@ curvature_correction, refr_coeff):
                 if v:
                     return sqrt((vi - i)**2 + (vj - j)**2)
                 else:
-                    return 0
+                    return -1.
             return compute
 
+        # Add the distance 
         distance_fn = compute_distance(i,j)
         distance_uri = raster_utils.temporary_filename()
-        ###raster_utils.vectorize_datasets([])
+        #raster_utils.vectorize_datasets([])
         # Multiply the viewshed by its coefficient
         # Apply the valuation function to the distance
         def polynomial(a, b, c, d):
