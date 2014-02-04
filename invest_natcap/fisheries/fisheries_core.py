@@ -486,7 +486,8 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                     count = (prev_count * surv)/ (1- surv)
                 else:
                     count = prev_count * prev_surv
-                
+                    #LOGGER.debug("For %s,%s we're using N=%s, Surv=%s" % (area, age, prev_count, prev_surv))
+
                 cycle_dict[0][area][age] = count
 
     LOGGER.debug(cycle_dict)
