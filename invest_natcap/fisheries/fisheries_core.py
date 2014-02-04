@@ -269,8 +269,6 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
 
             for i, stage in enumerate(order):
                
-                p_g_dict = {}
-
                 #a = 0
                 if stage in first_stage:
                     area_rec = larval_disp * total_recruits 
