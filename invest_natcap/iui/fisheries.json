@@ -98,16 +98,20 @@
                         "id" : "alpha",
                         "args_id" : "alpha",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Alpha (Beverton-Holt/Ricker)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An alpha parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
                         "id" : "beta",
                         "args_id" : "beta",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Beta (Beverton-Holt/Ricker)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An beta parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
@@ -122,8 +126,10 @@
                         "id" : "fix_param",
                         "args_id" : "fix_param",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Number of Recruits (Fixed)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This parameter is required if the recruitment equation is 'Fixed'. This number representes a single number of recruits that will be brought into all areas at each time step."
                     }
                     ]
@@ -138,6 +144,7 @@
                     "id" : "recruit_num",
                     "args_id" : "init_recruits",
                     "type": "text",
+                    "dataType": "float",
                     "label": "Initial Number of Recruits",
                     "required": true,
                     "dataType": "int",
@@ -211,6 +218,7 @@
                     "id" : "sim_dur",
                     "args_id" : "duration",
                     "type": "text",
+                    "dataType": "int",
                     "label": "Duration of Simulation (time steps)",
                     "validateAs": {"type": "number"},
                     "required": true,
