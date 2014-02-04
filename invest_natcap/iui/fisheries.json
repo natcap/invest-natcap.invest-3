@@ -115,7 +115,7 @@
                         "args_id" : "fec_params_uri",
                         "type": "file",
                         "label": "Offspring per Age Class (Fecundity)",
-                        "required": true,
+                        "required": false,
                         "helpText": "This CSV file is required if the chosen recruitment equation is 'Fecundity.' It should contain numbers of potential offspring for each age class being included in the main parameters CSV."
                     },
                     {
