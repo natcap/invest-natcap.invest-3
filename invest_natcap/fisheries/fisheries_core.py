@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 def execute(args):
     '''
     Input:
-        workspace_uri- Location into which all intermediate and output files
+        workspace_dir- Location into which all intermediate and output files
             should be placed.
         maturity_type- String specifying whether the model is age-specific or
             stage-specific. Options will be either "Age Specific" or
@@ -71,8 +71,8 @@ def execute(args):
             desires the model to run.
     '''
 
-    inter_dir = os.path.join(args['workspace_uri'], 'Intermediate')
-    output_dir = os.path.join(args['workspace_uri'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
 
     '''This dictionary will contain all counts of individuals for each
     combination of cycle, age/stage, and area. The final dictionary will look

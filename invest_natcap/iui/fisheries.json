@@ -13,7 +13,7 @@
             "elements":[
                 {
                     "id" : "workspace",
-                    "args_id" : "workspace_uri",
+                    "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../Fisheries",
