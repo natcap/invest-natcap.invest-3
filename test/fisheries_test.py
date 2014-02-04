@@ -78,6 +78,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Numbers'
         args['num_classes'] = 4
         args['is_gendered'] = False
         args['rec_eq'] = "Ricker"
@@ -90,11 +91,13 @@ class TestHRA(invest_natcap.testing.GISTest):
 
     def test_age_gendered_smoke(self):
 
+        #Using DC for gendered testing.
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Numbers'
         #Are counting each gender/age combo as an age class?
         args['num_classes'] = 10
         args['is_gendered'] = True
@@ -108,11 +111,13 @@ class TestHRA(invest_natcap.testing.GISTest):
     
     def test_stage_no_gender_smoke(self):
        
+        #Using white shrimp for stage testing.
         args = {}
         args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
         args['maturity_type'] = "Stage Specific"
+        args['hrv_type'] = 'Weight'
         #Are counting each gender/age combo as an age class?
         args['num_classes'] = 5
         args['is_gendered'] = False
