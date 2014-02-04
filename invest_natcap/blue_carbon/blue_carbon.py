@@ -375,6 +375,10 @@ def execute(args):
     em_soil_veg_name = os.path.join(intermediate_dir, "%i_%i_em_soil_veg_%i.tif")
     em_bio_veg_name = os.path.join(intermediate_dir, "%i_%i_em_bio_veg_%i.tif")
 
+    #net file names
+    net_dis_bio_veg_name = os.path.join(intermediate_dir, "%i_net_dis_bio_veg_%i.tif")
+    net_dis_soil_veg_name = os.path.join(intermediate_dir, "%i_net_dis_soil_veg_%i.tif")
+
     #totals
     total_acc_soil_name = "total_soil_acc_%i_%i.tif"
     total_acc_bio_name = "total_bio_acc_%i_%i.tif"
@@ -618,7 +622,7 @@ def execute(args):
 
     #creating stock rasters for vegetation specific carbon
     for veg_type in veg_type_list:
-        for name in [dis_bio_veg_name, undis_bio_veg_name, dis_soil_veg_name, undis_soil_veg_name]:
+        for name in [adj_dis_bio_veg_name, undis_bio_veg_name, adj_dis_soil_veg_name, undis_soil_veg_name]:
             uri = os.path.join(workspace_dir, name % (this_year, veg_type))
             raster_utils.new_raster_from_base_uri(this_uri,
                                                   uri,
@@ -799,18 +803,19 @@ def execute(args):
             this_veg_mask_uri = os.path.join(workspace_dir, veg_mask_name % (this_year, veg_type))
 
             this_dis_bio_veg_uri = os.path.join(workspace_dir, dis_bio_veg_name % (this_year, veg_type))
-            this_undis_bio_veg_uri = os.path.join(workspace_dir, undis_bio_veg_name % (this_year, veg_type))
+            this_adj_dis_bio_veg_uri = os.path.join(workspace_dir, adj_dis_bio_veg_name % (this_year, veg_type))
+            next_dis_bio_veg_uri = os.path.join(workspace_dir, dis_bio_veg_name % (next_year, veg_type))
+            this_net_dis_bio_veg_uri = os.path.join(workspace_dir, net_dis_bio_veg_name % (this_year, veg_type))
 
             this_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (this_year, veg_type))
-            this_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (this_year, veg_type))
-
-            this_adj_dis_bio_veg_uri = os.path.join(workspace_dir, adj_dis_bio_veg_name % (this_year, veg_type))
             this_adj_dis_soil_veg_uri = os.path.join(workspace_dir, adj_dis_soil_veg_name % (this_year, veg_type))
+            next_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (next_year, veg_type))
+            this_net_dis_soil_veg_uri = os.path.join(workspace_dir, net_dis_soil_veg_name % (this_year, veg_type))
 
-            next_dis_bio_veg_uri = os.path.join(workspace_dir, dis_bio_veg_name % (next_year, veg_type))
+            this_undis_bio_veg_uri = os.path.join(workspace_dir, undis_bio_veg_name % (this_year, veg_type))
             next_undis_bio_veg_uri = os.path.join(workspace_dir, undis_bio_veg_name % (next_year, veg_type))
 
-            next_dis_soil_veg_uri  = os.path.join(workspace_dir, dis_soil_veg_name % (next_year, veg_type))
+            this_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (this_year, veg_type))
             next_undis_soil_veg_uri = os.path.join(workspace_dir, undis_soil_veg_name % (next_year, veg_type))
 
             next_em_soil_veg_uri = os.path.join(workspace_dir, em_soil_veg_name % (this_year, next_year, veg_type))
@@ -832,140 +837,143 @@ def execute(args):
                          os.path.basename(this_veg_mask_uri),
                          os.path.basename(this_uri))
 
-            #adjust vegetation specific disturbed soil pool by masked soil disturbance
-            raster_utils.vectorize_datasets([this_dis_soil_veg_uri,
-                                             this_dis_soil_uri,
-                                             this_veg_mask_uri],
-                                            veg_adj_op,
-                                            this_adj_dis_soil_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegtation specific soil disturbance raster"
-                         " %s from %s, %s, and %s.",
-                         os.path.basename(this_adj_dis_soil_veg_uri),
-                         os.path.basename(this_dis_soil_veg_uri),
-                         os.path.basename(this_dis_soil_uri),
-                         os.path.basename(this_veg_mask_uri))
+            if this_year == lulc_years[0]:
+                pass
+            else:                
+                #adjust vegetation specific disturbed soil pool by masked soil disturbance
+                raster_utils.vectorize_datasets([this_dis_soil_veg_uri,
+                                                 this_dis_soil_uri,
+                                                 this_veg_mask_uri],
+                                                veg_adj_op,
+                                                this_adj_dis_soil_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegtation specific soil disturbance raster"
+                             " %s from %s, %s, and %s.",
+                             os.path.basename(this_adj_dis_soil_veg_uri),
+                             os.path.basename(this_dis_soil_veg_uri),
+                             os.path.basename(this_dis_soil_uri),
+                             os.path.basename(this_veg_mask_uri))
 
-            #adjust vegetation specific disturbed biomass pool by masked biomass disturbance
-            raster_utils.vectorize_datasets([this_dis_bio_veg_uri,
-                                             this_dis_bio_uri,
-                                             this_veg_mask_uri],
-                                            veg_adj_op,
-                                            this_adj_dis_bio_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific biomass disturbance"
-                         " raster %s from %s, %s, and %s.",
-                         os.path.basename(this_adj_dis_bio_veg_uri),
-                         os.path.basename(this_dis_bio_veg_uri),
-                         os.path.basename(this_dis_bio_uri),
-                         os.path.basename(this_veg_mask_uri))
+                #adjust vegetation specific disturbed biomass pool by masked biomass disturbance
+                raster_utils.vectorize_datasets([this_dis_bio_veg_uri,
+                                                 this_dis_bio_uri,
+                                                 this_veg_mask_uri],
+                                                veg_adj_op,
+                                                this_adj_dis_bio_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific biomass disturbance"
+                             " raster %s from %s, %s, and %s.",
+                             os.path.basename(this_adj_dis_bio_veg_uri),
+                             os.path.basename(this_dis_bio_veg_uri),
+                             os.path.basename(this_dis_bio_uri),
+                             os.path.basename(this_veg_mask_uri))
 
-            #adjust vegetation specific undisturbed soil pool by masked soil accumulation
-            raster_utils.vectorize_datasets([this_undis_soil_veg_uri,
-                                             this_acc_soil_uri,
-                                             this_veg_mask_uri],
-                                            veg_adj_op,
-                                            next_undis_soil_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific soil accumulation raster"
-                         " %s from %s, %s, and %s.",
-                         os.path.basename(next_undis_soil_veg_uri),
-                         os.path.basename(this_undis_soil_veg_uri),
-                         os.path.basename(this_veg_mask_uri))
+                #adjust vegetation specific undisturbed soil pool by masked soil accumulation
+                raster_utils.vectorize_datasets([this_undis_soil_veg_uri,
+                                                 this_acc_soil_uri,
+                                                 this_veg_mask_uri],
+                                                veg_adj_op,
+                                                next_undis_soil_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific soil accumulation raster"
+                             " %s from %s, %s, and %s.",
+                             os.path.basename(next_undis_soil_veg_uri),
+                             os.path.basename(this_undis_soil_veg_uri),
+                             os.path.basename(this_veg_mask_uri))
 
-            #adjust vegetation specific undisturbed biomass pool by masked biomass accumulation
-            raster_utils.vectorize_datasets([this_undis_bio_veg_uri,
-                                             this_acc_bio_uri,
-                                             this_veg_mask_uri],
-                                            veg_adj_op,
-                                            next_undis_bio_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific biomass accumulation"
-                         " raster %s from %s, %s, and %s.",
-                         os.path.basename(next_undis_bio_veg_uri),
-                         os.path.basename(this_undis_bio_veg_uri),
-                         os.path.basename(this_acc_bio_uri),
-                         os.path.basename(this_veg_mask_uri))
+                #adjust vegetation specific undisturbed biomass pool by masked biomass accumulation
+                raster_utils.vectorize_datasets([this_undis_bio_veg_uri,
+                                                 this_acc_bio_uri,
+                                                 this_veg_mask_uri],
+                                                veg_adj_op,
+                                                next_undis_bio_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific biomass accumulation"
+                             " raster %s from %s, %s, and %s.",
+                             os.path.basename(next_undis_bio_veg_uri),
+                             os.path.basename(this_undis_bio_veg_uri),
+                             os.path.basename(this_acc_bio_uri),
+                             os.path.basename(this_veg_mask_uri))
 
-            ##calculate emitted carbon
-            #half life vectorize datasets operator
-            def half_life_op(alpha, alpha_t):
-                def h_l_op(c):
-                    try:
-                        return (0.5 ** (alpha_t/(float(alpha)))) * c
-                    except ValueError:
-                        #return 0 if alpha is None
-                        return 0
-                return h_l_op
+                ##calculate emitted carbon
+                #half life vectorize datasets operator
+                def half_life_op(alpha, alpha_t):
+                    def h_l_op(c):
+                        try:
+                            return (0.5 ** (alpha_t/(float(alpha)))) * c
+                        except ValueError:
+                            #return 0 if alpha is None
+                            return 0
+                    return h_l_op
 
-            #calculate vegetation specific emitted carbon from soil
-            raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri],
-                                            half_life_op(half_life[veg_type][half_life_field_soil], t),
-                                            next_em_soil_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific soil emissions raster"
-                         " %s from %s.",
-                         os.path.basename(next_em_soil_veg_uri),
-                         os.path.basename(this_adj_dis_soil_veg_uri))
+                #calculate vegetation specific emitted carbon from soil
+                raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri],
+                                                half_life_op(half_life[veg_type][half_life_field_soil], t),
+                                                next_em_soil_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific soil emissions raster"
+                             " %s from %s.",
+                             os.path.basename(next_em_soil_veg_uri),
+                             os.path.basename(this_adj_dis_soil_veg_uri))
 
-            #calculate vegetation specific emitted carbon from biomass
-            raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri],
-                                            half_life_op(half_life[veg_type][half_life_field_bio], t),
-                                            next_em_bio_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific biomass emissions raster"
-                         " %s from %s.",
-                         os.path.basename(next_em_bio_veg_uri),
-                         os.path.basename(this_adj_dis_bio_veg_uri))
+                #calculate vegetation specific emitted carbon from biomass
+                raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri],
+                                                half_life_op(half_life[veg_type][half_life_field_bio], t),
+                                                next_em_bio_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific biomass emissions raster"
+                             " %s from %s.",
+                             os.path.basename(next_em_bio_veg_uri),
+                             os.path.basename(this_adj_dis_bio_veg_uri))
 
-            ##adjust carbon pools
-            #adjust disturbed soil pool by emissions
-            raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri, next_em_soil_veg_uri],
-                                            sub_op,
-                                            next_dis_soil_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific adjusted disturbed soil"
-                         " raster %s from the difference of %s and %s.",
-                         os.path.basename(next_dis_soil_veg_uri),
-                         os.path.basename(this_adj_dis_soil_veg_uri),
-                         os.path.basename(next_em_soil_veg_uri))
-            adj_soil_uri_list.append(next_dis_soil_veg_uri)
+                ##adjust carbon pools
+                #adjust disturbed soil pool by emissions
+                raster_utils.vectorize_datasets([this_adj_dis_soil_veg_uri, next_em_soil_veg_uri],
+                                                sub_op,
+                                                this_net_soil_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific adjusted disturbed soil"
+                             " raster %s from the difference of %s and %s.",
+                             os.path.basename(this_net_soil_veg_uri),
+                             os.path.basename(this_adj_dis_soil_veg_uri),
+                             os.path.basename(next_em_soil_veg_uri))
+                adj_soil_uri_list.append(this_net_soil_veg_uri)
 
-            #adjust bisturbed biomass pool by emissions
-            raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
-                                            sub_op,
-                                            next_dis_bio_veg_uri,
-                                            gdal_type_carbon,
-                                            nodata_default_float,
-                                            cell_size,
-                                            "union")
-            LOGGER.debug("Created vegetation specific adjusted disturbed"
-                         " biomass raster %s from the difference of %s and %s.",
-                         os.path.basename(next_dis_bio_veg_uri),
-                         os.path.basename(this_adj_dis_bio_veg_uri),
-                         os.path.basename(next_em_bio_veg_uri))
-            adj_bio_uri_list.append(next_dis_bio_veg_uri)
+                #adjust disturbed biomass pool by emissions
+                raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri, next_em_bio_veg_uri],
+                                                sub_op,
+                                                this_net_bio_veg_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                cell_size,
+                                                "union")
+                LOGGER.debug("Created vegetation specific adjusted disturbed"
+                             " biomass raster %s from the difference of %s and %s.",
+                             os.path.basename(this_net_soil_veg_uri),
+                             os.path.basename(this_adj_dis_bio_veg_uri),
+                             os.path.basename(next_em_bio_veg_uri))
+                adj_bio_uri_list.append(this_net_soil_veg_uri)
 
         ##calculate adjusted carbon
         #calculate adjusted soil
