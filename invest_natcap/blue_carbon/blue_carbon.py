@@ -569,7 +569,9 @@ def execute(args):
                                gdal_type_carbon,
                                nodata_default_float,
                                exception_flag="values_required")
-    LOGGER.debug("Created stock above raster.")
+    LOGGER.debug("Created stock above raster %s from %s.",
+                 os.path.basename(this_above_uri),
+                 os.path.basename(this_uri))
 
     raster_utils.reclassify_dataset_uri(this_uri,
                                below_dict,
@@ -577,7 +579,9 @@ def execute(args):
                                gdal_type_carbon,
                                nodata_default_float,
                                exception_flag="values_required")
-    LOGGER.debug("Created stock below raster.")
+    LOGGER.debug("Created stock below raster %s from %s.",
+                 os.path.basename(this_below_uri),
+                 os.path.basename(this_uri))
 
     raster_utils.reclassify_dataset_uri(this_uri,
                                soil_dict,
@@ -585,7 +589,9 @@ def execute(args):
                                gdal_type_carbon,
                                nodata_default_float,
                                exception_flag="values_required")
-    LOGGER.debug("Created stock soil raster.")
+    LOGGER.debug("Created stock soil raster %s from %s.",
+                 os.path.basename(this_soil_uri),
+                 os.path.basename(this_uri))
 
     raster_utils.vectorize_datasets([this_above_uri, this_below_uri],
                                     add_op,
@@ -594,7 +600,10 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Created stock biomass raster.")
+    LOGGER.debug("Created stock biomass raster %s from sum of %s and %s.",
+                 os.path.basename(this_bio_uri),
+                 os.path.basename(this_above_uri),
+                 os.path.basename(this_below_uri))
 
     this_adj_soil_uri = this_soil_uri
     this_adj_bio_uri = this_bio_uri
@@ -610,12 +619,15 @@ def execute(args):
     #creating stock rasters for vegetation specific carbon
     for veg_type in veg_type_list:
         for name in [dis_bio_veg_name, undis_bio_veg_name, dis_soil_veg_name, undis_soil_veg_name]:
+            uri = os.path.join(workspace_dir, name % (this_year, veg_type))
             raster_utils.new_raster_from_base_uri(this_uri,
-                                                  os.path.join(workspace_dir, name % (this_year, veg_type)),
+                                                  uri,
                                                   "GTiff",
                                                   nodata_default_float,
                                                   gdal_type_carbon,
                                                   0)
+            LOGGER.debug("Created zero fill raster %s.",
+                         os.path.basename(uri))
 
     ##loop over lulc years
     for next_year in lulc_years[1:] + [analysis_year]:
@@ -646,7 +658,9 @@ def execute(args):
                                    gdal_type_carbon,
                                    nodata_default_float,
                                    exception_flag="values_required")
-        LOGGER.debug("Created stock litter raster.")
+        LOGGER.debug("Created stock litter raster %s from %s.",
+                     os.path.basename(this_litter_uri),
+                     os.path.basename(this_uri))
 
         raster_utils.vectorize_datasets([this_adj_bio_uri, this_adj_soil_uri, this_litter_uri],
                                         add_op,
@@ -655,7 +669,11 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Created total carbon raster.")
+        LOGGER.debug("Created total carbon raster %s from the sum of %s, %s, and %s.",
+                     os.path.basename(this_adj_uri),
+                     os.path.basename(this_adj_bio_uri),
+                     os.path.basename(this_adj_soil_uri),
+                     os.path.basename(this_litter_uri))
 
         LOGGER.debug("Transition year %i.", next_year)
         next_uri = lulc_uri_dict[next_year]
@@ -672,8 +690,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-
-        LOGGER.debug("Accumulation coefficent raster created.")
+        LOGGER.debug("Created accumulation coefficent raster %s from %s and %s.",
+                     os.path.basename(this_acc_soil_co_uri),
+                     os.path.basename(this_uri),
+                     os.path.basename(next_uri))
 
         #multiply by number of years
         raster_utils.vectorize_datasets([this_acc_soil_co_uri],
@@ -683,7 +703,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Soil accumulation raster created.")
+        LOGGER.debug("Created soil accumulation raster %s from the product of %s and %i.",
+                     os.path.basename(this_acc_soil_uri),
+                     os.path.basename(this_acc_soil_co_uri),
+                     t)
 
         ##calculate biomass accumulation
         LOGGER.info("Processing biomass accumulation.")
@@ -695,7 +718,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Accumulation coefficent raster created.")
+        LOGGER.debug("Created accumulation coefficent raster %s from %s and %s.",
+                     os.path.basename(this_acc_bio_co_uri),
+                     os.path.basename(this_uri),
+                     os.path.basename(next_uri))
 
         #multiply by number of years
         raster_utils.vectorize_datasets([this_acc_bio_co_uri],
@@ -705,7 +731,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Biomass accumulation raster created.")
+        LOGGER.debug("Created biomass accumulation raster %s from the product of %s and %s.",
+                     os.path.basename(this_acc_bio_uri),
+                     os.path.basename(this_acc_bio_co_uri),
+                     t)
 
         ##calculate biomass disturbance
         LOGGER.info("Processing biomass disturbance.")
@@ -717,8 +746,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-
-        LOGGER.debug("Biomass disturbance coefficient raster created.")
+        LOGGER.debug("Created biomass disturbance coefficient raster %s from %s and %s.",
+                     os.path.basename(this_dis_bio_co_uri),
+                     os.path.basename(this_uri),
+                     os.path.basename(next_uri))
 
         #multiply coefficients by base biomass carbon
         raster_utils.vectorize_datasets([this_dis_bio_co_uri, this_adj_bio_uri],
@@ -728,7 +759,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Biomass disturbance raster created.")
+        LOGGER.debug("Created biomass disturbance raster %s from the product of %s and %s.",
+                     os.path.basename(this_dis_bio_uri),
+                     os.path.basename(this_dis_bio_co_uri),
+                     os.path.basename(this_adj_bio_uri))
 
         ##calculate soil disturbance
         LOGGER.info("Processing soil disturbance.")
@@ -740,7 +774,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Soil disturbance coefficient raster created.")
+        LOGGER.debug("Created soil disturbance coefficient raster %s from %s and %s.",
+                     os.path.basename(this_dis_soil_co_uri),
+                     os.path.basename(this_uri),
+                     os.path.basename(next_uri))
 
         #multiply coefficients by base soil carbon
         raster_utils.vectorize_datasets([this_dis_soil_co_uri, this_adj_soil_uri],
@@ -750,7 +787,10 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Soil disturbance raster created.")
+        LOGGER.debug("Created soil disturbance raster %s from the product of %s and %s.",
+                     os.path.basename(this_dis_soil_uri),
+                     os.path.basename(this_dis_soil_co_uri),
+                     os.path.basename(this_adj_soil_uri))
 
         ##calculate emission
         adj_bio_uri_list = []
@@ -787,47 +827,77 @@ def execute(args):
                                                 gdal_type_identity_raster,
                                                 nodata_default_int,
                                                 exception_flag="values_required")
-            LOGGER.debug("Created vegetation mask for %i.", veg_type)
+            LOGGER.debug("Created vegetation type %i raster %s from %s.",
+                         veg_type,
+                         os.path.basename(this_veg_mask_uri),
+                         os.path.basename(this_uri))
 
             #adjust vegetation specific disturbed soil pool by masked soil disturbance
-            raster_utils.vectorize_datasets([this_dis_soil_veg_uri, this_dis_soil_uri, this_veg_mask_uri],
+            raster_utils.vectorize_datasets([this_dis_soil_veg_uri,
+                                             this_dis_soil_uri,
+                                             this_veg_mask_uri],
                                             veg_adj_op,
                                             this_adj_dis_soil_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Allocated new disturbance for soil.")
+            LOGGER.debug("Created vegtation specific soil disturbance raster"
+                         " %s from %s, %s, and %s.",
+                         os.path.basename(this_adj_dis_soil_veg_uri),
+                         os.path.basename(this_dis_soil_veg_uri),
+                         os.path.basename(this_dis_soil_uri),
+                         os.path.basename(this_veg_mask_uri))
 
             #adjust vegetation specific disturbed biomass pool by masked biomass disturbance
-            raster_utils.vectorize_datasets([this_dis_bio_veg_uri, this_dis_bio_uri, this_veg_mask_uri],
+            raster_utils.vectorize_datasets([this_dis_bio_veg_uri,
+                                             this_dis_bio_uri,
+                                             this_veg_mask_uri],
                                             veg_adj_op,
                                             this_adj_dis_bio_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Allocated new disturbance for biomass.")
+            LOGGER.debug("Created vegetation specific biomass disturbance"
+                         " raster %s from %s, %s, and %s.",
+                         os.path.basename(this_adj_dis_bio_veg_uri),
+                         os.path.basename(this_dis_bio_veg_uri),
+                         os.path.basename(this_dis_bio_uri),
+                         os.path.basename(this_veg_mask_uri))
 
             #adjust vegetation specific undisturbed soil pool by masked soil accumulation
-            raster_utils.vectorize_datasets([this_undis_soil_veg_uri, this_acc_soil_uri, this_veg_mask_uri],
+            raster_utils.vectorize_datasets([this_undis_soil_veg_uri,
+                                             this_acc_soil_uri,
+                                             this_veg_mask_uri],
                                             veg_adj_op,
                                             next_undis_soil_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Allocated new accumulation for soil.")
+            LOGGER.debug("Created vegetation specific soil accumulation raster"
+                         " %s from %s, %s, and %s.",
+                         os.path.basename(next_undis_soil_veg_uri),
+                         os.path.basename(this_undis_soil_veg_uri),
+                         os.path.basename(this_veg_mask_uri))
 
             #adjust vegetation specific undisturbed biomass pool by masked biomass accumulation
-            raster_utils.vectorize_datasets([this_undis_bio_veg_uri, this_acc_bio_uri, this_veg_mask_uri],
+            raster_utils.vectorize_datasets([this_undis_bio_veg_uri,
+                                             this_acc_bio_uri,
+                                             this_veg_mask_uri],
                                             veg_adj_op,
                                             next_undis_bio_veg_uri,
                                             gdal_type_carbon,
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Allocated new accumulation for biomass.")
+            LOGGER.debug("Created vegetation specific biomass accumulation"
+                         " raster %s from %s, %s, and %s.",
+                         os.path.basename(next_undis_bio_veg_uri),
+                         os.path.basename(this_undis_bio_veg_uri),
+                         os.path.basename(this_acc_bio_uri),
+                         os.path.basename(this_veg_mask_uri))
 
             ##calculate emitted carbon
             #half life vectorize datasets operator
@@ -848,7 +918,10 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Calculated new emissions from soil.")
+            LOGGER.debug("Created vegetation specific soil emissions raster"
+                         " %s from %s.",
+                         os.path.basename(next_em_soil_veg_uri),
+                         os.path.basename(this_adj_dis_soil_veg_uri))
 
             #calculate vegetation specific emitted carbon from biomass
             raster_utils.vectorize_datasets([this_adj_dis_bio_veg_uri],
@@ -858,7 +931,10 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Calculated new emissions from biomass.")
+            LOGGER.debug("Created vegetation specific biomass emissions raster"
+                         " %s from %s.",
+                         os.path.basename(next_em_bio_veg_uri),
+                         os.path.basename(this_adj_dis_bio_veg_uri))
 
             ##adjust carbon pools
             #adjust disturbed soil pool by emissions
@@ -869,7 +945,11 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Adjusted disturbed carbon by new emissions from soil.")
+            LOGGER.debug("Created vegetation specific adjusted disturbed soil"
+                         " raster %s from the difference of %s and %s.",
+                         os.path.basename(next_dis_soil_veg_uri),
+                         os.path.basename(this_adj_dis_soil_veg_uri),
+                         os.path.basename(next_em_soil_veg_uri))
             adj_soil_uri_list.append(next_dis_soil_veg_uri)
 
             #adjust bisturbed biomass pool by emissions
@@ -880,7 +960,11 @@ def execute(args):
                                             nodata_default_float,
                                             cell_size,
                                             "union")
-            LOGGER.debug("Adjusted disturbed carbon by new emissions from biomass.")
+            LOGGER.debug("Created vegetation specific adjusted disturbed"
+                         " biomass raster %s from the difference of %s and %s.",
+                         os.path.basename(next_dis_bio_veg_uri),
+                         os.path.basename(this_adj_dis_bio_veg_uri),
+                         os.path.basename(next_em_bio_veg_uri))
             adj_bio_uri_list.append(next_dis_bio_veg_uri)
 
         ##calculate adjusted carbon
@@ -892,7 +976,9 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Calculated adjusted soil carbon.")
+        LOGGER.debug("Created adjusted soil raster %s from %s.",
+                     os.path.basename(next_adj_soil_uri),
+                     ','.join([os.path.basename(uri) for uri in adj_soil_uri_list]))
 
         #calculate adjusted biomass
         raster_utils.vectorize_datasets(adj_bio_uri_list,
@@ -902,7 +988,9 @@ def execute(args):
                                         nodata_default_float,
                                         cell_size,
                                         "union")
-        LOGGER.debug("Calculated adjusted biomass carbon.")
+        LOGGER.debug("Created adjusted biomass raster %s from %s.",
+                     os.path.basename(next_adj_bio_uri),
+                     ','.join([os.path.basename(uri) for uri in adj_bio_uri_list]))
 
         ##change base year variables
         this_year = next_year
@@ -987,7 +1075,11 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Created total carbon raster.")
+    LOGGER.debug("Created total carbon raster %s from %s, %s, and %s.",
+                 os.path.basename(this_adj_uri),
+                 os.path.basename(this_adj_bio_uri),
+                 os.path.basename(this_adj_soil_uri),
+                 os.path.basename(this_litter_uri))
 
     ##calculate totals
     LOGGER.info("Calculating totals.")
@@ -1004,7 +1096,9 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Cumilative soil accumulation raster created.")
+    LOGGER.debug("Created total soil accumulation raster %s from %s.",
+                 os.path.basename(total_acc_soil_uri),
+                 ','.join([os.path.basename(uri) for uri in acc_soil_uri_list]))
 
     raster_utils.vectorize_datasets(acc_bio_uri_list,
                                     add_op,
@@ -1013,7 +1107,9 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Cumilative biomass accumulation raster created.")
+    LOGGER.debug("Created total biomass accumulation raster from %s.",
+                 os.path.basename(total_acc_bio_uri),
+                 ','.join([os.path.basename(uri) for uri in acc_bio_uri_list]))
 
     raster_utils.vectorize_datasets(dis_soil_uri_list,
                                     add_op,
@@ -1022,7 +1118,9 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Cumilative soil disturbance raster created.")
+    LOGGER.debug("Created total soil disturbance raster %s from %s.",
+                 os.path.basename(total_dis_soil_uri),
+                 ','.join([os.path.basename(uri) for uri in dis_soil_uri_list]))
 
     raster_utils.vectorize_datasets(dis_bio_uri_list,
                                     add_op,
@@ -1031,7 +1129,9 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Cumilative biomass disturbance raster created.")
+    LOGGER.debug("Created total biomass disturbance raster %s from %s.",
+                 os.path.basename(total_dis_bio_uri),
+                 ','.join([os.path.basename(uri) for uri in dis_bio_uri_list]))
 
     net_sequestration_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], analysis_year))
     raster_utils.vectorize_datasets([total_acc_bio_uri, total_dis_bio_uri, total_acc_soil_uri, total_dis_soil_uri],
@@ -1041,7 +1141,12 @@ def execute(args):
                                     nodata_default_float,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Net sequestration raster created.")
+    LOGGER.debug("Created net sequestration raster %s from %s, %s, %s, and %s.",
+                 os.path.basename(net_sequestration_uri),
+                 os.path.basename(total_acc_bio_uri),
+                 os.path.basename(total_dis_bio_uri),
+                 os.path.basename(total_acc_soil_uri),
+                 os.path.basename(total_dis_soil_uri))
 
 
     ##calculate totals in rasters and write report
