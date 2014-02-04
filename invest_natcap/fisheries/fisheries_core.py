@@ -191,7 +191,6 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
    
-    do_migration = False if migration_dict is None else True
     gender_var = 2 if is_gendered else 1
 
     for cycle in range(1, duration):
