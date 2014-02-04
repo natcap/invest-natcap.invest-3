@@ -239,7 +239,7 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
         example_style_uri = os.path.join(REPORTING_DATA, 'table_style.css')
-        
+
         args = {'format':'link', 'src':example_style_uri, 'out_uri':output_uri}
 
         expected_result = \
@@ -248,8 +248,8 @@ class TestReportingPackage(testing.GISTest):
         result = reporting.add_head_element(args)
 
         self.assertEqual(expected_result, result)
-        
-        os.remove(os.path.join(TEST_OUT, 'table_style.css')) 
+
+        os.remove(os.path.join(TEST_OUT, 'table_style.css'))
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
@@ -259,7 +259,7 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
         example_script_uri = os.path.join(REPORTING_DATA, 'sorttable.js')
-        
+
         args = {'format':'script', 'src':example_script_uri,
                 'out_uri':output_uri}
 
@@ -270,8 +270,8 @@ class TestReportingPackage(testing.GISTest):
 
         self.assertEqual(expected_result, result)
 
-        os.remove(os.path.join(TEST_OUT, 'sorttable.js')) 
-    
+        os.remove(os.path.join(TEST_OUT, 'sorttable.js'))
+
     def test_add_head_element_script_exception(self):
         """Unit test for adding script head elements to html file with a faulty
             script URI. Should raise an IOError with a nice message"""
@@ -281,7 +281,7 @@ class TestReportingPackage(testing.GISTest):
 
         output_uri = os.path.join(TEST_OUT, 'reporting_add_head_element.html')
         example_script_uri = os.path.join(REPORTING_DATA, 'foo_bar.js')
-        
+
         args = {'format':'script', 'src':example_script_uri,
                 'out_uri':output_uri}
 
@@ -428,7 +428,7 @@ class TestReportingPackage(testing.GISTest):
         reporting.generate_report(report_args)
 
         self.assertFiles(output_uri, reg_uri)
-    
+
     def test_generate_html_multiple_tables(self):
         """Regression test for making a html page with multiple tables.
         """
@@ -502,9 +502,11 @@ class TestReportingPackage(testing.GISTest):
                 });
             }'''
 
-        sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
-                       {'date':'3', 'price':'2.25', 'product':'peanuts'},
-                       {'date':'5', 'price':'3.2', 'product':'mints'}]
+        #sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
+        #               {'date':'3', 'price':'2.25', 'product':'peanuts'},
+        #               {'date':'5', 'price':'3.2', 'product':'mints'}]
+        
+        sample_dict = []
 
         columns = [{'name': 'product', 'total':False},
                    {'name': 'date', 'total':False},
@@ -523,8 +525,8 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'table',
                         'section': 'body',
                         'sortable': True,
-                        'checkbox': True,
-                        'total':True,
+                        'checkbox': False,
+                        'total':False,
                         'data_type':'dictionary',
                         'columns':columns,
                         'key':'ws_id',
@@ -567,6 +569,94 @@ class TestReportingPackage(testing.GISTest):
                         'format': 'script',
                         'data_src': js_string,
                         'input_type': 'Text'}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_generate_html_interactive_tables(self):
+        """Regression test for making a html page where two tables
+            talk to each other.
+        """
+
+        #raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        output_uri = os.path.join(TEST_OUT, 'html_test_interactive_tables_list.html')
+        reg_uri = os.path.join(
+                REGRESSION_DATA, 'regres_html_test_multi_tables.html')
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
+        csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
+
+        sample_dict = [{'ES2':'130', 'ES1':'90', 'parcel_id':'1'},
+                       {'ES2':'96', 'ES1':'50', 'parcel_id':'2'},
+                       {'ES2':'36', 'ES1':'110', 'parcel_id':'3'},
+                       {'ES2':'50', 'ES1':'85', 'parcel_id':'4'}]
+
+        columns = [{'name': 'parcel_id', 'total':False},
+                   {'name': 'ES1', 'total':True},
+                   {'name': 'ES2', 'total':True}]
+
+        pop_groups = [{'pop_group':'pop1', 'ES_offset': '0'}]
+
+        columns_pop = [
+                {'name': 'pop_group', 'total':False},
+                {'name': 'ES_offset', 'total':True}]
+
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'parcel_id',
+                        'data': sample_dict},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'text': '<p>Here is a sortable table!</p>'},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': False,
+                        'total':False,
+                        'data_type':'dictionary',
+                        'columns':columns_pop,
+                        'key':'pop_group',
+                        'data': pop_groups},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'src': jsc_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'src': jquery_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'src': jsc_fun_uri}
                     ],
                 'out_uri': output_uri}
 
