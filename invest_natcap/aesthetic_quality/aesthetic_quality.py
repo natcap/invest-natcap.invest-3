@@ -173,6 +173,7 @@ curvature_correction, refr_coeff):
     GT = in_dem_raster.GetGeoTransform()
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
+    uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(1): #feature_count):
         print("feature " + str(f))
@@ -217,8 +218,21 @@ curvature_correction, refr_coeff):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
-        aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
+        uri_list.append(raster_utils.temporary_filename())
+        aesthetic_quality_core.viewshed(in_dem_uri, uri_list[-1], \
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
+        # Generate the distance for each point
+        def compute_distance(vi, vj):
+            def compute(i, j, v):
+                if v:
+                    return sqrt((vi - i)**2 + (vj - j)**2)
+                else:
+                    return 0
+            return compute
+
+        distance_fn = compute_distance(i,j)
+        distance_uri = raster_utils.temporary_filename()
+        ###raster_utils.vectorize_datasets([])
         # Multiply the viewshed by its coefficient
         # Apply the valuation function to the distance
         def polynomial(a, b, c, d):
@@ -246,6 +260,7 @@ curvature_correction, refr_coeff):
         assert valuation_function is not None
             
         # Combine everything
+        ##raster_utils.vectorize_dataset([out_viewshed_uri], valuation_function, )
 
         # Accumulate result to combined raster
 
