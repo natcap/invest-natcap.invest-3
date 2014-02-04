@@ -256,7 +256,7 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
         cycle_dict[cycle] = {}
 
         #This will be used for each 0 stage in the cycle. 
-        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
+        total_recruits = area_indifferent_rec(cycle_dict, params_dict,
                                                 rec_dict, gender_var, cycle)
    
         for area in params_dict['Area_Params'].keys():
@@ -273,8 +273,6 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
 
                 #a = 0
                 if stage in first_stage:
-                    total_recruits = area_indifferent_rec(cycle_dict, params_dict, 
-                                            rec_dict, gender_var, cycle)
                     area_rec = larval_disp * total_recruits 
                     
                     num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, stage, cycle)
