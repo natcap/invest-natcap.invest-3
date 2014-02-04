@@ -36,10 +36,10 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         #Check that exceptions are properly raised when expected.
         self.assertRaises(fisheries.ImproperStageParameter,
-                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed')
+                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count, 'Fixed', True)
 
         self.assertRaises(fisheries.ImproperAreaParameter,
-                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed')
+                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed', True)
     
     def test_recruitment_errors(self):
         '''One of the first things we want to check is whether the necessary
