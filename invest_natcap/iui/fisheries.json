@@ -13,7 +13,7 @@
             "elements":[
                 {
                     "id" : "workspace",
-                    "args_id" : "workspace_uri",
+                    "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../Fisheries",
@@ -60,6 +60,17 @@
                     "defaultValue": false,
                     "required": true,
                     "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
+                },
+                {
+                    "id" : "harvest_type",
+                    "args_id" : "hrv_type",
+                    "type": "dropdown",
+                    "label": "Biomass and Harvest by Weight or Numbers?",
+                    "required": true,
+                    "options" : ["Numbers", "Weight"],
+                    "returns": "strings",
+                    "dataType": "string",
+                    "helpText": "This dropdown specifies whether the harvest numbers returned should be given in number of individuals harvested, or by the weight being harvested. If using the weight, there must be a corresponding 'weight' column in the CSV, with information about the weight of each maturity class."
                 }
             ]
         },
@@ -87,16 +98,20 @@
                         "id" : "alpha",
                         "args_id" : "alpha",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Alpha (Beverton-Holt/Ricker)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An alpha parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
                         "id" : "beta",
                         "args_id" : "beta",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Beta (Beverton-Holt/Ricker)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An beta parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
@@ -104,15 +119,17 @@
                         "args_id" : "fec_params_uri",
                         "type": "file",
                         "label": "Offspring per Age Class (Fecundity)",
-                        "required": true,
+                        "required": false,
                         "helpText": "This CSV file is required if the chosen recruitment equation is 'Fecundity.' It should contain numbers of potential offspring for each age class being included in the main parameters CSV."
                     },
                     {
                         "id" : "fix_param",
                         "args_id" : "fix_param",
                         "type": "text",
+                        "dataType": "float",
                         "label": "Number of Recruits (Fixed)",
                         "required": false,
+                        "validateAs": {"type": "number"},
                         "helpText": "This parameter is required if the recruitment equation is 'Fixed'. This number representes a single number of recruits that will be brought into all areas at each time step."
                     }
                     ]
@@ -127,9 +144,9 @@
                     "id" : "recruit_num",
                     "args_id" : "init_recruits",
                     "type": "text",
+                    "dataType": "float",
                     "label": "Initial Number of Recruits",
                     "required": true,
-                    "dataType": "int",
                     "validateAs": {"type":"number"},
                     "helpText": "The initial number of recruits that will be placed into the model. If there are multiple AOI zones, this initial number will be split equally amongst them."
                 }
@@ -200,6 +217,7 @@
                     "id" : "sim_dur",
                     "args_id" : "duration",
                     "type": "text",
+                    "dataType": "int",
                     "label": "Duration of Simulation (time steps)",
                     "validateAs": {"type": "number"},
                     "required": true,

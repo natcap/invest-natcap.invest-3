@@ -7,83 +7,163 @@
     "height": 600,
     "width" : 700,
     "elements": [
-            {
-            "id" : "workspace_list",
-            "type": "list",	        
-		    "elements": [
+                {
+                "id": "aesthetic_quality_tab_group",
+                "type": "tabbedGroup",
+                "elements": 
+                [
+                    {
+                        "id": "general_tab",
+                        "label": "General",
+                        "type": "tab",
+                        "enabled": true,
+                        "elements":
+                        [
+                        {
+                        "id" : "workspace_list",
+                        "type": "list",	        
+		                "elements": [
+                            {
+                                "id" : "workspace_dir",
+                                "args_id" : "workspace_dir",
+                                "type": "folder",
+                                "label": "Workspace",
+                                "required": true
+                            },                        
+                            {
+                                "id" : "aoi_uri",
+                                "args_id" : "aoi_uri",
+                                "type": "file",
+                                "label": "Area of Interest",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": true
+                            },
+                            {
+                                "id" : "structure_uri",
+                                "args_id" : "structure_uri",
+                                "type": "file",
+                                "label": "Structures",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": true
+                            },
+                            {
+                                "id" : "dem_uri",
+                                "args_id" : "dem_uri",
+                                "type": "file",
+                                "label": "Digital Elevation Model",
+                                "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
+                                "validateAs": {"type": "GDAL"},
+                                "required": true
+                            },                                
+                            {
+                                "id" : "refraction",
+                                "args_id" : "refraction",
+                                "type": "text",
+                                "label": "Refractivity Coefficient",
+                                "defaultValue": "0.13",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": true
+                            },                                
+                            {
+                                "id" : "cell_size",
+                                "args_id" : "cell_size",
+                                "type": "text",
+                                "label": "Cell Size (meters)",
+                                "defaultValue": "500",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": false
+                            },
+                            {
+                                "id" : "pop_uri",
+                                "args_id" : "pop_uri",
+                                "type": "file",
+                                "label": "Population Raster",
+                                "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
+                                "validateAs": {"type": "GDAL"},
+                                "required": true
+                            },
+                            {
+                                "id" : "overlap_uri",
+                                "args_id" : "overlap_uri",
+                                "type": "file",
+                                "label": "Overlap Analysis Features",
+                                "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
+                                "validateAs": {"type": "OGR"},
+                                "required": false
+                            }
+                            ]
+                        }
+                        ]
+                    },
+                    {
+                        "id": "valuation_tab",
+                        "label": "Valuation",
+                        "type": "tab",
+                        "enabled": true,
+                        "elements":
+                        [
+                        {
+                                "id" : "equation_coefficient_list",
+                                "type": "list",	        
+		                        "elements": 
+                                [
                                 {
-                                    "id" : "workspace_dir",
-                                    "args_id" : "workspace_dir",
-                                    "type": "folder",
-                                    "label": "Workspace",
-                                    "required": true
-                                },                        
-                                {
-                                    "id" : "aoi_uri",
-                                    "args_id" : "aoi_uri",
-                                    "type": "file",
-                                    "label": "Area of Interest",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": true
+                                    "id": "valuation_function",
+                                    "args_id": "valuation_function"
+                                    "type": "dropdown",
+                                    "label": "Valuation function",
+                                    "options":["polynomial: a + bx + cx^2 + dx^3", "logarithmic: a + b ln(x)"],
+                                    "returns": "strings",
+                                    "defaultValue": 0
                                 },
                                 {
-                                    "id" : "structure_uri",
-                                    "args_id" : "structure_uri",
-                                    "type": "file",
-                                    "label": "Structures",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": true
-                                },
-                                {
-                                    "id" : "dem_uri",
-                                    "args_id" : "dem_uri",
-                                    "type": "file",
-                                    "label": "Digital Elevation Model",
-                                    "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
-                                    "validateAs": {"type": "GDAL"},
-                                    "required": true
-                                },                                
-                                {
-                                    "id" : "refraction",
-                                    "args_id" : "refraction",
+                                    "id" : "a_coefficient",
+                                    "args_id" : "a_coefficient",
                                     "type": "text",
-                                    "label": "Refractivity Coefficient",
-                                    "defaultValue": "0.13",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": true
-                                },                                
-                                {
-                                    "id" : "cell_size",
-                                    "args_id" : "cell_size",
-                                    "type": "text",
-                                    "label": "Cell Size (meters)",
-                                    "defaultValue": "500",
+                                    "label": "'a' coefficient (polynomial/logarithmic)",
+                                    "defaultValue": "0.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
-                                },
+                                },                              
                                 {
-                                    "id" : "pop_uri",
-                                    "args_id" : "pop_uri",
-                                    "type": "file",
-                                    "label": "Population Raster",
-                                    "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
-                                    "validateAs": {"type": "GDAL"},
-                                    "required": true
-                                },
-                                {
-                                    "id" : "overlap_uri",
-                                    "args_id" : "overlap_uri",
-                                    "type": "file",
-                                    "label": "Overlap Analysis Features",
-                                    "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
-                                    "validateAs": {"type": "OGR"},
+                                    "id" : "b_coefficient",
+                                    "args_id" : "b_coefficient",
+                                    "type": "text",
+                                    "label": "'b' coefficient (polynomial/logarithmic)",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
                                     "required": false
-                                }
-		   ]
+                                },                              
+                                {
+                                    "id" : "c_coefficient",
+                                    "args_id" : "c_coefficient",
+                                    "type": "text",
+                                    "label": "'c' coefficient (polynomial only)",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },                              
+                                {
+                                    "id" : "d_coefficient",
+                                    "args_id" : "d_coefficient",
+                                    "type": "text",
+                                    "label": "'d' coefficient (polynomial only)",
+                                    "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                }                               
+                                ]
+                        }                        ]
+                    }
+		        ]
 		   }
     ]
 }

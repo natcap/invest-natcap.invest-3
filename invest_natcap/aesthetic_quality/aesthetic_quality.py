@@ -144,6 +144,8 @@ curvature_correction, refr_coeff):
     obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
+    coefficient = 1.0 # Used to weight the importance of individual viewsheds
+    height = 0.0 # Per viewoint height offset
 
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
@@ -171,21 +173,39 @@ curvature_correction, refr_coeff):
     GT = in_dem_raster.GetGeoTransform()
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
+    uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(1): #feature_count):
+        print("feature " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
-        # Check whether there is a field that contains the radius information
+        # Check for feature information (radius and coefficient)
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
-            if field_name == 'RADIUS2':
+            if (field_name.upper() == 'RADIUS2') or \
+                (field_name.upper() == 'RADIUS'):
                 field_type = field_def.GetType()
-                message = 'Wrong field type ' + str(field_type) + \
+                message = 'Wrong field type for radius: ' + str(field_type) + \
                 ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
-                max_dist = -feature.GetFieldAsInteger(field)
+                max_dist = abs(feature.GetFieldAsInteger(field))
+                assert max_dist is not None, "max distance can't be None"
                 max_dist = int(max_dist/cell_size)
+            if field_name.lower() == 'coeff':
+                field_type = field_def.GetType()
+                message = 'Wrong field type for coeff: ' + str(field_type) + \
+                ' expected 2 (ogr.OFTReal)'
+                assert field_type == ogr.OFTReal, message
+                coefficient = feature.GetFieldAsDouble(field)    
+                assert coefficient is not None, "feature coeff can't be None"
+            if field_name.lower() == 'height':
+                field_type = field_def.GetType()
+                message = 'Wrong field type for height: ' + str(field_type) + \
+                ' expected 2 (ogr.OFTReal)'
+                assert field_type == ogr.OFTReal, message
+                height = feature.GetFieldAsDouble(field)
+                assert height is not None, "height can't be None"
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
@@ -198,9 +218,51 @@ curvature_correction, refr_coeff):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
-        aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
-        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
-    
+        uri_list.append(raster_utils.temporary_filename())
+        aesthetic_quality_core.viewshed(in_dem_uri, uri_list[-1], \
+        (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
+        # Generate the distance for each point
+        def compute_distance(vi, vj):
+            def compute(i, j, v):
+                if v:
+                    return sqrt((vi - i)**2 + (vj - j)**2)
+                else:
+                    return 0
+            return compute
+
+        distance_fn = compute_distance(i,j)
+        distance_uri = raster_utils.temporary_filename()
+        ###raster_utils.vectorize_datasets([])
+        # Multiply the viewshed by its coefficient
+        # Apply the valuation function to the distance
+        def polynomial(a, b, c, d):
+            def compute(x, v):
+                return a + b*x + c*x**2 + d*x**3
+            return compute
+
+        def logarithmic(a, b):
+            def compute(x, v):
+                return a + b*math.log(x)
+            return compute
+
+        a = args["a_coefficient"]
+        b = args["b_coefficient"]
+        c = args["c_coefficient"]
+        d = args["d_coefficient"]
+        valuation_function = None
+        if "polynomial" in args["valuation_function"]:
+            print("Polynomial")
+            valuation_function = polynomial(a, b, c, d)
+        elif "logarithmic" in args['valuation_function']:
+            print("logarithmic")
+            valuation_function = logarithmic(a, b)
+
+        assert valuation_function is not None
+            
+        # Combine everything
+        ##raster_utils.vectorize_dataset([out_viewshed_uri], valuation_function, )
+
+        # Accumulate result to combined raster
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)

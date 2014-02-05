@@ -7,6 +7,7 @@ import logging
 import csv
 import json
 import codecs
+import re
 
 import numpy as np
 from osgeo import gdal
@@ -57,7 +58,8 @@ def generate_report(reporting_args):
                     'data_type' is 'shapefile' or 'csv' (required). If a
                     list of dictionaries, each dictionary should have
                     keys that represent the columns, where each dictionary
-                    is a row. How the rows are ordered are defined by their
+                    is a row (list could be empty)
+                    How the rows are ordered are defined by their
                     index in the list. Formatted example:
                     [{col_name_1: value, col_name_2: value, ...},
                      {col_name_1: value, col_name_2: value, ...},
@@ -83,11 +85,15 @@ def generate_report(reporting_args):
 
             Head element dictionary has at least the following additional arguments:
                 'format' - a string representing the type of head element being
-                    added. Currently 'script' (javascript) and 'link' (css
+                    added. Currently 'script' (javascript) and 'style' (css
                     style) accepted (required)
 
-                'src'- a URI to the location of the external file for either
-                    the 'script' or the 'link' (required)
+                'data_src'- a URI to the location of the external file for either
+                    the 'script' or the 'style' OR a String representing the
+                    html script or style (DO NOT include the tags) (required)
+                
+                'input_type' -  a String, 'File' or 'Text' that refers to how
+                    'data_src' is being passed in (URI vs String) (required). 
 
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
@@ -114,7 +120,7 @@ def generate_report(reporting_args):
     report = {
             'table': build_table,
             'text' : add_text_element,
-            'head': add_head_element
+            'head': add_head_element,
             }
 
     # Iterate over the elements to be added to the html page
@@ -125,13 +131,6 @@ def generate_report(reporting_args):
         # individual element functions)
         fun_type = element.pop('type')
         section = element.pop('section')
-
-        # In order to copy any script files to where the output html file is to
-        # be saved, the out_uri needs to be passed along into the function that
-        # handles them. As of now, the easiest / maybe best way is to add a key
-        # in the 'elements' dictionary being passed along
-        if fun_type == 'head':
-            element['out_uri'] = reporting_args['out_uri']
 
         # Process the element by calling it's specific function handler which
         # will return a string. Append this to html dictionary to be written
@@ -293,9 +292,10 @@ def data_dict_to_list(data_dict):
         the inner dictionaries are added to the list in the order of
         their sorted keys
 
-        data_dict - a dictionary with unique keys pointing to dictionaries
+        data_dict - a dictionary with unique keys pointing to dictionaries.
+            Could be empty (required)
 
-        returns - a list of dictionaries"""
+        returns - a list of dictionaries, or empty list if data_dict is empty"""
     
     data_list = []
     data_keys = data_dict.keys()
@@ -321,55 +321,57 @@ def add_text_element(param_args):
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section of
-        an html file. Currently handles 'link' and 'script' elements, where both
-        the script and link point to an external source
+        an html file. Currently handles 'style' and 'script' elements, where both
+        the script and style are locally embedded
 
         param_args - a dictionary that holds the following arguments:
 
             param_args['format'] - a string representing the type of element to
-                be added. Currently : 'script', 'link' (required)
+                be added. Currently : 'script', 'style' (required)
 
-            param_args['src'] - a string URI path for the external source of the
-                element (required)
-            
-            param_args['out_uri'] - a string URI path for the html page
-                (required)
+            param_args['data_src'] - a string URI path for the external source of the
+                element OR a String representing the html (DO NOT include html
+                tags, tags are automatically generated). If a URI the file is
+                read in as a String. (required)
+
+            param_args['input_type'] - 'Text' or 'File'. Determines how the
+                input from 'data_src' is handled (required)
 
         returns - a string representation of the html head element"""
 
     # Get the type of element to add
     form = param_args['format']
-    # Get the external file location for either the link or script reference
-    src = param_args['src']
-    # The destination on disk for the html page to be written to. This will be
-    # used to get the directory name so as to locate the scripts properly
-    output_uri = param_args['out_uri']
-    
-    # Get the script files basename
-    basename = os.path.basename(src)
-    # Get the output_uri directory location
-    dirname = os.path.dirname(output_uri)
-    # Set the destination URI for copying the script
-    dst = os.path.join(dirname, basename)
-    
-    # Copy the source file to the location of the output directory
-    if not os.path.isfile(dst):
-        try:
-            shutil.copyfile(src, dst)
-        except IOError:
-            raise IOError('The head element script could not be copied properly'
-                    ', check the location of the file as well as output'
-                    ' destination. Script source : %s' % src)
-    # Set a relative path for the script file so that the html page can find it
-    relative_dst = './' + basename
-
-    if form == 'link':
-        html_str = '<link rel=stylesheet type=text/css href=%s>' % relative_dst
-    elif form == 'script':
-        html_str = '<script type=text/javascript src=%s></script>' % relative_dst
+    # Get a handle on the data whether it be a String or URI
+    src = param_args['data_src']
+    # Get the input type of the data, 'File' or 'Text'
+    input_type = param_args['input_type']
+    if input_type == 'File':
+        # Read in file and save as string. Using latin1 to decode, seems to work
+        # on the current javascript / css files
+        head_file = codecs.open(src, 'rb', 'latin1')
+        file_str = head_file.read()
     else:
-        raise Exception('Currently this type of head element is not supported')
+        file_str = src
+    
+    # List of regular expression strings to search against
+    reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
-    LOGGER.debug('HEAD STRING : %s', html_str)
+    # Iterate over the String object to make sure there are no conflicting html
+    # tags
+    for exp in reg_list:
+        if re.search(exp, file_str) != None:
+            raise Exception('The following html tag was found in header'
+                    ' string : %s. Please do not place any html tags in'
+                    ' the header elements' % exp)
+
+    if form == 'style':
+        html_str = '''<style type=text/css> %s </style>''' % file_str
+    elif form == 'script':
+        html_str = '''<script type=text/javascript> %s </script>''' % file_str
+    elif form == 'json':
+        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
+    else:
+        raise Exception('Currently this type of head element is not supported'
+                ' : %s' % form)
 
     return html_str
