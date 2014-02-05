@@ -52,7 +52,7 @@ def execute(args):
     module.
     
     Inputs:
-        workspace_uri- Location into which all intermediate and output files
+        workspace_dir- Location into which all intermediate and output files
             should be placed.
         aoi_uri- Location of shapefile which will be used as subregions for
             calculation. Each region must conatin a 'name' attribute which will
@@ -103,7 +103,7 @@ def execute(args):
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
-        out_dir = os.path.join(args['workspace_uri'], folder)
+        out_dir = os.path.join(args['workspace_dir'], folder)
         
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
@@ -170,7 +170,7 @@ def execute(args):
 
 
     #Direct pass all these variables
-    core_args['workspace_uri'] = args['workspace_uri']
+    core_args['workspace_dir'] = args['workspace_dir']
     core_args['maturity_type'] = args['maturity_type']
     core_args['is_gendered'] = args['is_gendered']
     core_args['init_recruits'] = args['init_recruits']

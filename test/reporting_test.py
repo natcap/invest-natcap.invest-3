@@ -433,7 +433,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for making a html page with multiple tables.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -592,7 +592,8 @@ class TestReportingPackage(testing.GISTest):
         css_uri = os.path.join(REPORTING_DATA,'table_style.css')
         jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
-        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
+        json_uri = os.path.join(REPORTING_DATA,'sample_json.json')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
         sample_dict = [{'ES2':'130', 'ES1':'90', 'parcel_id':'1'},
@@ -604,7 +605,7 @@ class TestReportingPackage(testing.GISTest):
                    {'name': 'ES1', 'total':True},
                    {'name': 'ES2', 'total':True}]
 
-        pop_groups = [{'pop_group':'pop1', 'ES_offset': '0'}]
+        pop_groups = []
 
         columns_pop = [
                 {'name': 'pop_group', 'total':False},
@@ -640,23 +641,33 @@ class TestReportingPackage(testing.GISTest):
                     {
                         'type': 'head',
                         'section': 'head',
-                        'format': 'link',
-                        'src': css_uri},
+                        'format': 'style',
+                        'data_src': css_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_uri},
+                        'data_src': jsc_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jquery_uri},
+                        'data_src': jquery_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_fun_uri}
+                        'data_src': jsc_fun_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'json',
+                        'data_src': json_uri,
+                        'input_type':'File'}
                     ],
                 'out_uri': output_uri}
 
