@@ -5,7 +5,7 @@ cdef double fmin(double a, double b):
          return a
      return b
 
-cdef double fmax(double a, doulbe b):
+cdef double fmax(double a, double b):
     if a > b:
         return a
     return b
@@ -17,25 +17,25 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
 
-        Kc - numpy array with the Kc (plant evapotranspiration 
+        Kc - numpy array with the Kc (plant evapotranspiration
               coefficient) raster values
-        eto - numpy array with the potential evapotranspiration raster 
+        eto - numpy array with the potential evapotranspiration raster
               values (mm)
         precip - numpy array with the precipitation raster values (mm)
         root - numpy array with the root depth (maximum root depth for
                vegetated land use classes) raster values (mm)
         soil - numpy array with the depth to root restricted layer raster
             values (mm)
-        pawc - numpy array with the plant available water content raster 
+        pawc - numpy array with the plant available water content raster
                values
         veg - numpy array with a 1 or 0 where 1 depicts the land type as
-                vegetation and 0 depicts the land type as non 
-                vegetation (wetlands, urban, water, etc...). If 1 use 
+                vegetation and 0 depicts the land type as non
+                vegetation (wetlands, urban, water, etc...). If 1 use
                 regular AET equation if 0 use: AET = Kc * ETo
 
     returns - fractp value """
 
-    #If any of the local variables which are in the 'fractp_nodata_dict' 
+    #If any of the local variables which are in the 'fractp_nodata_dict'
     #dictionary are equal to a out_nodata value, then return out_nodata
     if Kc == Kc_nodata:
         return out_nodata
@@ -60,19 +60,19 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
     #Use the original AET equation if the land cover type is vegetation
     #If not vegetation (wetlands, urban, water, etc...) use
     #Alternative equation Kc * Eto
-    
+
     # Initiate some variables to be used in the if/else block
     cdef double phi
     cdef double awc
     cdef double w_x
     cdef double aet_p
-    
+
     if veg == 1.0:
         phi = (Kc * eto) / (precip)
-        
+
         #Calculate plant available water content (mm) using the minimum
         #of soil depth and root depth
-        awc = (fmin(root, soil) * pawc)  
+        awc = (fmin(root, soil) * pawc)
 
         #Calculate dimensionless ratio of plant accessible water
         #storage to expected precipitation during the year
@@ -91,7 +91,7 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
 
         return fmin(phi, aet_p)
-        
+
     else:
-        return fmax(precip, Kc * eto) / precip 
-    
+        return fmax(precip, Kc * eto) / precip
+
