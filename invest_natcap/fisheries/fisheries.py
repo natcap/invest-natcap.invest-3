@@ -171,6 +171,7 @@ def execute(args):
 
     #Direct pass all these variables
     core_args['workspace_dir'] = args['workspace_dir']
+    core_args['aoi_uri'] = args['aoi_uri']
     core_args['maturity_type'] = args['maturity_type']
     core_args['is_gendered'] = args['is_gendered']
     core_args['init_recruits'] = args['init_recruits']
