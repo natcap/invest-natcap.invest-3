@@ -131,7 +131,7 @@ def get_data_type_uri(ds_uri):
     return raster_data_type
 
 def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-curvature_correction, refr_coeff):
+curvature_correction, refr_coeff, args):
     """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
     
         -in_dem_uri: URI to input surface raster
@@ -251,36 +251,39 @@ curvature_correction, refr_coeff):
         uri_list.append(raster_utils.temporary_filename())
         uri_list.append(I_uri)
         uri_list.append(J_uri)
-        aesthetic_quality_core.viewshed(in_dem_uri, uri_list[0], \
+        visibility_uri = raster_utils.temporary_filename()
+        aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j)
         distance_uri = raster_utils.temporary_filename()
-        raster_utils.vectorize_datasets(uri_list, distance_fn, \
-        distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
+        distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         uri_list.append(distance_uri)
-        ## Apply the valuation function
-        #a = args["a_coefficient"]
-        #b = args["b_coefficient"]
-        #c = args["c_coefficient"]
-        #d = args["d_coefficient"]
-        #valuation_function = None
-        #if "polynomial" in args["valuation_function"]:
-        #    print("Polynomial")
-        #    valuation_function = polynomial(a, b, c, d)
-        #elif "logarithmic" in args['valuation_function']:
-        #    print("logarithmic")
-        #    valuation_function = logarithmic(a, b)
-        #
-        #assert valuation_function is not None
-        #    
-        #viewshed_uri = raster_utils.temporary_filename()
-        #raster_utils.vectorize_datasets(uri_list, valuation_function, \
-        #viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        ## Multiply the viewshed by its coefficient
-        #apply_coefficient = multiply(coefficient)
-        #raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
-        #viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        # Apply the valuation function
+        a = args["a_coefficient"]
+        b = args["b_coefficient"]
+        c = args["c_coefficient"]
+        d = args["d_coefficient"]
+        valuation_function = None
+        if "polynomial" in args["valuation_function"]:
+            print("Polynomial")
+            valuation_function = polynomial(a, b, c, d)
+        elif "logarithmic" in args['valuation_function']:
+            print("logarithmic")
+            valuation_function = logarithmic(a, b)
+
+        assert valuation_function is not None
+            
+        viewshed_uri = raster_utils.temporary_filename()
+        raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
+        valuation_function, viewshed_uri, gdal.GDT_Float64, -1., cell_size, \
+        "union")
+        # Multiply the viewshed by its coefficient
+        apply_coefficient = multiply(coefficient)
+        scaled_viewshed_uri = raster_utils.temporary_filename()
+        raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
+        scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Accumulate result to combined raster
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
@@ -412,7 +415,8 @@ def execute(args):
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,
-             aq_args['refraction'])
+             aq_args['refraction'],
+             aq_args)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
@@ -481,13 +485,13 @@ def execute(args):
     unaffected_pop = 0
     for row_index in range(vs_band.YSize):
         pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(numpy.float64)
+        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
         pop_row[pop_row == nodata_pop]=0.0
         vs_row[vs_row == nodata_viewshed]=-1
 
-        affected_pop += numpy.sum(pop_row[vs_row > 0])
-        unaffected_pop += numpy.sum(pop_row[vs_row == 0])
+        affected_pop += np.sum(pop_row[vs_row > 0])
+        unaffected_pop += np.sum(pop_row[vs_row == 0])
 
     pop_band = None
     pop = None
