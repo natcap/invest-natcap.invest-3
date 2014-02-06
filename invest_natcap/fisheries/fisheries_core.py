@@ -105,7 +105,27 @@ def execute(args):
                     migration_dict, args['duration'], args['do_weight'])
 
     hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'])
-    
+   
+    #If either of the two valuation variables exist, know that valuation is desired
+    if 'unit_price' in args:
+        val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
+
+def calc_valuation(total_dict, price, frac):
+    '''If the user wants valuation, want to output a dictionary that maps area
+    to total value of harvest across all areas.'''
+
+    value_dict = {}
+
+    for area, totals in totals_dict.items():
+        
+        val = total * price * frac
+        value_dict[area] = val
+
+    return value_dict
+
+
+
+
 def calc_harvest(cycle_dict, params_dict):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
