@@ -113,7 +113,7 @@
                                 [
                                 {
                                     "id": "valuation_function",
-                                    "args_id": "valuation_function"
+                                    "args_id": "valuation_function",
                                     "type": "dropdown",
                                     "label": "Valuation function",
                                     "options":["polynomial: a + bx + cx^2 + dx^3", "logarithmic: a + b ln(x)"],

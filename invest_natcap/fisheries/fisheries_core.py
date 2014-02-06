@@ -5,6 +5,8 @@ import os
 import copy
 import cmath
 
+from invest_natcap import raster_utils
+
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -14,6 +16,8 @@ def execute(args):
     Input:
         workspace_dir- Location into which all intermediate and output files
             should be placed.
+        aoi_uri- Location of the AOI containing all areas the user is
+            interested in using for this model run.
         maturity_type- String specifying whether the model is age-specific or
             stage-specific. Options will be either "Age Specific" or
             "Stage Specific" and will change which equation is used in modeling
@@ -105,7 +109,36 @@ def execute(args):
                     migration_dict, args['duration'], args['do_weight'])
 
     hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'])
-    
+   
+    #If either of the two valuation variables exist, know that valuation is desired
+    if 'unit_price' in args:
+        val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
+
+    #Here be outputs
+    aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
+    cp_aoi_uri = os.path.join(output_dir, aoi_basename + 'Results.shp')
+    raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
+
+    val_var = val_dict if 'unit_price' in args else None
+    append_results_to_aoi(cp_aoi_uri, totals_dict, val_var)
+
+def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
+    '''Want to add the relevant data to the correct AOI as attributes.'''
+
+
+def calc_valuation(total_dict, price, frac):
+    '''If the user wants valuation, want to output a dictionary that maps area
+    to total value of harvest across all areas.'''
+
+    value_dict = {}
+
+    for area, totals in total_dict.items():
+        
+        val = totals * price * frac
+        value_dict[area] = val
+
+    return value_dict
+
 def calc_harvest(cycle_dict, params_dict):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
