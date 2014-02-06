@@ -1,15 +1,18 @@
 import os
+import math
+
+import numpy as np
+import scipy.stats
+import shutil
+import logging
+
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+
 from invest_natcap import raster_utils
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
-
-import logging
-
-import scipy.stats
-import numpy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -151,7 +154,7 @@ curvature_correction, refr_coeff):
     def compute_distance(vi, vj):
         def compute(i, j, v):
             if v:
-                return sqrt((vi - i)**2 + (vj - j)**2)
+                return ((vi - i)**2 + (vj - j)**2)**.5
             else:
                 return -1.
         return compute
@@ -167,18 +170,24 @@ curvature_correction, refr_coeff):
             return a + b*math.log(x)
         return compute
 
+    # Multiply a value by a constant
+    def multiply(c):
+        def compute(x):
+            return x*c
+        return compute
+
     # Build I and J arrays, and save them to disk
-    rows, cols = raster_util.get_row_col_from_uri(in_dem_uri)
+    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
     I_uri = raster_utils.temporary_filename()
     J_uri = raster_utils.temporary_filename()
     shutil.copy(in_dem_uri, I_uri)
     shutil.copy(in_dem_uri, J_uri)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    I_raster.GetRasterBand(1).Write(I)
+    I_raster.GetRasterBand(1).WriteArray(I)
     I_raster = None
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    J_raster.GetRasterBand(1).Write(J)
+    J_raster.GetRasterBand(1).WriteArray(J)
     J_raster = None
 
     # Extract cell size from input DEM
@@ -247,30 +256,31 @@ curvature_correction, refr_coeff):
         # Compute the distance
         distance_fn = compute_distance(i,j)
         distance_uri = raster_utils.temporary_filename()
-        raster_utils.vectorize_datasets(uri_list, compute_distance, \
+        raster_utils.vectorize_datasets(uri_list, distance_fn, \
         distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         uri_list.append(distance_uri)
-        # Apply the valuation function
-        a = args["a_coefficient"]
-        b = args["b_coefficient"]
-        c = args["c_coefficient"]
-        d = args["d_coefficient"]
-        valuation_function = None
-        if "polynomial" in args["valuation_function"]:
-            print("Polynomial")
-            valuation_function = polynomial(a, b, c, d)
-        elif "logarithmic" in args['valuation_function']:
-            print("logarithmic")
-            valuation_function = logarithmic(a, b)
-
-        assert valuation_function is not None
-            
-        viewshed_uri = raster_utils.temporary_filename()
-        raster_utils.vectorize_datasets(uri_list, valuation_function, \
-        viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        # Multiply the viewshed by its coefficient
-        raster_utils.vectorize_datasets([viewshed_uri], lambda x: , \
-        viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        ## Apply the valuation function
+        #a = args["a_coefficient"]
+        #b = args["b_coefficient"]
+        #c = args["c_coefficient"]
+        #d = args["d_coefficient"]
+        #valuation_function = None
+        #if "polynomial" in args["valuation_function"]:
+        #    print("Polynomial")
+        #    valuation_function = polynomial(a, b, c, d)
+        #elif "logarithmic" in args['valuation_function']:
+        #    print("logarithmic")
+        #    valuation_function = logarithmic(a, b)
+        #
+        #assert valuation_function is not None
+        #    
+        #viewshed_uri = raster_utils.temporary_filename()
+        #raster_utils.vectorize_datasets(uri_list, valuation_function, \
+        #viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        ## Multiply the viewshed by its coefficient
+        #apply_coefficient = multiply(coefficient)
+        #raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
+        #viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Accumulate result to combined raster
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
