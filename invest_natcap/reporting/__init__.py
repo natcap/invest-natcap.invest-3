@@ -120,7 +120,7 @@ def generate_report(reporting_args):
     report = {
             'table': build_table,
             'text' : add_text_element,
-            'head': add_head_element
+            'head': add_head_element,
             }
 
     # Iterate over the elements to be added to the html page
@@ -368,6 +368,8 @@ def add_head_element(param_args):
         html_str = '''<style type=text/css> %s </style>''' % file_str
     elif form == 'script':
         html_str = '''<script type=text/javascript> %s </script>''' % file_str
+    elif form == 'json':
+        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)

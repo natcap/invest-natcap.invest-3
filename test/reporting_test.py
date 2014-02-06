@@ -433,7 +433,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for making a html page with multiple tables.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -505,7 +505,7 @@ class TestReportingPackage(testing.GISTest):
         #sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
         #               {'date':'3', 'price':'2.25', 'product':'peanuts'},
         #               {'date':'5', 'price':'3.2', 'product':'mints'}]
-        
+
         sample_dict = []
 
         columns = [{'name': 'product', 'total':False},
@@ -592,23 +592,27 @@ class TestReportingPackage(testing.GISTest):
         css_uri = os.path.join(REPORTING_DATA,'table_style.css')
         jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
-        jsc_fun_uri = os.path.join(REPORTING_DATA,'total_functions.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
+        json_uri = os.path.join(REPORTING_DATA,'sample_json.json')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
-        sample_dict = [{'ES2':'130', 'ES1':'90', 'parcel_id':'1'},
-                       {'ES2':'96', 'ES1':'50', 'parcel_id':'2'},
-                       {'ES2':'36', 'ES1':'110', 'parcel_id':'3'},
-                       {'ES2':'50', 'ES1':'85', 'parcel_id':'4'}]
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'90', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'110', 'Phosphorous':'60','parcel_id':'3'},
+                       {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
 
         columns = [{'name': 'parcel_id', 'total':False},
-                   {'name': 'ES1', 'total':True},
-                   {'name': 'ES2', 'total':True}]
+                   {'name': 'Nitrogen', 'total':True},
+                   {'name': 'Sediment', 'total':True},
+                   {'name': 'Phosphorous', 'total':True}]
 
-        pop_groups = [{'pop_group':'pop1', 'ES_offset': '0'}]
+        pop_groups = []
 
         columns_pop = [
-                {'name': 'pop_group', 'total':False},
-                {'name': 'ES_offset', 'total':True}]
+                {'name': 'municipalities', 'total':False},
+                {'name': 'Sediment', 'total':False},
+                {'name': 'Nitrogen', 'total':False},
+                {'name': 'Phosphorous', 'total':False}]
 
         report_args = {
                 'title': 'Sortable Table',
@@ -640,23 +644,33 @@ class TestReportingPackage(testing.GISTest):
                     {
                         'type': 'head',
                         'section': 'head',
-                        'format': 'link',
-                        'src': css_uri},
+                        'format': 'style',
+                        'data_src': css_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_uri},
+                        'data_src': jsc_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jquery_uri},
+                        'data_src': jquery_uri,
+                        'input_type':'File'},
                     {
                         'type': 'head',
                         'section': 'head',
                         'format': 'script',
-                        'src': jsc_fun_uri}
+                        'data_src': jsc_fun_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'json',
+                        'data_src': json_uri,
+                        'input_type':'File'}
                     ],
                 'out_uri': output_uri}
 

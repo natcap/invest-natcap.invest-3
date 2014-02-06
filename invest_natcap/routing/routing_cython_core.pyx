@@ -822,8 +822,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     
     cdef Row_Col_Weight_Tuple t
     cdef int weight, region_count = 0
-    
-
 
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
@@ -881,8 +879,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         cache_dirty[cache_row_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        if region_count % 100 == 0:
-            LOGGER.info('working on plateau #%d (reports every 100 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+        if region_count % 1000 == 0:
+            LOGGER.info('working on plateau #%d (reports every 1000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
         
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
@@ -1456,14 +1454,15 @@ def find_sinks(dem_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
         numpy.zeros((3, n_cols), dtype=numpy.float32))
-   
-
+        
     cdef int col_index, row_index
     cdef int sink_set_index = 0
     cdef int y_offset, local_y_offset, neighbor_index
     cdef int neighbor_row_index, neighbor_col_index
-    
-    sink_set = numpy.empty((10,), dtype=numpy.int32)
+    cdef int sink_set_size = 10
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] sink_set = (
+        numpy.empty((sink_set_size,), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] tmp_sink_set
     for row_index in range(n_rows):
         #the col index will be 0 since we go row by row
          #We load 3 rows at a time
@@ -1482,7 +1481,6 @@ def find_sinks(dem_uri):
             win_ysize=3, buf_obj=dem_array)
         
         for col_index in range(n_cols):
-            
             if dem_array[local_y_offset, col_index] == nodata_value:
                 continue
             for neighbor_index in range(8):
@@ -1502,15 +1500,15 @@ def find_sinks(dem_uri):
             else: #else for the for loop
                 #every cell we encountered was nodata or higher than current
                 #cell, must be a sink
-                if sink_set_index >= sink_set.shape[0]:
-                    sink_set.resize((sink_set.shape[0] * 2,))
+                if sink_set_index >= sink_set_size:
+                    tmp_sink_set = numpy.empty(
+                        (sink_set_size * 2,), dtype=numpy.int32)
+                    tmp_sink_set[0:sink_set_size] = sink_set
+                    sink_set_size *= 2
+                    sink_set = tmp_sink_set
                 sink_set[sink_set_index] = row_index * n_cols + col_index
                 sink_set_index += 1
 
-    sink_set.resize((sink_set_index,))
-    
-    cdef int w_row_index, w_col_index
-    cdef int row_window_size, col_window_size, ul_row_index, ul_col_index
-    cdef int lr_col_index, lr_row_index, hits, misses, w_neighbor_row_index, w_neighbor_col_index
-    
-    return sink_set
+    tmp_sink_set = numpy.empty((sink_set_index,), dtype=numpy.int32)
+    tmp_sink_set[0:sink_set_index] = sink_set[0:sink_set_index]
+    return tmp_sink_set
