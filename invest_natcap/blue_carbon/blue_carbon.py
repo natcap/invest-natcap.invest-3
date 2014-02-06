@@ -819,10 +819,12 @@ def execute(args):
 
 
 
-    ##calculate totals in rasters and write report
-    LOGGER.info("Tabulating data and generating report.")
+    ##generate csv
+    #open csv
+    csv = open(blue_carbon_csv_uri, 'w')
 
-    for name, uri in [(veg_acc_bio_name, "Acc Bio"),
+    header = ["Year"]
+    for name, label in [(veg_acc_bio_name, "Acc Bio"),
                       (veg_acc_soil_name, "Acc Soil"),
                       (veg_dis_bio_name, "Dis Bio"),
                       (veg_dis_soil_name, "Dis Soil"),
@@ -834,9 +836,33 @@ def execute(args):
                       (veg_em_soil_name, "Em Soil")]:
 ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
 ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
+        for veg_type in veg_type_list:
+            header.append(label + (" Veg %i" % veg_type))
 
-##    #open csv
-##    csv = open(blue_carbon_csv_uri, 'w')
+    csv.write(",".join(header))
+
+
+    for year in lulc_years:
+        row = [str(year)]
+        for name, label in [(veg_acc_bio_name, "Acc Bio"),
+                          (veg_acc_soil_name, "Acc Soil"),
+                          (veg_dis_bio_name, "Dis Bio"),
+                          (veg_dis_soil_name, "Dis Soil"),
+    ##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
+    ##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
+    ##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
+    ##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
+                          (veg_em_bio_name, "Em Bio"),
+                          (veg_em_soil_name, "Em Soil")]:
+    ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
+    ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
+            for veg_type in veg_type_list:
+                row.append(str(totals[year][veg_type][name]))
+        csv.write("\n" + ",".join(row))
+
+    csv.close()
+            
+
 ##
 ##    acc_bio_veg_cols = ["Acc Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Bio Total"]
 ##    acc_soil_veg_cols = ["Acc Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Soil Total"]
@@ -1019,6 +1045,6 @@ def execute(args):
 ##    datasource.DeleteLayer(0)
 ##    datasource = None
 
-    debug_log.flush()
-    debug_log = None
-    debug_log_file.close()
+##    debug_log.flush()
+##    debug_log = None
+##    debug_log_file.close()
