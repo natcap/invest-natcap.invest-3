@@ -5,6 +5,8 @@ import os
 import copy
 import cmath
 
+from invest_natcap import raster_utils
+
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -130,9 +132,9 @@ def calc_valuation(total_dict, price, frac):
 
     value_dict = {}
 
-    for area, totals in totals_dict.items():
+    for area, totals in total_dict.items():
         
-        val = total * price * frac
+        val = totals * price * frac
         value_dict[area] = val
 
     return value_dict
