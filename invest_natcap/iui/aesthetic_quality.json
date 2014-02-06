@@ -159,6 +159,16 @@
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
+                                },                               
+                                {
+                                    "id" : "max_valuation_radius",
+                                    "args_id" : "max_valuation_radius",
+                                    "type": "text",
+                                    "label": "maximum valuation radius",
+                                    "defaultValue": "8000",
+                                    "validText": "[0-9]+",
+                                    "dataType": "int",
+                                    "required": false
                                 }                               
                                 ]
                         }                        ]

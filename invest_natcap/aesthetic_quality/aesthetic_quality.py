@@ -160,12 +160,12 @@ curvature_correction, refr_coeff, args):
         return compute
 
     # Apply the valuation functions to the distance
-    def polynomial(a, b, c, d):
+    def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
             return a + b*x + c*x**2 + d*x**3
         return compute
 
-    def logarithmic(a, b):
+    def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
             return a + b*math.log(x)
         return compute
@@ -266,12 +266,13 @@ curvature_correction, refr_coeff, args):
         c = args["c_coefficient"]
         d = args["d_coefficient"]
         valuation_function = None
+        max_valuation_radius = args['max_valuation_radius']
         if "polynomial" in args["valuation_function"]:
             print("Polynomial")
-            valuation_function = polynomial(a, b, c, d)
+            valuation_function = polynomial(a, b, c, d, max_valuation_radius)
         elif "logarithmic" in args['valuation_function']:
             print("logarithmic")
-            valuation_function = logarithmic(a, b)
+            valuation_function = logarithmic(a, b, max_valuation_radius)
 
         assert valuation_function is not None
             
