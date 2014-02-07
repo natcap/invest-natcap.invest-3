@@ -162,12 +162,18 @@ curvature_correction, refr_coeff, args):
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            return a + b*x + c*x**2 + d*x**3
+            if d <= max_valuation_radius:
+                return a + b*x + c*x**2 + d*x**3
+            else:
+                return 0
         return compute
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
-            return a + b*math.log(x)
+            if d <= max_valuation_radius:
+                return a + b*math.log(x)
+            else:
+                return 0
         return compute
 
     # Multiply a value by a constant
@@ -247,10 +253,6 @@ curvature_correction, refr_coeff, args):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
-        uri_list = []
-        uri_list.append(raster_utils.temporary_filename())
-        uri_list.append(I_uri)
-        uri_list.append(J_uri)
         visibility_uri = raster_utils.temporary_filename()
         aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
@@ -259,7 +261,6 @@ curvature_correction, refr_coeff, args):
         distance_uri = raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        uri_list.append(distance_uri)
         # Apply the valuation function
         a = args["a_coefficient"]
         b = args["b_coefficient"]
@@ -285,7 +286,15 @@ curvature_correction, refr_coeff, args):
         scaled_viewshed_uri = raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        # Accumulate result to combined raster
+        viewshed_uri_list.append(scaled_viewshed_uri)
+    # Accumulate result to combined raster
+    def accumulate(x):
+        print('x', x)
+        return sum([x])
+    print("scaled_viewshed_uri", scaled_viewshed_uri)
+    print('out_viewshed_uri', out_viewshed_uri)
+    raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
+    out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
