@@ -137,7 +137,7 @@ def execute(args):
     #parameter as a lower case. This will be used in core when we write harvest
     #and valuation results to it.
     aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
-    cp_aoi_uri = os.path.join(args['worspace_dir'], 'Output', aoi_basename + 'Results.shp')
+    cp_aoi_uri = os.path.join(args['workspace_dir'], 'Output', aoi_basename + 'Results.shp')
     raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
 
     #pop the first feature to determine what the 'name' attribute is called,
