@@ -116,12 +116,8 @@ def execute(args):
         val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
 
     #Here be outputs
-    aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
-    cp_aoi_uri = os.path.join(output_dir, aoi_basename + 'Results.shp')
-    raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
-
     val_var = val_dict if 'unit_price' in args else None
-    append_results_to_aoi(cp_aoi_uri, totals_dict, val_var)
+    append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
 
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
@@ -137,11 +133,10 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
         layer.CreateField(val_field)
     
     for feature in layer:
-        for attrib_name in feature.keys():
-            if attrib_name.lower() == 'name':
-                name_attrib = attrib_name
 
-        subregion_name = feature.items()[name_attrib]
+        #Since we now know for sure there will be a name attribute lower case,
+        #can just call it directly.
+        subregion_name = feature.items()['name']
         feature.SetField('Hrv_Total', totals_dict[subregion_name])
 
         if val_dict is not None:
