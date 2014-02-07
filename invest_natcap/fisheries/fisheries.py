@@ -369,13 +369,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #Do the survival params first
         for j in range(len(area_names)):
            
-            #If there is only one area, user may instead choose to not write an
-            #area name, but instead just put "Survival". If that's the case, 
-            #replace it with 'AOI'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
-            if curr_area_name.lower() == 'survival':
-                curr_area_name = 'AOI'
-
             area_surv = line[j]
 
             main_dict['Stage_Params'][stage_name]['survival'][curr_area_name] = float(area_surv)
@@ -394,8 +388,6 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
                         'larvaldispersal': 'larv_disp'}
     #pre-populate with area names
     for area_name in area_names:
-        if area_name.lower() == 'survival':
-            area_name = 'AOI'
         main_dict['Area_Params'][area_name] = {}
 
     exp_frac_exists = False
@@ -417,9 +409,6 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
 
         for n in range(len(area_names)):
             curr_area_name = area_names[n]
-            if curr_area_name.lower() == 'survival':
-                curr_area_name = 'AOI'
-            
             param_value = line[n]
        
             main_dict['Area_Params'][curr_area_name][short_param_name] = float(param_value)
