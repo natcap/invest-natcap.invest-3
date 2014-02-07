@@ -182,9 +182,14 @@ curvature_correction, refr_coeff, args):
             return x*c
         return compute
 
+    # Extract cell size from input DEM
+    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+
     # Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    I *= cell_size
+    J *= cell_size
     I_uri = raster_utils.temporary_filename()
     J_uri = raster_utils.temporary_filename()
     shutil.copy(in_dem_uri, I_uri)
@@ -195,9 +200,6 @@ curvature_correction, refr_coeff, args):
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
     J_raster.GetRasterBand(1).WriteArray(J)
     J_raster = None
-
-    # Extract cell size from input DEM
-    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
 
     # The model extracts each viewpoint from the shapefile
     point_list = []
@@ -289,8 +291,7 @@ curvature_correction, refr_coeff, args):
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
     def accumulate(x):
-        print('x', x)
-        return sum([x])
+        return x
     print("scaled_viewshed_uri", scaled_viewshed_uri)
     print('out_viewshed_uri', out_viewshed_uri)
     raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
