@@ -138,7 +138,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     
     for feature in layer:
         for attrib_name in feature.keys():
-            if attrib_name.lower() = 'name':
+            if attrib_name.lower() == 'name':
                 name_attrib = attrib_name
 
         subregion_name = feature.items()[name_attrib]
