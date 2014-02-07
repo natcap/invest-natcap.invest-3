@@ -137,7 +137,11 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
         layer.CreateField(val_field)
     
     for feature in layer:
-        subregion_name = feature.items()['name']
+        for attrib_name in feature.keys():
+            if attrib_name.lower() = 'name':
+                name_attrib = attrib_name
+
+        subregion_name = feature.items()[name_attrib]
         feature.SetField('Hrv_Total', totals_dict[subregion_name])
 
         if val_dict is not None:
