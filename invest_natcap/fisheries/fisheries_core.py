@@ -5,6 +5,7 @@ import os
 import copy
 import cmath
 
+from osgeo import ogr
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
@@ -125,7 +126,26 @@ def execute(args):
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
+    ds = ogr.Open(aoi_uri)
+    layer = ds.GetLayer()
 
+    harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    layer.createField(harvest_field)
+    
+    if val_dict is not None:
+        val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        layer.createField(val_field)
+    
+    for feature in layer:
+        subregion_name = feature.items()['name']
+        feature.SetField('Hrv_Total', totals_dict[subregion_name])
+
+        if val_dict is not None:
+            feature.SetField('Val_Total', val_dict[subregion_name])
+
+        layer.SetFeature(feature)
+
+    layer.ResetReading()
 def calc_valuation(total_dict, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.'''
