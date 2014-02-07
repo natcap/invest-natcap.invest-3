@@ -8,6 +8,7 @@ import csv
 
 from osgeo import ogr
 from invest_natcap.fisheries import fisheries_core
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -132,10 +133,24 @@ def execute(args):
                     provided next to the recruitment equation selection, and \
                     add the necessary additional information.")
 
-    #Want to know how many areas we're dealing with
-    aoi_ds = ogr.Open(args['aoi_uri'])
+    #Create a copy of the AOI, but make sure that it contains the 'name'
+    #parameter as a lower case. This will be used in core when we write harvest
+    #and valuation results to it.
+    aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
+    cp_aoi_uri = os.path.join(output_dir, aoi_basename + 'Results.shp')
+    raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
+
+    #pop the first feature to determine what the 'name' attribute is called,
+    #since GetFieldIndex is case insensitive
+    aoi_ds = ogr.Open(cp_aoi_uri, update =1)
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
+
+    feature = aoi_layer[0]
+    name_index = feature.GetFieldIndex('name')
+    field_defn = ogr.FieldDefn('name', ogr.OFTReal)
+
+    aoi_layer.AlterFieldDefn(name_index, field_defn, ogr.ALTER_NAME_FLAG)
 
     #Calculate the classes main param info, and add it to the core args dict
     do_weight = True if args['hrv_type'] == 'Weight' else False
