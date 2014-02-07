@@ -130,14 +130,18 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     layer = ds.GetLayer()
 
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
-    layer.createField(harvest_field)
+    layer.CreateField(harvest_field)
     
     if val_dict is not None:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
-        layer.createField(val_field)
+        layer.CreateField(val_field)
     
     for feature in layer:
-        subregion_name = feature.items()['name']
+        for attrib_name in feature.keys():
+            if attrib_name.lower() == 'name':
+                name_attrib = attrib_name
+
+        subregion_name = feature.items()[name_attrib]
         feature.SetField('Hrv_Total', totals_dict[subregion_name])
 
         if val_dict is not None:
