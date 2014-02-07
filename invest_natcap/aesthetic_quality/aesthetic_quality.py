@@ -151,10 +151,10 @@ curvature_correction, refr_coeff, args):
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
     # Compute the distance for each point
-    def compute_distance(vi, vj):
+    def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
             if v:
-                return ((vi - i)**2 + (vj - j)**2)**.5
+                return ((vi - i)**2 + (vj - j)**2)**.5# * cell_size
             else:
                 return -1.
         return compute
@@ -188,8 +188,6 @@ curvature_correction, refr_coeff, args):
     # Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    I *= cell_size
-    J *= cell_size
     I_uri = raster_utils.temporary_filename()
     J_uri = raster_utils.temporary_filename()
     shutil.copy(in_dem_uri, I_uri)
@@ -259,8 +257,9 @@ curvature_correction, refr_coeff, args):
         aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
-        distance_fn = compute_distance(i,j)
-        distance_uri = raster_utils.temporary_filename()
+        base_uri = os.path.split(out_viewshed_uri)[0]
+        distance_fn = compute_distance(i,j, cell_size)
+        distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
