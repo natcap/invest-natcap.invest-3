@@ -789,7 +789,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
     LOGGER.info('identify sink cells')
-    cdef int sink_cell_hits = 0, edge_cell_hits = 0, steps = 0
+    cdef int sink_cell_hits = 0, edge_cell_hits = 0
 
     cdef queue[int] flat_region_queue
     
@@ -800,7 +800,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     
-    cdef int CACHE_ROWS = 2**8
+    cdef int CACHE_ROWS = 2**12
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_cache = (
@@ -829,7 +829,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         flat_set_for_looping.erase(flat_index)
         
         row_index = flat_index / n_cols
-        col_index = flat_index % n_cols
         
         #see if we need to update the row cache
         for cache_row_offset in range(-1, 2):
@@ -867,6 +866,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
         
         cache_row_index = row_index % CACHE_ROWS
+        col_index = flat_index % n_cols
         if dem_cache[cache_row_index, col_index] == nodata_value:
             continue
 
@@ -889,8 +889,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             flat_region_queue.pop()
             
             row_index = flat_index / n_cols
-            col_index = flat_index % n_cols
-
+            
             #see if we need to update the row cache
             for cache_row_offset in range(-1, 2):
                 neighbor_row_index = row_index + cache_row_offset
@@ -927,7 +926,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
 
             cache_row_index = row_index % CACHE_ROWS
-            
+            col_index = flat_index % n_cols
+
             #test if this point is an edge
             #if it's flat it could be an edge
             if flat_set.find(flat_index) != flat_set.end():
@@ -968,11 +968,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             #loop neighbor and test to see if we can extend
             for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                
+                neighbor_row_index = row_index + row_offsets[neighbor_index]                
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
+                    
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
 
@@ -1043,9 +1043,9 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
                 
@@ -1077,7 +1077,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         #process edge offsets for region
         while edge_queue.size() > 0:
             edge_cell_hits += 1
-            steps += 1
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
             
@@ -1168,8 +1167,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.debug('region_count: %d' % region_count)
     LOGGER.info('edge cell hits %d' % edge_cell_hits)
     LOGGER.info('sink cell hits %d' % sink_cell_hits)
-    LOGGER.info('cell steps %d' % steps)
-
+    
     #Find max distance
     LOGGER.debug('calculating max distance')
     cdef numpy.ndarray[numpy.npy_float, ndim=2] row_array = (
@@ -1401,7 +1399,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
     
     
-@cython.profile(False)
 cdef int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,

@@ -11,7 +11,7 @@ import pyximport
 pyximport.install()
 
 test_region = 'willamate' #peru|willamate
-test_mode = 'flow_accumulation' #flat_resolve|flow_accumulation
+test_mode = 'flat_resolve' #flat_resolve|flow_accumulation
 
 if test_region == 'peru':
     base_uri = 'regression_peru_dem_out.tif'
