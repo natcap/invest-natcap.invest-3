@@ -863,52 +863,10 @@ def execute(args):
     csv.close()
             
 
-##
-##    acc_bio_veg_cols = ["Acc Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Bio Total"]
-##    acc_soil_veg_cols = ["Acc Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Acc Soil Total"]
-##
-##    dis_bio_veg_cols = ["Dis Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Dis Bio Total"]
-##    dis_soil_veg_cols = ["Dis Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Dis Soil Total"]
-##
-##    em_bio_veg_cols = ["Em Bio Veg %i" % veg_type for veg_type in veg_type_list] + ["Em Bio Total"]
-##    em_soil_veg_cols = ["Em Soil Veg %i" % veg_type for veg_type in veg_type_list] + ["Em Soil Total"]
-##
-##    csv.write(",".join(["Year"] + acc_bio_veg_cols + acc_soil_veg_cols +\
-##                       dis_bio_veg_cols + dis_soil_veg_cols +\
-##                       em_bio_veg_cols + em_soil_veg_cols ))
-##
-##    #row_format = "\n%s" + (",%s" * (len(veg_type_list) + 1) * 2)
-##
-##    for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
-##        row = [this_year]
-##
-##        #tabulate accumulation and disturbance
-##        for source_veg_name in [undis_bio_veg_name, undis_soil_veg_name, dis_bio_veg_name, dis_soil_veg_name]:
-##            total = 0
-##            for veg_type in veg_type_list:
-##                this_source_veg_uri = os.path.join(workspace_dir, source_veg_name % (this_year, veg_type))
-##                v = sum_uri(this_source_veg_uri, extent_uri)
-##                total += v
-##                row.append(v)
-##            row.append(total)
-##
-##        #tabulate emissions
-##        for source_veg_name in [em_bio_veg_name, em_soil_veg_name]:
-##            total = 0
-##            for veg_type in veg_type_list:
-##                this_source_veg_uri = os.path.join(workspace_dir,  source_veg_name % (this_year, next_year, veg_type))
-##                v = sum_uri(this_source_veg_uri, extent_uri)
-##                total += v
-##                row.append(v)
-##            row.append(total)
-##
-##        csv.write("\n" + ",".join([str(s) for s in row]))
-##
-##    csv.close()
 
-##    #open report
-##    report = open(report_uri, 'w')
-##    report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
+    #open report
+    report = open(report_uri, 'w')
+    report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
 ##
 ##    #soil disturbance and accumulation table
 ##    report.write("<B>Soil Disturbance and Accumulation</B>")
@@ -1023,8 +981,22 @@ def execute(args):
 ##
 ##    report.write("\n</TABLE>")
 ##
-##    #close report
-##    report.close()
+
+    for csv_uri, name in [(carbon_uri, "Stock Carbon"),
+                          (trans_uri, "Transition Matrix"),
+                          (dis_bio_csv_uri, "Biomass Disturbance"),
+                          (dis_soil_csv_uri, "Soil Disturbance"),
+                          (acc_bio_csv_uri, "Biomass Accumulation"),
+                          (acc_soil_csv_uri, "Soil Accumulation"),
+                          (half_life_csv_uri, "Carbon Half-Lives")]:
+        table = "<TABLE BORDER=1><TR><TD>" + open(csv_uri).read().strip().replace(",","</TD><TD>").replace("\n","</TD></TR><TR><TD>") + "</TD></TR></TABLE>"
+
+        report.write("<P><P><B>%s</B>" % name)
+        report.write(table)
+    
+    #close report
+    report.write("\n</BODY></HTML>")
+    report.close()
 
 ##
 ##    ##clean up
