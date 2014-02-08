@@ -154,7 +154,7 @@ curvature_correction, refr_coeff, args):
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
             if v:
-                return ((vi - i)**2 + (vj - j)**2)**.5# * cell_size
+                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
         return compute
@@ -259,7 +259,7 @@ curvature_correction, refr_coeff, args):
         # Compute the distance
         base_uri = os.path.split(out_viewshed_uri)[0]
         distance_fn = compute_distance(i,j, cell_size)
-        distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
+        distance_uri = raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
