@@ -162,18 +162,19 @@ curvature_correction, refr_coeff, args):
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            if d <= max_valuation_radius:
+            if v and (x <= max_valuation_radius):
+                print('d', x, 'returning', a + b*x + c*x**2 + d*x**3)
                 return a + b*x + c*x**2 + d*x**3
             else:
-                return 0
+                return 0.
         return compute
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
-            if d <= max_valuation_radius:
+            if v and (x <= max_valuation_radius):
                 return a + b*math.log(x)
             else:
-                return 0
+                return 0.
         return compute
 
     # Multiply a value by a constant
@@ -278,7 +279,7 @@ curvature_correction, refr_coeff, args):
 
         assert valuation_function is not None
             
-        viewshed_uri = raster_utils.temporary_filename()
+        viewshed_uri = os.path.join(base_uri, "valuation.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
         valuation_function, viewshed_uri, gdal.GDT_Float64, -1., cell_size, \
         "union")
