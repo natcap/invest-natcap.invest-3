@@ -163,7 +163,6 @@ curvature_correction, refr_coeff, args):
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
             if v and (x <= max_valuation_radius):
-                print('d', x, 'returning', a + b*x + c*x**2 + d*x**3)
                 return a + b*x + c*x**2 + d*x**3
             else:
                 return 0.
@@ -254,13 +253,13 @@ curvature_correction, refr_coeff, args):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
-        visibility_uri = raster_utils.temporary_filename()
+        visibility_uri = os.path.join(base_uri, "visibility.tif") #raster_utils.temporary_filename()
         aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
         (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
         base_uri = os.path.split(out_viewshed_uri)[0]
         distance_fn = compute_distance(i,j, cell_size)
-        distance_uri = raster_utils.temporary_filename()
+        distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
