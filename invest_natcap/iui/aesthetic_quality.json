@@ -125,7 +125,7 @@
                                     "args_id" : "a_coefficient",
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
-                                    "defaultValue": "0.0",
+                                    "defaultValue": "1.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
@@ -158,6 +158,16 @@
                                     "defaultValue": "0.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
+                                    "required": false
+                                },                               
+                                {
+                                    "id" : "max_valuation_radius",
+                                    "args_id" : "max_valuation_radius",
+                                    "type": "text",
+                                    "label": "maximum valuation radius (meters)",
+                                    "defaultValue": "8000",
+                                    "validText": "[0-9]+",
+                                    "dataType": "int",
                                     "required": false
                                 }                               
                                 ]

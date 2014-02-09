@@ -5,6 +5,7 @@ import os
 import copy
 import cmath
 
+from osgeo import ogr
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
@@ -115,17 +116,35 @@ def execute(args):
         val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
 
     #Here be outputs
-    aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
-    cp_aoi_uri = os.path.join(output_dir, aoi_basename + 'Results.shp')
-    raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
-
     val_var = val_dict if 'unit_price' in args else None
-    append_results_to_aoi(cp_aoi_uri, totals_dict, val_var)
+    append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
 
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
+    ds = ogr.Open(aoi_uri)
+    layer = ds.GetLayer()
 
+    harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    layer.CreateField(harvest_field)
+    
+    if val_dict is not None:
+        val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        layer.CreateField(val_field)
+    
+    for feature in layer:
+
+        #Since we now know for sure there will be a name attribute lower case,
+        #can just call it directly.
+        subregion_name = feature.items()['name']
+        feature.SetField('Hrv_Total', totals_dict[subregion_name])
+
+        if val_dict is not None:
+            feature.SetField('Val_Total', val_dict[subregion_name])
+
+        layer.SetFeature(feature)
+
+    layer.ResetReading()
 def calc_valuation(total_dict, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.'''

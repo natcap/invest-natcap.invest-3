@@ -49,7 +49,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         '''
         
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
 
         #Test B-H, Ricker
         for equation in ['Beverton-Holt', 'Ricker']:
@@ -74,7 +74,7 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         #Going to use Blue Crab for testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
@@ -93,7 +93,7 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         #Using DC for gendered testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
@@ -113,7 +113,7 @@ class TestHRA(invest_natcap.testing.GISTest):
        
         #Using white shrimp for stage testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
         args['maturity_type'] = "Stage Specific"
