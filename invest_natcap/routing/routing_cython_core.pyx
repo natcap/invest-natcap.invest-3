@@ -197,17 +197,17 @@ def calculate_transport(
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
-            #get percent flow from neighbor to current cell
+            #get percent flow from neighbour to current cell
 
             neighbor_row = current_row+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
-            #See if neighbor out of bounds
+            #See if neighbour out of bounds
             if 0 < neighbor_row < 0 or neighbor_row >= n_rows or \
                     neighbor_col < 0 or neighbor_col >= n_cols:
                 continue
 
-            #if neighbor inflows
+            #if neighbour inflows
             neighbor_direction = \
                 outflow_direction_array[neighbor_row, neighbor_col]
             if neighbor_direction == outflow_direction_nodata:
