@@ -493,7 +493,9 @@ def execute(args):
         raise ValueError, msg
 
     #construct dictionaries for single parameter lookups
-    conversion = raster_utils.get_cell_size_from_uri(lulc_uri_dict[lulc_years[0]]) ** 2 / 10000.0 #convert to Ha
+    conversion = (raster_utils.get_cell_size_from_uri(lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0 #convert to Ha
+
+    LOGGER.debug("Cell size is %s hectacres.", conversion)
 
     veg_dict = dict([(k, int(carbon[k][carbon_field_veg])) for k in carbon])
 
@@ -535,7 +537,7 @@ def execute(args):
                 veg_trans_acc_dict[veg_type][component][original_lulc] = {}
                 for transition_lulc in trans:
                     if int(carbon[original_lulc][carbon_field_veg]) == veg_type:
-                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[veg_type][trans[original_lulc][str(transition_lulc)]]
+                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[veg_type][trans[original_lulc][str(transition_lulc)]] * conversion
                     else:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0
 
@@ -623,12 +625,11 @@ def execute(args):
         def h_l_op(c):
             alpha = half_life[veg_type][half_life_field]
             try:
-                return (0.5 ** (alpha_t/(float(alpha)))) * c
+                return (1 - (0.5 ** (alpha_t/(float(alpha))))) * c
             except ValueError:
                 #return 0 if alpha is None
                 return 0
         return h_l_op
-
 
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
@@ -672,6 +673,7 @@ def execute(args):
         this_veg_stock_soil_uri = os.path.join(workspace_dir, veg_stock_soil_name % veg_type)
         this_veg_stock_bio_uri = os.path.join(workspace_dir, veg_stock_bio_name % veg_type)
 
+        print veg_type, carbon_field_bio, veg_field_dict[veg_type][carbon_field_bio]
         raster_utils.reclassify_dataset_uri(this_uri,
                                             veg_field_dict[veg_type][carbon_field_bio],
                                             this_veg_stock_bio_uri,
