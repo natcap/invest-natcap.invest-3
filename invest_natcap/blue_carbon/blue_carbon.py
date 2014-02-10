@@ -511,7 +511,7 @@ def execute(args):
                 if int(carbon[k][carbon_field_veg]) == veg_type:
                     veg_field_dict[veg_type][field][k] = float(carbon[k][field]) * conversion
                 else:
-                    veg_field_dict[veg_type][field][k] = 0
+                    veg_field_dict[veg_type][field][k] = 0.0
 
     #add biomass to carbon field
     carbon_field_bio = "bio"
@@ -539,7 +539,7 @@ def execute(args):
                     if int(carbon[original_lulc][carbon_field_veg]) == veg_type:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[veg_type][trans[original_lulc][str(transition_lulc)]] * conversion
                     else:
-                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0
+                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0.0
 
     #disturbance
     trans_dis_dict = {}
