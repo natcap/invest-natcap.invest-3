@@ -122,7 +122,7 @@ def execute(args):
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
-    ds = ogr.Open(aoi_uri)
+    ds = ogr.Open(aoi_uri, update=1)
     layer = ds.GetLayer()
 
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)

@@ -305,11 +305,13 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
 
         csv_reader = csv.reader(param_file)
 
+        #First line is the place name and stuff.
+
         #In some cases, line[0] may contain the name of the model 
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
         LOGGER.debug(line)
-        while line[0] == '':
+        while line[0] == '' or line[1] == '':
             LOGGER.debug(line)
             line = csv_reader.next()
         
@@ -347,8 +349,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
     age_params = map(lambda x: x.lower(), age_params)
     
     #Want to make sure that the headers are in the acceptable set.
+    LOGGER.debug("AGE PARAMS: %s" % age_params)
     for param in age_params:
-
+    
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
