@@ -308,7 +308,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #In some cases, line[0] may contain the name of the model 
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
-        while line[0] == '' or line[1] == '':
+        LOGGER.debug(line)
+        while line[0] == '':
+            LOGGER.debug(line)
             line = csv_reader.next()
         
         #Once we get here, know that we're into the area/age vars.
@@ -316,6 +318,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #to switch over to area specific stuff.
         
         while line[0] != '':
+            LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
         
