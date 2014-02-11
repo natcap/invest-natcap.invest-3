@@ -186,7 +186,7 @@ def execute(args):
 
     #Direct pass all these variables
     core_args['workspace_dir'] = args['workspace_dir']
-    core_args['aoi_uri'] = args['aoi_uri']
+    core_args['aoi_uri'] = cp_aoi_uri
     core_args['maturity_type'] = args['maturity_type']
     core_args['is_gendered'] = args['is_gendered']
     core_args['init_recruits'] = args['init_recruits']
@@ -305,10 +305,14 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
 
         csv_reader = csv.reader(param_file)
 
+        #First line is the place name and stuff.
+
         #In some cases, line[0] may contain the name of the model 
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
+        LOGGER.debug(line)
         while line[0] == '' or line[1] == '':
+            LOGGER.debug(line)
             line = csv_reader.next()
         
         #Once we get here, know that we're into the area/age vars.
@@ -316,6 +320,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #to switch over to area specific stuff.
         
         while line[0] != '':
+            LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
         
@@ -344,8 +349,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
     age_params = map(lambda x: x.lower(), age_params)
     
     #Want to make sure that the headers are in the acceptable set.
+    LOGGER.debug("AGE PARAMS: %s" % age_params)
     for param in age_params:
-
+    
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \

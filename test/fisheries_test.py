@@ -71,7 +71,6 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
-
         #Going to use Blue Crab for testing.
         args = {}
         args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
@@ -90,7 +89,6 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
 
     def test_age_gendered_smoke(self):
-
         #Using DC for gendered testing.
         args = {}
         args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
@@ -110,7 +108,6 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
     
     def test_stage_no_gender_smoke(self):
-       
         #Using white shrimp for stage testing.
         args = {}
         args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
