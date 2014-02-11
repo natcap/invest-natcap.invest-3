@@ -1250,10 +1250,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     dem_offset_ds = gdal.Open(dem_offset_uri)
     dem_offset_band = dem_offset_ds.GetRasterBand(1)
     
-    #dem_data_uri = raster_utils.temporary_filename()
-    #dem_carray = raster_utils.load_dataset_to_carray(
-    #    dem_offset_uri, dem_data_uri, array_type=gdal.GDT_Float32)
-
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
     #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
@@ -1323,11 +1319,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             
         dem_window = dem_offset_band.ReadAsArray(
             xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-        
-        #dem_sink_offset_band.ReadAsArray(
-        #            xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-        #            win_ysize=1, buf_obj=dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)))
-        #dem_window = dem_carray[y_offset:y_offset+3,:]
         
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
