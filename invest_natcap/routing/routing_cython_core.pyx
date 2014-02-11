@@ -197,17 +197,17 @@ def calculate_transport(
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
-            #get percent flow from neighbour to current cell
+            #get percent flow from neighbor to current cell
 
             neighbor_row = current_row+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
-            #See if neighbour out of bounds
+            #See if neighbor out of bounds
             if 0 < neighbor_row < 0 or neighbor_row >= n_rows or \
                     neighbor_col < 0 or neighbor_col >= n_cols:
                 continue
 
-            #if neighbour inflows
+            #if neighbor inflows
             neighbor_direction = \
                 outflow_direction_array[neighbor_row, neighbor_col]
             if neighbor_direction == outflow_direction_nodata:
@@ -708,7 +708,7 @@ cdef void _build_flat_set(
             if dem_value == nodata_value:
                 continue
 
-            #check all the neighbours, if nodata or lower, this isn't flat
+            #check all the neighbors, if nodata or lower, this isn't flat
             for neighbor_index in xrange(8):
                 neighbor_row_index = 1 + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
@@ -1050,24 +1050,24 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     continue
                 
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
-                #If the neighbour is not flat then skip
+                #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
-                #If the neighbour is at a different height, then skip
+                #If the neighbor is at a different height, then skip
                 if (dem_cache[cache_row_index, col_index] != 
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
-                #if the neighbour's weight is less than the weight we'd project to it
+                #if the neighbor's weight is less than the weight we'd project to it
                 #no need to update it, we're done w/ that direction
                 if (dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] <=
                     weight + 1):
                     continue
 
-                #otherwise, project onto the neighbour
+                #otherwise, project onto the neighbor
                 t = Row_Col_Weight_Tuple(
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
@@ -1131,13 +1131,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
-                #If the neighbour is not at the same height, skip
+                #If the neighbor is not at the same height, skip
                 if (dem_cache[cache_row_index, col_index] !=
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
-                #If the neighbour is not flat then skip
+                #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
@@ -1147,7 +1147,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
                 dem_edge_offset_cache[neighbor_cache_row_index, neighbor_col_index] = weight + 1
                 cache_dirty[neighbor_cache_row_index] = 1
-                #otherwise project the current weight to the neighbour
+                #otherwise project the current weight to the neighbor
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                 edge_queue.push(t)
                 
@@ -1310,14 +1310,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
         #We load 3 rows at a time
         y_offset = row_index - 1
         local_y_offset = 1
-        if y_offset < 0:
+        if y_offset == -1:
             y_offset = 0
             local_y_offset = 0
-        if y_offset >= n_rows - 2:
+        elif y_offset == n_rows - 1:
             #could be 0 or 1
             local_y_offset = 2
             y_offset = n_rows - 3
-
+            
         dem_window = dem_carray[y_offset:y_offset+3,:]
         
         #clear out the flow array from the previous loop
@@ -1354,7 +1354,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
-                    #If any neighbours are nodata, it's contaminated
+                    #If any neighbors are nodata, it's contaminated
                     break
 
                 #s_1 is slope along straight edge
@@ -1381,7 +1381,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
-            else: 
+            else:
                 # This is the fallthrough condition for the for loop, we reach
                 # it only if we haven't encountered an invalid slope or pixel
                 # that caused the above algorithm to break out 
@@ -1430,7 +1430,7 @@ cdef int _update_window(
     else:
         return 0
 
-        
+
 def find_sinks(dem_uri):
     """Discover and return the sinks in the dem array
     
@@ -1490,7 +1490,7 @@ def find_sinks(dem_uri):
 
                 if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
                     continue
-                
+
                 if (dem_array[neighbor_row_index, neighbor_col_index] < dem_array[local_y_offset, col_index]):
                     #this cell can drain into another
                     break

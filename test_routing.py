@@ -10,7 +10,7 @@ import routing_cython_core
 import pyximport
 pyximport.install()
 
-test_region = 'peru' #peru|willamate
+test_region = 'willamate' #peru|willamate
 test_mode = 'flow_accumulation' #flat_resolve|flow_accumulation
 
 if test_region == 'peru':
@@ -36,8 +36,8 @@ if test_mode == 'flow_accumulation':
     cProfile.run('routing_utils.flow_accumulation(dem_uri, out_uri)', 'flowstats')
 
 p = pstats.Stats('flowstats')
-p.sort_stats('time').print_stats(10)
-p.sort_stats('cumulative').print_stats(10)
+p.sort_stats('time').print_stats(20)
+p.sort_stats('cumulative').print_stats(20)
 end = time.time()
 
 
