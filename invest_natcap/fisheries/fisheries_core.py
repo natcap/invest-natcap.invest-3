@@ -44,7 +44,7 @@ def execute(args):
                 }
              'Area_Params':
                 {'Area_1':
-                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    {'exploit_frac': 0.309, 'larv_disp': 0.023},
                     ...
                 }
             }
@@ -121,9 +121,16 @@ def execute(args):
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
     create_results_page(html_page_uri, totals_dict, val_var)
 
+
 def create_results_page(uri, totals_dict, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
     for each subregion.'''
+
+    rep_args = {}
+    rep_args['title'] = "Fishieries Results Page"
+    rep_args['out_uri'] = uri
+
+    pass
 
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
@@ -151,6 +158,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
         layer.SetFeature(feature)
 
     layer.ResetReading()
+
 def calc_valuation(total_dict, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.'''
@@ -206,7 +214,6 @@ def calc_harvest(cycle_dict, params_dict):
 
     return hrv_dict, totals_dict
     
-
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration, do_weight):
     '''cycle_dict- Contains all counts of individuals for each combination of 
@@ -232,11 +239,12 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 }
              'Area_Params':
                 {'Area_1':
-                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    {'exploit_frac': 0.309, 'larv_disp': 0.023},
                     ...
                 }
             }
     '''
+    LOGGER.debug(params_dict['Area_Params'])
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
@@ -264,12 +272,13 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
             cycle_dict[cycle][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
             for i, age in enumerate(order):
     
                 #If a = 0
                 if age in first_age:
+                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
@@ -296,6 +305,13 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
 
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
+    for cycle in cycle_dict:
+        for area in cycle_dict[cycle]:
+            if area == '1':
+                for age in cycle_dict[cycle][area]:
+                    #LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
+                    pass
+
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration, do_weight):
     
@@ -321,7 +337,7 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
             cycle_dict[cycle][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
             for i, stage in enumerate(order):
                
@@ -409,6 +425,7 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
         spawners = spawner_count(cycle_dict, params_dict, cycle, do_weight)
+        LOGGER.debug(spawners)
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
@@ -500,7 +517,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
             cycle_dict[0][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larval_disp'] if 'larval_disp' in area_params else 1 
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
             
             #The first stage should be set to the initial recruits equation, the
             #rest should be 1.
@@ -543,8 +560,6 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
 
                 cycle_dict[0][area][age] = count
 
-    LOGGER.debug(cycle_dict)
-
 def calc_prob_surv_stay(params_dict, stage, area):
     
     surv = calc_survival_mortal(params_dict, area, stage)
@@ -581,7 +596,7 @@ def calc_survival_mortal(params_dict, area, stage):
                 }
              'Area_Params':
                 {'Area_1':
-                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    {'exploit_frac': 0.309, 'larv_disp': 0.023},
                     ...
                 }
             }
