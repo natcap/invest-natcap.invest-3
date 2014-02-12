@@ -14,7 +14,7 @@ LOGGER = logging.getLogger('fisheries_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestHRA(invest_natcap.testing.GISTest):
+class TestFisheries(invest_natcap.testing.GISTest):
 
     def test_main_csv_parse(self):
         '''Want to make sure that the main CSV parsing function is working as
