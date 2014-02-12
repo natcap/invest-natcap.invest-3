@@ -6,6 +6,7 @@ import copy
 import cmath
 
 from osgeo import ogr
+from invest_natcap import reporting
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
