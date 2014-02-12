@@ -153,7 +153,7 @@ curvature_correction, refr_coeff, args):
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
-            if v:
+            if v == 1:
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
