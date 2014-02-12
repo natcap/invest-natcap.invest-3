@@ -41,3 +41,54 @@ class TestStyleModule(testing.GISTest):
 
         #self.assertFiles(output_uri, reg_uri)
 
+    def test_grayscale_raster(self):
+        """Regression test for interpolating a gdal raster to a gdal integer
+            raster with values between 0 and 255"""
+
+        raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        input_raster_uri = os.path.join(STYLE_DATA, 'grayscale_input_test.tif')
+        output_uri = os.path.join(TEST_OUT, 'style_grayscale_raster.tif')
+        reg_uri = os.path.join(REGRESSION_DATA, 'reg_grayscale_raster.tif')
+
+        style.grayscale_raster(input_raster_uri, output_uri)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_tif_to_png(self):
+        """Regression test for converting a tif raster to a png image
+        """
+
+        raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        input_raster_uri = os.path.join(REGRESSION_DATA, 'reg_grayscale_raster.tif')
+        output_uri = os.path.join(TEST_OUT, 'tif_to_png_raster.png')
+        reg_uri = os.path.join(REGRESSION_DATA, 'png_reg_raster.png')
+
+        style.tif_to_png(input_raster_uri, output_uri)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_create_thumbnail(self):
+        """Regression test for creating a thumbnail"""
+
+        raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        input_raster_uri = os.path.join(REGRESSION_DATA, 'png_reg_raster.png')
+        output_uri = os.path.join(TEST_OUT, 'png_thumbnail.png')
+        reg_uri = os.path.join(REGRESSION_DATA, 'png_thumbnail_reg.png')
+
+        size = (256, 256)
+
+        style.create_thumbnail(input_raster_uri, output_uri, size)
+
+        self.assertFiles(output_uri, reg_uri)
