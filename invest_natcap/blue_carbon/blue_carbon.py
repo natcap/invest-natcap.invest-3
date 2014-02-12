@@ -511,7 +511,7 @@ def execute(args):
                 if int(carbon[k][carbon_field_veg]) == veg_type:
                     veg_field_dict[veg_type][field][k] = float(carbon[k][field]) * conversion
                 else:
-                    veg_field_dict[veg_type][field][k] = 0
+                    veg_field_dict[veg_type][field][k] = 0.0
 
     #add biomass to carbon field
     carbon_field_bio = "bio"
@@ -539,7 +539,7 @@ def execute(args):
                     if int(carbon[original_lulc][carbon_field_veg]) == veg_type:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[veg_type][trans[original_lulc][str(transition_lulc)]] * conversion
                     else:
-                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0
+                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0.0
 
     #disturbance
     trans_dis_dict = {}
@@ -819,7 +819,7 @@ def execute(args):
             veg_base_uri_dict[veg_type][base_veg_dis_bio] = this_veg_adj_em_dis_bio_uri
             veg_base_uri_dict[veg_type][base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
-
+    ##analysis year calculations
 
     ##generate csv
     #open csv
@@ -869,121 +869,97 @@ def execute(args):
     #open report
     report = open(report_uri, 'w')
     report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
-##
-##    #soil disturbance and accumulation table
-##    report.write("<B>Soil Disturbance and Accumulation</B>")
-##    column_name_list = ["Year", "Disturbance", "Accumulation", "Net", "Total"]
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##    d_total = 0
-##    a_total = 0
-##    total = 0
-##    for year, d_uri, a_uri in zip(lulc_years, dis_soil_uri_list, acc_soil_uri_list):
-##        try:
-##            d = sum_uri(d_uri, extent_uri)
-##        except Exception:
-##            d = 0
-##        try:
-##            a = sum_uri(a_uri, extent_uri)
-##        except Exception:
-##            a = 0
-##
-##        d_total += d
-##        a_total += a
-##
-##        net = a - d
-##        total += net
-##
-##        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(map(str,[year, d, a, net, total])))
-##
-##    try:
-##        d = sum_uri(total_dis_soil_uri, extent_uri)
-##    except Exception:
-##        d = 0
-##    try:
-##        a = sum_uri(total_acc_soil_uri, extent_uri)
-##    except Exception:
-##        a = 0
-##    net = a - d
-##    total = net
-##    report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, a, net, total])))
-##    report.write("\n</TABLE>")
-##
-##    #biomass disturbance table
-##    report.write("\n<P><P><B>Biomass Disturbance and Accumulation</B>")
-##    column_name_list = ["Year", "Disturbance", "Accumulation", "Net", "Total"]
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##    d_total = 0
-##    a_total = 0
-##    total = 0
-##    for year, d_uri, a_uri in zip(lulc_years, dis_bio_uri_list, acc_bio_uri_list):
-##        try:
-##            d = sum_uri(d_uri, extent_uri)
-##        except Exception:
-##            d = 0
-##        try:
-##            a = sum_uri(a_uri, extent_uri)
-##        except Exception:
-##            a = 0
-##
-##        d_total += d
-##        a_total += a
-##
-##        net = a - d
-##        total += net
-##
-##        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(map(str,[year, d, a, net, total])))
-##
-##    try:
-##        d = sum_uri(total_dis_soil_uri, extent_uri)
-##    except Exception:
-##        d = 0
-##    try:
-##        a = sum_uri(total_acc_soil_uri, extent_uri)
-##    except Exception:
-##        a = 0
-##    net = a - d
-##    total = net
-##    report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, a, net, total])))
-##    report.write("\n</TABLE>")
-##
-##    #totals
-##    report.write("\n<P><P><B>Totals</B>")
-##    column_name_list = ["Year", "Amount"]
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##
-##    for year in lulc_years:
-##        report.write("\n<TR><TD>%i</TD><TD>%s</TD></TR>" % (year, str(sum_uri(os.path.join(workspace_dir, carbon_name % year), extent_uri))))
-##
-##    report.write("\n</TABLE>")
 
-##    #lulc statistics
-##    report.write("\n<P><P><B>LULC Counts</B>")
-##    lulc_types = carbon.keys()
-##    lulc_types.sort()
-##
-##    counts = {}
-##    count_max = 0
-##    for year in lulc_years:
-##        counts[year] = raster_utils.unique_raster_values_count(lulc_uri_dict[year])
-##        count_max = max([count_max] + [counts[year][k] for k in counts[year]])
-##
-##    width = int(math.ceil(math.log10(count_max)))
-##
-##    column_name_list = ["Year"] + [str(lulc).ljust(width, "#").replace("#", "&ensp;") for lulc in lulc_types]
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##
-##    for year in lulc_years:
-##        report.write("<P><TR align=\"right\"><TD>%i</TD>" % year)
-##        for lulc in lulc_types:
-##            try:
-##                report.write("<TD>%i</TD>" % counts[year][lulc])
-##            except KeyError:
-##                report.write("<TD>%i</TD>" % 0)
-##        report.write("</TR>")
-##
-##    report.write("\n</TABLE>")
-##
+    #totals
+    report.write("<B>Carbon </B>")
+    column_name_list = ["Year",
+                        "New Biomass",
+                        "New Disturbed Biomass",
+                        "New Soil",
+                        "New Disturbed Soil",
+                        "Biomass Emissions",
+                        "Soil Emissions",
+                        "Net Sequestration"]
+   
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 
+    for this_year in lulc_years:
+        row = [this_year]
+
+        for name in [veg_acc_bio_name,
+                     veg_dis_bio_name,
+                     veg_acc_soil_name,
+                     veg_dis_soil_name,
+                     veg_em_bio_name,
+                     veg_em_soil_name]:
+
+            total = 0
+            for veg_type in veg_type_list:
+                total += totals[this_year][veg_type][name]
+
+            row.append(total)
+        row.append(row[1]+row[3]-row[5]-row[6])        
+
+        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
+
+    report.write("\n</TABLE>")
+
+    #emissions
+    report.write("<P><P><B>Emissions</B>")
+
+    column_name_list = ["Year","Accumulation","Emissions","Net Sequestration"]
+
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    
+    for this_year in range(lulc_years[0],analysis_year+1):
+        if this_year in lulc_years: # + [analysis_year]:
+            row = ["<B>%i</B>" % this_year]
+            start_year = this_year
+            stop_year = (lulc_years + [analysis_year])[lulc_years.index(start_year)+1]
+            span = float(stop_year - start_year)
+            acc_total = 0
+            for veg_type in veg_type_list:
+                acc_total += totals[this_year][veg_type][veg_acc_bio_name] + totals[this_year][veg_type][veg_acc_soil_name]
+        else:
+            row = [this_year]
+                
+        em_total = 0
+        this_span = stop_year - this_year
+        for veg_type in veg_type_list:
+            try:
+                bio_alpha = float(half_life[veg_type][half_life_field_bio])
+
+                bio_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ bio_alpha)))
+                bio_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ bio_alpha)))
+                bio_co = bio_stop_co - bio_start_co
+
+                em_total += totals[start_year][veg_type][veg_em_bio_name] * bio_co
+
+            except ValueError:
+                pass
+
+            try:
+                soil_alpha = float(half_life[veg_type][half_life_field_soil])
+
+                soil_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ soil_alpha)))
+                soil_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ soil_alpha)))
+                soil_co = soil_stop_co - soil_start_co
+
+                em_total += totals[start_year][veg_type][veg_em_soil_name] * soil_co
+                
+            except ValueError:
+                pass
+            
+        row.extend([acc_total / span, em_total])
+        row.append(row[-2]-row[-1])
+
+        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
+
+    report.write("\n</TABLE>")
+
+
+    #input CSVs
+    report.write("<P><P><B>Input Tables</B><P><P>")
     for csv_uri, name in [(carbon_uri, "Stock Carbon"),
                           (trans_uri, "Transition Matrix"),
                           (dis_bio_csv_uri, "Biomass Disturbance"),

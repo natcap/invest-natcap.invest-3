@@ -80,7 +80,7 @@ def execute(args):
 
     returns nothing
     '''
-
+    LOGGER.debug("FROM CORE: %s" % args['farm_op_dict'])
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
     cycle_history = calc_farm_cycles(
