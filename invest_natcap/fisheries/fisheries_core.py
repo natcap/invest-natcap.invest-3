@@ -76,8 +76,6 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
     '''This dictionary will contain all counts of individuals for each
