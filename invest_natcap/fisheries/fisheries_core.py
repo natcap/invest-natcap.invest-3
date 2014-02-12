@@ -119,6 +119,13 @@ def execute(args):
     val_var = val_dict if 'unit_price' in args else None
     append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
 
+    html_page_uri = os.path.join(output_dir, 'Results_Page.html')
+    create_results_page(html_page_uri, totals_dict, val_var)
+
+def create_results_page(uri, totals_dict, val_var):
+    '''Will output an HTML file that contains a summary of all harvest totals
+    for each subregion.'''
+
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
