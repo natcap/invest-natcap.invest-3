@@ -357,7 +357,7 @@ def calculate_flow_graph(
                 flow_angle_to_neighbor = abs(
                     angle_to_neighbor[neighbor_direction_index] -
                     flow_direction)
-                if flow_angle_to_neighbor < PI/4.0:
+                if flow_angle_to_neighbor <= PI/4.0:
                     found = True
 
 
@@ -1305,28 +1305,19 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     
-    for row_index in range(n_rows):
+    #flow not defined on the edges, so just go 1 row in 
+    for row_index in range(1, n_rows - 1):
         #We load 3 rows at a time
         y_offset = row_index - 1
         local_y_offset = 1
-        if y_offset == -1:
-            y_offset = 0
-            local_y_offset = 0
-        elif y_offset == n_rows - 2:
-            #could be 0 or 1
-            local_y_offset = 2
-            y_offset = n_rows - 3
-            
+        
         dem_window = dem_offset_band.ReadAsArray(
             xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
         
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
-        for col_index in range(n_cols):
-                
-            if col_index == 10:
-                LOGGER.debug("we're at column 10")
-                LOGGER.debug("we're at row %d" % (row_index))
+        #flow not defined on the edges, so just go 1 col in 
+        for col_index in range(1, n_cols - 1):
                 
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[local_y_offset, col_index] == dem_nodata:
@@ -1345,28 +1336,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 e_2_row_index = e_2_offsets[facet_index * 2 + 0] + local_y_offset
                 e_2_col_index = e_2_offsets[facet_index * 2 + 1] + col_index
 
-                if col_index == 10:
-                    LOGGER.debug('facet_index %d' % facet_index)
-                    LOGGER.debug('e_0_row_index %d, e_0_col_index %d, e_1_row_index %d, e_1_col_index %d, e_2_row_index %d, e_2_col_index %d' % (e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index))
-                    
-                
-                if (e_0_row_index < 0 or e_0_row_index > 2 or
-                    e_1_row_index < 0 or e_1_row_index > 2 or
-                    e_2_row_index < 0 or e_2_row_index > 2 or
-                    e_0_col_index < 0 or e_0_col_index >= n_cols or
-                    e_1_col_index < 0 or e_1_col_index >= n_cols or
-                    e_2_col_index < 0 or e_2_col_index >= n_cols):
-                    if col_index == 10:
-                        LOGGER.debug('out of bounds')
-                    continue
-            
                 e_0 = dem_window[e_0_row_index, e_0_col_index]
                 e_1 = dem_window[e_1_row_index, e_1_col_index]
                 e_2 = dem_window[e_2_row_index, e_2_col_index]
 
-                if col_index == 10:
-                    LOGGER.debug('e_0 %d, e_1 %d, e_2 %d' % (e_0, e_1, e_2))
-                
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
                     #If any neighbors are nodata, it's contaminated
@@ -1377,12 +1350,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                
                 flow_direction = atan2(s_2, s_1) #Eqn 3
                 
-                if col_index == 10:
-                    LOGGER.debug('s_1 %f, s_2 %f' % (s_1, s_2))
-                    LOGGER.debug('flow_direction %f' % (flow_direction))
                 if flow_direction < 0: #Eqn 4
                     #If the flow direction goes off one side, set flow
                     #direction to that side and the slope to the straight line
@@ -1401,6 +1370,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
+                
             else:
                 # This is the fallthrough condition for the for loop, we reach
                 # it only if we haven't encountered an invalid slope or pixel
@@ -1410,8 +1380,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_array[0, col_index] = (
                         a_f[max_index] * flow_direction_max_slope +
                         a_c[max_index] * 3.14159265 / 2.0)
-            if col_index == 10:
-                pass#sys.exit(-1)
+                    #just in case we set 2pi rather than 0
+                    #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
+                    #    flow_array[0, col_index]  = 0.0
+                
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
 
