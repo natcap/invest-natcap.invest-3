@@ -8,7 +8,7 @@ from nose.plugins.skip import SkipTest
 import invest_natcap.testing as testing
 
 #from invest_natcap import reporting
-from invest_natcap import style
+from invest_natcap.reporting import style
 import invest_test_core
 
 STYLE_DATA = os.path.join('invest-data/test/data', 'style_data')

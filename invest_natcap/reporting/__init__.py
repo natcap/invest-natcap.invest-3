@@ -16,6 +16,7 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 import table_generator
+import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
 
@@ -74,7 +75,7 @@ def generate_report(reporting_args):
                     structure for the table (required). The order of the
                     columns from left to right is depicted by the index
                     of the column dictionary in the list. Each dictionary
-                    in the list has the following keys and values: 
+                    in the list has the following keys and values:
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
@@ -91,9 +92,9 @@ def generate_report(reporting_args):
                 'data_src'- a URI to the location of the external file for either
                     the 'script' or the 'style' OR a String representing the
                     html script or style (DO NOT include the tags) (required)
-                
+
                 'input_type' -  a String, 'File' or 'Text' that refers to how
-                    'data_src' is being passed in (URI vs String) (required). 
+                    'data_src' is being passed in (URI vs String) (required).
 
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
@@ -176,7 +177,7 @@ def write_html(html_obj, out_uri):
     html_str += '</html>'
 
     LOGGER.debug('HTML Complete String : %s', html_str)
-    
+
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
         os.remove(out_uri)
@@ -199,7 +200,7 @@ def build_table(param_args):
                 build the table from. Either 'shapefile', 'csv', or 'dictionary'
                 (required)
 
-            param_args['data'] - a URI to a csv or shapefile OR a list of 
+            param_args['data'] - a URI to a csv or shapefile OR a list of
                 dictionaries. If a list of dictionaries the data should be
                 represented in the following format: (required)
                     [{col_name_1: value, col_name_2: value, ...},
@@ -210,12 +211,12 @@ def build_table(param_args):
                 field (shapefile) will be the unique key to use in extracting
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
-                
+
             param_args['columns'] - a list of dictionaries that defines the column
                     structure for the table (required). The order of the
                     columns from left to right is depicted by the index
                     of the column dictionary in the list. Each dictionary
-                    in the list has the following keys and values: 
+                    in the list has the following keys and values:
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
@@ -296,7 +297,7 @@ def data_dict_to_list(data_dict):
             Could be empty (required)
 
         returns - a list of dictionaries, or empty list if data_dict is empty"""
-    
+
     data_list = []
     data_keys = data_dict.keys()
     data_keys.sort()
@@ -352,7 +353,7 @@ def add_head_element(param_args):
         file_str = head_file.read()
     else:
         file_str = src
-    
+
     # List of regular expression strings to search against
     reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
