@@ -149,13 +149,23 @@
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
-                                },                              
+                                },
                                 {
                                     "id" : "d_coefficient",
                                     "args_id" : "d_coefficient",
                                     "type": "text",
                                     "label": "'d' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },
+                                {
+                                    "id" : "max_valuation_radius",
+                                    "args_id" : "max_valuation_radius",
+                                    "type": "text",
+                                    "label": "Maximum valuation radius (m)",
+                                    "defaultValue": "1000.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
