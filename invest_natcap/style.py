@@ -5,6 +5,7 @@ import Image
 import logging
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 from shapely.wkb import loads
 from matplotlib import pyplot
 from kartograph import Kartograph
@@ -108,18 +109,32 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
-def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri):
+def shape_to_svg(shape_in_uri, image_out_uri, css_uri, args):
+    """Create a svg file from and OGR shapefile
+
+        shape_in_uri - a URI to the OGR shapefile to convert to an svg
+        image_out_uri - a URI to an output destination on disk
+        css_uri - a URI to a CSS file for styling
+        args - a Dictionary with the following parameters used in creating the svg configuration:
+            size - tuple for width, height in pixels
+            field_id - the shapefile field to display as a label
+            key_id - the unique field for the shapefile
+            proj_type - a string for how the image projection should be interpreted
+
+        returns - Nothing
     """
 
-    """
-
-    if os.path.isfile(tmp_uri):
-        os.remove(tmp_uri)
     if os.path.isfile(image_out_uri):
         os.remove(image_out_uri)
+    base_dir = os.path.dirname(image_out_uri)
 
     # Copy the datasource to make some preprocessing adjustments
-    shape_copy_uri = 'shape_copy.shp'
+    shape_copy_uri = os.path.join(base_dir, 'tmp_shp_copy.shp')
+
+    def remove_shapefile(shape_uri):
+        drv = ogr.GetDriverByName("ESRI Shapefile")
+        drv.DeleteDataSource(shape_uri)
+        drv = None
 
     def convert_ogr_fields_to_strings(orig_shape_uri, shape_copy_uri):
         """Converts an OGR Shapefile's fields to String values by
@@ -136,7 +151,7 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
         orig_layer = orig_shape.GetLayer()
 
         if os.path.isfile(shape_copy_uri):
-            os.remove(shape_copy_uri)
+            remove_shapefile(shape_copy_uri)
 
         out_driver = ogr.GetDriverByName('ESRI Shapefile')
         out_ds = out_driver.CreateDataSource(shape_copy_uri)
@@ -169,9 +184,14 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
     aoi_sr = raster_utils.get_spatial_ref_uri(shape_copy_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
+    wkt_file = open('../test/invest-data/test/data/style_data/wkt_file.txt', 'wb')
+    wkt_file.write(aoi_wkt)
+    wkt_file.close()
+
     # Get the Well Known Text of the shapefile
-    shapefile_sr = raster_utils.get_spatial_ref_uri(lat_long_shape)
-    shapefile_wkt = shapefile_sr.ExportToWkt()
+    wgs84_sr = osr.SpatialReference()
+    wgs84_sr.SetWellKnownGeogCS("WGS84")
+    wgs84_wkt = wgs84_sr.ExportToWkt()
 
     # NOTE: I think that kartograph is supposed to do the projection
     # adjustment on the fly but it does not seem to be working for
@@ -179,8 +199,9 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
 
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
+    tmp_uri = os.path.join(base_dir, 'tmp_shp_proj.shp')
     raster_utils.reproject_datasource_uri(
-            shape_copy_uri, shapefile_wkt, tmp_uri)
+            shape_copy_uri, wgs84_wkt, tmp_uri)
 
     css = open(css_uri).read()
 
@@ -190,25 +211,16 @@ def shape_to_image(shape_in_uri, lat_long_shape, tmp_uri, image_out_uri, css_uri
                 {"mylayer":
                     {"src":tmp_uri,
                      "simplify": 1,
-                     "labeling": {"ws_id": "ws_id"},
-                     "attributes":["ws_id"]}
+                     "labeling": {"key": args['field_id']},
+                     "attributes":[args['key_id']]}
                  },
-              "proj":{"id": "mercator"},
-              "export":{"width":1000, "height": 800}
+              "proj":{"id": args['proj_type']},
+              "export":{"width":args['size'][0], "height": args['size'][1]}
               }
 
     kart.generate(config, outfile=image_out_uri, stylesheet=css)
 
-
-
-
-
-
-
-
-
-
-
-
+    remove_shapefile(shape_copy_uri)
+    remove_shapefile(tmp_uri)
 
 
