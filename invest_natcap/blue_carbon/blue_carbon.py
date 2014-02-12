@@ -819,7 +819,7 @@ def execute(args):
             veg_base_uri_dict[veg_type][base_veg_dis_bio] = this_veg_adj_em_dis_bio_uri
             veg_base_uri_dict[veg_type][base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
-
+    ##analysis year calculations
 
     ##generate csv
     #open csv
@@ -903,6 +903,60 @@ def execute(args):
         report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
 
     report.write("\n</TABLE>")
+
+    #emissions
+    report.write("<P><P><B>Emissions</B>")
+
+    column_name_list = ["Year","Accumulation","Emissions","Net Sequestration"]
+
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    
+    for this_year in range(lulc_years[0],analysis_year+1):
+        if this_year in lulc_years: # + [analysis_year]:
+            row = ["<B>%i</B>" % this_year]
+            start_year = this_year
+            stop_year = (lulc_years + [analysis_year])[lulc_years.index(start_year)+1]
+            span = float(stop_year - start_year)
+            acc_total = 0
+            for veg_type in veg_type_list:
+                acc_total += totals[this_year][veg_type][veg_acc_bio_name] + totals[this_year][veg_type][veg_acc_soil_name]
+        else:
+            row = [this_year]
+                
+        em_total = 0
+        this_span = stop_year - this_year
+        for veg_type in veg_type_list:
+            try:
+                bio_alpha = float(half_life[veg_type][half_life_field_bio])
+
+                bio_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ bio_alpha)))
+                bio_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ bio_alpha)))
+                bio_co = bio_stop_co - bio_start_co
+
+                em_total += totals[start_year][veg_type][veg_em_bio_name] * bio_co
+
+            except ValueError:
+                pass
+
+            try:
+                soil_alpha = float(half_life[veg_type][half_life_field_soil])
+
+                soil_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ soil_alpha)))
+                soil_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ soil_alpha)))
+                soil_co = soil_stop_co - soil_start_co
+
+                em_total += totals[start_year][veg_type][veg_em_soil_name] * soil_co
+                
+            except ValueError:
+                pass
+            
+        row.extend([acc_total / span, em_total])
+        row.append(row[-2]-row[-1])
+
+        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
+
+    report.write("\n</TABLE>")
+
 
     #input CSVs
     report.write("<P><P><B>Input Tables</B><P><P>")
