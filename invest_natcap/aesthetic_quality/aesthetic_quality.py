@@ -153,7 +153,7 @@ curvature_correction, refr_coeff, args):
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
-            if v:
+            if v == 1:
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
@@ -162,16 +162,32 @@ curvature_correction, refr_coeff, args):
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            if v and (x <= max_valuation_radius):
-                return a + b*x + c*x**2 + d*x**3
+            if v==1:
+                F = a + b*x + c*x**2 + d*x**3
+                if x == 0:
+                    print('x', x, 'F', F, 'exp', (b + 2*c*x +
+                    3*d*x**2)*(1000-x), 'total', F - (b + 2*c*x + 3*d*x**2)*(1000-x))
+                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                elif x < 1000:
+                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return F
+                else:
+                    return 0.
             else:
                 return 0.
         return compute
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
-            if v and (x <= max_valuation_radius):
-                return a + b*math.log(x)
+            if v==1:
+                F = a + b*math.log(x)
+                if x < 1000:
+                    return F - (b/x)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return F
+                else:
+                    return 0.
             else:
                 return 0.
         return compute
@@ -181,6 +197,33 @@ curvature_correction, refr_coeff, args):
         def compute(x):
             return x*c
         return compute
+
+
+    # Setup valuation function
+    a = args["a_coefficient"]
+    b = args["b_coefficient"]
+    c = args["c_coefficient"]
+    d = args["d_coefficient"]
+
+    valuation_function = None
+    max_valuation_radius = args['max_valuation_radius']
+    if "polynomial" in args["valuation_function"]:
+        print("Polynomial")
+        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
+    elif "logarithmic" in args['valuation_function']:
+        print("logarithmic")
+        valuation_function = logarithmic(a, b, max_valuation_radius)
+
+    assert valuation_function is not None
+    
+    # Make sure the values don't become too small at max_valuation_radius:
+    edge_value = valuation_function(max_valuation_radius, 1)
+    message = "Valuation function can't be negative if evaluated at " + \
+    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+    assert edge_value >= 0., message
+        
+    # Base path uri
+    base_uri = os.path.split(out_viewshed_uri)[0]
 
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
@@ -255,32 +298,16 @@ curvature_correction, refr_coeff, args):
         'distance radius is ' + str(max_dist) + " pixels.")
         visibility_uri = os.path.join(base_uri, "visibility.tif") #raster_utils.temporary_filename()
         aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
-        (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
+        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
-        base_uri = os.path.split(out_viewshed_uri)[0]
         distance_fn = compute_distance(i,j, cell_size)
         distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        a = args["a_coefficient"]
-        b = args["b_coefficient"]
-        c = args["c_coefficient"]
-        d = args["d_coefficient"]
-        valuation_function = None
-        max_valuation_radius = args['max_valuation_radius']
-        if "polynomial" in args["valuation_function"]:
-            print("Polynomial")
-            valuation_function = polynomial(a, b, c, d, max_valuation_radius)
-        elif "logarithmic" in args['valuation_function']:
-            print("logarithmic")
-            valuation_function = logarithmic(a, b, max_valuation_radius)
-
-        assert valuation_function is not None
-            
         viewshed_uri = os.path.join(base_uri, "valuation.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
-        valuation_function, viewshed_uri, gdal.GDT_Float64, -1., cell_size, \
+        valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
         apply_coefficient = multiply(coefficient)

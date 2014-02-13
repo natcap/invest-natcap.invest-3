@@ -125,8 +125,8 @@
                                     "args_id" : "a_coefficient",
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
-                                    "defaultValue": "1.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "defaultValue": "0.0",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
                                 },                              
@@ -136,7 +136,7 @@
                                     "type": "text",
                                     "label": "'b' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
                                 },                              
@@ -146,10 +146,10 @@
                                     "type": "text",
                                     "label": "'c' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
-                                },                              
+                                },
                                 {
                                     "id" : "d_coefficient",
                                     "args_id" : "d_coefficient",
@@ -159,15 +159,15 @@
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
-                                },                               
+                                },
                                 {
                                     "id" : "max_valuation_radius",
                                     "args_id" : "max_valuation_radius",
                                     "type": "text",
-                                    "label": "maximum valuation radius (meters)",
-                                    "defaultValue": "8000",
-                                    "validText": "[0-9]+",
-                                    "dataType": "int",
+                                    "label": "Maximum valuation radius (m)",
+                                    "defaultValue": "8000.0",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
                                     "required": false
                                 }                               
                                 ]
