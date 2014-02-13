@@ -198,6 +198,30 @@ curvature_correction, refr_coeff, args):
             return x*c
         return compute
 
+
+    # Setup valuation function
+    a = args["a_coefficient"]
+    b = args["b_coefficient"]
+    c = args["c_coefficient"]
+    d = args["d_coefficient"]
+
+    valuation_function = None
+    max_valuation_radius = args['max_valuation_radius']
+    if "polynomial" in args["valuation_function"]:
+        print("Polynomial")
+        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
+    elif "logarithmic" in args['valuation_function']:
+        print("logarithmic")
+        valuation_function = logarithmic(a, b, max_valuation_radius)
+
+    assert valuation_function is not None
+    
+    # Make sure the values don't become too small at max_valuation_radius:
+    edge_value = valuation_function(max_valuation_radius, 1)
+    message = "Valuation function can't be negative if evaluated at " + \
+    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+    assert edge_value >= 0., message
+        
     # Base path uri
     base_uri = os.path.split(out_viewshed_uri)[0]
 
@@ -281,21 +305,6 @@ curvature_correction, refr_coeff, args):
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        a = args["a_coefficient"]
-        b = args["b_coefficient"]
-        c = args["c_coefficient"]
-        d = args["d_coefficient"]
-        valuation_function = None
-        max_valuation_radius = args['max_valuation_radius']
-        if "polynomial" in args["valuation_function"]:
-            print("Polynomial")
-            valuation_function = polynomial(a, b, c, d, max_valuation_radius)
-        elif "logarithmic" in args['valuation_function']:
-            print("logarithmic")
-            valuation_function = logarithmic(a, b, max_valuation_radius)
-
-        assert valuation_function is not None
-            
         viewshed_uri = os.path.join(base_uri, "valuation.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
