@@ -879,8 +879,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         cache_dirty[cache_row_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        if region_count % 1000 == 0:
-            LOGGER.info('working on plateau #%d (reports every 1000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+        if region_count % 10000 == 0:
+            LOGGER.info('working on plateau #%d (reports every 10000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
         
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
@@ -1280,6 +1280,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                              +1, +1]
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+    
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
     n_rows, n_cols = raster_utils.get_row_col_from_uri(dem_uri)
     d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
@@ -1304,12 +1307,21 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
+    cdef int max_downhill_facet
+    cdef float lowest_dem
     
     #flow not defined on the edges, so just go 1 row in 
-    for row_index in range(1, n_rows - 1):
+    for row_index in range(n_rows):
         #We load 3 rows at a time
         y_offset = row_index - 1
         local_y_offset = 1
+        
+        if row_index == 0:
+            y_offset = 0
+            local_y_offset = 0
+        if row_index == n_rows - 1:
+            y_offset = n_rows - 3
+            local_y_offset = 2
         
         dem_window = dem_offset_band.ReadAsArray(
             xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
@@ -1317,11 +1329,53 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
         #flow not defined on the edges, so just go 1 col in 
-        for col_index in range(1, n_cols - 1):
-                
+        for col_index in range(n_cols):
+
+            e_0_row_index = e_0_offsets[0] + local_y_offset
+            e_0_col_index = e_0_offsets[1] + col_index
+            e_0 = dem_window[e_0_row_index, e_0_col_index]
+
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[local_y_offset, col_index] == dem_nodata:
                 continue
+                
+            if (col_index == 0 or col_index == n_cols - 1 or 
+                row_index == 0 or row_index == n_rows - 1):
+                #loop through the neighbor edges, and manually set a direction
+                max_downhill_facet = -1
+                lowest_dem = e_0
+                for facet_index in range(8):
+                    e_1_row_index = row_offsets[facet_index] + local_y_offset
+                    e_1_col_index = col_offsets[facet_index] + col_index
+                    if (e_1_col_index == -1 or e_1_col_index == n_cols or
+                        e_1_row_index == -1 or e_1_row_index == 3):
+                        continue
+                    e_1 = dem_window[e_1_row_index, e_1_col_index]
+                    if e_1 == dem_nodata:
+                        continue
+                    if e_1 < lowest_dem:
+                        lowest_dem = e_1
+                        max_downhill_facet = facet_index
+                        
+                if max_downhill_facet != -1:
+                    flow_array[0, col_index] = (
+                        3.14159265 / 4.0 * max_downhill_facet)
+                else:
+                    #we need to point to the left or right
+                    if col_index == 0:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 2)
+                    elif col_index == n_cols - 1:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 0)
+                    elif row_index == 0:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 1)
+                    elif row_index == n_rows - 1:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 3)
+                continue
+                
             #Calculate the flow flow_direction for each facet
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
@@ -1329,14 +1383,11 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             
             for facet_index in range(8):
                 #This defines the three points the facet
-                e_0_row_index = e_0_offsets[facet_index * 2 + 0] + local_y_offset
-                e_0_col_index = e_0_offsets[facet_index * 2 + 1] + col_index
                 e_1_row_index = e_1_offsets[facet_index * 2 + 0] + local_y_offset
                 e_1_col_index = e_1_offsets[facet_index * 2 + 1] + col_index
                 e_2_row_index = e_2_offsets[facet_index * 2 + 0] + local_y_offset
                 e_2_col_index = e_2_offsets[facet_index * 2 + 1] + col_index
 
-                e_0 = dem_window[e_0_row_index, e_0_col_index]
                 e_1 = dem_window[e_1_row_index, e_1_col_index]
                 e_2 = dem_window[e_2_row_index, e_2_col_index]
 
@@ -1386,7 +1437,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
-
+    
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
