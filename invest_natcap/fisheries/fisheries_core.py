@@ -244,7 +244,6 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                 }
             }
     '''
-    LOGGER.debug(params_dict['Area_Params'])
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
@@ -278,7 +277,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     
                 #If a = 0
                 if age in first_age:
-                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
+                    #LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
@@ -425,7 +424,6 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
         spawners = spawner_count(cycle_dict, params_dict, cycle, do_weight)
-        LOGGER.debug(spawners)
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
