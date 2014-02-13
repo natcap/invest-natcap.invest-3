@@ -357,7 +357,7 @@ def calculate_flow_graph(
                 flow_angle_to_neighbor = abs(
                     angle_to_neighbor[neighbor_direction_index] -
                     flow_direction)
-                if flow_angle_to_neighbor < PI/4.0:
+                if flow_angle_to_neighbor <= PI/4.0:
                     found = True
 
 
@@ -708,7 +708,7 @@ cdef void _build_flat_set(
             if dem_value == nodata_value:
                 continue
 
-            #check all the neighbours, if nodata or lower, this isn't flat
+            #check all the neighbors, if nodata or lower, this isn't flat
             for neighbor_index in xrange(8):
                 neighbor_row_index = 1 + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
@@ -789,7 +789,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
     LOGGER.info('identify sink cells')
-    cdef int sink_cell_hits = 0, edge_cell_hits = 0, steps = 0
+    cdef int sink_cell_hits = 0, edge_cell_hits = 0
 
     cdef queue[int] flat_region_queue
     
@@ -800,7 +800,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     
-    cdef int CACHE_ROWS = 2**8
+    cdef int CACHE_ROWS = 2**12
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_cache = (
@@ -829,7 +829,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         flat_set_for_looping.erase(flat_index)
         
         row_index = flat_index / n_cols
-        col_index = flat_index % n_cols
         
         #see if we need to update the row cache
         for cache_row_offset in range(-1, 2):
@@ -867,6 +866,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
         
         cache_row_index = row_index % CACHE_ROWS
+        col_index = flat_index % n_cols
         if dem_cache[cache_row_index, col_index] == nodata_value:
             continue
 
@@ -879,8 +879,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         cache_dirty[cache_row_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        if region_count % 1000 == 0:
-            LOGGER.info('working on plateau #%d (reports every 1000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+        if region_count % 10000 == 0:
+            LOGGER.info('working on plateau #%d (reports every 10000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
         
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
@@ -889,8 +889,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             flat_region_queue.pop()
             
             row_index = flat_index / n_cols
-            col_index = flat_index % n_cols
-
+            
             #see if we need to update the row cache
             for cache_row_offset in range(-1, 2):
                 neighbor_row_index = row_index + cache_row_offset
@@ -927,7 +926,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
 
             cache_row_index = row_index % CACHE_ROWS
-            
+            col_index = flat_index % n_cols
+
             #test if this point is an edge
             #if it's flat it could be an edge
             if flat_set.find(flat_index) != flat_set.end():
@@ -968,11 +968,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             #loop neighbor and test to see if we can extend
             for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                
+                neighbor_row_index = row_index + row_offsets[neighbor_index]                
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
+                    
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
 
@@ -1043,31 +1043,31 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                     continue
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
                 
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
-                #If the neighbour is not flat then skip
+                #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
-                #If the neighbour is at a different height, then skip
+                #If the neighbor is at a different height, then skip
                 if (dem_cache[cache_row_index, col_index] != 
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
-                #if the neighbour's weight is less than the weight we'd project to it
+                #if the neighbor's weight is less than the weight we'd project to it
                 #no need to update it, we're done w/ that direction
                 if (dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] <=
                     weight + 1):
                     continue
 
-                #otherwise, project onto the neighbour
+                #otherwise, project onto the neighbor
                 t = Row_Col_Weight_Tuple(
                     neighbor_row_index, neighbor_col_index, weight + 1)
                 sink_queue.push(t)
@@ -1077,7 +1077,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         #process edge offsets for region
         while edge_queue.size() > 0:
             edge_cell_hits += 1
-            steps += 1
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
             
@@ -1132,13 +1131,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 
                 neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
                 
-                #If the neighbour is not at the same height, skip
+                #If the neighbor is not at the same height, skip
                 if (dem_cache[cache_row_index, col_index] !=
                     dem_cache[neighbor_cache_row_index, neighbor_col_index]):
                     continue
 
                 flat_index = neighbor_row_index * n_cols + neighbor_col_index
-                #If the neighbour is not flat then skip
+                #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
@@ -1148,7 +1147,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
                 dem_edge_offset_cache[neighbor_cache_row_index, neighbor_col_index] = weight + 1
                 cache_dirty[neighbor_cache_row_index] = 1
-                #otherwise project the current weight to the neighbour
+                #otherwise project the current weight to the neighbor
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
                 edge_queue.push(t)
                 
@@ -1168,8 +1167,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     LOGGER.debug('region_count: %d' % region_count)
     LOGGER.info('edge cell hits %d' % edge_cell_hits)
     LOGGER.info('sink cell hits %d' % sink_cell_hits)
-    LOGGER.info('cell steps %d' % steps)
-
+    
     #Find max distance
     LOGGER.debug('calculating max distance')
     cdef numpy.ndarray[numpy.npy_float, ndim=2] row_array = (
@@ -1249,10 +1247,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     LOGGER.info('resolving flat directions')
     resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
         
-    dem_data_uri = raster_utils.temporary_filename()
-    dem_carray = raster_utils.load_dataset_to_carray(
-        dem_offset_uri, dem_data_uri, array_type=gdal.GDT_Float32)
-
+    dem_offset_ds = gdal.Open(dem_offset_uri)
+    dem_offset_band = dem_offset_ds.GetRasterBand(1)
+    
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
     #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
@@ -1283,6 +1280,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                              +1, +1]
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+    
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
     n_rows, n_cols = raster_utils.get_row_col_from_uri(dem_uri)
     d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
@@ -1307,56 +1307,93 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
+    cdef int max_downhill_facet
+    cdef float lowest_dem
     
+    #flow not defined on the edges, so just go 1 row in 
     for row_index in range(n_rows):
         #We load 3 rows at a time
         y_offset = row_index - 1
         local_y_offset = 1
-        if y_offset < 0:
+        
+        if row_index == 0:
             y_offset = 0
             local_y_offset = 0
-        if y_offset >= n_rows - 2:
-            #could be 0 or 1
-            local_y_offset = 2
+        if row_index == n_rows - 1:
             y_offset = n_rows - 3
-
-        dem_window = dem_carray[y_offset:y_offset+3,:]
+            local_y_offset = 2
+        
+        dem_window = dem_offset_band.ReadAsArray(
+            xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
         
         #clear out the flow array from the previous loop
         flow_array[:] = flow_nodata
+        #flow not defined on the edges, so just go 1 col in 
         for col_index in range(n_cols):
+
+            e_0_row_index = e_0_offsets[0] + local_y_offset
+            e_0_col_index = e_0_offsets[1] + col_index
+            e_0 = dem_window[e_0_row_index, e_0_col_index]
+
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_window[local_y_offset, col_index] == dem_nodata:
                 continue
+                
+            if (col_index == 0 or col_index == n_cols - 1 or 
+                row_index == 0 or row_index == n_rows - 1):
+                #loop through the neighbor edges, and manually set a direction
+                max_downhill_facet = -1
+                lowest_dem = e_0
+                for facet_index in range(8):
+                    e_1_row_index = row_offsets[facet_index] + local_y_offset
+                    e_1_col_index = col_offsets[facet_index] + col_index
+                    if (e_1_col_index == -1 or e_1_col_index == n_cols or
+                        e_1_row_index == -1 or e_1_row_index == 3):
+                        continue
+                    e_1 = dem_window[e_1_row_index, e_1_col_index]
+                    if e_1 == dem_nodata:
+                        continue
+                    if e_1 < lowest_dem:
+                        lowest_dem = e_1
+                        max_downhill_facet = facet_index
+                        
+                if max_downhill_facet != -1:
+                    flow_array[0, col_index] = (
+                        3.14159265 / 4.0 * max_downhill_facet)
+                else:
+                    #we need to point to the left or right
+                    if col_index == 0:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 2)
+                    elif col_index == n_cols - 1:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 0)
+                    elif row_index == 0:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 1)
+                    elif row_index == n_rows - 1:
+                        flow_array[0, col_index] = (
+                            3.14159265 / 2.0 * 3)
+                continue
+                
             #Calculate the flow flow_direction for each facet
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
-
+            
             for facet_index in range(8):
                 #This defines the three points the facet
-                e_0_row_index = e_0_offsets[facet_index * 2 + 0] + local_y_offset
-                e_0_col_index = e_0_offsets[facet_index * 2 + 1] + col_index
                 e_1_row_index = e_1_offsets[facet_index * 2 + 0] + local_y_offset
                 e_1_col_index = e_1_offsets[facet_index * 2 + 1] + col_index
                 e_2_row_index = e_2_offsets[facet_index * 2 + 0] + local_y_offset
                 e_2_col_index = e_2_offsets[facet_index * 2 + 1] + col_index
 
-                if (e_0_row_index < 0 or e_0_row_index > 2 or
-                    e_1_row_index < 0 or e_1_row_index > 2 or
-                    e_2_row_index < 0 or e_2_row_index > 2 or
-                    e_0_col_index < 0 or e_0_col_index >= n_cols or
-                    e_1_col_index < 0 or e_1_col_index >= n_cols or
-                    e_2_col_index < 0 or e_2_col_index >= n_cols):
-                    continue
-            
-                e_0 = dem_window[e_0_row_index, e_0_col_index]
                 e_1 = dem_window[e_1_row_index, e_1_col_index]
                 e_2 = dem_window[e_2_row_index, e_2_col_index]
 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
-                    #If any neighbours are nodata, it's contaminated
+                    #If any neighbors are nodata, it's contaminated
                     break
 
                 #s_1 is slope along straight edge
@@ -1365,6 +1402,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
                 flow_direction = atan2(s_2, s_1) #Eqn 3
+                
                 if flow_direction < 0: #Eqn 4
                     #If the flow direction goes off one side, set flow
                     #direction to that side and the slope to the straight line
@@ -1383,7 +1421,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
-            else: 
+                
+            else:
                 # This is the fallthrough condition for the for loop, we reach
                 # it only if we haven't encountered an invalid slope or pixel
                 # that caused the above algorithm to break out 
@@ -1392,16 +1431,19 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_array[0, col_index] = (
                         a_f[max_index] * flow_direction_max_slope +
                         a_c[max_index] * 3.14159265 / 2.0)
+                    #just in case we set 2pi rather than 0
+                    #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
+                    #    flow_array[0, col_index]  = 0.0
+                
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
-
+    
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
     
     
-@cython.profile(False)
 cdef int _update_window(
     int row_index, int col_index, int *ul_row_index, int *ul_col_index,
     int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
@@ -1433,7 +1475,7 @@ cdef int _update_window(
     else:
         return 0
 
-        
+
 def find_sinks(dem_uri):
     """Discover and return the sinks in the dem array
     
@@ -1493,7 +1535,7 @@ def find_sinks(dem_uri):
 
                 if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
                     continue
-                
+
                 if (dem_array[neighbor_row_index, neighbor_col_index] < dem_array[local_y_offset, col_index]):
                     #this cell can drain into another
                     break

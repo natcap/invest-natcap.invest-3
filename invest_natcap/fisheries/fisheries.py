@@ -102,15 +102,13 @@ def execute(args):
     core_args = {}
 
     #Create folders that will be used for the rest of the model run.
-    for folder in ['Intermediate', 'Output']:
-        
-        out_dir = os.path.join(args['workspace_dir'], folder)
-        
-        if os.path.exists(out_dir):
-            shutil.rmtree(out_dir)
+    out_dir = os.path.join(args['workspace_dir'], 'Output')
 
-        os.makedirs(out_dir)
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
 
+    os.makedirs(out_dir)
+    
     #Do all error checking for the different recruitment equations, since
     #we can't continue if we don't have data.
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
