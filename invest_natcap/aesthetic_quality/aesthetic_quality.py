@@ -164,7 +164,11 @@ curvature_correction, refr_coeff, args):
         def compute(x, v):
             if v==1:
                 F = a + b*x + c*x**2 + d*x**3
-                if x < 1000:
+                if x == 0:
+                    print('x', x, 'F', F, 'exp', (b + 2*c*x +
+                    3*d*x**2)*(1000-x), 'total', F - (b + 2*c*x + 3*d*x**2)*(1000-x))
+                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                elif x < 1000:
                     return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
                 elif x <= max_valuation_radius:
                     return F
