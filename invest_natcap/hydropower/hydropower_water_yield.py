@@ -457,7 +457,7 @@ def execute(args):
     demand_table_file = open(args['demand_table_uri'])
     reader = csv.DictReader(demand_table_file)
     for row in reader:
-        demand_dict[int(row['lucode'])] = int(row['demand'])
+        demand_dict[int(row['lucode'])] = float(row['demand'])
     
     LOGGER.debug('Demand_Dict : %s', demand_dict)
     demand_table_file.close()

@@ -505,7 +505,7 @@ class TestReportingPackage(testing.GISTest):
         #sample_dict = [{'date':'13', 'price':'1.5', 'product':'chips'},
         #               {'date':'3', 'price':'2.25', 'product':'peanuts'},
         #               {'date':'5', 'price':'3.2', 'product':'mints'}]
-        
+
         sample_dict = []
 
         columns = [{'name': 'product', 'total':False},
@@ -596,20 +596,23 @@ class TestReportingPackage(testing.GISTest):
         json_uri = os.path.join(REPORTING_DATA,'sample_json.json')
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
-        sample_dict = [{'ES2':'130', 'ES1':'90', 'parcel_id':'1'},
-                       {'ES2':'96', 'ES1':'50', 'parcel_id':'2'},
-                       {'ES2':'36', 'ES1':'110', 'parcel_id':'3'},
-                       {'ES2':'50', 'ES1':'85', 'parcel_id':'4'}]
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'90', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'110', 'Phosphorous':'60','parcel_id':'3'},
+                       {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
 
         columns = [{'name': 'parcel_id', 'total':False},
-                   {'name': 'ES1', 'total':True},
-                   {'name': 'ES2', 'total':True}]
+                   {'name': 'Nitrogen', 'total':True},
+                   {'name': 'Sediment', 'total':True},
+                   {'name': 'Phosphorous', 'total':True}]
 
         pop_groups = []
 
         columns_pop = [
-                {'name': 'pop_group', 'total':False},
-                {'name': 'ES_offset', 'total':True}]
+                {'name': 'municipalities', 'total':False},
+                {'name': 'Sediment', 'total':False},
+                {'name': 'Nitrogen', 'total':False},
+                {'name': 'Phosphorous', 'total':False}]
 
         report_args = {
                 'title': 'Sortable Table',

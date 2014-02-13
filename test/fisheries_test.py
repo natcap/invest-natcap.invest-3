@@ -14,7 +14,7 @@ LOGGER = logging.getLogger('fisheries_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestHRA(invest_natcap.testing.GISTest):
+class TestFisheries(invest_natcap.testing.GISTest):
 
     def test_main_csv_parse(self):
         '''Want to make sure that the main CSV parsing function is working as
@@ -49,7 +49,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         '''
         
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
 
         #Test B-H, Ricker
         for equation in ['Beverton-Holt', 'Ricker']:
@@ -71,10 +71,9 @@ class TestHRA(invest_natcap.testing.GISTest):
                         fisheries.execute, args)
 
     def test_age_no_gender_smoke(self):
-
         #Going to use Blue Crab for testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
@@ -90,10 +89,9 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
 
     def test_age_gendered_smoke(self):
-
         #Using DC for gendered testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
         args['maturity_type'] = "Age Specific"
@@ -110,10 +108,9 @@ class TestHRA(invest_natcap.testing.GISTest):
         fisheries.execute(args)
     
     def test_stage_no_gender_smoke(self):
-       
         #Using white shrimp for stage testing.
         args = {}
-        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
         args['aoi_uri'] = './invest-data/test/data/fisheries/BC_temp_aoi.shp'
         args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
         args['maturity_type'] = "Stage Specific"

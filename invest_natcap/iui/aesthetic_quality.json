@@ -113,7 +113,7 @@
                                 [
                                 {
                                     "id": "valuation_function",
-                                    "args_id": "valuation_function"
+                                    "args_id": "valuation_function",
                                     "type": "dropdown",
                                     "label": "Valuation function",
                                     "options":["polynomial: a + bx + cx^2 + dx^3", "logarithmic: a + b ln(x)"],
@@ -126,7 +126,7 @@
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
                                 },                              
@@ -136,7 +136,7 @@
                                     "type": "text",
                                     "label": "'b' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
                                 },                              
@@ -146,10 +146,10 @@
                                     "type": "text",
                                     "label": "'c' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
-                                },                              
+                                },
                                 {
                                     "id" : "d_coefficient",
                                     "args_id" : "d_coefficient",
@@ -157,6 +157,16 @@
                                     "label": "'d' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },
+                                {
+                                    "id" : "max_valuation_radius",
+                                    "args_id" : "max_valuation_radius",
+                                    "type": "text",
+                                    "label": "Maximum valuation radius (m)",
+                                    "defaultValue": "8000.0",
+                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false
                                 }                               

@@ -1,15 +1,18 @@
 import os
+import math
+
+import numpy as np
+import scipy.stats
+import shutil
+import logging
+
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+
 from invest_natcap import raster_utils
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
-
-import logging
-
-import scipy.stats
-import numpy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -128,7 +131,7 @@ def get_data_type_uri(ds_uri):
     return raster_data_type
 
 def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-curvature_correction, refr_coeff):
+curvature_correction, refr_coeff, args):
     """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
     
         -in_dem_uri: URI to input surface raster
@@ -145,41 +148,116 @@ curvature_correction, refr_coeff):
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
-    height = 0.0 # Per viewoint height offset
+    height = 0.0 # Per viewpoint height offset--updated as we read file info
 
-    src_filename = \
-    "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
-    dst_filename = out_viewshed_uri
+    # Compute the distance for each point
+    def compute_distance(vi, vj, cell_size):
+        def compute(i, j, v):
+            if v == 1:
+                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
+            else:
+                return -1.
+        return compute
 
-    in_dem_raster = gdal.Open(in_dem_uri)
-    assert in_dem_raster is not None
-    src_ds = gdal.Open( src_filename )
-    driver = gdal.GetDriverByName("GTiff")
-    dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
+    # Apply the valuation functions to the distance
+    def polynomial(a, b, c, d, max_valuation_radius):
+        def compute(x, v):
+            if v==1:
+                F = a + b*x + c*x**2 + d*x**3
+                if x == 0:
+                    print('x', x, 'F', F, 'exp', (b + 2*c*x +
+                    3*d*x**2)*(1000-x), 'total', F - (b + 2*c*x + 3*d*x**2)*(1000-x))
+                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                elif x < 1000:
+                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return F
+                else:
+                    return 0.
+            else:
+                return 0.
+        return compute
 
-    # Once we're done, close properly the dataset
-    dst_ds = None
-    src_ds = None
+    def logarithmic(a, b, max_valuation_radius):
+        def compute(x, v):
+            if v==1:
+                F = a + b*math.log(x)
+                if x < 1000:
+                    return F - (b/x)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return F
+                else:
+                    return 0.
+            else:
+                return 0.
+        return compute
+
+    # Multiply a value by a constant
+    def multiply(c):
+        def compute(x):
+            return x*c
+        return compute
+
+
+    # Setup valuation function
+    a = args["a_coefficient"]
+    b = args["b_coefficient"]
+    c = args["c_coefficient"]
+    d = args["d_coefficient"]
+
+    valuation_function = None
+    max_valuation_radius = args['max_valuation_radius']
+    if "polynomial" in args["valuation_function"]:
+        print("Polynomial")
+        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
+    elif "logarithmic" in args['valuation_function']:
+        print("logarithmic")
+        valuation_function = logarithmic(a, b, max_valuation_radius)
+
+    assert valuation_function is not None
+    
+    # Make sure the values don't become too small at max_valuation_radius:
+    edge_value = valuation_function(max_valuation_radius, 1)
+    message = "Valuation function can't be negative if evaluated at " + \
+    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+    assert edge_value >= 0., message
+        
+    # Base path uri
+    base_uri = os.path.split(out_viewshed_uri)[0]
 
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
 
-    # The model extracts each point from the shapefile
+    # Build I and J arrays, and save them to disk
+    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    I_uri = raster_utils.temporary_filename()
+    J_uri = raster_utils.temporary_filename()
+    shutil.copy(in_dem_uri, I_uri)
+    shutil.copy(in_dem_uri, J_uri)
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_raster.GetRasterBand(1).WriteArray(I)
+    I_raster = None
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_raster.GetRasterBand(1).WriteArray(J)
+    J_raster = None
+
+    # The model extracts each viewpoint from the shapefile
     point_list = []
     shapefile = ogr.Open(in_structure_uri)
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    GT = in_dem_raster.GetGeoTransform()
+    GT = raster_utils.get_geotransform_uri(in_dem_uri)
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
-    uri_list = []
+    viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(1): #feature_count):
         print("feature " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
-        # Check for feature information (radius and coefficient)
+        # Check for feature information (radius, coeff, height)
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
@@ -218,51 +296,32 @@ curvature_correction, refr_coeff):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         'distance radius is ' + str(max_dist) + " pixels.")
-        uri_list.append(raster_utils.temporary_filename())
-        aesthetic_quality_core.viewshed(in_dem_uri, uri_list[-1], \
-        (i,j), obs_elev + height, tgt_elev, max_dist, refr_coeff)
-        # Generate the distance for each point
-        def compute_distance(vi, vj):
-            def compute(i, j, v):
-                if v:
-                    return sqrt((vi - i)**2 + (vj - j)**2)
-                else:
-                    return 0
-            return compute
-
-        distance_fn = compute_distance(i,j)
-        distance_uri = raster_utils.temporary_filename()
-        ###raster_utils.vectorize_datasets([])
+        visibility_uri = os.path.join(base_uri, "visibility.tif") #raster_utils.temporary_filename()
+        aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
+        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+        # Compute the distance
+        distance_fn = compute_distance(i,j, cell_size)
+        distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
+        raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
+        distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        # Apply the valuation function
+        viewshed_uri = os.path.join(base_uri, "valuation.tif") #raster_utils.temporary_filename()
+        raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
+        valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
+        "union")
         # Multiply the viewshed by its coefficient
-        # Apply the valuation function to the distance
-        def polynomial(a, b, c, d):
-            def compute(x, v):
-                return a + b*x + c*x**2 + d*x**3
-            return compute
-
-        def logarithmic(a, b):
-            def compute(x, v):
-                return a + b*math.log(x)
-            return compute
-
-        a = args["a_coefficient"]
-        b = args["b_coefficient"]
-        c = args["c_coefficient"]
-        d = args["d_coefficient"]
-        valuation_function = None
-        if "polynomial" in args["valuation_function"]:
-            print("Polynomial")
-            valuation_function = polynomial(a, b, c, d)
-        elif "logarithmic" in args['valuation_function']:
-            print("logarithmic")
-            valuation_function = logarithmic(a, b)
-
-        assert valuation_function is not None
-            
-        # Combine everything
-        ##raster_utils.vectorize_dataset([out_viewshed_uri], valuation_function, )
-
-        # Accumulate result to combined raster
+        apply_coefficient = multiply(coefficient)
+        scaled_viewshed_uri = raster_utils.temporary_filename()
+        raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
+        scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        viewshed_uri_list.append(scaled_viewshed_uri)
+    # Accumulate result to combined raster
+    def accumulate(x):
+        return x
+    print("scaled_viewshed_uri", scaled_viewshed_uri)
+    print('out_viewshed_uri', out_viewshed_uri)
+    raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
+    out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -393,7 +452,8 @@ def execute(args):
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,
-             aq_args['refraction'])
+             aq_args['refraction'],
+             aq_args)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
@@ -462,13 +522,13 @@ def execute(args):
     unaffected_pop = 0
     for row_index in range(vs_band.YSize):
         pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(numpy.float64)
+        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
         pop_row[pop_row == nodata_pop]=0.0
         vs_row[vs_row == nodata_viewshed]=-1
 
-        affected_pop += numpy.sum(pop_row[vs_row > 0])
-        unaffected_pop += numpy.sum(pop_row[vs_row == 0])
+        affected_pop += np.sum(pop_row[vs_row > 0])
+        unaffected_pop += np.sum(pop_row[vs_row == 0])
 
     pop_band = None
     pop = None
