@@ -32,10 +32,10 @@ def generate_report(reporting_args):
         reporting_args[elements] - a list of dictionaries that represent html
             elements to be added to the html page. (required) If no elements
             are provided (list is empty) a blank html page will be generated.
-            The 3 main element types are 'table', 'head', and 'text'.
+            The 3 main element types are 'table', 'head', 'svg', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
-                    Currently 'table', 'head', and 'text' are defined (required)
+                    Currently 'table', 'head', 'svg', and 'text' are defined (required)
 
                 'section' - a string that depicts whether the element belongs
                     in the body or head of the html page.
@@ -100,6 +100,16 @@ def generate_report(reporting_args):
                 'text'- a string to add as a paragraph element in the html page
                     (required)
 
+            SVG element dictionary has at least the following additional arguments:
+                'source_uri' - a URI path to a shapefile (required)
+                'field_id' - the shapefile field to display as a label (required)
+                'key_id' - the unique field for the shapefile (required)
+                'proj_type' - a string for how the image projection should be interpreted
+                    (optional)
+                'css'_uri' - a URI path to a css file (optional)
+                'size' - tuple for width, height in pixels (optional)
+
+
         returns - nothing"""
 
     # Get the title for the hmlt page and place it in a string with html
@@ -122,6 +132,7 @@ def generate_report(reporting_args):
             'table': build_table,
             'text' : add_text_element,
             'head': add_head_element,
+            'svg': add_svg_element
             }
 
     # Iterate over the elements to be added to the html page
@@ -344,6 +355,60 @@ def add_head_element(param_args):
     form = param_args['format']
     # Get a handle on the data whether it be a String or URI
     src = param_args['data_src']
+    # Get the input type of the data, 'File' or 'Text'
+    input_type = param_args['input_type']
+    if input_type == 'File':
+        # Read in file and save as string. Using latin1 to decode, seems to work
+        # on the current javascript / css files
+        head_file = codecs.open(src, 'rb', 'latin1')
+        file_str = head_file.read()
+    else:
+        file_str = src
+
+    # List of regular expression strings to search against
+    reg_list = [r'<script', r'/script>', r'<style', r'/style>']
+
+    # Iterate over the String object to make sure there are no conflicting html
+    # tags
+    for exp in reg_list:
+        if re.search(exp, file_str) != None:
+            raise Exception('The following html tag was found in header'
+                    ' string : %s. Please do not place any html tags in'
+                    ' the header elements' % exp)
+
+    if form == 'style':
+        html_str = '''<style type=text/css> %s </style>''' % file_str
+    elif form == 'script':
+        html_str = '''<script type=text/javascript> %s </script>''' % file_str
+    elif form == 'json':
+        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
+    else:
+        raise Exception('Currently this type of head element is not supported'
+                ' : %s' % form)
+
+    return html_str
+
+def add_svg_element(param_args):
+    """
+
+        param_args - a dictionary that holds the following arguments:
+
+            'out_uri' -
+            'source_uri' - a URI path to a shapefile (required)
+            'field_id' - the shapefile field to display as a label (required)
+            'key_id' - the unique field for the shapefile (required)
+            'proj_type' - a string for how the image projection should be interpreted
+                    (optional)
+            'css'_uri' - a URI path to a css file (optional)
+            'size' - tuple for width, height in pixels (optional)
+
+
+        returns - a string representation of the html svg element"""
+
+    # Get the type of element to add
+    form = param_args['format']
+    # Get a handle on the data whether it be a String or URI
+    src = param_args['source_uri']
     # Get the input type of the data, 'File' or 'Text'
     input_type = param_args['input_type']
     if input_type == 'File':
