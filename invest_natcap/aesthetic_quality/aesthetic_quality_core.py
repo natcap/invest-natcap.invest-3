@@ -1153,7 +1153,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
 
         Returns the visibility map for the DEM as a numpy array"""
     visibility_map = np.zeros(input_array.shape, dtype=np.int8)
-    visibility_map[input_array == nodata] = 255
+    visibility_map[input_array == nodata] = 0
     array_shape = input_array.shape
     # 1- get perimeter cells
     # TODO: Make this function return 10 scalars instead of 2 arrays 
