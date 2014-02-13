@@ -102,7 +102,7 @@
 		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
                     "defaultValue": "../HabitatRiskAssess_3_0/Input/subregions.shp",
-                    "helpText": "This is an option input which will take in a shapefile conatining feature subregions, and create additional summary outputs across these various subregions."
+                    "helpText": "This input will take in a shapefile conatining feature subregions, and create additional summary outputs across each one."
                 }
             ]
         }
