@@ -78,18 +78,6 @@ def execute(args):
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-    '''This dictionary will contain all counts of individuals for each
-    combination of cycle, age/stage, and area. The final dictionary will look
-    like the following:
-    
-    {Cycle_#:
-        {'Area_1':
-            {'Age_A': 1000,
-                ...
-            },
-        }
-    }
-    '''
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
 
@@ -119,18 +107,102 @@ def execute(args):
     append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
-    create_results_page(html_page_uri, totals_dict, val_var)
+    create_results_page(html_page_uri, hrv_dict, totals_dict, val_var)
 
 
-def create_results_page(uri, totals_dict, val_var):
+def create_results_page(uri, hrv_dict, totals_dict, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
-    for each subregion.'''
-
+    for each subregion.
+    
+    Inputs:
+        uri- Location at which the HTML file shoudl be saved. 
+        val_var*- Dictionary which maps each area to the total value returned
+            from all harvesting.
+            {'Area_1': 300000.50,
+            'Area_2': 40000.62}
+        hrv_dict- Dictionary containing all harvest information on a per area
+            per cycle basis. This will have the following structure.
+            {Cycle #:
+                {'Area_1': 3001},
+                'Area_2': ...,
+                'Cycle_Total: SUM(Area_1, Area_2, ...)}
+            }
+        totals_dict- Dictionary which sums total harvest by subregion.
+            {'Area_1': 3002,
+            'Area_2': 5000}
+    '''
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
     rep_args['out_uri'] = uri
 
-    pass
+    num_cycles = len(hrv_dict.keys())
+    
+    t_body = []
+    for area in totals_dict:
+        inner_dict = {}
+        inner_dict['Area'] = area
+        inner_dict['Harvest'] = totals_dict[area]
+        inner_dict['Value'] = '-' if val_var is None else val_var[area]
+    
+        t_body.append(inner_dict)
+
+    t_columns =  [{'name': 'Subregion', 'total': False},
+                {'name': 'Harvest', 'total': True},
+                {'name': 'Value', 'total': True}]
+
+    c_body = []
+    for cycle in hrv_dict:
+        inner_dict = {}
+        inner_dict['Cycle'] = cycle
+        inner_dict['Harvest'] = hrv_dict[cycle]['Cycle_Total']
+
+        if cycle < 9:
+            inner_dict['Equilibrated?'] = '-'
+        else:
+            mov_tot = 0
+            for past_cy in range(cycle-9, cycle+1):
+                mov_tot += hrv_dict[past_cy]['Cycle_Total']
+            frac = round(mov_total / hrv_dict[cycle]['Cycle_Total'], 1)
+
+            if frac in [99.9, 100.0, 100.1]:
+                inner_dict['Equilibrated?'] = 'Y'
+            else:
+                inner_dict['Equilibrated?'] = 'N'
+
+    c_columns = [{'name': 'Cycle', 'total': False},
+                {'name': 'Harvest', 'total': True},
+                {'name': 'Equilibrated?', 'total': False}]
+
+    elements = [{
+                'type': 'text',
+                'section': 'body',
+                'text': '<h2>Fishieries Totals by Subregion for ' + str(num_cycles) + ' Cycles</h2>'},
+                {
+                'type': 'table',
+                'section': 'body',
+                'sortable': True,
+                'checkbox': False,
+                'total': True,
+                'data_type': 'dictionary',
+                'columns': t_columns,
+                'data': t_body},
+                {
+                'type': 'text',
+                'section': 'body',
+                'text': '<h3>Cycle Breakdown</h3>'},
+                {
+                'type': 'table',
+                'section': 'body',
+                'sortable': True,
+                'checkbox': False,
+                'total': True,
+                'data_type': 'dictionary',
+                'columns': c_columns,
+                'data': c_body}]
+
+    rep_args['elements'] = elements
+
+    reporting.generate_report(rep_args)
 
 def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
@@ -161,8 +233,14 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
 
 def calc_valuation(total_dict, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
-    to total value of harvest across all areas.'''
-
+    to total value of harvest across all areas.
+    
+    Returns:
+        val_dict- Dictionary which maps each area to the total value returned
+            from all harvesting.
+            {'Area_1': 300000.50,
+            'Area_2': 40000.62}
+    '''
     value_dict = {}
 
     for area, totals in total_dict.items():
@@ -183,15 +261,20 @@ def calc_harvest(cycle_dict, params_dict):
         hrv_dict- Dictionary containing all harvest information on a per area
             per cycle basis. This will have the following structure.
             {Cycle #:
-                {'Area_1': 3001},
-                {'Area_2': ...}
-            }    
+                {'Area_1': 3001,
+                'Area_2': ...,
+                'Cycle_Total: SUM(Area_1, Area_2, ...)}
+            }
+        totals_dict- Dictionary which sums total harvest by subregion.
+            {'Area_1': 3002,
+            'Area_2': 5000}
             '''
     hrv_dict = {}
     totals_dict = {}
 
     for cycle, areas_dict in cycle_dict.items():
         hrv_dict[cycle] = {}
+        hrv_dict[cycle]['Cycle_Total'] = 0
 
         for area, stages_dict in areas_dict.items():
             exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
@@ -210,6 +293,7 @@ def calc_harvest(cycle_dict, params_dict):
                 hrv_total += curr_ax_hrv
 
             hrv_dict[cycle][area] = hrv_total
+            hrv_dict[cycle]['Cycle_Total'] += hrv_total
             totals_dict[area] += hrv_total
 
     return hrv_dict, totals_dict
