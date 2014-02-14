@@ -319,7 +319,7 @@ curvature_correction, refr_coeff, args):
         #result = np.sum(x)
         #print('result', result)
         #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
-        return x[0]
+        return 0.
     print('viewshed_uri_list', viewshed_uri_list)
     raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
     out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
