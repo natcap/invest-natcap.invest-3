@@ -95,8 +95,8 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
     memory_array_flat = memory_array.reshape((-1,))
 
     quantile_breaks = [0]
-    min_value = 0. 
-    max_value = 1000000000.
+    min_value = 1
+    max_value = 1000000 
     for quantile in quantile_list:
         quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile, (min_value, max_value)))
 
