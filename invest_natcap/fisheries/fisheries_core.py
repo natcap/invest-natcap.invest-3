@@ -140,7 +140,7 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
     t_body = []
     for area in totals_dict:
         inner_dict = {}
-        inner_dict['Area'] = area
+        inner_dict['Subregion'] = area
         inner_dict['Harvest'] = totals_dict[area]
         inner_dict['Value'] = '-' if val_var is None else val_var[area]
     
@@ -162,12 +162,15 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
             mov_tot = 0
             for past_cy in range(cycle-9, cycle+1):
                 mov_tot += hrv_dict[past_cy]['Cycle_Total']
-            frac = round(mov_total / hrv_dict[cycle]['Cycle_Total'], 1)
-
-            if frac in [99.9, 100.0, 100.1]:
+            mov_avg = mov_tot / 10
+            frac = round((mov_tot/10) / hrv_dict[cycle]['Cycle_Total'], 4)
+            
+            #Want it to be between 99.9% and 100.1%
+            if frac in [0.999, 1.0, 1.001]:
                 inner_dict['Equilibrated?'] = 'Y'
             else:
                 inner_dict['Equilibrated?'] = 'N'
+        c_body.append(inner_dict)
 
     c_columns = [{'name': 'Cycle', 'total': False},
                 {'name': 'Harvest', 'total': True},
@@ -189,7 +192,7 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
                 {
                 'type': 'text',
                 'section': 'body',
-                'text': '<h3>Cycle Breakdown</h3>'},
+                'text': '<h2>Cycle Breakdown</h2>'},
                 {
                 'type': 'table',
                 'section': 'body',
@@ -198,7 +201,32 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
                 'total': True,
                 'data_type': 'dictionary',
                 'columns': c_columns,
-                'data': c_body}]
+                'data': c_body},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'script',
+                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/sorttable.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'script',
+                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/jquery-1.10.2.min.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'script',
+                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/total_functions.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'style',
+                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/table_style.css',
+                'input_type': 'File'}
+                ]
 
     rep_args['elements'] = elements
 
