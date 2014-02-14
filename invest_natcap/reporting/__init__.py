@@ -151,7 +151,7 @@ def generate_report(reporting_args):
         # in write_html
         html_obj[section].append(report[fun_type](element))
 
-    LOGGER.debug('HTML OBJECT : %s', html_obj)
+    #LOGGER.debug('HTML OBJECT : %s', html_obj)
 
     # Write the html page to 'out_uri'
     write_html(html_obj, reporting_args['out_uri'])
@@ -189,7 +189,7 @@ def write_html(html_obj, out_uri):
     # Finish the html tag
     html_str += '</html>'
 
-    LOGGER.debug('HTML Complete String : %s', html_str)
+    #LOGGER.debug('HTML Complete String : %s', html_str)
 
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
