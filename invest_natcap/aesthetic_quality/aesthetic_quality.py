@@ -96,7 +96,7 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
 
     quantile_breaks = [0]
     min_value = 1
-    max_value = 32767
+    max_value = 1000000 
     for quantile in quantile_list:
         quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile, (min_value, max_value)))
 
@@ -163,15 +163,11 @@ curvature_correction, refr_coeff, args):
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
             if v==1:
-                F = a + b*x + c*x**2 + d*x**3
-                if x == 0:
-                    print('x', x, 'F', F, 'exp', (b + 2*c*x +
-                    3*d*x**2)*(1000-x), 'total', F - (b + 2*c*x + 3*d*x**2)*(1000-x))
-                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
-                elif x < 1000:
-                    return F - (b + 2*c*x + 3*d*x**2)*(1000-x)
+                if x < 1000:
+                    return a + b*1000 + c*1000**2 + d*1000**3 - \
+                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
                 elif x <= max_valuation_radius:
-                    return F
+                    return a + b*x + c*x**2 + d*x**3
                 else:
                     return 0.
             else:
@@ -181,11 +177,10 @@ curvature_correction, refr_coeff, args):
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
             if v==1:
-                F = a + b*math.log(x)
                 if x < 1000:
-                    return F - (b/x)*(1000-x)
+                    return a + b*math.log(1000) - (b/1000)*(1000-x)
                 elif x <= max_valuation_radius:
-                    return F
+                    return a + b*math.log(x)
                 else:
                     return 0.
             else:
