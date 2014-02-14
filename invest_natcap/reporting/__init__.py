@@ -101,14 +101,16 @@ def generate_report(reporting_args):
                     (required)
 
             SVG element dictionary has at least the following additional arguments:
-                'source_uri' - a URI path to a shapefile (required)
-                'field_id' - the shapefile field to display as a label (required)
-                'key_id' - the unique field for the shapefile (required)
-                'proj_type' - a string for how the image projection should be interpreted
+                'svg_out_uri' - a URI path to save SVG to disk
+                'source_uri' - a URI path to an OGR shapefile (required)
+                'field_id' - a String for an attribute in 'source_uri' to
+                    display as a label (required)
+                'key_id' - a String for an attribute in 'source_uri' for the
+                    unique field for the shapefile (required)
+                'proj_type' - a String for how the image projection should be interpreted
                     (optional)
                 'css'_uri' - a URI path to a css file (optional)
-                'size' - tuple for width, height in pixels (optional)
-
+                'size' - a Tuple for width, height in pixels (optional)
 
         returns - nothing"""
 
@@ -149,7 +151,7 @@ def generate_report(reporting_args):
         # in write_html
         html_obj[section].append(report[fun_type](element))
 
-    LOGGER.debug('HTML OBJECT : %s', html_obj)
+    #LOGGER.debug('HTML OBJECT : %s', html_obj)
 
     # Write the html page to 'out_uri'
     write_html(html_obj, reporting_args['out_uri'])
@@ -187,7 +189,7 @@ def write_html(html_obj, out_uri):
     # Finish the html tag
     html_str += '</html>'
 
-    LOGGER.debug('HTML Complete String : %s', html_str)
+    #LOGGER.debug('HTML Complete String : %s', html_str)
 
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
@@ -389,55 +391,40 @@ def add_head_element(param_args):
     return html_str
 
 def add_svg_element(param_args):
-    """
+    """Generate an SVG file from a shapefile and read the SVG file in as a
+        html String. Return the SVG html String
 
-        param_args - a dictionary that holds the following arguments:
-
-            'out_uri' -
-            'source_uri' - a URI path to a shapefile (required)
-            'field_id' - the shapefile field to display as a label (required)
-            'key_id' - the unique field for the shapefile (required)
-            'proj_type' - a string for how the image projection should be interpreted
+        param_args - a dictionary that holds the following arguments / keys:
+            'svg_out_uri' - a URI path to save SVG to disk
+            'source_uri' - a URI path to an OGR shapefile (required)
+            'field_id' - a String for an attribute in 'source_uri' to
+                display as a label (required)
+            'key_id' - a String for an attribute in 'source_uri' for the
+                unique field for the shapefile (required)
+            'proj_type' - a String for how the image projection should be interpreted
                     (optional)
             'css'_uri' - a URI path to a css file (optional)
-            'size' - tuple for width, height in pixels (optional)
-
+            'size' - a Tuple for width, height in pixels (optional)
 
         returns - a string representation of the html svg element"""
 
-    # Get the type of element to add
-    form = param_args['format']
-    # Get a handle on the data whether it be a String or URI
-    src = param_args['source_uri']
-    # Get the input type of the data, 'File' or 'Text'
-    input_type = param_args['input_type']
-    if input_type == 'File':
-        # Read in file and save as string. Using latin1 to decode, seems to work
-        # on the current javascript / css files
-        head_file = codecs.open(src, 'rb', 'latin1')
-        file_str = head_file.read()
+    # Pop file URIs that are passed into the function signature
+    source_uri = param_args.pop('source_uri')
+    svg_out_uri = param_args.pop('svg_out_uri')
+    css_uri = param_args.pop('css_uri')
+    # Create SVG from shapefile
+    style.shape_to_svg(source_uri, svg_out_uri, css_uri, param_args)
+    # Open SVG
+    svg_file = codecs.open(svg_out_uri, 'rb', 'latin1')
+    file_str = svg_file.read()
+    # At the moment I think we are only interested in what lives within the svg tags
+    # from the SVG file. Search for this section.
+    svg_match = re.search(r'<svg.*/svg>', file_str)
+    if svg_match != None:
+        svg_str = svg_match.group()
     else:
-        file_str = src
+        raise Exception('Could not load SVG from file. Could not match <svg></svg> tags')
 
-    # List of regular expression strings to search against
-    reg_list = [r'<script', r'/script>', r'<style', r'/style>']
-
-    # Iterate over the String object to make sure there are no conflicting html
-    # tags
-    for exp in reg_list:
-        if re.search(exp, file_str) != None:
-            raise Exception('The following html tag was found in header'
-                    ' string : %s. Please do not place any html tags in'
-                    ' the header elements' % exp)
-
-    if form == 'style':
-        html_str = '''<style type=text/css> %s </style>''' % file_str
-    elif form == 'script':
-        html_str = '''<script type=text/javascript> %s </script>''' % file_str
-    elif form == 'json':
-        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
-    else:
-        raise Exception('Currently this type of head element is not supported'
-                ' : %s' % form)
+    html_str = '''%s''' % svg_str
 
     return html_str

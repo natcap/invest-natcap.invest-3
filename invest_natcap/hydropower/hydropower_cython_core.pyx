@@ -5,11 +5,6 @@ cdef double fmin(double a, double b):
          return a
      return b
 
-cdef double fmax(double a, double b):
-    if a > b:
-        return a
-    return b
-
 @cython.cdivision(True)
 cpdef double fractp_op(double out_nodata, double seasonality_constant,
               double Kc, double eto, double precip, double root, double soil, double pawc, double veg,
@@ -93,5 +88,5 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         return fmin(phi, aet_p)
 
     else:
-        return fmax(precip, Kc * eto) / precip
+        return fmin(precip, Kc * eto) / precip
 
