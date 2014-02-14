@@ -220,6 +220,11 @@ curvature_correction, refr_coeff, args):
     # Base path uri
     base_uri = os.path.split(out_viewshed_uri)[0]
 
+    # Temporary files that will be used 
+    visibility_uri = raster_utils.temporary_filename()
+    distance_uri = raster_utils.temporary_filename()
+    viewshed_uri = raster_utils.temporary_filename()
+
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
 
@@ -248,7 +253,7 @@ curvature_correction, refr_coeff, args):
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
-    for f in range(1): #feature_count):
+    for f in range(feature_count):
         print("feature " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
@@ -289,30 +294,28 @@ curvature_correction, refr_coeff, args):
         y = geometry.GetY()
         j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
-        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
-        'distance radius is ' + str(max_dist) + " pixels.")
-        visibility_uri = os.path.join(base_uri, "visibility.tif") #raster_utils.temporary_filename()
+        #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
+        #'distance radius is ' + str(max_dist) + " pixels.")
         aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
         (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j, cell_size)
-        distance_uri = os.path.join(base_uri, "distance.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        viewshed_uri = os.path.join(base_uri, "valuation.tif") #raster_utils.temporary_filename()
         raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
-        apply_coefficient = multiply(coefficient)
         scaled_viewshed_uri = raster_utils.temporary_filename()
+        apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
-    def accumulate(x):
-        return x
+    def accumulate(*x):
+        print('type of x', type(x), x)
+        return sum(x)
     print("scaled_viewshed_uri", scaled_viewshed_uri)
     print('out_viewshed_uri', out_viewshed_uri)
     raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
