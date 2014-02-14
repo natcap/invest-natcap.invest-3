@@ -315,9 +315,10 @@ curvature_correction, refr_coeff, args):
     # Accumulate result to combined raster
     def accumulate(*x):
         print('type of x', type(x), type(x[0]), x)
-        result = sum(x)
-        print('result')
-        return result
+        x = np.array(x)
+        result = np.sum(x)
+        print('result', result)
+        return raster_utils.gdal_cast(result, gdal.GDT_Float64)
     print('viewshed_uri_list', viewshed_uri_list)
     raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
     out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
