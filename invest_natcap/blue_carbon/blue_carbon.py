@@ -409,6 +409,7 @@ def execute(args):
     total_acc_bio_uri = os.path.join(workspace_dir, total_acc_bio_name % (lulc_years[0], analysis_year))
     total_dis_soil_uri = os.path.join(workspace_dir, total_dis_soil_name % (lulc_years[0], analysis_year))
     total_dis_bio_uri = os.path.join(workspace_dir, total_dis_bio_name % (lulc_years[0], analysis_year))
+    total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], analysis_year))
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
@@ -673,7 +674,6 @@ def execute(args):
         this_veg_stock_soil_uri = os.path.join(workspace_dir, veg_stock_soil_name % veg_type)
         this_veg_stock_bio_uri = os.path.join(workspace_dir, veg_stock_bio_name % veg_type)
 
-        print veg_type, carbon_field_bio, veg_field_dict[veg_type][carbon_field_bio]
         raster_utils.reclassify_dataset_uri(this_uri,
                                             veg_field_dict[veg_type][carbon_field_bio],
                                             this_veg_stock_bio_uri,
@@ -699,8 +699,17 @@ def execute(args):
     #create extent shapefile
     datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)        
 
+    veg_acc_bio_uri_list = []
+    veg_acc_soil_uri_list = []
+    veg_dis_bio_uri_list = []
+    veg_dis_soil_uri_list = []
+    veg_seq_uri_list = []
+
     totals = {}
     for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
+        this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % this_year)
+        this_total_carbon_uri_list = []
+        
         totals[this_year] = {}
 
         LOGGER.info("Transition from %i to %i.", this_year, next_year)
@@ -799,6 +808,14 @@ def execute(args):
                                       this_veg_adj_em_dis_soil_uri)
 
             #totals
+            this_total_carbon_uri_list.append(this_veg_acc_bio_uri)
+            this_total_carbon_uri_list.append(this_veg_acc_soil_uri)
+            
+            veg_acc_bio_uri_list.append(this_veg_acc_bio_uri)
+            veg_acc_soil_uri_list.append(this_veg_acc_soil_uri)
+            veg_dis_bio_uri_list.append(this_veg_dis_bio_uri)
+            veg_dis_soil_uri_list.append(this_veg_dis_soil_uri)
+            
             for name, uri in [(veg_acc_bio_name, this_veg_acc_bio_uri),
                               (veg_acc_soil_name, this_veg_acc_soil_uri),
                               (veg_dis_bio_name, this_veg_dis_bio_uri),
@@ -819,7 +836,32 @@ def execute(args):
             veg_base_uri_dict[veg_type][base_veg_dis_bio] = this_veg_adj_em_dis_bio_uri
             veg_base_uri_dict[veg_type][base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
-    ##analysis year calculations
+        vectorize_carbon_datasets(this_total_carbon_uri_list,
+                                  add_op,
+                                  this_total_carbon_uri)
+    ##carbon totals
+    vectorize_carbon_datasets(veg_acc_bio_uri_list,
+                              add_op,
+                              total_acc_bio_uri)
+
+    vectorize_carbon_datasets(veg_acc_soil_uri_list,
+                              add_op,
+                              total_acc_soil_uri)
+
+    vectorize_carbon_datasets(veg_dis_bio_uri_list,
+                              add_op,
+                              total_dis_bio_uri)
+
+    vectorize_carbon_datasets(veg_dis_soil_uri_list,
+                              add_op,
+                              total_dis_soil_uri)
+
+    veg_seq_uri_list = [this_veg_acc_bio_uri,
+                        this_veg_acc_soil_uri]
+    vectorize_carbon_datasets(veg_seq_uri_list,
+                              add_op,
+                              total_seq_uri)
+            
 
     ##generate csv
     #open csv

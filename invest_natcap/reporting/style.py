@@ -1,7 +1,7 @@
 """A raster styling/visualizing module"""
 import os
 import numpy as np
-import Image
+from PIL import Image
 import logging
 from osgeo import gdal
 from osgeo import ogr
@@ -113,13 +113,14 @@ def shape_to_svg(shape_in_uri, image_out_uri, css_uri, args):
     """Create a svg file from and OGR shapefile
 
         shape_in_uri - a URI to the OGR shapefile to convert to an svg
-        image_out_uri - a URI to an output destination on disk
+        image_out_uri - a URI path to save SVG to disk
         css_uri - a URI to a CSS file for styling
         args - a Dictionary with the following parameters used in creating the svg configuration:
-            size - tuple for width, height in pixels
-            field_id - the shapefile field to display as a label
+            size - a Tuple for width, height in pixels
+            field_id - a String for an attribute in 'source_uri' for the
+                unique field for the shapefile
             key_id - the unique field for the shapefile
-            proj_type - a string for how the image projection should be interpreted
+            proj_type - a String for how the image projection should be interpreted
 
         returns - Nothing
     """
