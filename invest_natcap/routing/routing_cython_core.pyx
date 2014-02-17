@@ -1339,11 +1339,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             if dem_window[local_y_offset, col_index] == dem_nodata:
                 continue
                 
+            max_downhill_facet = -1
+            lowest_dem = e_0
+            #we have a special case if we're on the border of the raster
             if (col_index == 0 or col_index == n_cols - 1 or 
                 row_index == 0 or row_index == n_rows - 1):
                 #loop through the neighbor edges, and manually set a direction
-                max_downhill_facet = -1
-                lowest_dem = e_0
                 for facet_index in range(8):
                     e_1_row_index = row_offsets[facet_index] + local_y_offset
                     e_1_col_index = col_offsets[facet_index] + col_index
@@ -1374,6 +1375,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     elif row_index == n_rows - 1:
                         flow_array[0, col_index] = (
                             3.14159265 / 2.0 * 3)
+                #done with this pixel, go to the next
                 continue
                 
             #Calculate the flow flow_direction for each facet
@@ -1381,6 +1383,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
             
+            #max_downhill_facet = -1
+            #lowest_dem = e_0
+            contaminated = False
             for facet_index in range(8):
                 #This defines the three points the facet
                 e_1_row_index = e_1_offsets[facet_index * 2 + 0] + local_y_offset
@@ -1391,11 +1396,19 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 e_1 = dem_window[e_1_row_index, e_1_col_index]
                 e_2 = dem_window[e_2_row_index, e_2_col_index]
 
+                if facet_index % 2 == 0 and e_1 != dem_nodata and e_1 < lowest_dem:
+                    lowest_dem = e_1
+                    max_downhill_facet = facet_index
+                elif facet_index % 2 == 1 and e_2 != dem_nodata and e_2 < lowest_dem:
+                    lowest_dem = e_2
+                    max_downhill_facet = facet_index
+                
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
                     #If any neighbors are nodata, it's contaminated
-                    break
-
+                    contaminated = True
+                    continue
+                    
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
                 #slope along diagonal edge
@@ -1422,19 +1435,23 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     slope_max = slope
                     max_index = facet_index
                 
-            else:
-                # This is the fallthrough condition for the for loop, we reach
-                # it only if we haven't encountered an invalid slope or pixel
-                # that caused the above algorithm to break out 
-                #Calculate the global angle depending on the max slope facet
+            # This is the fallthrough condition for the for loop, we reach
+            # it only if we haven't encountered an invalid slope or pixel
+            # that caused the above algorithm to break out 
+            #Calculate the global angle depending on the max slope facet
+            if not contaminated:
                 if slope_max > 0:
                     flow_array[0, col_index] = (
                         a_f[max_index] * flow_direction_max_slope +
                         a_c[max_index] * 3.14159265 / 2.0)
-                    #just in case we set 2pi rather than 0
-                    #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
-                    #    flow_array[0, col_index]  = 0.0
-                
+                #just in case we set 2pi rather than 0
+                #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
+                #    flow_array[0, col_index]  = 0.0
+            else:
+                if max_downhill_facet != -1:
+                    flow_array[0, col_index] = (
+                        3.14159265 / 4.0 * max_downhill_facet)
+                    
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
     
