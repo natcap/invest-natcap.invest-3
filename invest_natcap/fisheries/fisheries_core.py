@@ -293,8 +293,13 @@ def calc_harvest(cycle_dict, params_dict):
             }
             '''
     hrv_dict = {}
+    equil_pt = None
+    mov_tot = 0
 
-    for cycle, areas_dict in cycle_dict.items():
+    for cycle in range(0, len(cycle_dict)):
+        
+        areas_dict = cycle_dict[cycle]
+        
         hrv_dict[cycle] = {}
         hrv_dict[cycle]['Cycle_Total'] = 0
 
@@ -312,6 +317,22 @@ def calc_harvest(cycle_dict, params_dict):
 
             hrv_dict[cycle][area] = hrv_total
             hrv_dict[cycle]['Cycle_Total'] += hrv_total
+        
+        mov_tot += hrv_dict[cycle]['Cycle_Total']
+
+        #Equilibration checks.
+        if cycle > 9:
+
+            mov_avg = mov_total / 10
+            frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
+
+            #If we reach equilibrium before the total duration, record what
+            #cycle it happened at, and we can break.
+            if .999 < frac < 1.001:
+                equil_pt = cycle
+                break
+
+        mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
 
     return hrv_dict
     
