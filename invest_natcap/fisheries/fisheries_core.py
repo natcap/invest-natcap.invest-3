@@ -293,9 +293,11 @@ def calc_harvest(cycle_dict, params_dict):
             }
             '''
     hrv_dict = {}
-    equil_pt = None
+    equil_pt = len(cycle_dict)-1
     mov_tot = 0
 
+    #Want to be sure that we're looking at the harvests in order so that all
+    #prior harvest information will exist.
     for cycle in range(0, len(cycle_dict)):
         
         areas_dict = cycle_dict[cycle]
@@ -334,7 +336,7 @@ def calc_harvest(cycle_dict, params_dict):
 
         mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
 
-    return hrv_dict
+    return hrv_dict, equil_pt
     
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration, do_weight):
