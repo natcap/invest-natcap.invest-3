@@ -107,7 +107,7 @@ def execute(args):
 
     #Here be outputs
     val_var = val_dict if 'unit_price' in args else None
-    append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
+    append_results_to_aoi(args['aoi_uri'], hrv_dict[len(hrv_dict)-1], val_var)
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
     create_results_page(html_page_uri, hrv_dict, totals_dict, val_var)
@@ -235,7 +235,7 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
 
     reporting.generate_report(rep_args)
 
-def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
+def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
     ds = ogr.Open(aoi_uri, update=1)
@@ -253,7 +253,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
         #Since we now know for sure there will be a name attribute lower case,
         #can just call it directly.
         subregion_name = feature.items()['name']
-        feature.SetField('Hrv_Total', totals_dict[subregion_name])
+        feature.SetField('Hrv_Total', final_cycle[subregion_name])
 
         if val_dict is not None:
             feature.SetField('Val_Total', val_dict[subregion_name])
