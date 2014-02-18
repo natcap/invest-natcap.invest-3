@@ -96,11 +96,14 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'], args['do_weight'])
 
-    hrv_dict = calc_harvest(cycle_dict, args['params_dict'])
+    hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'])
    
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
-        val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
+        #passing a subdictionary that is only the equilibrated final cycle 
+        #to get the value
+        val_dict = calc_valuation(hrv_dict[len(hrv_dict)-1], args['unit_price'], 
+                                                    args['frac_post_process'])
 
     #Here be outputs
     val_var = val_dict if 'unit_price' in args else None
@@ -259,7 +262,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
 
     layer.ResetReading()
 
-def calc_valuation(total_dict, price, frac):
+def calc_valuation(final_cycle, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.
     
@@ -269,12 +272,15 @@ def calc_valuation(total_dict, price, frac):
             {'Area_1': 300000.50,
             'Area_2': 40000.62}
     '''
+    
     value_dict = {}
 
-    for area, totals in total_dict.items():
+    for area, totals in final_cycle.items():
         
-        val = totals * price * frac
-        value_dict[area] = val
+        #There's an extra key that's a running total. Don't get a value for it
+        if area != 'Cycle_Total':
+            val = totals * price * frac
+            value_dict[area] = val
 
     return value_dict
 
