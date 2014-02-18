@@ -541,22 +541,21 @@ def percent_to_sink(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    process_stack = collections.deque()
-
     cdef int loop_col_index, loop_row_index, index, row_index, col_index, neighbor_row_index, neighbor_col_index, offset, outflow_direction, neighbor_index, neighbor_outflow_direction
     cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
 
-    process_queue = collections.deque()
+    cdef queue[int] process_queue
     #Queue the sinks
     for col_index in xrange(n_cols):
         for row_index in xrange(n_rows):
             if sink_pixels_array[row_index, col_index] == 1:
                 effect_array[row_index, col_index] = 1.0
-                process_queue.appendleft(row_index * n_cols + col_index)
+                process_queue.push(row_index * n_cols + col_index)
 
-    while len(process_queue) > 0:
-        index = process_queue.pop()
+    while process_queue.size() > 0:
+        index = process_queue.front()
+        process_queue.pop()
         row_index = index / n_cols
         col_index = index % n_cols
 
@@ -611,7 +610,7 @@ def percent_to_sink(
             if it_flows_here:
                 #If we haven't processed that effect yet, set it to 0 and append to the queue
                 if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
-                    process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
+                    process_queue.push(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_array[neighbor_row_index, neighbor_col_index] = 0.0
 
                 effect_array[neighbor_row_index, neighbor_col_index] += \
