@@ -79,8 +79,8 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         "intersection", 0, aoi_uri=aoi_uri)
 
     flow_direction_uri = raster_utils.temporary_filename()
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = 'sed/out/outflow_weights.tif'#raster_utils.temporary_filename()
+    outflow_direction_uri = 'sed/out/outflow_dir.tif'#raster_utils.temporary_filename()
 
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
