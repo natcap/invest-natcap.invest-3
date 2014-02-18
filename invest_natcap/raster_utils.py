@@ -193,6 +193,9 @@ def get_cell_size_from_uri(dataset_uri):
         
     srs = osr.SpatialReference()
     dataset = gdal.Open(dataset_uri)
+    if dataset == None:
+        raise IOError(
+            'File not found or not valid dataset type at: %s' % dataset_uri)
     srs.SetProjection(dataset.GetProjection())
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
