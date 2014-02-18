@@ -96,7 +96,7 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'], args['do_weight'])
 
-    hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'])
+    hrv_dict = calc_harvest(cycle_dict, args['params_dict'])
    
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
@@ -283,8 +283,6 @@ def calc_harvest(cycle_dict, params_dict):
     is True, then this will be done on the basis of biomass, otherwise the
     results represent the number of individuals.
     
-    
-    
     Returns:
         hrv_dict- Dictionary containing all harvest information on a per area
             per cycle basis. This will have the following structure.
@@ -359,7 +357,9 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
    
     gender_var = 2 if is_gendered else 1
 
-    for cycle in range(1, duration):
+    #Want to pre-run it for extra cycles, on the off-chance that it does not
+    #equilibrate within the given time. 
+    for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
@@ -424,7 +424,9 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
     else:
         first_stage = [order[0]]
     
-    for cycle in range(1, duration):
+    #Want to pre-run it for extra cycles, on the off-chance that it does not
+    #equilibrate within the given time. 
+    for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
