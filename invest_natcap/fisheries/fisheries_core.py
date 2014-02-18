@@ -293,12 +293,8 @@ def calc_harvest(cycle_dict, params_dict):
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
-        totals_dict- Dictionary which sums total harvest by subregion.
-            {'Area_1': 3002,
-            'Area_2': 5000}
             '''
     hrv_dict = {}
-    totals_dict = {}
 
     for cycle, areas_dict in cycle_dict.items():
         hrv_dict[cycle] = {}
@@ -306,10 +302,6 @@ def calc_harvest(cycle_dict, params_dict):
 
         for area, stages_dict in areas_dict.items():
             exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
-
-            #Want the total across all age groups for a single area
-            if area not in totals_dict:
-                totals_dict[area] = 0
 
             hrv_total = 0
             for stage, indivs in stages_dict.items():
@@ -322,9 +314,8 @@ def calc_harvest(cycle_dict, params_dict):
 
             hrv_dict[cycle][area] = hrv_total
             hrv_dict[cycle]['Cycle_Total'] += hrv_total
-            totals_dict[area] += hrv_total
 
-    return hrv_dict, totals_dict
+    return hrv_dict
     
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration, do_weight):
