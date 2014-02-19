@@ -313,18 +313,23 @@ curvature_correction, refr_coeff, args):
         scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
-    def accumulate(*x):
-        #print('type of x', type(x), type(x[0]), x)
-        x = np.array(x)
-        #result = np.sum(x)
-        #print('result', result)
-        #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
-        return 0.
-    print('viewshed_uri_list', viewshed_uri_list)
-    print('out_viewshed_uri', out_viewshed_uri)
-    raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
-    out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
-    print('------ Done')
+    ## The vectorize_dataset method segfaults--trying with numpy instead.
+    #def accumulate(*x):
+    #    #print('type of x', type(x), type(x[0]), x)
+    #    x = np.array(x)
+    #    #result = np.sum(x)
+    #    #print('result', result)
+    #    #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
+    #    return 0.
+    ##raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
+    ##out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    # Numpy method:
+    #Create the output raster from the first in the input list
+    raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
+    out_viewshed_uri, 'GTiff', -1., gdal.GDT_Float64)
+    # Open the first raster and sum up the values using numpy
+    raster = gdal.Open(viewshed_uri_list[0])
+    accum_array = raster.GetRasterBand(1).ReadAsArray()
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
