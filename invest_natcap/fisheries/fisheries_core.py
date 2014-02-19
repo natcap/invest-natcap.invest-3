@@ -176,7 +176,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Fishieries Totals by Subregion for ' + str(num_cycles) + ' Cycles</h2>'},
+                'text': '<h2>Final Harvest by Subregion After ' + str(num_cycles) + ' Cycles</h2>'},
                 {
                 'type': 'table',
                 'section': 'body',
