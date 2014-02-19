@@ -110,10 +110,10 @@ def execute(args):
     append_results_to_aoi(args['aoi_uri'], hrv_dict[len(hrv_dict)-1], val_var)
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
-    create_results_page(html_page_uri, hrv_dict, totals_dict, val_var)
+    create_results_page(html_page_uri, hrv_dict, equil_pt, val_var)
 
 
-def create_results_page(uri, hrv_dict, totals_dict, val_var):
+def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
     for each subregion.
     
@@ -130,9 +130,8 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
-        totals_dict- Dictionary which sums total harvest by subregion.
-            {'Area_1': 3002,
-            'Area_2': 5000}
+        equil_pt- The cycle on which the harvest was equilibrated. If it never
+            equilibrated, this will be -1.
     '''
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
@@ -141,13 +140,17 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
     num_cycles = len(hrv_dict.keys())
     
     t_body = []
-    for area in totals_dict:
-        inner_dict = {}
-        inner_dict['Subregion'] = area
-        inner_dict['Harvest'] = totals_dict[area]
-        inner_dict['Value'] = '-' if val_var is None else val_var[area]
+
+    final_cycle = hrv_dict[num_cycles-1]
+
+    for area in final_cycle:
+        if area != 'Cycle_Total':
+            inner_dict = {}
+            inner_dict['Subregion'] = area
+            inner_dict['Harvest'] = final_cycle[area]
+            inner_dict['Value'] = '-' if val_var is None else val_var[area]
     
-        t_body.append(inner_dict)
+            t_body.append(inner_dict)
 
     t_columns =  [{'name': 'Subregion', 'total': False},
                 {'name': 'Harvest', 'total': True},
@@ -159,20 +162,11 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
         inner_dict['Cycle'] = cycle
         inner_dict['Harvest'] = hrv_dict[cycle]['Cycle_Total']
 
-        if cycle < 9:
-            inner_dict['Equilibrated?'] = '-'
+        if cycle == equil_pt: 
+            inner_dict['Equilibrated?'] = 'Y'
         else:
-            mov_tot = 0
-            for past_cy in range(cycle-9, cycle+1):
-                mov_tot += hrv_dict[past_cy]['Cycle_Total']
-            mov_avg = mov_tot / 10
-            frac = round((mov_tot/10) / hrv_dict[cycle]['Cycle_Total'], 4)
-            
-            #Want it to be between 99.9% and 100.1%
-            if frac in [0.999, 1.0, 1.001]:
-                inner_dict['Equilibrated?'] = 'Y'
-            else:
-                inner_dict['Equilibrated?'] = 'N'
+            inner_dict['Equilibrated?'] = 'N'
+        
         c_body.append(inner_dict)
 
     c_columns = [{'name': 'Cycle', 'total': False},
