@@ -697,6 +697,8 @@ class TestReportingPackage(testing.GISTest):
         svg_out_uri = os.path.join(TEST_OUT, 'svg_test_out.svg')
         shape_uri = os.path.join(STYLE_DATA, 'subwatersheds.shp')
 
+        dee_three_uri = os.path.join(REPORTING_DATA,'d3.v3.min.js')
+
         jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
         jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
@@ -787,6 +789,12 @@ class TestReportingPackage(testing.GISTest):
                         'section': 'head',
                         'format': 'json',
                         'data_src': json_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': dee_three_uri,
                         'input_type':'File'}
                     ],
                 'out_uri': output_uri}

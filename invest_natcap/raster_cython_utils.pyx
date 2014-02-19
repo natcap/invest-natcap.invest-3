@@ -65,7 +65,7 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         returns nothing"""
 
     #Read the DEM directly into an array
-    cdef float a,b,c,d,e,f,g,h,i,dem_nodata, dxdz, dxdy
+    cdef float a,b,c,d,e,f,g,h,i,dem_nodata
     cdef int row_index, col_index, n_rows, n_cols
 
     dem_dataset = gdal.Open(dem_dataset_uri)
@@ -89,10 +89,16 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
     slope_array[0, :] = slope_nodata
     slope_band.WriteArray(slope_array, 0, 0)
     slope_band.WriteArray(slope_array, 0, n_rows - 1)
+    
+    cdef numpy.ndarray[numpy.float_t, ndim=2] dzdx = numpy.empty((1, n_cols))
+    cdef numpy.ndarray[numpy.float_t, ndim=2] dzdy = numpy.empty((1, n_cols))
+    
     for row_index in xrange(1, n_rows - 1):
         #Loop through the dataset 3 rows at a time
         dem_array = dem_band.ReadAsArray(0, row_index - 1, n_cols, 3, buf_obj=dem_array)
         slope_array[0, :] = slope_nodata
+        dzdx[:] = slope_nodata
+        dzdy[:] = slope_nodata
         for col_index in xrange(1, n_cols - 1):
             # abc
             # def
@@ -117,8 +123,9 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
             i = dem_array[2, col_index + 1]
             if i == dem_nodata: continue
 
-            dzdx = ((c+2*f+i) - (a+2*d+g)) / (cell_size_times_8)
-            dzdy = ((g+2*h+i) - (a+2*b+c)) / (cell_size_times_8)
+            dzdx[0, col_index] = ((c+2*f+i) - (a+2*d+g)) / (cell_size_times_8)
+            dzdy[0, col_index] = ((g+2*h+i) - (a+2*b+c)) / (cell_size_times_8)
             #output in terms of percent
-            slope_array[0, col_index] = numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100
+        
+        slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
