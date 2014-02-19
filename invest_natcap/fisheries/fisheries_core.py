@@ -322,19 +322,21 @@ def calc_harvest(cycle_dict, params_dict):
         mov_tot += hrv_dict[cycle]['Cycle_Total']
 
         #Equilibration checks.
-        if cycle > 9:
+        if cycle >= 9:
             mov_avg = mov_tot / 10
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
 
+
+            LOGGER.debug("FRAC IS: %s" % frac)
             #If we reach equilibrium before the total duration, record what
             #cycle it happened at, and we can break.
             if .999 < frac < 1.001:
                 equil_pt = cycle
                 break
 
-        #Want to make sure the moving total always includes the current cycle,
-        #and removes the one that will be 10 back in the next step.
-        mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
+            #Want to make sure the moving total always includes the current cycle,
+            #and removes the one that will be 10 back in the next step.
+            mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
 
     return hrv_dict, equil_pt
     
