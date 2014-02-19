@@ -7,7 +7,6 @@ import cmath
 
 from osgeo import ogr
 from invest_natcap import reporting
-from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -96,21 +95,24 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'], args['do_weight'])
 
-    hrv_dict, totals_dict = calc_harvest(cycle_dict, args['params_dict'])
+    hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'])
    
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
-        val_dict = calc_valuation(totals_dict, args['unit_price'], args['frac_post_process'])
+        #passing a subdictionary that is only the equilibrated final cycle 
+        #to get the value
+        val_dict = calc_valuation(hrv_dict[len(hrv_dict)-1], args['unit_price'], 
+                                                    args['frac_post_process'])
 
     #Here be outputs
     val_var = val_dict if 'unit_price' in args else None
-    append_results_to_aoi(args['aoi_uri'], totals_dict, val_var)
+    append_results_to_aoi(args['aoi_uri'], hrv_dict[len(hrv_dict)-1], val_var)
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
-    create_results_page(html_page_uri, hrv_dict, totals_dict, val_var)
+    create_results_page(html_page_uri, hrv_dict, equil_pt, val_var)
 
 
-def create_results_page(uri, hrv_dict, totals_dict, val_var):
+def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
     for each subregion.
     
@@ -127,9 +129,8 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
-        totals_dict- Dictionary which sums total harvest by subregion.
-            {'Area_1': 3002,
-            'Area_2': 5000}
+        equil_pt- The cycle on which the harvest was equilibrated. If it never
+            equilibrated, this will be -1.
     '''
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
@@ -138,13 +139,17 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
     num_cycles = len(hrv_dict.keys())
     
     t_body = []
-    for area in totals_dict:
-        inner_dict = {}
-        inner_dict['Subregion'] = area
-        inner_dict['Harvest'] = totals_dict[area]
-        inner_dict['Value'] = '-' if val_var is None else val_var[area]
+
+    final_cycle = hrv_dict[num_cycles-1]
+
+    for area in final_cycle:
+        if area != 'Cycle_Total':
+            inner_dict = {}
+            inner_dict['Subregion'] = area
+            inner_dict['Harvest'] = final_cycle[area]
+            inner_dict['Value'] = '-' if val_var is None else val_var[area]
     
-        t_body.append(inner_dict)
+            t_body.append(inner_dict)
 
     t_columns =  [{'name': 'Subregion', 'total': False},
                 {'name': 'Harvest', 'total': True},
@@ -156,20 +161,11 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
         inner_dict['Cycle'] = cycle
         inner_dict['Harvest'] = hrv_dict[cycle]['Cycle_Total']
 
-        if cycle < 9:
-            inner_dict['Equilibrated?'] = '-'
+        if cycle == equil_pt: 
+            inner_dict['Equilibrated?'] = 'Y'
         else:
-            mov_tot = 0
-            for past_cy in range(cycle-9, cycle+1):
-                mov_tot += hrv_dict[past_cy]['Cycle_Total']
-            mov_avg = mov_tot / 10
-            frac = round((mov_tot/10) / hrv_dict[cycle]['Cycle_Total'], 4)
-            
-            #Want it to be between 99.9% and 100.1%
-            if frac in [0.999, 1.0, 1.001]:
-                inner_dict['Equilibrated?'] = 'Y'
-            else:
-                inner_dict['Equilibrated?'] = 'N'
+            inner_dict['Equilibrated?'] = 'N'
+        
         c_body.append(inner_dict)
 
     c_columns = [{'name': 'Cycle', 'total': False},
@@ -179,7 +175,7 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Fishieries Totals by Subregion for ' + str(num_cycles) + ' Cycles</h2>'},
+                'text': '<h2>Final Harvest by Subregion After ' + str(num_cycles) + ' Cycles</h2>'},
                 {
                 'type': 'table',
                 'section': 'body',
@@ -232,7 +228,7 @@ def create_results_page(uri, hrv_dict, totals_dict, val_var):
 
     reporting.generate_report(rep_args)
 
-def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
+def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
     '''Want to add the relevant data to the correct AOI as attributes.'''
 
     ds = ogr.Open(aoi_uri, update=1)
@@ -250,7 +246,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
         #Since we now know for sure there will be a name attribute lower case,
         #can just call it directly.
         subregion_name = feature.items()['name']
-        feature.SetField('Hrv_Total', totals_dict[subregion_name])
+        feature.SetField('Hrv_Total', final_cycle[subregion_name])
 
         if val_dict is not None:
             feature.SetField('Val_Total', val_dict[subregion_name])
@@ -259,7 +255,7 @@ def append_results_to_aoi(aoi_uri, totals_dict, val_dict):
 
     layer.ResetReading()
 
-def calc_valuation(total_dict, price, frac):
+def calc_valuation(final_cycle, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.
     
@@ -269,12 +265,15 @@ def calc_valuation(total_dict, price, frac):
             {'Area_1': 300000.50,
             'Area_2': 40000.62}
     '''
+    
     value_dict = {}
 
-    for area, totals in total_dict.items():
+    for area, totals in final_cycle.items():
         
-        val = totals * price * frac
-        value_dict[area] = val
+        #There's an extra key that's a running total. Don't get a value for it
+        if area != 'Cycle_Total':
+            val = totals * price * frac
+            value_dict[area] = val
 
     return value_dict
 
@@ -282,8 +281,6 @@ def calc_harvest(cycle_dict, params_dict):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
     results represent the number of individuals.
-    
-    
     
     Returns:
         hrv_dict- Dictionary containing all harvest information on a per area
@@ -293,23 +290,22 @@ def calc_harvest(cycle_dict, params_dict):
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
-        totals_dict- Dictionary which sums total harvest by subregion.
-            {'Area_1': 3002,
-            'Area_2': 5000}
             '''
     hrv_dict = {}
-    totals_dict = {}
+    equil_pt = len(cycle_dict)-1
+    mov_tot = 0
 
-    for cycle, areas_dict in cycle_dict.items():
+    #Want to be sure that we're looking at the harvests in order so that all
+    #prior harvest information will exist.
+    for cycle in range(0, len(cycle_dict)):
+        
+        areas_dict = cycle_dict[cycle]
+        
         hrv_dict[cycle] = {}
         hrv_dict[cycle]['Cycle_Total'] = 0
 
         for area, stages_dict in areas_dict.items():
             exploit_frac = params_dict['Area_Params'][area]['exploit_frac']
-
-            #Want the total across all age groups for a single area
-            if area not in totals_dict:
-                totals_dict[area] = 0
 
             hrv_total = 0
             for stage, indivs in stages_dict.items():
@@ -322,9 +318,27 @@ def calc_harvest(cycle_dict, params_dict):
 
             hrv_dict[cycle][area] = hrv_total
             hrv_dict[cycle]['Cycle_Total'] += hrv_total
-            totals_dict[area] += hrv_total
+        
+        mov_tot += hrv_dict[cycle]['Cycle_Total']
 
-    return hrv_dict, totals_dict
+        #Equilibration checks.
+        if cycle >= 9:
+            mov_avg = mov_tot / 10
+            frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
+
+
+            LOGGER.debug("FRAC IS: %s" % frac)
+            #If we reach equilibrium before the total duration, record what
+            #cycle it happened at, and we can break.
+            if .999 < frac < 1.001:
+                equil_pt = cycle
+                break
+
+            #Want to make sure the moving total always includes the current cycle,
+            #and removes the one that will be 10 back in the next step.
+            mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
+
+    return hrv_dict, equil_pt
     
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     migration_dict, duration, do_weight):
@@ -368,7 +382,9 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
    
     gender_var = 2 if is_gendered else 1
 
-    for cycle in range(1, duration):
+    #Want to pre-run it for extra cycles, on the off-chance that it does not
+    #equilibrate within the given time. 
+    for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
@@ -433,7 +449,9 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
     else:
         first_stage = [order[0]]
     
-    for cycle in range(1, duration):
+    #Want to pre-run it for extra cycles, on the off-chance that it does not
+    #equilibrate within the given time. 
+    for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
