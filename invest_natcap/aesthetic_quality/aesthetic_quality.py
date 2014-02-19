@@ -321,8 +321,10 @@ curvature_correction, refr_coeff, args):
         #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
         return 0.
     print('viewshed_uri_list', viewshed_uri_list)
-    raster_utils.vectorize_datasets(viewshed_uri_list, accumulate, \
+    print('out_viewshed_uri', out_viewshed_uri)
+    raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
     out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    print('------ Done')
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
