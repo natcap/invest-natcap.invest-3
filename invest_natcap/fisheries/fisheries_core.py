@@ -7,7 +7,6 @@ import cmath
 
 from osgeo import ogr
 from invest_natcap import reporting
-from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -324,8 +323,7 @@ def calc_harvest(cycle_dict, params_dict):
 
         #Equilibration checks.
         if cycle > 9:
-
-            mov_avg = mov_total / 10
+            mov_avg = mov_tot / 10
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
 
             #If we reach equilibrium before the total duration, record what
@@ -334,6 +332,8 @@ def calc_harvest(cycle_dict, params_dict):
                 equil_pt = cycle
                 break
 
+        #Want to make sure the moving total always includes the current cycle,
+        #and removes the one that will be 10 back in the next step.
         mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
 
     return hrv_dict, equil_pt
