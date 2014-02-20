@@ -307,10 +307,11 @@ curvature_correction, refr_coeff, args):
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
-        scaled_viewshed_uri = raster_utils.temporary_filename()
+        path, _ = os.path.split(out_viewshed_uri)
+        scaled_viewshed_uri = os.path.join(path, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
-        scaled_viewshed_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
     ## The vectorize_dataset method segfaults--trying with numpy instead.
@@ -326,10 +327,19 @@ curvature_correction, refr_coeff, args):
     # Numpy method:
     #Create the output raster from the first in the input list
     raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
-    out_viewshed_uri, 'GTiff', -1., gdal.GDT_Float64)
+    out_viewshed_uri, 'GTiff', 0., gdal.GDT_Float64)
     # Open the first raster and sum up the values using numpy
     raster = gdal.Open(viewshed_uri_list[0])
     accum_array = raster.GetRasterBand(1).ReadAsArray()
+    for uri in viewshed_uri_list[1:]:
+        nodata = raster_utils.get_nodata_from_uri(uri)
+        raster = gdal.Open(uri)
+        array = raster.GetRasterBand(1).ReadAsArray()
+        accum_array += array
+    # Store the accumulated value in the output uri
+    raster = gdal.Open(out_viewshed_uri, gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    band.WriteArray(accum_array)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
