@@ -16,6 +16,8 @@ import numpy
 
 import logging
 
+import struct
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -99,6 +101,20 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = N
     dataset_out = None
 
 
+shapeTypes= {0: "Null Shape", 1: "Point", 3: "PolyLine", 5: "Polygon",
+             8: "MultiPoint", 11: "PointZ", 13: "PolyLineZ",
+             15: "PolygonZ", 18: "MultiPointZ", 21: "PointM",
+             23: "PolyLineM", 25: "PolygonM", 28: "MultiPointM",
+             31: "MultiPatch"}
+
+def get_geometry_type_from_uri(datasource_uri):
+    datasource = open(datasource_uri, 'r')
+    datasource.seek(32)
+    shape_type ,= struct.unpack('<i',datasource.read(4))
+    datasource.close()
+
+    return shape_type
+
 def execute(args):
     ###
     #overiding, non-standard field names
@@ -137,6 +153,10 @@ def execute(args):
     ###
 
     #raise warning if nothing going to happen, ie no criteria provided
+
+    #suitiblity validation
+    #if polygon no distance field allowed
+    #if point or line, integer distance field only
 
     ###
     #resample, align and rasterize data
@@ -180,31 +200,30 @@ def execute(args):
                    LOGGER.error(msg)
                    raise ValueError, msg
 
-                if suitability_field_name == "" and distance == "":
-                   LOGGER.info("Rasterizing %s without sutibility field or distance field.", factor_stem)
-                   ds_uri = os.path.join(workspace, "%s.tif" % factor_stem)
-                   nodata = 0
-                   burn_value = 1
-                   gdal_format = gdal.GDT_Byte
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
-                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list)
-                elif distance == "":
-                   LOGGER.info("Rasterizing %s using sutibility field.", factor_stem)
+                shape_type = get_geometry_type_from_uri(factor_uri)
+                LOGGER.debug("Processing %s.", shapeTypes[shape_type])
+                
+                if shape_type in [5, 15, 25, 31]: #polygon
+                   LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
                    ds_uri = os.path.join(workspace, "%s_%s.tif" % (factor_stem, suitability_field_name))
                    nodata = 0
-                   burn_value = 0
+                   burn_value = [0]
                    suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
                    gdal_format = gdal.GDT_Float64
                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
-                elif suitability_field_name == "":
+
+                elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
+                   distance = int(distance)
                    ds_uri = raster_utils.temporary_filename()
                    nodata = 1
-                   burn_value = 0
+                   burn_value = [0]
                    LOGGER.info("Rasterizing %s using distance field.", factor_stem)
                    gdal_format = gdal.GDT_Byte
                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
-                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list)
+
+                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
+
                    distance_uri = raster_utils.temporary_filename()
                    fdistance_uri = os.path.join(workspace, "%s_%i.tif" % (factor_stem, distance))
                    calculate_distance_raster_uri(ds_uri, distance_uri)
@@ -224,7 +243,7 @@ def execute(args):
                                                    "union")
 
                 else:
-                   raise ValueError, "Not sure what to do."
+                   raise ValueError, "Invalid geometry type %i." % shape_type
 
                 factor_set.add((factor_stem, suitability_field_name, distance))
             else:
