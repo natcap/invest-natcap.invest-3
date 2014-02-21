@@ -140,6 +140,11 @@ def execute(args):
     landcover_uri = args["landcover"]
     override_uri = args["override"]
 
+    intermediate_dir = "intermediate"
+
+    if not os.path.exists(os.path.join(workspace, intermediate_dir)):
+        os.makedirs(os.path.join(workspace, intermediate_dir))
+        
     landcover_resample_uri = os.path.join(workspace, "resample.tif")
 
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
@@ -148,12 +153,20 @@ def execute(args):
 
     raster_utils.create_directories([workspace])
 
+    transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
+    suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
+    constraints_name = os.path.join(intermediate_dir, "constraints.tif")
+
     #constants
     raster_format = "GTiff"
+    transition_type = gdal.GDT_Int16
+    transition_nodata = -1
 
     ###
     #validate data
     ###
+
+
 
     #raise warning if nothing going to happen, ie no criteria provided
 
@@ -178,6 +191,27 @@ def execute(args):
           landcover_uri = landcover_resample_uri
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
+
+    if args["transition"]:
+        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+
+        for next_lulc in transition_dict:
+            this_uri = os.path.join(workspace, transition_name % next_lulc)
+            #construct reclass dictionary
+            reclass_dict = {}
+            for this_lulc in transition_dict:
+                reclass_dict[this_lulc]=transition_dict[this_lulc][str(next_lulc)]
+
+            #reclass lulc by reclass_dict
+            raster_utils.reclassify_dataset_uri(landcover_uri,
+                                                reclass_dict,
+                                                this_uri,
+                                                transition_type,
+                                                transition_nodata,
+                                                exception_flag = "values_required")
+               
+       
+    
     if args["factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_set = set()
@@ -207,7 +241,7 @@ def execute(args):
                 
                 if shape_type in [5, 15, 25, 31]: #polygon
                    LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
-                   ds_uri = os.path.join(workspace, "%s_%s.tif" % (factor_stem, suitability_field_name))
+                   ds_uri = os.path.join(workspace, suitability_name % (factor_stem, suitability_field_name))
                    nodata = 0
                    burn_value = [0]
                    suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
@@ -227,7 +261,7 @@ def execute(args):
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
                    distance_uri = raster_utils.temporary_filename()
-                   fdistance_uri = os.path.join(workspace, "%s_%i.tif" % (factor_stem, distance))
+                   fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
                    calculate_distance_raster_uri(ds_uri, distance_uri)
 
                    nodata = -1
@@ -250,6 +284,7 @@ def execute(args):
                 factor_set.add((factor_stem, suitability_field_name, distance))
             else:
                LOGGER.debug("Skipping already processed suitability layer.")
+         
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
@@ -280,7 +315,7 @@ def execute(args):
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
         constraints_field_name = args["constraints_field"]
-        ds_uri = os.path.join(workspace, "constraints.tif")
+        ds_uri = os.path.join(workspace, constraints_name)
         option_list = ["ALL_TOUCHED=FALSE"]
         nodata = -1
         burn_value = [-1]
@@ -288,6 +323,8 @@ def execute(args):
         gdal_format = gdal.GDT_Float64
         raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
         raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
+
+        #clump and sieve
 
     return
    
