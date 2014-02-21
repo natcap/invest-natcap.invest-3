@@ -148,6 +148,9 @@ def execute(args):
 
     raster_utils.create_directories([workspace])
 
+    #constants
+    raster_format = "GTiff"
+
     ###
     #validate data
     ###
@@ -177,7 +180,6 @@ def execute(args):
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
     if args["factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
-        raster_format = "GTiff"
         factor_set = set()
         factor_folder = args["suitability_folder"]
 
@@ -268,15 +270,27 @@ def execute(args):
 ##    dst_band = None
 ##    dst_ds = None
 
-    return
-
-
     ###
     #compute intermediate data if needed
     ###
 
     #contraints raster (reclass using permability values, filters on clump size)
 
+    if args["constraints"]:
+        LOGGER.info("Rasterizing constraints.")
+        constraints_uri = args["constraints"]
+        constraints_field_name = args["constraints_field"]
+        ds_uri = os.path.join(workspace, "constraints.tif")
+        option_list = ["ALL_TOUCHED=FALSE"]
+        nodata = -1
+        burn_value = [-1]
+        constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
+        gdal_format = gdal.GDT_Float64
+        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+        raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
+
+    return
+   
     #normalize probabilities to be on a 10 point scale
     #probability raster (reclass using probability matrix)
 
