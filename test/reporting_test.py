@@ -13,6 +13,8 @@ from invest_natcap.reporting import table_generator
 import invest_test_core
 
 REPORTING_DATA = os.path.join('invest-data/test/data', 'reporting_data')
+
+STYLE_DATA = os.path.join('invest-data/test/data', 'style_data')
 REGRESSION_DATA = os.path.join(
     'invest-data/test/data', 'reporting_data', 'regression_data')
 TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
@@ -581,7 +583,7 @@ class TestReportingPackage(testing.GISTest):
             talk to each other.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -670,6 +672,129 @@ class TestReportingPackage(testing.GISTest):
                         'section': 'head',
                         'format': 'json',
                         'data_src': json_uri,
+                        'input_type':'File'}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_generate_html_svg(self):
+        """Regression test for making a html page with embedded svg.
+        """
+
+        #raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        output_uri = os.path.join(TEST_OUT, 'html_test_svg.html')
+        reg_uri = os.path.join(
+                REGRESSION_DATA, 'regres_html_test_multi_tables.html')
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        svg_css_uri = os.path.join(STYLE_DATA,'test_css.css')
+        svg_out_uri = os.path.join(TEST_OUT, 'svg_test_out.svg')
+        shape_uri = os.path.join(STYLE_DATA, 'subwatersheds.shp')
+
+        dee_three_uri = os.path.join(REPORTING_DATA,'d3.v3.min.js')
+
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
+        json_uri = os.path.join(REPORTING_DATA,'sample_json.json')
+        csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
+
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'90', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'110', 'Phosphorous':'60','parcel_id':'3'},
+                       {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
+
+        columns = [{'name': 'parcel_id', 'total':False},
+                   {'name': 'Nitrogen', 'total':True},
+                   {'name': 'Sediment', 'total':True},
+                   {'name': 'Phosphorous', 'total':True}]
+
+        pop_groups = []
+
+        columns_pop = [
+                {'name': 'municipalities', 'total':False},
+                {'name': 'Sediment', 'total':False},
+                {'name': 'Nitrogen', 'total':False},
+                {'name': 'Phosphorous', 'total':False}]
+
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'svg',
+                        'section': 'body',
+                        'svg_out_uri': svg_out_uri,
+                        'source_uri': shape_uri,
+                        'field_id': 'subws_id',
+                        'key_id': 'subws_id',
+                        'proj_type': 'mercator',
+                        'css_uri': svg_css_uri,
+                        'size': (400, 600)},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'parcel_id',
+                        'data': sample_dict},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'text': '<p>Here is a sortable table!</p>'},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': False,
+                        'total':False,
+                        'data_type':'dictionary',
+                        'columns':columns_pop,
+                        'key':'pop_group',
+                        'data': pop_groups},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'style',
+                        'data_src': css_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jsc_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jquery_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jsc_fun_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'json',
+                        'data_src': json_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': dee_three_uri,
                         'input_type':'File'}
                     ],
                 'out_uri': output_uri}

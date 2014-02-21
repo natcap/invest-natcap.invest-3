@@ -16,6 +16,7 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 import table_generator
+import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
 
@@ -31,10 +32,10 @@ def generate_report(reporting_args):
         reporting_args[elements] - a list of dictionaries that represent html
             elements to be added to the html page. (required) If no elements
             are provided (list is empty) a blank html page will be generated.
-            The 3 main element types are 'table', 'head', and 'text'.
+            The 3 main element types are 'table', 'head', 'svg', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
-                    Currently 'table', 'head', and 'text' are defined (required)
+                    Currently 'table', 'head', 'svg', and 'text' are defined (required)
 
                 'section' - a string that depicts whether the element belongs
                     in the body or head of the html page.
@@ -74,7 +75,7 @@ def generate_report(reporting_args):
                     structure for the table (required). The order of the
                     columns from left to right is depicted by the index
                     of the column dictionary in the list. Each dictionary
-                    in the list has the following keys and values: 
+                    in the list has the following keys and values:
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
@@ -91,13 +92,25 @@ def generate_report(reporting_args):
                 'data_src'- a URI to the location of the external file for either
                     the 'script' or the 'style' OR a String representing the
                     html script or style (DO NOT include the tags) (required)
-                
+
                 'input_type' -  a String, 'File' or 'Text' that refers to how
-                    'data_src' is being passed in (URI vs String) (required). 
+                    'data_src' is being passed in (URI vs String) (required).
 
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
                     (required)
+
+            SVG element dictionary has at least the following additional arguments:
+                'svg_out_uri' - a URI path to save SVG to disk
+                'source_uri' - a URI path to an OGR shapefile (required)
+                'field_id' - a String for an attribute in 'source_uri' to
+                    display as a label (required)
+                'key_id' - a String for an attribute in 'source_uri' for the
+                    unique field for the shapefile (required)
+                'proj_type' - a String for how the image projection should be interpreted
+                    (optional)
+                'css'_uri' - a URI path to a css file (optional)
+                'size' - a Tuple for width, height in pixels (optional)
 
         returns - nothing"""
 
@@ -121,6 +134,7 @@ def generate_report(reporting_args):
             'table': build_table,
             'text' : add_text_element,
             'head': add_head_element,
+            'svg': add_svg_element
             }
 
     # Iterate over the elements to be added to the html page
@@ -137,7 +151,7 @@ def generate_report(reporting_args):
         # in write_html
         html_obj[section].append(report[fun_type](element))
 
-    LOGGER.debug('HTML OBJECT : %s', html_obj)
+    #LOGGER.debug('HTML OBJECT : %s', html_obj)
 
     # Write the html page to 'out_uri'
     write_html(html_obj, reporting_args['out_uri'])
@@ -175,8 +189,8 @@ def write_html(html_obj, out_uri):
     # Finish the html tag
     html_str += '</html>'
 
-    LOGGER.debug('HTML Complete String : %s', html_str)
-    
+    #LOGGER.debug('HTML Complete String : %s', html_str)
+
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
         os.remove(out_uri)
@@ -199,7 +213,7 @@ def build_table(param_args):
                 build the table from. Either 'shapefile', 'csv', or 'dictionary'
                 (required)
 
-            param_args['data'] - a URI to a csv or shapefile OR a list of 
+            param_args['data'] - a URI to a csv or shapefile OR a list of
                 dictionaries. If a list of dictionaries the data should be
                 represented in the following format: (required)
                     [{col_name_1: value, col_name_2: value, ...},
@@ -210,12 +224,12 @@ def build_table(param_args):
                 field (shapefile) will be the unique key to use in extracting
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
-                
+
             param_args['columns'] - a list of dictionaries that defines the column
                     structure for the table (required). The order of the
                     columns from left to right is depicted by the index
                     of the column dictionary in the list. Each dictionary
-                    in the list has the following keys and values: 
+                    in the list has the following keys and values:
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
@@ -296,7 +310,7 @@ def data_dict_to_list(data_dict):
             Could be empty (required)
 
         returns - a list of dictionaries, or empty list if data_dict is empty"""
-    
+
     data_list = []
     data_keys = data_dict.keys()
     data_keys.sort()
@@ -352,7 +366,7 @@ def add_head_element(param_args):
         file_str = head_file.read()
     else:
         file_str = src
-    
+
     # List of regular expression strings to search against
     reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
@@ -373,5 +387,44 @@ def add_head_element(param_args):
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)
+
+    return html_str
+
+def add_svg_element(param_args):
+    """Generate an SVG file from a shapefile and read the SVG file in as a
+        html String. Return the SVG html String
+
+        param_args - a dictionary that holds the following arguments / keys:
+            'svg_out_uri' - a URI path to save SVG to disk
+            'source_uri' - a URI path to an OGR shapefile (required)
+            'field_id' - a String for an attribute in 'source_uri' to
+                display as a label (required)
+            'key_id' - a String for an attribute in 'source_uri' for the
+                unique field for the shapefile (required)
+            'proj_type' - a String for how the image projection should be interpreted
+                    (optional)
+            'css'_uri' - a URI path to a css file (optional)
+            'size' - a Tuple for width, height in pixels (optional)
+
+        returns - a string representation of the html svg element"""
+
+    # Pop file URIs that are passed into the function signature
+    source_uri = param_args.pop('source_uri')
+    svg_out_uri = param_args.pop('svg_out_uri')
+    css_uri = param_args.pop('css_uri')
+    # Create SVG from shapefile
+    style.shape_to_svg(source_uri, svg_out_uri, css_uri, param_args)
+    # Open SVG
+    svg_file = codecs.open(svg_out_uri, 'rb', 'latin1')
+    file_str = svg_file.read()
+    # At the moment I think we are only interested in what lives within the svg tags
+    # from the SVG file. Search for this section.
+    svg_match = re.search(r'<svg.*/svg>', file_str)
+    if svg_match != None:
+        svg_str = svg_match.group()
+    else:
+        raise Exception('Could not load SVG from file. Could not match <svg></svg> tags')
+
+    html_str = '''%s''' % svg_str
 
     return html_str
