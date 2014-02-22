@@ -45,7 +45,17 @@
                     "dataType": "float",
                     "required": false,
                     "helpText": "The spatial resolution of the model run."
-                }                    
+                },
+                {
+                    "id": "proximity",
+                    "args_id": "proximity",
+                    "label" : "Proximity",
+                    "type": "text",
+                    "validText": "[0-9]*(\\.[0-9]*)?",
+                    "dataType": "float",
+                    "required": false,
+                    "helpText": ""
+                }                                    
             ]
         },
         {
