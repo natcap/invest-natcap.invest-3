@@ -192,6 +192,7 @@ def execute(args):
     #suitiblity validation
     #if polygon no distance field allowed
     #if point or line, integer distance field only
+    #error if same factor twice
 
     #land attributes table validation
     #raise error if percent change both specified
@@ -246,7 +247,7 @@ def execute(args):
     suitability_factors_dict = {}
     if args["factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
-        factor_set = set()
+        factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
 
         if args["factor_inclusion"]:
@@ -261,10 +262,11 @@ def execute(args):
             suitability_field_name = factor_dict[factor_id][args["suitability_field"]]
             distance = factor_dict[factor_id][args["distance_field"]]
 
-            cover_id = factor_dict[factor_id][args["suitability_cover_id"]]
+            cover_id = int(factor_dict[factor_id][args["suitability_cover_id"]])
+            weight = int(factor_dict[factor_id][args["suitability_weight"]])
             
-            LOGGER.debug("Found reference to factor (%s, %s, %s).", factor_stem, suitability_field_name, distance)
-            if not (factor_stem, suitability_field_name, distance) in factor_set:
+            LOGGER.debug("Found reference to factor (%s, %s, %s) for cover %i.", factor_stem, suitability_field_name, distance, cover_id)
+            if not (factor_stem, suitability_field_name, distance) in factor_uri_dict:
                 factor_uri = os.path.join(factor_folder, factor)
                 if not os.path.exists(factor_uri):
                    msg = "Missing file %s." % factor_uri
@@ -284,11 +286,7 @@ def execute(args):
                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
 
-                   if cover_id in suitability_factors_dict:
-                       suitability_factors_dict[cover_id].append((ds_uri, int(factor_dict[factor_id][args["suitability_weight"]])))
-                   else:
-                       suitability_factors_dict[cover_id] = [(ds_uri, int(factor_dict[factor_id][args["suitability_weight"]]))]
-
+                   factor_uri_dict[(factor_stem, suitability_field_name, distance)] = ds_uri
 
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
                    distance = int(distance)
@@ -343,37 +341,39 @@ def execute(args):
                 else:
                    raise ValueError, "Invalid geometry type %i." % shape_type
 
-                factor_set.add((factor_stem, suitability_field_name, distance))
+                factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
 
-                if cover_id in suitability_factors_dict:
-                    suitability_factors_dict[cover_id].append((normalized_uri, int(factor_dict[factor_id][args["suitability_weight"]])))
-                else:
-                    suitability_factors_dict[cover_id] = [(normalized_uri, int(factor_dict[factor_id][args["suitability_weight"]]))]
-                
             else:
                LOGGER.debug("Skipping already processed suitability layer.")
+
+            LOGGER.debug("Adding factor (%s, %s, %s) to cover %i suitability list.", factor_stem, suitability_field_name, distance, cover_id)
+            if cover_id in suitability_factors_dict:
+                suitability_factors_dict[cover_id].append((factor_uri_dict[(factor_stem, suitability_field_name, distance)], weight))
+            else:
+                suitability_factors_dict[cover_id] = [(factor_uri_dict[(factor_stem, suitability_field_name, distance)], weight)]
+
 
         for cover_id in suitability_factors_dict:
            if len(suitability_factors_dict[cover_id]) > 1:
               LOGGER.info("Combining factors for cover type %i.", cover_id)
               ds_uri = os.path.join(workspace, combined_name % cover_id)
+
               print suitability_factors_dict[cover_id]
               uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
-              print repr(weights_list)
+              
               total = float(sum(weights_list))
               weights_list = [weight / total for weight in weights_list]
 
+              print repr(weights_list)
+              
               def weighted_op(*values):
-                  if suitability_nodata in values:
-                      return suitability_nodata
-                  else:
-                      return sum([ v * w for v, w in zip(values, weights_list)])
+                  return sum([ v * w for v, w in zip(values, weights_list)])
 
               raster_utils.vectorize_datasets(uri_list,
                                               weighted_op,
                                               ds_uri,
                                               suitability_type,
-                                              suitability_nodata,
+                                              transition_nodata,
                                               cell_size,
                                               "union")               
                      
