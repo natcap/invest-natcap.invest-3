@@ -165,8 +165,9 @@ def execute(args):
     transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
     suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
     normalized_name = os.path.join(intermediate_dir, "%s_%s_norm.tif")
-    combined_name = os.path.join(intermediate_dir, "suitability_%s.tif")
+    combined_name = os.path.join(intermediate_dir, "factors_%s.tif")
     constraints_name = os.path.join(intermediate_dir, "constraints.tif")
+    factors_name = os.path.join(intermediate_dir, "suitability_%s.tif")
 
     #constants
     raster_format = "GTiff"
@@ -178,6 +179,16 @@ def execute(args):
 
     suitability_nodata = 0
     suitability_type = gdal.GDT_Int16
+
+    if args["weight"]:
+       physical_suitability_weight = float(args["weight"])
+    else:
+       physical_suitability_weight = 0.5
+
+    def suitability_op(trans, suit):
+        return ((1 - physical_suitability_weight) * trans)\
+               + (physical_suitability_weight * suit)
+
 
     ###
     #validate data
@@ -193,6 +204,7 @@ def execute(args):
     #if polygon no distance field allowed
     #if point or line, integer distance field only
     #error if same factor twice
+    #error if overall physical weight not in 0 to 1 range
 
     #land attributes table validation
     #raise error if percent change both specified
@@ -241,7 +253,7 @@ def execute(args):
             nodata = band.SetNoDataValue(transition_nodata)
             dataset = None
 
-            suitability_transition_dict[next_lulc] = [this_uri]
+            suitability_transition_dict[next_lulc] = this_uri
                
        
     suitability_factors_dict = {}
@@ -352,21 +364,15 @@ def execute(args):
             else:
                 suitability_factors_dict[cover_id] = [(factor_uri_dict[(factor_stem, suitability_field_name, distance)], weight)]
 
-
-        print repr(suitability_factors_dict)
-
         for cover_id in suitability_factors_dict:
            if len(suitability_factors_dict[cover_id]) > 1:
               LOGGER.info("Combining factors for cover type %i.", cover_id)
               ds_uri = os.path.join(workspace, combined_name % cover_id)
 
-              print suitability_factors_dict[cover_id]
               uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
               
               total = float(sum(weights_list))
               weights_list = [weight / total for weight in weights_list]
-
-              print repr(weights_list)
               
               def weighted_op(*values):
                   return sum([ v * w for v, w in zip(values, weights_list)])
@@ -377,8 +383,31 @@ def execute(args):
                                               suitability_type,
                                               transition_nodata,
                                               cell_size,
-                                              "union")               
-                     
+                                              "union")
+
+              suitability_factors_dict[cover_id] = ds_uri
+
+    suitability_dict = {}
+    if args["transition"]:
+        suitability_dict = suitability_transition_dict
+        if args["factors"]:
+           for cover_id in suitability_factors_dict:
+              if cover_id in suitability_dict:
+                 LOGGER.info("Combining suitability for cover %i.", cover_id)
+                 ds_uri = os.path.join(workspace, factors_name % cover_id)
+                 raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
+                                                  suitability_factors_dict[cover_id]],
+                                                 suitability_op,
+                                                 ds_uri,
+                                                 transition_type,
+                                                 transition_nodata,
+                                                 cell_size,
+                                                 "union")
+                 suitability_dict[cover_id] = ds_uri
+              else:
+                  suitability_dict[cover_id] = suitability_factors_dict[cover_id]
+    elif args["factors"]:
+        suitability_dict = suitability_factors_dict
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
