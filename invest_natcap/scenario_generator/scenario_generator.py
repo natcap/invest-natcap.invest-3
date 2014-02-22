@@ -127,14 +127,14 @@ def execute(args):
     ###
 
     #transition fields
-    args["transition_id"] = "ID"
+    args["transition_id"] = "Id"
     args["percent_field"] = "Percent Change"
     args["area_field"] = "Area Change"
     args["priority_field"] = "Priority"
     args["proximity_field"] = "Proximity"
 
     #factors fields
-    args["suitability_id"] =  "ID"
+    args["suitability_id"] =  "Id"
     args["suitability_layer"] = "Layer"
     args["suitability_weight"] = "Wt"
     args["suitability_field"] = "Suitfield"
@@ -229,7 +229,7 @@ def execute(args):
 
     suitability_transition_dict = {}
 
-    if args["transition"]:
+    if "transition" in args:
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
 
         for next_lulc in transition_dict:
@@ -257,7 +257,7 @@ def execute(args):
                
        
     suitability_factors_dict = {}
-    if args["factors"]:
+    if "factors" in args:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
@@ -388,9 +388,9 @@ def execute(args):
               suitability_factors_dict[cover_id] = ds_uri
 
     suitability_dict = {}
-    if args["transition"]:
+    if "transition" in args:
         suitability_dict = suitability_transition_dict
-        if args["factors"]:
+        if "factors" in args:
            for cover_id in suitability_factors_dict:
               if cover_id in suitability_dict:
                  LOGGER.info("Combining suitability for cover %i.", cover_id)
@@ -406,7 +406,7 @@ def execute(args):
                  suitability_dict[cover_id] = ds_uri
               else:
                   suitability_dict[cover_id] = suitability_factors_dict[cover_id]
-    elif args["factors"]:
+    elif "factors" in args:
         suitability_dict = suitability_factors_dict
 
 ##    #select pixels
@@ -434,17 +434,16 @@ def execute(args):
 
     #contraints raster (reclass using permability values, filters on clump size)
 
-    if args["constraints"]:
+    if "constraints" in args:
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
         constraints_field_name = args["constraints_field"]
         ds_uri = os.path.join(workspace, constraints_name)
         option_list = ["ALL_TOUCHED=FALSE"]
-        nodata = -1
-        burn_value = [-1]
+        burn_value = [0]
         constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
         gdal_format = gdal.GDT_Float64
-        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
         raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
 
         #clump and sieve
