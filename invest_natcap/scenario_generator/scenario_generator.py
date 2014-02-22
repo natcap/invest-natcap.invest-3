@@ -82,7 +82,7 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
 
    #convert change amount to pixels?
 
-def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None):
+def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
     if cell_size == None:
        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
 
@@ -91,6 +91,10 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = N
     memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
 
     nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
+
+##    if max_distance != None:
+##        memory_array[memory_array > max_distance] = nodata
+    
     raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
 
     dataset_out = gdal.Open(dataset_out_uri, 1)
@@ -132,6 +136,8 @@ def execute(args):
     args["suitability_layer"] = "Layer"
     args["suitability_field"] = "Suitfield"
     args["distance_field"] = "Dist"
+
+    args["suitability_cover_id"] = "Cover ID"
     
     ###
     #get parameters, set outputs
@@ -155,12 +161,16 @@ def execute(args):
 
     transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
     suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
+    normalized_name = os.path.join(intermediate_dir, "%s_%s_norm.tif")
     constraints_name = os.path.join(intermediate_dir, "constraints.tif")
 
     #constants
     raster_format = "GTiff"
     transition_type = gdal.GDT_Int16
     transition_nodata = -1
+
+    transition_scale = 10
+    distance_scale = 100
 
     ###
     #validate data
@@ -169,10 +179,14 @@ def execute(args):
 
 
     #raise warning if nothing going to happen, ie no criteria provided
+    #user must select at least one of the sutibility options (transitions - matrix, factors - shapefiles)
 
     #suitiblity validation
     #if polygon no distance field allowed
     #if point or line, integer distance field only
+
+    #land attributes table validation
+    #raise error if percent change both specified
 
     ###
     #resample, align and rasterize data
@@ -192,6 +206,8 @@ def execute(args):
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
 
+    suitability_dict = {}
+
     if args["transition"]:
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
 
@@ -200,7 +216,7 @@ def execute(args):
             #construct reclass dictionary
             reclass_dict = {}
             for this_lulc in transition_dict:
-                reclass_dict[this_lulc]=transition_dict[this_lulc][str(next_lulc)]
+                reclass_dict[this_lulc]=int(transition_dict[this_lulc][str(next_lulc)]) * transition_scale
 
             #reclass lulc by reclass_dict
             raster_utils.reclassify_dataset_uri(landcover_uri,
@@ -209,6 +225,8 @@ def execute(args):
                                                 transition_type,
                                                 transition_nodata,
                                                 exception_flag = "values_required")
+
+            suitability_dict[next_lulc] = [this_uri]
                
        
     
@@ -228,6 +246,9 @@ def execute(args):
             factor_stem, _ = os.path.splitext(factor)
             suitability_field_name = factor_dict[factor_id][args["suitability_field"]]
             distance = factor_dict[factor_id][args["distance_field"]]
+
+            cover_id = factor_dict[factor_id][args["suitability_cover_id"]]
+            
             LOGGER.debug("Found reference to factor (%s, %s, %s).", factor_stem, suitability_field_name, distance)
             if not (factor_stem, suitability_field_name, distance) in factor_set:
                 factor_uri = os.path.join(factor_folder, factor)
@@ -249,9 +270,20 @@ def execute(args):
                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
 
+                   if cover_id in suitability_dict:
+                       suitability_dict[cover_id].append(ds_uri)
+                   else:
+                       suitability_dict[cover_id] = [ds_uri]
+
+
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
                    distance = int(distance)
+
                    ds_uri = raster_utils.temporary_filename()
+                   distance_uri = raster_utils.temporary_filename()
+                   fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
+                   normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
+                   
                    nodata = 1
                    burn_value = [0]
                    LOGGER.info("Rasterizing %s using distance field.", factor_stem)
@@ -260,8 +292,6 @@ def execute(args):
 
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
-                   distance_uri = raster_utils.temporary_filename()
-                   fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
                    calculate_distance_raster_uri(ds_uri, distance_uri)
 
                    nodata = -1
@@ -277,6 +307,32 @@ def execute(args):
                                                    nodata,
                                                    cell_size,
                                                    "union")
+
+                   minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+
+                   def normalize_op(value):
+                       if value == nodata:
+                           return nodata
+                       else:
+                           return ((distance_scale - 1) \
+                                   - (((value - minimum) \
+                                       / float(maximum - minimum)) \
+                                      * (distance_scale - 1))) \
+                                      + 1
+
+                   raster_utils.vectorize_datasets([fdistance_uri],
+                                                   normalize_op,
+                                                   normalized_uri,
+                                                   transition_type,
+                                                   nodata,
+                                                   cell_size,
+                                                   "union")
+
+
+                   if cover_id in suitability_dict:
+                       suitability_dict[cover_id].append(normalized_uri)
+                   else:
+                       suitability_dict[cover_id] = [normalized_uri]
 
                 else:
                    raise ValueError, "Invalid geometry type %i." % shape_type
