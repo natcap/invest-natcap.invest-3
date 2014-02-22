@@ -231,8 +231,14 @@ def execute(args):
                                                 reclass_dict,
                                                 this_uri,
                                                 transition_type,
-                                                transition_nodata,
+                                                suitability_nodata,
                                                 exception_flag = "values_required")
+
+            #changing nodata value so 0's no longer nodata
+            dataset = gdal.Open(this_uri, 1)
+            band = dataset.GetRasterBand(1)
+            nodata = band.SetNoDataValue(transition_nodata)
+            dataset = None
 
             suitability_transition_dict[next_lulc] = [this_uri]
                
@@ -275,7 +281,7 @@ def execute(args):
                    burn_value = [0]
                    suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
                    gdal_format = gdal.GDT_Float64
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, suitability_nodata, gdal_format)
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
 
                    if cover_id in suitability_factors_dict:
