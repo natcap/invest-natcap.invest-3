@@ -297,7 +297,7 @@ def execute(args):
                    normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
                    
                    burn_value = [0]
-                   LOGGER.info("Rasterizing %s using distance field.", factor_stem)
+                   LOGGER.info("Buffering rasterization of %s to distance of %i.", factor_stem, distance)
                    gdal_format = gdal.GDT_Byte
                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, 1, gdal_format)
 
@@ -338,10 +338,10 @@ def execute(args):
                                                    cell_size,
                                                    "union")
 
+                   factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
+
                 else:
                    raise ValueError, "Invalid geometry type %i." % shape_type
-
-                factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
 
             else:
                LOGGER.debug("Skipping already processed suitability layer.")
@@ -352,6 +352,8 @@ def execute(args):
             else:
                 suitability_factors_dict[cover_id] = [(factor_uri_dict[(factor_stem, suitability_field_name, distance)], weight)]
 
+
+        print repr(suitability_factors_dict)
 
         for cover_id in suitability_factors_dict:
            if len(suitability_factors_dict[cover_id]) > 1:
