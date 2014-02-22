@@ -134,6 +134,7 @@ def execute(args):
     #factors fields
     args["suitability_id"] =  "ID"
     args["suitability_layer"] = "Layer"
+    args["suitability_weight"] = "Wt"
     args["suitability_field"] = "Suitfield"
     args["distance_field"] = "Dist"
 
@@ -162,6 +163,7 @@ def execute(args):
     transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
     suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
     normalized_name = os.path.join(intermediate_dir, "%s_%s_norm.tif")
+    combined_name = os.path.join(intermediate_dir, "suitability_%s.tif")
     constraints_name = os.path.join(intermediate_dir, "constraints.tif")
 
     #constants
@@ -172,6 +174,9 @@ def execute(args):
     transition_scale = 10
     distance_scale = 100
 
+    suitability_nodata = 0
+    suitability_type = gdal.GDT_Int16
+
     ###
     #validate data
     ###
@@ -180,6 +185,7 @@ def execute(args):
 
     #raise warning if nothing going to happen, ie no criteria provided
     #user must select at least one of the sutibility options (transitions - matrix, factors - shapefiles)
+    #the weight field must contain a value
 
     #suitiblity validation
     #if polygon no distance field allowed
@@ -206,7 +212,7 @@ def execute(args):
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
 
-    suitability_dict = {}
+    suitability_transition_dict = {}
 
     if args["transition"]:
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
@@ -226,10 +232,10 @@ def execute(args):
                                                 transition_nodata,
                                                 exception_flag = "values_required")
 
-            suitability_dict[next_lulc] = [this_uri]
+            suitability_transition_dict[next_lulc] = [this_uri]
                
        
-    
+    suitability_factors_dict = {}
     if args["factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_set = set()
@@ -263,17 +269,17 @@ def execute(args):
                 if shape_type in [5, 15, 25, 31]: #polygon
                    LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
                    ds_uri = os.path.join(workspace, suitability_name % (factor_stem, suitability_field_name))
-                   nodata = 0
+
                    burn_value = [0]
                    suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
                    gdal_format = gdal.GDT_Float64
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, suitability_nodata, gdal_format)
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
 
-                   if cover_id in suitability_dict:
-                       suitability_dict[cover_id].append(ds_uri)
+                   if cover_id in suitability_factors_dict:
+                       suitability_factors_dict[cover_id].append((ds_uri, int(factor_dict[factor_id][args["suitability_weight"]])))
                    else:
-                       suitability_dict[cover_id] = [ds_uri]
+                       suitability_factors_dict[cover_id] = [(ds_uri, int(factor_dict[factor_id][args["suitability_weight"]]))]
 
 
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
@@ -284,35 +290,36 @@ def execute(args):
                    fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
                    normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
                    
-                   nodata = 1
                    burn_value = [0]
                    LOGGER.info("Rasterizing %s using distance field.", factor_stem)
                    gdal_format = gdal.GDT_Byte
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, suitability_nodata, gdal_format)
 
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
                    calculate_distance_raster_uri(ds_uri, distance_uri)
 
-                   nodata = -1
                    def threshold(value):
-                       if value == nodata or value > distance:
-                           return nodata
+                       if value == suitability_nodata or value > distance:
+                           return suitability_nodata
+                       return value
+
+                   def threshold(value):
                        return value
 
                    raster_utils.vectorize_datasets([distance_uri],
                                                    threshold,
                                                    fdistance_uri,
                                                    raster_utils.get_datatype_from_uri(distance_uri),
-                                                   nodata,
+                                                   suitability_nodata,
                                                    cell_size,
                                                    "union")
 
                    minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
 
                    def normalize_op(value):
-                       if value == nodata:
-                           return nodata
+                       if value == suitability_nodata:
+                           return suitability_nodata
                        else:
                            return ((distance_scale - 1) \
                                    - (((value - minimum) \
@@ -324,23 +331,47 @@ def execute(args):
                                                    normalize_op,
                                                    normalized_uri,
                                                    transition_type,
-                                                   nodata,
+                                                   0,
                                                    cell_size,
                                                    "union")
-
-
-                   if cover_id in suitability_dict:
-                       suitability_dict[cover_id].append(normalized_uri)
-                   else:
-                       suitability_dict[cover_id] = [normalized_uri]
 
                 else:
                    raise ValueError, "Invalid geometry type %i." % shape_type
 
                 factor_set.add((factor_stem, suitability_field_name, distance))
+
+                if cover_id in suitability_factors_dict:
+                    suitability_factors_dict[cover_id].append((normalized_uri, int(factor_dict[factor_id][args["suitability_weight"]])))
+                else:
+                    suitability_factors_dict[cover_id] = [(normalized_uri, int(factor_dict[factor_id][args["suitability_weight"]]))]
+                
             else:
                LOGGER.debug("Skipping already processed suitability layer.")
-         
+
+        for cover_id in suitability_factors_dict:
+           if len(suitability_factors_dict[cover_id]) > 1:
+              LOGGER.info("Combining factors for cover type %i.", cover_id)
+              ds_uri = os.path.join(workspace, combined_name % cover_id)
+              print suitability_factors_dict[cover_id]
+              uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
+              print repr(weights_list)
+              total = float(sum(weights_list))
+              weights_list = [weight / total for weight in weights_list]
+
+              def weighted_op(*values):
+                  if suitability_nodata in values:
+                      return suitability_nodata
+                  else:
+                      return sum(map(operator.mul, zip(values, weights_list)))
+
+              raster_utils.vectorize_datasets(uri_list,
+                                              weighted_op,
+                                              ds_uri,
+                                              suitability_type,
+                                              suitability_nodata,
+                                              cell_size,
+                                              "union")               
+                     
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
