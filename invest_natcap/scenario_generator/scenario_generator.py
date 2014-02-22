@@ -18,6 +18,8 @@ import logging
 
 import struct
 
+import operator
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -293,32 +295,29 @@ def execute(args):
                    burn_value = [0]
                    LOGGER.info("Rasterizing %s using distance field.", factor_stem)
                    gdal_format = gdal.GDT_Byte
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, suitability_nodata, gdal_format)
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, 1, gdal_format)
 
                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
                    calculate_distance_raster_uri(ds_uri, distance_uri)
 
                    def threshold(value):
-                       if value == suitability_nodata or value > distance:
-                           return suitability_nodata
-                       return value
-
-                   def threshold(value):
+                       if value > distance:
+                           return transition_nodata
                        return value
 
                    raster_utils.vectorize_datasets([distance_uri],
                                                    threshold,
                                                    fdistance_uri,
                                                    raster_utils.get_datatype_from_uri(distance_uri),
-                                                   suitability_nodata,
+                                                   transition_nodata,
                                                    cell_size,
                                                    "union")
 
                    minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
 
                    def normalize_op(value):
-                       if value == suitability_nodata:
+                       if value == transition_nodata:
                            return suitability_nodata
                        else:
                            return ((distance_scale - 1) \
@@ -331,7 +330,7 @@ def execute(args):
                                                    normalize_op,
                                                    normalized_uri,
                                                    transition_type,
-                                                   0,
+                                                   transition_nodata,
                                                    cell_size,
                                                    "union")
 
@@ -362,7 +361,7 @@ def execute(args):
                   if suitability_nodata in values:
                       return suitability_nodata
                   else:
-                      return sum(map(operator.mul, zip(values, weights_list)))
+                      return sum([ v * w for v, w in zip(values, weights_list)])
 
               raster_utils.vectorize_datasets(uri_list,
                                               weighted_op,
