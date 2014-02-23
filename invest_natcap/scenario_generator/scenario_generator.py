@@ -236,24 +236,28 @@ def execute(args):
             this_uri = os.path.join(workspace, transition_name % next_lulc)
             #construct reclass dictionary
             reclass_dict = {}
+            all_zeros = True
             for this_lulc in transition_dict:
-                reclass_dict[this_lulc]=int(transition_dict[this_lulc][str(next_lulc)]) * transition_scale
+                value = int(transition_dict[this_lulc][str(next_lulc)])
+                reclass_dict[this_lulc] = value * transition_scale
+                all_zeros = all_zeros and (value == 0)
 
-            #reclass lulc by reclass_dict
-            raster_utils.reclassify_dataset_uri(landcover_uri,
-                                                reclass_dict,
-                                                this_uri,
-                                                transition_type,
-                                                suitability_nodata,
-                                                exception_flag = "values_required")
+            if not all_zeros:
+                #reclass lulc by reclass_dict
+                raster_utils.reclassify_dataset_uri(landcover_uri,
+                                                    reclass_dict,
+                                                    this_uri,
+                                                    transition_type,
+                                                    suitability_nodata,
+                                                    exception_flag = "values_required") 
 
-            #changing nodata value so 0's no longer nodata
-            dataset = gdal.Open(this_uri, 1)
-            band = dataset.GetRasterBand(1)
-            nodata = band.SetNoDataValue(transition_nodata)
-            dataset = None
+                #changing nodata value so 0's no longer nodata
+                dataset = gdal.Open(this_uri, 1)
+                band = dataset.GetRasterBand(1)
+                nodata = band.SetNoDataValue(transition_nodata)
+                dataset = None
 
-            suitability_transition_dict[next_lulc] = this_uri
+                suitability_transition_dict[next_lulc] = this_uri
                
        
     suitability_factors_dict = {}
