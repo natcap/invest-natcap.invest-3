@@ -132,6 +132,7 @@ def execute(args):
     args["area_field"] = "Area Change"
     args["priority_field"] = "Priority"
     args["proximity_field"] = "Proximity"
+    args["proximity_weight"] = "0.3"
 
     #factors fields
     args["suitability_id"] =  "Id"
@@ -171,6 +172,7 @@ def execute(args):
     cover_name = os.path.join(intermediate_dir, "cover_%i.tif")
     proximity_name = os.path.join(intermediate_dir, "proximity_%s.tif")
     normalized_proximity_name = os.path.join(intermediate_dir, "proximity_norm_%s.tif")
+    adjusted_suitability_name = os.path.join(intermediate_dir, "adjusted_suitability_%s.tif")
 
     #constants
     raster_format = "GTiff"
@@ -182,6 +184,8 @@ def execute(args):
 
     suitability_nodata = 0
     suitability_type = gdal.GDT_Int16
+
+    proximity_weight = float(args["proximity_weight"])
 
     try:
        physical_suitability_weight = float(args["weight"])
@@ -421,7 +425,6 @@ def execute(args):
     ###
 
     #contraints raster (reclass using permability values, filters on clump size)
-
     if "calculate_constraints" in args:
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
@@ -441,7 +444,7 @@ def execute(args):
         LOGGER.info("Calculating proximity.")
         cover_types = transition_dict.keys()
         for cover_id in transition_dict:
-           if transition_dict[cover_id][args["proximity_field"]] > 0:
+           if transition_dict[cover_id][args["proximity_field"]] > 0 and cover_id in suitability_dict:
               distance = int(transition_dict[cover_id][args["proximity_field"]])
               LOGGER.info("Calculating proximity for %i.", cover_id)
               reclass_dict = dict(zip(cover_types, [1] * len(cover_types)))
@@ -495,6 +498,60 @@ def execute(args):
                                               "union")
 
               proximity_dict[cover_id] = normalized_uri
+
+    def constraint_op(suit, cons):
+        return suit * cons
+
+    def proximity_op(suit, prox):
+        v = suit + (prox * proximity_weight)
+        if v > 100:
+            return 100
+        else:
+            return v
+
+    def constraint_proximity_op(suit, cons, prox):
+        v = (cons * suit) + (prox * proximity_weight)
+        if v > 100:
+            return 100
+        else:
+            return v
+      
+    for cover_id in suitability_dict:
+        suitability_uri = os.path.join(workspace, adjusted_suitability_name % cover_id)
+        if "calculate_constraints" in args:
+            if cover_id in proximity_dict:
+                raster_utils.vectorize_datasets([suitability_dict[cover_id],
+                                                 proximity_dict[cover_id],
+                                                 constraints_uri],
+                                                constraint_proximity_op,
+                                                suitability_uri,
+                                                transition_type,
+                                                transition_nodata,
+                                                cell_size,
+                                                "union")
+                suitability_dict[cover_id] = suitability_uri
+                
+            else:
+                raster_utils.vectorize_datasets([suitability_dict[cover_id],
+                                                 constraints_uri],
+                                                constraint_op,
+                                                suitability_uri,
+                                                transition_type,
+                                                transition_nodata,
+                                                cell_size,
+                                                 "union")
+                suitability_dict[cover_id] = suitability_uri
+
+        elif cover_id in proximity_dict:
+            raster_utils.vectorize_datasets([suitability_dict[cover_id],
+                                             proximity_dict[cover_id]],
+                                            proximity_op,
+                                            suitability_uri,
+                                            transition_type,
+                                            transition_nodata,
+                                            cell_size,
+                                            "union")
+            suitability_dict[cover_id] = suitability_uri
 
     return
    
