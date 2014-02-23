@@ -45,7 +45,16 @@
                     "dataType": "float",
                     "required": false,
                     "helpText": "The spatial resolution of the model run."
-                }                                
+                },
+                {
+                    "id": "transition",
+                    "args_id": "transition",
+                    "type": "file",
+                    "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
+                    "label": "Transition Table",
+                    "required": false,
+                    "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
+                }                
             ]
         },
         {
@@ -55,6 +64,7 @@
             "collapsible" : true,
             "label" : "Proximity",
             "defaultValue": true,
+            "enabledBy": "transition",
             "elements" : [
                 {
                     "id" : "calculate_proximity_list",
@@ -82,20 +92,12 @@
             "collapsible" : true,
             "label" : "Specify transitions",
             "defaultValue": true,
+            "enabledBy": "transition",
             "elements" : [
                 {
                     "id" : "calculate_transition_list",
-                    "type": "list",
+                    "type": "hiddenElement",
                     "elements": [
-                                    {
-                                        "id": "transition",
-                                        "args_id": "transition",
-                                        "type": "file",
-                                        "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
-                                        "label": "Transition Table",
-                                        "required": true,
-                                        "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
-                                    }
                                 ]
                 },
                 {
@@ -167,10 +169,10 @@
             ]
         },
         {
-            "id" : "factors",
+            "id" : "calculate_factors",
             "type" : "container",
             "collapsible" : true,
-            "args_id" : "factors",
+            "args_id" : "calculate_factors",
             "label" : "Use factors",
             "defaultValue": true,
             "elements" : [
@@ -322,8 +324,8 @@
             ]
         },
         {
-            "id": "constraints_layer",
-            "args_id": "contraints_layer",
+            "id": "calculate_constraints",
+            "args_id": "calculate_contraints",
             "type": "container",
             "collapsible": true,
             "label": "Constraints layer",

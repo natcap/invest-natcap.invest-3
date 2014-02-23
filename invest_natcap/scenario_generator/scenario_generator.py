@@ -180,15 +180,17 @@ def execute(args):
     suitability_nodata = 0
     suitability_type = gdal.GDT_Int16
 
-    if args["weight"]:
+    try:
        physical_suitability_weight = float(args["weight"])
-    else:
+    except ValueError:
        physical_suitability_weight = 0.5
 
     def suitability_op(trans, suit):
         return ((1 - physical_suitability_weight) * trans)\
                + (physical_suitability_weight * suit)
 
+    if "transition" in args:
+        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
 
     ###
     #validate data
@@ -229,9 +231,7 @@ def execute(args):
 
     suitability_transition_dict = {}
 
-    if "transition" in args:
-        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
-
+    if "calculate_transition" in args:
         for next_lulc in transition_dict:
             this_uri = os.path.join(workspace, transition_name % next_lulc)
             #construct reclass dictionary
@@ -257,7 +257,7 @@ def execute(args):
                
        
     suitability_factors_dict = {}
-    if "factors" in args:
+    if "calculate_factors" in args:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
@@ -388,9 +388,9 @@ def execute(args):
               suitability_factors_dict[cover_id] = ds_uri
 
     suitability_dict = {}
-    if "transition" in args:
+    if "calculate_transition" in args:
         suitability_dict = suitability_transition_dict
-        if "factors" in args:
+        if "calculate_factors" in args:
            for cover_id in suitability_factors_dict:
               if cover_id in suitability_dict:
                  LOGGER.info("Combining suitability for cover %i.", cover_id)
@@ -406,8 +406,46 @@ def execute(args):
                  suitability_dict[cover_id] = ds_uri
               else:
                   suitability_dict[cover_id] = suitability_factors_dict[cover_id]
-    elif "factors" in args:
+    elif "calculate_factors" in args:
         suitability_dict = suitability_factors_dict
+
+    ###
+    #compute intermediate data if needed
+    ###
+
+    #contraints raster (reclass using permability values, filters on clump size)
+
+    if "calculate_constraints" in args:
+        LOGGER.info("Rasterizing constraints.")
+        constraints_uri = args["constraints"]
+        constraints_field_name = args["constraints_field"]
+        ds_uri = os.path.join(workspace, constraints_name)
+        option_list = ["ALL_TOUCHED=FALSE"]
+        burn_value = [0]
+        constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
+        gdal_format = gdal.GDT_Float64
+        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
+        raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
+
+        #clump and sieve
+
+    if "calculate_proximity" in args:
+        LOGGER.info("Calculating proximity.")
+
+    return
+   
+    #normalize probabilities to be on a 10 point scale
+    #probability raster (reclass using probability matrix)
+
+    #proximity raster (gaussian for each landcover type, using max distance)
+    #InVEST 2 uses 4-connectedness?
+
+    #combine rasters for weighting into sutibility raster, multiply proximity by 0.3
+    #[suitability * (1-factor weight)] + (factors * factor weight) or only single raster
+
+    ###
+    #reallocate pixels (disk heap sort, randomly reassign equal value pixels, applied in order)
+    ###
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
@@ -427,41 +465,6 @@ def execute(args):
 ##
 ##    dst_band = None
 ##    dst_ds = None
-
-    ###
-    #compute intermediate data if needed
-    ###
-
-    #contraints raster (reclass using permability values, filters on clump size)
-
-    if "constraints" in args:
-        LOGGER.info("Rasterizing constraints.")
-        constraints_uri = args["constraints"]
-        constraints_field_name = args["constraints_field"]
-        ds_uri = os.path.join(workspace, constraints_name)
-        option_list = ["ALL_TOUCHED=FALSE"]
-        burn_value = [0]
-        constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
-        gdal_format = gdal.GDT_Float64
-        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
-        raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
-
-        #clump and sieve
-
-    return
-   
-    #normalize probabilities to be on a 10 point scale
-    #probability raster (reclass using probability matrix)
-
-    #proximity raster (gaussian for each landcover type, using max distance)
-    #InVEST 2 uses 4-connectedness?
-
-    #combine rasters for weighting into sutibility raster, multiply proximity by 0.3
-    #[suitability * (1-factor weight)] + (factors * factor weight) or only single raster
-
-    ###
-    #reallocate pixels (disk heap sort, randomly reassign equal value pixels, applied in order)
-    ###
 
     #reallocate
     src_ds = gdal.Open(landcover_uri)
