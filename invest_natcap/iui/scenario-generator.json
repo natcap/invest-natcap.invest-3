@@ -45,19 +45,35 @@
                     "dataType": "float",
                     "required": false,
                     "helpText": "The spatial resolution of the model run."
-                },
-                {
-                    "id": "proximity",
-                    "args_id": "proximity",
-                    "label" : "Proximity",
-                    "type": "text",
-                    "validText": "[0-9]*(\\.[0-9]*)?",
-                    "dataType": "float",
-                    "required": false,
-                    "helpText": ""
-                }                                    
+                }                                
             ]
         },
+        {
+            "id" : "calculate_proximity",
+            "args_id" : "calculate_proximity",            
+            "type" : "container",
+            "collapsible" : true,
+            "label" : "Proximity",
+            "defaultValue": true,
+            "elements" : [
+                {
+                    "id" : "calculate_proximity_list",
+                    "type": "hiddenElement",
+                    "elements": [
+                        {
+                            "id": "proximity_weight",
+                            "args_id": "proximity_weight",
+                            "label" : "Weight",
+                            "type": "text",
+                            "validText": "[0-9]*(\\.[0-9]*)?",
+                            "dataType": "float",
+                            "required": false,
+                            "helpText": ""
+                        }
+                    ]
+                }
+            ]
+        },       
         {
             "id" : "calculate_transition",
             "args_id" : "calculate_transition",            
