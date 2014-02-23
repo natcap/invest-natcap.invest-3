@@ -168,6 +168,9 @@ def execute(args):
     combined_name = os.path.join(intermediate_dir, "factors_%s.tif")
     constraints_name = os.path.join(intermediate_dir, "constraints.tif")
     factors_name = os.path.join(intermediate_dir, "suitability_%s.tif")
+    cover_name = os.path.join(intermediate_dir, "cover_%i.tif")
+    proximity_name = os.path.join(intermediate_dir, "proximity_%s.tif")
+    normalized_proximity_name = os.path.join(intermediate_dir, "proximity_norm_%s.tif")
 
     #constants
     raster_format = "GTiff"
@@ -196,6 +199,7 @@ def execute(args):
     #validate data
     ###
 
+    #raise error if LULC contains id's not in transition table
 
 
     #raise warning if nothing going to happen, ie no criteria provided
@@ -258,8 +262,7 @@ def execute(args):
                 dataset = None
 
                 suitability_transition_dict[next_lulc] = this_uri
-               
-       
+                      
     suitability_factors_dict = {}
     if "calculate_factors" in args:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
@@ -433,8 +436,65 @@ def execute(args):
 
         #clump and sieve
 
+    proximity_dict = {}
     if "calculate_proximity" in args:
         LOGGER.info("Calculating proximity.")
+        cover_types = transition_dict.keys()
+        for cover_id in transition_dict:
+           if transition_dict[cover_id][args["proximity_field"]] > 0:
+              distance = int(transition_dict[cover_id][args["proximity_field"]])
+              LOGGER.info("Calculating proximity for %i.", cover_id)
+              reclass_dict = dict(zip(cover_types, [1] * len(cover_types)))
+              reclass_dict[cover_id] = 0
+
+              ds_uri = os.path.join(workspace, cover_name % cover_id)
+              distance_uri = raster_utils.temporary_filename()
+              fdistance_uri = os.path.join(workspace, proximity_name % cover_id)
+              normalized_uri = os.path.join(workspace, normalized_proximity_name % cover_id)
+              
+              raster_utils.reclassify_dataset_uri(landcover_uri,
+                                                  reclass_dict,
+                                                  ds_uri,
+                                                  transition_type,
+                                                  transition_nodata,
+                                                  exception_flag = "values_required") 
+
+              calculate_distance_raster_uri(ds_uri, distance_uri)
+
+              def threshold(value):
+                  if value > distance:
+                      return transition_nodata
+                  return value
+ 
+              raster_utils.vectorize_datasets([distance_uri],
+                                              threshold,
+                                              fdistance_uri,
+                                              raster_utils.get_datatype_from_uri(distance_uri),
+                                              transition_nodata,
+                                              cell_size,
+                                              "union")
+
+              minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+
+              def normalize_op(value):
+                  if value == transition_nodata:
+                      return suitability_nodata
+                  else:
+                      return ((distance_scale - 1) \
+                              - (((value - minimum) \
+                                  / float(maximum - minimum)) \
+                                 * (distance_scale - 1))) \
+                                 + 1
+
+              raster_utils.vectorize_datasets([fdistance_uri],
+                                              normalize_op,
+                                              normalized_uri,
+                                              transition_type,
+                                              transition_nodata,
+                                              cell_size,
+                                              "union")
+
+              proximity_dict[cover_id] = normalized_uri
 
     return
    
