@@ -20,6 +20,8 @@ import struct
 
 import operator
 
+import math
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -174,6 +176,8 @@ def execute(args):
     normalized_proximity_name = os.path.join(intermediate_dir, "proximity_norm_%s.tif")
     adjusted_suitability_name = os.path.join(intermediate_dir, "adjusted_suitability_%s.tif")
 
+    scenario_name = "scenario.tif"
+
     #constants
     raster_format = "GTiff"
     transition_type = gdal.GDT_Int16
@@ -204,6 +208,15 @@ def execute(args):
     ###
 
     #raise error if LULC contains id's not in transition table
+    landcover_count_dict = raster_utils.unique_raster_values_count(landcover_uri)
+    missing_lulc = set(landcover_count_dict).difference(transition_dict.keys())
+    if len(missing_lulc) > 0 :
+       missing_lulc = list(missing_lulc)
+       missing_lulc.sort()
+       mising_lulc = ", ".join([str(l) for l in missing_lulc])
+       msg = "Missing suitability information for cover(s) %s." % missing_lulc
+       LOGGER.error(msg)
+       raise ValueError, msg
 
 
     #raise warning if nothing going to happen, ie no criteria provided
@@ -217,7 +230,7 @@ def execute(args):
     #error if overall physical weight not in 0 to 1 range
 
     #land attributes table validation
-    #raise error if percent change both specified
+    #raise error if percent and area change both specified
 
     ###
     #resample, align and rasterize data
@@ -564,7 +577,7 @@ def execute(args):
                                             "union")
             suitability_dict[cover_id] = suitability_uri
 
-    return
+
    
     #normalize probabilities to be on a 10 point scale
     #probability raster (reclass using probability matrix)
@@ -579,24 +592,72 @@ def execute(args):
     #reallocate pixels (disk heap sort, randomly reassign equal value pixels, applied in order)
     ###
 
-##    #select pixels
-##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
-##    ds = gdal.Open(ds_uri)
-##
-##    n_cols = ds.RasterXSize
-##    n_rows = ds.RasterYSize
-##    ds = None
-##
-##    dst_ds = gdal.Open(distance_uri, 1)
-##    dst_band = dst_ds.GetRasterBand(1)
-##
-##    for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
-##        if n == 10:
-##           break
-##        dst_band.WriteBlock(flat_index % n_cols, flat_index / n_cols, nodata, 1)
-##
-##    dst_band = None
-##    dst_ds = None
+    #copy initial LULC
+    scenario_uri = os.path.join(workspace, scenario_name)            
+
+    src_ds = gdal.Open(landcover_uri)
+    n_cols = src_ds.RasterXSize
+    n_rows = src_ds.RasterYSize
+
+    ds_type = "GTiff"
+    driver = gdal.GetDriverByName(ds_type)    
+    dst_ds = driver.CreateCopy(scenario_uri, src_ds, 0)
+    dst_ds = None
+    src_ds = None
+       
+    #identify LULC types undergoing change
+    change_list = []
+    for cover_id in transition_dict:
+        percent_change = transition_dict[cover_id][args["percent_field"]]
+        area_change = transition_dict[cover_id][args["area_field"]]
+        if percent_change > 0:
+            change_list.append((transition_dict[cover_id][args["priority_field"]],
+                                cover_id,
+                                int((percent_change / 100.0) \
+                                * landcover_count_dict[cover_id])))
+        elif area_change > 0:
+            change_list.append((transition_dict[cover_id][args["priority_field"]],
+                                cover_id,
+                                int(math.ceil(area_change / cell_size))))
+
+    change_list.sort(reverse=True)
+
+    #change pixels
+    scenario_ds = gdal.Open(scenario_uri, 1)
+    scenario_band = scenario_ds.GetRasterBand(1)
+    
+    for index, (priority, cover_id, count) in enumerate(change_list):
+        LOGGER.debug("Increasing cover %i by %i pixels.", cover_id, count)
+
+        update_ds = {}
+        update_bands = {}
+        for _, update_id, _ in change_list[index+1:]:
+           update_ds[update_id] = gdal.Open(suitability_dict[cover_id], 1)
+           update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
+           
+        #select pixels
+        pixel_heap = disk_sort.sort_to_disk(suitability_dict[cover_id], cover_id)
+
+        for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
+            if n == count or value == 0:
+                if value == 0:
+                   LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
+                break
+            scenario_band.WriteArray(numpy.array([[cover_id]]), flat_index % n_cols, flat_index / n_cols)
+
+            for c_id in update_bands:
+                update_bands[c_id].WriteArray(numpy.array([[0]]), flat_index % n_cols, flat_index / n_cols)
+
+        for c_id in update_bands:
+           update_bands[c_id] = None
+
+        for c_id in update_bands:
+            update_bands[c_id] = None
+
+    scenario_band = None
+    scenario_ds = None
+
+    return
 
     #reallocate
     src_ds = gdal.Open(landcover_uri)
