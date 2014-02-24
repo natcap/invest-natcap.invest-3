@@ -148,7 +148,7 @@ def execute(args):
     ###
     workspace = args["workspace_dir"]
     landcover_uri = args["landcover"]
-    override_uri = args["override"]
+    #override_uri = args["override"]
 
     intermediate_dir = "intermediate"
 
@@ -429,15 +429,17 @@ def execute(args):
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
         constraints_field_name = args["constraints_field"]
-        ds_uri = os.path.join(workspace, constraints_name)
+        constraints_ds_uri = os.path.join(workspace, constraints_name)
         option_list = ["ALL_TOUCHED=FALSE"]
         burn_value = [0]
         constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
         gdal_format = gdal.GDT_Float64
-        raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
-        raster_utils.rasterize_layer_uri(ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
+        raster_utils.new_raster_from_base_uri(landcover_uri, constraints_ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
+        raster_utils.rasterize_layer_uri(constraints_ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
 
         #clump and sieve
+    else:
+        LOGGER.info("Constraints not included.")
 
     proximity_dict = {}
     if "calculate_proximity" in args:
@@ -520,9 +522,12 @@ def execute(args):
         suitability_uri = os.path.join(workspace, adjusted_suitability_name % cover_id)
         if "calculate_constraints" in args:
             if cover_id in proximity_dict:
-                raster_utils.vectorize_datasets([suitability_dict[cover_id],
-                                                 proximity_dict[cover_id],
-                                                 constraints_uri],
+                LOGGER.info("Combining suitability, proximity, and constraints for %i.", cover_id)
+                uri_list = [suitability_dict[cover_id],
+                            constraints_ds_uri,
+                            proximity_dict[cover_id]]
+                LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
+                raster_utils.vectorize_datasets(uri_list,
                                                 constraint_proximity_op,
                                                 suitability_uri,
                                                 transition_type,
@@ -532,8 +537,11 @@ def execute(args):
                 suitability_dict[cover_id] = suitability_uri
                 
             else:
-                raster_utils.vectorize_datasets([suitability_dict[cover_id],
-                                                 constraints_uri],
+                LOGGER.info("Combining suitability and constraints for %i.", cover_id)
+                uri_list = [suitability_dict[cover_id],
+                            constraints_ds_uri]
+                LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
+                raster_utils.vectorize_datasets(uri_list,
                                                 constraint_op,
                                                 suitability_uri,
                                                 transition_type,
@@ -543,8 +551,11 @@ def execute(args):
                 suitability_dict[cover_id] = suitability_uri
 
         elif cover_id in proximity_dict:
-            raster_utils.vectorize_datasets([suitability_dict[cover_id],
-                                             proximity_dict[cover_id]],
+            LOGGER.info("Combining suitability and proximity for %i.", cover_id)
+            uri_list = [suitability_dict[cover_id],
+                        proximity_dict[cover_id]]
+            LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
+            raster_utils.vectorize_datasets(uri_list,
                                             proximity_op,
                                             suitability_uri,
                                             transition_type,

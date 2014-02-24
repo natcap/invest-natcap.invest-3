@@ -275,6 +275,41 @@
                     ]
                 }
             ]
+        },
+        {
+            "id": "calculate_constraints",
+            "args_id": "calculate_constraints",
+            "type": "container",
+            "collapsible": true,
+            "label": "Constraints layer",
+            "defaultsValue": true,
+            "elements": [
+                {
+                    "id": "constraints_layer_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id": "constraints",
+                            "args_id": "constraints",
+                            "label": "Constraints layer",
+                            "type": "file",
+                            "defaultValue": "../ScenarioGenerator/input/constraints.shp",
+                            "validateAs": {"type": "OGR"},                    
+                            "required": false,
+                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+                        },
+                        {
+                            "id": "constraints_field",
+                            "args_id": "constraints_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Constraints field",
+                            "enabledBy": "constraints",
+                            "helpText" : "The field from the override table that contains the value for the override.",
+                            "returns": "strings"
+                        }                        
+                    ]
+                }
+            ]
         },        
         {
             "id": "override_layer",
@@ -319,41 +354,6 @@
                             "enabledBy": "override_field",
                             "helpText": ""
                         }
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "calculate_constraints",
-            "args_id": "calculate_contraints",
-            "type": "container",
-            "collapsible": true,
-            "label": "Constraints layer",
-            "defaultsValue": true,
-            "elements": [
-                {
-                    "id": "constraints_layer_list",
-                    "type": "list",
-                    "elements": [
-                        {
-                            "id": "constraints",
-                            "args_id": "constraints",
-                            "label": "Constraints layer",
-                            "type": "file",
-                            "defaultValue": "../ScenarioGenerator/input/constraints.shp",
-                            "validateAs": {"type": "OGR"},                    
-                            "required": false,
-                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
-                        },
-                        {
-                            "id": "constraints_field",
-                            "args_id": "constraints_field",
-                            "type": "OGRFieldDropdown",
-                            "label": "Constraints field",
-                            "enabledBy": "constraints",
-                            "helpText" : "The field from the override table that contains the value for the override.",
-                            "returns": "strings"
-                        }                        
                     ]
                 }
             ]
