@@ -151,7 +151,7 @@ def execute(args):
     ###
     workspace = args["workspace_dir"]
     landcover_uri = args["landcover"]
-    #override_uri = args["override"]
+    override_uri = args["override"]
 
     intermediate_dir = "intermediate"
 
@@ -701,18 +701,8 @@ def execute(args):
     scenario_band = None
     scenario_ds = None
 
-    return
-
-    #reallocate
-    src_ds = gdal.Open(landcover_uri)
-
-    LOGGER.debug("Copying landcover to %s.", landcover_transition_uri)
-    driver.CreateCopy(landcover_transition_uri, src_ds, 0 )
-    src_ds = None
-
     #apply override
-    field = args["override_field"]
-    LOGGER.info("Overriding pixels using values from field %s.", field)
+    LOGGER.info("Overriding pixels using values from field %s.", args["override_field"])
     datasource = ogr.Open(override_uri)
     layer = datasource.GetLayer()
     dataset = gdal.Open(landcover_transition_uri, 1)
@@ -729,14 +719,16 @@ def execute(args):
 
     if not bool(args["override_inclusion"]):
         LOGGER.debug("Overriding all touched pixels.")
-        options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % field]
+        options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % args["override_field"]]
     else:
         LOGGER.debug("Overriding only pixels with covered center points.")
-        options = ["ATTRIBUTE=%s" % field]
+        options = ["ATTRIBUTE=%s" % args["override_field"]]
     gdal.RasterizeLayer(dataset, [1], layer, options=options)
     dataset.FlushCache()
     datasource = None
     dataset = None
+
+    return
 
     ###
     #tabulate coverages
