@@ -663,6 +663,8 @@ def execute(args):
             change_list.append((transition_dict[cover_id][args["priority_field"]],
                                 cover_id,
                                 int(math.ceil(area_change / cell_size))))
+        else:
+            LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
 
     change_list.sort(reverse=True)
 
