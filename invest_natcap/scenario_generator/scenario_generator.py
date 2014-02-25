@@ -82,7 +82,7 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
     """
 
     raster_utils.get_lookup_from_csv(trasition_uri, transition_key_field)
-    ratser_utils.unique_raster_values_count(landcover_uri)
+    raster_utils.unique_raster_values_count(landcover_uri)
 
    #convert change amount to pixels?
 
