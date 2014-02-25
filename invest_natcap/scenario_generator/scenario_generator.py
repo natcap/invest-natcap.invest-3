@@ -123,6 +123,33 @@ def get_geometry_type_from_uri(datasource_uri):
 
     return shape_type
 
+def sieve_dataset_uri(dataset_in_uri, dataset_out_uri, mask_op, size_op, replacement):
+    src_ds = gdal.Open(dataset_in_uri)
+
+    gdal.GetDriverByName("GTiff").CreateCopy(dataset_out_uri, src_ds, 0 )
+
+    src_band = src_ds.GetRasterBand(1)
+    src_array = src_band.ReadAsArray()
+
+    dst_ds = gdal.Open(dataset_out_uri, 1)
+    dst_band = dst_ds.GetRasterBand(1)
+    dst_array = dst_band.ReadAsArray()
+
+    mask = mask_op(src_array)
+    label_im, nb_labels = scipy.ndimage.label(mask)
+    sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+    mask_size = mask_op(sizes)
+    remove_pixel = mask_size[label_im]
+    label_im[remove_pixel] = replacement
+
+    dst_band.WriteArray(label_im)
+
+    dst_band = None
+    dst_ds = None
+    src_band = None
+    src_ds = None
+
+
 def execute(args):
     ###
     #overiding, non-standard field names
@@ -157,6 +184,18 @@ def execute(args):
 
     if not os.path.exists(os.path.join(workspace, intermediate_dir)):
         os.makedirs(os.path.join(workspace, intermediate_dir))
+
+
+    def mask_op(value):
+       return value == 6
+
+    def size_op(value):
+       return value > 1
+
+    sieve_dataset_uri(landcover_uri, os.path.join(workspace, "filter.tif"), mask_op, size_op, 101)
+
+    return
+   
         
     landcover_resample_uri = os.path.join(workspace, "resample.tif")
 
