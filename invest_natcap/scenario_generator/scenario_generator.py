@@ -359,10 +359,15 @@ def execute(args):
 
     #raise error if percent change for new LULC
     for cover_id in transition_dict:
-       if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
-          msg = "Cover %i does not exist in LULC and therefore cannot have a percent change."
-          LOGGER.error(msg)
-          raise ValueError, msg
+        if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
+            msg = "Cover %i does not exist in LULC and therefore cannot have a percent change."
+            LOGGER.error(msg)
+            raise ValueError, msg
+
+        if (transition_dict[cover_id][args["percent_field"]] > 0) and (transition_dict[cover_id][args["area_field"]] > 0):
+           msg = "Cover %i cannot have both an increase by percent and area."
+           LOGGER.error(msg)
+           raise ValueError, msg
 
 
     #raise warning if nothing is going to happen
@@ -381,6 +386,7 @@ def execute(args):
 
     #land attributes table validation
     #raise error if percent and area change both specified
+    
 
     ###
     #resample, align and rasterize data
