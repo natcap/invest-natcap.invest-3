@@ -148,6 +148,100 @@ def sieve_dataset_uri(dataset_in_uri, dataset_out_uri, mask_op, size_op, replace
     src_band = None
     src_ds = None
 
+def get_transition_set_count_from_uri(dataset_uri_list):
+    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
+    lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
+    nodata = 0
+    
+    #reclass rasters to compact bit space
+    lulc_codes = set()
+    unique_raster_values_count = {}
+    
+    for dataset_uri in dataset_uri_list:
+        unique_raster_values_count[dataset_uri] = raster_utils.unique_raster_values_count(dataset_uri)
+        lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
+        
+    lulc_codes = list(lulc_codes)
+    lulc_codes.sort()
+
+    if len(lulc_codes) < 2 ** 8:
+        data_type = gdal.GDT_UInt16
+        shift = 8
+    elif len(lulc_codes) < 2 ** 16:
+        data_type = gdal.GDT_UInt32
+        shift = 16
+    else:
+        raise ValueError, "Too many LULC codes."
+
+    #renumber and reclass rasters
+    reclass_orig_dict = dict(zip(lulc_codes,range(1,len(lulc_codes)+1)))
+
+    reclass_dest_dict = {}
+    for key in reclass_orig_dict:
+        reclass_dest_dict[key] = reclass_orig_dict[key] << shift
+
+    def add_op(orig, dest):
+        return orig + dest
+
+    counts={}
+    for i in range(len(dataset_uri_list)-1):
+        orig_uri = raster_utils.temporary_filename()
+        dest_uri = raster_utils.temporary_filename()
+        multi_uri = raster_utils.temporary_filename()
+
+        #reclass orig values
+        raster_utils.reclassify_dataset_uri(dataset_uri_list[i],
+                                            reclass_orig_dict,
+                                            orig_uri,
+                                            data_type,
+                                            nodata,
+                                            exception_flag="values_required")
+
+        #reclass dest values
+        raster_utils.reclassify_dataset_uri(dataset_uri_list[i+1],
+                                            reclass_dest_dict,
+                                            dest_uri,
+                                            data_type,
+                                            nodata,
+                                            exception_flag="values_required")
+
+        #multiplex orig with dest
+        raster_utils.vectorize_datasets([orig_uri, dest_uri],
+                                        add_op,
+                                        multi_uri,
+                                        data_type,
+                                        nodata,
+                                        cell_size,
+                                        "union")
+    
+        #get unique counts
+        counts[i]=raster_utils.unique_raster_values_count(multi_uri, False)
+
+    restore_classes = {}
+    for key in reclass_orig_dict:
+        restore_classes[reclass_orig_dict[key]] = key
+    restore_classes[nodata] = lulc_nodata
+
+    LOGGER.debug("Decoding transition table.")
+    transitions = {}
+    for key in counts:
+        transitions[key]={}
+        for k in counts[key]:
+            try:
+                orig = restore_classes[k % (2**shift)]
+            except KeyError:
+                orig = lulc_nodata
+            try:
+                dest = restore_classes[k >> shift]
+            except KeyError:
+                dest = lulc_nodata
+                
+            try:
+                transitions[key][orig][dest] = counts[key][k]
+            except KeyError:
+                transitions[key][orig] = {dest : counts[key][k]}
+
+    return unique_raster_values_count, transitions
 
 def execute(args):
     ###
