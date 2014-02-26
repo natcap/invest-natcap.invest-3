@@ -45,9 +45,46 @@
                     "dataType": "float",
                     "required": false,
                     "helpText": "The spatial resolution of the model run."
-                }                    
+                },
+                {
+                    "id": "transition",
+                    "args_id": "transition",
+                    "type": "file",
+                    "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
+                    "label": "Transition Table",
+                    "required": false,
+                    "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
+                }                
             ]
         },
+        {
+            "id" : "calculate_proximity",
+            "args_id" : "calculate_proximity",            
+            "type" : "container",
+            "collapsible" : true,
+            "label" : "Proximity",
+            "defaultValue": true,
+            "enabledBy": "transition",
+            "elements" : [
+                {
+                    "id" : "calculate_proximity_list",
+                    "type": "hiddenElement",
+                    "elements": [
+                        {
+                            "id": "proximity_weight",
+                            "args_id": "proximity_weight",
+                            "label" : "Weight",
+                            "type": "text",
+                            "defaultValue" : "0.3",
+                            "validText": "[0-9]*(\\.[0-9]*)?",
+                            "dataType": "float",
+                            "required": false,
+                            "helpText": ""
+                        }
+                    ]
+                }
+            ]
+        },       
         {
             "id" : "calculate_transition",
             "args_id" : "calculate_transition",            
@@ -55,20 +92,12 @@
             "collapsible" : true,
             "label" : "Specify transitions",
             "defaultValue": true,
+            "enabledBy": "transition",
             "elements" : [
                 {
                     "id" : "calculate_transition_list",
-                    "type": "list",
+                    "type": "hiddenElement",
                     "elements": [
-                                    {
-                                        "id": "transition",
-                                        "args_id": "transition",
-                                        "type": "file",
-                                        "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
-                                        "label": "Transition Table",
-                                        "required": true,
-                                        "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
-                                    }
                                 ]
                 },
                 {
@@ -140,92 +169,10 @@
             ]
         },
         {
-            "id": "override_layer",
-            "type": "container",
-            "collapsible": true,
-            "args_id": "override_layer",
-            "label": "Override layer",
-            "defaultValue": true,
-            "elements": [
-                {
-                    "id" : "workspace2_list",
-                    "type" : "list",
-                    "elements" : [
-                        {
-                            "id": "override",
-                            "args_id": "override",
-                            "label": "Override Layer",                    
-                            "type": "file",
-                            "defaultValue": "../ScenarioGenerator/input/override.shp",
-                            "validateAs": {"type": "OGR"},                    
-                            "required": false,
-                            "helpText": "This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
-                        },
-                        {
-                            "id": "override_field",
-                            "args_id": "override_field",
-                            "type": "OGRFieldDropdown",
-                            "label": "Override field",
-                            "enabledBy": "override",
-                            "helpText" : "The field from the override table that contains the value for the override.",
-                            "returns": "strings"
-                        },
-                        {
-                            "id": "override_inclusion",
-                            "args_id": "override_inclusion",
-                            "type": "dropdown",
-                            "label": "Rasterization method",
-                            "options": ["All touched pixels", "Only pixels with covered center points"],
-                            "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
-                            "defaultValue": 0,
-                            "required": true,
-                            "enabledBy": "override_field",
-                            "helpText": ""
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "constraints_layer",
-            "args_id": "contraints_layer",
-            "type": "container",
-            "collapsible": true,
-            "label": "Constraints layer",
-            "defaultsValue": true,
-            "elements": [
-                {
-                    "id": "constraints_layer_list",
-                    "type": "list",
-                    "elements": [
-                        {
-                            "id": "constraints",
-                            "args_id": "constraints",
-                            "label": "Constraints layer",
-                            "type": "file",
-                            "defaultValue": "../ScenarioGenerator/input/constraints.shp",
-                            "validateAs": {"type": "OGR"},                    
-                            "required": false,
-                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
-                        },
-                        {
-                            "id": "constraints_field",
-                            "args_id": "constraints_field",
-                            "type": "OGRFieldDropdown",
-                            "label": "Constraints field",
-                            "enabledBy": "constraints",
-                            "helpText" : "The field from the override table that contains the value for the override.",
-                            "returns": "strings"
-                        }                        
-                    ]
-                }
-            ]
-        },
-        {
-            "id" : "factors",
+            "id" : "calculate_factors",
             "type" : "container",
             "collapsible" : true,
-            "args_id" : "factors",
+            "args_id" : "calculate_factors",
             "label" : "Use factors",
             "defaultValue": true,
             "elements" : [
@@ -324,6 +271,88 @@
                                     "required": true
                                 }
                             ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "calculate_constraints",
+            "args_id": "calculate_constraints",
+            "type": "container",
+            "collapsible": true,
+            "label": "Constraints layer",
+            "defaultsValue": true,
+            "elements": [
+                {
+                    "id": "constraints_layer_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id": "constraints",
+                            "args_id": "constraints",
+                            "label": "Constraints layer",
+                            "type": "file",
+                            "defaultValue": "../ScenarioGenerator/input/constraints.shp",
+                            "validateAs": {"type": "OGR"},                    
+                            "required": false,
+                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+                        },
+                        {
+                            "id": "constraints_field",
+                            "args_id": "constraints_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Constraints field",
+                            "enabledBy": "constraints",
+                            "helpText" : "The field from the override table that contains the value for the override.",
+                            "returns": "strings"
+                        }                        
+                    ]
+                }
+            ]
+        },        
+        {
+            "id": "override_layer",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "override_layer",
+            "label": "Override layer",
+            "defaultValue": true,
+            "elements": [
+                {
+                    "id" : "workspace2_list",
+                    "type" : "list",
+                    "elements" : [
+                        {
+                            "id": "override",
+                            "args_id": "override",
+                            "label": "Override Layer",                    
+                            "type": "file",
+                            "defaultValue": "../ScenarioGenerator/input/override.shp",
+                            "validateAs": {"type": "OGR"},                    
+                            "required": false,
+                            "helpText": "This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
+                        },
+                        {
+                            "id": "override_field",
+                            "args_id": "override_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Override field",
+                            "enabledBy": "override",
+                            "helpText" : "The field from the override table that contains the value for the override.",
+                            "returns": "strings"
+                        },
+                        {
+                            "id": "override_inclusion",
+                            "args_id": "override_inclusion",
+                            "type": "dropdown",
+                            "label": "Rasterization method",
+                            "options": ["All touched pixels", "Only pixels with covered center points"],
+                            "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
+                            "defaultValue": 0,
+                            "required": true,
+                            "enabledBy": "override_field",
+                            "helpText": ""
                         }
                     ]
                 }

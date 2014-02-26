@@ -507,7 +507,7 @@ class Executor(threading.Thread):
             for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
 
                 if tmp_variable in os.environ:
-                    LOGGER.info('Upddating os.environ["%s"]=%s to %s' % (tmp_variable, os.environ[tmp_variable], args['workspace_dir']))
+                    LOGGER.info('Updating os.environ["%s"]=%s to %s' % (tmp_variable, os.environ[tmp_variable], args['workspace_dir']))
                 else:
                     LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
 
