@@ -39,27 +39,38 @@
                                 "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
+                            },
+                            {
+                                "id" : "cell_size",
+                                "args_id" : "cell_size",
+                                "type": "text",
+                                "label": "Cell Size (meters)",
+                                "defaultValue": "500",
+                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                "dataType": "float",
+                                "required": false,
+                                "helpText": "Length (in meters) of each side of the (square) cell."
                             },
                             {
                                 "id" : "structure_uri",
                                 "args_id" : "structure_uri",
                                 "type": "file",
-                                "label": "Structures",
+                                "label": "Features impacting Aesthetic Quality",
                                 "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "The user must specify a point feature layer that indicates locations of objects that contribute to negative aesthetic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
                             },
                             {
                                 "id" : "dem_uri",
                                 "args_id" : "dem_uri",
                                 "type": "file",
-                                "label": "Digital Elevation Model",
+                                "label": "Digital Elevation Model (DEM)",
                                 "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
                                 "validateAs": {"type": "GDAL"},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible."
                             },                                
                             {
                                 "id" : "refraction",
@@ -70,28 +81,17 @@
                                 "validText": "[0-9]+(\\.[0-9][0-9])?",
                                 "dataType": "float",
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "The earth curvature correction option corrects for the curvature of the earth and refraction of visible light in air. Changes in air density curve the light downward causing an observer to see further and the earth to appear less curved. While the magnitude of this effect varies with atmospheric conditions, a standard rule of thumb is that refraction of visible light reduces the apparent curvature of the earth by one-seventh. By default, this model corrects for the curvature of the earth and sets the refractivity coefficient to 0.13."
                             },                                
-                            {
-                                "id" : "cell_size",
-                                "args_id" : "cell_size",
-                                "type": "text",
-                                "label": "Cell Size (meters)",
-                                "defaultValue": "500",
-                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                "dataType": "float",
-                                "required": false,
-                                "helpText": ""
-                            },
                             {
                                 "id" : "pop_uri",
                                 "args_id" : "pop_uri",
                                 "type": "file",
-                                "label": "Population Raster",
+                                "label": "Population Raster (Optional)",
                                 "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
                                 "validateAs": {"type": "GDAL"},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible and not visible."
                             },
                             {
                                 "id" : "overlap_uri",
@@ -101,7 +101,7 @@
                                 "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": false,
-                                "helpText": ""
+                                "helpText": "The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting aesthetic quality."
                             }
                             ]
                         }
@@ -127,7 +127,7 @@
                                     "options":["polynomial: a + bx + cx^2 + dx^3", "logarithmic: a + b ln(x)"],
                                     "returns": "strings",
                                     "defaultValue": 0,
-                                    "helpText": ""
+                                    "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x&lt;1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
                                 },
                                 {
                                     "id" : "a_coefficient",
@@ -138,7 +138,7 @@
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
-                                    "helpText": ""
+                                    "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
                                     "id" : "b_coefficient",
@@ -149,7 +149,7 @@
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
-                                    "helpText": ""
+                                    "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
                                     "id" : "c_coefficient",
@@ -160,7 +160,7 @@
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
-                                    "helpText": ""
+                                    "helpText": "Third coefficient for the polynomial's quadratic term."
                                 },
                                 {
                                     "id" : "d_coefficient",
@@ -171,7 +171,7 @@
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
-                                    "helpText": ""
+                                    "helpText": "Fourth coefficient for the polynomial's cubic exponent."
                                 },
                                 {
                                     "id" : "max_valuation_radius",
@@ -182,7 +182,7 @@
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
-                                    "helpText": ""
+                                    "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."
                                 }                               
                                 ]
                         }                        ]
