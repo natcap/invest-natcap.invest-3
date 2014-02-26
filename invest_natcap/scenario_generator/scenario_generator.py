@@ -880,18 +880,61 @@ def execute(args):
 
     unique_raster_values_count, transitions = get_transition_set_count_from_uri([landcover_uri, scenario_uri])
 
-    return
-    htm = open(os.path.join(workspace, "report.html"),'w')
+    htm = open(landcover_htm_uri,'w')
     htm.write("<HTML><TITLE>Scenario Generator Report</TITLE>")
 
-    htm.write("\n<TABLE>")
-    initial_cover_id_list = unique_raster_values_count[0].keys()
+    htm.write("<B>Initial Landscape</B>")
+    htm.write("\n<TABLE BORDER=1>")
+    initial_cover_id_list = unique_raster_values_count[landcover_uri].keys()
     initial_cover_id_list.sort()
-    htm.write("\n<TR><TD>")
-    htm.write("</TD><TD>".join(initial_cover_id_list))
+
+    htm.write("\n<TR><TD>ID</TD><TD>")
+    htm.write("</TD><TD>".join([str(cover_id) for cover_id in initial_cover_id_list]))
     htm.write("\n</TD></TR>")
 
-    htm.write("\n<\TABLE>")
+    htm.write("\n<TR><TD>Count</TD><TD>")
+    htm.write("</TD><TD>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
+    htm.write("\n</TD></TR>")
+    
+    htm.write("\n</TABLE>")
 
-    htm.write("\n<\HTML>")
+    htm.write("\n</HTML>")
+
+
+    htm.write("<P><P><B>Scenario Landscape</B>")
+    htm.write("\n<TABLE BORDER=1>")
+    scenario_cover_id_list = unique_raster_values_count[scenario_uri].keys()
+    scenario_cover_id_list.sort()
+
+    htm.write("\n<TR><TD>ID</TD><TD>")
+    htm.write("</TD><TD>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</TD></TR>")
+
+    htm.write("\n<TR><TD>Count</TD><TD>")
+    htm.write("</TD><TD>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</TD></TR>")
+    
+    htm.write("\n</TABLE>")
+
+
+    htm.write("<P><P><B>Transition Matrix</B>")
+    htm.write("\n<TABLE BORDER=1>")    
+    htm.write("\n<TR><TD>ID</TD><TD>")
+    htm.write("</TD><TD>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</TD></TR>")
+
+    for initial_cover_id in initial_cover_id_list:
+        htm.write("\n<TR><TD>%i</TD>" % initial_cover_id)
+        for scenario_cover_id in scenario_cover_id_list:
+            try:
+                htm.write("<TD>%i</TD>" % transitions[0][initial_cover_id][scenario_cover_id])
+            except KeyError:
+                htm.write("<TD><FONT COLOR=lightgray>%i</FONT></TD>" % 0)
+
+        htm.write("\n</TR>")
+       
+    htm.write("\n</TABLE>")
+
+    htm.write("\n</HTML>")
+
     htm.close()
