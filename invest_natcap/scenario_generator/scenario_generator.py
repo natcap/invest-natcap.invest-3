@@ -874,38 +874,24 @@ def execute(args):
        datasource = None
        dataset = None
 
-    return
-
     ###
     #tabulate coverages
     ###
-    htm = open(landcover_htm_uri,'w')
-    htm.write("<html>")
 
-    LOGGER.debug("Tabulating %s.", landcover_uri)
-    landcover_counts = raster_utils.unique_raster_values_count(landcover_uri)
+    unique_raster_values_count, transitions = get_transition_set_count_from_uri([landcover_uri, scenario_uri])
 
-    LOGGER.debug("Tabulating %s.", landcover_transition_uri)
-    landcover_transition_counts = raster_utils.unique_raster_values_count(
-        landcover_transition_uri)
+    return
+    htm = open(os.path.join(workspace, "report.html"),'w')
+    htm.write("<HTML><TITLE>Scenario Generator Report</TITLE>")
 
-    for k in landcover_transition_counts:
-        if k not in landcover_counts:
-            landcover_counts[k]=0
+    htm.write("\n<TABLE>")
+    initial_cover_id_list = unique_raster_values_count[0].keys()
+    initial_cover_id_list.sort()
+    htm.write("\n<TR><TD>")
+    htm.write("</TD><TD>".join(initial_cover_id_list))
+    htm.write("\n</TD></TR>")
 
-    for k in landcover_counts:
-        if k not in landcover_transition_counts:
-            landcover_transition_counts[k]=0
+    htm.write("\n<\TABLE>")
 
-    landcover_keys = landcover_counts.keys()
-    landcover_keys.sort()
-
-    htm.write("Land Use Land Cover")
-    htm.write("<table border = \"1\">")
-    htm.write("<tr><td>Type</td><td>Initial Count</td><td>Final Count</td><td>Difference</td></tr>")
-    for k in landcover_keys:
-        htm.write("<tr><td>%i</td><td>%i</td><td>%i</td><td>%i</td></tr>" % (k, landcover_counts[k], landcover_transition_counts[k], landcover_transition_counts[k] - landcover_counts[k]))
-    htm.write("</table>")
-
-    htm.write("</html>")
+    htm.write("\n<\HTML>")
     htm.close()
