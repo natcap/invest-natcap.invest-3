@@ -357,6 +357,13 @@ def execute(args):
        LOGGER.error(msg)
        raise ValueError, msg
 
+    #raise error if percent change for new LULC
+    for cover_id in transition_dict:
+       if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
+          msg = "Cover %i does not exist in LULC and therefore cannot have a percent change."
+          LOGGER.error(msg)
+          raise ValueError, msg
+
 
     #raise warning if nothing is going to happen
     if not any([args["calculate_transition"],
