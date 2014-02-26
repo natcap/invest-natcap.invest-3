@@ -75,7 +75,7 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
     3 PIXELCHANGE  The number of pixels expected to change
     4 PRIORITY  The priority of this landcover (objective)
     5 PROXIMITY Is this landcover suitability affected by proximity, eg do pixels
-                closer to agriculture have higher chances of converting to agriculture [0,1]
+                closer to agrizculture have higher chances of converting to agriculture [0,1]
     6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m)
     7 PATCHHA Minimum size of patch
     8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC
@@ -235,7 +235,7 @@ def execute(args):
 
     try:
        physical_suitability_weight = float(args["weight"])
-    except ValueError:
+    except KeyError:
        physical_suitability_weight = 0.5
 
     def suitability_op(trans, suit):
