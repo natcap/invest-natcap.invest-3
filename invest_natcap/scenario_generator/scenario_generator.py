@@ -177,7 +177,6 @@ def execute(args):
     ###
     workspace = args["workspace_dir"]
     landcover_uri = args["landcover"]
-    override_uri = args["override"]
 
     intermediate_dir = "intermediate"
 
@@ -266,9 +265,9 @@ def execute(args):
 
 
     #raise warning if nothing is going to happen
-    if not any([task in args for task in ["calculate_transition",
-                                          "calculate_factors",
-                                          "override_inclusion"]]):
+    if not any([args["calculate_transition"],
+               args["calculate_factors"],
+               args["override_layer"]]):
        msg = "You must select at least of of the following: specify transitions, use factors, or override layer."
        LOGGER.error(msg)
        raise ValueError, msg
@@ -333,7 +332,7 @@ def execute(args):
                 suitability_transition_dict[next_lulc] = this_uri
                       
     suitability_factors_dict = {}
-    if "calculate_factors" in args:
+    if args["calculate_factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
@@ -535,7 +534,7 @@ def execute(args):
     ###
 
     #contraints raster (reclass using permability values, filters on clump size)
-    if "calculate_constraints" in args:
+    if args["calculate_constraints"]:
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
         constraints_field_name = args["constraints_field"]
@@ -551,7 +550,7 @@ def execute(args):
         LOGGER.info("Constraints not included.")
 
     proximity_dict = {}
-    if "calculate_proximity" in args:
+    if args["calculate_proximity"]:
         LOGGER.info("Calculating proximity.")
         cover_types = transition_dict.keys()
         for cover_id in transition_dict:
@@ -629,7 +628,7 @@ def execute(args):
       
     for cover_id in suitability_dict:
         suitability_uri = os.path.join(workspace, adjusted_suitability_name % cover_id)
-        if "calculate_constraints" in args:
+        if args["calculate_constraints"]:
             if cover_id in proximity_dict:
                 LOGGER.info("Combining suitability, proximity, and constraints for %i.", cover_id)
                 uri_list = [suitability_dict[cover_id],
@@ -754,31 +753,32 @@ def execute(args):
     scenario_ds = None
 
     #apply override
-    LOGGER.info("Overriding pixels using values from field %s.", args["override_field"])
-    datasource = ogr.Open(override_uri)
-    layer = datasource.GetLayer()
-    dataset = gdal.Open(scenario_uri, 1)
+    if args["override_layer"]:
+       LOGGER.info("Overriding pixels using values from field %s.", args["override_field"])
+       datasource = ogr.Open(args["override"])
+       layer = datasource.GetLayer()
+       dataset = gdal.Open(scenario_uri, 1)
 
-    if dataset == None:
-        msg = "Could not open landcover transition raster."
-        LOGGER.error(msg)
-        raise IOError, msg
+       if dataset == None:
+           msg = "Could not open landcover transition raster."
+           LOGGER.error(msg)
+           raise IOError, msg
 
-    if datasource == None:
-        msg = "Could not open override vector."
-        LOGGER.error(msg)
-        raise IOError, msg
+       if datasource == None:
+           msg = "Could not open override vector."
+           LOGGER.error(msg)
+           raise IOError, msg
 
-    if not bool(args["override_inclusion"]):
-        LOGGER.debug("Overriding all touched pixels.")
-        options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % args["override_field"]]
-    else:
-        LOGGER.debug("Overriding only pixels with covered center points.")
-        options = ["ATTRIBUTE=%s" % args["override_field"]]
-    gdal.RasterizeLayer(dataset, [1], layer, options=options)
-    dataset.FlushCache()
-    datasource = None
-    dataset = None
+       if not bool(args["override_inclusion"]):
+           LOGGER.debug("Overriding all touched pixels.")
+           options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % args["override_field"]]
+       else:
+           LOGGER.debug("Overriding only pixels with covered center points.")
+           options = ["ATTRIBUTE=%s" % args["override_field"]]
+       gdal.RasterizeLayer(dataset, [1], layer, options=options)
+       dataset.FlushCache()
+       datasource = None
+       dataset = None
 
     return
 
