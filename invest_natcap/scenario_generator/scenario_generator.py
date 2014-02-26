@@ -248,7 +248,7 @@ def execute(args):
     #overiding, non-standard field names
     ###
 
-    #transition fields
+    #transition table fields
     args["transition_id"] = "Id"
     args["percent_field"] = "Percent Change"
     args["area_field"] = "Area Change"
@@ -257,7 +257,7 @@ def execute(args):
     args["proximity_weight"] = "0.3"
     args["patch_field"] = "Patch ha"
 
-    #factors fields
+    #factors table fields
     args["suitability_id"] =  "Id"
     args["suitability_layer"] = "Layer"
     args["suitability_weight"] = "Wt"
@@ -277,6 +277,14 @@ def execute(args):
     if not os.path.exists(os.path.join(workspace, intermediate_dir)):
         os.makedirs(os.path.join(workspace, intermediate_dir))
 
+    proximity_weight = float(args["proximity_weight"])
+
+    #it might be better to just check if factors being used
+    try:
+       physical_suitability_weight = float(args["weight"])
+    except KeyError:
+       physical_suitability_weight = 0.5
+
 
 ##    def mask_op(value):
 ##       """
@@ -291,7 +299,9 @@ def execute(args):
 ##
 ##    return
    
-        
+
+    ##output file names
+    #absolute paths
     landcover_resample_uri = os.path.join(workspace, "resample.tif")
 
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
@@ -300,6 +310,7 @@ def execute(args):
 
     raster_utils.create_directories([workspace])
 
+    #relative paths, or with patterned name
     transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
     suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
     normalized_name = os.path.join(intermediate_dir, "%s_%s_norm.tif")
@@ -313,31 +324,23 @@ def execute(args):
 
     scenario_name = "scenario.tif"
 
+    ###
     #constants
+    ###
     raster_format = "GTiff"
     transition_type = gdal.GDT_Int16
     transition_nodata = -1
 
+    #value to multiply transition matrix entries (ie covert 10 point scale to 100 point scale)
     transition_scale = 10
     distance_scale = 100
 
     suitability_nodata = 0
     suitability_type = gdal.GDT_Int16
 
-    proximity_weight = float(args["proximity_weight"])
-
-    try:
-       physical_suitability_weight = float(args["weight"])
-    except KeyError:
-       physical_suitability_weight = 0.5
-
     def suitability_op(trans, suit):
         return ((1 - physical_suitability_weight) * trans)\
                + (physical_suitability_weight * suit)
-
-    if "transition" in args:
-        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
-
 
     ds_type = "GTiff"
     driver = gdal.GetDriverByName(ds_type)
@@ -345,48 +348,58 @@ def execute(args):
     ###
     #validate data
     ###
+    #raise warning if nothing is going to happen
+    if not any([args["calculate_transition"],
+                args["calculate_factors"],
+                args["override_layer"]]):
+        msg = "You must select at least one of the following: specify transitions, use factors, or override layer."
+        LOGGER.error(msg)
+        raise ValueError, msg
 
-    #raise error if LULC contains id's not in transition table
-    landcover_count_dict = raster_utils.unique_raster_values_count(landcover_uri)
-    missing_lulc = set(landcover_count_dict).difference(transition_dict.keys())
-    if len(missing_lulc) > 0 :
-       missing_lulc = list(missing_lulc)
-       missing_lulc.sort()
-       mising_lulc = ", ".join([str(l) for l in missing_lulc])
-       msg = "Missing suitability information for cover(s) %s." % missing_lulc
-       LOGGER.error(msg)
-       raise ValueError, msg
-
-    #raise error if percent change for new LULC
-    for cover_id in transition_dict:
-        if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
-            msg = "Cover %i does not exist in LULC and therefore cannot have a percent change." % cover_id
+    ##transition table validation
+    #raise error if transition table provided, but not used
+    if args["transition"] and not(args["calculate_transition"] or args["calculate_factors"]):
+        msg = "Transition table provided but not used."
+        LOGGER.error(msg)
+        raise ValueError, msg
+      
+    if args["calculate_transition"] or args["calculate_factors"]:
+        #load transition table
+        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+        
+        #raise error if LULC contains cover id's not in transition table
+        landcover_count_dict = raster_utils.unique_raster_values_count(landcover_uri)
+        missing_lulc = set(landcover_count_dict).difference(transition_dict.keys())
+        if len(missing_lulc) > 0 :
+            missing_lulc = list(missing_lulc)
+            missing_lulc.sort()
+            mising_lulc = ", ".join([str(l) for l in missing_lulc])
+            msg = "Missing suitability information for cover(s) %s." % missing_lulc
             LOGGER.error(msg)
             raise ValueError, msg
 
-        if (transition_dict[cover_id][args["percent_field"]] > 0) and (transition_dict[cover_id][args["area_field"]] > 0):
-           msg = "Cover %i cannot have both an increase by percent and area." % cover_id
-           LOGGER.error(msg)
-           raise ValueError, msg
+        for cover_id in transition_dict:
+            #raise error if percent change for new LULC           
+            if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
+                msg = "Cover %i does not exist in LULC and therefore cannot have a percent change." % cover_id
+                LOGGER.error(msg)
+                raise ValueError, msg
 
-
-    #raise warning if nothing is going to happen
-    if not any([args["calculate_transition"],
-               args["calculate_factors"],
-               args["override_layer"]]):
-       msg = "You must select at least of of the following: specify transitions, use factors, or override layer."
-       LOGGER.error(msg)
-       raise ValueError, msg
+            #raise error if change by percent and area both specified
+            if (transition_dict[cover_id][args["percent_field"]] > 0) and (transition_dict[cover_id][args["area_field"]] > 0):
+                msg = "Cover %i cannot have both an increase by percent and area." % cover_id
+                LOGGER.error(msg)
+                raise ValueError, msg
     
-    #suitiblity validation
-    #if polygon no distance field allowed
-    #if point or line, integer distance field only
-    #error if same factor twice
-    #error if overall physical weight not in 0 to 1 range
-
-    #land attributes table validation
-    #raise error if percent and area change both specified
-    
+    ##factor parameters validation
+    if args["calculate_factors"]:
+        pass
+        #error if overall physical weight not in [0, 1] range
+      
+        ##factor table validation
+        #if polygon no distance field allowed
+        #if point or line, integer distance field only
+        #error if same factor twice for same coverage
 
     ###
     #resample, align and rasterize data
@@ -394,6 +407,7 @@ def execute(args):
 
     #check geographic extents, projections
 
+    #validate resampling size
     if args["resolution"] != "":
        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
           msg = "The analysis resolution cannot be smaller than the input."
@@ -410,7 +424,7 @@ def execute(args):
 
     suitability_transition_dict = {}
    
-    if "calculate_transition" in args:
+    if args["calculate_transition"]:
         for next_lulc in transition_dict:
             this_uri = os.path.join(workspace, transition_name % next_lulc)
             #construct reclass dictionary
@@ -570,9 +584,9 @@ def execute(args):
               suitability_factors_dict[cover_id] = ds_uri
 
     suitability_dict = {}
-    if "calculate_transition" in args:
+    if args["calculate_transition"]:
         suitability_dict = suitability_transition_dict
-        if "calculate_factors" in args:
+        if args["calculate_factors"]:
            for cover_id in suitability_factors_dict:
               if cover_id in suitability_dict:
                  LOGGER.info("Combining suitability for cover %i.", cover_id)
@@ -588,7 +602,7 @@ def execute(args):
                  suitability_dict[cover_id] = ds_uri
               else:
                   suitability_dict[cover_id] = suitability_factors_dict[cover_id]
-    elif "calculate_factors" in args:
+    elif args["calculate_factors"]:
         suitability_dict = suitability_factors_dict
 
 ##    #clump and sieve
@@ -827,10 +841,12 @@ def execute(args):
     #change pixels
     scenario_ds = gdal.Open(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
-    
+
+    unconverted_pixels = {}
     for index, (priority, cover_id, count) in enumerate(change_list):
         LOGGER.debug("Increasing cover %i by %i pixels.", cover_id, count)
 
+        #open all lower priority suitability rasters and assign changed pixels value of 0
         update_ds = {}
         update_bands = {}
         for _, update_id, _ in change_list[index+1:]:
@@ -843,8 +859,9 @@ def execute(args):
         for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
             if n == count or value == 0:
                 if value == 0:
-                   LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
-                break
+                    LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
+                    unconverted_pixels[cover_id] = count - (n -1)
+                    break
             scenario_band.WriteArray(numpy.array([[cover_id]]), flat_index % n_cols, flat_index / n_cols)
 
             for c_id in update_bands:
@@ -948,6 +965,17 @@ def execute(args):
        
     htm.write("\n</TABLE>")
 
+    unconverted_cover_id_list = unconverted_pixels.keys()
+    unconverted_cover_id_list.sort()
+    if len(unconverted_cover_id) > 0:
+       htm.write("<P><P><B>Unconverted Pixels</B>")
+       htm.write("\n<TABLE BORDER=1>")
+       htm.write("<TR><TD>ID</TD><TD>Count</TD></TR>")
+       for cover_id in unconverted_cover_id_list:
+          htm.write("TR><TD>%i</TD><TD>%i</TD></TR>" % (cover_id, unconverted_pixels[cover_id]))
+       htm.write("\n</TABLE>")
+    else:
+        htm.write("<P><P><I>All target pixels converted.</I>")
     htm.write("\n</HTML>")
 
     htm.close()
