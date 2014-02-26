@@ -78,7 +78,7 @@
                             "defaultValue" : "0.3",
                             "validText": "[0-9]*(\\.[0-9]*)?",
                             "dataType": "float",
-                            "required": false,
+                            "required": true,
                             "helpText": ""
                         }
                     ]
@@ -206,7 +206,7 @@
                             "validText": "[0](\\.[0-9][0-9])?",
                             "dataType": "float",
                             "defaultValue": "0.5",
-                            "required": false,
+                            "required": true,
                             "helpText": "The factor weight is a value between 0 and 1 which determines the weight given to the factors vs. the expert opinion likelihood rasters.  For example, if a weight of 0.3 is entered then 30% of the final suitability is contributed by the factors and the likelihood matrix contributes 70%.  This value is entered on the tool interface."
                         },
                         {

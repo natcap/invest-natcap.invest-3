@@ -265,10 +265,14 @@ def execute(args):
        raise ValueError, msg
 
 
-    #raise warning if nothing going to happen, ie no criteria provided
-    #user must select at least one of the sutibility options (transitions - matrix, factors - shapefiles)
-    #the weight field must contain a value
-
+    #raise warning if nothing is going to happen
+    if not any([task in args for task in ["calculate_transition",
+                                          "calculate_factors",
+                                          "override_inclusion"]]):
+       msg = "You must select at least of of the following: specify transitions, use factors, or override layer."
+       LOGGER.error(msg)
+       raise ValueError, msg
+    
     #suitiblity validation
     #if polygon no distance field allowed
     #if point or line, integer distance field only
@@ -281,6 +285,8 @@ def execute(args):
     ###
     #resample, align and rasterize data
     ###
+
+    #check geographic extents, projections
 
     if args["resolution"] != "":
        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
@@ -297,7 +303,7 @@ def execute(args):
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
 
     suitability_transition_dict = {}
-
+   
     if "calculate_transition" in args:
         for next_lulc in transition_dict:
             this_uri = os.path.join(workspace, transition_name % next_lulc)
