@@ -861,7 +861,7 @@ def execute(args):
                 if value == 0:
                     LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
                     unconverted_pixels[cover_id] = count - (n -1)
-                    break
+                break
             scenario_band.WriteArray(numpy.array([[cover_id]]), flat_index % n_cols, flat_index / n_cols)
 
             for c_id in update_bands:
@@ -967,12 +967,12 @@ def execute(args):
 
     unconverted_cover_id_list = unconverted_pixels.keys()
     unconverted_cover_id_list.sort()
-    if len(unconverted_cover_id) > 0:
+    if len(unconverted_cover_id_list) > 0:
        htm.write("<P><P><B>Unconverted Pixels</B>")
        htm.write("\n<TABLE BORDER=1>")
        htm.write("<TR><TD>ID</TD><TD>Count</TD></TR>")
        for cover_id in unconverted_cover_id_list:
-          htm.write("TR><TD>%i</TD><TD>%i</TD></TR>" % (cover_id, unconverted_pixels[cover_id]))
+          htm.write("<TR><TD>%i</TD><TD>%i</TD></TR>" % (cover_id, unconverted_pixels[cover_id]))
        htm.write("\n</TABLE>")
     else:
         htm.write("<P><P><I>All target pixels converted.</I>")
