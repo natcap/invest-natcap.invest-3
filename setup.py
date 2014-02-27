@@ -104,6 +104,7 @@ packages = ['invest_natcap',
             'invest_natcap.fisheries',
             'invest_natcap.ntfp',
             'invest_natcap.blue_carbon',
+            'invest_natcap.scenario_generator',
             ]
 
 def get_iui_resource_data_files(lib_path):
@@ -163,7 +164,8 @@ if platform.system() == 'Windows':
          'invest_monthly_water_yield.py',
          'invest_blue_carbon.py',
          'invest_blue_carbon_preprocessor.py',
-         'invest_test_all.py']
+         'invest_test_all.py',
+         'invest_scenario_generator.py']
 
     from py2exe.build_exe import py2exe as py2exeCommand
 
