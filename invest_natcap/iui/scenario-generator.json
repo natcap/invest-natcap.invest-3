@@ -69,6 +69,7 @@
                     "label": "Priorities table",
                     "type": "file",
                     "required": true,
+                    "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
                     "enabledBy": "calculate_priorities"
                 }
             ]

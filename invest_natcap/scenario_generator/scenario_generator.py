@@ -404,6 +404,9 @@ def execute(args):
     ###
     #resample, align and rasterize data
     ###
+    if args["calculate_priorities"]:
+        priorities_csv_uri = args["priorities_csv_uri"]
+
 
     #check geographic extents, projections
 
@@ -977,5 +980,24 @@ def execute(args):
     else:
         htm.write("<P><P><I>All target pixels converted.</I>")
     htm.write("\n</HTML>")
+
+    #input CSVs
+    input_csv_list = []
+
+    if args["calculate_priorities"]:
+       input_csv_list.append((args["priorities_csv_uri"], "Priorities Table"))
+
+    if args["calculate_transition"] or args["calculate_factors"]:
+        input_csv_list.append((args["transition"], "Transition Table"))
+
+    if args["calculate_factors"]:
+        input_csv_list.append((args["suitability"], "Factors Table"))
+    
+    htm.write("<P><P><B>Input Tables</B><P><P>")
+    for csv_uri, name in input_csv_list:
+        table = "\n<TABLE BORDER=1><TR><TD>" + open(csv_uri).read().strip().replace(",","</TD><TD>").replace("\n","</TD></TR><TR><TD>") + "</TD></TR></TABLE>"
+
+        htm.write("<P><P><B>%s</B>" % name)
+        htm.write(table)
 
     htm.close()
