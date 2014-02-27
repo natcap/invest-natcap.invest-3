@@ -29,62 +29,45 @@ LOGGER = logging.getLogger('scenario_generator')
 
 
 def calculate_weights(arr, rounding=4):
-   places = Decimal(10) ** -(rounding)
-
+    
+   PLACES = Decimal(10) ** -(rounding)
+   
    # get eigenvalues and vectors
-   eigenvalues, eigenvectors = eig(arr)
+   evas, eves = eig(arr)
 
    # get primary eigenvalue and vector
-   primary_eigenvalue = max(eigenvalues)
-   primary_eigenvalue_index = eigenvalues.tolist().index(primary_eigenvalue)
-   primary_eigenvector = eigenvalues.take((primary_eigenvalue_index,), axis=1)
+   eva = max(evas)
+   eva_idx = evas.tolist().index(eva)
+   eve = eves.take((eva_idx,), axis=1)
 
    # priority vector = normalized primary eigenvector
 
-   normalized = eigenvector / sum(eigenvector)
+   normalized = eve / sum(eve)
 
    # turn into list of real part values
    vector = [abs(e[0]) for e in normalized]
 
    # return nice rounded Decimal values with labels
-   return [ Decimal( str(v) ).quantize(places) for v in vector ]
+   return [ Decimal( str(v) ).quantize(PLACES) for v in vector ]
 
-def calulcate_priority(table_uri, attributes_uri=None):
-    table_file = open(table_uri,'r')
-    table = [line.split(",") for line in table_file]
-    table_file.close()
+def calculate_priority(table_uri):
+    table = [line.strip().split(",") for line in open(table_uri).readlines()]
+    id_index = table[0].index("Id")
 
-    #format table
-    for row_id, line in enumerate(table):
-        for column_id in range(row_id+1):
-            table[row_id][column_id]=Fraction(table[row_id][column_id])
-            if row_id != column_id:
-                table[column_id][row_id]=1/Fraction(table[row_id][column_id])
+    cover_id_list = [row[id_index] for row in table]
+    cover_id_list.pop(0)
 
-    matrix = numpy.array(table)
+    cover_id_index_list = [table[0].index(cover_id) for cover_id in cover_id_list]
 
-    return calculate_weights(matrix, 4)
+    matrix = numpy.zeros((len(cover_id_list),len(cover_id_list)))
 
-def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field):
-    """
-    Table expected to contain the following columns in order:
+    for row in range(len(cover_id_list)):
+       for col in range(row+1):
+            matrix[row][col] = float(table[row+1][cover_id_index_list[col]])
+            matrix[col][row] = 1 / matrix[row][col]
 
-    0 LULC    The land cover code
-    1 SHORTNME  The land cover short name (max 12 characters)
-    2 COUNT  Number of pixels in each LULC class
-    3 PIXELCHANGE  The number of pixels expected to change
-    4 PRIORITY  The priority of this landcover (objective)
-    5 PROXIMITY Is this landcover suitability affected by proximity, eg do pixels
-                closer to agrizculture have higher chances of converting to agriculture [0,1]
-    6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m)
-    7 PATCHHA Minimum size of patch
-    8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC
-    """
-
-    raster_utils.get_lookup_from_csv(trasition_uri, transition_key_field)
-    raster_utils.unique_raster_values_count(landcover_uri)
-
-   #convert change amount to pixels?
+    cover_id_list = [int(cover_id) for cover_id in cover_id_list]
+    return dict(zip(cover_id_list, calculate_weights(matrix, 4)))
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
     if cell_size == None:
@@ -405,9 +388,8 @@ def execute(args):
     #resample, align and rasterize data
     ###
     if args["calculate_priorities"]:
-        priorities_csv_uri = args["priorities_csv_uri"]
-
-
+        priorities_dict = calculate_priority(args["priorities_csv_uri"])
+        
     #check geographic extents, projections
 
     #validate resampling size
@@ -824,20 +806,37 @@ def execute(args):
        
     #identify LULC types undergoing change
     change_list = []
-    for cover_id in transition_dict:
-        percent_change = transition_dict[cover_id][args["percent_field"]]
-        area_change = transition_dict[cover_id][args["area_field"]]
-        if percent_change > 0:
-            change_list.append((transition_dict[cover_id][args["priority_field"]],
-                                cover_id,
-                                int((percent_change / 100.0) \
-                                * landcover_count_dict[cover_id])))
-        elif area_change > 0:
-            change_list.append((transition_dict[cover_id][args["priority_field"]],
-                                cover_id,
-                                int(math.ceil(area_change / cell_size))))
-        else:
-            LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
+    if args["calculate_priorities"]:
+       for cover_id in transition_dict:
+           percent_change = transition_dict[cover_id][args["percent_field"]]
+           area_change = transition_dict[cover_id][args["area_field"]]
+           if percent_change > 0:
+               change_list.append((priorities_dict[cover_id],
+                                   cover_id,
+                                   int((percent_change / 100.0) \
+                                   * landcover_count_dict[cover_id])))
+           elif area_change > 0:
+               change_list.append((priorities_dict[cover_id],
+                                   cover_id,
+                                   int(math.ceil(area_change / cell_size))))
+           else:
+               LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
+    else:
+        for cover_id in transition_dict:
+            percent_change = transition_dict[cover_id][args["percent_field"]]
+            area_change = transition_dict[cover_id][args["area_field"]]
+            if percent_change > 0:
+                change_list.append((transition_dict[cover_id][args["priority_field"]],
+                                    cover_id,
+                                    int((percent_change / 100.0) \
+                                    * landcover_count_dict[cover_id])))
+            elif area_change > 0:
+                change_list.append((transition_dict[cover_id][args["priority_field"]],
+                                   cover_id,
+                                   int(math.ceil(area_change / cell_size))))
+            else:
+                LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
+        
 
     change_list.sort(reverse=True)
 
