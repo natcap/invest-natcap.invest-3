@@ -1,26 +1,21 @@
 import os
+import math
+import shutil
+import disk_sort
+import struct
+import operator
+import logging
+from decimal import Decimal
+from fractions import Fraction
+
+import numpy
+from scipy.linalg import eig
+import scipy.ndimage
 
 from osgeo import gdal, ogr
 
 from invest_natcap import raster_utils
 
-from scipy.linalg import eig
-import scipy.ndimage
-
-import disk_sort
-
-from decimal import Decimal
-from fractions import Fraction
-
-import numpy
-
-import logging
-
-import struct
-
-import operator
-
-import math
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -240,6 +235,51 @@ def generate_chart_html(cover_dict):
     html += "\n<TABLE>"
 
     return html
+
+def filter_fragments(input_uri, size, output_uri):
+    shutil.copy(input_uri, output_uri)
+##    #clump and sieve
+##    for cover_id in transition_dict:
+##        if transition_dict[cover_id][args["patch_field"]] > 0 and cover_id in suitability_dict:
+##            LOGGER.info("Filtering patches from %i.", cover_id)
+##            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / cell_size))
+##
+##            LOGGER.debug("Filtering patches smaller than %i from %i.", size, cover_id)
+##
+##            src_ds = gdal.Open(suitability_dict[cover_id])
+##            src_band = src_ds.GetRasterBand(1)
+##            src_array = src_band.ReadAsArray()
+##
+##            dst_uri = os.path.join(workspace, "intermediate/filtered_%i.tif" % cover_id)
+##            driver.CreateCopy(dst_uri, src_ds, 0 )
+##
+##            dst_ds = gdal.Open(dst_uri, 1)
+##            dst_band = dst_ds.GetRasterBand(1)
+##            dst_array = dst_band.ReadAsArray()
+##
+##            suitability_values = numpy.unique(src_array)
+##            if suitability_values[0] == 0:
+##               suitability_values = suitability_values[1:]
+##
+##            #8 connectedness preferred, 4 connectedness allowed
+##            #dst_array = numpy.zeros_like(dst_array)
+##            for value in [suitability_values[0]]:
+##               mask = src_array == value # You get a mask with the polygons only
+##               label_im, nb_labels = scipy.ndimage.label(mask) # Use the mask to label the polygons
+##               src_array[mask] = 1
+##               sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1)) # Compute the polygon area in pixels
+##               print size
+##               print sizes
+##               size_mask = sizes < size # Keep cells from polygons smaller than 1000 cells in size_mask
+##               remove_cells = size_mask[label_im] # Extract all the cells from the raster that belong to small polygons
+##               #label_im[remove_cells] = 0 # Erase these cells by overriding their value with the value 0.
+##               dst_array[remove_cells] = 0
+##
+##            dst_band.WriteArray(dst_array)
+##            dst_band = None
+##            dst_ds = None
+##            src_band = None
+##            src_ds = None
 
 def execute(args):
     ###
@@ -606,50 +646,20 @@ def execute(args):
     elif args["calculate_factors"]:
         suitability_dict = suitability_factors_dict
 
-##    #clump and sieve
-##    for cover_id in transition_dict:
-##        if transition_dict[cover_id][args["patch_field"]] > 0 and cover_id in suitability_dict:
-##            LOGGER.info("Filtering patches from %i.", cover_id)
-##            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / cell_size))
-##
-##            LOGGER.debug("Filtering patches smaller than %i from %i.", size, cover_id)
-##
-##            src_ds = gdal.Open(suitability_dict[cover_id])
-##            src_band = src_ds.GetRasterBand(1)
-##            src_array = src_band.ReadAsArray()
-##
-##            dst_uri = os.path.join(workspace, "intermediate/filtered_%i.tif" % cover_id)
-##            driver.CreateCopy(dst_uri, src_ds, 0 )
-##
-##            dst_ds = gdal.Open(dst_uri, 1)
-##            dst_band = dst_ds.GetRasterBand(1)
-##            dst_array = dst_band.ReadAsArray()
-##
-##            suitability_values = numpy.unique(src_array)
-##            if suitability_values[0] == 0:
-##               suitability_values = suitability_values[1:]
-##
-##            #8 connectedness preferred, 4 connectedness allowed
-##            #dst_array = numpy.zeros_like(dst_array)
-##            for value in [suitability_values[0]]:
-##               mask = src_array == value # You get a mask with the polygons only
-##               label_im, nb_labels = scipy.ndimage.label(mask) # Use the mask to label the polygons
-##               src_array[mask] = 1
-##               sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1)) # Compute the polygon area in pixels
-##               print size
-##               print sizes
-##               size_mask = sizes < size # Keep cells from polygons smaller than 1000 cells in size_mask
-##               remove_cells = size_mask[label_im] # Extract all the cells from the raster that belong to small polygons
-##               #label_im[remove_cells] = 0 # Erase these cells by overriding their value with the value 0.
-##               dst_array[remove_cells] = 0
-##
-##            dst_band.WriteArray(dst_array)
-##            dst_band = None
-##            dst_ds = None
-##            src_band = None
-##            src_ds = None
-##
-##            suitability_dict[cover_id] = dst_uri
+    #clump and sieve
+    for cover_id in transition_dict:
+        if transition_dict[cover_id][args["patch_field"]] > 0 and cover_id in suitability_dict:
+            LOGGER.info("Filtering patches from %i.", cover_id)
+            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / cell_size))
+
+            LOGGER.debug("Filtering patches smaller than %i from %i.", size, cover_id)
+
+            input_uri = os.path.join(workspace, adjusted_suitability_name % cover_id)
+            basename, ext = os.path.splitext(input_uri)
+            output_uri = basename + '_filtered' + ext
+            print('input_uri', input_uri, 'output_uri', output_uri)
+            filter_fragments(input_uri, size, output_uri)
+            suitability_dict[cover_id] = output_uri
 
     ###
     #compute intermediate data if needed
