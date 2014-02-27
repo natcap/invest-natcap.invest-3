@@ -226,6 +226,21 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     return unique_raster_values_count, transitions
 
+def generate_chart_html(cover_dict):
+    html = "\n<TABLE BORDER=1>"
+    html += "\n<TR><TD>Id</TD><TD>Before</TD><TD>After</TD></TR>"
+    cover_id_list = cover_dict.keys()
+    cover_id_list.sort()
+
+    for cover_id in cover_id_list:
+       html += "\n<TR><TD>%i</TD><TD>%i</TD><TD>%i</TD></TR>" % (cover_id,
+                                                                 cover_dict[cover_id][0],
+                                                                 cover_dict[cover_id][1])
+
+    html += "\n<TABLE>"
+
+    return html
+
 def execute(args):
     ###
     #overiding, non-standard field names
@@ -388,6 +403,7 @@ def execute(args):
     #resample, align and rasterize data
     ###
     if args["calculate_priorities"]:
+        LOGGER.info("Calculating priorities.")
         priorities_dict = calculate_priority(args["priorities_csv_uri"])
         
     #check geographic extents, projections
@@ -932,7 +948,6 @@ def execute(args):
 
     htm.write("\n</HTML>")
 
-
     htm.write("<P><P><B>Scenario Landscape</B>")
     htm.write("\n<TABLE BORDER=1>")
     scenario_cover_id_list = unique_raster_values_count[scenario_uri].keys()
@@ -948,6 +963,20 @@ def execute(args):
     
     htm.write("\n</TABLE>")
 
+    cover_dict = {}
+    for cover_id in set(unique_raster_values_count[landcover_uri].keys()).union(set(unique_raster_values_count[scenario_uri].keys())):
+        try:
+            before = unique_raster_values_count[landcover_uri][cover_id]
+        except KeyError:
+            before = 0
+        try:
+            after =unique_raster_values_count[scenario_uri][cover_id]
+        except KeyError:
+            after = 0
+        cover_dict[cover_id] = (before, after)
+
+    htm.write("<P><P><B>Change Table</B>")
+    htm.write(generate_chart_html(cover_dict))
 
     htm.write("<P><P><B>Transition Matrix</B>")
     htm.write("\n<TABLE BORDER=1>")    
