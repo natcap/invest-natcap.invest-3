@@ -591,7 +591,7 @@ def execute(args, config):
 
         #osm patch
         if args["osm"]:
-            sql = "ALTER TABLE %i DROP COLUMN %i"
+            sql = "ALTER TABLE %s DROP COLUMN %s"
             if not args["osm_1"]:
                 LOGGER.debug("Removing OSM information for cultural features.")
                 cur.execute(sql % ("results", "pointCult"))
