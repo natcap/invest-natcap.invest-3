@@ -48,9 +48,9 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         that will operate on input flux and other user defined arguments
         to determine nodal output flux.
 
-        dem_uri - a URI to a DEM raster
-        source_uri - a GDAL dataset that has source flux per pixel
-        absorption_rate_uri - a GDAL floating point dataset that has a percent
+        in_dem_uri - a URI to a DEM raster
+        in_source_uri - a GDAL dataset that has source flux per pixel
+        in_absorption_rate_uri - a GDAL floating point dataset that has a percent
             of flux absorbed per pixel
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
@@ -79,8 +79,8 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         "intersection", 0, aoi_uri=aoi_uri)
 
     flow_direction_uri = raster_utils.temporary_filename()
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = 'sed/out/outflow_weights.tif'#raster_utils.temporary_filename()
+    outflow_direction_uri = 'sed/out/outflow_dir.tif'#raster_utils.temporary_filename()
 
     dem_data_uri = raster_utils.temporary_filename()
     dem_carray = raster_utils.load_dataset_to_carray(
@@ -105,13 +105,14 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
 
 
-def flow_accumulation(dem_uri, flux_output_uri):
+def flow_accumulation(dem_uri, flux_output_uri, aoi_uri=None):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
 
         dem_uri - a uri to a gdal dataset representing a DEM
         flux_output_uri - location to dump the raster representing flow
-            accumulation"""
+            accumulation
+        aoi_uri - (optional) uri to a datasource to mask out the dem"""
 
     LOGGER.debug("starting flow_accumulation")
     constant_flux_source_uri = raster_utils.temporary_filename()
@@ -127,7 +128,8 @@ def flow_accumulation(dem_uri, flux_output_uri):
     LOGGER.debug("routing flux")
     route_flux(
         dem_uri, constant_flux_source_uri,
-        zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only')
+        zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
+        aoi_uri=aoi_uri)
 
 
 def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):

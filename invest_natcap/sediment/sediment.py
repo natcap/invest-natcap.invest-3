@@ -140,7 +140,7 @@ def execute(args):
     LOGGER.info('building export fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
     lulc_to_export_dict = \
-        dict([(lulc_code, 1.0 - float(table['sedret_eff'])/100.0) \
+        dict([(lulc_code, 1.0 - float(table['sedret_eff'])) \
                   for (lulc_code, table) in biophysical_table.items()])
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
@@ -270,9 +270,14 @@ def execute(args):
     field_summaries['sret_mn_dr'] = {}
     field_summaries['sret_mn_wq'] = {}
     for ws_id, value in field_summaries['upret_tot'].iteritems():
-        n_cells = field_summaries['upret_tot'][ws_id] / field_summaries['upret_mean'][ws_id]
-        for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
-            field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
+        try:
+            n_cells = field_summaries['upret_tot'][ws_id] / field_summaries['upret_mean'][ws_id]
+            for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
+                field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
+        except ZeroDivisionError as e:
+            LOGGER.warn(str(e) + '\nSetting field summaries to 0')
+            for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
+                field_summaries[out_field][ws_id] = 0.0
 
     if 'sediment_valuation_table_uri' in args:
         sediment_valuation_table = raster_utils.get_lookup_from_csv(
