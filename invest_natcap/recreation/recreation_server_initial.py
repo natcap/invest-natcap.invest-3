@@ -346,8 +346,8 @@ def execute(args, config):
         LOGGER.debug("Imported AOI with SRID %i", aoi_srid)
 
         if not args["grid"]:
-            SQL = "SELECT MIN(ST_Area(way)) FROM %s" % aoi_name
-            cur.execute(SQL)
+            sql = "SELECT MIN(ST_Area(way)) FROM %s" % aoi_name
+            cur.execute(sql)
             area, = cur.fetchone()
             area_hex = (3.0 / 2.0) * (3 ** 0.5) * ((config["min_cell_size"] / 2.0) ** 2) * (1 - 5e-5)
             if area * (linear_units ** 2) < area_hex:
@@ -357,11 +357,11 @@ def execute(args, config):
             else:
                 LOGGER.info("All cells in the custom grid meet the minimum area requirement.")
             
-            SQL = "SELECT COUNT(*) FROM %s" % aoi_name
-            cur.execute(SQL)
+            sql = "SELECT COUNT(*) FROM %s" % aoi_name
+            cur.execute(sql)
             count, = cur.fetchone()
-            SQL = "SELECT SUM(Cast(ST_Crosses(x.way, y.way) AS integer)) FROM %s AS x, %s AS y" % (aoi_name, aoi_name)
-            cur.execute(SQL)
+            sql = "SELECT SUM(Cast(ST_Crosses(x.way, y.way) AS integer)) FROM %s AS x, %s AS y" % (aoi_name, aoi_name)
+            cur.execute(sql)
             intersects, = cur.fetchone()
             if intersects > count:
                 msg = "Custom grids cannot have overlapping polygons."
@@ -442,8 +442,8 @@ def execute(args, config):
                                                 grid_column_name, cell_size)
         else:
             LOGGER.debug("Duplicating table to allow for custom grids.")
-            SQL = "CREATE TEMPORARY TABLE %s AS (SELECT row_number() OVER (ORDER BY ST_YMin(box2d(way)), ST_XMin(box2d(way)) ASC) AS id, way AS cell FROM %s)" % (grid_name, aoi_name)
-            cur.execute(SQL)
+            sql = "CREATE TEMPORARY TABLE %s AS (SELECT row_number() OVER (ORDER BY ST_YMin(box2d(way)), ST_XMin(box2d(way)) ASC) AS id, way AS cell FROM %s)" % (grid_name, aoi_name)
+            cur.execute(sql)
 
         #counting grid cells
         sql = "SELECT COUNT(*) FROM %s"
@@ -567,7 +567,7 @@ def execute(args, config):
                 LOGGER.warn("Predictor %s contains no features inside the grid.", predictor)
                 LOGGER.debug("Processing empty predictor %s.", predictor)
                 sql = "CREATE TABLE %s (%s int, id int)"% (results_format%predictor, "result")
-                LOGGER.debug("Executing sql: %s", sql.replace(", ", "|").replace(".", "||"))
+                LOGGER.debug("Executing SQL: %s", sql.replace(", ", "|").replace(".", "||"))
                 cur.execute(sql)
             elif geo_type == 0:
                 LOGGER.info("Processing point predictor %s.", predictor)
@@ -591,45 +591,46 @@ def execute(args, config):
 
         #osm patch
         if args["osm"]:
+            sql = "ALTER TABLE %i DROP COLUMN %i"
             if not args["osm_1"]:
                 LOGGER.debug("Removing OSM information for cultural features.")
-                cur.execute(SQL % ("results", "pointCult"))
+                cur.execute(sql % ("results", "pointCult"))
                 ignore_category.add("pointcult")
-                cur.execute(SQL % ("results", "lineCult"))
+                cur.execute(sql % ("results", "lineCult"))
                 ignore_category.add("linecult")
-                cur.execute(SQL % ("results", "polyCult"))
+                cur.execute(sql % ("results", "polyCult"))
                 ignore_category.add("polycult")
             if not args["osm_2"]:
                 LOGGER.debug("Removing OSM information for industrial features.")
-                cur.execute(SQL % ("results", "pointIndus"))
+                cur.execute(sql % ("results", "pointIndus"))
                 ignore_category.add("pointindus")
-                cur.execute(SQL % ("results", "lineIndus"))
+                cur.execute(sql % ("results", "lineIndus"))
                 ignore_category.add("lineindus")
-                cur.execute(SQL % ("results", "polyIndus"))
+                cur.execute(sql % ("results", "polyIndus"))
                 ignore_category.add("polyindus")
             if not args["osm_3"]:
                 LOGGER.debug("Removing OSM information for natural features.")
-                cur.execute(SQL % ("results", "pointNat"))
+                cur.execute(sql % ("results", "pointNat"))
                 ignore_category.add("pointnat")
-                cur.execute(SQL % ("results", "lineNat"))
+                cur.execute(sql % ("results", "lineNat"))
                 ignore_category.add("linenat")
-                cur.execute(SQL % ("results", "polyNat"))
+                cur.execute(sql % ("results", "polyNat"))
                 ignore_category.add("polynat")
             if not args["osm_4"]:
                 LOGGER.debug("Removing OSM information for superstructure featrues.")
-                cur.execute(SQL % ("results", "pointStruc"))
+                cur.execute(sql % ("results", "pointStruc"))
                 ignore_category.add("pointstruc")
-                cur.execute(SQL % ("results", "lineStruc"))
+                cur.execute(sql % ("results", "lineStruc"))
                 ignore_category.add("linestruc")
-                cur.execute(SQL % ("results", "polyStruc"))
+                cur.execute(sql % ("results", "polyStruc"))
                 ignore_category.add("polystruc")
             if not args["osm_0"]:
                 LOGGER.debug("Removing OSM information for miscellaneous features.")
-                cur.execute(SQL % ("results", "pointMisc"))
+                cur.execute(sql % ("results", "pointMisc"))
                 ignore_category.add("pointmisc")
-                cur.execute(SQL % ("results", "lineMisc"))
+                cur.execute(sql % ("results", "lineMisc"))
                 ignore_category.add("linemisc")
-                cur.execute(SQL % ("results", "polyMisc"))
+                cur.execute(sql % ("results", "polyMisc"))
                 ignore_category.add("polymisc")
 
         #writing predictor table            
