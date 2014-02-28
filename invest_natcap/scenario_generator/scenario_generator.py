@@ -5,11 +5,13 @@ from osgeo import gdal, ogr
 from invest_natcap import raster_utils
 
 from scipy.linalg import eig
+
 import scipy.ndimage
 
 import disk_sort
 
 from decimal import Decimal
+
 from fractions import Fraction
 
 import numpy
@@ -304,7 +306,7 @@ def execute(args):
 
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
     override_dataset_uri = os.path.join(workspace,"override.tif")
-    landcover_htm_uri = os.path.join(workspace,"landcover.htm")
+    landcover_htm_uri = os.path.join(workspace,"scenario-report.html")
 
     raster_utils.create_directories([workspace])
 
@@ -929,39 +931,50 @@ def execute(args):
     unique_raster_values_count, transitions = get_transition_set_count_from_uri([landcover_uri, scenario_uri])
 
     htm = open(landcover_htm_uri,'w')
-    htm.write("<HTML><TITLE>Scenario Generator Report</TITLE>")
-
-    htm.write("<B>Initial Landscape</B>")
-    htm.write("\n<TABLE BORDER=1>")
+    htm.write("<html><head><title>Scenario Generator Report</title>")
+    
+    htm.write("<style type='text/css'>")
+    htm.write("table {border-collapse: collapse; font-size: 1em;}")
+    htm.write("td {padding: 10px;}")
+    htm.write('body {font-family: Arial, Helvetica, sans-serif; font-size: 1em;}')
+    htm.write('h2 {background: #DDDDDD; padding: 10px;}')
+    htm.write("</style>")
+    htm.write("</head><body>")
+    htm.write("<div style=''>")
+    htm.write("<h1>Scenario Generator Report</h1>")
+    htm.write("<h2>Output</h2>")
+    
+    htm.write("<h3>Initial Landscape</h3>")
+    htm.write("\n<table BORDER=1>")
     initial_cover_id_list = unique_raster_values_count[landcover_uri].keys()
     initial_cover_id_list.sort()
 
-    htm.write("\n<TR><TD>ID</TD><TD>")
-    htm.write("</TD><TD>".join([str(cover_id) for cover_id in initial_cover_id_list]))
-    htm.write("\n</TD></TR>")
+    htm.write("\n<tr><td>ID</td><td>")
+    htm.write("</td><td>".join([str(cover_id) for cover_id in initial_cover_id_list]))
+    htm.write("\n</td></tr>")
 
-    htm.write("\n<TR><TD>Count</TD><TD>")
-    htm.write("</TD><TD>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
-    htm.write("\n</TD></TR>")
+    htm.write("\n<tr><td>Count</td><td>")
+    htm.write("</td><td>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
+    htm.write("\n</td></tr>")
     
-    htm.write("\n</TABLE>")
+    htm.write("\n</table>")
 
-    htm.write("\n</HTML>")
 
-    htm.write("<P><P><B>Scenario Landscape</B>")
-    htm.write("\n<TABLE BORDER=1>")
+
+    htm.write("<h3>Scenario Landscape</h3>")
+    htm.write("\n<table BORDER=1>")
     scenario_cover_id_list = unique_raster_values_count[scenario_uri].keys()
     scenario_cover_id_list.sort()
 
-    htm.write("\n<TR><TD>ID</TD><TD>")
-    htm.write("</TD><TD>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
-    htm.write("\n</TD></TR>")
+    htm.write("\n<tr><td>ID</td><td>")
+    htm.write("</td><td>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</td></tr>")
 
-    htm.write("\n<TR><TD>Count</TD><TD>")
-    htm.write("</TD><TD>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
-    htm.write("\n</TD></TR>")
+    htm.write("\n<tr><td>Count</td><td>")
+    htm.write("</td><td>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</td></tr>")
     
-    htm.write("\n</TABLE>")
+    htm.write("\n</table>")
 
     cover_dict = {}
     for cover_id in set(unique_raster_values_count[landcover_uri].keys()).union(set(unique_raster_values_count[scenario_uri].keys())):
@@ -975,39 +988,39 @@ def execute(args):
             after = 0
         cover_dict[cover_id] = (before, after)
 
-    htm.write("<P><P><B>Change Table</B>")
+    htm.write("<h3>Change Table</h3>")
     htm.write(generate_chart_html(cover_dict))
 
-    htm.write("<P><P><B>Transition Matrix</B>")
-    htm.write("\n<TABLE BORDER=1>")    
-    htm.write("\n<TR><TD>ID</TD><TD>")
-    htm.write("</TD><TD>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
-    htm.write("\n</TD></TR>")
+    htm.write("<h3>Transition Matrix</h3>")
+    htm.write("\n<table BORDER=1>")    
+    htm.write("\n<tr><td>ID</td><td>")
+    htm.write("</td><td>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
+    htm.write("\n</td></tr>")
 
     for initial_cover_id in initial_cover_id_list:
-        htm.write("\n<TR><TD>%i</TD>" % initial_cover_id)
+        htm.write("\n<tr><td>%i</td>" % initial_cover_id)
         for scenario_cover_id in scenario_cover_id_list:
             try:
-                htm.write("<TD>%i</TD>" % transitions[0][initial_cover_id][scenario_cover_id])
+                htm.write("<td>%i</td>" % transitions[0][initial_cover_id][scenario_cover_id])
             except KeyError:
-                htm.write("<TD><FONT COLOR=lightgray>%i</FONT></TD>" % 0)
+                htm.write("<td><FONT COLOR=lightgray>%i</FONT></td>" % 0)
 
-        htm.write("\n</TR>")
+        htm.write("\n</tr>")
        
-    htm.write("\n</TABLE>")
+    htm.write("\n</table>")
 
     unconverted_cover_id_list = unconverted_pixels.keys()
     unconverted_cover_id_list.sort()
     if len(unconverted_cover_id_list) > 0:
-       htm.write("<P><P><B>Unconverted Pixels</B>")
-       htm.write("\n<TABLE BORDER=1>")
-       htm.write("<TR><TD>ID</TD><TD>Count</TD></TR>")
+       htm.write("<h3>Unconverted Pixels</h3>")
+       htm.write("\n<table BORDER=1>")
+       htm.write("<tr><td>ID</td><td>Count</td></tr>")
        for cover_id in unconverted_cover_id_list:
-          htm.write("<TR><TD>%i</TD><TD>%i</TD></TR>" % (cover_id, unconverted_pixels[cover_id]))
-       htm.write("\n</TABLE>")
+          htm.write("<tr><td>%i</td><td>%i</td></tr>" % (cover_id, unconverted_pixels[cover_id]))
+       htm.write("\n</table>")
     else:
-        htm.write("<P><P><I>All target pixels converted.</I>")
-    htm.write("\n</HTML>")
+        htm.write("<p><i>All target pixels converted.</i></p>")
+    htm.write("\n</html>")
 
     #input CSVs
     input_csv_list = []
@@ -1021,11 +1034,11 @@ def execute(args):
     if args["calculate_factors"]:
         input_csv_list.append((args["suitability"], "Factors Table"))
     
-    htm.write("<P><P><B>Input Tables</B><P><P>")
+    htm.write("<h2>Input Tables</h2>")
     for csv_uri, name in input_csv_list:
-        table = "\n<TABLE BORDER=1><TR><TD>" + open(csv_uri).read().strip().replace(",","</TD><TD>").replace("\n","</TD></TR><TR><TD>") + "</TD></TR></TABLE>"
+        table = "\n<table BORDER=1><tr><td>" + open(csv_uri).read().strip().replace(",","</td><td>").replace("\n","</td></tr><tr><td>") + "</td></tr></table>"
 
-        htm.write("<P><P><B>%s</B>" % name)
+        htm.write("<h3>%s</h3>" % name)
         htm.write(table)
-
+    htm.write("\n</div>\n</body>\n</html>")
     htm.close()
