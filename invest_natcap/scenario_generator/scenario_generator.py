@@ -101,31 +101,6 @@ def get_geometry_type_from_uri(datasource_uri):
 
     return shape_type
 
-def sieve_dataset_uri(dataset_in_uri, dataset_out_uri, mask_op, size_op, replacement):
-    src_ds = gdal.Open(dataset_in_uri)
-
-    gdal.GetDriverByName("GTiff").CreateCopy(dataset_out_uri, src_ds, 0 )
-
-    src_band = src_ds.GetRasterBand(1)
-    src_array = src_band.ReadAsArray()
-
-    dst_ds = gdal.Open(dataset_out_uri, 1)
-    dst_band = dst_ds.GetRasterBand(1)
-    dst_array = dst_band.ReadAsArray()
-
-    mask = mask_op(src_array)
-    label_im, nb_labels = scipy.ndimage.label(mask)
-    sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
-    mask_size = size_op(sizes)
-    remove_pixel = mask_size[label_im]
-    dst_array[remove_pixel] = replacement
-    dst_band.WriteArray(dst_array)
-
-    dst_band = None
-    dst_ds = None
-    src_band = None
-    src_ds = None
-
 def get_transition_set_count_from_uri(dataset_uri_list):
     cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
     lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
@@ -237,49 +212,59 @@ def generate_chart_html(cover_dict):
     return html
 
 def filter_fragments(input_uri, size, output_uri):
-    shutil.copy(input_uri, output_uri)
-##    #clump and sieve
-##    for cover_id in transition_dict:
-##        if transition_dict[cover_id][args["patch_field"]] > 0 and cover_id in suitability_dict:
-##            LOGGER.info("Filtering patches from %i.", cover_id)
-##            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / cell_size))
-##
-##            LOGGER.debug("Filtering patches smaller than %i from %i.", size, cover_id)
-##
-##            src_ds = gdal.Open(suitability_dict[cover_id])
-##            src_band = src_ds.GetRasterBand(1)
-##            src_array = src_band.ReadAsArray()
-##
-##            dst_uri = os.path.join(workspace, "intermediate/filtered_%i.tif" % cover_id)
-##            driver.CreateCopy(dst_uri, src_ds, 0 )
-##
-##            dst_ds = gdal.Open(dst_uri, 1)
-##            dst_band = dst_ds.GetRasterBand(1)
-##            dst_array = dst_band.ReadAsArray()
-##
-##            suitability_values = numpy.unique(src_array)
-##            if suitability_values[0] == 0:
-##               suitability_values = suitability_values[1:]
-##
-##            #8 connectedness preferred, 4 connectedness allowed
-##            #dst_array = numpy.zeros_like(dst_array)
-##            for value in [suitability_values[0]]:
-##               mask = src_array == value # You get a mask with the polygons only
-##               label_im, nb_labels = scipy.ndimage.label(mask) # Use the mask to label the polygons
-##               src_array[mask] = 1
-##               sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1)) # Compute the polygon area in pixels
-##               print size
-##               print sizes
-##               size_mask = sizes < size # Keep cells from polygons smaller than 1000 cells in size_mask
-##               remove_cells = size_mask[label_im] # Extract all the cells from the raster that belong to small polygons
-##               #label_im[remove_cells] = 0 # Erase these cells by overriding their value with the value 0.
-##               dst_array[remove_cells] = 0
-##
-##            dst_band.WriteArray(dst_array)
-##            dst_band = None
-##            dst_ds = None
-##            src_band = None
-##            src_ds = None
+    #clump and sieve
+    LOGGER.debug("Filtering patches smaller than %i from %s.", size,
+        os.path.split(input_uri)[1])
+
+    src_ds = gdal.Open(input_uri)
+    src_band = src_ds.GetRasterBand(1)
+    src_array = src_band.ReadAsArray()
+    
+    dst_ds = gdal.Open(output_uri, 1)
+    dst_band = dst_ds.GetRasterBand(1)
+    dst_array = numpy.copy(src_array) 
+
+    driver = gdal.GetDriverByName("GTiff")
+    driver.CreateCopy(input_uri, dst_ds, 0 )
+
+    suitability_values = numpy.unique(src_array)
+    if suitability_values[0] == 0:
+       suitability_values = suitability_values[1:]
+
+    #8 connectedness preferred, 4 connectedness allowed
+    for value in suitability_values:
+       mask = src_array == value # You get a mask with the polygons only
+       ones_in_mask = numpy.sum(mask)
+       print('Processing value' + str(value) + ' (found ' + \
+       str(ones_in_mask) + ' among ' + str(mask.size) + ')')
+       label_im, nb_labels = scipy.ndimage.label(mask)
+       src_array[mask] = 1
+       fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+       fragment_labels = numpy.array(range(nb_labels + 1))
+       print('Labels', nb_labels, fragment_sizes)
+       assert fragment_sizes.size == len(fragment_labels)
+       small_fragment_mask = numpy.where(fragment_sizes <= size)
+       small_fragment_sizes = fragment_sizes[small_fragment_mask]
+       small_fragment_labels = fragment_labels[small_fragment_mask]
+       print('small fragment count', small_fragment_sizes.size)
+       combined_small_fragment_size = numpy.sum(small_fragment_sizes)
+       print('fragments to remove', combined_small_fragment_size)
+       print('small fragment sizes', small_fragment_sizes)
+       print('small fragment labels', small_fragment_labels)
+       #print('large_fragments', large_fragments.size, large_fragments)
+       removed_pixels = 0
+       for label in small_fragment_labels[1:]:
+           pixels_to_remove = numpy.where(label_im == label)
+           dst_array[pixels_to_remove] = 0
+           removed_pixels += pixels_to_remove[0].size
+           print('removed ' + str(pixels_to_remove[0].size) + \
+           ' pixels with label ' + str(label) + ', total = ' + \
+           str(removed_pixels))
+       message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
+       ', pixels removed = ' + str(removed_pixels)
+       assert removed_pixels == combined_small_fragment_size, message
+
+    dst_band.WriteArray(dst_array)
 
 def execute(args):
     ###
@@ -383,6 +368,12 @@ def execute(args):
     ds_type = "GTiff"
     driver = gdal.GetDriverByName(ds_type)
     
+    basename, ext = os.path.splitext(landcover_uri)
+    output_uri = basename + '_filtered' + ext
+    shutil.copy(landcover_uri, output_uri)
+
+    filter_fragments(landcover_uri, 2, output_uri)
+
     ###
     #validate data
     ###
@@ -658,7 +649,7 @@ def execute(args):
             basename, ext = os.path.splitext(input_uri)
             output_uri = basename + '_filtered' + ext
             print('input_uri', input_uri, 'output_uri', output_uri)
-            filter_fragments(input_uri, size, output_uri)
+            #filter_fragments(input_uri, size, output_uri)
             suitability_dict[cover_id] = output_uri
 
     ###
