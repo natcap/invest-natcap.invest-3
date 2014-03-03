@@ -175,7 +175,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Final Harvest by Subregion After ' + str(num_cycles) + ' Cycles</h2>'},
+                'text': '<h2>Final Harvest by Subregion After ' + str(num_cycles-1) + ' Cycles</h2>'},
                 {
                 'type': 'table',
                 'section': 'body',
@@ -194,7 +194,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'section': 'body',
                 'sortable': True,
                 'checkbox': False,
-                'total': True,
+                'total': False,
                 'data_type': 'dictionary',
                 'columns': c_columns,
                 'data': c_body},
@@ -327,7 +327,7 @@ def calc_harvest(cycle_dict, params_dict):
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
 
 
-            LOGGER.debug("FRAC IS: %s" % frac)
+            LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
             #If we reach equilibrium before the total duration, record what
             #cycle it happened at, and we can break.
             if .999 < frac < 1.001:
