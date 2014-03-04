@@ -436,7 +436,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         for area in cycle_dict[cycle]:
             if area == '1':
                 for age in cycle_dict[cycle][area]:
-                    #LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
+                    LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
                     pass
 
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
