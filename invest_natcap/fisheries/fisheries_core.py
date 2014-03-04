@@ -84,7 +84,8 @@ def execute(args):
         args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
         cycle_dict)
 
-    migration_dict = args['migration_dict'] if 'migration_dict' in args else None
+    migration_dict = args['migrate_dict'] if 'migrate_dict' in args else None
+    LOGGER.debug("MIGRATION: %s" % migration_dict)
 
     if args['maturity_type'] == "Age Specific":
         age_structured_cycle(args['params_dict'], args['is_gendered'],
@@ -172,6 +173,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Equilibrated?', 'total': False}]
 
+    LOGGER.debug("I AM IN : %s" % os.getcwd())
+
     elements = [{
                 'type': 'text',
                 'section': 'body',
@@ -202,25 +205,25 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '../reporting/reporting_data/sorttable.js',
+                'data_src': './invest_natcap/reporting/reporting_data/sorttable.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '../reporting/reporting_data/jquery-1.10.2.min.js',
+                'data_src': './invest_natcap/reporting/reporting_data/jquery-1.10.2.min.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '../reporting/reporting_data/total_functions.js',
+                'data_src': './invest_natcap/reporting/reporting_data/total_functions.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'style',
-                'data_src': '../reporting/reporting_data/table_style.css',
+                'data_src': './invest_natcap/reporting/reporting_data/table_style.css',
                 'input_type': 'File'}
                 ]
 
