@@ -522,7 +522,7 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
             }
     '''
     prev_indiv_in_area = cycle_dict[cycle-1][area][age]
-    prev_mig_in_area = 1 if mig_dict == None else mig_dict[age][area][area]
+    prev_mig_in_area = 1 if mig_dict == None or age not in mig_dict else mig_dict[age][area][area]
 
     indivs_in_area = prev_indiv_in_area * prev_mig_in_area
 
