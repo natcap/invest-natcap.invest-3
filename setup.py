@@ -189,6 +189,8 @@ if platform.system() == 'Windows':
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
+                ('invest_natcap/reporting',
+                glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
 
             # These are the GDAL DLLs.  They are absolutely required for running the
@@ -251,8 +253,6 @@ setup(name='invest_natcap',
       requires=['cython (>=0.19.1)', 'scipy (>=0.12.0)', 'nose (>=1.2.1)', 'osgeo (>=1.9.2)'],
       include_dirs = [np.get_include()],
       data_files=data_files,
-      package_data={'invest_natcap.reporting': ['reporting_data/*']},
-      include_package_data=True,
       ext_modules=cythonize([Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES),
                    Extension(name="aesthetic_quality_cython_core",
