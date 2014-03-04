@@ -202,25 +202,25 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/sorttable.js',
+                'data_src': '../reporting/reporting_data/sorttable.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/jquery-1.10.2.min.js',
+                'data_src': '../reporting/reporting_data/jquery-1.10.2.min.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/total_functions.js',
+                'data_src': '../reporting/reporting_data/total_functions.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'style',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/table_style.css',
+                'data_src': '../reporting/reporting_data/table_style.css',
                 'input_type': 'File'}
                 ]
 
