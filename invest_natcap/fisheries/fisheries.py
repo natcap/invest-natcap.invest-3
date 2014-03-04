@@ -255,7 +255,8 @@ def parse_migration_tables(mig_folder_uri):
                     sink = line.pop(0)
                     
                     for i, source in enumerate(headers):
-                        mig_dict[stage_name][source][sink] = line[i]
+                        percent = float(line[i].strip('%'))
+                        mig_dict[stage_name][source][sink] = percent
                 
                 except StopIteration:
                     break
