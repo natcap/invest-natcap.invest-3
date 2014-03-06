@@ -219,8 +219,9 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         flow_length_nodata, cell_size, "intersection")
 
 
-def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri,
-                          in_source_uri, pixel_export_uri, aoi_uri=None):
+def pixel_amount_exported(
+    in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri,
+    in_source_uri, pixel_export_uri, aoi_uri=None):
     """Calculates flow and absorption rates to determine the amount of source
         exported to the stream.  All datasets must be in the same projection.
         Nothing will be retained on stream pixels.
@@ -242,10 +243,11 @@ def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri,
     stream_uri = raster_utils.temporary_filename()
     retention_rate_uri = raster_utils.temporary_filename()
     source_uri = raster_utils.temporary_filename()
+    flow_direction_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
-        [in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri],
-        [dem_uri, stream_uri, retention_rate_uri, source_uri],
-        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
+        [in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri],
+        [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri, source_uri],
+        ["nearest", "nearest", "nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
     #Calculate export rate
@@ -262,11 +264,9 @@ def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri,
         dataset_to_align_index=0)
 
     #Calculate flow direction and weights
-    flow_direction_uri = raster_utils.temporary_filename()
-    routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
-    routing_cython_core.calculate_flow_graph(
+    routing_cython_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     #Calculate the percent to sink

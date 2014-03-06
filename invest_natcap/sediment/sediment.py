@@ -239,7 +239,7 @@ def execute(args):
 
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     routing_utils.pixel_amount_exported(
-        args['dem_uri'], v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
+        flow_direction_uri, dem_offset_uri, v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
