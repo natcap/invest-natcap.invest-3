@@ -16,7 +16,10 @@ def generate_table(table_dict, attributes=None):
                     'name' - a string for the column name (required)
                     'total' - a boolean for whether the column should be
                         totaled (required)
-            
+                    'attr' - a dictionary that has key value pairs for
+                        optional tag attributes (optional). Ex:
+                        'attr': {'class': 'offsets'}
+        
             'rows' - a list of dictionaries that represent the rows. Each
                 dictionaries keys should match the column names found in 
                 'cols' (possibly empty list) (required) Example:
@@ -74,11 +77,22 @@ def generate_table(table_dict, attributes=None):
     # headers should be allowed to be totaled
     total_cols = get_dictionary_values_ordered(table_cols, 'total')
 
+    def attr_to_string(attr_dict):
+        attr_str = ''
+        for key, value in attr_dict.iteritems():
+            attr_str += ' ' + key + '= ' + str(value)
+            
+        return attr_str
+        
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
-    for col in col_headers:
+    for col_dict in table_cols:
         # Add each column header to the html string
-        table_string += '<th>%s</th>' % col
+        try:
+            col_attr = attr_to_string(col_dict['attr'])
+            table_string += '<th%s>%s</th>' % (col_attr, col_dict['name'])
+        except KeyError:
+            table_string += '<th>%s</th>' % col_dict['name']
 
     # Add the closing tag for the table header
     table_string += '</tr></thead>'

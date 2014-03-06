@@ -79,6 +79,9 @@ def generate_report(reporting_args):
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
+                        'attr' - a dictionary that has key value pairs for
+                            optional tag attributes (optional). Ex:
+                            'attr': {'class': 'offsets'}
 
                 'total'- a boolean value for whether there should be a constant
                     total row at the bottom of the table that sums the column
@@ -233,6 +236,9 @@ def build_table(param_args):
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
+                        'attr' - a dictionary that has key value pairs for
+                            optional tag attributes (optional). Ex:
+                            'attr': {'class': 'offsets'}
 
             param_args['total'] - a boolean value where if True a constant
                 total row will be placed at the bottom of the table that sums the
