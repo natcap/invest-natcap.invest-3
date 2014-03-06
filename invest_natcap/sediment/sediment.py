@@ -78,6 +78,16 @@ def execute(args):
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row
 
+    #Test to see if the retention, c or p values are outside of 0..1
+    for table_key in ['sedret_eff', 'usle_c', 'usle_p']:
+        for (lulc_code, table) in biophysical_table.iteritems():
+            try:
+                float_value = float(table[table_key])
+                if float_value < 0 or float_value > 1:
+                    raise Exception('Value should be within range 0..1 offending value table %s, lulc_code %s, value %s' % (table_key, str(lulc_code), str(float_value)))
+            except ValueError as e:
+                raise Exception('Value is not a floating point value within range 0..1 offending value table %s, lulc_code %s, value %s' % (table_key, str(lulc_code), table[table_key]))
+        
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
@@ -91,7 +101,6 @@ def execute(args):
 
     #Clip the dem and cast to a float
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
-#raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
         [args['dem_uri']], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
@@ -153,7 +162,7 @@ def execute(args):
     lulc_to_retention_dict = \
         dict([(lulc_code, float(table['sedret_eff'])) \
                   for (lulc_code, table) in biophysical_table.items()])
-                  
+    
     no_stream_retention_rate_uri = raster_utils.temporary_filename()
     nodata_retention = -1.0
     raster_utils.reclassify_dataset(
