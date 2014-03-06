@@ -650,6 +650,7 @@ def aggregate_raster_values_uri(
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     if shapefile_field is not None:
+        LOGGER.debug('Looking up field %s', shapefile_field)
         
         #Make sure that the layer name refers to an integer 
         layer_d = shapefile_layer.GetLayerDefn()
