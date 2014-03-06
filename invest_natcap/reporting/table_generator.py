@@ -78,6 +78,15 @@ def generate_table(table_dict, attributes=None):
     total_cols = get_dictionary_values_ordered(table_cols, 'total')
 
     def attr_to_string(attr_dict):
+        """Concatenates a string from key value pairs in 'attr_dict'.
+            The string is generated in such a way where each key is
+            set equal to it's value and each key/value are separated
+            by a space. Example: 'key1=value1 key2=value2...'
+            
+            attr_dict - a dictionary of key value pairs
+            
+            returns - a string        
+        """
         attr_str = ''
         for key, value in attr_dict.iteritems():
             attr_str += ' ' + key + '= ' + str(value)
