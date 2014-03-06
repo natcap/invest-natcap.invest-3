@@ -146,16 +146,30 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
 
+    # Build I and J arrays, and save them to disk
+    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    I_uri = raster_utils.temporary_filename()
+    J_uri = raster_utils.temporary_filename()
+    shutil.copy(in_dem_uri, I_uri)
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_raster.GetRasterBand(1).WriteArray(I)
+    I_raster = None
+    shutil.copy(in_dem_uri, J_uri)
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_raster.GetRasterBand(1).WriteArray(J)
+    J_raster = None
+
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
     # Call the non-uri version of viewshed.
     compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri,
-    cell_size, GT, curvature_correction, refr_coeff, args)
+    cell_size, GT, I_uri, J_uri, curvature_correction, refr_coeff, args)
 
 
 def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-    cell_size, GT, curvature_correction, refr_coeff, args):
+    cell_size, GT, I_uri, J_uri, curvature_correction, refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
     # default parameter values that are not passed to this function but that
@@ -240,20 +254,6 @@ def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
     visibility_uri = raster_utils.temporary_filename()
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
-
-    # Build I and J arrays, and save them to disk
-    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
-    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    I_uri = raster_utils.temporary_filename()
-    J_uri = raster_utils.temporary_filename()
-    shutil.copy(in_dem_uri, I_uri)
-    I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    I_raster.GetRasterBand(1).WriteArray(I)
-    I_raster = None
-    shutil.copy(in_dem_uri, J_uri)
-    J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    J_raster.GetRasterBand(1).WriteArray(J)
-    J_raster = None
 
     # The model extracts each viewpoint from the shapefile
     point_list = []
