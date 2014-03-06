@@ -30,16 +30,15 @@ if test_region == 'willamate':
 
 start = time.time()
 
-print 'CALCULATING FLOW DIRECTION'
-routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
-print 'DONE CALCULATING FLOW DIRECTION'
 
 if test_mode == 'flat_resolve':
     cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')
 
 if test_mode == 'flow_accumulation':   
     #cProfile.run('routing_utils.flow_accumulation(flow_direction_uri, dem_uri, out_uri)', 'flowstats')
-    routing_utils.flow_accumulation(flow_direction_uri, dem_uri, out_uri)
+    routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
+    routing_cython_core.calculate_flow_direction(dem_offset_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, out_uri)
 
 p = pstats.Stats('flowstats')
 p.sort_stats('time').print_stats(20)

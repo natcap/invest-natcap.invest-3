@@ -429,9 +429,7 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
             determine flow direction.
         flow_direction_uri - a URI to create a dataset that will be used
             to store the flow direction.
-        inflow_direction_uri - a URI to a byte GDAL raster that's used
-            to determine which neighbors inflow into the current cell
-
+   
         returns nothing"""
 
     LOGGER.info('Calculate flow direction')
@@ -1203,7 +1201,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
 
     
-def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
+def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         
@@ -1217,10 +1215,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
        flow_direction_uri - a uri to write a single band float raster of same
             dimensions.  After the function call it will have flow direction 
             in it.
-        dem_offset_uri - (optional) a uri to dump the dem offset.  If left as none
-            a temporary CArray the same dimensions as dem_uri that
-            will contain the flat region resolved regions of the dem_carray
-       
+        
        returns nothing"""
 
     cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
@@ -1233,16 +1228,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     else:
         #we don't have a nodata value, traditional one
         dem_nodata = -9999
-    
-    #Load DEM and resolve plateaus
-    if dem_offset_uri is None:
-        dem_offset_uri = raster_utils.temporary_filename()
         
-    LOGGER.info('resolving flat directions')
-    resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
-        
-    dem_offset_ds = gdal.Open(dem_offset_uri)
-    dem_offset_band = dem_offset_ds.GetRasterBand(1)
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
     
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -1317,7 +1305,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             y_offset = n_rows - 3
             local_y_offset = 2
         
-        dem_window = dem_offset_band.ReadAsArray(
+        dem_window = dem_band.ReadAsArray(
             xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
         
         #clear out the flow array from the previous loop
