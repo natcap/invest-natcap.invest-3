@@ -146,6 +146,9 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Extract cell size from input DEM
     cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
 
+    # Extract nodata
+    nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
+    
     # Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
@@ -163,13 +166,20 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
+    # Open the input URI and extract the numpy array
+    input_raster = gdal.Open(in_dem_uri)
+    input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_raster = None
+
     # Call the non-uri version of viewshed.
-    compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri,
-    cell_size, GT, I_uri, J_uri, curvature_correction, refr_coeff, args)
+    compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri,
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
+    refr_coeff, args)
 
 
-def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-    cell_size, GT, I_uri, J_uri, curvature_correction, refr_coeff, args):
+def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri, \
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
+    refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
     # default parameter values that are not passed to this function but that
@@ -308,8 +318,11 @@ def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         #'distance radius is ' + str(max_dist) + " pixels.")
-        aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
-        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+
+        array_shape = (rows, cols)
+    
+        aesthetic_quality_core.viewshed(in_dem_uri, input_array, array_shape, \
+        nodata, visibility_uri, (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \

@@ -1089,7 +1089,8 @@ def cell_angles(cell_coords, viewpoint):
     angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
     return angles
 
-def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
+def viewshed(input_uri, input_array, array_shape, nodata, output_uri, \
+    coordinates, obs_elev=1.75, tgt_elev=0.0, \
     max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
@@ -1110,16 +1111,6 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     # Get the cell size
     cell_size = raster_utils.get_cell_size_from_uri(input_uri)
 
-    # Open the input URI and extract the numpy array
-    input_raster = gdal.Open(input_uri)
-    message = 'Cannot open file ' + input_uri
-    assert input_raster is not None, message
-    input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    array_shape = input_array.shape
-    input_raster = None
-    nodata = raster_utils.get_nodata_from_uri(input_uri)
-    print('computing viewshed on ' + input_uri, array_shape)
-    
     # Compute the viewshed on it
     output_array = compute_viewshed(input_array, nodata, coordinates, \
     obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
