@@ -130,10 +130,10 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-curvature_correction, refr_coeff, args):
+def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri, 
+    curvature_correction, refr_coeff, args):
     """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
-    
+
         -in_dem_uri: URI to input surface raster
         -out_viewshed_uri: URI to the output raster
         -in_structure_uri: URI to a point shapefile that contains the location
@@ -142,6 +142,22 @@ curvature_correction, refr_coeff, args):
         FLAT_EARTH or CURVED_EARTH. Not used yet.
         -refraction: refraction index between 0 (max effect) and 1 (no effect).
         Default is 0.13."""
+
+    # Extract cell size from input DEM
+    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+
+    # Extract the input raster geotransform
+    GT = raster_utils.get_geotransform_uri(in_dem_uri)
+
+    # Call the non-uri version of viewshed.
+    compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri,
+    cell_size, GT, curvature_correction, refr_coeff, args)
+
+
+def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
+    cell_size, GT, curvature_correction, refr_coeff, args):
+    """ array-based function that computes the viewshed as is defined in ArcGIS
+    """
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
     obs_elev = 1.0 # Observator's elevation in meters
@@ -225,19 +241,16 @@ curvature_correction, refr_coeff, args):
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
 
-    # Extract cell size from input DEM
-    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
-
     # Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
     I_uri = raster_utils.temporary_filename()
     J_uri = raster_utils.temporary_filename()
     shutil.copy(in_dem_uri, I_uri)
-    shutil.copy(in_dem_uri, J_uri)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
     I_raster.GetRasterBand(1).WriteArray(I)
     I_raster = None
+    shutil.copy(in_dem_uri, J_uri)
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
     J_raster.GetRasterBand(1).WriteArray(J)
     J_raster = None
@@ -248,7 +261,6 @@ curvature_correction, refr_coeff, args):
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    GT = raster_utils.get_geotransform_uri(in_dem_uri)
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
@@ -466,7 +478,7 @@ def execute(args):
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    viewshed(viewshed_dem_reclass_uri,
+    compute_viewshed_uri(viewshed_dem_reclass_uri,
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,

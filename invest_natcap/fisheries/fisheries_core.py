@@ -76,7 +76,7 @@ def execute(args):
             desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-
+    LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
 
@@ -84,7 +84,8 @@ def execute(args):
         args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
         cycle_dict)
 
-    migration_dict = args['migration_dict'] if 'migration_dict' in args else None
+    migration_dict = args['migrate_dict'] if 'migrate_dict' in args else None
+    LOGGER.debug("MIGRATION: %s" % migration_dict)
 
     if args['maturity_type'] == "Age Specific":
         age_structured_cycle(args['params_dict'], args['is_gendered'],
@@ -172,6 +173,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Equilibrated?', 'total': False}]
 
+    LOGGER.debug("I AM IN : %s" % os.getcwd())
+
     elements = [{
                 'type': 'text',
                 'section': 'body',
@@ -202,25 +205,25 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/sorttable.js',
+                'data_src': './invest_natcap/reporting/reporting_data/sorttable.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/jquery-1.10.2.min.js',
+                'data_src': './invest_natcap/reporting/reporting_data/jquery-1.10.2.min.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'script',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/total_functions.js',
+                'data_src': './invest_natcap/reporting/reporting_data/total_functions.js',
                 'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
                 'format': 'style',
-                'data_src': '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/reporting_data/table_style.css',
+                'data_src': './invest_natcap/reporting/reporting_data/table_style.css',
                 'input_type': 'File'}
                 ]
 
@@ -327,7 +330,7 @@ def calc_harvest(cycle_dict, params_dict):
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
 
 
-            LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
+            #LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
             #If we reach equilibrium before the total duration, record what
             #cycle it happened at, and we can break.
             if .999 < frac < 1.001:
@@ -429,6 +432,8 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     prev_num_indivs = \
                         calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_age, cycle)
+                    if area == '1' and age == '3' and cycle == 1:
+                        LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (prev_num_indivs, prev_survival))
 
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
@@ -436,7 +441,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         for area in cycle_dict[cycle]:
             if area == '1':
                 for age in cycle_dict[cycle][area]:
-                    #LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
+                    LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
                     pass
 
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
@@ -519,9 +524,11 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
             }
     '''
     prev_indiv_in_area = cycle_dict[cycle-1][area][age]
-    prev_mig_in_area = 1 if mig_dict == None else mig_dict[age][area][area]
+    prev_mig_in_area = 1 if mig_dict == None or age not in mig_dict else mig_dict[age][area][area]
 
     indivs_in_area = prev_indiv_in_area * prev_mig_in_area
+    if cycle == 1 and age == '2':
+        LOGGER.debug("Area %s x==x: %s" % (area, indivs_in_area))
 
     incoming_pop = 0
 
@@ -536,7 +543,8 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
             else:
                 mig_prime_to_area = 0
 
-            incoming_pop += prev_indivs_prime * mig_prime_to_area
+            inc_prime = prev_indivs_prime * mig_prime_to_area
+            incoming_pop += inc_prime
     
     return indivs_in_area + incoming_pop
 
