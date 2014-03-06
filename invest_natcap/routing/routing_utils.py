@@ -40,8 +40,9 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('routing')
 
 
-def route_flux(in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri, loss_uri,
-               flux_uri, absorption_mode, aoi_uri=None):
+def route_flux(
+    in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri, loss_uri,
+    flux_uri, absorption_mode, aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -75,11 +76,6 @@ def route_flux(in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri,
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_flow_direction)
     LOGGER.info('starting route_flux by aligning datasets')
     
-    #flow_direction_uri = in_flow_direction
-    #dem_uri = in_dem
-    #source_uri = in_source_uri
-    #absorption_rate_uri = in_absorption_rate_uri
-    
     raster_utils.align_dataset_list(
         [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
         [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
@@ -103,7 +99,6 @@ def route_flux(in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
 
 
-        
 def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
