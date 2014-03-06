@@ -629,6 +629,9 @@ def aggregate_raster_values_uri(
            calculation.  hectare_mean is None if raster_uri is unprojected.
         """
 
+    LOGGER.debug('Collecting raster stats from %s', raster_uri)
+    LOGGER.debug('Aggregating values by vector %s', shapefile_uri)
+
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
