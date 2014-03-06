@@ -211,7 +211,25 @@ def parse_fec_csv(fec_uri):
 
             {'stage1': 0.02, 'stage2': 0.3, ...}
     '''
-    return
+    fec_dict = {}
+
+    with open(fec_uri, 'rU') as fec_file:
+        csv_reader = csv.reader(fec_file)
+
+        #Pass over the first row, which is just headers
+        csv_reader.next()
+
+        while True:
+            try:
+                line = csv_reader.next()
+                
+                #Should only be two parts to line- line[0] will be the stage
+                #name, and line[1] should be the corresponding fec param.
+                fec_dict[line[0]] = line[1]
+
+            except StopIteration:
+                break
+    return fec_dict
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
