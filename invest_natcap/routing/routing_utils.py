@@ -35,12 +35,12 @@ from invest_natcap import raster_utils
 import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing')
 
 
-def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
+def route_flux(in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri, loss_uri,
                flux_uri, absorption_mode, aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
@@ -48,14 +48,16 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         that will operate on input flux and other user defined arguments
         to determine nodal output flux.
 
-        in_dem_uri - a URI to a DEM raster
+        in_flow_direction - a URI to a d-infinity flow direction raster
+        in_dem - a uri to the dem that generated in_flow_direction, they
+            should be aligned rasters
         in_source_uri - a GDAL dataset that has source flux per pixel
         in_absorption_rate_uri - a GDAL floating point dataset that has a percent
             of flux absorbed per pixel
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
-            traveling through each pixel
+            travelling through each pixel
         absorption_mode - either 'flux_only' or 'source_and_flux'. For
             'flux_only' the outgoing flux is (in_flux * absorption + source).
             If 'source_and_flux' then the output flux
@@ -66,50 +68,50 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
             non-contibuting inputs depending on the orientation of the DEM.
 
         returns nothing"""
-
     dem_uri = raster_utils.temporary_filename()
+    flow_direction_uri = raster_utils.temporary_filename()
     source_uri = raster_utils.temporary_filename()
     absorption_rate_uri = raster_utils.temporary_filename()
-    out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+    out_pixel_size = raster_utils.get_cell_size_from_uri(in_flow_direction)
     LOGGER.info('starting route_flux by aligning datasets')
+    
+    #flow_direction_uri = in_flow_direction
+    #dem_uri = in_dem
+    #source_uri = in_source_uri
+    #absorption_rate_uri = in_absorption_rate_uri
+    
     raster_utils.align_dataset_list(
-        [in_dem_uri, in_source_uri, in_absorption_rate_uri],
-        [dem_uri, source_uri, absorption_rate_uri],
-        ["nearest", "nearest", "nearest"], out_pixel_size,
+        [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
+        [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
+        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
-    flow_direction_uri = raster_utils.temporary_filename()
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
 
-    dem_data_uri = raster_utils.temporary_filename()
-    dem_carray = raster_utils.load_dataset_to_carray(
-        dem_uri, dem_data_uri, array_type=gdal.GDT_Float32)
-
-    LOGGER.info("calculating flow_direction_inf")
-    dem_offset_uri = raster_utils.temporary_filename()
-    routing_cython_core.flow_direction_inf(
-        dem_uri, flow_direction_uri, dem_offset_uri)
-    dem_nodata = raster_utils.get_nodata_from_uri(dem_offset_uri)
     LOGGER.info("finding sinks")
-    sink_cell_set = routing_cython_core.find_sinks(dem_offset_uri)
+    sink_cell_set = routing_cython_core.find_sinks(dem_uri)
     LOGGER.info("calculating flow_graph")
-    routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
-        dem_uri)
+    routing_cython_core.calculate_flow_weights(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.debug('sinks: %s' % str(sink_cell_set))
     LOGGER.info("calculating transport")
+    LOGGER.debug('absorption_rate_uri %s' % absorption_rate_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
 
 
-def flow_accumulation(dem_uri, flux_output_uri, aoi_uri=None):
+        
+def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
 
-        dem_uri - a uri to a gdal dataset representing a DEM
+        flow_direction_uri - a uri to a raster that has d-infinity flow
+            directions in it
+        dem_uri - a uri to a gdal dataset representing a DEM, must be aligned
+            with flow_direction_uri
         flux_output_uri - location to dump the raster representing flow
             accumulation
         aoi_uri - (optional) uri to a datasource to mask out the dem"""
@@ -127,7 +129,7 @@ def flow_accumulation(dem_uri, flux_output_uri, aoi_uri=None):
 
     LOGGER.debug("routing flux")
     route_flux(
-        dem_uri, constant_flux_source_uri,
+        flow_direction_uri, dem_uri, constant_flux_source_uri,
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
         aoi_uri=aoi_uri)
 

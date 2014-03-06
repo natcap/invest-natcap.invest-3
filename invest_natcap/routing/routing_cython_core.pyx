@@ -268,12 +268,10 @@ def calculate_transport(
                 (time.clock() - start))
 
 
-def calculate_flow_graph(
-    flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
-    dem_uri=None):
-    """This function calculates the flow graph from a d-infinity based
-        flow algorithm to include including source/sink cells
-        as well as a data structures to assist in walking up the flow graph.
+def calculate_flow_weights(
+    flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
+    """This function calculates the flow weights from a d-infinity based
+        flow algorithm to assist in walking up the flow graph.
 
         flow_direction_uri - uri to a flow direction GDAL dataset that's
             used to calculate the flow graph
@@ -287,9 +285,6 @@ def calculate_flow_graph(
             3 2 1
             4 x 0
             5 6 7
-
-        dem_uri - (optional) if present, returns a sink cell list sorted by
-            "lowest" height to highest.  useful for flow accumulation sorting
 
         returns nothing"""
 
