@@ -689,7 +689,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 surv = calc_survival_mortal(params_dict, area, age)
 
                 if age in final_stage:
-                    count = (prev_count * surv)/ (1- surv)
+                    count = (prev_count * prev_surv)/ (1- surv)
                 else:
                     count = prev_count * prev_surv
                     #LOGGER.debug("For %s,%s we're using N=%s, Surv=%s" % (area, age, prev_count, prev_surv))
