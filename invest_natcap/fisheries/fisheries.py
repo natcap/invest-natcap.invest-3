@@ -181,7 +181,6 @@ def execute(args):
     
     core_args['rec_dict'] = rec_dict
 
-
     #Direct pass all these variables
     core_args['workspace_dir'] = args['workspace_dir']
     core_args['aoi_uri'] = cp_aoi_uri
@@ -226,9 +225,9 @@ def parse_fec_csv(fec_uri):
                 #Should only be two parts to line- line[0] will be the stage
                 #name, and line[1] should be the corresponding fec param.
                 fec_dict[line[0]] = line[1]
-
             except StopIteration:
                 break
+    
     return fec_dict
 
 def parse_migration_tables(mig_folder_uri):
