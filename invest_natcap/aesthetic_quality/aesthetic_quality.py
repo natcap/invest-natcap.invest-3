@@ -143,13 +143,19 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
         -refraction: refraction index between 0 (max effect) and 1 (no effect).
         Default is 0.13."""
 
+    # Extract cell size from input DEM
+    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+
+    # Extract the input raster geotransform
+    GT = raster_utils.get_geotransform_uri(in_dem_uri)
+
     # Call the non-uri version of viewshed.
     compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri,
-    curvature_correction, refr_coeff, args)
+    cell_size, GT, curvature_correction, refr_coeff, args)
 
 
 def compute_viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-curvature_correction, refr_coeff, args):
+    cell_size, GT, curvature_correction, refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
     # default parameter values that are not passed to this function but that
@@ -235,9 +241,6 @@ curvature_correction, refr_coeff, args):
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
 
-    # Extract cell size from input DEM
-    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
-
     # Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
@@ -258,7 +261,6 @@ curvature_correction, refr_coeff, args):
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    GT = raster_utils.get_geotransform_uri(in_dem_uri)
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
