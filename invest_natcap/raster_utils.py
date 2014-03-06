@@ -1995,6 +1995,14 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
+    
+    #make sure that the input lists are of the same length
+    if not reduce(lambda x,y: x if x==y else False, 
+        [len(dataset_uri_list), len(dataset_out_uri_list),
+        len(resample_method_list)]):
+        raise Exception("dataset_uri_list, dataset_out_uri_list, and "
+            "resample_method_list must be the same length")
+        
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
