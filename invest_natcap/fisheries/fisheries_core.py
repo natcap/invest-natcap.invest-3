@@ -76,7 +76,7 @@ def execute(args):
             desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-
+    LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
 
@@ -330,7 +330,7 @@ def calc_harvest(cycle_dict, params_dict):
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
 
 
-            LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
+            #LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
             #If we reach equilibrium before the total duration, record what
             #cycle it happened at, and we can break.
             if .999 < frac < 1.001:
@@ -432,6 +432,8 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     prev_num_indivs = \
                         calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_age, cycle)
+                    if area == '1' and age == '3' and cycle == 1:
+                        LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (prev_num_indivs, prev_survival))
 
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
@@ -525,6 +527,8 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     prev_mig_in_area = 1 if mig_dict == None or age not in mig_dict else mig_dict[age][area][area]
 
     indivs_in_area = prev_indiv_in_area * prev_mig_in_area
+    if cycle == 1 and age == '2':
+        LOGGER.debug("Area %s x==x: %s" % (area, indivs_in_area))
 
     incoming_pop = 0
 
@@ -539,7 +543,8 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
             else:
                 mig_prime_to_area = 0
 
-            incoming_pop += prev_indivs_prime * mig_prime_to_area
+            inc_prime = prev_indivs_prime * mig_prime_to_area
+            incoming_pop += inc_prime
     
     return indivs_in_area + incoming_pop
 
