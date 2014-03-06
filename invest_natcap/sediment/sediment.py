@@ -105,8 +105,13 @@ def execute(args):
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
-
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)
+    
+    routing_cython_core.resolve_flat_regions_for_drainage(clipped_dem_uri, dem_offset_uri)
+    routing_cython_core.calculate_flow_direction(dem_offset_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
@@ -114,12 +119,9 @@ def execute(args):
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
-    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
-    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
-    routing_cython_core.calculate_flow_direction(clipped_dem_uri, flow_direction_uri)
-
     #Calculate LS term
     LOGGER.info('calculate ls term')
+    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
     ls_nodata = -1.0
     sediment_core.calculate_ls_factor(
         flow_accumulation_uri, slope_uri, flow_direction_uri, ls_uri, ls_nodata)
@@ -214,7 +216,7 @@ def execute(args):
         output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
     sed_flux_uri = raster_utils.temporary_filename()
     routing_utils.route_flux(
-        args['dem_uri'], usle_uri, retention_rate_uri,
+        flow_direction_uri, dem_offset_uri, usle_uri, retention_rate_uri,
         upstream_on_pixel_retention_uri, sed_flux_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'])
 
