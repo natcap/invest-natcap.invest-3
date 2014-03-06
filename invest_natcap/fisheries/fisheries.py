@@ -168,14 +168,14 @@ def execute(args):
     Dictionary will look like one of the following:
         {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
         {'Ricker': {'alpha': 0.02, 'beta': 3}}
-        {'Fecundity': {FECUNDITY DICT}}
+        {'Fecundity': {'stage1': 0.02, 'stage2': 0.03, ...}}
         {'Fixed': 0.5}
    ''' 
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
         rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
     elif args['rec_eq'] == 'Fecundity':
-        rec_dict = {'Fecundity': args['fec_params_dict']}
+        rec_dict = {'Fecundity': parse_fec_csv(args['fec_params_uri'])}
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
@@ -205,6 +205,11 @@ def parse_fec_csv(fec_uri):
     Input:
         fec_uri- The location of the CSV file containing all pertinent
             information for fecundity.
+    Returns:
+        fec_dict- Dictionary that associates a single fecundity parameter with
+            each age/stage class.
+
+            {'stage1': 0.02, 'stage2': 0.3, ...}
     '''
     return
 
