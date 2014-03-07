@@ -168,19 +168,18 @@ def execute(args):
     Dictionary will look like one of the following:
         {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
         {'Ricker': {'alpha': 0.02, 'beta': 3}}
-        {'Fecundity': {FECUNDITY DICT}}
+        {'Fecundity': {'stage1': 0.02, 'stage2': 0.03, ...}}
         {'Fixed': 0.5}
    ''' 
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
         rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
     elif args['rec_eq'] == 'Fecundity':
-        rec_dict = {'Fecundity': args['fec_params_dict']}
+        rec_dict = {'Fecundity': parse_fec_csv(args['fec_params_uri'])}
     else:
         rec_dict = {'Fixed': args['fix_param']}
     
     core_args['rec_dict'] = rec_dict
-
 
     #Direct pass all these variables
     core_args['workspace_dir'] = args['workspace_dir']
@@ -205,8 +204,31 @@ def parse_fec_csv(fec_uri):
     Input:
         fec_uri- The location of the CSV file containing all pertinent
             information for fecundity.
+    Returns:
+        fec_dict- Dictionary that associates a single fecundity parameter with
+            each age/stage class.
+
+            {'stage1': 0.02, 'stage2': 0.3, ...}
     '''
-    return
+    fec_dict = {}
+
+    with open(fec_uri, 'rU') as fec_file:
+        csv_reader = csv.reader(fec_file)
+
+        #Pass over the first row, which is just headers
+        csv_reader.next()
+
+        while True:
+            try:
+                line = csv_reader.next()
+                
+                #Should only be two parts to line- line[0] will be the stage
+                #name, and line[1] should be the corresponding fec param.
+                fec_dict[line[0]] = line[1]
+            except StopIteration:
+                break
+    
+    return fec_dict
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and

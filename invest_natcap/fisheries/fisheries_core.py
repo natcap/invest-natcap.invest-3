@@ -571,12 +571,39 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
         rec = add_info['alpha'] * spawners * \
                     (cmath.e ** (-add_info['beta']*spawners)) / gender_var
     elif rec_eq == 'Fecundity':
-        pass
+        summed_fec = calc_fecundity_value(cycle_dict, params_dict, add_info, cycle-1)
+        rec = summed_fec / gender_var
     elif rec_eq == 'Fixed':
         #In this case, add_info is a fixed recruitment
         rec = add_info / gender_var
 
     return rec
+
+def calc_fecundity_value(cycle_dict, params_dict, fec_dict, prev_cycle):
+    '''Want to get the sum of the previous indivual numbers, multiplied
+    against the maturity, and the fecundity. The equation should be 
+    SUM( N{a,s,x,t-1} * Maturity{a,s} * Fec{a,s} )
+    
+    cycle_dict- Contains all counts of individuals for each combination of 
+                cycle, age/stage, and area.
+                
+                {Cycle_#:
+                    {'Area_1':
+                        {'Age_A': 1000}
+                    }
+            }
+    '''
+    summed_fec = 0
+
+    for area, age_dict in cycle_dict[prev_cycle].items():
+        for age, indivs in age_dict.items():
+
+            maturity = params_dict['Stage_Params'][age]['maturity']
+            fecundity = fec_dict[age]
+
+            summed_fec += indivs * maturity * fecundity
+
+    return summed_fec
 
 def spawner_count(cycle_dict, params_dict, cycle, do_weight):
     '''For a given cycle, does a SUMPRODUCT of the individuals and the maturity
@@ -689,7 +716,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 surv = calc_survival_mortal(params_dict, area, age)
 
                 if age in final_stage:
-                    count = (prev_count * surv)/ (1- surv)
+                    count = (prev_count * prev_surv)/ (1- surv)
                 else:
                     count = prev_count * prev_surv
                     #LOGGER.debug("For %s,%s we're using N=%s, Surv=%s" % (area, age, prev_count, prev_surv))
