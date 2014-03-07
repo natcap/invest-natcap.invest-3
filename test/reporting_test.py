@@ -840,7 +840,7 @@ class TestReportingPackage(testing.GISTest):
                 {'name': 'Sediment', 'total':False, 'attr':{'class':'offsets'}},
                 {'name': 'Nitrogen', 'total':False, 'attr':{'class':'offsets'}},
                 {'name': 'Phosphorous', 'total':False, 'attr':{'class':'offsets'}}]
-        
+
         #columns_pop = [
         #        {'name': 'municipalities', 'total':False},
         #        {'name': 'pop', 'total':False},
@@ -853,8 +853,8 @@ class TestReportingPackage(testing.GISTest):
         #        {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
         #        {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
         #        {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
-                
-                
+
+
         report_args = {
                 'title': 'Sortable Table',
                 'elements': [
@@ -867,7 +867,8 @@ class TestReportingPackage(testing.GISTest):
                         'data_type':'dictionary',
                         'columns':columns,
                         'key':'parcel_id',
-                        'data': sample_dict},
+                        'data': sample_dict,
+                        'attributes': {'id':'parcel_table'}},
                     {
                         'type': 'text',
                         'section': 'body',
@@ -881,7 +882,8 @@ class TestReportingPackage(testing.GISTest):
                         'data_type':'dictionary',
                         'columns':columns_pop,
                         'key':'pop_group',
-                        'data': pop_groups},
+                        'data': pop_groups,
+                        'attributes': {'class': 'multi_class'}},
                     {
                         'type': 'head',
                         'section': 'head',

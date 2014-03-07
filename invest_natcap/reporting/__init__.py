@@ -42,6 +42,11 @@ def generate_report(reporting_args):
                     Values: 'body' | 'head' (required)
 
             Table element dictionary has at least the following additional arguments:
+                'attributes' - a dictionary of html table attributes. The attribute
+                    name is the key which gets set to the value of the key.
+                    (optional)
+                    Example: {'class': 'sorttable', 'id': 'parcel_table'}
+
                 'sortable' - a boolean value for whether the tables columns
                     should be sortable (required)
 
@@ -209,6 +214,11 @@ def build_table(param_args):
         param_args - a dictionary that has the parameters for building up the
             html table. The dictionary includes the following:
 
+            'attributes' - a dictionary of html table attributes. The attribute
+                    name is the key which gets set to the value of the key.
+                    (optional)
+                    Example: {'class': 'sorttable', 'id': 'parcel_table'}
+
             param_args['sortable'] - a boolean value that determines whether the
                 table should be sortable (required)
 
@@ -292,20 +302,32 @@ def build_table(param_args):
     if 'total' in param_args:
         table_dict['total'] = param_args['total']
 
-    LOGGER.debug('Final Table Dictionary: %s', table_dict)
-
-    attr = None
-    # If table is sortable build up a dictionary with the proper key-value pair
-    if param_args['sortable']:
-        attr = {"class":"sortable"}
+    # If table attributes were passed in check to see if the 'sortable' class
+    # needs to be added to that list
+    if 'attributes' in param_args:
+        table_dict['attributes'] = param_args['attributes']
+        if param_args['sortable']:
+            try:
+                class_list = table_dict['attributes']['class'] + ' sortable'
+                table_dict['attributes']['class'] = class_list
+            except KeyError:
+                table_dict['attributes']['class'] = 'sortable'
+    else:
+        # Attributes were not passed in, however if sortable is True
+        # create attributes key and dictionary to pass in to table
+        # handler
+        if param_args['sortable']:
+            table_dict['attributes'] = {'class': 'sortable'}
 
     # If a checkbox column is wanted pass in the table dictionary
     if 'checkbox' in param_args and param_args['checkbox']:
         table_dict['checkbox'] = True
 
+    LOGGER.debug('Final Table Dictionary: %s', table_dict)
+
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
-    return table_generator.generate_table(table_dict, attr)
+    return table_generator.generate_table(table_dict)
 
 def data_dict_to_list(data_dict):
     """Abstract out inner dictionaries from data_dict into a list, where

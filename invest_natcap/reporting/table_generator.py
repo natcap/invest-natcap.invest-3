@@ -12,16 +12,16 @@ def generate_table(table_dict, attributes=None):
                 structure for the table (required). The order of the
                 columns from left to right is depicted by the index
                 of the column dictionary in the list. Each dictionary
-                in the list has the following keys and values: 
+                in the list has the following keys and values:
                     'name' - a string for the column name (required)
                     'total' - a boolean for whether the column should be
                         totaled (required)
                     'attr' - a dictionary that has key value pairs for
                         optional tag attributes (optional). Ex:
                         'attr': {'class': 'offsets'}
-        
+
             'rows' - a list of dictionaries that represent the rows. Each
-                dictionaries keys should match the column names found in 
+                dictionaries keys should match the column names found in
                 'cols' (possibly empty list) (required) Example:
                 [{col_name_1: value, col_name_2: value, ...},
                  {col_name_1: value, col_name_2: value, ...},
@@ -36,8 +36,10 @@ def generate_table(table_dict, attributes=None):
                 total row at the bottom of the table that sums the column
                 values (optional)
 
-         attributes - a dictionary with keys being valid html table attributes
-             that point to proper values (optional)
+            'attributes' - a dictionary of html table attributes. The attribute
+                    name is the key which gets set to the value of the key.
+                    (optional)
+                    Example: {'class': 'sorttable', 'id': 'parcel_table'}
 
         returns - a string representing an html table
     """
@@ -45,10 +47,10 @@ def generate_table(table_dict, attributes=None):
     # Initialize the string that will store the html representation of the table
     table_string = ''
 
-    if attributes != None:
+    if 'attributes' in table_dict:
         table_string += '<table'
-        for attr_key, attr_value in attributes.iteritems():
-            table_string += ' %s=%s' % (attr_key, attr_value)
+        for attr_key, attr_value in table_dict['attributes'].iteritems():
+            table_string += ' %s="%s"' % (attr_key, attr_value)
 
         table_string += '>'
     else:
@@ -60,7 +62,7 @@ def generate_table(table_dict, attributes=None):
         # to pass into checkbox function
         cols_copy = list(table_dict['cols'])
         rows_copy = list(table_dict['rows'])
-        # Get the updated column and row data after adding a 
+        # Get the updated column and row data after adding a
         # checkbox column
         table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
         add_checkbox_total = True
@@ -82,17 +84,17 @@ def generate_table(table_dict, attributes=None):
             The string is generated in such a way where each key is
             set equal to it's value and each key/value are separated
             by a space. Example: 'key1=value1 key2=value2...'
-            
+
             attr_dict - a dictionary of key value pairs
-            
-            returns - a string        
+
+            returns - a string
         """
         attr_str = ''
         for key, value in attr_dict.iteritems():
             attr_str += ' ' + key + '= ' + str(value)
-            
+
         return attr_str
-        
+
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
     for col_dict in table_cols:
@@ -212,7 +214,7 @@ def get_dictionary_values_ordered(dict_list, key_name):
 
     # Initiate an empty list to store values
     ordered_value_list = []
-    
+
     # Iterate over the list and extract the wanted value from each dictionaries
     # 'key_name'. Append the value to the new list
     for item in dict_list:
@@ -230,13 +232,13 @@ def add_checkbox_column(col_list, row_list):
             structure for the table (required). The order of the
             columns from left to right is depicted by the index
             of the column dictionary in the list. Each dictionary
-            in the list has the following keys and values: 
+            in the list has the following keys and values:
                 'name' - a string for the column name (required)
                 'total' - a boolean for whether the column should be
                     totaled (required)
-        
+
         'row_list' - a list of dictionaries that represent the rows. Each
-            dictionaries keys should match the column names found in 
+            dictionaries keys should match the column names found in
             'col_list' (required) Example:
             [{col_name_1: value, col_name_2: value, ...},
              {col_name_1: value, col_name_2: value, ...},
@@ -257,7 +259,7 @@ def add_checkbox_column(col_list, row_list):
 
     LOGGER.debug('Rows with Checkboxes: %s', row_list)
 
-    # Return a tuple of the updated / modified column and row list of 
+    # Return a tuple of the updated / modified column and row list of
     # dictionaries
     return (col_list, row_list)
 
@@ -266,7 +268,7 @@ def get_row_data(row_list, col_headers):
         using col_headers to properly order the row data.
 
         'row_list' - a list of dictionaries that represent the rows. Each
-            dictionaries keys should match the column names found in 
+            dictionaries keys should match the column names found in
             'col_headers'. The rows will be ordered the same as they are found
             in the dictionary list (required) Example:
             [{'col_name_1':'9/13', 'col_name_3':'expensive',
