@@ -1218,7 +1218,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         
        returns nothing"""
 
-    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index, flat_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
@@ -1290,7 +1290,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
-    cdef float lowest_dem
+    cdef float lowest_dem, dem_value, flow_direction_value
+    cdef queue[int] unresolved_cells
     
     #flow not defined on the edges, so just go 1 row in 
     for row_index in range(n_rows):
@@ -1426,6 +1427,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     flow_array[0, col_index] = (
                         a_f[max_index] * flow_direction_max_slope +
                         a_c[max_index] * 3.14159265 / 2.0)
+                else:
+                    unresolved_cells.push(col_index + row_index * n_cols)
                 #just in case we set 2pi rather than 0
                 #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
                 #    flow_array[0, col_index]  = 0.0
@@ -1433,9 +1436,50 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 if max_downhill_facet != -1:
                     flow_array[0, col_index] = (
                         3.14159265 / 4.0 * max_downhill_facet)
-                    
+                else:
+                    unresolved_cells.push(col_index + row_index * n_cols)
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
+    
+    y_offset = -1
+    cdef int dirty_cache = 0
+    while unresolved_cells.size() > 0:
+        flat_index = unresolved_cells.front()
+        unresolved_cells.pop()
+    
+        row_index = flat_index / n_cols
+        col_index = flat_index % n_cols
+            
+        #We load 3 rows at a time and we know unresolved directions can only
+        #occur in the middle of the raster
+        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
+            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
+        if y_offset != row_index - 1:
+            if dirty_cache:
+                flow_band.WriteArray(flow_array, 0, y_offset)
+                dirty_cache = 0
+            local_y_offset = 1
+            y_offset = row_index - 1
+            dem_window = dem_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+            flow_array = flow_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+                
+        dem_value = dem_window[1, col_index]
+        flow_direction_value = flow_array[1, col_index]
+        
+        for facet_index in range(8):
+            e_1_row_index = row_offsets[facet_index] + local_y_offset
+            e_1_col_index = col_offsets[facet_index] + col_index
+            if (dem_window[e_1_row_index, e_1_col_index] == dem_value and
+                flow_array[e_1_row_index, e_1_col_index] != flow_nodata):
+                flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
+                dirty_cache = 1
+                break
+
+    if dirty_cache:
+        flow_band.WriteArray(flow_array, 0, y_offset)
+        dirty_cache = 0
     
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
