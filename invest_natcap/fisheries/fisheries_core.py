@@ -316,7 +316,9 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
                 vuln = params_dict['Stage_Params'][stage]['vulnfishing']
                 curr_ax_hrv = indivs * exploit_frac * vuln
 
-                if
+                if do_weight:
+                    stage_weight = params_dict['Stage_Params'][stage]['weight']
+                    curr_ax_hrv = curr_ax_hrv * weight
 
                 #Adding to the total for that area
                 hrv_total += curr_ax_hrv
