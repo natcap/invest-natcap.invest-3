@@ -38,7 +38,7 @@ cdef double EPS = 1e-6
 cdef int MAX_WINDOW_SIZE = 2**12
 cdef float INF = numpy.inf
 
-def calculate_transport(
+def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode):
     """This is a generalized flux transport algorithm that operates
@@ -421,26 +421,6 @@ def calculate_flow_weights(
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))
 
-
-def calculate_flow_direction(dem_uri, flow_direction_uri):
-    """Calculates the flow direction of a landscape given its dem
-
-        dem_uri - a URI to a GDAL dataset to the DEM that will be used to
-            determine flow direction.
-        flow_direction_uri - a URI to create a dataset that will be used
-            to store the flow direction.
-   
-        returns nothing"""
-
-    LOGGER.info('Calculate flow direction')
-    start = time.clock()
-
-    #Calcualte the d infinity flow direction
-    flow_direction_inf(dem_uri, flow_direction_uri)
-
-    LOGGER.info(
-        'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
-    
 
 def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,

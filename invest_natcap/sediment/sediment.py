@@ -120,7 +120,7 @@ def execute(args):
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
 
-    routing_cython_core.calculate_flow_direction(dem_offset_uri, flow_direction_uri)
+    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
     routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
     
     #classify streams from the flow accumulation raster
