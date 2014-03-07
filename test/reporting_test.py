@@ -913,7 +913,8 @@ class TestReportingPackage(testing.GISTest):
                         'section': 'head',
                         'format': 'json',
                         'data_src': json_uri,
-                        'input_type':'File'}
+                        'input_type':'File',
+                        'attributes':{'id':'muni-data'}}
                     ],
                 'out_uri': output_uri}
 

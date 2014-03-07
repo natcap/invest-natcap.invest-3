@@ -3,7 +3,7 @@ var globalData;
 $(document).ready(function()
         {
            //var jsonData = JSON.parse(document.getElementById('jsonData').innerHTML);
-           globalData = JSON.parse(document.getElementById('jsonData').innerHTML);
+           globalData = JSON.parse(document.getElementById('muni-data').innerHTML);
            console.log(globalData);
 
            sum_constant_total();
