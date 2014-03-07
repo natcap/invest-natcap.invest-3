@@ -106,18 +106,20 @@ def execute(args):
         gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
+    #resolve plateaus 
+    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)    
+    routing_cython_core.resolve_flat_regions_for_drainage(clipped_dem_uri, dem_offset_uri)
+    
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
+    raster_utils.calculate_slope(dem_offset_uri, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
-    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)
-    
-    routing_cython_core.resolve_flat_regions_for_drainage(clipped_dem_uri, dem_offset_uri)
+
     routing_cython_core.calculate_flow_direction(dem_offset_uri, flow_direction_uri)
     routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
     
