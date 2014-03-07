@@ -96,7 +96,7 @@ def execute(args):
                     args['ordered_stages'], args['rec_dict'], cycle_dict, 
                     migration_dict, args['duration'], args['do_weight'])
 
-    hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'])
+    hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
    
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
@@ -280,7 +280,7 @@ def calc_valuation(final_cycle, price, frac):
 
     return value_dict
 
-def calc_harvest(cycle_dict, params_dict):
+def calc_harvest(cycle_dict, params_dict, do_weight):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
     results represent the number of individuals.
@@ -315,6 +315,10 @@ def calc_harvest(cycle_dict, params_dict):
                 
                 vuln = params_dict['Stage_Params'][stage]['vulnfishing']
                 curr_ax_hrv = indivs * exploit_frac * vuln
+
+                if do_weight:
+                    stage_weight = params_dict['Stage_Params'][stage]['weight']
+                    curr_ax_hrv = curr_ax_hrv * stage_weight
 
                 #Adding to the total for that area
                 hrv_total += curr_ax_hrv
@@ -595,7 +599,7 @@ def calc_fecundity_value(cycle_dict, params_dict, fec_dict, prev_cycle):
     '''
     summed_fec = 0
 
-    for area, age_dict in cycle_dict[prev_cycle].items():
+    for age_dict in cycle_dict[prev_cycle].values():
         for age, indivs in age_dict.items():
 
             maturity = params_dict['Stage_Params'][age]['maturity']
