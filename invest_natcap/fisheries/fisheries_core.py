@@ -599,7 +599,7 @@ def calc_fecundity_value(cycle_dict, params_dict, fec_dict, prev_cycle):
     '''
     summed_fec = 0
 
-    for area, age_dict in cycle_dict[prev_cycle].items():
+    for age_dict in cycle_dict[prev_cycle].values():
         for age, indivs in age_dict.items():
 
             maturity = params_dict['Stage_Params'][age]['maturity']
