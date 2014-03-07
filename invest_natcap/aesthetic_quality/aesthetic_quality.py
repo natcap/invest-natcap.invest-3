@@ -321,8 +321,13 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
 
         array_shape = (rows, cols)
     
-        aesthetic_quality_core.viewshed(in_dem_uri, input_array, array_shape, \
-        nodata, visibility_uri, (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+        # Create a raster from base before passing it to viewshed
+        raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+            255, gdal.GDT_Byte, fill_value = 255)
+
+        aesthetic_quality_core.viewshed(in_dem_uri, input_array, cell_size, \
+        array_shape, nodata, visibility_uri, (i,j), obs_elev, tgt_elev, \
+        max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
