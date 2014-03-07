@@ -318,7 +318,7 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
 
                 if do_weight:
                     stage_weight = params_dict['Stage_Params'][stage]['weight']
-                    curr_ax_hrv = curr_ax_hrv * weight
+                    curr_ax_hrv = curr_ax_hrv * stage_weight
 
                 #Adding to the total for that area
                 hrv_total += curr_ax_hrv
