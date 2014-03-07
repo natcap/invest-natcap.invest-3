@@ -1478,21 +1478,58 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
                 dirty_cache = 1
                 break
-        else:
-            #we couldn't resolve it, try again later
-            LOGGER.info("couldn't resolve direction for index %d" % (flat_index))
-            unresolved_cells_defer.push(flat_index)
-            
-        if unresolved_cells.size() == 0 and unresolved_cells_defer.size() != 0 and unresolved_cells_defer.size() < previous_unresolved_size:
-            previous_unresolved_size = unresolved_cells_defer.size()
-            while unresolved_cells.size() > 0:
-                unresolved_cells.push(unresolved_cells_defer.front())
-                unresolved_cells_defer.pop()
+        else:        
+            #maybe we can drain to nodata
+            for facet_index in range(8):
+                e_1_row_index = row_offsets[facet_index] + local_y_offset
+                e_1_col_index = col_offsets[facet_index] + col_index
+                if dem_window[e_1_row_index, e_1_col_index] == dem_nodata:
+                    flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
+                    dirty_cache = 1
+                    break
+            else:
+                #we couldn't resolve it, try again later
+                LOGGER.info("couldn't resolve direction for index %d" % (flat_index))
+                unresolved_cells_defer.push(flat_index)
+                
+        if unresolved_cells.size() == 0:
+            LOGGER.info('previous_unresolved_size %d' % previous_unresolved_size)
+            LOGGER.info('unresolved_cells_defer.size() = %d' % unresolved_cells_defer.size())
+            if unresolved_cells_defer.size() < previous_unresolved_size:
+                previous_unresolved_size = unresolved_cells_defer.size()
+                while unresolved_cells_defer.size() > 0:
+                    unresolved_cells.push(unresolved_cells_defer.front())
+                    unresolved_cells_defer.pop()
 
+    while unresolved_cells_defer.size() > 0:
+        flat_index = unresolved_cells_defer.front()
+        unresolved_cells_defer.pop()
+    
+        LOGGER.info('marking unresolved flat index %d' % flat_index)
+        row_index = flat_index / n_cols
+        col_index = flat_index % n_cols
+        #We load 3 rows at a time and we know unresolved directions can only
+        #occur in the middle of the raster
+        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
+            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
+        if y_offset != row_index - 1:
+            if dirty_cache:
+                flow_band.WriteArray(flow_array, 0, y_offset)
+                dirty_cache = 0
+            local_y_offset = 1
+            y_offset = row_index - 1
+            flow_array = flow_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+                
+            flow_array[1, col_index] = 9999
+            dirty_cache = 1
+            
     if dirty_cache:
         flow_band.WriteArray(flow_array, 0, y_offset)
         dirty_cache = 0
-    
+
+
+        
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
