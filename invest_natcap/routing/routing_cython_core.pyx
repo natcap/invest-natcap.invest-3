@@ -1443,6 +1443,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     
     y_offset = -1
     cdef int dirty_cache = 0
+    cdef queue[int] unresolved_cells_defer
+    cdef int previous_unresolved_size = unresolved_cells.size()
     while unresolved_cells.size() > 0:
         flat_index = unresolved_cells.front()
         unresolved_cells.pop()
@@ -1476,6 +1478,16 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
                 dirty_cache = 1
                 break
+        else:
+            #we couldn't resolve it, try again later
+            LOGGER.info("couldn't resolve direction for index %d" % (flat_index))
+            unresolved_cells_defer.push(flat_index)
+            
+        if unresolved_cells.size() == 0 and unresolved_cells_defer.size() != 0 and unresolved_cells_defer.size() < previous_unresolved_size:
+            previous_unresolved_size = unresolved_cells_defer.size()
+            while unresolved_cells.size() > 0:
+                unresolved_cells.push(unresolved_cells_defer.front())
+                unresolved_cells_defer.pop()
 
     if dirty_cache:
         flow_band.WriteArray(flow_array, 0, y_offset)
