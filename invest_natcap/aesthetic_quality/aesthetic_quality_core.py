@@ -1089,13 +1089,17 @@ def cell_angles(cell_coords, viewpoint):
     angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
     return angles
 
-def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
+def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
+    coordinates, obs_elev=1.75, tgt_elev=0.0, \
     max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
         Inputs: 
-            -input_uri: uri of the input elevation raster map
-            -output_uri: uri of the output raster map
+            -input_array: numpy array of the elevation raster map
+            -cell_size: raster cell size in meters
+            -array_shape: input_array_shape as returned from ndarray.shape()
+            -nodata: input_array's raster nodata value
+            -output_uri: output raster uri, compatible with input_array's size
             -coordinates: tuple (east, north) of coordinates of viewing
                 position
             -obs_elev: observer elevation above the raster map.
@@ -1107,28 +1111,11 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
             (default) or 'python'.
 
         Returns nothing"""
-    # Get the cell size
-    cell_size = raster_utils.get_cell_size_from_uri(input_uri)
-
-    # Open the input URI and extract the numpy array
-    input_raster = gdal.Open(input_uri)
-    message = 'Cannot open file ' + input_uri
-    assert input_raster is not None, message
-    input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    array_shape = input_array.shape
-    input_raster = None
-    nodata = raster_utils.get_nodata_from_uri(input_uri)
-    print('computing viewshed on ' + input_uri, array_shape)
-    
     # Compute the viewshed on it
     output_array = compute_viewshed(input_array, nodata, coordinates, \
     obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
     
     # Save the output in the output URI
-    if os.path.exists(output_uri):
-        os.remove(output_uri)
-    raster_utils.new_raster_from_base_uri(input_uri, output_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message

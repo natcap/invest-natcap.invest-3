@@ -40,7 +40,18 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         self.assertRaises(fisheries.ImproperAreaParameter,
                         fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count, 'Fixed', True)
-    
+   
+    def test_fecundity_csv_parse(self):
+       '''Since none of the models currently use fecundity for their
+       recruitment, need to test to make sure that it actually parses the way I
+       think it should.'''
+
+       csv_uri = './invest-data/test/data/fisheries/CSVs/shrimp_fecundity_test.csv'
+
+       dictionary = fisheries.parse_fec_csv(csv_uri)
+
+       LOGGER.debug(dictionary)
+
     def test_recruitment_errors(self):
         '''One of the first things we want to check is whether the necessary
         parameters for recruitment (based on the user-selected recruitment
@@ -70,6 +81,7 @@ class TestFisheries(invest_natcap.testing.GISTest):
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
 
+    @SkipTest
     def test_age_no_gender_smoke(self):
         #Going to use Blue Crab for testing.
         args = {}
@@ -88,6 +100,7 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         fisheries.execute(args)
 
+    @SkipTest
     def test_age_gendered_smoke(self):
         #Using DC for gendered testing.
         args = {}
@@ -107,6 +120,7 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         fisheries.execute(args)
     
+    @SkipTest
     def test_stage_no_gender_smoke(self):
         #Using white shrimp for stage testing.
         args = {}
@@ -124,4 +138,26 @@ class TestFisheries(invest_natcap.testing.GISTest):
         args['duration'] = 300
 
         fisheries.execute(args)
-        
+
+    @SkipTest
+    def test_age_no_gender_migration(self):
+        #Using lobster to test a model which uses migration.
+        args = {}
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/Lobster_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/carribean_spiny_lobster_main_params.csv'
+        args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Weight'
+        args['num_classes'] = 8
+        args['is_gendered'] = False
+        args['rec_eq'] = "Beverton-Holt"
+        args['alpha'] = 5770000
+        args['beta'] = 2885000
+        args['init_recruits'] = 4686959.42894736
+        args['mig_params_uri'] = './invest-data/Fisheries/Input/Carribean_Spiny_Lobster_migration'
+        args['frac_post_process'] = 0.286332579995172
+        args['unit_price'] = 29.9320213844594
+        args['duration'] = 100
+
+        fisheries.execute(args)
+
