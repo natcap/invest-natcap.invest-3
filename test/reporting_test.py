@@ -684,7 +684,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for making a html page with embedded svg.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -795,6 +795,124 @@ class TestReportingPackage(testing.GISTest):
                         'section': 'head',
                         'format': 'script',
                         'data_src': dee_three_uri,
+                        'input_type':'File'}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_generate_html_classes_tables(self):
+        """Regression test for making a html page where two tables
+            talk to each other.
+        """
+
+        #raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        output_uri = os.path.join(TEST_OUT, 'html_test_classes_tables.html')
+        reg_uri = os.path.join(
+                REGRESSION_DATA, 'regres_html_test_multi_tables.html')
+        css_uri = os.path.join(REPORTING_DATA,'table_style.css')
+        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
+        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
+        jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
+        json_uri = os.path.join(REPORTING_DATA,'sample_json.json')
+        csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
+
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'90', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'110', 'Phosphorous':'60','parcel_id':'3'},
+                       {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
+
+        columns = [{'name': 'parcel_id', 'total':False, 'attr':{'class':'tr_head'}},
+                   {'name': 'Nitrogen', 'total':True, 'attr':{'class':'nit'}},
+                   {'name': 'Sediment', 'total':True, 'attr':{'class':'sed'}},
+                   {'name': 'Phosphorous', 'total':True, 'attr':{'class':'pho'}}]
+
+        pop_groups = []
+
+        columns_pop = [
+                {'name': 'municipalities', 'total':False},
+                {'name': 'Sediment', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Nitrogen', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Phosphorous', 'total':False, 'attr':{'class':'offsets'}}]
+
+        #columns_pop = [
+        #        {'name': 'municipalities', 'total':False},
+        #        {'name': 'pop', 'total':False},
+        #        {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}},
+        #        {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}},
+        #        {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}},
+        #        {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
+        #        {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
+        #        {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
+        #        {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
+        #        {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
+        #        {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
+
+
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'parcel_id',
+                        'data': sample_dict,
+                        'attributes': {'id':'parcel_table'}},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'text': '<p>Here is a sortable table!</p>'},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': False,
+                        'total':False,
+                        'data_type':'dictionary',
+                        'columns':columns_pop,
+                        'key':'pop_group',
+                        'data': pop_groups,
+                        'attributes': {'class': 'multi_class'}},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'style',
+                        'data_src': css_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jsc_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jquery_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'data_src': jsc_fun_uri,
+                        'input_type':'File'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'json',
+                        'data_src': json_uri,
                         'input_type':'File'}
                     ],
                 'out_uri': output_uri}
