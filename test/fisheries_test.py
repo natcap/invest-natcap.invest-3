@@ -124,4 +124,25 @@ class TestFisheries(invest_natcap.testing.GISTest):
         args['duration'] = 300
 
         fisheries.execute(args)
-        
+
+    def test_age_migration(self):
+        #Using lobster to test a model which uses migration.
+        args = {}
+        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
+        args['aoi_uri'] = './invest-data/test/data/fisheries/Lobster_temp_aoi.shp'
+        args['class_params_uri'] = './invest-data/Fisheries/Input/carribean_spiny_lobster_main_params.csv'
+        args['maturity_type'] = "Age Specific"
+        args['hrv_type'] = 'Weight'
+        args['num_classes'] = 8
+        args['is_gendered'] = False
+        args['rec_eq'] = "Beverton-Holt"
+        args['alpha'] = 5770000
+        args['beta'] = 2885000
+        args['init_recruits'] = 4686959.42894736
+        args['mig_params_uri'] = './invest-data/Fisheries/Input/Carribean_Spiny_Lobster_migration'
+        args['frac_post_process'] = 0.286332579995172
+        args['unit_price'] = 29.9320213844594
+        args['duration'] = 100
+
+        fisheries.execute(args)
+
