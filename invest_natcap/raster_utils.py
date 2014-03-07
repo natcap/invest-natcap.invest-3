@@ -893,7 +893,7 @@ def calculate_slope(
 
     LOGGER.debug("calculate slope")
 
-    slope_nodata = -1.0
+    slope_nodata = -9999.0
     dem_small_dataset = gdal.Open(dem_small_uri)
     new_raster_from_base(
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
