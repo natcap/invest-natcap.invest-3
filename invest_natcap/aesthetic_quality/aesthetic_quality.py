@@ -171,13 +171,18 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
     input_raster = None
 
+    # Create a raster from base before passing it to viewshed
+    visibility_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+
     # Call the non-uri version of viewshed.
-    compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri,
+    compute_viewshed(input_array, visibility_uri, in_structure_uri,
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
     refr_coeff, args)
 
 
-def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri, \
+def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
     refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
@@ -258,10 +263,9 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
     assert edge_value >= 0., message
         
     # Base path uri
-    base_uri = os.path.split(out_viewshed_uri)[0]
+    base_uri = os.path.split(visibility_uri)[0]
 
     # Temporary files that will be used 
-    visibility_uri = raster_utils.temporary_filename()
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
 
@@ -321,11 +325,7 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
 
         array_shape = (rows, cols)
     
-        # Create a raster from base before passing it to viewshed
-        raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-            255, gdal.GDT_Byte, fill_value = 255)
-
-        aesthetic_quality_core.viewshed(in_dem_uri, input_array, cell_size, \
+        aesthetic_quality_core.viewshed(input_array, cell_size, \
         array_shape, nodata, visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
@@ -337,8 +337,7 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
-        path, _ = os.path.split(out_viewshed_uri)
-        scaled_viewshed_uri = os.path.join(path, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
@@ -353,11 +352,11 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
     #    #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
     #    return 0.
     ##raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
-    ##out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    ##visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
     # Numpy method:
     #Create the output raster from the first in the input list
     raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
-    out_viewshed_uri, 'GTiff', 0., gdal.GDT_Float64)
+    visibility_uri, 'GTiff', 0., gdal.GDT_Float64)
     # Open the first raster and sum up the values using numpy
     raster = gdal.Open(viewshed_uri_list[0])
     accum_array = raster.GetRasterBand(1).ReadAsArray()
@@ -367,7 +366,7 @@ def compute_viewshed(in_dem_uri, input_array, out_viewshed_uri, in_structure_uri
         array = raster.GetRasterBand(1).ReadAsArray()
         accum_array += array
     # Store the accumulated value in the output uri
-    raster = gdal.Open(out_viewshed_uri, gdal.GA_Update)
+    raster = gdal.Open(visibility_uri, gdal.GA_Update)
     band = raster.GetRasterBand(1)
     band.WriteArray(accum_array)
 

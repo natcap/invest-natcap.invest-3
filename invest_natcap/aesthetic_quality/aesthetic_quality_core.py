@@ -1089,14 +1089,17 @@ def cell_angles(cell_coords, viewpoint):
     angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
     return angles
 
-def viewshed(input_uri, input_array, cell_size, array_shape, nodata, output_uri, \
+def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     coordinates, obs_elev=1.75, tgt_elev=0.0, \
     max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
         Inputs: 
-            -input_uri: uri of the input elevation raster map
-            -output_uri: uri of the output raster map
+            -input_array: numpy array of the elevation raster map
+            -cell_size: raster cell size in meters
+            -array_shape: input_array_shape as returned from ndarray.shape()
+            -nodata: input_array's raster nodata value
+            -output_uri: output raster uri, compatible with input_array's size
             -coordinates: tuple (east, north) of coordinates of viewing
                 position
             -obs_elev: observer elevation above the raster map.
