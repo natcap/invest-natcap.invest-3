@@ -242,12 +242,15 @@ def execute(args):
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
+    usle_summary = raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id')
+    upret_summary = raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id')
+
     field_summaries = {
-        'usle_mean': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').pixel_mean,
-        'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
+        'usle_mean': usle_summary.pixel_mean,
+        'usle_tot': usle_summary.total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').pixel_mean,
+        'upret_tot': upret_summary.total,
+        'upret_mean': upret_summary.pixel_mean,
         }
 
     #Create the service field sums
