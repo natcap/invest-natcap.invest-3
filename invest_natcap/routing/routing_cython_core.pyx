@@ -170,6 +170,7 @@ def calculate_transport(
     cdef double absorption_rate
     cdef double outflow_weight
     cdef double in_flux
+    cdef int cache_row_offset, neighbor_row_index, cache_row_index, cache_row_tag
 
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
