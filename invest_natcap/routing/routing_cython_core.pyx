@@ -79,63 +79,63 @@ def calculate_transport(
     LOGGER.info('Processing transport through grid')
     start = time.clock()
 
-    #Extract input datasets
-    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
-
-    #Create memory mapped lookup arrays
-    outflow_direction_data_file = tempfile.TemporaryFile()
-    outflow_weights_data_file = tempfile.TemporaryFile()
-    source_data_file = tempfile.TemporaryFile()
-    absorption_rate_data_file = tempfile.TemporaryFile()
-
-    outflow_direction_data_uri = raster_utils.temporary_filename()
-    outflow_direction_carray = raster_utils.load_dataset_to_carray(
-        outflow_direction_uri, outflow_direction_data_uri)        
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = (
-        outflow_direction_carray[:])
-    
-    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
-
-    outflow_weights_data_uri = raster_utils.temporary_filename()
-    outflow_weights_carray = raster_utils.load_dataset_to_carray(
-        outflow_weights_uri, outflow_weights_data_uri)        
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = (
-        outflow_weights_carray[:])
-    
-    cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
-    source_data_uri = raster_utils.temporary_filename()
-    source_carray = raster_utils.load_dataset_to_carray(
-        source_uri, source_data_uri)        
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = source_carray[:]
-    
-    cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
-    absorption_rate_data_uri = raster_utils.temporary_filename()
-    absorption_rate_carray = raster_utils.load_dataset_to_carray(
-        absorption_rate_uri, absorption_rate_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = absorption_rate_carray[:]
-    
     #Create output arrays for loss and flux
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
+    
+    
+    cdef int CACHE_ROWS = 2**12
+    if CACHE_ROWS > n_rows:
+        CACHE_ROWS = n_rows
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] source_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] loss_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] flux_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
+        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
+    cache_tag[:] = -1
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
+        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+    cache_dirty[:] = 0
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
+
+    source_dataset = gdal.Open(source_uri)
+    source_band = source_dataset.GetRasterBand(1)
+    cdef int source_nodata = raster_utils.get_nodata_from_uri(
+        source_uri)
+
+    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
+    absorption_rate_band = absorption_rate_dataset.GetRasterBand(1)
+    cdef int absorption_rate_nodata = raster_utils.get_nodata_from_uri(
+        absorption_rate_uri)
+
+    #Create output arrays for loss and flux
     transport_nodata = -1.0
 
-    loss_data_file = tempfile.TemporaryFile()
-    flux_data_file = tempfile.TemporaryFile()
-
-    
-    loss_data_uri = raster_utils.temporary_filename()
-    loss_carray = raster_utils.create_carray(loss_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = loss_carray[:]
-    
-    flux_data_uri = raster_utils.temporary_filename()
-    flux_carray = raster_utils.create_carray(flux_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = flux_carray[:]
-
-    loss_array[:] = transport_nodata
-    flux_array[:] = transport_nodata
+    loss_dataset = raster_utils.new_raster_from_base(
+        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
+        gdal.GDT_Float32)
+    loss_band = loss_dataset.GetRasterBand(1)
+    flux_dataset = raster_utils.new_raster_from_base(
+        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
+        gdal.GDT_Float32)
+    flux_band = flux_dataset.GetRasterBand(1)
 
     #Process flux through the grid
-
     cdef stack[int] cells_to_process
     for cell in sink_cell_set:
         cells_to_process.push(cell)
@@ -154,6 +154,7 @@ def calculate_transport(
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int current_index
+    cdef int old_row_index
     cdef int current_row
     cdef int current_col
     cdef int neighbor_direction
@@ -170,46 +171,91 @@ def calculate_transport(
         cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
-
+        #see if we need to update the row cache
+        for cache_row_offset in range(-1, 2):
+            neighbor_row_index = current_row + cache_row_offset
+            #see if that row is out of bounds
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            #otherwise check if the cache needs an update
+            cache_row_index = neighbor_row_index % CACHE_ROWS
+            cache_row_tag = neighbor_row_index / CACHE_ROWS
+            
+            if cache_tag[cache_row_index] == cache_row_tag:
+                #cache is up to date, so skip
+                continue
+                
+            #see if we need to save the cache
+            if cache_dirty[cache_row_index]:
+                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+                LOGGER.info(old_row_index)
+                loss_band.WriteArray(
+                    loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                flux_band.WriteArray(
+                    flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                cache_dirty[cache_row_index] = 0
+                
+            #load a new row
+            flux_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=flux_cache[cache_row_index].reshape((1,n_cols)))
+            loss_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=loss_cache[cache_row_index].reshape((1,n_cols)))
+            absorption_rate_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=absorption_rate_cache[cache_row_index].reshape((1,n_cols)))
+            source_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=source_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_direction_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
+            cache_tag[cache_row_index] = cache_row_tag
+                
+        cache_row_index = current_row % CACHE_ROWS
+        
         #Ensure we are working on a valid pixel
-        if (source_array[current_row, current_col] == source_nodata):
-            flux_array[current_row, current_col] = 0.0
-            loss_array[current_row, current_col] = 0.0
+        if (source_cache[cache_row_index, current_col] == source_nodata):
+            flux_cache[cache_row_index, current_col] = 0.0
+            loss_cache[cache_row_index, current_col] = 0.0
+            cache_dirty[cache_row_index] = 1
 
         #We have real data that make the absorption array nodata sometimes
         #right now the best thing to do is treat it as 0.0 so everything else
         #routes
-        if (absorption_rate_array[current_row, current_col] == 
-            absorption_nodata):
-            absorption_rate_array[current_row, current_col] = 0.0
+        if (absorption_rate_cache[cache_row_index, current_col] == 
+            absorption_rate_nodata):
+            absorption_rate_cache[cache_row_index, current_col] = 0.0
 
-        if flux_array[current_row, current_col] == transport_nodata:
-            flux_array[current_row, current_col] = source_array[
-                current_row, current_col]
-            loss_array[current_row, current_col] = 0.0
+        if flux_cache[cache_row_index, current_col] == transport_nodata:
+            flux_cache[cache_row_index, current_col] = source_cache[
+                cache_row_index, current_col]
+            loss_cache[cache_row_index, current_col] = 0.0
+            cache_dirty[cache_row_index] = 1
             if absorb_source:
                 absorption_rate = (
-                    absorption_rate_array[current_row, current_col])
-                loss_array[current_row, current_col] = (
-                    absorption_rate * flux_array[current_row, current_col])
-                flux_array[current_row, current_col] *= (1 - absorption_rate)
+                    absorption_rate_cache[cache_row_index, current_col])
+                loss_cache[cache_row_index, current_col] = (
+                    absorption_rate * flux_cache[cache_row_index, current_col])
+                flux_cache[cache_row_index, current_col] *= (1 - absorption_rate)
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
 
-            neighbor_row = current_row+row_offsets[direction_index]
+            neighbor_row = cache_row_index+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if 0 < neighbor_row < 0 or neighbor_row >= n_rows or \
-                    neighbor_col < 0 or neighbor_col >= n_cols:
+            if (0 < neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
+                    neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
             #if neighbor inflows
             neighbor_direction = \
-                outflow_direction_array[neighbor_row, neighbor_col]
+                outflow_direction_cache[neighbor_row, neighbor_col]
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
@@ -219,7 +265,7 @@ def calculate_transport(
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
+            outflow_weight = outflow_weights_cache[neighbor_row, neighbor_col]
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
@@ -227,16 +273,17 @@ def calculate_transport(
             if abs(outflow_weight) < 0.001:
                 continue
 
-            in_flux = flux_array[neighbor_row, neighbor_col]
+            in_flux = flux_cache[neighbor_row, neighbor_col]
             if in_flux != transport_nodata:
                 absorption_rate = \
-                    absorption_rate_array[current_row, current_col]
+                    absorption_rate_cache[cache_row_index, current_col]
 
-                flux_array[current_row, current_col] += (
+                flux_cache[cache_row_index, current_col] += (
                     outflow_weight * in_flux * (1.0 - absorption_rate))
 
-                loss_array[current_row, current_col] += (
+                loss_cache[cache_row_index, current_col] += (
                     outflow_weight * in_flux * absorption_rate)
+                cache_dirty[cache_row_index] = 1
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
@@ -251,18 +298,16 @@ def calculate_transport(
 
     LOGGER.info('Writing results to disk')
     #Write results to disk
-    loss_dataset = raster_utils.new_raster_from_base(
-        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
-    flux_dataset = raster_utils.new_raster_from_base(
-        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
+    for cache_row_index in range(CACHE_ROWS):
+        if cache_dirty[cache_row_index]:
+            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+            LOGGER.info('old_row_index %d' % old_row_index)
+            flux_band.WriteArray(
+                flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            loss_band.WriteArray(
+                loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            cache_dirty[cache_row_index] = 0
 
-    loss_band, _ = raster_utils.extract_band_and_nodata(loss_dataset)
-    flux_band, _ = raster_utils.extract_band_and_nodata(flux_dataset)
-
-    loss_band.WriteArray(loss_array)
-    flux_band.WriteArray(flux_array)
 
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
@@ -815,7 +860,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if cache_tag[cache_row_index] == cache_row_tag:
                 #cache is up to date, so skip
                 continue
-                
+            
             #see if we need to save the cache
             if cache_dirty[cache_row_index]:
                 old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
