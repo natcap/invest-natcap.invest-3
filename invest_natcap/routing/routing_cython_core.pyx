@@ -65,7 +65,7 @@ def calculate_transport(
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
-            traveling through each pixel
+            travelling through each pixel
         absorption_mode - either 'flux_only' or 'source_and_flux'. For
             'flux_only' the outgoing flux is (in_flux * absorption + source).
             If 'source_and_flux' then the output flux 
@@ -112,6 +112,13 @@ def calculate_transport(
     outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
+        
+        
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef int outflow_weights_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
+    
 
     source_dataset = gdal.Open(source_uri)
     source_band = source_dataset.GetRasterBand(1)
@@ -211,6 +218,9 @@ def calculate_transport(
             outflow_direction_band.ReadAsArray(
                 xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                 win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_weights_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
             cache_tag[cache_row_index] = cache_row_tag
                 
         cache_row_index = current_row % CACHE_ROWS
