@@ -344,62 +344,62 @@ def calculate_flow_weights(
     LOGGER.info('Calculating flow graph')
     start = time.clock()
 
-    #This is the array that's used to keep track of the connections of the
-    #current cell to those *inflowing* to the cell, thus the 8 directions
+    
     flow_direction_dataset = gdal.Open(flow_direction_uri)
     cdef double flow_direction_nodata
     flow_direction_band, flow_direction_nodata = \
         raster_utils.extract_band_and_nodata(flow_direction_dataset)
-
+    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_window
+    
+    #This is the array that's used to keep track of the connections of the
+    #current cell to those *inflowing* to the cell, thus the 8 directions
     cdef int n_cols, n_rows
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
-
-    outflow_weight_data_file = tempfile.TemporaryFile()
     
-    outflow_weights_data_uri = raster_utils.temporary_filename()
-    outflow_weights_carray = raster_utils.create_carray(
-        outflow_weights_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = (
-        outflow_weights_carray[:])
-    outflow_weights_nodata = -1.0
-    outflow_weights[:] = outflow_weights_nodata
-
-    outflow_direction_data_file = tempfile.TemporaryFile()
-
-    outflow_direction_data_uri = raster_utils.temporary_filename()
-    outflow_direction_carray = raster_utils.create_carray(
-        outflow_direction_data_uri, tables.Int8Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_carray[:]
-    outflow_direction_nodata = 9
-    outflow_direction[:] = outflow_direction_nodata
+    cdef int outflow_direction_nodata = 9
+    outflow_direction_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_direction_uri, 'GTiff',
+        outflow_direction_nodata, gdal.GDT_Byte)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_window = (
+        numpy.empty((1, n_cols), dtype=numpy.int8))
+    
+    cdef float outflow_weights_nodata = -1.0
+    outflow_weights_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_weights_uri, 'GTiff',
+        outflow_weights_nodata, gdal.GDT_Float32)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_window = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
 
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
     cdef int n_neighbors = 8
     cdef double *angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
-
-    flow_direction_memory_file = tempfile.TemporaryFile()
-    flow_direction_data_uri = raster_utils.temporary_filename()
-    flow_direction_carray = raster_utils.load_dataset_to_carray(
-        flow_direction_uri, flow_direction_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
-        flow_direction_carray[:])
     
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
-    cdef int *diagonal_offsets = \
-        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+    cdef int *diagonal_offsets = [
+        1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
 
     #Iterate over flow directions
     cdef int row_index, col_index, neighbor_direction_index
     cdef long current_index
     cdef double flow_direction, flow_angle_to_neighbor, outflow_weight
+    
     for row_index in range(n_rows):
+        
+        outflow_direction_window[:] = outflow_direction_nodata
+        outflow_weights_window[:] = outflow_weights_nodata
+        
+        flow_direction_window = flow_direction_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+    
         for col_index in range(n_cols):
-            flow_direction = flow_direction_array[row_index, col_index]
+            flow_direction = flow_direction_window[0, col_index]
             #make sure the flow direction is defined, if not, skip this cell
             if flow_direction == flow_direction_nodata:
                 continue
-            current_index = row_index * n_cols + col_index
             found = False
             for neighbor_direction_index in range(n_neighbors):
                 flow_angle_to_neighbor = abs(
@@ -407,7 +407,6 @@ def calculate_flow_weights(
                     flow_direction)
                 if flow_angle_to_neighbor <= PI/4.0:
                     found = True
-
 
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
@@ -433,45 +432,18 @@ def calculate_flow_weights(
                         neighbor_direction_index = \
                             (neighbor_direction_index + 1) % 8
 
-                    outflow_direction[row_index, col_index] = \
-                        neighbor_direction_index
-                    outflow_weights[row_index, col_index] = outflow_weight
-
-                    #There's flow from the current cell to the neighbor
-                    #so figure out the neighbor then add to inflow set
-                    outflow_index = current_index + \
-                        diagonal_offsets[neighbor_direction_index]
-
-                    #if there is non-zero flow to the next cell clockwise then
-                    #add it to the inflow set
-                    if outflow_weight != 1.0:
-                        next_outflow_index = current_index + \
-                            diagonal_offsets[(neighbor_direction_index + 1) % 8]
+                    outflow_direction_window[0, col_index] = neighbor_direction_index
+                    outflow_weights_window[0, col_index] = outflow_weight
 
                     #we found the outflow direction
                     break
             if not found:
                 LOGGER.debug('no flow direction found for %s %s' % \
                                  (row_index, col_index))
+        outflow_weights_band.WriteArray(outflow_weights_window, xoff=0, yoff=row_index)
+        outflow_direction_band.WriteArray(outflow_direction_window, xoff=0, yoff=row_index)
 
-    #write outflow direction and weights
-    outflow_weights_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_weights_uri, 'GTiff',
-        outflow_weights_nodata, gdal.GDT_Float32)
-    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    outflow_weights_band.WriteArray(outflow_weights)
-
-    outflow_direction_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_direction_uri, 'GTiff',
-        outflow_direction_nodata, gdal.GDT_Byte)
-    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
-    outflow_direction_band.WriteArray(outflow_direction)
-
-    LOGGER.debug("Calculating sink and source cells")
-
-    LOGGER.debug('n_cols n_rows %s %s' % (n_cols, n_rows))
-
-    LOGGER.info('Done calculating flow path elapsed time %ss' % \
+    LOGGER.info('Done calculating flow weights elapsed time %ss' % \
                     (time.clock()-start))
 
 
