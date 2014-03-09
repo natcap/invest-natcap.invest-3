@@ -195,7 +195,6 @@ def calculate_transport(
             #see if we need to save the cache
             if cache_dirty[cache_row_index]:
                 old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                LOGGER.info(old_row_index)
                 loss_band.WriteArray(
                     loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
                 flux_band.WriteArray(
@@ -254,7 +253,6 @@ def calculate_transport(
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
-
             neighbor_row = cache_row_index+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
@@ -279,7 +277,8 @@ def calculate_transport(
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
-            #TODO: Make sure that there is outflow from the neighbor cell to the current one before processing
+            #TODO: Make sure that there is outflow from the neighbor cell to 
+            #the current one before processing
             if abs(outflow_weight) < 0.001:
                 continue
 
@@ -306,18 +305,16 @@ def calculate_transport(
                 cell_neighbor_to_process.push(0)
                 break
 
-    LOGGER.info('Writing results to disk')
+    LOGGER.info('Flushing remaining dirty cache to disk')
     #Write results to disk
     for cache_row_index in range(CACHE_ROWS):
         if cache_dirty[cache_row_index]:
             old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-            LOGGER.info('old_row_index %d' % old_row_index)
             flux_band.WriteArray(
                 flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
             loss_band.WriteArray(
                 loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
             cache_dirty[cache_row_index] = 0
-
 
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
