@@ -325,4 +325,3 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         returns nothing"""
     routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_out_uri)
     
-    
