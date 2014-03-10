@@ -314,7 +314,6 @@ def new_raster_from_base(
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 
-    LOGGER.debug('Setting nodata value: %s', nodata)
     band.SetNoDataValue(nodata)
     if fill_value != None:
         band.Fill(fill_value)
