@@ -306,3 +306,23 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
        returns nothing"""
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
+
+    
+def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
+    """This function resolves the flat regions on a DEM that cause undefined
+        flow directions to occur during routing.  The algorithm is the one
+        presented in "The assignment of drainage direction over float surfaces
+        in raster digital elevation models by Garbrecht and Martz (1997)
+        
+        dem_carray - a chunked floating point array that represents a digital
+            elevation model.  Any flat regions that would cause an undefined
+            flow direction will be adjusted in height so that every pixel
+            on the dem has a local defined slope.
+
+        nodata_value - this value will be ignored on the DEM as a valid height
+            value
+            
+        returns nothing"""
+    routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_out_uri)
+    
+    
