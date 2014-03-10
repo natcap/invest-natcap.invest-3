@@ -115,7 +115,7 @@ def execute(args):
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_offset_uri, slope_uri)
 
-    #Calcualte flow accumulation
+    #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
