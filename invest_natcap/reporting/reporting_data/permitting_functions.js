@@ -3,10 +3,11 @@ var globalData;
 $(document).ready(function()
         {
            //var jsonData = JSON.parse(document.getElementById('jsonData').innerHTML);
-           globalData = JSON.parse(document.getElementById('jsonData').innerHTML);
+           globalData = JSON.parse(document.getElementById('muni-data').innerHTML);
            console.log(globalData);
 
            sum_constant_total();
+           check_number_format();
         });
 
 $(function(){
@@ -170,6 +171,8 @@ $(function(){
             delete jsonState[par_id];
             console.log(globalData[par_id]);
         }
+
+        check_number_format();
     });
 });
 
@@ -197,6 +200,22 @@ function sum_constant_total() {
         //$("#my_table td.totalCol").each(function(i){
         $(this).find("td.totalCol").each(function(i){
             $(this).html(totals_array[i]);
+        });
+    });
+}
+
+function check_number_format() {
+    //This function checks to see if any columns should have
+    //numbers formatted in scientific notation
+    $('.scientific').each(function(){
+        console.log($(this).index());
+        var col_index = $(this).index() + 1;
+        $(this).closest('table').find("td:nth-child("+col_index+")").each(function(){
+            var value = $(this).html();
+            console.log(value);
+            if ($.isNumeric(value)){
+                $(this).html(parseFloat(value).toExponential());
+            }
         });
     });
 }

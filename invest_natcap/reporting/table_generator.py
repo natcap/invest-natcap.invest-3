@@ -91,7 +91,7 @@ def generate_table(table_dict, attributes=None):
         """
         attr_str = ''
         for key, value in attr_dict.iteritems():
-            attr_str += ' ' + key + '= ' + str(value)
+            attr_str += ' %s= "%s"' % (key, str(value))
 
         return attr_str
 

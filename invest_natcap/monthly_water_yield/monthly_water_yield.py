@@ -107,17 +107,25 @@ def execute(args):
         gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
         aoi_uri=watershed_uri)
 
+    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset.tif')
+    routing_utils.resolve_flat_regions_for_drainage(clipped_dem_uri, dem_offset_uri)
+
     # Calculate the slope raster from the DEM to use in later alpha
     # calculations
     LOGGER.debug("calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
-
+    raster_utils.calculate_slope(dem_offset_uri, slope_uri)
+    
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+    routing_utils.flow_direction_inf(dem_offset_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(
+        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.debug("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
             intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
+    routing_utils.flow_accumulation(dem_offset_uri, flow_accumulation_uri)
 
     # Classify streams from the flow accumulation raster
     LOGGER.debug("Classifying streams from flow accumulation raster")
@@ -125,13 +133,14 @@ def execute(args):
             intermediate_dir, 'v_stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
 		flow_accumulation_uri, threshold_flow_accum, v_stream_uri)
+    nodata_stream = raster_utils.get_nodata_from_uri(v_stream_uri)
 
     # Align Datasets. It is important when we are computing and comparing the
     # outputs that all the datasets are properly aligned so that the pixel
     # counts do not differ under a watershed
     uris_to_align = [
-            clipped_dem_uri, lulc_uri, smax_uri, soil_text_uri,
-            slope_uri, v_stream_uri]
+        dem_offset_uri, lulc_uri, smax_uri, soil_text_uri,
+        slope_uri, v_stream_uri]
 
     dem_aligned_uri = os.path.join(
             intermediate_dir, 'dem_aligned%s.tif' % file_suffix)
@@ -155,7 +164,7 @@ def execute(args):
         'intersection', 0, assert_datasets_projected=True)
 
     # Set out_nodata value
-    float_nodata = -65432.0
+    float_nodata = -9999.0
 
     # URIs for the impervious raster and etk raster, both based on
     # mapping lulc codes to values
