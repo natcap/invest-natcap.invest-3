@@ -2731,3 +2731,29 @@ def nearly_equal(a, b, sig_fig=5):
         returns True if a and b are equal to each other within a given 
             tolerance"""
     return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
+
+    
+def make_constant_raster_from_base_uri(
+    base_dataset_uri, constant_value, out_uri, nodata_value=None,
+    dataset_type=gdal.GDT_Float32):
+    """A helper function that creates a new gdal raster from base, and fills
+        it with the constant value provided.
+
+        base_dataset_uri - the gdal base raster
+        constant_value - the value to set the new base raster to
+        out_uri - the uri of the output raster
+        nodata_value - (optional) the value to set the constant raster's nodata
+            value to.  If not specified, it will be set to constant_value - 1.0
+        dataset_type - (optional) the datatype to set the dataset to, default
+            will be a float 32 value.
+
+        returns nothing"""
+
+    if nodata_value == None:
+        nodata_value = constant_value - 1.0
+    new_raster_from_base_uri(
+        base_dataset_uri, out_uri, 'GTiff', nodata_value,
+        dataset_type)
+    base_dataset = gdal.Open(out_uri, gdal.GA_Update)
+    base_band = base_dataset.GetRasterBand(1)
+    base_band.Fill(constant_value)

@@ -117,9 +117,9 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
     loss_uri = raster_utils.temporary_filename()
 
     LOGGER.debug("creating constant rasters")
-    make_constant_raster_from_base(
+    raster_utils.make_constant_raster_from_base_uri(
         dem_uri, 1.0, constant_flux_source_uri)
-    make_constant_raster_from_base(
+    raster_utils.make_constant_raster_from_base_uri(
         dem_uri, 0.0, zero_absorption_source_uri)
 
     LOGGER.debug("routing flux")
@@ -127,24 +127,6 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
         flow_direction_uri, dem_uri, constant_flux_source_uri,
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
         aoi_uri=aoi_uri)
-
-
-def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
-    """A helper function that creates a new gdal raster from base, and fills
-        it with the constant value provided.
-
-        base_dataset_uri - the gdal base raster
-        constant_value - the value to set the new base raster to
-        out_uri - the uri of the output raster
-
-        returns nothing"""
-
-    base_dataset = gdal.Open(base_dataset_uri)
-    out_dataset = raster_utils.new_raster_from_base(
-        base_dataset, out_uri, 'GTiff', constant_value - 1,
-        gdal.GDT_Float32)
-    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
-    out_band.Fill(constant_value)
 
 
 def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
