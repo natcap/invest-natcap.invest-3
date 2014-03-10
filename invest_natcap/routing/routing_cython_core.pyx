@@ -1599,38 +1599,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
-    
-    
-cdef int _update_window(
-    int row_index, int col_index, int *ul_row_index, int *ul_col_index,
-    int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
-    int row_window_size, int col_window_size, int window_buffer):
-
-    if (((row_index < ul_row_index[0] + window_buffer) and (ul_row_index[0] != 0)) or
-        ((row_index >= lr_row_index[0] - window_buffer) and (lr_row_index[0] != n_rows)) or
-        ((col_index <  ul_col_index[0] + window_buffer) and (ul_col_index[0] != 0)) or
-        ((col_index >= lr_col_index[0] - window_buffer) and (lr_col_index[0] != n_cols))):
-
-        ul_row_index[0] = row_index-(row_window_size/2)
-        lr_row_index[0] = row_index+row_window_size/2+row_window_size%2
-        ul_col_index[0] = col_index-(col_window_size/2)
-        lr_col_index[0] = col_index+col_window_size/2+col_window_size%2
-
-        if ul_row_index[0] < 0:
-            lr_row_index[0] += -ul_row_index[0]
-            ul_row_index[0] = 0
-        if ul_col_index[0] < 0:
-            lr_col_index[0] += -ul_col_index[0]
-            ul_col_index[0] = 0
-        if lr_row_index[0] > n_rows:
-            ul_row_index[0] -= lr_row_index[0] - n_rows
-            lr_row_index[0] = n_rows
-        if lr_col_index[0] > n_cols:
-            ul_col_index[0] -= lr_col_index[0] - n_cols
-            lr_col_index[0] = n_cols
-        return 1
-    else:
-        return 0
 
 
 def find_sinks(dem_uri):
