@@ -480,7 +480,6 @@ def percent_to_sink(
     LOGGER.info("calculating percent to sink")
     start_time = time.clock()
 
-    
     cdef float effect_nodata = -1.0
     raster_utils.new_raster_from_base_uri(
         sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
@@ -535,10 +534,9 @@ def percent_to_sink(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int loop_col_index, loop_row_index, index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, offset, outflow_direction, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
-    cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
-    cdef float outflow_percent_list[2]
-
+    cdef int index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
+    cdef float outflow_weight, neighbor_outflow_weight
+    
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
         numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
     #initially nothing is loaded in the cache, use -1 to indicate that as a tag
