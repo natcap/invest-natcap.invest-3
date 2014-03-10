@@ -58,12 +58,13 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
 
     # Initiate some variables to be used in the if/else block
     cdef double phi
+    cdef double pet
     cdef double awc
     cdef double climate_w
     cdef double aet_p
 
     if veg == 1.0:
-        #phi = (Kc * eto) / (precip)
+        phi = (Kc * eto) / (precip)
         pet = Kc * eto
 
         #Calculate plant available water content (mm) using the minimum
@@ -78,7 +79,7 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         #Compute evapotranspiration partition of the water balance
         #aet_p = (1+ climate_w * phi) / (1 + climate_w * phi + 1 / phi)
 
-        aet_new = 1.0 + (pet / precip) - (1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w)
+        aet_new = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
 
         #Currently as of release 2.2.2 the following operation is not
         #documented in the users guide. We take the minimum of the
