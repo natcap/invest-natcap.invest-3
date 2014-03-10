@@ -130,10 +130,10 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, \
-curvature_correction, refr_coeff, args):
+def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri, 
+    curvature_correction, refr_coeff, args):
     """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
-    
+
         -in_dem_uri: URI to input surface raster
         -out_viewshed_uri: URI to the output raster
         -in_structure_uri: URI to a point shapefile that contains the location
@@ -142,6 +142,51 @@ curvature_correction, refr_coeff, args):
         FLAT_EARTH or CURVED_EARTH. Not used yet.
         -refraction: refraction index between 0 (max effect) and 1 (no effect).
         Default is 0.13."""
+
+    # Extract cell size from input DEM
+    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+
+    # Extract nodata
+    nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
+    
+    # Build I and J arrays, and save them to disk
+    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    I_uri = raster_utils.temporary_filename()
+    J_uri = raster_utils.temporary_filename()
+    shutil.copy(in_dem_uri, I_uri)
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_raster.GetRasterBand(1).WriteArray(I)
+    I_raster = None
+    shutil.copy(in_dem_uri, J_uri)
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_raster.GetRasterBand(1).WriteArray(J)
+    J_raster = None
+
+    # Extract the input raster geotransform
+    GT = raster_utils.get_geotransform_uri(in_dem_uri)
+
+    # Open the input URI and extract the numpy array
+    input_raster = gdal.Open(in_dem_uri)
+    input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_raster = None
+
+    # Create a raster from base before passing it to viewshed
+    visibility_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+
+    # Call the non-uri version of viewshed.
+    compute_viewshed(input_array, visibility_uri, in_structure_uri,
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
+    refr_coeff, args)
+
+
+def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
+    refr_coeff, args):
+    """ array-based function that computes the viewshed as is defined in ArcGIS
+    """
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
     obs_elev = 1.0 # Observator's elevation in meters
@@ -218,29 +263,11 @@ curvature_correction, refr_coeff, args):
     assert edge_value >= 0., message
         
     # Base path uri
-    base_uri = os.path.split(out_viewshed_uri)[0]
+    base_uri = os.path.split(visibility_uri)[0]
 
     # Temporary files that will be used 
-    visibility_uri = raster_utils.temporary_filename()
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
-
-    # Extract cell size from input DEM
-    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
-
-    # Build I and J arrays, and save them to disk
-    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
-    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    I_uri = raster_utils.temporary_filename()
-    J_uri = raster_utils.temporary_filename()
-    shutil.copy(in_dem_uri, I_uri)
-    shutil.copy(in_dem_uri, J_uri)
-    I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    I_raster.GetRasterBand(1).WriteArray(I)
-    I_raster = None
-    J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    J_raster.GetRasterBand(1).WriteArray(J)
-    J_raster = None
 
     # The model extracts each viewpoint from the shapefile
     point_list = []
@@ -248,7 +275,6 @@ curvature_correction, refr_coeff, args):
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    GT = raster_utils.get_geotransform_uri(in_dem_uri)
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
@@ -296,8 +322,12 @@ curvature_correction, refr_coeff, args):
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
         #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
         #'distance radius is ' + str(max_dist) + " pixels.")
-        aesthetic_quality_core.viewshed(in_dem_uri, visibility_uri, \
-        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+
+        array_shape = (rows, cols)
+    
+        aesthetic_quality_core.viewshed(input_array, cell_size, \
+        array_shape, nodata, visibility_uri, (i,j), obs_elev, tgt_elev, \
+        max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
@@ -307,8 +337,7 @@ curvature_correction, refr_coeff, args):
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
-        path, _ = os.path.split(out_viewshed_uri)
-        scaled_viewshed_uri = os.path.join(path, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
@@ -323,11 +352,11 @@ curvature_correction, refr_coeff, args):
     #    #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
     #    return 0.
     ##raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
-    ##out_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    ##visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
     # Numpy method:
     #Create the output raster from the first in the input list
     raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
-    out_viewshed_uri, 'GTiff', 0., gdal.GDT_Float64)
+    visibility_uri, 'GTiff', 0., gdal.GDT_Float64)
     # Open the first raster and sum up the values using numpy
     raster = gdal.Open(viewshed_uri_list[0])
     accum_array = raster.GetRasterBand(1).ReadAsArray()
@@ -337,7 +366,7 @@ curvature_correction, refr_coeff, args):
         array = raster.GetRasterBand(1).ReadAsArray()
         accum_array += array
     # Store the accumulated value in the output uri
-    raster = gdal.Open(out_viewshed_uri, gdal.GA_Update)
+    raster = gdal.Open(visibility_uri, gdal.GA_Update)
     band = raster.GetRasterBand(1)
     band.WriteArray(accum_array)
 
@@ -466,7 +495,7 @@ def execute(args):
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    viewshed(viewshed_dem_reclass_uri,
+    compute_viewshed_uri(viewshed_dem_reclass_uri,
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,

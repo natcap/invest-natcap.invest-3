@@ -628,6 +628,9 @@ def aggregate_raster_values_uri(
            calculation.  hectare_mean is None if raster_uri is unprojected.
         """
 
+    LOGGER.debug('Collecting raster stats from %s', raster_uri)
+    LOGGER.debug('Aggregating values by vector %s', shapefile_uri)
+
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
@@ -649,15 +652,21 @@ def aggregate_raster_values_uri(
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     if shapefile_field is not None:
-        
+        LOGGER.debug('Looking up field %s', shapefile_field)
+
         #Make sure that the layer name refers to an integer 
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
+        if fd == -1:  # -1 returned when field does not exist.
+            # Raise exception if user provided a field that's not in vector
+            raise AttributeError(('Vector %s must have a field named %s' %
+                (shapefile_uri, shapefile_field)))
+
         if fd.GetTypeName() != 'Integer':
             raise TypeError(
                 'Can only aggreggate by integer based fields, requested '
                 'field is of type  %s' % fd.GetTypeName())
-    
+
         gdal.RasterizeLayer(
             mask_dataset, [1], shapefile_layer,
             options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
