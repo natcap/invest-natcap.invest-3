@@ -168,6 +168,16 @@ def _execute_nutrient(args):
             nutrients_to_process.append(nutrient_id)
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
+        
+    for lucode in lucode_to_parameters:
+        for nutrient_id in ['n', 'p']:
+            if args['calc_' + nutrient_id]:
+                value = lucode_to_parameters[lucode]['eff_' + nutrient_id]
+                if value > 1.0 or value < 0.0:
+                    raise ValueError(
+                        '%s for lucode %s is out of range (%f) should be '
+                        'within [0..1]' % ('eff_' + nutrient_id, lucode, 
+                        value))
 
     threshold_table = raster_utils.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
