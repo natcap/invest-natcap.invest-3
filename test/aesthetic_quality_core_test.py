@@ -1162,6 +1162,27 @@ class TestAestheticQualityCore(unittest.TestCase):
                     assert after[i] >= distance, message
         
 
+    def test_hand_made_landscape(self):
+        """Creating a hand-made landscape to make sure the visibility is ok"""
+        ray_length = 5
+        land_array = np.zeros((ray_length*2+1, ray_length*2+1)).astype(float)
+        land_array[ray_length, ray_length+1] = 1.0
+        viewpoint = (ray_length, ray_length)
+        viewpoint_elevation = 1.0
+        target_elevation = 0.0
+        cell_size = 100.0
+        refraction_coeff = 1.0
+
+        visibility = aesthetic_quality_core.compute_viewshed(land_array,
+        255, viewpoint, viewpoint_elevation, target_elevation, -1.0, \
+        cell_size, refraction_coeff, 'cython')
+
+        visibility[viewpoint] = 2
+        visibility[np.where(land_array > 0.)] = 3
+        print('visibility')
+        print(visibility)
+        
+
     def test_viewshed(self):
         """Compare the python and cython versions of compute_viewshed"""
         array_shape = (8, 6)

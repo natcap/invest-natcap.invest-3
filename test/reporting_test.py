@@ -821,6 +821,8 @@ class TestReportingPackage(testing.GISTest):
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
         jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
         json_uri = os.path.join(JSON_DATA,'sample_json.json')
+        json_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
+
         csv_uri = os.path.join(JSON_DATA, 'csv_test.csv')
 
         sample_dict = [{'Sediment':'130', 'Nitrogen':'90132323.923233', 'Phosphorous':'60', 'parcel_id':'1'},
@@ -835,24 +837,24 @@ class TestReportingPackage(testing.GISTest):
 
         pop_groups = []
 
-        columns_pop = [
-                {'name': 'municipalities', 'total':False},
-                {'name': 'Sediment', 'total':False, 'attr':{'class':'offsets'}},
-                {'name': 'Nitrogen', 'total':False, 'attr':{'class':'offsets scientific'}},
-                {'name': 'Phosphorous', 'total':False, 'attr':{'class':'offsets'}}]
-
         #columns_pop = [
         #        {'name': 'municipalities', 'total':False},
-        #        {'name': 'pop', 'total':False},
-        #        {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}},
-        #        {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}},
-        #        {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}},
-        #        {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
-        #        {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
-        #        {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
-        #        {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
-        #        {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
-        #        {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
+        #        {'name': 'Sediment', 'total':False, 'attr':{'class':'offsets'}},
+        #        {'name': 'Nitrogen', 'total':False, 'attr':{'class':'offsets scientific'}},
+        #        {'name': 'Phosphorous', 'total':False, 'attr':{'class':'offsets'}}]
+
+        columns_pop = [
+                {'name': 'municipalities', 'total':False},
+                {'name': 'pop', 'total':False},
+                {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}},
+                {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}},
+                {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}},
+                {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
+                {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
+                {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
 
 
         report_args = {
@@ -881,7 +883,6 @@ class TestReportingPackage(testing.GISTest):
                         'total':False,
                         'data_type':'dictionary',
                         'columns':columns_pop,
-                        'key':'pop_group',
                         'data': pop_groups,
                         'attributes': {'class': 'multi_class'}},
                     {
@@ -914,7 +915,14 @@ class TestReportingPackage(testing.GISTest):
                         'format': 'json',
                         'data_src': json_uri,
                         'input_type':'File',
-                        'attributes':{'id':'muni-data'}}
+                        'attributes':{'id':'muni-data'}},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'json',
+                        'data_src': json_impacts_uri,
+                        'input_type':'File',
+                        'attributes':{'id':'impact-data'}}
                     ],
                 'out_uri': output_uri}
 
