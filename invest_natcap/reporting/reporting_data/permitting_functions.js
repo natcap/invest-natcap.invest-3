@@ -11,6 +11,7 @@ $(document).ready(function()
            console.log(globalMuniData);
 
            sum_constant_total();
+           initiate_impacts();
            check_number_format();
         });
 
@@ -40,6 +41,12 @@ $(function(){
 
     //Sort the indicies so the row string can be aggregated properly.
     muniIndicies.sort();
+
+    //Impact muni list from json object
+    muniImpactList = [];
+    for(var key in globalImpactData){
+       muniImpactList.push(key);
+    }
 
     //On a checkbox change event
     $('[name="cb"]').change(function() {
@@ -179,6 +186,34 @@ $(function(){
         check_number_format();
     });
 });
+
+function initiate_impacts() {
+    //Handle on the 'last' table, municipality table
+    $tableLast = $('table:last');
+    var colMap = {};
+    var keyList = [];
+    $tableLast.find("th").each(function(){
+        colMap[$(this).index()] = $(this).html();
+        keyList.push($(this).index());
+    });
+    keyList.sort();
+    var colList = [];
+    for(colIndex in keyList){
+        colList.push(colMap[colIndex]);
+    }
+
+    console.log(colList);
+
+    for(muni_key in globalImpactData) {
+        $tableLast.find("th").each(function(){
+            var newRow = "<tr>";
+            $colName = $(this).html();
+            if($colName == "municipalities"){
+
+
+        }
+        });
+        }
 
 function sum_constant_total() {
 
