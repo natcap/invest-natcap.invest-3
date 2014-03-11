@@ -223,7 +223,7 @@ $(function(){
     });
 });
 
-function initiate_impacts() {
+function initiate_impacts(var muniState) {
     //Handle on the 'last' table, municipality table
     $tableLast = $('table:last');
     var colMap = {};
