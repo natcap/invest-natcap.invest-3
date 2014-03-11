@@ -38,7 +38,7 @@ cdef double EPS = 1e-6
 cdef int MAX_WINDOW_SIZE = 2**12
 cdef float INF = numpy.inf
 
-def calculate_transport(
+def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode):
     """This is a generalized flux transport algorithm that operates
@@ -65,7 +65,7 @@ def calculate_transport(
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
-            traveling through each pixel
+            travelling through each pixel
         absorption_mode - either 'flux_only' or 'source_and_flux'. For
             'flux_only' the outgoing flux is (in_flux * absorption + source).
             If 'source_and_flux' then the output flux 
@@ -79,63 +79,70 @@ def calculate_transport(
     LOGGER.info('Processing transport through grid')
     start = time.clock()
 
-    #Extract input datasets
-    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
-
-    #Create memory mapped lookup arrays
-    outflow_direction_data_file = tempfile.TemporaryFile()
-    outflow_weights_data_file = tempfile.TemporaryFile()
-    source_data_file = tempfile.TemporaryFile()
-    absorption_rate_data_file = tempfile.TemporaryFile()
-
-    outflow_direction_data_uri = raster_utils.temporary_filename()
-    outflow_direction_carray = raster_utils.load_dataset_to_carray(
-        outflow_direction_uri, outflow_direction_data_uri)        
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = (
-        outflow_direction_carray[:])
-    
-    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
-
-    outflow_weights_data_uri = raster_utils.temporary_filename()
-    outflow_weights_carray = raster_utils.load_dataset_to_carray(
-        outflow_weights_uri, outflow_weights_data_uri)        
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = (
-        outflow_weights_carray[:])
-    
-    cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
-    source_data_uri = raster_utils.temporary_filename()
-    source_carray = raster_utils.load_dataset_to_carray(
-        source_uri, source_data_uri)        
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = source_carray[:]
-    
-    cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
-    absorption_rate_data_uri = raster_utils.temporary_filename()
-    absorption_rate_carray = raster_utils.load_dataset_to_carray(
-        absorption_rate_uri, absorption_rate_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = absorption_rate_carray[:]
-    
     #Create output arrays for loss and flux
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
+    
+    
+    cdef int CACHE_ROWS = 2**12
+    if CACHE_ROWS > n_rows:
+        CACHE_ROWS = n_rows
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] source_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] loss_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] flux_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
+        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
+    cache_tag[:] = -1
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
+        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+    cache_dirty[:] = 0
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
+        
+        
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef int outflow_weights_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
+    
+
+    source_dataset = gdal.Open(source_uri)
+    source_band = source_dataset.GetRasterBand(1)
+    cdef int source_nodata = raster_utils.get_nodata_from_uri(
+        source_uri)
+
+    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
+    absorption_rate_band = absorption_rate_dataset.GetRasterBand(1)
+    cdef int absorption_rate_nodata = raster_utils.get_nodata_from_uri(
+        absorption_rate_uri)
+
+    #Create output arrays for loss and flux
     transport_nodata = -1.0
 
-    loss_data_file = tempfile.TemporaryFile()
-    flux_data_file = tempfile.TemporaryFile()
-
-    
-    loss_data_uri = raster_utils.temporary_filename()
-    loss_carray = raster_utils.create_carray(loss_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = loss_carray[:]
-    
-    flux_data_uri = raster_utils.temporary_filename()
-    flux_carray = raster_utils.create_carray(flux_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = flux_carray[:]
-
-    loss_array[:] = transport_nodata
-    flux_array[:] = transport_nodata
+    loss_dataset = raster_utils.new_raster_from_base(
+        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
+        gdal.GDT_Float32)
+    loss_band = loss_dataset.GetRasterBand(1)
+    flux_dataset = raster_utils.new_raster_from_base(
+        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
+        gdal.GDT_Float32)
+    flux_band = flux_dataset.GetRasterBand(1)
 
     #Process flux through the grid
-
     cdef stack[int] cells_to_process
     for cell in sink_cell_set:
         cells_to_process.push(cell)
@@ -154,6 +161,7 @@ def calculate_transport(
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int current_index
+    cdef int old_row_index
     cdef int current_row
     cdef int current_col
     cdef int neighbor_direction
@@ -162,6 +170,7 @@ def calculate_transport(
     cdef double absorption_rate
     cdef double outflow_weight
     cdef double in_flux
+    cdef int cache_row_offset, neighbor_row_index, cache_row_index, cache_row_tag
 
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
@@ -170,46 +179,92 @@ def calculate_transport(
         cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
-
+        #see if we need to update the row cache
+        for cache_row_offset in range(-1, 2):
+            neighbor_row_index = current_row + cache_row_offset
+            #see if that row is out of bounds
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            #otherwise check if the cache needs an update
+            cache_row_index = neighbor_row_index % CACHE_ROWS
+            cache_row_tag = neighbor_row_index / CACHE_ROWS
+            
+            if cache_tag[cache_row_index] == cache_row_tag:
+                #cache is up to date, so skip
+                continue
+                
+            #see if we need to save the cache
+            if cache_dirty[cache_row_index]:
+                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+                loss_band.WriteArray(
+                    loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                flux_band.WriteArray(
+                    flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                cache_dirty[cache_row_index] = 0
+                
+            #load a new row
+            flux_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=flux_cache[cache_row_index].reshape((1,n_cols)))
+            loss_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=loss_cache[cache_row_index].reshape((1,n_cols)))
+            absorption_rate_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=absorption_rate_cache[cache_row_index].reshape((1,n_cols)))
+            source_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=source_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_direction_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_weights_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
+            cache_tag[cache_row_index] = cache_row_tag
+                
+        cache_row_index = current_row % CACHE_ROWS
+        
         #Ensure we are working on a valid pixel
-        if (source_array[current_row, current_col] == source_nodata):
-            flux_array[current_row, current_col] = 0.0
-            loss_array[current_row, current_col] = 0.0
+        if (source_cache[cache_row_index, current_col] == source_nodata):
+            flux_cache[cache_row_index, current_col] = 0.0
+            loss_cache[cache_row_index, current_col] = 0.0
+            cache_dirty[cache_row_index] = 1
 
         #We have real data that make the absorption array nodata sometimes
         #right now the best thing to do is treat it as 0.0 so everything else
         #routes
-        if (absorption_rate_array[current_row, current_col] == 
-            absorption_nodata):
-            absorption_rate_array[current_row, current_col] = 0.0
+        if (absorption_rate_cache[cache_row_index, current_col] == 
+            absorption_rate_nodata):
+            absorption_rate_cache[cache_row_index, current_col] = 0.0
 
-        if flux_array[current_row, current_col] == transport_nodata:
-            flux_array[current_row, current_col] = source_array[
-                current_row, current_col]
-            loss_array[current_row, current_col] = 0.0
+        if flux_cache[cache_row_index, current_col] == transport_nodata:
+            flux_cache[cache_row_index, current_col] = source_cache[
+                cache_row_index, current_col]
+            loss_cache[cache_row_index, current_col] = 0.0
+            cache_dirty[cache_row_index] = 1
             if absorb_source:
                 absorption_rate = (
-                    absorption_rate_array[current_row, current_col])
-                loss_array[current_row, current_col] = (
-                    absorption_rate * flux_array[current_row, current_col])
-                flux_array[current_row, current_col] *= (1 - absorption_rate)
+                    absorption_rate_cache[cache_row_index, current_col])
+                loss_cache[cache_row_index, current_col] = (
+                    absorption_rate * flux_cache[cache_row_index, current_col])
+                flux_cache[cache_row_index, current_col] *= (1 - absorption_rate)
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
-
-            neighbor_row = current_row+row_offsets[direction_index]
+            neighbor_row = cache_row_index+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if 0 < neighbor_row < 0 or neighbor_row >= n_rows or \
-                    neighbor_col < 0 or neighbor_col >= n_cols:
+            if (0 < neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
+                    neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
             #if neighbor inflows
             neighbor_direction = \
-                outflow_direction_array[neighbor_row, neighbor_col]
+                outflow_direction_cache[neighbor_row, neighbor_col]
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
@@ -219,24 +274,26 @@ def calculate_transport(
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
+            outflow_weight = outflow_weights_cache[neighbor_row, neighbor_col]
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
-            #TODO: Make sure that there is outflow from the neighbor cell to the current one before processing
+            #TODO: Make sure that there is outflow from the neighbor cell to 
+            #the current one before processing
             if abs(outflow_weight) < 0.001:
                 continue
 
-            in_flux = flux_array[neighbor_row, neighbor_col]
+            in_flux = flux_cache[neighbor_row, neighbor_col]
             if in_flux != transport_nodata:
                 absorption_rate = \
-                    absorption_rate_array[current_row, current_col]
+                    absorption_rate_cache[cache_row_index, current_col]
 
-                flux_array[current_row, current_col] += (
+                flux_cache[cache_row_index, current_col] += (
                     outflow_weight * in_flux * (1.0 - absorption_rate))
 
-                loss_array[current_row, current_col] += (
+                loss_cache[cache_row_index, current_col] += (
                     outflow_weight * in_flux * absorption_rate)
+                cache_dirty[cache_row_index] = 1
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
@@ -249,31 +306,25 @@ def calculate_transport(
                 cell_neighbor_to_process.push(0)
                 break
 
-    LOGGER.info('Writing results to disk')
+    LOGGER.info('Flushing remaining dirty cache to disk')
     #Write results to disk
-    loss_dataset = raster_utils.new_raster_from_base(
-        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
-    flux_dataset = raster_utils.new_raster_from_base(
-        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
-
-    loss_band, _ = raster_utils.extract_band_and_nodata(loss_dataset)
-    flux_band, _ = raster_utils.extract_band_and_nodata(flux_dataset)
-
-    loss_band.WriteArray(loss_array)
-    flux_band.WriteArray(flux_array)
+    for cache_row_index in range(CACHE_ROWS):
+        if cache_dirty[cache_row_index]:
+            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+            flux_band.WriteArray(
+                flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            loss_band.WriteArray(
+                loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            cache_dirty[cache_row_index] = 0
 
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
 
 
-def calculate_flow_graph(
-    flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
-    dem_uri=None):
-    """This function calculates the flow graph from a d-infinity based
-        flow algorithm to include including source/sink cells
-        as well as a data structures to assist in walking up the flow graph.
+def calculate_flow_weights(
+    flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
+    """This function calculates the flow weights from a d-infinity based
+        flow algorithm to assist in walking up the flow graph.
 
         flow_direction_uri - uri to a flow direction GDAL dataset that's
             used to calculate the flow graph
@@ -288,70 +339,67 @@ def calculate_flow_graph(
             4 x 0
             5 6 7
 
-        dem_uri - (optional) if present, returns a sink cell list sorted by
-            "lowest" height to highest.  useful for flow accumulation sorting
-
         returns nothing"""
 
     LOGGER.info('Calculating flow graph')
     start = time.clock()
 
-    #This is the array that's used to keep track of the connections of the
-    #current cell to those *inflowing* to the cell, thus the 8 directions
+    
     flow_direction_dataset = gdal.Open(flow_direction_uri)
     cdef double flow_direction_nodata
     flow_direction_band, flow_direction_nodata = \
         raster_utils.extract_band_and_nodata(flow_direction_dataset)
-
+    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_window
+    
+    #This is the array that's used to keep track of the connections of the
+    #current cell to those *inflowing* to the cell, thus the 8 directions
     cdef int n_cols, n_rows
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
-
-    outflow_weight_data_file = tempfile.TemporaryFile()
     
-    outflow_weights_data_uri = raster_utils.temporary_filename()
-    outflow_weights_carray = raster_utils.create_carray(
-        outflow_weights_data_uri, tables.Float32Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = (
-        outflow_weights_carray[:])
-    outflow_weights_nodata = -1.0
-    outflow_weights[:] = outflow_weights_nodata
-
-    outflow_direction_data_file = tempfile.TemporaryFile()
-
-    outflow_direction_data_uri = raster_utils.temporary_filename()
-    outflow_direction_carray = raster_utils.create_carray(
-        outflow_direction_data_uri, tables.Int8Atom(), (n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_carray[:]
-    outflow_direction_nodata = 9
-    outflow_direction[:] = outflow_direction_nodata
+    cdef int outflow_direction_nodata = 9
+    outflow_direction_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_direction_uri, 'GTiff',
+        outflow_direction_nodata, gdal.GDT_Byte)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_window = (
+        numpy.empty((1, n_cols), dtype=numpy.int8))
+    
+    cdef float outflow_weights_nodata = -1.0
+    outflow_weights_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_weights_uri, 'GTiff',
+        outflow_weights_nodata, gdal.GDT_Float32)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_window = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
 
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
     cdef int n_neighbors = 8
     cdef double *angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
-
-    flow_direction_memory_file = tempfile.TemporaryFile()
-    flow_direction_data_uri = raster_utils.temporary_filename()
-    flow_direction_carray = raster_utils.load_dataset_to_carray(
-        flow_direction_uri, flow_direction_data_uri)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
-        flow_direction_carray[:])
     
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
-    cdef int *diagonal_offsets = \
-        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+    cdef int *diagonal_offsets = [
+        1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
 
     #Iterate over flow directions
     cdef int row_index, col_index, neighbor_direction_index
     cdef long current_index
     cdef double flow_direction, flow_angle_to_neighbor, outflow_weight
+    
     for row_index in range(n_rows):
+        
+        outflow_direction_window[:] = outflow_direction_nodata
+        outflow_weights_window[:] = outflow_weights_nodata
+        
+        flow_direction_window = flow_direction_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+    
         for col_index in range(n_cols):
-            flow_direction = flow_direction_array[row_index, col_index]
+            flow_direction = flow_direction_window[0, col_index]
             #make sure the flow direction is defined, if not, skip this cell
             if flow_direction == flow_direction_nodata:
                 continue
-            current_index = row_index * n_cols + col_index
             found = False
             for neighbor_direction_index in range(n_neighbors):
                 flow_angle_to_neighbor = abs(
@@ -359,7 +407,6 @@ def calculate_flow_graph(
                     flow_direction)
                 if flow_angle_to_neighbor <= PI/4.0:
                     found = True
-
 
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
@@ -385,69 +432,20 @@ def calculate_flow_graph(
                         neighbor_direction_index = \
                             (neighbor_direction_index + 1) % 8
 
-                    outflow_direction[row_index, col_index] = \
-                        neighbor_direction_index
-                    outflow_weights[row_index, col_index] = outflow_weight
-
-                    #There's flow from the current cell to the neighbor
-                    #so figure out the neighbor then add to inflow set
-                    outflow_index = current_index + \
-                        diagonal_offsets[neighbor_direction_index]
-
-                    #if there is non-zero flow to the next cell clockwise then
-                    #add it to the inflow set
-                    if outflow_weight != 1.0:
-                        next_outflow_index = current_index + \
-                            diagonal_offsets[(neighbor_direction_index + 1) % 8]
+                    outflow_direction_window[0, col_index] = neighbor_direction_index
+                    outflow_weights_window[0, col_index] = outflow_weight
 
                     #we found the outflow direction
                     break
             if not found:
                 LOGGER.debug('no flow direction found for %s %s' % \
                                  (row_index, col_index))
+        outflow_weights_band.WriteArray(outflow_weights_window, xoff=0, yoff=row_index)
+        outflow_direction_band.WriteArray(outflow_direction_window, xoff=0, yoff=row_index)
 
-    #write outflow direction and weights
-    outflow_weights_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_weights_uri, 'GTiff',
-        outflow_weights_nodata, gdal.GDT_Float32)
-    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    outflow_weights_band.WriteArray(outflow_weights)
-
-    outflow_direction_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_direction_uri, 'GTiff',
-        outflow_direction_nodata, gdal.GDT_Byte)
-    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
-    outflow_direction_band.WriteArray(outflow_direction)
-
-    LOGGER.debug("Calculating sink and source cells")
-
-    LOGGER.debug('n_cols n_rows %s %s' % (n_cols, n_rows))
-
-    LOGGER.info('Done calculating flow path elapsed time %ss' % \
+    LOGGER.info('Done calculating flow weights elapsed time %ss' % \
                     (time.clock()-start))
 
-
-def calculate_flow_direction(dem_uri, flow_direction_uri):
-    """Calculates the flow direction of a landscape given its dem
-
-        dem_uri - a URI to a GDAL dataset to the DEM that will be used to
-            determine flow direction.
-        flow_direction_uri - a URI to create a dataset that will be used
-            to store the flow direction.
-        inflow_direction_uri - a URI to a byte GDAL raster that's used
-            to determine which neighbors inflow into the current cell
-
-        returns nothing"""
-
-    LOGGER.info('Calculate flow direction')
-    start = time.clock()
-
-    #Calcualte the d infinity flow direction
-    flow_direction_inf(dem_uri, flow_direction_uri)
-
-    LOGGER.info(
-        'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
-    
 
 def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,
@@ -475,63 +473,58 @@ def percent_to_sink(
             first counter-clockwise neighbor
 
         effect_uri - the output GDAL dataset that shows the percent of flux
-            eminating per pixel that will reach any sink pixel
+            emanating per pixel that will reach any sink pixel
 
         returns nothing"""
 
     LOGGER.info("calculating percent to sink")
     start_time = time.clock()
 
-    sink_pixels_dataset = gdal.Open(sink_pixels_uri)
-
     cdef float effect_nodata = -1.0
-    effect_dataset = raster_utils.new_raster_from_base(
-        sink_pixels_dataset, effect_uri, 'GTiff', effect_nodata,
-        gdal.GDT_Float32)
+    raster_utils.new_raster_from_base_uri(
+        sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
+        gdal.GDT_Float32, fill_value=effect_nodata)
+    effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
+    effect_band = effect_dataset.GetRasterBand(1)
 
-    cdef int n_cols = sink_pixels_dataset.RasterXSize
-    cdef int n_rows = sink_pixels_dataset.RasterYSize
-
-    sink_pixels_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_array = raster_utils.load_memory_mapped_array(
-        sink_pixels_uri, sink_pixels_data_file)
-
-    outflow_direction_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
-        outflow_direction_uri, outflow_direction_data_file)
-    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
-
-    cdef int outflow_direction_nodata
-    _, outflow_direction_nodata = raster_utils.extract_band_and_nodata(
-        outflow_direction_dataset)
-
-    outflow_weights_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = raster_utils.load_memory_mapped_array(
-        outflow_weights_uri, outflow_weights_data_file)
-    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
-
-    cdef float outflow_weights_nodata
-    _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
-        outflow_weights_dataset)
-
-    export_rate_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_array = raster_utils.load_memory_mapped_array(
-        export_rate_uri, export_rate_data_file)
-    export_rate_dataset = gdal.Open(export_rate_uri)
+    cdef int n_cols = effect_dataset.RasterXSize
+    cdef int n_rows = effect_dataset.RasterYSize
     
-    cdef float export_rate_nodata
-    _, export_rate_nodata = raster_utils.extract_band_and_nodata(
-        export_rate_dataset)
+    cdef int CACHE_ROWS = 2**12
+    if CACHE_ROWS > n_rows:
+        CACHE_ROWS = n_rows
 
-    effect_band, _ = raster_utils.extract_band_and_nodata(
-        effect_dataset)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
 
-    effect_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_array = numpy.memmap(
-        effect_data_file, dtype=numpy.float32, mode='w+',
-        shape=(n_rows, n_cols))
-    effect_array[:] = effect_nodata
-
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    sink_pixels_dataset = gdal.Open(sink_pixels_uri)
+    sink_pixels_band = sink_pixels_dataset.GetRasterBand(1)
+    cdef int sink_pixels_nodata = raster_utils.get_nodata_from_uri(
+        sink_pixels_uri)
+    
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    export_rate_dataset = gdal.Open(export_rate_uri)
+    export_rate_band = export_rate_dataset.GetRasterBand(1)
+    cdef float export_rate_nodata = raster_utils.get_nodata_from_uri(
+        export_rate_uri)
+    
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
+    
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef float outflow_weights_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
+    
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
@@ -541,17 +534,33 @@ def percent_to_sink(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int loop_col_index, loop_row_index, index, row_index, col_index, neighbor_row_index, neighbor_col_index, offset, outflow_direction, neighbor_index, neighbor_outflow_direction
-    cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
-    cdef float outflow_percent_list[2]
-
+    cdef int index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
+    cdef float outflow_weight, neighbor_outflow_weight
+    
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
+        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
+    cache_tag[:] = -1
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
+        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+    cache_dirty[:] = 0
+    
+    
     cdef queue[int] process_queue
     #Queue the sinks
-    for col_index in xrange(n_cols):
-        for row_index in xrange(n_rows):
-            if sink_pixels_array[row_index, col_index] == 1:
-                effect_array[row_index, col_index] = 1.0
+    for row_index in xrange(n_rows):
+        effect_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols,
+            win_ysize=1, buf_obj=effect_cache[0].reshape((1,n_cols)))
+        sink_pixels_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols,
+            win_ysize=1, buf_obj=sink_pixels_cache[0].reshape((1,n_cols)))
+        for col_index in xrange(n_cols):
+            if sink_pixels_cache[0, col_index] == 1:
+                effect_cache[0, col_index] = 1.0
                 process_queue.push(row_index * n_cols + col_index)
+        effect_band.WriteArray(
+            effect_cache[0].reshape((1,n_cols)), xoff=0, yoff=row_index)
 
     while process_queue.size() > 0:
         index = process_queue.front()
@@ -559,17 +568,58 @@ def percent_to_sink(
         row_index = index / n_cols
         col_index = index % n_cols
 
-        if export_rate_array[row_index, col_index] == export_rate_nodata:
+        for cache_row_offset in range(-1, 2):
+            neighbor_row_index = row_index + cache_row_offset
+            #see if that row is out of bounds
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            #otherwise check if the cache needs an update
+            cache_row_index = neighbor_row_index % CACHE_ROWS
+            cache_row_tag = neighbor_row_index / CACHE_ROWS
+            
+            if cache_tag[cache_row_index] == cache_row_tag:
+                #cache is up to date, so skip
+                continue
+                
+            #see if we need to save the cache
+            if cache_dirty[cache_row_index]:
+                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+                effect_band.WriteArray(
+                    effect_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                cache_dirty[cache_row_index] = 0
+                
+            #load a new row
+            sink_pixels_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=sink_pixels_cache[cache_row_index].reshape((1,n_cols)))
+            export_rate_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=export_rate_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_direction_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_weights_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
+            effect_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=effect_cache[cache_row_index].reshape((1,n_cols)))
+            cache_tag[cache_row_index] = cache_row_tag
+                
+        cache_row_index = row_index % CACHE_ROWS
+        
+        if export_rate_cache[cache_row_index, col_index] == export_rate_nodata:
             continue
 
         #if the outflow weight is nodata, then not a valid pixel
-        outflow_weight = outflow_weights_array[row_index, col_index]
+        outflow_weight = outflow_weights_cache[cache_row_index, col_index]
         if outflow_weight == outflow_weights_nodata:
             continue
 
         for neighbor_index in range(8):
+            cache_neighbor_row_index = cache_row_index + row_offsets[neighbor_index]
             neighbor_row_index = row_index + row_offsets[neighbor_index]
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+            if cache_neighbor_row_index < 0 or cache_neighbor_row_index >= n_rows:
                 #out of bounds
                 continue
 
@@ -578,17 +628,18 @@ def percent_to_sink(
                 #out of bounds
                 continue
 
-            if sink_pixels_array[neighbor_row_index, neighbor_col_index] == 1:
+            if sink_pixels_cache[cache_neighbor_row_index, neighbor_col_index] == 1:
                 #it's already a sink
                 continue
 
-            neighbor_outflow_direction = \
-                outflow_direction_array[neighbor_row_index, neighbor_col_index]
+            neighbor_outflow_direction = (
+                outflow_direction_cache[cache_neighbor_row_index, neighbor_col_index])
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_direction == outflow_direction_nodata:
                 continue
 
-            neighbor_outflow_weight = outflow_weights_array[neighbor_row_index, neighbor_col_index]
+            neighbor_outflow_weight = (
+                outflow_weights_cache[cache_neighbor_row_index, neighbor_col_index])
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_weight == outflow_direction_nodata:
                 continue
@@ -609,16 +660,23 @@ def percent_to_sink(
                 
             if it_flows_here:
                 #If we haven't processed that effect yet, set it to 0 and append to the queue
-                if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
+                if effect_cache[cache_neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.push(neighbor_row_index * n_cols + neighbor_col_index)
-                    effect_array[neighbor_row_index, neighbor_col_index] = 0.0
+                    effect_cache[cache_neighbor_row_index, neighbor_col_index] = 0.0
 
-                effect_array[neighbor_row_index, neighbor_col_index] += \
-                    effect_array[row_index, col_index] * \
-                    neighbor_outflow_weight * \
-                    export_rate_array[row_index, col_index]
+                effect_cache[cache_neighbor_row_index, neighbor_col_index] += (
+                    effect_cache[cache_row_index, col_index] *
+                    neighbor_outflow_weight *
+                    export_rate_cache[cache_row_index, col_index])
+                cache_dirty[cache_neighbor_row_index] = 1
 
-    effect_band.WriteArray(effect_array, 0, 0)
+    for cache_row_index in range(CACHE_ROWS):
+        if cache_dirty[cache_row_index]:
+            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+            effect_band.WriteArray(
+                effect_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            cache_dirty[cache_row_index] = 0
+                
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
                     (time.clock() - start_time))
 
@@ -842,7 +900,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             if cache_tag[cache_row_index] == cache_row_tag:
                 #cache is up to date, so skip
                 continue
-                
+            
             #see if we need to save the cache
             if cache_dirty[cache_row_index]:
                 old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
@@ -1208,7 +1266,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
 
     
-def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
+def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         
@@ -1222,13 +1280,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
        flow_direction_uri - a uri to write a single band float raster of same
             dimensions.  After the function call it will have flow direction 
             in it.
-        dem_offset_uri - (optional) a uri to dump the dem offset.  If left as none
-            a temporary CArray the same dimensions as dem_uri that
-            will contain the flat region resolved regions of the dem_carray
-       
+        
        returns nothing"""
 
-    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index, flat_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
@@ -1238,16 +1293,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     else:
         #we don't have a nodata value, traditional one
         dem_nodata = -9999
-    
-    #Load DEM and resolve plateaus
-    if dem_offset_uri is None:
-        dem_offset_uri = raster_utils.temporary_filename()
         
-    LOGGER.info('resolving flat directions')
-    resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
-        
-    dem_offset_ds = gdal.Open(dem_offset_uri)
-    dem_offset_band = dem_offset_ds.GetRasterBand(1)
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
     
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -1307,7 +1355,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
-    cdef float lowest_dem
+    cdef float lowest_dem, dem_value, flow_direction_value
+    cdef queue[int] unresolved_cells
     
     #flow not defined on the edges, so just go 1 row in 
     for row_index in range(n_rows):
@@ -1322,7 +1371,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
             y_offset = n_rows - 3
             local_y_offset = 2
         
-        dem_window = dem_offset_band.ReadAsArray(
+        dem_window = dem_band.ReadAsArray(
             xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
         
         #clear out the flow array from the previous loop
@@ -1443,6 +1492,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                     flow_array[0, col_index] = (
                         a_f[max_index] * flow_direction_max_slope +
                         a_c[max_index] * 3.14159265 / 2.0)
+                else:
+                    unresolved_cells.push(col_index + row_index * n_cols)
                 #just in case we set 2pi rather than 0
                 #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
                 #    flow_array[0, col_index]  = 0.0
@@ -1450,46 +1501,104 @@ def flow_direction_inf(dem_uri, flow_direction_uri, dem_offset_uri=None):
                 if max_downhill_facet != -1:
                     flow_array[0, col_index] = (
                         3.14159265 / 4.0 * max_downhill_facet)
-                    
+                else:
+                    unresolved_cells.push(col_index + row_index * n_cols)
         #save the current flow row
         flow_band.WriteArray(flow_array, 0, row_index)
     
+    y_offset = -1
+    cdef int dirty_cache = 0
+    cdef queue[int] unresolved_cells_defer
+    cdef int previous_unresolved_size = unresolved_cells.size()
+    while unresolved_cells.size() > 0:
+        flat_index = unresolved_cells.front()
+        unresolved_cells.pop()
+    
+        row_index = flat_index / n_cols
+        col_index = flat_index % n_cols
+            
+        #We load 3 rows at a time and we know unresolved directions can only
+        #occur in the middle of the raster
+        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
+            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
+        if y_offset != row_index - 1:
+            if dirty_cache:
+                flow_band.WriteArray(flow_array, 0, y_offset)
+                dirty_cache = 0
+            local_y_offset = 1
+            y_offset = row_index - 1
+            dem_window = dem_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+            flow_array = flow_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+                
+        dem_value = dem_window[1, col_index]
+        flow_direction_value = flow_array[1, col_index]
+        
+        for facet_index in range(8):
+            e_1_row_index = row_offsets[facet_index] + local_y_offset
+            e_1_col_index = col_offsets[facet_index] + col_index
+            if (dem_window[e_1_row_index, e_1_col_index] == dem_value and
+                flow_array[e_1_row_index, e_1_col_index] != flow_nodata):
+                flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
+                dirty_cache = 1
+                break
+        else:        
+            #maybe we can drain to nodata
+            for facet_index in range(8):
+                e_1_row_index = row_offsets[facet_index] + local_y_offset
+                e_1_col_index = col_offsets[facet_index] + col_index
+                if dem_window[e_1_row_index, e_1_col_index] == dem_nodata:
+                    flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
+                    dirty_cache = 1
+                    break
+            else:
+                #we couldn't resolve it, try again later
+                LOGGER.info("couldn't resolve direction for index %d" % (flat_index))
+                unresolved_cells_defer.push(flat_index)
+                
+        if unresolved_cells.size() == 0:
+            LOGGER.info('previous_unresolved_size %d' % previous_unresolved_size)
+            LOGGER.info('unresolved_cells_defer.size() = %d' % unresolved_cells_defer.size())
+            if unresolved_cells_defer.size() < previous_unresolved_size:
+                previous_unresolved_size = unresolved_cells_defer.size()
+                while unresolved_cells_defer.size() > 0:
+                    unresolved_cells.push(unresolved_cells_defer.front())
+                    unresolved_cells_defer.pop()
+
+    while unresolved_cells_defer.size() > 0:
+        flat_index = unresolved_cells_defer.front()
+        unresolved_cells_defer.pop()
+    
+        LOGGER.info('marking unresolved flat index %d' % flat_index)
+        row_index = flat_index / n_cols
+        col_index = flat_index % n_cols
+        #We load 3 rows at a time and we know unresolved directions can only
+        #occur in the middle of the raster
+        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
+            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
+        if y_offset != row_index - 1:
+            if dirty_cache:
+                flow_band.WriteArray(flow_array, 0, y_offset)
+                dirty_cache = 0
+            local_y_offset = 1
+            y_offset = row_index - 1
+            flow_array = flow_band.ReadAsArray(
+                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
+                
+            flow_array[1, col_index] = 9999
+            dirty_cache = 1
+            
+    if dirty_cache:
+        flow_band.WriteArray(flow_array, 0, y_offset)
+        dirty_cache = 0
+
+
+        
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
-    
-    
-cdef int _update_window(
-    int row_index, int col_index, int *ul_row_index, int *ul_col_index,
-    int *lr_row_index, int *lr_col_index, int n_rows, int n_cols,
-    int row_window_size, int col_window_size, int window_buffer):
-
-    if (((row_index < ul_row_index[0] + window_buffer) and (ul_row_index[0] != 0)) or
-        ((row_index >= lr_row_index[0] - window_buffer) and (lr_row_index[0] != n_rows)) or
-        ((col_index <  ul_col_index[0] + window_buffer) and (ul_col_index[0] != 0)) or
-        ((col_index >= lr_col_index[0] - window_buffer) and (lr_col_index[0] != n_cols))):
-
-        ul_row_index[0] = row_index-(row_window_size/2)
-        lr_row_index[0] = row_index+row_window_size/2+row_window_size%2
-        ul_col_index[0] = col_index-(col_window_size/2)
-        lr_col_index[0] = col_index+col_window_size/2+col_window_size%2
-
-        if ul_row_index[0] < 0:
-            lr_row_index[0] += -ul_row_index[0]
-            ul_row_index[0] = 0
-        if ul_col_index[0] < 0:
-            lr_col_index[0] += -ul_col_index[0]
-            ul_col_index[0] = 0
-        if lr_row_index[0] > n_rows:
-            ul_row_index[0] -= lr_row_index[0] - n_rows
-            lr_row_index[0] = n_rows
-        if lr_col_index[0] > n_cols:
-            ul_col_index[0] -= lr_col_index[0] - n_cols
-            lr_col_index[0] = n_cols
-        return 1
-    else:
-        return 0
 
 
 def find_sinks(dem_uri):

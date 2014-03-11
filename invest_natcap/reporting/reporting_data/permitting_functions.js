@@ -1,12 +1,17 @@
-var globalData;
+var globalMuniData;
+var globalImpactData;
 
 $(document).ready(function()
         {
            //var jsonData = JSON.parse(document.getElementById('jsonData').innerHTML);
-           globalData = JSON.parse(document.getElementById('jsonData').innerHTML);
-           console.log(globalData);
+           //TODO: put below json parsing in function below, but outside of event handler
+           globalMuniData = JSON.parse(document.getElementById('muni-data').innerHTML);
+           globalImpactData = JSON.parse(document.getElementById('impact-data').innerHTML);
+
+           console.log(globalMuniData);
 
            sum_constant_total();
+           check_number_format();
         });
 
 $(function(){
@@ -22,8 +27,8 @@ $(function(){
     $tableLast = $('table:last');
     //Interate over one instance of the JSON data to get the keys (municipality,
     //ecosystem services)
-    for(var outKey in globalData){
-        for(inKey in globalData[outKey]){
+    for(var outKey in globalMuniData){
+        for(inKey in globalMuniData[outKey]){
             var index = $tableLast.find('th:contains("'+inKey+'")').index();
             //Build up an object that points an index to its column string
             muniObj[index] = inKey;
@@ -61,7 +66,7 @@ $(function(){
         //ADD and update
         if(this.checked){
             //Add parcel_id to jsonState with data
-            jsonState[par_id] = globalData[par_id];
+            jsonState[par_id] = globalMuniData[par_id];
             //Get the munis from parcel_id data
             var munis = jsonState[par_id]['municipalities'];
             for(muni in munis){
@@ -168,8 +173,10 @@ $(function(){
             }
             //Update jsonState by deleting the parcel id that was unchecked
             delete jsonState[par_id];
-            console.log(globalData[par_id]);
+            console.log(globalMuniData[par_id]);
         }
+
+        check_number_format();
     });
 });
 
@@ -197,6 +204,22 @@ function sum_constant_total() {
         //$("#my_table td.totalCol").each(function(i){
         $(this).find("td.totalCol").each(function(i){
             $(this).html(totals_array[i]);
+        });
+    });
+}
+
+function check_number_format() {
+    //This function checks to see if any columns should have
+    //numbers formatted in scientific notation
+    $('.scientific').each(function(){
+        console.log($(this).index());
+        var col_index = $(this).index() + 1;
+        $(this).closest('table').find("td:nth-child("+col_index+")").each(function(){
+            var value = $(this).html();
+            console.log(value);
+            if ($.isNumeric(value)){
+                $(this).html(parseFloat(value).toExponential());
+            }
         });
     });
 }
