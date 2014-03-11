@@ -32,7 +32,7 @@ def willimate_run(workspace_dir):
     args['sediment_threshold_table_uri'] = os.path.join(DATA, 'Sedimentation/input/sediment_threshold_table.csv')
     sediment.execute(args)
 
-    sediment_export_base = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    sediment_export_base = os.path.join(args['workspace_dir'], 'output', 'sed_export.tif')
     base_sediment_export = raster_utils.aggregate_raster_values_uri(
         sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum').total[0]
 
@@ -75,9 +75,9 @@ def willimate_run(workspace_dir):
     
 
     ########Subtract the mining only and origina lulc map for a static permitting map
-    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    original_export_uri = os.path.join(args['workspace_dir'], 'output', 'sed_export.tif')
     export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
-    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
+    mining_export_uri = os.path.join(args['workspace_dir'], 'output', 'sed_export_mining.tif')
     static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
 
     def sub_export(original_export, mining_export):
@@ -137,7 +137,7 @@ def willimate_run(workspace_dir):
         sediment.execute(args)
         _reset_temp_dir()
 
-        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export_%s.tif' % str(run_number))
+        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'output', 'sed_export_%s.tif' % str(run_number))
 
         #Lookup the amount of sediment export on the watershed polygon
         permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
@@ -218,14 +218,14 @@ def base_run(workspace_dir):
     #prep data from sediment run
     print 'doing the base sediment run'
     sediment.execute(args)
-    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
+    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'output', 'sed_export.tif')
     pixel_export_nodata = raster_utils.get_nodata_from_uri(pixel_export_uri)
 
     print 'doing the permitting sediment run'
     args['workspace_dir'] = os.path.join(workspace_dir, 'permitting_run')
     args['landuse_uri'] = converted_lulc_uri
     sediment.execute(args)
-    permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'Output', 'sed_export.tif')
+    permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'output', 'sed_export.tif')
 
     pixel_export_dataset = gdal.Open(pixel_export_uri)
     pixel_export_band = pixel_export_dataset.GetRasterBand(1)
@@ -355,4 +355,4 @@ def optimize_it(base_map_uri, aoi_uri, output_uri):
 
 if __name__ == '__main__':
     willimate_run('./base_sediment_run')
-    #optimize_it('./base_sediment_run/base_run/Output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
+    #optimize_it('./base_sediment_run/base_run/output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
