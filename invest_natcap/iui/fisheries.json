@@ -187,7 +187,7 @@
                     "elements": [
                         {
                             "id" : "f_post_proc",
-                            "args_id" : "frac_post_proc",
+                            "args_id" : "frac_post_process",
                             "type": "text",
                             "label": "Fraction After Processing",
                             "required": true,

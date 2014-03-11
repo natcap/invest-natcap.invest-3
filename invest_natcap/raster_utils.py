@@ -314,7 +314,6 @@ def new_raster_from_base(
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 
-    LOGGER.debug('Setting nodata value: %s', nodata)
     band.SetNoDataValue(nodata)
     if fill_value != None:
         band.Fill(fill_value)
@@ -629,6 +628,9 @@ def aggregate_raster_values_uri(
            calculation.  hectare_mean is None if raster_uri is unprojected.
         """
 
+    LOGGER.debug('Collecting raster stats from %s', raster_uri)
+    LOGGER.debug('Aggregating values by vector %s', shapefile_uri)
+
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
@@ -650,15 +652,21 @@ def aggregate_raster_values_uri(
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     if shapefile_field is not None:
-        
+        LOGGER.debug('Looking up field %s', shapefile_field)
+
         #Make sure that the layer name refers to an integer 
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
+        if fd == -1:  # -1 returned when field does not exist.
+            # Raise exception if user provided a field that's not in vector
+            raise AttributeError(('Vector %s must have a field named %s' %
+                (shapefile_uri, shapefile_field)))
+
         if fd.GetTypeName() != 'Integer':
             raise TypeError(
                 'Can only aggreggate by integer based fields, requested '
                 'field is of type  %s' % fd.GetTypeName())
-    
+
         gdal.RasterizeLayer(
             mask_dataset, [1], shapefile_layer,
             options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
@@ -893,7 +901,7 @@ def calculate_slope(
 
     LOGGER.debug("calculate slope")
 
-    slope_nodata = -1.0
+    slope_nodata = -9999.0
     dem_small_dataset = gdal.Open(dem_small_uri)
     new_raster_from_base(
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
@@ -1995,6 +2003,14 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
+    
+    #make sure that the input lists are of the same length
+    if not reduce(lambda x,y: x if x==y else False, 
+        [len(dataset_uri_list), len(dataset_out_uri_list),
+        len(resample_method_list)]):
+        raise Exception("dataset_uri_list, dataset_out_uri_list, and "
+            "resample_method_list must be the same length")
+        
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
@@ -2723,3 +2739,29 @@ def nearly_equal(a, b, sig_fig=5):
         returns True if a and b are equal to each other within a given 
             tolerance"""
     return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
+
+    
+def make_constant_raster_from_base_uri(
+    base_dataset_uri, constant_value, out_uri, nodata_value=None,
+    dataset_type=gdal.GDT_Float32):
+    """A helper function that creates a new gdal raster from base, and fills
+        it with the constant value provided.
+
+        base_dataset_uri - the gdal base raster
+        constant_value - the value to set the new base raster to
+        out_uri - the uri of the output raster
+        nodata_value - (optional) the value to set the constant raster's nodata
+            value to.  If not specified, it will be set to constant_value - 1.0
+        dataset_type - (optional) the datatype to set the dataset to, default
+            will be a float 32 value.
+
+        returns nothing"""
+
+    if nodata_value == None:
+        nodata_value = constant_value - 1.0
+    new_raster_from_base_uri(
+        base_dataset_uri, out_uri, 'GTiff', nodata_value,
+        dataset_type)
+    base_dataset = gdal.Open(out_uri, gdal.GA_Update)
+    base_band = base_dataset.GetRasterBand(1)
+    base_band.Fill(constant_value)
