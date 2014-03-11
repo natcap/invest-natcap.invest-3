@@ -26,7 +26,7 @@ def willimate_run(workspace_dir):
     base_landuse_uri = os.path.join(DATA, 'Base_Data/Freshwater/landuse_90')
     args['landuse_uri'] = base_landuse_uri
     args['watersheds_uri'] = os.path.join(DATA, 'Base_Data/Freshwater/watersheds.shp')
-    args['biophysical_table_uri'] = '../data/colombia_testing/Biophysical_Colombia.csv'
+    args['biophysical_table_uri'] = '../data/colombia_testing/Biophysical_Colombia_new.csv'
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 75.0
     args['sediment_threshold_table_uri'] = os.path.join(DATA, 'Sedimentation/input/sediment_threshold_table.csv')
@@ -37,6 +37,18 @@ def willimate_run(workspace_dir):
         sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum').total[0]
 
 
+    temp_dir = os.path.join(args['workspace_dir'], 'temp')
+    for temp_variable in ['TMP', 'TEMP', 'TMPDIR']:
+        try:
+            old_value = os.environ[temp_variable]
+        except KeyError:
+            old_value = None
+        os.environ[temp_variable] = temp_dir
+    os.makedirs(temp_dir)
+
+    def _reset_temp_dir():
+        shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir)
 
     #######Create a mining only export lulc and export map
     only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
@@ -59,6 +71,7 @@ def willimate_run(workspace_dir):
     print 'simulating the entire watershed as mining'
     sediment.execute(args)
     args.pop('suffix')
+    _reset_temp_dir()
     
 
     ########Subtract the mining only and origina lulc map for a static permitting map
@@ -77,6 +90,7 @@ def willimate_run(workspace_dir):
         static_impact_map_uri, gdal.GDT_Float32, export_nodata,
         landuse_pixel_size, "union", dataset_to_align_index=0, 
         aoi_uri=args['watersheds_uri'])
+    _reset_temp_dir()
 
 
     ########create a random permitting polygon
@@ -121,6 +135,7 @@ def willimate_run(workspace_dir):
         args['suffix'] = str(run_number)
 
         sediment.execute(args)
+        _reset_temp_dir()
 
         sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export_%s.tif' % str(run_number))
 
