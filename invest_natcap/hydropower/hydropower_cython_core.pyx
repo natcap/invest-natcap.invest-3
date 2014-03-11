@@ -73,13 +73,17 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
 
         #Calculate dimensionless ratio of plant accessible water
         #storage to expected precipitation during the year
-
-        climate_w = (awc / precip) * seasonality_constant
+        # Donohue et al. 2012 recommend the 0.2 factor to be used to
+        # get the used Z (seasonality constant) range used by InVEST
+        climate_w = ((awc / precip) * seasonality_constant) / 0.2
+        # Bound climate_w in between 1.25 and 5.0 1.25 <= w <= 5.0
+        if climate_w < 1.25:
+            climate_w = 1.25
+        if climate_w > 5.0:
+            climate_w = 5.0
 
         #Compute evapotranspiration partition of the water balance
-        #aet_p = (1+ climate_w * phi) / (1 + climate_w * phi + 1 / phi)
-
-        aet_new = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
+        aet_p = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
 
         #Currently as of release 2.2.2 the following operation is not
         #documented in the users guide. We take the minimum of the
@@ -89,8 +93,7 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         #5/10/12
         #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
 
-        return fmin(phi, aet_new)
+        return fmin(phi, aet_p)
 
     else:
         return fmin(precip, Kc * eto) / precip
-
