@@ -19,6 +19,10 @@ $(function(){
     var jsonState = {};
     //State of current municipalities
     var muniState = {};
+
+    initiate_impacts(muniState);
+    console.log(muniState);
+
     //The indexes for each above key found in muni table
     var muniIndicies = [];
     //Object that has the relationship between column index and column name
@@ -28,10 +32,10 @@ $(function(){
     //Interate over one instance of the JSON data to get the keys (municipality,
     //ecosystem services)
     for(var outKey in globalMuniData){
-        for(inKey in globalMuniData[outKey]){
-            var index = $tableLast.find('th:contains("'+inKey+'")').index();
+        for(var inKey in globalMuniData[outKey]){
+            var index = $tableLast.find('th:contains("'+inKey+'_offsets")').index();
             //Build up an object that points an index to its column string
-            muniObj[index] = inKey;
+            muniObj[index] = inKey + ;
             muniIndicies.push(index);
         }
         //We just want a handle on the inner String keys, so quit after one round
@@ -40,6 +44,35 @@ $(function(){
 
     //Sort the indicies so the row string can be aggregated properly.
     muniIndicies.sort();
+
+    var muniColMap = {};
+    var muniColIndexList = [];
+    $tableLast.find("th").each(function(){
+        muniColMap[$(this).index()] = $(this).html();
+        muniColIndexList.push($(this).index());
+    });
+    muniColIndexList.sort();
+    var muniColList = [];
+    for(var colIndex in muniColIndexList){
+        muniColList.push(muniColMap[colIndex]);
+    }
+
+    console.log(muniColList);
+
+    var offsetsList = [];
+    $tableLast.('th.offsets').each(function(){
+        offsetsList.push($(this).html())
+    });
+    var netsList = [];
+    $tableLast.('th.net').each(function(){
+        netsList.push($(this).html())
+    });
+
+    //Impact muni list from json object
+    muniImpactList = [];
+    for(var key in globalImpactData){
+       muniImpactList.push(key);
+    }
 
     //On a checkbox change event
     $('[name="cb"]').change(function() {
@@ -81,21 +114,31 @@ $(function(){
                     //update
                     $td = $tableLast.find('td:contains("' + muni + '")');
                     $tr = $td.closest('tr');
-                    for(var colIndex in muniIndicies){
-                        var colName = muniObj[colIndex];
-                        if(colName != 'municipalities'){
-                            var curVal = muniState[muni][colName];
-                            var newVal = jsonState[par_id][colName] * perc;
-                            $tdUp = $tr.find('td:eq(' + colIndex + ')');
-                            console.log($tdUp.html());
-                            //Making sure values are numbers with '+'
-                            var upVal = +newVal + +curVal;
-                            //Update muni state
-                            muniState[muni][colName] = upVal;
-                            //Add new value to table data spot
-                            $tdUp.html(upVal);
-                        }
+                    //Update class offsets
+                    for(var offsetCol in offsetsList){
+                        var colIndex = muniColList.indexOf(offsetCol);
+                        var curVal = muniState[muni][offsetCol];
+                        var newVal = jsonState[par_id][offsetCol.substr(0, offsetCol.indexOf('_'))];
+                        $tdUp = $tr.find('td:eq'( + colIndex + ')'));
+                        var upVal = +newVal + +curVal;
+                        muniState[muni][offsetCol] = upVal;
+                        $td.html(upVal);
                     }
+                    //for(var colIndex in muniIndicies){
+                      //  var colName = muniObj[colIndex];
+                        //if(colName != 'municipalities'){
+                          //  var curVal = muniState[muni][colName];
+                          //  var newVal = jsonState[par_id][colName] * perc;
+                          //  $tdUp = $tr.find('td:eq(' + colIndex + ')');
+                          //  console.log($tdUp.html());
+                            //Making sure values are numbers with '+'
+                          //  var upVal = +newVal + +curVal;
+                            //Update muni state
+                          //  muniState[muni][colName] = upVal;
+                            //Add new value to table data spot
+                          //  $tdUp.html(upVal);
+                       // }
+                   // }
                 }
                 else{
                     //Add new municipality
@@ -179,6 +222,34 @@ $(function(){
         check_number_format();
     });
 });
+
+function initiate_impacts(var muniState) {
+    //Handle on the 'last' table, municipality table
+    $tableLast = $('table:last');
+    var colMap = {};
+    var keyList = [];
+    $tableLast.find("th").each(function(){
+        colMap[$(this).index()] = $(this).html();
+        keyList.push($(this).index());
+    });
+    keyList.sort();
+    var colList = [];
+    for(colIndex in keyList){
+        colList.push(colMap[colIndex]);
+    }
+
+    console.log(colList);
+
+    for(muni_key in globalImpactData) {
+        $tableLast.find("th").each(function(){
+            var newRow = "<tr>";
+            $colName = $(this).html();
+            if($colName == "municipalities"){
+
+
+        }
+        });
+        }
 
 function sum_constant_total() {
 
