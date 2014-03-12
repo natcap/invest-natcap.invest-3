@@ -4,6 +4,7 @@ import logging
 import os
 import copy
 import cmath
+import csv
 
 from osgeo import ogr
 from invest_natcap import reporting
@@ -118,8 +119,29 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
     '''Want to give a CSV output that is the same information as the HTML,
     but in an easier-to-use-for-calculation form.'''
 
+    with open(uri, 'wb') as c_file:
+        c_writer = csv.writer(c_file)
+   
+        #Header for final results table
+        c_writer.writerow('Final Harvest by Subregion after ' + str(equil_pt) + ' Cycles')
+        c_writer.writerow()
+        sum_headers_row = ['Subregion', 'Harvest']
+        if val_var not None:
+            sum_headers_row.append('Value')
+        c_writer.writerow(sum_headers_row)
+        
+        num_cycles = len(hrv_dict.keys())
+        final_cycle = hrv_dict[num_cycles-1]
+        for area in final_cycle:
+            if area != 'Cycle_Total':
+                line = [area, final_cycle[area]]
+                if val_var not None:
+                    line.append(val_var[area])
+                
+                    c_write.writerow(line)
+            
 
-    
+
 
 def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
