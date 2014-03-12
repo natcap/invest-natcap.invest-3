@@ -111,7 +111,15 @@ def execute(args):
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
     create_results_page(html_page_uri, hrv_dict, equil_pt, val_var)
+    csv_page_uri = os.path.join(output_dir, 'Results_Table.csv')
+    create_results_csv(csv_page_uri, hrv_dict, equil_pt, val_var)
 
+def create_results_csv(uri, hrv_dict, equil_pt, val_var):
+    '''Want to give a CSV output that is the same information as the HTML,
+    but in an easier-to-use-for-calculation form.'''
+
+
+    
 
 def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
