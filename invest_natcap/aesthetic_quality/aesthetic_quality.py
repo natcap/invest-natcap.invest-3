@@ -172,7 +172,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     input_raster = None
 
     # Create a raster from base before passing it to viewshed
-    visibility_uri = raster_utils.temporary_filename()
+    visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
 
@@ -505,6 +505,7 @@ def execute(args):
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
     quantile_list = [25,50,75,100]
+    print('Trying to open', viewshed_uri)
     reclassify_quantile_dataset_uri(viewshed_uri,
                                     quantile_list,
                                     viewshed_quality_uri,
