@@ -126,7 +126,7 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         c_writer.writerow(['Final Harvest by Subregion after ' + str(equil_pt) + ' Cycles'])
         c_writer.writerow([])
         sum_headers_row = ['Subregion', 'Harvest']
-        if val_var not None:
+        if val_var is not None:
             sum_headers_row.append('Value')
         c_writer.writerow(sum_headers_row)
         
@@ -135,7 +135,7 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         for area in final_cycle:
             if area != 'Cycle_Total':
                 line = [area, final_cycle[area]]
-                if val_var not None:
+                if val_var is not None:
                     line.append(val_var[area])
                 
                     c_write.writerow(line)
