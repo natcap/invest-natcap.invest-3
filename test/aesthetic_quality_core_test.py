@@ -1164,7 +1164,7 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_hand_made_landscape(self):
         """Creating a hand-made landscape to make sure the visibility is ok"""
-        ray_length = 5
+        ray_length = 2
         land_array = np.zeros((ray_length*2+1, ray_length*2+1)).astype(float)
         land_array[ray_length, ray_length+1] = 1.0
         viewpoint = (ray_length, ray_length)
@@ -1175,7 +1175,7 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         visibility = aesthetic_quality_core.compute_viewshed(land_array,
         255, viewpoint, viewpoint_elevation, target_elevation, -1.0, \
-        cell_size, refraction_coeff, 'cython')
+        cell_size, refraction_coeff, 'python')
 
         visibility[viewpoint] = 2
         visibility[np.where(land_array > 0.)] = 3
