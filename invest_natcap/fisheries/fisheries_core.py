@@ -138,12 +138,13 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
                 if val_var is not None:
                     line.append(val_var[area])
                 
-                    c_write.writerow(line)
+                    c_writer.writerow(line)
+                    
         
         #Starting on the second table, summed harvest by cycle
-        c_writer.writerow()
+        c_writer.writerow([])
         c_writer.writerow(['Cycle Breakdown'])
-        c_writer.writerow()
+        c_writer.writerow([])
         c_writer.writerow(['Cycle', 'Harvest', 'Equilibrated?'])
 
         for cycle, inner_dict in hrv_dict.items():
