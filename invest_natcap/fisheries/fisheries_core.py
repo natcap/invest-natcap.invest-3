@@ -153,8 +153,10 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
         for cycle in range(len(cycle_dict)):
             line = [cycle]
             
-            for i, area in enumerate(area_line):
-                    stage = stage_line[i]
+            for i, area in enumerate(area_line[1::]):
+                    #Want to skip the heading at the beginning of stage_line,
+                    #so using i+1, since area_line won't count it.
+                    stage = stage_line[i + 1]
                     line.append(cycle_dict[cycle][area][stage])
 
             c_writer.writerow(line)
