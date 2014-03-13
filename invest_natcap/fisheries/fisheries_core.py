@@ -77,6 +77,8 @@ def execute(args):
             desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir', 'Intermediate')
+
     LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
@@ -98,7 +100,10 @@ def execute(args):
                     migration_dict, args['duration'], args['do_weight'])
 
     hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
-   
+  
+    inter_csv_uri = os.path.join(inter_dir, 'Cycle_Breakdown.csv')
+    create_inter_cycle_csv(inter_csv_uri, cycle_dict)
+
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
         #passing a subdictionary that is only the equilibrated final cycle 
@@ -114,6 +119,11 @@ def execute(args):
     create_results_page(html_page_uri, hrv_dict, equil_pt, val_var)
     csv_page_uri = os.path.join(output_dir, 'Results_Table.csv')
     create_results_csv(csv_page_uri, hrv_dict, equil_pt, val_var)
+
+def create_inter_cycle_csv(uri, cycle_dict):
+    '''Want to create an intermediate output that gives the number of
+    individuals within each area for each cycle for each age/stage.'''
+
 
 def create_results_csv(uri, hrv_dict, equil_pt, val_var):
     '''Want to give a CSV output that is the same information as the HTML,
