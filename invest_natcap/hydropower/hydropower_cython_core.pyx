@@ -73,12 +73,13 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
 
         #Calculate dimensionless ratio of plant accessible water
         #storage to expected precipitation during the year
-        # Donohue et al. 2012 recommend the 0.2 factor to be used to
-        # get the used Z (seasonality constant) range used by InVEST
-        climate_w = ((awc / precip) * seasonality_constant) / 0.2
-        # Bound climate_w in between 1.25 and 5.0 1.25 <= w <= 5.0
-        if climate_w < 1.25:
-            climate_w = 1.25
+        # Donohue et al. 2012 recommend the 1.25 factor which
+        # corresponds to the minimum omega value and can be seen
+        # in the User's Guide
+
+        climate_w = ((awc / precip) * seasonality_constant) + 1.25
+
+        # Capping to 5.0 to set to upper limit if exceeded
         if climate_w > 5.0:
             climate_w = 5.0
 
