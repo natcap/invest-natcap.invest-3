@@ -102,7 +102,7 @@ def execute(args):
     hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
   
     inter_csv_uri = os.path.join(inter_dir, 'Cycle_Breakdown.csv')
-    create_inter_cycle_csv(inter_csv_uri, cycle_dict)
+    create_inter_cycle_csv(inter_csv_uri, cycle_dict, args['ordered_stages'])
 
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
@@ -120,9 +120,45 @@ def execute(args):
     csv_page_uri = os.path.join(output_dir, 'Results_Table.csv')
     create_results_csv(csv_page_uri, hrv_dict, equil_pt, val_var)
 
-def create_inter_cycle_csv(uri, cycle_dict):
+def create_inter_cycle_csv(uri, cycle_dict, order):
     '''Want to create an intermediate output that gives the number of
-    individuals within each area for each cycle for each age/stage.'''
+    individuals within each area for each cycle for each age/stage.
+    cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+    '''    
+    with open(uri, 'wb') as c_file:
+        c_writer = csv.writer(c_file)
+
+        arb_subdict = cycle_dict.itervalues().next()
+        area_names = arb_subdict.keys()
+        area_line = ['Area'] 
+        stage_line = ['Age/Stage']
+
+        for area in area_names:
+            for stage in order:
+
+                area_line.append(area)
+                stage_line.append(stage)
+
+        c_writer.writerow(area_line)
+        c_writer.writerow(stage_line)
+        c_writer.writerow([])
+
+        for cycle in range(len(cycle_dict))
+            line = [cycle]
+            
+            for i, area in enumerate(area_line):
+
+                    stage = stage_line[i]
+                    line.append(cycle_dict[cycle][area][stage]
+
+            c_writer.writerow(line)
 
 
 def create_results_csv(uri, hrv_dict, equil_pt, val_var):
