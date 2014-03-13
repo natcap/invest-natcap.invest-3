@@ -8,6 +8,7 @@ $(document).ready(function()
            globalMuniData = JSON.parse(document.getElementById('muni-data').innerHTML);
            globalImpactData = JSON.parse(document.getElementById('impact-data').innerHTML);
 
+           console.log('globalMuniData');
            console.log(globalMuniData);
 
            sum_constant_total();
@@ -19,8 +20,6 @@ $(function(){
     var jsonState = {};
     //State of current municipalities
     var muniState = {};
-
-
     //The indexes for each above key found in muni table
     var muniIndicies = [];
     //Object that has the relationship between column index and column name
@@ -29,19 +28,19 @@ $(function(){
     $tableLast = $('table:last');
     //Interate over one instance of the JSON data to get the keys (municipality,
     //ecosystem services)
-    for(var outKey in globalMuniData){
-        for(var inKey in globalMuniData[outKey]){
-            var index = $tableLast.find('th:contains("'+inKey+'_offsets")').index();
+    //for(var outKey in globalMuniData){
+    //    for(var inKey in globalMuniData[outKey]){
+    //       var index = $tableLast.find('th:contains("'+inKey+'_offsets")').index();
             //Build up an object that points an index to its column string
-            muniObj[index] = inKey + ;
-            muniIndicies.push(index);
-        }
+    //        muniObj[index] = inKey + ;
+    //        muniIndicies.push(index);
+    //    }
         //We just want a handle on the inner String keys, so quit after one round
-        break;
-    }
+    //    break;
+    //}
 
     //Sort the indicies so the row string can be aggregated properly.
-    muniIndicies.sort();
+    //muniIndicies.sort();
 
     var muniColMap = {};
     var muniColIndexList = [];
@@ -50,23 +49,26 @@ $(function(){
         muniColIndexList.push($(this).index());
     });
     muniColIndexList.sort();
+    console.log('muniColIndexList');
+    console.log(muniColIndexList);
     var muniColList = [];
     for(var colIndex in muniColIndexList){
         muniColList.push(muniColMap[colIndex]);
     }
-
+    console.log('muniColList');
     console.log(muniColList);
 
     initiate_impacts(muniState, muniColList);
+    console.log('returned munistate');
     console.log(muniState);
-    
+    //break;
     var offsetsList = [];
-    $tableLast.('th.offsets').each(function(){
-        offsetsList.push($(this).html())
+    $tableLast.find('th.offsets').each(function(){
+        offsetsList.push($(this).html());
     });
     var netList = [];
-    $tableLast.('th.net').each(function(){
-        netList.push($(this).html())
+    $tableLast.find('th.net').each(function(){
+        netList.push($(this).html());
     });
 
     //Impact muni list from json object
@@ -225,56 +227,70 @@ $(function(){
 });
 
 function initiate_impacts(muniState, muniColList) {
-    //Handle on the 'last' table, municipality table
-    $tableLast = $('table:last');
-    //Create a new row
-    //Get list of rows in order for muni table
-    //['muni','pop','sed_im','nit_im',sed_of','nit_of','sed_net','nit_net']
-    var colList = muniColList;
-    //build dictionary where above elements are keys that are set initially to
-    //0.0
-    muniColDict = {};
-    for(var colKey in muniColList){
-        muniColDict[colKey] = 0.0;
-    }
 
-    //loop over munis in globalImpactData
-    for(muniKey in globalImpactData){
-
-        //set dict['muni'] to key of globalImpactData
-        muniColDict['municipality'] = muniKey;
-
-        //loop over inner keys (setting 'pop')
-        for (innerKey in globalImpactData[muniKey]){
-            if (innerKey != 'impacts'){
-                muniColDict['']
-    //if inner key is 'impacts' loop over impacts setting dict
-    //and net
-    //loop over muni table list building up table row string
-    var colMap = {};
-    var keyList = [];
-    $tableLast.find("th").each(function(){
-        colMap[$(this).index()] = $(this).html();
-        keyList.push($(this).index());
-    });
-    keyList.sort();
-    var colList = [];
-    for(colIndex in keyList){
-        colList.push(colMap[colIndex]);
-    }
-
-    console.log(colList);
-
-    for(muni_key in globalImpactData) {
-        $tableLast.find("th").each(function(){
-            var newRow = "<tr>";
-            $colName = $(this).html();
-            if($colName == "municipalities"){
-
-
-        }
+    function get_col_class(name){
+        var classList = [];
+        $tableLast.find('th.' + name).each(function(){
+            classList.push($(this).html());
         });
-        }
+
+        return classList;
+    }
+
+    offsetList = get_col_class('offsets');
+    impactList = get_col_class('impacts');
+    netList = get_col_class('net');
+
+    console.log('offsetList');
+    console.log(offsetList);
+
+    for(var muniKey in globalImpactData){
+        muniState[muniKey] = globalImpactData[muniKey];
+        muniDict = muniState[muniKey];
+
+        muniDict['offsets'] = {};
+        muniDict['nets'] = {};
+        $.each(offsetList, function(index, offset){
+            muniDict['offsets'][offset] = 0.0;
+            });
+        $.each(netList, function(index, net){
+            colBase = net.substr(0, net.indexOf('_'));
+            impactEqu = colBase + '_impact';
+            muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
+            });
+    }
+
+    console.log('muniSate');
+    console.log(muniState);
+
+    for(muniKey in muniState){
+        muniDict = muniState[muniKey];
+        var rowString = "<tr>";
+        $.each(muniColList, function(index, colName){
+
+            if(colName == 'municipalities'){
+                rowString = rowString + "<td>" + muniKey + "</td>";}
+            else if(colName == "pop"){
+                rowString = rowString + "<td>" + muniDict[colName] + "</td>";
+                }
+            else if(impactList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['impacts'][colName] + "</td>";
+                }
+            else if(offsetList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['offsets'][colName] + "</td>";
+                }
+            else if(netList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['nets'][colName] + "</td>";
+                }
+            else {
+                console.log("ERROR handling column name for impact row : " + colName);
+            }
+        });
+
+        rowString = rowString + "</tr>";
+        $tableLast.append(rowString);
+    }
+}
 
 function sum_constant_total() {
 
