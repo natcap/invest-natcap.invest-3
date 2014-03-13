@@ -26,23 +26,27 @@ def execute(args):
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     file_suffix = ''
-    
-    dem_offset_uri = os.path.join(output_directory, 'dem_offset%s.tif' % file_suffix)    
-    routing_cython_core.resolve_flat_regions_for_drainage(args['dem_uri'], dem_offset_uri)
+    dem_uri = args['dem_uri']
+    if args['resolve_plateaus']:
+        LOGGER.info('resolving plateaus')
+        prefix, suffix = os.path.splitext(args['resolve_plateaus_filename'])
+        dem_offset_uri = os.path.join(output_directory, prefix + file_suffix + suffix)    
+        routing_cython_core.resolve_flat_regions_for_drainage(args['dem_uri'], dem_offset_uri)
+        dem_uri = dem_offset_uri
     
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(output_directory, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_offset_uri, slope_uri)
+    raster_utils.calculate_slope(dem_uri, slope_uri)
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow direction")
     flow_direction_uri = os.path.join(output_directory, 'flow_direction%s.tif' % file_suffix)
-    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
+    routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
     
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(output_directory, 'flow_accumulation%s.tif' % file_suffix)
-    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    routing_utils.flow_accumulation(flow_direction_uri, dem_uri, flow_accumulation_uri)
     
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
