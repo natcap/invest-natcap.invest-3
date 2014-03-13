@@ -20,8 +20,6 @@ $(function(){
     //State of current municipalities
     var muniState = {};
 
-    initiate_impacts(muniState);
-    console.log(muniState);
 
     //The indexes for each above key found in muni table
     var muniIndicies = [];
@@ -59,13 +57,16 @@ $(function(){
 
     console.log(muniColList);
 
+    initiate_impacts(muniState, muniColList);
+    console.log(muniState);
+    
     var offsetsList = [];
     $tableLast.('th.offsets').each(function(){
         offsetsList.push($(this).html())
     });
-    var netsList = [];
+    var netList = [];
     $tableLast.('th.net').each(function(){
-        netsList.push($(this).html())
+        netList.push($(this).html())
     });
 
     //Impact muni list from json object
@@ -223,9 +224,33 @@ $(function(){
     });
 });
 
-function initiate_impacts(var muniState) {
+function initiate_impacts(muniState, muniColList) {
     //Handle on the 'last' table, municipality table
     $tableLast = $('table:last');
+    //Create a new row
+    //Get list of rows in order for muni table
+    //['muni','pop','sed_im','nit_im',sed_of','nit_of','sed_net','nit_net']
+    var colList = muniColList;
+    //build dictionary where above elements are keys that are set initially to
+    //0.0
+    muniColDict = {};
+    for(var colKey in muniColList){
+        muniColDict[colKey] = 0.0;
+    }
+
+    //loop over munis in globalImpactData
+    for(muniKey in globalImpactData){
+
+        //set dict['muni'] to key of globalImpactData
+        muniColDict['municipality'] = muniKey;
+
+        //loop over inner keys (setting 'pop')
+        for (innerKey in globalImpactData[muniKey]){
+            if (innerKey != 'impacts'){
+                muniColDict['']
+    //if inner key is 'impacts' loop over impacts setting dict
+    //and net
+    //loop over muni table list building up table row string
     var colMap = {};
     var keyList = [];
     $tableLast.find("th").each(function(){
