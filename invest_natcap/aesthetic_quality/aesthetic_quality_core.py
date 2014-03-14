@@ -920,21 +920,21 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     pixel = active_pixels['closest']
     max_visibility = -1000000.
     while pixel is not None:
-        print('pixel', pixel['visibility'], 'max', max_visibility)
+        #print('pixel', pixel['visibility'], 'max', max_visibility)
         # Pixel is visible
         if pixel['visibility'] > max_visibility:
-            print('visible')
+            #print('visible')
             visibility = 1
             max_visibility = pixel['visibility']
         # Pixel is not visible
         else:
-            print('not visible')
+            #print('not visible')
             visibility = 0
         # Update the visibility map for this pixel
         index = pixel['index']
         i = I[index]
         j = J[index]
-        if visibility_map[i, j] != 0:
+        if visibility_map[i, j] == 0:
             visibility_map[i, j] = visibility
         pixel = pixel['next']
 
@@ -1095,7 +1095,7 @@ def cell_angles(cell_coords, viewpoint):
 
 def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     coordinates, obs_elev=1.75, tgt_elev=0.0, \
-    max_dist=-1., refraction_coeff=None, alg_version='cython'):
+    max_dist=-1., refraction_coeff=None, alg_version='python'):
     """URI wrapper for the viewshed computation function
         
         Inputs: 
@@ -1143,7 +1143,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             (default) or 'python'.
 
         Returns the visibility map for the DEM as a numpy array"""
-    visibility_map = np.ones(input_array.shape, dtype=np.int8)
+    visibility_map = np.zeros(input_array.shape, dtype=np.int8)
     visibility_map[input_array == nodata] = 0
     array_shape = input_array.shape
     # 1- get perimeter cells
@@ -1232,6 +1232,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     active_line = {}
     # 1- add cells at angle 0
     LOGGER.debug('Creating python event stream')
+    #print('visibility map 1s:', np.sum(visibility_map))
     # Collect cell_center events
     cell_center_events = []
     # Create cell_center_events
@@ -1251,11 +1252,12 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         update_visible_pixels(active_line, I, J, visibility_map)
     
     #print('cell center events', [center_events[e] for e in cell_center_events])
-    print('cell center events', [e for e in cell_center_events])
+    #print('cell center events', [e for e in cell_center_events])
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
+        print('visibility map 1s:', np.sum(visibility_map))
+        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
@@ -1269,7 +1271,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             arg_min[add_event_id] = 0
             add_event_id += 1
         #print('add cell events', [add_events[e] for e in add_cell_events])
-        print('add cell events', [e for e in add_cell_events])
+        #print('add cell events', [e for e in add_cell_events])
     #   2.1- add cells
         if len(add_cell_events) > 0:
             for c in add_cell_events:
@@ -1291,7 +1293,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             active_line = remove_active_pixel(active_line, d)
             active_cells.remove(d)
         #print('remove cell events', [remove_events[e] for e in remove_cell_events])
-        print('remove cell events', [e for e in remove_cell_events])
+        #print('remove cell events', [e for e in remove_cell_events])
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
 
