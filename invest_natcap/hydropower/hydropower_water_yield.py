@@ -6,7 +6,7 @@ import os
 import csv
 import math
 
-import numpy as np
+import numpy
 from osgeo import gdal
 from osgeo import ogr
 
@@ -222,10 +222,10 @@ def execute(args):
             Kc_pix - a float value for Kc coefficient
 
             returns - a float value for pet"""
-
-        if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
-            return out_nodata
-        return eto_pix * Kc_pix
+        return numpy.where((eto_pix == eto_nodata) | (Kc_pix == Kc_nodata), out_nodata, eto_pix * Kc_pix)
+        #if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
+        #    return out_nodata
+        #return eto_pix * Kc_pix
 
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
@@ -249,18 +249,66 @@ def execute(args):
         'pawc':pawc_nodata,
         }
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
-        """A wrapper function to call hydropower's cython core. Acts as a
-            closure for fractp_nodata_dict, out_nodata, seasonality_constant
-            """
-
-        return hydropower_cython_core.fractp_op(
-            out_nodata, seasonality_constant,
-            Kc, eto, precip, root, soil, pawc, veg,
-            Kc_nodata, eto_nodata, precip_nodata, root_nodata,
-            root_rest_layer_nodata, pawc_nodata, veg_nodata)
-
+        """Function that calculates the fractp (actual evapotranspiration
+            fraction of precipitation) raster
+       
+        Kc - numpy array with the Kc (plant evapotranspiration
+              coefficient) raster values
+        eto - numpy array with the potential evapotranspiration raster
+              values (mm)
+        precip - numpy array with the precipitation raster values (mm)
+        root - numpy array with the root depth (maximum root depth for
+               vegetated land use classes) raster values (mm)
+        soil - numpy array with the depth to root restricted layer raster
+            values (mm)
+        pawc - numpy array with the plant available water content raster
+               values
+        veg - numpy array with a 1 or 0 where 1 depicts the land type as
+                vegetation and 0 depicts the land type as non
+                vegetation (wetlands, urban, water, etc...). If 1 use
+                regular AET equation if 0 use: AET = Kc * ETo
+                
+        returns - fractp value
+        """
+        
+        #Compute Budyko Dryness index
+        #Use the original AET equation if the land cover type is vegetation
+        #If not vegetation (wetlands, urban, water, etc...) use
+        #Alternative equation Kc * Eto
+        phi = (Kc * eto) / (precip)
+        pet = Kc * eto
+        
+        #Calculate plant available water content (mm) using the minimum
+        #of soil depth and root depth
+        awc = numpy.where(root < soil, root, soil) * pawc
+        climate_w = ((awc / precip) * seasonality_constant) + 1.25
+        # Capping to 5.0 to set to upper limit if exceeded
+        climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
+            
+        #Compute evapotranspiration partition of the water balance
+        aet_p = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
+        
+        #Currently as of release 2.2.2 the following operation is not
+        #documented in the users guide. We take the minimum of the
+        #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
+        #partition of the water balance (see users guide for variable
+        #and equation references). This was confirmed by Yonas Ghile on
+        #5/10/12
+        #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
+        veg_result =  numpy.where(phi < aet_p, phi, aet_p)
+        nonveg_result = numpy.where(precip < Kc * eto, precip, Kc * eto) / precip
+        result = numpy.where(veg == 1.0, veg_result, nonveg_result)
+        
+        #If any of the local variables which are in the 'fractp_nodata_dict'
+        #dictionary are equal to a out_nodata value, then return out_nodata
+        return numpy.where(
+            (Kc == Kc_nodata) | (eto == eto_nodata) | (precip == precip_nodata)
+            | (root == root_nodata) | (soil == root_rest_layer_nodata) |
+            (pawc == pawc_nodata) | (veg == veg_nodata) | (precip == 0.0) |
+            (Kc == 0.0) | (eto == 0.0), out_nodata, result)
+          
     # Vectorize operation
-    fractp_vec = np.vectorize(fractp_op)
+    fractp_vec = numpy.vectorize(fractp_op, otypes=[numpy.float])
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
@@ -271,8 +319,8 @@ def execute(args):
     # Create clipped fractp_clipped raster
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
-            raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
+        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
 
     def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
@@ -281,11 +329,11 @@ def execute(args):
            precip - numpy array with the precipitation raster values (mm)
 
            returns - water yield value (mm)"""
-
-        if fractp == out_nodata or precip == precip_nodata:
-            return out_nodata
-        else:
-            return (1.0 - fractp) * precip
+        return numpy.where((fractp == out_nodata) & (precip == precip_nodata), out_nodata, (1.0 - fractp) * precip)
+        #if fractp == out_nodata or precip == precip_nodata:
+        #    return out_nodata
+        #else:
+        #    return (1.0 - fractp) * precip
 
     LOGGER.debug('Performing wyield operation')
     # Create clipped wyield_clipped raster
@@ -319,10 +367,11 @@ def execute(args):
 
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
-        if fractp >= 0 and precip != precip_nodata:
-            return fractp * precip
-        else:
-            return out_nodata
+        return numpy.where((fractp >= 0) & (precip != precip_nodata), fractp * precip, out_nodata)
+        #if fractp >= 0 and precip != precip_nodata:
+        #    return fractp * precip
+        #else:
+        #    return out_nodata
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
