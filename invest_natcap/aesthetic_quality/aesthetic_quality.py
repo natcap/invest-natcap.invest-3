@@ -182,7 +182,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     refr_coeff, args)
 
 
-def compute_viewshed(input_array, output_uri, in_structure_uri, \
+def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
     refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
@@ -263,7 +263,7 @@ def compute_viewshed(input_array, output_uri, in_structure_uri, \
     assert edge_value >= 0., message
         
     # Base path uri
-    base_uri = os.path.split(output_uri)[0]
+    base_uri = os.path.split(visibility_uri)[0]
 
     # Temporary files that will be used 
     distance_uri = raster_utils.temporary_filename()
@@ -325,18 +325,19 @@ def compute_viewshed(input_array, output_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        visibility_uri = raster_utils.temporary_filename()
-        raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-            255, gdal.GDT_Byte, fill_value = 255)
+        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_visibility_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
         aesthetic_quality_core.viewshed(input_array, cell_size, \
-        array_shape, nodata, visibility_uri, (i,j), obs_elev, tgt_elev, \
+        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
         distance_fn = compute_distance(i,j, cell_size)
-        raster_utils.vectorize_datasets([I_uri, J_uri, visibility_uri], \
+        raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        raster_utils.vectorize_datasets([distance_uri, visibility_uri], \
+        raster_utils.vectorize_datasets([distance_uri, tmp_visibility_uri], \
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
@@ -369,7 +370,7 @@ def compute_viewshed(input_array, output_uri, in_structure_uri, \
         array = raster.GetRasterBand(1).ReadAsArray()
         accum_array += array
     # Store the accumulated value in the output uri
-    raster = gdal.Open(output_uri, gdal.GA_Update)
+    raster = gdal.Open(visibility_uri, gdal.GA_Update)
     band = raster.GetRasterBand(1)
     band.WriteArray(accum_array)
 
