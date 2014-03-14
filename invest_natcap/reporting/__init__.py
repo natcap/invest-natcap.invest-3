@@ -19,6 +19,7 @@ import table_generator
 import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
+REPORTING_DATA = os.path.join(os.path.dirname(__file__), 'reporting_data/')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
