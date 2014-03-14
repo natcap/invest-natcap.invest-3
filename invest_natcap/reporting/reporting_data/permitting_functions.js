@@ -26,21 +26,6 @@ $(function(){
     var muniObj = {};
     //Handle on the 'last' table, municipality table
     $tableLast = $('table:last');
-    //Interate over one instance of the JSON data to get the keys (municipality,
-    //ecosystem services)
-    //for(var outKey in globalMuniData){
-    //    for(var inKey in globalMuniData[outKey]){
-    //       var index = $tableLast.find('th:contains("'+inKey+'_offsets")').index();
-            //Build up an object that points an index to its column string
-    //        muniObj[index] = inKey + ;
-    //        muniIndicies.push(index);
-    //    }
-        //We just want a handle on the inner String keys, so quit after one round
-    //    break;
-    //}
-
-    //Sort the indicies so the row string can be aggregated properly.
-    //muniIndicies.sort();
 
     var muniColMap = {};
     var muniColIndexList = [];
@@ -61,7 +46,6 @@ $(function(){
     initiate_impacts(muniState, muniColList);
     console.log('returned munistate');
     console.log(muniState);
-    //break;
 
     var offsetsList = [];
     $tableLast.find('th.offsets').each(function(){
@@ -130,8 +114,9 @@ $(function(){
                     $.each(offsetList, function(index, offset){
                         offsetBase = offset.substr(0, offset.indexOf('_'));
                         netColName = offsetBase + '_net';
-                        muniOffsets[offset] = muniOffsets[offset] + jsonState[par_id][offsetBase];
-                        muniNets[netColName] = muniNets[netColName] + jsonState[par_id][offsetBase];
+                        var adjustedVal = jsonState[par_id][offsetBase] * perc;
+                        muniOffsets[offset] = muniOffsets[offset] + adjustedVal;
+                        muniNets[netColName] = muniNets[netColName] + adjustedVal;
 
                         offsetIndex = $tableLast.find('th:contains("' + offset + '")').index();
                         netIndex = $tableLast.find('th:contains("' + netColName + '")').index();
@@ -157,9 +142,9 @@ $(function(){
                         offsetBase = offset.substr(0, offset.indexOf('_'));
                         netColName = offsetBase + '_net';
                         impactColName = offsetBase + '_impact';
-                        muniDict['offsets'][offset] = jsonState[par_id][offsetBase];
+                        muniDict['offsets'][offset] = jsonState[par_id][offsetBase] * perc;
                         muniDict['impacts'][impactColName] = 0.0;
-                        muniDict['nets'][netColName] = jsonState[par_id][offsetBase];
+                        muniDict['nets'][netColName] = jsonState[par_id][offsetBase] * perc;
                     });
 
                     var rowString = "<tr>";
@@ -215,25 +200,30 @@ $(function(){
                     //Get handle on the row
                     $td = $tableLast.find('td:contains("' + muni + '")');
                     $tr = $td.closest('tr');
-                    for(var colIndex in muniIndicies){
-                        var colName = muniObj[colIndex];
-                        if(colName != 'municipalities'){
-                            var curVal = muniState[muni][colName];
-                            var newVal = jsonState[par_id][colName] * perc;
-                            $tdUp = $tr.find('td:eq(' + colIndex + ')');
-                            console.log($tdUp.html());
-                            var upVal = +curVal - +newVal;
-                            muniState[muni][colName] = upVal;
-                            $tdUp.html(upVal);
-                        }
-                    }
+
+                    var muniDict = muniState[muni];
+
+                    muniOffsets = muniDict['offsets'];
+                    muniNets = muniDict['nets'];
+                    $.each(offsetList, function(index, offset){
+                        offsetBase = offset.substr(0, offset.indexOf('_'));
+                        netColName = offsetBase + '_net';
+                        var adjustedVal = jsonState[par_id][offsetBase] * perc;
+                        muniOffsets[offset] = muniOffsets[offset] - adjustedVal;
+                        muniNets[netColName] = muniNets[netColName] - adjustedVal;
+
+                        offsetIndex = $tableLast.find('th:contains("' + offset + '")').index();
+                        netIndex = $tableLast.find('th:contains("' + netColName + '")').index();
+                        $tr.find('td:eq(' + offsetIndex + ')').html(muniOffsets[offset]);
+                        $tr.find('td:eq(' + netIndex + ')').html(muniOffsets[netColName]);
+                    });
+
                 }
             }
             //Update jsonState by deleting the parcel id that was unchecked
             delete jsonState[par_id];
             console.log(globalMuniData[par_id]);
         }
-
         check_number_format();
     });
 });
