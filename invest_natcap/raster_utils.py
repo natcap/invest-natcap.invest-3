@@ -2098,7 +2098,7 @@ def align_dataset_list(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        print 'masking out aoi'
+        LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
@@ -2113,19 +2113,25 @@ def align_dataset_list(
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
 
-        dataset_row = numpy.zeros((1, n_cols))
-        mask_row = numpy.zeros((1, n_cols))
+        mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
-        for out_dataset_uri in dataset_out_uri_list:
-            nodata_out = get_nodata_from_uri(out_dataset_uri)
-            out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
-            out_band = out_dataset.GetRasterBand(1)
-            for row_index in range(n_rows):
-                out_dataset.ReadAsArray(
-                    0, row_index, n_cols, 1, buf_obj=dataset_row)
-                mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_row)
-                dataset_row[mask_row == 0] = nodata_out
-                out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
+        LOGGER.info('masking out each output dataset')
+        out_dataset_list = map(lambda x: gdal.Open(x, gdal.GA_Update), dataset_out_uri_list)
+        out_band_list = map(lambda x: x.GetRasterBand(1), out_dataset_list)
+        nodata_out_list = map(lambda x: get_nodata_from_uri(x), dataset_out_uri_list)
+        #for out_dataset_uri in dataset_out_uri_list:
+        #    nodata_out = get_nodata_from_uri(out_dataset_uri)
+        #    out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
+        #    out_band = out_dataset.GetRasterBand(1)
+        for row_index in range(n_rows):
+            mask_row = (mask_band.ReadAsArray(
+                0, row_index, n_cols, 1) == 0)
+            for out_band, nodata_out in zip(out_band_list, nodata_out_list):
+                dataset_row = out_band.ReadAsArray(
+                    0, row_index, n_cols, 1)
+                out_band.WriteArray(numpy.where(
+                    mask_row, nodata_out, dataset_row), 
+                    xoff=0, yoff=row_index)
 
         #Remove the mask aoi if necessary
         mask_band = None

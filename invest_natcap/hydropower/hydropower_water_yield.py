@@ -11,7 +11,6 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
-import hydropower_cython_core
 
 LOGGER = logging.getLogger('hydropower_water_yield')
 
