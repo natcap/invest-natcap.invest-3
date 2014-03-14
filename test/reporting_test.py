@@ -821,13 +821,13 @@ class TestReportingPackage(testing.GISTest):
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
         jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
         json_uri = os.path.join(JSON_DATA,'sample_json.json')
-        json_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
+        json_impacts_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
 
         csv_uri = os.path.join(JSON_DATA, 'csv_test.csv')
 
-        sample_dict = [{'Sediment':'130', 'Nitrogen':'90132323.923233', 'Phosphorous':'60', 'parcel_id':'1'},
-                       {'Sediment':'96', 'Nitrogen':'0.0003433', 'Phosphorous':'60','parcel_id':'2'},
-                       {'Sediment':'36', 'Nitrogen':'-1101.03', 'Phosphorous':'60','parcel_id':'3'},
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'100', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'70', 'Phosphorous':'60','parcel_id':'3'},
                        {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
 
         columns = [{'name': 'parcel_id', 'total':False, 'attr':{'class':'tr_head'}},
