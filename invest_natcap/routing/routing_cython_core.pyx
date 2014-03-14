@@ -257,18 +257,18 @@ def calculate_transport(
             neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if (0 < neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
-                    neighbor_col < 0 or neighbor_col >= n_cols):
+            if (neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
+                neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
             #if neighbor inflows
-            neighbor_direction = \
-                outflow_direction_cache[neighbor_row, neighbor_col]
+            neighbor_direction = (
+                outflow_direction_cache[neighbor_row, neighbor_col])
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
-            if inflow_offsets[direction_index] != neighbor_direction and \
-               inflow_offsets[direction_index] != (neighbor_direction - 1) % 8:
+            if (inflow_offsets[direction_index] != neighbor_direction and
+                inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
                 #then neighbor doesn't inflow into current cell
                 continue
 
@@ -277,15 +277,10 @@ def calculate_transport(
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
-            #TODO: Make sure that there is outflow from the neighbor cell to 
-            #the current one before processing
-            if abs(outflow_weight) < 0.001:
-                continue
-
             in_flux = flux_cache[neighbor_row, neighbor_col]
             if in_flux != transport_nodata:
-                absorption_rate = \
-                    absorption_rate_cache[cache_row_index, current_col]
+                absorption_rate = (
+                    absorption_rate_cache[cache_row_index, current_col])
 
                 flux_cache[cache_row_index, current_col] += (
                     outflow_weight * in_flux * (1.0 - absorption_rate))

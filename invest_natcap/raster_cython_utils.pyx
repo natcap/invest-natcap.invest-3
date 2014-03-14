@@ -39,7 +39,8 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format,
     cdef float value = 0.0
 
     for row in range(n_rows):
-        dataset_band.ReadAsArray(0,row,output_band.XSize,1, buf_obj = dataset_array)
+        dataset_band.ReadAsArray(
+            0, row, output_band.XSize, 1, buf_obj=dataset_array)
         for col in range(n_cols):
             value = dataset_array[0,col]
             if lookup.count(value) == 1:
