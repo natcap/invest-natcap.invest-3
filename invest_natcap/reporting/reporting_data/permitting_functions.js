@@ -62,6 +62,7 @@ $(function(){
     console.log('returned munistate');
     console.log(muniState);
     //break;
+
     var offsetsList = [];
     $tableLast.find('th.offsets').each(function(){
         offsetsList.push($(this).html());
@@ -112,11 +113,19 @@ $(function(){
                     //Handle updating the muni
                     //Update the count of parcel ids representing the
                     //municipality
-                    muniState[muni]['count'] = muniState[muni]['count'] + 1;
+                    if('count' in muniState[muni]){
+                        muniState[muni]['count'] = muniState[muni]['count'] + 1;
+                    }
+                    else{
+                        muniState[muni]['count'] = 1;
+                    }
                     //Get handle on the row of the municipality we want to
                     //update
                     $td = $tableLast.find('td:contains("' + muni + '")');
                     $tr = $td.closest('tr');
+
+
+
                     //Update class offsets
                     for(var offsetCol in offsetsList){
                         var colIndex = muniColList.indexOf(offsetCol);
