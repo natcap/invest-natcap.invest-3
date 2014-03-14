@@ -50,7 +50,29 @@
                     "defaultValue": "plateau_resolved_dem.tif",
                     "enabledBy": "resolve_plateaus",
                     "requiredIf": ["resolve_plateaus"],
-                    "helpText": "The calendar year of the future scenario."
+                    "helpText": "This is the filename of the raster after the DEM has had plateaus resolved.  It will be placed in the workspace output."
+                },
+                {
+                    "id" : "calculate_slope",
+                    "args_id": "calculate_slope",
+                    "type": "checkbox",
+                    "label": "Calculate Slope",
+                    "defaultValue": false,
+                    "required": false,
+                    "helpText": "Select to calculate slope in degrees."
+                },
+                {
+                    "id" : "slope_filename",
+                    "type": "text",
+                    "width": 70,
+                    "dataType": "string",
+                    "label": "Slope Filename",
+                    "args_id": "slope_filename",
+                    "required": false,
+                    "defaultValue": "slope.tif",
+                    "enabledBy": "calculate_slope",
+                    "requiredIf": ["calculate_slope"],
+                    "helpText": "The filename for the calculated slope in degrees."
                 },
                 {
                     "id" : "threshold_flow_accumulation",

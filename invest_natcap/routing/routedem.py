@@ -27,17 +27,18 @@ def execute(args):
         os.makedirs(output_directory)
     file_suffix = ''
     dem_uri = args['dem_uri']
-    if args['resolve_plateaus']:
-        LOGGER.info('resolving plateaus')
-        prefix, suffix = os.path.splitext(args['resolve_plateaus_filename'])
-        dem_offset_uri = os.path.join(output_directory, prefix + file_suffix + suffix)    
-        routing_cython_core.resolve_flat_regions_for_drainage(args['dem_uri'], dem_offset_uri)
-        dem_uri = dem_offset_uri
-    
+    LOGGER.info('resolving plateaus')
+    prefix, suffix = os.path.splitext(args['resolve_plateaus_filename'])
+    dem_offset_uri = os.path.join(output_directory, prefix + file_suffix + suffix)    
+    routing_cython_core.resolve_flat_regions_for_drainage(args['dem_uri'], dem_offset_uri)
+    dem_uri = dem_offset_uri
+
     #Calculate slope
-    LOGGER.info("Calculating slope")
-    slope_uri = os.path.join(output_directory, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_uri, slope_uri)
+    if args['calculate_slope']:
+        LOGGER.info("Calculating slope")
+        prefix, suffix = os.path.splitext(args['slope_filename'])
+        slope_uri = os.path.join(output_directory, prefix + file_suffix + suffix)
+        raster_utils.calculate_slope(dem_uri, slope_uri)
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow direction")

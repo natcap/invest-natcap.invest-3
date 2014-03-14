@@ -33,10 +33,9 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('routing cython core')
 
 cdef double PI = 3.141592653589793238462643383279502884
-cdef double EPS = 1e-6
 
 cdef int MAX_WINDOW_SIZE = 2**12
-cdef float INF = numpy.inf
+cdef double INF = numpy.inf
 
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -96,10 +95,10 @@ def calculate_transport(
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] loss_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] flux_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+    cdef numpy.ndarray[numpy.npy_float64, ndim=2] loss_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))   
+    cdef numpy.ndarray[numpy.npy_float64, ndim=2] flux_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
 
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
         numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
@@ -135,11 +134,11 @@ def calculate_transport(
 
     loss_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float64)
     loss_band = loss_dataset.GetRasterBand(1)
     flux_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float64)
     flux_band = flux_dataset.GetRasterBand(1)
 
     #Process flux through the grid
@@ -365,7 +364,7 @@ def calculate_flow_weights(
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_window = (
         numpy.empty((1, n_cols), dtype=numpy.int8))
     
-    cdef float outflow_weights_nodata = -1.0
+    cdef double outflow_weights_nodata = -1.0
     outflow_weights_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, outflow_weights_uri, 'GTiff',
         outflow_weights_nodata, gdal.GDT_Float32)
@@ -480,10 +479,10 @@ def percent_to_sink(
     LOGGER.info("calculating percent to sink")
     start_time = time.clock()
 
-    cdef float effect_nodata = -1.0
+    cdef double effect_nodata = -1.0
     raster_utils.new_raster_from_base_uri(
         sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
-        gdal.GDT_Float32, fill_value=effect_nodata)
+        gdal.GDT_Float64, fill_value=effect_nodata)
     effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
     effect_band = effect_dataset.GetRasterBand(1)
 
@@ -494,8 +493,8 @@ def percent_to_sink(
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float64, ndim=2] effect_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
@@ -508,7 +507,7 @@ def percent_to_sink(
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     export_rate_dataset = gdal.Open(export_rate_uri)
     export_rate_band = export_rate_dataset.GetRasterBand(1)
-    cdef float export_rate_nodata = raster_utils.get_nodata_from_uri(
+    cdef double export_rate_nodata = raster_utils.get_nodata_from_uri(
         export_rate_uri)
     
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
@@ -522,7 +521,7 @@ def percent_to_sink(
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     outflow_weights_dataset = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    cdef float outflow_weights_nodata = raster_utils.get_nodata_from_uri(
+    cdef double outflow_weights_nodata = raster_utils.get_nodata_from_uri(
         outflow_weights_uri)
     
     #Diagonal offsets are based off the following index notation for neighbors
@@ -535,7 +534,7 @@ def percent_to_sink(
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
-    cdef float outflow_weight, neighbor_outflow_weight
+    cdef double outflow_weight, neighbor_outflow_weight
     
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
         numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
@@ -654,16 +653,14 @@ def percent_to_sink(
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
-            if abs(neighbor_outflow_weight) < EPS:
-                #it doesn't flow here
-                continue
-                
             if it_flows_here:
                 #If we haven't processed that effect yet, set it to 0 and append to the queue
                 if effect_cache[cache_neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.push(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_cache[cache_neighbor_row_index, neighbor_col_index] = 0.0
 
+                #the percent of the pixel upstream equals the current percent 
+                #times the percent flow to that pixels times the 
                 effect_cache[cache_neighbor_row_index, neighbor_col_index] += (
                     effect_cache[cache_row_index, col_index] *
                     neighbor_outflow_weight *
@@ -736,7 +733,7 @@ cdef void _build_flat_set(
     band, float nodata_value, int n_rows, int n_cols,
     int *row_offsets, int *col_offsets, c_set[int] *flat_set):
 
-    cdef float dem_value, neighbor_dem_value
+    cdef double dem_value, neighbor_dem_value
     #get the ceiling of the integer division
     cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
 
@@ -801,7 +798,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         
     #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)
-    cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    cdef double nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         INF)
@@ -1334,7 +1331,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     n_rows, n_cols = raster_utils.get_row_col_from_uri(dem_uri)
     d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
     d_2 = d_1
-    cdef float max_r = numpy.pi / 4.0
+    cdef double max_r = numpy.pi / 4.0
     
     #Create a flow carray and respective dataset
     flow_nodata = -9999
@@ -1355,7 +1352,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
-    cdef float lowest_dem, dem_value, flow_direction_value
+    cdef double lowest_dem, dem_value, flow_direction_value
     cdef queue[int] unresolved_cells
     
     #flow not defined on the edges, so just go 1 row in 
@@ -1615,7 +1612,7 @@ def find_sinks(dem_uri):
     dem_band = dem_ds.GetRasterBand(1)
     cdef int n_cols = dem_band.XSize
     cdef int n_rows = dem_band.YSize
-    cdef float nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    cdef double nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     
     LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
 
