@@ -8,6 +8,7 @@ $(document).ready(function()
            globalMuniData = JSON.parse(document.getElementById('muni-data').innerHTML);
            globalImpactData = JSON.parse(document.getElementById('impact-data').innerHTML);
 
+           console.log('globalMuniData');
            console.log(globalMuniData);
 
            sum_constant_total();
@@ -27,19 +28,55 @@ $(function(){
     $tableLast = $('table:last');
     //Interate over one instance of the JSON data to get the keys (municipality,
     //ecosystem services)
-    for(var outKey in globalMuniData){
-        for(inKey in globalMuniData[outKey]){
-            var index = $tableLast.find('th:contains("'+inKey+'")').index();
+    //for(var outKey in globalMuniData){
+    //    for(var inKey in globalMuniData[outKey]){
+    //       var index = $tableLast.find('th:contains("'+inKey+'_offsets")').index();
             //Build up an object that points an index to its column string
-            muniObj[index] = inKey;
-            muniIndicies.push(index);
-        }
+    //        muniObj[index] = inKey + ;
+    //        muniIndicies.push(index);
+    //    }
         //We just want a handle on the inner String keys, so quit after one round
-        break;
-    }
+    //    break;
+    //}
 
     //Sort the indicies so the row string can be aggregated properly.
-    muniIndicies.sort();
+    //muniIndicies.sort();
+
+    var muniColMap = {};
+    var muniColIndexList = [];
+    $tableLast.find("th").each(function(){
+        muniColMap[$(this).index()] = $(this).html();
+        muniColIndexList.push($(this).index());
+    });
+    muniColIndexList.sort();
+    console.log('muniColIndexList');
+    console.log(muniColIndexList);
+    var muniColList = [];
+    for(var colIndex in muniColIndexList){
+        muniColList.push(muniColMap[colIndex]);
+    }
+    console.log('muniColList');
+    console.log(muniColList);
+
+    initiate_impacts(muniState, muniColList);
+    console.log('returned munistate');
+    console.log(muniState);
+    //break;
+
+    var offsetsList = [];
+    $tableLast.find('th.offsets').each(function(){
+        offsetsList.push($(this).html());
+    });
+    var netList = [];
+    $tableLast.find('th.net').each(function(){
+        netList.push($(this).html());
+    });
+
+    //Impact muni list from json object
+    muniImpactList = [];
+    for(var key in globalImpactData){
+       muniImpactList.push(key);
+    }
 
     //On a checkbox change event
     $('[name="cb"]').change(function() {
@@ -76,26 +113,44 @@ $(function(){
                     //Handle updating the muni
                     //Update the count of parcel ids representing the
                     //municipality
-                    muniState[muni]['count'] = muniState[muni]['count'] + 1;
+                    if('count' in muniState[muni]){
+                        muniState[muni]['count'] = muniState[muni]['count'] + 1;
+                    }
+                    else{
+                        muniState[muni]['count'] = 1;
+                    }
                     //Get handle on the row of the municipality we want to
                     //update
                     $td = $tableLast.find('td:contains("' + muni + '")');
                     $tr = $td.closest('tr');
-                    for(var colIndex in muniIndicies){
-                        var colName = muniObj[colIndex];
-                        if(colName != 'municipalities'){
-                            var curVal = muniState[muni][colName];
-                            var newVal = jsonState[par_id][colName] * perc;
-                            $tdUp = $tr.find('td:eq(' + colIndex + ')');
-                            console.log($tdUp.html());
-                            //Making sure values are numbers with '+'
-                            var upVal = +newVal + +curVal;
-                            //Update muni state
-                            muniState[muni][colName] = upVal;
-                            //Add new value to table data spot
-                            $tdUp.html(upVal);
-                        }
+
+
+
+                    //Update class offsets
+                    for(var offsetCol in offsetsList){
+                        var colIndex = muniColList.indexOf(offsetCol);
+                        var curVal = muniState[muni][offsetCol];
+                        var newVal = jsonState[par_id][offsetCol.substr(0, offsetCol.indexOf('_'))];
+                        $tdUp = $tr.find('td:eq'( + colIndex + ')'));
+                        var upVal = +newVal + +curVal;
+                        muniState[muni][offsetCol] = upVal;
+                        $td.html(upVal);
                     }
+                    //for(var colIndex in muniIndicies){
+                      //  var colName = muniObj[colIndex];
+                        //if(colName != 'municipalities'){
+                          //  var curVal = muniState[muni][colName];
+                          //  var newVal = jsonState[par_id][colName] * perc;
+                          //  $tdUp = $tr.find('td:eq(' + colIndex + ')');
+                          //  console.log($tdUp.html());
+                            //Making sure values are numbers with '+'
+                          //  var upVal = +newVal + +curVal;
+                            //Update muni state
+                          //  muniState[muni][colName] = upVal;
+                            //Add new value to table data spot
+                          //  $tdUp.html(upVal);
+                       // }
+                   // }
                 }
                 else{
                     //Add new municipality
@@ -179,6 +234,72 @@ $(function(){
         check_number_format();
     });
 });
+
+function initiate_impacts(muniState, muniColList) {
+
+    function get_col_class(name){
+        var classList = [];
+        $tableLast.find('th.' + name).each(function(){
+            classList.push($(this).html());
+        });
+
+        return classList;
+    }
+
+    offsetList = get_col_class('offsets');
+    impactList = get_col_class('impacts');
+    netList = get_col_class('net');
+
+    console.log('offsetList');
+    console.log(offsetList);
+
+    for(var muniKey in globalImpactData){
+        muniState[muniKey] = globalImpactData[muniKey];
+        muniDict = muniState[muniKey];
+
+        muniDict['offsets'] = {};
+        muniDict['nets'] = {};
+        $.each(offsetList, function(index, offset){
+            muniDict['offsets'][offset] = 0.0;
+            });
+        $.each(netList, function(index, net){
+            colBase = net.substr(0, net.indexOf('_'));
+            impactEqu = colBase + '_impact';
+            muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
+            });
+    }
+
+    console.log('muniSate');
+    console.log(muniState);
+
+    for(muniKey in muniState){
+        muniDict = muniState[muniKey];
+        var rowString = "<tr>";
+        $.each(muniColList, function(index, colName){
+
+            if(colName == 'municipalities'){
+                rowString = rowString + "<td>" + muniKey + "</td>";}
+            else if(colName == "pop"){
+                rowString = rowString + "<td>" + muniDict[colName] + "</td>";
+                }
+            else if(impactList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['impacts'][colName] + "</td>";
+                }
+            else if(offsetList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['offsets'][colName] + "</td>";
+                }
+            else if(netList.indexOf(colName) != -1){
+                rowString = rowString + "<td>" + muniDict['nets'][colName] + "</td>";
+                }
+            else {
+                console.log("ERROR handling column name for impact row : " + colName);
+            }
+        });
+
+        rowString = rowString + "</tr>";
+        $tableLast.append(rowString);
+    }
+}
 
 function sum_constant_total() {
 

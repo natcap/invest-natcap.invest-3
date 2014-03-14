@@ -821,7 +821,7 @@ class TestReportingPackage(testing.GISTest):
         jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
         jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
         json_uri = os.path.join(JSON_DATA,'sample_json.json')
-        json_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
+        json_impacts_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
 
         csv_uri = os.path.join(JSON_DATA, 'csv_test.csv')
 
