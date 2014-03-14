@@ -2098,7 +2098,7 @@ def align_dataset_list(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        print 'masking out aoi'
+        LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
@@ -2113,19 +2113,20 @@ def align_dataset_list(
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
 
-        dataset_row = numpy.zeros((1, n_cols))
-        mask_row = numpy.zeros((1, n_cols))
+        mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
+        LOGGER.info('masking out each output dataset')
         for out_dataset_uri in dataset_out_uri_list:
             nodata_out = get_nodata_from_uri(out_dataset_uri)
             out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
             out_band = out_dataset.GetRasterBand(1)
             for row_index in range(n_rows):
-                out_dataset.ReadAsArray(
-                    0, row_index, n_cols, 1, buf_obj=dataset_row)
+                dataset_row = out_dataset.ReadAsArray(
+                    0, row_index, n_cols, 1)
                 mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_row)
-                dataset_row[mask_row == 0] = nodata_out
-                out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
+                out_band.WriteArray(numpy.where(
+                    mask_row == 0, nodata_out, dataset_row), 
+                    xoff=0, yoff=row_index)
 
         #Remove the mask aoi if necessary
         mask_band = None
