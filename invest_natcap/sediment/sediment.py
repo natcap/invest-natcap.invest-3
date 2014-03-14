@@ -103,7 +103,7 @@ def execute(args):
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
     raster_utils.vectorize_datasets(
         [args['dem_uri']], float, clipped_dem_uri,
-        gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float64, dem_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
     #resolve plateaus 
@@ -156,7 +156,7 @@ def execute(args):
         dict([(lulc_code, 1.0 - float(table['sedret_eff'])) \
                   for (lulc_code, table) in biophysical_table.items()])
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float64,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building retention fraction raster from lulc')
@@ -168,7 +168,7 @@ def execute(args):
     no_stream_retention_rate_uri = raster_utils.temporary_filename()
     nodata_retention = -1.0
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float64,
         -1.0, exception_flag='values_required')
 
     def zero_out_retention_fn(retention, v_stream):
@@ -177,7 +177,7 @@ def execute(args):
         return retention
     raster_utils.vectorize_datasets(
         [no_stream_retention_rate_uri, v_stream_uri], zero_out_retention_fn,
-        retention_rate_uri, gdal.GDT_Float32, nodata_retention, out_pixel_size,
+        retention_rate_uri, gdal.GDT_Float64, nodata_retention, out_pixel_size,
         "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
@@ -185,7 +185,7 @@ def execute(args):
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     cp_uri = os.path.join(intermediate_dir, 'cp%s.tif' % file_suffix)
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float64,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating rkls')
@@ -199,13 +199,13 @@ def execute(args):
     nodata_rkls = raster_utils.get_nodata_from_uri(rkls_uri)
     nodata_cp = raster_utils.get_nodata_from_uri(cp_uri)
     nodata_usle = -1.0
-    def mult_rkls_cp(rkls, cp_factor):
+    def mult_rkls_cp(rkls, cp_factor, v_stream):
         if rkls == nodata_rkls or cp_factor == nodata_cp:
             return nodata_usle
-        return rkls * cp_factor
+        return rkls * cp_factor * (1 - v_stream)
     raster_utils.vectorize_datasets(
-        [rkls_uri, cp_uri], mult_rkls_cp, usle_uri,
-        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
+        [rkls_uri, cp_uri, v_stream_uri], mult_rkls_cp, usle_uri,
+        gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('calculating on pixel retention RKLS-USLE')
@@ -215,10 +215,10 @@ def execute(args):
     def sub_rkls_usle(rkls, usle):
         if rkls == nodata_rkls or usle == nodata_usle:
             return nodata_usle
-        return rkls * usle
+        return rkls - usle
     raster_utils.vectorize_datasets(
         [rkls_uri, usle_uri], sub_rkls_usle, on_pixel_retention_uri,
-        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
+        gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('route the sediment flux to determine upstream retention')
@@ -240,11 +240,11 @@ def execute(args):
     def add_upstream_and_on_pixel_retention(upstream_retention, on_pixel_retention):
         if upstream_retention == upstream_retention_nodata or on_pixel_retention == on_pixel_retention_nodata:
             return upstream_retention_nodata
-        return upstream_retention + on_pixel_retention
+        return upstream_retention #+ on_pixel_retention
 
     raster_utils.vectorize_datasets(
         [upstream_on_pixel_retention_uri, on_pixel_retention_uri], add_upstream_and_on_pixel_retention,
-        sed_retention_uri, gdal.GDT_Float32, sed_retention_nodata,
+        sed_retention_uri, gdal.GDT_Float64, sed_retention_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
@@ -255,15 +255,10 @@ def execute(args):
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
-    usle_summary = raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id')
-    upret_summary = raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id')
-
     field_summaries = {
-        'usle_mean': usle_summary.pixel_mean,
-        'usle_tot': usle_summary.total,
+        'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_tot': upret_summary.total,
-        'upret_mean': upret_summary.pixel_mean,
+        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
         }
 
     #Create the service field sums
@@ -282,19 +277,6 @@ def execute(args):
             if field_summaries[out_field][ws_id] < 0.0:
                 field_summaries[out_field][ws_id] = 0.0
     
-    #Create the service field means
-    field_summaries['sret_mn_dr'] = {}
-    field_summaries['sret_mn_wq'] = {}
-    for ws_id, value in field_summaries['upret_tot'].iteritems():
-        try:
-            n_cells = field_summaries['upret_tot'][ws_id] / field_summaries['upret_mean'][ws_id]
-            for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
-                field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
-        except ZeroDivisionError as e:
-            LOGGER.warn(str(e) + '\nSetting field summaries to 0')
-            for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
-                field_summaries[out_field][ws_id] = 0.0
-
     if 'sediment_valuation_table_uri' in args:
         sediment_valuation_table = raster_utils.get_lookup_from_csv(
             args['sediment_valuation_table_uri'], 'ws_id')
