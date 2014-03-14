@@ -30,12 +30,11 @@ mkdir($usrpath . $sessid . "/" . $predpath , 0755);
 $logpath = $usrpath . $sessid . "/" . $config->{'files'}->{'log'};
 $log = fopen($logpath, 'w');
 
-if (!isValidSessionId($sessid))
+if (isValidSessionId($sessid) == FALSE)
 {
     fwrite($log,",ERROR,Invalid session id.\n");
     fflush($log);
-    fclose($log);    
-    echo $sessid;    
+    fclose($log);
     return;
 }
 
