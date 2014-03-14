@@ -923,7 +923,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         #print('pixel', pixel['visibility'], 'max', max_visibility)
         # Pixel is visible
         if pixel['visibility'] > max_visibility:
-            print('visible')
+            #print('visible')
             visibility = 1
             max_visibility = pixel['visibility']
         # Pixel is not visible
@@ -934,8 +934,8 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         index = pixel['index']
         i = I[index]
         j = J[index]
-        #if visibility_map[i, j] != 0:
-        visibility_map[i, j] = visibility
+        if visibility_map[i, j] == 0:
+            visibility_map[i, j] = visibility
         pixel = pixel['next']
 
 def find_active_pixel(sweep_line, distance):
@@ -1232,7 +1232,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     active_line = {}
     # 1- add cells at angle 0
     LOGGER.debug('Creating python event stream')
-    print('visibility map 1s:', np.sum(visibility_map))
+    #print('visibility map 1s:', np.sum(visibility_map))
     # Collect cell_center events
     cell_center_events = []
     # Create cell_center_events

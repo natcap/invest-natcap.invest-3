@@ -333,17 +333,25 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
+        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_distance_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
-        distance_fn, distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        raster_utils.vectorize_datasets([distance_uri, tmp_visibility_uri], \
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_viewshed_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+        raster_utils.vectorize_datasets([tmp_distance_uri, tmp_visibility_uri], \
         valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
         scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
-        raster_utils.vectorize_datasets([viewshed_uri], apply_coefficient, \
+        raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
