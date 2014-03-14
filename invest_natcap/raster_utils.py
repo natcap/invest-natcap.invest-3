@@ -2253,13 +2253,6 @@ def vectorize_datasets(
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
-    #Try to numpy vectorize the operation
-    try:
-        vectorized_op = numpy.vectorize(dataset_pixel_op)
-    except ValueError:
-        #it's possible that the operation is already vectorized, so try that
-        vectorized_op = dataset_pixel_op
-
     #If there's an AOI, mask it out
     if aoi_uri != None:
         mask_uri = temporary_filename()
@@ -2279,7 +2272,14 @@ def vectorize_datasets(
         for dataset_index in range(len(aligned_bands)):
             aligned_bands[dataset_index].ReadAsArray(
                 0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        out_row = vectorized_op(*dataset_rows)
+        #we might not have to vectorize, try without it
+        try:
+            out_row = dataset_pixel_op(*dataset_rows)
+        except Exception as e:
+            LOGGER.error(e)
+            dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
+            out_row = dataset_pixel_op(*dataset_rows)
+        #out_row = vectorized_op(*dataset_rows)
         #Mask out the row if there is a mask
         if aoi_uri != None:
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
