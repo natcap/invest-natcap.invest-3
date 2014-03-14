@@ -346,7 +346,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         tmp_viewshed_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
         raster_utils.vectorize_datasets([tmp_distance_uri, tmp_visibility_uri], \
-        valuation_function, viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
+        valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
         "union")
         # Multiply the viewshed by its coefficient
         scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
