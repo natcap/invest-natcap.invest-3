@@ -1181,9 +1181,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
     correction = distances_sq*cell_size**2 * (1 - refraction_coeff) / D_earth 
-    print("refraction coeff", refraction_coeff)
-    print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
-    np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
+    #print("refraction coeff", refraction_coeff)
+    #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
+    #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
     visibility += correction
     # 3- Divide the height by the distance to get a visibility score
     visibility /= np.sqrt(distances_sq)
@@ -1231,7 +1231,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
-    LOGGER.debug('Creating python event stream')
+    #LOGGER.debug('Creating python event stream')
     #print('visibility map 1s:', np.sum(visibility_map))
     # Collect cell_center events
     cell_center_events = []
@@ -1256,7 +1256,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('visibility map 1s:', np.sum(visibility_map))
+        #print('visibility map 1s:', np.sum(visibility_map))
         #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
