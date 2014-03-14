@@ -102,7 +102,7 @@ $(function(){
                         muniDict['count'] = muniDict['count'] + 1;
                     }
                     else{
-                        muniDict['count'] = 1;
+                        muniDict['count'] = 2;
                     }
                     //Get handle on the row of the municipality we want to
                     //update
@@ -121,7 +121,7 @@ $(function(){
                         offsetIndex = $tableLast.find('th:contains("' + offset + '")').index();
                         netIndex = $tableLast.find('th:contains("' + netColName + '")').index();
                         $tr.find('td:eq(' + offsetIndex + ')').html(muniOffsets[offset]);
-                        $tr.find('td:eq(' + netIndex + ')').html(muniOffsets[netColName]);
+                        $tr.find('td:eq(' + netIndex + ')').html(muniNets[netColName]);
                     });
                 }
                 else{
@@ -215,7 +215,7 @@ $(function(){
                         offsetIndex = $tableLast.find('th:contains("' + offset + '")').index();
                         netIndex = $tableLast.find('th:contains("' + netColName + '")').index();
                         $tr.find('td:eq(' + offsetIndex + ')').html(muniOffsets[offset]);
-                        $tr.find('td:eq(' + netIndex + ')').html(muniOffsets[netColName]);
+                        $tr.find('td:eq(' + netIndex + ')').html(muniNets[netColName]);
                     });
 
                 }
