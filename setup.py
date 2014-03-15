@@ -165,7 +165,8 @@ if platform.system() == 'Windows':
          'invest_blue_carbon.py',
          'invest_blue_carbon_preprocessor.py',
          'invest_test_all.py',
-         'invest_scenario_generator.py']
+         'invest_scenario_generator.py',
+         'invest_aesthetic_quality.py']
 
     from py2exe.build_exe import py2exe as py2exeCommand
 

@@ -1,4 +1,11 @@
 <?php
+
+//http://codeaid.net/php/check-if-the-string-is-a-valid-session-id
+function isValidSessionId($s_id)
+{
+    return !empty($s_id) && preg_match('/^[a-zA-Z0-9]{26, 40}$/', $s_id);
+}
+
 //read configuration
 $json = file_get_contents("./recreation_server_config.json");
 $config = json_decode($json);
@@ -6,6 +13,11 @@ $config = json_decode($json);
 //get session id
 // $sessid = "DEBUGGING";
 $sessid = $_POST["sessid"];
+
+if (!isValidSessionId($sessid))
+{
+    return;
+}
 
 //set paths
 $usrpath = $config->{'paths'}->{'absolute'}->{'userroot'} . $config->{'paths'}->{'relative'}->{'data'};
