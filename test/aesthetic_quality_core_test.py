@@ -16,6 +16,7 @@ import cProfile
 import pstats
 import line_profiler
 
+from invest_natcap.aesthetic_quality import aesthetic_quality as AQ
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
 import aesthetic_quality_cython_core
 
@@ -1183,7 +1184,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         print(visibility)
         
 
-    def test_viewshed(self):
+    def test_python_vs_cython(self):
         """Compare the python and cython versions of compute_viewshed"""
         array_shape = (8, 6)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
@@ -1209,22 +1210,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         str(difference)
         assert difference == 0, message
 
-        #pr = cProfile.Profile()
-        ##pr = line_profiler.LineProfiler()
-        ##pr.wrap_function(aesthetic_quality_cython_core.sweep_through_angles)
-        ##pr.__call__(aesthetic_quality_cython_core.sweep_through_angles)
-        #pr.enable()
-        #pr.runcall(aesthetic_quality_core.compute_viewshed, DEM, viewpoint,
-        #1.75, 0.0, -1.0, 1.0, 'cython')
-        #pr.disable()
-        ##pr.dump_stats('compute_viewshed_python.prof')
-        ##stats = pstats.Stats('compute_viewshed_python.prof')
-        ##stats.strip_dirs()
-        ##stats.sort_stats('time')
-        ##stats.print_stats()
-
-        #pr.print_stats()
-
         print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
@@ -1247,6 +1232,42 @@ class TestAestheticQualityCore(unittest.TestCase):
         #aesthetic_quality_core.viewshed(input_uri, output_uri, coordinates, \
         #obs_elev = 1.75, tgt_elev = 0.0, max_dist = -1., \
         #refraction_coeff = None)
+
+    def test_viewshed(self):
+        """Regression test on the output and intermediate files mentioned in the
+        user's guide"""
+
+        # Paths to regression data
+        aq_args = {}
+        aq_args['workspace_dir'] = \
+        'invest-data/test/data/aesthetic_quality_regression_data/multiple_viewpoints'
+        viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
+        viewshed_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
+        viewshed_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
+        pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
+        overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
+
+        # Run the model
+        args = {}
+        args['workspace_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
+        args['aoi_uri'] = \
+        'invest-data/AestheticQuality/Input/AOI_WCVI.shp'
+        args['structure_uri'] = \
+        'invest-data/AestheticQuality/Input/AquaWEM_points.shp'
+        args['dem_uri'] = '../Base_Data/Marine/DEMs/claybark_dem/hdr.adf'
+        args['refraction'] = 0.13
+        args['cell_size'] = 500.
+        args['pop_uri'] = \
+        '../Base_Data/Marine/Population/global_pop/hdr.adf'
+        args['overlap_uri'] = \
+        'invest_data/AestheticQuality/Input/BC_parks.shp'
+
+        out_viewshed_uri = os.path.join(args['workspace_dir'], 'viewshed.tif')
+        
+        AQ.compute_viewshed_uri(args['dem_uri'], \
+        out_viewshed_uri, args['structure_uri'], 0, args['refraction'], args)
+
+        
 
     def tare_down(self):
         pass
