@@ -231,23 +231,6 @@ def execute(args):
         upstream_on_pixel_retention_uri, sed_flux_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'], stream_uri=v_stream_uri)
 
-    #Calculate the retention due to per pixel retention and the cp factor
-    LOGGER.info("calculating total retention (upstream + CP factor)")
-    sed_retention_uri = os.path.join(output_dir, 'sed_ret%s.tif' % file_suffix)
-    sed_retention_nodata = -1.0
-    upstream_retention_nodata = raster_utils.get_nodata_from_uri(upstream_on_pixel_retention_uri)
-    on_pixel_retention_nodata = raster_utils.get_nodata_from_uri(on_pixel_retention_uri)
-    def add_upstream_and_on_pixel_retention(upstream_retention, on_pixel_retention):
-        if upstream_retention == upstream_retention_nodata or on_pixel_retention == on_pixel_retention_nodata:
-            return upstream_retention_nodata
-        return upstream_retention #+ on_pixel_retention
-
-    raster_utils.vectorize_datasets(
-        [upstream_on_pixel_retention_uri, on_pixel_retention_uri], add_upstream_and_on_pixel_retention,
-        sed_retention_uri, gdal.GDT_Float64, sed_retention_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'])
-
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     routing_utils.pixel_amount_exported(
         flow_direction_uri, dem_offset_uri, v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
@@ -258,7 +241,7 @@ def execute(args):
     field_summaries = {
         'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
+        'upret_tot': raster_utils.aggregate_raster_values_uri(upstream_on_pixel_retention_uri, args['watersheds_uri'], 'ws_id').total,
         }
 
     #Create the service field sums
@@ -287,7 +270,7 @@ def execute(args):
                 discount = disc(sediment_valuation_table[ws_id][expense_type + '_time'],
                                 sediment_valuation_table[ws_id][expense_type + '_disc'])
                 field_summaries['sed_val_' + expense_type][ws_id] = \
-                    field_summaries['sret_sm_' + expense_type][ws_id] * \
+                    field_summaries['sed_ret_' + expense_type][ws_id] * \
                     sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
 
     original_datasource = ogr.Open(args['watersheds_uri'])
