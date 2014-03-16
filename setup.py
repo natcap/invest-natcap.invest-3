@@ -3,6 +3,7 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.core import Command
+import distutils.sysconfig
 import platform
 import os
 import sys
@@ -13,11 +14,14 @@ import subprocess
 import matplotlib
 import zipfile
 import re
+import shutil
 
 
 import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
+
+SITE_PACKAGES = distutils.sysconfig.get_python_lib()
 
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(uri='invest_version.py',
@@ -244,6 +248,13 @@ else:
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
     data_files.extend(get_iui_resource_data_files(lib_path))
+
+# Adding reporting data, since we always want to include that in with the
+# package itself.
+reporting_data_dir = os.path.join(SITE_PACKAGES, 'invest_natcap', 'reporting',
+    'reporting_data')
+data_files.append((reporting_data_dir,
+    glob.glob('invest_natcap/reporting/reporting_data/*')))
 
 #The standard distutils setup command
 setup(name='invest_natcap',
