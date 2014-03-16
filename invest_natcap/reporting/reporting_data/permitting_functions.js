@@ -1,20 +1,11 @@
-var globalMuniData;
-var globalImpactData;
+$(document).ready(function(){
+    //Get a handle on the two JSON data objects set in the html json tags
+    var globalMuniData = JSON.parse(document.getElementById('muni-data').innerHTML);
+    var globalImpactData = JSON.parse(document.getElementById('impact-data').innerHTML);
 
-$(document).ready(function()
-        {
-           //var jsonData = JSON.parse(document.getElementById('jsonData').innerHTML);
-           //TODO: put below json parsing in function below, but outside of event handler
-           globalMuniData = JSON.parse(document.getElementById('muni-data').innerHTML);
-           globalImpactData = JSON.parse(document.getElementById('impact-data').innerHTML);
+    //Check to see if any formatting options have been indicated
+    check_number_format();
 
-           console.log('globalMuniData');
-           console.log(globalMuniData);
-
-           check_number_format();
-        });
-
-$(function(){
     //State of current selected parcel_ids
     var jsonState = {};
     //State of current municipalities
@@ -42,7 +33,7 @@ $(function(){
     console.log('muniColList');
     console.log(muniColList);
 
-    initiate_impacts(muniState, muniColList);
+    initiate_impacts(muniState, muniColList, globalImpactData);
     console.log('returned munistate');
     console.log(muniState);
 
@@ -215,7 +206,7 @@ $(function(){
     });
 });
 
-function initiate_impacts(muniState, muniColList) {
+function initiate_impacts(muniState, muniColList, globalImpactData) {
 
     function get_col_class(name){
         var classList = [];
@@ -286,13 +277,23 @@ function initiate_impacts(muniState, muniColList) {
 function check_number_format() {
     //This function checks to see if any columns should have
     //numbers formatted in scientific notation
+
+    //Search for class names of scientific which indicate the column
+    //should be represented in scientific notation
     $('.scientific').each(function(){
-        console.log($(this).index());
+        //console.log($(this).index());
+        //Get the index for the column the class name is found at.
+        //Add 1 because 'nth-child' below starts indexing at 1
         var col_index = $(this).index() + 1;
+        //Get the table associated with class scientific, find all
+        //table data with the same index and iterate over
         $(this).closest('table').find("td:nth-child("+col_index+")").each(function(){
+            //Get html value from table data
             var value = $(this).html();
-            console.log(value);
+            //console.log(value);
+            //Make sure the value is a number to operate properly on
             if ($.isNumeric(value)){
+                //Cast and set html value to exponential format
                 $(this).html(parseFloat(value).toExponential());
             }
         });
