@@ -159,7 +159,7 @@ def generate_report(reporting_args):
             'type': 'head', 'section': 'head', 'format': 'script',
             'data_src': JQUERY_URI, 'input_type':'File'}
 
-    reporting_args['elements'].append(jquery_dict)
+    reporting_args['elements'].insert(0, jquery_dict)
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
