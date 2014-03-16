@@ -817,8 +817,6 @@ class TestReportingPackage(testing.GISTest):
         reg_uri = os.path.join(
                 REGRESSION_DATA, 'regres_html_test_multi_tables.html')
         css_uri = os.path.join(REPORTING_DATA,'table_style.css')
-        jsc_uri = os.path.join(REPORTING_DATA,'sorttable.js')
-        jquery_uri = os.path.join(REPORTING_DATA,'jquery-1.10.2.min.js')
         jsc_fun_uri = os.path.join(REPORTING_DATA,'permitting_functions.js')
         json_uri = os.path.join(JSON_DATA,'sample_json.json')
         json_impacts_uri = os.path.join(JSON_DATA,'sample_impacts_json.json')
@@ -890,18 +888,6 @@ class TestReportingPackage(testing.GISTest):
                         'section': 'head',
                         'format': 'style',
                         'data_src': css_uri,
-                        'input_type':'File'},
-                    {
-                        'type': 'head',
-                        'section': 'head',
-                        'format': 'script',
-                        'data_src': jsc_uri,
-                        'input_type':'File'},
-                    {
-                        'type': 'head',
-                        'section': 'head',
-                        'format': 'script',
-                        'data_src': jquery_uri,
                         'input_type':'File'},
                     {
                         'type': 'head',
