@@ -10,23 +10,25 @@ $(document).ready(function(){
     var jsonState = {};
     //State of current municipalities
     var muniState = {};
-    //The indexes for each above key found in muni table
-    var muniIndicies = [];
-    //Object that has the relationship between column index and column name
-    var muniObj = {};
     //Handle on the 'last' table, municipality table
     $tableLast = $('table:last');
 
+    //Object that maps municipality column indices to municipality names
     var muniColMap = {};
+    //Array of municipality table column indices
     var muniColIndexList = [];
+    //Build up muniColMap and muniColIndexList
     $tableLast.find("th").each(function(){
         muniColMap[$(this).index()] = $(this).html();
         muniColIndexList.push($(this).index());
     });
+    //Sort the indices
     muniColIndexList.sort();
-    console.log('muniColIndexList');
-    console.log(muniColIndexList);
+    //console.log('muniColIndexList');
+    //console.log(muniColIndexList);
+    //Array to hold municipality column names in order
     var muniColList = [];
+    //Build up muniColList
     for(var colIndex in muniColIndexList){
         muniColList.push(muniColMap[colIndex]);
     }
