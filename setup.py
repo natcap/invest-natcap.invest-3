@@ -192,7 +192,9 @@ if platform.system() == 'Windows':
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
-                ('installer', glob.glob('installer/*'))
+                ('installer', glob.glob('installer/*')),
+                ('invest_natcap/reporting/reporting_data',
+                    glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
 
             # These are the GDAL DLLs.  They are absolutely required for running the
