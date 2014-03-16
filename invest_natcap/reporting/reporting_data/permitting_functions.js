@@ -117,7 +117,7 @@ $(function(){
                     muniState[muni]['count'] = 1;
 
                     muniDict = muniState[muni];
-                    muniDict['pop'] = 0;
+                    muniDict['pop'] = globalImpactData[muni]['pop'];
 
                     muniDict['offsets'] = {};
                     muniDict['nets'] = {};
@@ -232,19 +232,21 @@ function initiate_impacts(muniState, muniColList) {
     console.log(offsetList);
 
     for(var muniKey in globalImpactData){
-        muniState[muniKey] = globalImpactData[muniKey];
-        muniDict = muniState[muniKey];
+        if('impacts' in globalImpactData[muniKey]){
+            muniState[muniKey] = globalImpactData[muniKey];
+            muniDict = muniState[muniKey];
 
-        muniDict['offsets'] = {};
-        muniDict['nets'] = {};
-        $.each(offsetList, function(index, offset){
-            muniDict['offsets'][offset] = 0.0;
-            });
-        $.each(netList, function(index, net){
-            colBase = net.substr(0, net.indexOf('_'));
-            impactEqu = colBase + '_impact';
-            muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
-            });
+            muniDict['offsets'] = {};
+            muniDict['nets'] = {};
+            $.each(offsetList, function(index, offset){
+                muniDict['offsets'][offset] = 0.0;
+                });
+            $.each(netList, function(index, net){
+                colBase = net.substr(0, net.indexOf('_'));
+                impactEqu = colBase + '_impact';
+                muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
+                });
+        }
     }
 
     console.log('muniSate');
