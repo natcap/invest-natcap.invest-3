@@ -329,6 +329,13 @@ def build_table(param_args):
     if 'attributes' in param_args:
         table_dict['attributes'] = param_args['attributes']
         if param_args['sortable']:
+            # Since sorttable functionality is needed, add default javascript
+            # functionality for sorting column rows
+            sortable_dict = {
+                    'type': 'head', 'section': 'head', 'format': 'script',
+                    'data_src': SORTTABLE_URI, 'input_type':'File'}
+            add_head_element(sortable_dict)
+
             try:
                 class_list = table_dict['attributes']['class'] + ' sortable'
                 table_dict['attributes']['class'] = class_list
