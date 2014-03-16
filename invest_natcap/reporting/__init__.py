@@ -150,6 +150,14 @@ def generate_report(reporting_args):
             'svg': add_svg_element
             }
 
+    # Add Jquery file to the elements list any time a html page is generated
+    jquery_uri = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
+    jquery_dict = {
+            'type': 'head', 'section': 'head', 'format': 'script',
+            'data_src': jquery_uri, 'input_type':'File'}
+
+    reporting_args['elements'].append(jquery_dict)
+
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
         # There are 2 general purpose arguments that each element will have,
