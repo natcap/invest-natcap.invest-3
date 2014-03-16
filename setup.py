@@ -85,7 +85,6 @@ packages = ['invest_natcap',
             'invest_natcap.iui.dbfpy',
             'invest_natcap.recreation',
             'invest_natcap.sediment',
-            'invest_natcap.malaria',
             'invest_natcap.testing',
             'invest_natcap.reporting',
             'invest_natcap.optimization',
@@ -174,13 +173,6 @@ if platform.system() == 'Windows':
 
     from py2exe.build_exe import py2exe as py2exeCommand
 
-    # This is for the case when we do a windows virtualenv build but are not
-    #doing a py2exe build:
-    data_files.append(
-        ('lib/site-packages/invest_natcap/reporting/reporting_data',
-            glob.glob('invest_natcap/reporting/reporting_data/*')))
-
-
     class CustomPy2exe(py2exeCommand):
         """This is a custom Py2exe command that allows us to define data files
         that are only used for the built executeables.  This is especially
@@ -200,14 +192,10 @@ if platform.system() == 'Windows':
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
-                ('installer', glob.glob('installer/*'))
+                ('installer', glob.glob('installer/*')),
+                ('invest_natcap/reporting',
+                glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
-
-            #sorry have to hard code these for now for the windows vs. linux issues
-            self.distribution.data_files.append(
-                ('invest_natcap/reporting/reporting_data',
-                    glob.glob('invest_natcap/reporting/reporting_data/*')))
-
 
             # These are the GDAL DLLs.  They are absolutely required for running the
             # Windows executeables on XP.  For whatever reason, they do not appear to be
@@ -260,10 +248,6 @@ else:
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
     data_files.extend(get_iui_resource_data_files(lib_path))
-    data_files.append(
-        (os.path.join(lib_path, 'invest_natcap/reporting/reporting_data'),
-            glob.glob('invest_natcap/reporting/reporting_data/*')))
-
 
 # Adding reporting data, since we always want to include that in with the
 # package itself.
