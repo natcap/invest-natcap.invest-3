@@ -262,18 +262,18 @@ def execute(args):
         }
 
     #Create the service field sums
-    field_summaries['sret_sm_dr'] = {}
-    field_summaries['sret_sm_wq'] = {}
+    field_summaries['sed_ret_dr'] = {}
+    field_summaries['sed_ret_wq'] = {}
     for ws_id, value in field_summaries['upret_tot'].iteritems():
         #The 1.26 comes from the InVEST user's guide
-        field_summaries['sret_sm_dr'][ws_id] = value - \
-            sediment_threshold_table[ws_id]['dr_deadvol'] * \
-            1.26 / sediment_threshold_table[ws_id]['dr_time']
-        field_summaries['sret_sm_wq'][ws_id] = value - \
-            sediment_threshold_table[ws_id]['wq_annload']
+        field_summaries['sed_ret_dr'][ws_id] = (value - 
+            sediment_threshold_table[ws_id]['dr_deadvol'] * 
+            1.26 / sediment_threshold_table[ws_id]['dr_time'])
+        field_summaries['sed_ret_wq'][ws_id] = (value - 
+            sediment_threshold_table[ws_id]['wq_annload'])
 
         #Clamp any negatives to 0
-        for out_field in ['sret_sm_dr', 'sret_sm_wq']:
+        for out_field in ['sed_ret_dr', 'sed_ret_wq']:
             if field_summaries[out_field][ws_id] < 0.0:
                 field_summaries[out_field][ws_id] = 0.0
     
