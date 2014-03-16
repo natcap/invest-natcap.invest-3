@@ -21,8 +21,8 @@ import style
 LOGGER = logging.getLogger('invest_natcap.reporting')
 REPORTING_DATA = os.path.join(os.path.dirname(__file__), 'reporting_data/')
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
-SORTTABLE_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
-TOTALS_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
+SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
+TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
