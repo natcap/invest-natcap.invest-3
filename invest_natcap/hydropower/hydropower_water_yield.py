@@ -234,7 +234,8 @@ def execute(args):
     LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
             [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+            vectorize_op=False)
 
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
@@ -319,7 +320,8 @@ def execute(args):
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
         raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
-        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+        vectorize_op=False)
 
     def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
@@ -339,7 +341,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
@@ -377,7 +379,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Get the area of the pixel to use in later calculations for volume
     wyield_pixel_area = raster_utils.get_cell_size_from_uri(wyield_clipped_path) ** 2

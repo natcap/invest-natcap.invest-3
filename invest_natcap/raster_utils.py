@@ -2162,7 +2162,7 @@ def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True, process_pool=None):
+    assert_datasets_projected=True, process_pool=None, vectorize_op=True):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2217,7 +2217,11 @@ def vectorize_datasets(
         assert_datasets_projected - (optional) if True this operation will
             test if any datasets are not projected and raise an exception
             if so.
-        process_pool - (optional) a process pool for multiprocessing            
+        process_pool - (optional) a process pool for multiprocessing
+        vectorize_op - (optional) if true the model will try to numpy.vectorize
+            dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
+            array broadcasting, set this parameter to False, else it may 
+            inefficiently invoke the function on individual elements.
             """
     
     if aoi_uri == None:
@@ -2274,18 +2278,18 @@ def vectorize_datasets(
         aoi_datasource = None
 
     dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
+    
+    #We only want to do this if requested, otherwise we might have a more
+    #efficient call if we don't vectorize.
+    if vectorize_op:
+        dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
+        
     for row_index in range(n_rows):
         for dataset_index in range(len(aligned_bands)):
             aligned_bands[dataset_index].ReadAsArray(
                 0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        #we might not have to vectorize, try without it
-        try:
-            out_row = dataset_pixel_op(*dataset_rows)
-        except Exception as e:
-            LOGGER.error(e)
-            dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-            out_row = dataset_pixel_op(*dataset_rows)
-        #out_row = vectorized_op(*dataset_rows)
+        out_row = dataset_pixel_op(*dataset_rows)
+        
         #Mask out the row if there is a mask
         if aoi_uri != None:
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
