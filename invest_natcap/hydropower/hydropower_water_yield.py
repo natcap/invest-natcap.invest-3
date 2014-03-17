@@ -234,7 +234,8 @@ def execute(args):
     LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
             [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+            vectorize_op=False)
 
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
@@ -250,7 +251,7 @@ def execute(args):
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
         """Function that calculates the fractp (actual evapotranspiration
             fraction of precipitation) raster
-       
+
         Kc - numpy array with the Kc (plant evapotranspiration
               coefficient) raster values
         eto - numpy array with the potential evapotranspiration raster
@@ -266,38 +267,37 @@ def execute(args):
                 vegetation and 0 depicts the land type as non
                 vegetation (wetlands, urban, water, etc...). If 1 use
                 regular AET equation if 0 use: AET = Kc * ETo
-                
+
         returns - fractp value
         """
-        
+
         #Compute Budyko Dryness index
         #Use the original AET equation if the land cover type is vegetation
         #If not vegetation (wetlands, urban, water, etc...) use
         #Alternative equation Kc * Eto
         phi = (Kc * eto) / (precip)
         pet = Kc * eto
-        
+
         #Calculate plant available water content (mm) using the minimum
         #of soil depth and root depth
         awc = numpy.where(root < soil, root, soil) * pawc
         climate_w = ((awc / precip) * seasonality_constant) + 1.25
         # Capping to 5.0 to set to upper limit if exceeded
         climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
-            
+
         #Compute evapotranspiration partition of the water balance
         aet_p = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
-        
-        #Currently as of release 2.2.2 the following operation is not
-        #documented in the users guide. We take the minimum of the
-        #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
-        #partition of the water balance (see users guide for variable
-        #and equation references). This was confirmed by Yonas Ghile on
-        #5/10/12
-        #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
+
+        #We take the minimum of the following values (phi, aet_p)
+        #to determine the evapotranspiration partition of the
+        # water balance (see users guide)
         veg_result =  numpy.where(phi < aet_p, phi, aet_p)
+        #Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
         nonveg_result = numpy.where(precip < Kc * eto, precip, Kc * eto) / precip
+        #If veg is 1.0 use the result for vegetated areas else use result
+        #for non veg areas
         result = numpy.where(veg == 1.0, veg_result, nonveg_result)
-        
+
         #If any of the local variables which are in the 'fractp_nodata_dict'
         #dictionary are equal to a out_nodata value, then return out_nodata
         return numpy.where(
@@ -305,7 +305,7 @@ def execute(args):
             | (root == root_nodata) | (soil == root_rest_layer_nodata) |
             (pawc == pawc_nodata) | (veg == veg_nodata) | (precip == 0.0) |
             (Kc == 0.0) | (eto == 0.0), out_nodata, result)
-          
+
     # Vectorize operation
     fractp_vec = numpy.vectorize(fractp_op, otypes=[numpy.float])
 
@@ -319,7 +319,8 @@ def execute(args):
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
         raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
-        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+        vectorize_op=False)
 
     def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
@@ -339,7 +340,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
@@ -377,7 +378,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Get the area of the pixel to use in later calculations for volume
     wyield_pixel_area = raster_utils.get_cell_size_from_uri(wyield_clipped_path) ** 2

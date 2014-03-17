@@ -11,7 +11,6 @@ $(document).ready(function()
            console.log('globalMuniData');
            console.log(globalMuniData);
 
-           sum_constant_total();
            check_number_format();
         });
 
@@ -67,18 +66,6 @@ $(function(){
 
         $table = $(this).closest('table');
 
-        //$('.checkTot').html("0");
-        $table.find('.checkTot').html("0");
-        //$('[name="cb"]:checked').closest('tr').find('.rowDataSd').each(function() {
-        $table.find('[name="cb"]:checked').closest('tr').find('.rowDataSd').each(function() {
-            var $td = $(this);
-            //var $sumColumn = $(this).find('tr.checkTotal td:eq(' + $td.index() + ')');
-            var $sumColumn = $table.find('tr.checkTotal td:eq(' + $td.index() + ')');
-            var currVal = $sumColumn.html() || 0;
-            currVal = +currVal + +$td.html();
-            $sumColumn.html(currVal);
-        });
-
         //Get handle on the parcel_id column index
         var par_index = $table.find('th:contains("parcel_id")').index();
         //Get the parcel_id related to the changed checkbox
@@ -132,7 +119,7 @@ $(function(){
                     muniState[muni]['count'] = 1;
 
                     muniDict = muniState[muni];
-                    muniDict['pop'] = 0;
+                    muniDict['pop'] = globalImpactData[muni]['pop'];
 
                     muniDict['offsets'] = {};
                     muniDict['nets'] = {};
@@ -247,19 +234,21 @@ function initiate_impacts(muniState, muniColList) {
     console.log(offsetList);
 
     for(var muniKey in globalImpactData){
-        muniState[muniKey] = globalImpactData[muniKey];
-        muniDict = muniState[muniKey];
+        if('impacts' in globalImpactData[muniKey]){
+            muniState[muniKey] = globalImpactData[muniKey];
+            muniDict = muniState[muniKey];
 
-        muniDict['offsets'] = {};
-        muniDict['nets'] = {};
-        $.each(offsetList, function(index, offset){
-            muniDict['offsets'][offset] = 0.0;
-            });
-        $.each(netList, function(index, net){
-            colBase = net.substr(0, net.indexOf('_'));
-            impactEqu = colBase + '_impact';
-            muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
-            });
+            muniDict['offsets'] = {};
+            muniDict['nets'] = {};
+            $.each(offsetList, function(index, offset){
+                muniDict['offsets'][offset] = 0.0;
+                });
+            $.each(netList, function(index, net){
+                colBase = net.substr(0, net.indexOf('_'));
+                impactEqu = colBase + '_impact';
+                muniDict['nets'][net] = -1.0 * muniDict['impacts'][impactEqu];
+                });
+        }
     }
 
     console.log('muniSate');
@@ -292,34 +281,6 @@ function initiate_impacts(muniState, muniColList) {
         rowString = rowString + "</tr>";
         $tableLast.append(rowString);
     }
-}
-
-function sum_constant_total() {
-
-    $('table').each(function(){
-
-        var totals_array = new Array();
-
-        //var $dataRows=$("#my_table tr:not('.totalColumn')");
-        var $dataRows=$(this).find("tr:not('.totalColumn')");
-
-        $dataRows.each(function() {
-            $(this).find('.rowDataSd').each(function(i){
-                totals_array[i] = 0;
-            });
-        });
-
-        $dataRows.each(function() {
-            $(this).find('.rowDataSd').each(function(i){
-                totals_array[i]+=parseFloat( $(this).html());
-            });
-        });
-
-        //$("#my_table td.totalCol").each(function(i){
-        $(this).find("td.totalCol").each(function(i){
-            $(this).html(totals_array[i]);
-        });
-    });
 }
 
 function check_number_format() {

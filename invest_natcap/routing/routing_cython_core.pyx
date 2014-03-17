@@ -39,7 +39,7 @@ cdef double INF = numpy.inf
 
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
-    absorption_rate_uri, loss_uri, flux_uri, absorption_mode):
+    absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri=None):
     """This is a generalized flux transport algorithm that operates
         on a 2D grid given a per pixel flow direction, per pixel source,
         and per pixel absorption rate.  It produces a grid of loss per
@@ -69,6 +69,10 @@ def calculate_transport(
             'flux_only' the outgoing flux is (in_flux * absorption + source).
             If 'source_and_flux' then the output flux 
             is (in_flux + source) * absorption.
+        stream_uri - (optional) a raster to a stream classification layer that
+            if 1 indicates a stream 0 if not.  If flux hits a stream the total
+            flux is set to zero so that it can't be further routed out of the
+            stream if it diverges later.
 
         returns nothing"""
 
@@ -99,6 +103,18 @@ def calculate_transport(
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))   
     cdef numpy.ndarray[numpy.npy_float64, ndim=2] flux_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    
+    cdef int stream_nodata = 0
+    if stream_uri != None:
+        stream_dataset = gdal.Open(stream_uri)
+        stream_band = stream_dataset.GetRasterBand(1)
+        stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
+    else:
+        stream_band = None
+    
+        
 
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
         numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
@@ -220,6 +236,12 @@ def calculate_transport(
             outflow_weights_band.ReadAsArray(
                 xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                 win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
+            if stream_band != None:
+                stream_band.ReadAsArray(
+                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                    win_ysize=1, buf_obj=stream_cache[cache_row_index].reshape((1,n_cols)))
+            else:
+                stream_cache[:] = 0
             cache_tag[cache_row_index] = cache_row_tag
                 
         cache_row_index = current_row % CACHE_ROWS
@@ -238,8 +260,11 @@ def calculate_transport(
             absorption_rate_cache[cache_row_index, current_col] = 0.0
 
         if flux_cache[cache_row_index, current_col] == transport_nodata:
-            flux_cache[cache_row_index, current_col] = source_cache[
-                cache_row_index, current_col]
+            if stream_cache[cache_row_index, current_col] == 0:
+                flux_cache[cache_row_index, current_col] = source_cache[
+                    cache_row_index, current_col]
+            else:
+                flux_cache[cache_row_index, current_col] = 0.0
             loss_cache[cache_row_index, current_col] = 0.0
             cache_dirty[cache_row_index] = 1
             if absorb_source:
@@ -282,11 +307,18 @@ def calculate_transport(
                 absorption_rate = (
                     absorption_rate_cache[cache_row_index, current_col])
 
-                flux_cache[cache_row_index, current_col] += (
-                    outflow_weight * in_flux * (1.0 - absorption_rate))
+                #If it's not a stream, route the flux normally
+                if stream_cache[cache_row_index, current_col] == 0:
+                    flux_cache[cache_row_index, current_col] += (
+                        outflow_weight * in_flux * (1.0 - absorption_rate))
 
-                loss_cache[cache_row_index, current_col] += (
-                    outflow_weight * in_flux * absorption_rate)
+                    loss_cache[cache_row_index, current_col] += (
+                        outflow_weight * in_flux * absorption_rate)
+                else:
+                    #Otherwise if it is a stream, all flux routes to the outlet
+                    #we don't want it absorbed later
+                    flux_cache[cache_row_index, current_col] = 0.0
+                    loss_cache[cache_row_index, current_col] = 0.0
                 cache_dirty[cache_row_index] = 1
             else:
                 #we need to process the neighbor, remember where we were
