@@ -34,7 +34,7 @@ CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
 #This makes a destination directory with the name invest_version_datetime.
-#Will make it easy to see the difference between different builds of the 
+#Will make it easy to see the difference between different builds of the
 #same version.
 DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
     ARCHITECTURE)
@@ -193,8 +193,8 @@ if platform.system() == 'Windows':
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
-                ('invest_natcap/reporting',
-                glob.glob('invest_natcap/reporting/reporting_data/*')),
+                ('invest_natcap/reporting/reporting_data',
+                    glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
 
             # These are the GDAL DLLs.  They are absolutely required for running the
@@ -203,7 +203,6 @@ if platform.system() == 'Windows':
             # I'm only including them here for the 32-bit windows build.
             if platform.architecture()[0] == '32bit':
                 self.distribution.data_files.append(('.', glob.glob('gdal_dlls/*.dll')))
-
 
             self.distribution.data_files.extend(get_iui_resource_data_files(''))
 

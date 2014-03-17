@@ -64,6 +64,8 @@ $(function(){
     //On a checkbox change event
     $('[name="cb"]').change(function() {
 
+        $table = $(this).closest('table');
+
         //Get handle on the parcel_id column index
         var par_index = $table.find('th:contains("parcel_id")').index();
         //Get the parcel_id related to the changed checkbox
