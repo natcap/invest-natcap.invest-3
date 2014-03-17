@@ -19,6 +19,10 @@ import table_generator
 import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
+REPORTING_DATA = os.path.join(os.path.dirname(__file__), 'reporting_data/')
+JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
+SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
+TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
@@ -144,6 +148,14 @@ def generate_report(reporting_args):
             'head': add_head_element,
             'svg': add_svg_element
             }
+
+    # Add Jquery file to the elements list any time a html page is generated
+
+    jquery_dict = {
+            'type': 'head', 'section': 'head', 'format': 'script',
+            'data_src': JQUERY_URI, 'input_type':'File'}
+
+    reporting_args['elements'].insert(0, jquery_dict)
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
@@ -300,6 +312,12 @@ def build_table(param_args):
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
+        # Since totalling functionality is needed, add default javascript
+        # functionality for totalling
+        totals_dict = {
+                'type': 'head', 'section': 'head', 'format': 'script',
+                'data_src': TOTALS_URI, 'input_type':'File'}
+        add_head_element(totals_dict)
         table_dict['total'] = param_args['total']
 
     # If table attributes were passed in check to see if the 'sortable' class
@@ -307,6 +325,13 @@ def build_table(param_args):
     if 'attributes' in param_args:
         table_dict['attributes'] = param_args['attributes']
         if param_args['sortable']:
+            # Since sorttable functionality is needed, add default javascript
+            # functionality for sorting column rows
+            sortable_dict = {
+                    'type': 'head', 'section': 'head', 'format': 'script',
+                    'data_src': SORTTABLE_URI, 'input_type':'File'}
+            add_head_element(sortable_dict)
+
             try:
                 class_list = table_dict['attributes']['class'] + ' sortable'
                 table_dict['attributes']['class'] = class_list
