@@ -3,6 +3,7 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.core import Command
+import distutils.sysconfig
 import platform
 import os
 import sys
@@ -13,11 +14,14 @@ import subprocess
 import matplotlib
 import zipfile
 import re
+import shutil
 
 
 import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
+
+SITE_PACKAGES = distutils.sysconfig.get_python_lib()
 
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(uri='invest_version.py',
@@ -30,7 +34,7 @@ CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
 #This makes a destination directory with the name invest_version_datetime.
-#Will make it easy to see the difference between different builds of the 
+#Will make it easy to see the difference between different builds of the
 #same version.
 DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
     ARCHITECTURE)
@@ -81,7 +85,6 @@ packages = ['invest_natcap',
             'invest_natcap.iui.dbfpy',
             'invest_natcap.recreation',
             'invest_natcap.sediment',
-            'invest_natcap.malaria',
             'invest_natcap.testing',
             'invest_natcap.reporting',
             'invest_natcap.optimization',
@@ -165,7 +168,8 @@ if platform.system() == 'Windows':
          'invest_blue_carbon.py',
          'invest_blue_carbon_preprocessor.py',
          'invest_test_all.py',
-         'invest_scenario_generator.py']
+         'invest_scenario_generator.py',
+         'invest_aesthetic_quality.py']
 
     from py2exe.build_exe import py2exe as py2exeCommand
 
@@ -189,8 +193,8 @@ if platform.system() == 'Windows':
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
-                ('invest_natcap/reporting',
-                glob.glob('invest_natcap/reporting/reporting_data/*')),
+                ('invest_natcap/reporting/reporting_data',
+                    glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
 
             # These are the GDAL DLLs.  They are absolutely required for running the
@@ -199,7 +203,6 @@ if platform.system() == 'Windows':
             # I'm only including them here for the 32-bit windows build.
             if platform.architecture()[0] == '32bit':
                 self.distribution.data_files.append(('.', glob.glob('gdal_dlls/*.dll')))
-
 
             self.distribution.data_files.extend(get_iui_resource_data_files(''))
 
@@ -245,6 +248,13 @@ else:
     lib_path = os.path.join('lib', python_version, 'site-packages')
     data_files.extend(get_iui_resource_data_files(lib_path))
 
+# Adding reporting data, since we always want to include that in with the
+# package itself.
+reporting_data_dir = os.path.join(SITE_PACKAGES, 'invest_natcap', 'reporting',
+    'reporting_data')
+data_files.append((reporting_data_dir,
+    glob.glob('invest_natcap/reporting/reporting_data/*')))
+
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
@@ -257,6 +267,8 @@ setup(name='invest_natcap',
                              sources = CYTHON_SOURCE_FILES),
                    Extension(name="aesthetic_quality_cython_core",
                              sources = ['invest_natcap/aesthetic_quality/aesthetic_quality_cython_core.pyx']),
+                   Extension(name="hydropower_cython_core",
+                             sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx']),
                    Extension(name="raster_cython_utils",
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
                              language="c++"),
@@ -265,9 +277,6 @@ setup(name='invest_natcap',
                              language="c++"),
                    Extension(name="routing_cython_core",
                              sources = ['invest_natcap/routing/routing_cython_core.pyx'],
-                             language="c++"),
-                   Extension(name="sediment_cython_core",
-                             sources = ['invest_natcap/sediment/sediment_cython_core.pyx'],
                              language="c++"),
                    Extension(name="flood_mitigation_cython_core",
                              sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],

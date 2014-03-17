@@ -19,6 +19,10 @@ import table_generator
 import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
+REPORTING_DATA = os.path.join(os.path.dirname(__file__), 'reporting_data/')
+JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
+SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
+TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
@@ -104,10 +108,6 @@ def generate_report(reporting_args):
                 'input_type' -  a String, 'File' or 'Text' that refers to how
                     'data_src' is being passed in (URI vs String) (required).
 
-                'attributes' - a dictionary that has key value pairs for
-                    optional tag attributes (optional). Ex:
-                    'attributes': {'id': 'muni_data'}
-
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
                     (required)
@@ -148,6 +148,14 @@ def generate_report(reporting_args):
             'head': add_head_element,
             'svg': add_svg_element
             }
+
+    # Add Jquery file to the elements list any time a html page is generated
+
+    jquery_dict = {
+            'type': 'head', 'section': 'head', 'format': 'script',
+            'data_src': JQUERY_URI, 'input_type':'File'}
+
+    reporting_args['elements'].insert(0, jquery_dict)
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
@@ -304,6 +312,12 @@ def build_table(param_args):
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
+        # Since totalling functionality is needed, add default javascript
+        # functionality for totalling
+        totals_dict = {
+                'type': 'head', 'section': 'head', 'format': 'script',
+                'data_src': TOTALS_URI, 'input_type':'File'}
+        add_head_element(totals_dict)
         table_dict['total'] = param_args['total']
 
     # If table attributes were passed in check to see if the 'sortable' class
@@ -311,6 +325,13 @@ def build_table(param_args):
     if 'attributes' in param_args:
         table_dict['attributes'] = param_args['attributes']
         if param_args['sortable']:
+            # Since sorttable functionality is needed, add default javascript
+            # functionality for sorting column rows
+            sortable_dict = {
+                    'type': 'head', 'section': 'head', 'format': 'script',
+                    'data_src': SORTTABLE_URI, 'input_type':'File'}
+            add_head_element(sortable_dict)
+
             try:
                 class_list = table_dict['attributes']['class'] + ' sortable'
                 table_dict['attributes']['class'] = class_list
@@ -383,10 +404,6 @@ def add_head_element(param_args):
             param_args['input_type'] - 'Text' or 'File'. Determines how the
                 input from 'data_src' is handled (required)
 
-            'attributes' - a dictionary that has key value pairs for
-                optional tag attributes (optional). Ex:
-                'attributes': {'class': 'offsets'}
-
         returns - a string representation of the html head element"""
 
     # Get the type of element to add
@@ -403,11 +420,6 @@ def add_head_element(param_args):
     else:
         file_str = src
 
-    attr = ''
-    if 'attributes' in param_args:
-        for key, val in param_args['attributes'].iteritems():
-            attr += '%s="%s" ' % (key, val)
-
     # List of regular expression strings to search against
     reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
@@ -420,11 +432,11 @@ def add_head_element(param_args):
                     ' the header elements' % exp)
 
     if form == 'style':
-        html_str = '''<style type=text/css %s> %s </style>''' % (attr, file_str)
+        html_str = '''<style type=text/css> %s </style>''' % file_str
     elif form == 'script':
-        html_str = '''<script type=text/javascript %s> %s </script>''' % (attr, file_str)
+        html_str = '''<script type=text/javascript> %s </script>''' % file_str
     elif form == 'json':
-        html_str = '''<script type=application/json %s> %s </script>''' % (attr, file_str)
+        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)
