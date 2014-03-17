@@ -95,12 +95,11 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
     memory_array_flat = memory_array.reshape((-1,))
 
     quantile_breaks = [0]
-    min_value = .000001
-    max_value = 1000000. 
     for quantile in quantile_list:
-        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile, (min_value, max_value)))
+        LOGGER.debug('quantile %f' % quantile)
+        quantile_breaks.append(scipy.stats.scoreatpercentile(
+                memory_array_flat, quantile, (0.0, np.amax(memory_array_flat))))
 
-    LOGGER.debug('quantile_breaks %s' % quantile_breaks)
     def reclass(value):
         if value == nodata_ds:
             return nodata_out
@@ -342,12 +341,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
         tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(visibility_uri, \
-        tmp_viewshed_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
-        raster_utils.vectorize_datasets([tmp_distance_uri, tmp_visibility_uri], \
-        valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, 0., cell_size, \
-        "union")
+
+        raster_utils.vectorize_datasets(
+            [tmp_distance_uri, tmp_visibility_uri],
+            valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
+            "union")
+
+
         # Multiply the viewshed by its coefficient
         scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
