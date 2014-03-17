@@ -857,6 +857,8 @@ class TestReportingPackage(testing.GISTest):
 
         report_args = {
                 'title': 'Sortable Table',
+                'sortable' : True,
+                'totals' : True,
                 'elements': [
                     {
                         'type': 'table',
