@@ -222,9 +222,6 @@ def execute(args):
 
             returns - a float value for pet"""
         return numpy.where((eto_pix == eto_nodata) | (Kc_pix == Kc_nodata), out_nodata, eto_pix * Kc_pix)
-        #if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
-        #    return out_nodata
-        #return eto_pix * Kc_pix
 
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
@@ -234,7 +231,8 @@ def execute(args):
     LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
             [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+            vectorize_op=False)
 
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
@@ -319,7 +317,8 @@ def execute(args):
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
         raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
-        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
+        vectorize_op=False)
 
     def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
@@ -339,7 +338,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
@@ -367,17 +366,13 @@ def execute(args):
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
         return numpy.where((fractp >= 0) & (precip != precip_nodata), fractp * precip, out_nodata)
-        #if fractp >= 0 and precip != precip_nodata:
-        #    return fractp * precip
-        #else:
-        #    return out_nodata
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri)
+            aoi_uri=sheds_uri, vectorize_op=False)
 
     # Get the area of the pixel to use in later calculations for volume
     wyield_pixel_area = raster_utils.get_cell_size_from_uri(wyield_clipped_path) ** 2
