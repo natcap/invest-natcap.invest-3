@@ -265,7 +265,7 @@
                     },
                    {
                        "id" : "private_valuation",
-                       "type" : "container",
+                       "type" : "hiddenElement",
                        "collapsible" : true,
                        "args_id" : "private_valuation",
                        "label" : "Private market valuation.",
