@@ -10,7 +10,7 @@ import routing_cython_core
 import pyximport
 pyximport.install()
 
-test_region = 'willamate' #peru|willamate
+test_region = 'peru' #peru|willamate
 test_mode = 'flow_accumulation' #flat_resolve|flow_accumulation
 
 if test_region == 'peru':
@@ -19,26 +19,21 @@ if test_region == 'peru':
     dem_uri = 'Peru_for_Rich/dem_50km'
     regression_dem_offset_uri = 'regression_peru_dem_offset.tif'
     dem_offset_uri = 'peru_dem_offset.tif'
-    flow_direction_uri = 'peru_flow_direction.tif'
 if test_region == 'willamate':
     base_uri = 'regression_willamate_flux_out.tif'
     out_uri = 'willamate_flux_out.tif'
     dem_uri = './test/invest-data/Base_Data/Freshwater/dem'
     regression_dem_offset_uri = './regression_offset_willamate_flux_out.tif'
     dem_offset_uri = './offset_willamate_flux_out.tif'
-    flow_direction_uri = 'willamate_flow_direction.tif'
+
 
 start = time.time()
-
 
 if test_mode == 'flat_resolve':
     cProfile.runctx('routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)', globals(), locals(), 'flowstats')
 
 if test_mode == 'flow_accumulation':   
-    #cProfile.run('routing_utils.flow_accumulation(flow_direction_uri, dem_uri, out_uri)', 'flowstats')
-    routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
-    routing_cython_core.calculate_flow_direction(dem_offset_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, out_uri)
+    cProfile.run('routing_utils.flow_accumulation(dem_uri, out_uri)', 'flowstats')
 
 p = pstats.Stats('flowstats')
 p.sort_stats('time').print_stats(20)

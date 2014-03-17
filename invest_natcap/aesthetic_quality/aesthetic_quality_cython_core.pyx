@@ -597,8 +597,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
 
         # Update the visibility map for this pixel
         index = p.index
-        if visibility_map[I[index], J[index]] == 0:
-            visibility_map[I[index], J[index]] = visibility
+        visibility_map[I[index], J[index]] = visibility
         pixel = p.next
 
 #@cython.boundscheck(False)

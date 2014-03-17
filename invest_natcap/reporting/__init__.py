@@ -104,10 +104,6 @@ def generate_report(reporting_args):
                 'input_type' -  a String, 'File' or 'Text' that refers to how
                     'data_src' is being passed in (URI vs String) (required).
 
-                'attributes' - a dictionary that has key value pairs for
-                    optional tag attributes (optional). Ex:
-                    'attributes': {'id': 'muni_data'}
-
             Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
                     (required)
@@ -383,10 +379,6 @@ def add_head_element(param_args):
             param_args['input_type'] - 'Text' or 'File'. Determines how the
                 input from 'data_src' is handled (required)
 
-            'attributes' - a dictionary that has key value pairs for
-                optional tag attributes (optional). Ex:
-                'attributes': {'class': 'offsets'}
-
         returns - a string representation of the html head element"""
 
     # Get the type of element to add
@@ -403,11 +395,6 @@ def add_head_element(param_args):
     else:
         file_str = src
 
-    attr = ''
-    if 'attributes' in param_args:
-        for key, val in param_args['attributes'].iteritems():
-            attr += '%s="%s" ' % (key, val)
-
     # List of regular expression strings to search against
     reg_list = [r'<script', r'/script>', r'<style', r'/style>']
 
@@ -420,11 +407,11 @@ def add_head_element(param_args):
                     ' the header elements' % exp)
 
     if form == 'style':
-        html_str = '''<style type=text/css %s> %s </style>''' % (attr, file_str)
+        html_str = '''<style type=text/css> %s </style>''' % file_str
     elif form == 'script':
-        html_str = '''<script type=text/javascript %s> %s </script>''' % (attr, file_str)
+        html_str = '''<script type=text/javascript> %s </script>''' % file_str
     elif form == 'json':
-        html_str = '''<script type=application/json %s> %s </script>''' % (attr, file_str)
+        html_str = '''<script type=application/json id=jsonData> %s </script>''' % file_str
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)
