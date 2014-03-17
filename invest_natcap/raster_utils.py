@@ -314,7 +314,6 @@ def new_raster_from_base(
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 
-    LOGGER.debug('Setting nodata value: %s', nodata)
     band.SetNoDataValue(nodata)
     if fill_value != None:
         band.Fill(fill_value)
@@ -902,7 +901,7 @@ def calculate_slope(
 
     LOGGER.debug("calculate slope")
 
-    slope_nodata = -1.0
+    slope_nodata = -9999.0
     dem_small_dataset = gdal.Open(dem_small_uri)
     new_raster_from_base(
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
@@ -2004,6 +2003,14 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
+    
+    #make sure that the input lists are of the same length
+    if not reduce(lambda x,y: x if x==y else False, 
+        [len(dataset_uri_list), len(dataset_out_uri_list),
+        len(resample_method_list)]):
+        raise Exception("dataset_uri_list, dataset_out_uri_list, and "
+            "resample_method_list must be the same length")
+        
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
@@ -2091,7 +2098,7 @@ def align_dataset_list(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        print 'masking out aoi'
+        LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
@@ -2106,19 +2113,25 @@ def align_dataset_list(
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
 
-        dataset_row = numpy.zeros((1, n_cols))
-        mask_row = numpy.zeros((1, n_cols))
+        mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
-        for out_dataset_uri in dataset_out_uri_list:
-            nodata_out = get_nodata_from_uri(out_dataset_uri)
-            out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
-            out_band = out_dataset.GetRasterBand(1)
-            for row_index in range(n_rows):
-                out_dataset.ReadAsArray(
-                    0, row_index, n_cols, 1, buf_obj=dataset_row)
-                mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_row)
-                dataset_row[mask_row == 0] = nodata_out
-                out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
+        LOGGER.info('masking out each output dataset')
+        out_dataset_list = map(lambda x: gdal.Open(x, gdal.GA_Update), dataset_out_uri_list)
+        out_band_list = map(lambda x: x.GetRasterBand(1), out_dataset_list)
+        nodata_out_list = map(lambda x: get_nodata_from_uri(x), dataset_out_uri_list)
+        #for out_dataset_uri in dataset_out_uri_list:
+        #    nodata_out = get_nodata_from_uri(out_dataset_uri)
+        #    out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
+        #    out_band = out_dataset.GetRasterBand(1)
+        for row_index in range(n_rows):
+            mask_row = (mask_band.ReadAsArray(
+                0, row_index, n_cols, 1) == 0)
+            for out_band, nodata_out in zip(out_band_list, nodata_out_list):
+                dataset_row = out_band.ReadAsArray(
+                    0, row_index, n_cols, 1)
+                out_band.WriteArray(numpy.where(
+                    mask_row, nodata_out, dataset_row), 
+                    xoff=0, yoff=row_index)
 
         #Remove the mask aoi if necessary
         mask_band = None
@@ -2149,7 +2162,7 @@ def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True, process_pool=None):
+    assert_datasets_projected=True, process_pool=None, vectorize_op=True):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2204,7 +2217,11 @@ def vectorize_datasets(
         assert_datasets_projected - (optional) if True this operation will
             test if any datasets are not projected and raise an exception
             if so.
-        process_pool - (optional) a process pool for multiprocessing            
+        process_pool - (optional) a process pool for multiprocessing
+        vectorize_op - (optional) if true the model will try to numpy.vectorize
+            dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
+            array broadcasting, set this parameter to False, else it may 
+            inefficiently invoke the function on individual elements.
             """
     
     if aoi_uri == None:
@@ -2246,13 +2263,6 @@ def vectorize_datasets(
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
-    #Try to numpy vectorize the operation
-    try:
-        vectorized_op = numpy.vectorize(dataset_pixel_op)
-    except ValueError:
-        #it's possible that the operation is already vectorized, so try that
-        vectorized_op = dataset_pixel_op
-
     #If there's an AOI, mask it out
     if aoi_uri != None:
         mask_uri = temporary_filename()
@@ -2268,11 +2278,18 @@ def vectorize_datasets(
         aoi_datasource = None
 
     dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
+    
+    #We only want to do this if requested, otherwise we might have a more
+    #efficient call if we don't vectorize.
+    if vectorize_op:
+        dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
+        
     for row_index in range(n_rows):
         for dataset_index in range(len(aligned_bands)):
             aligned_bands[dataset_index].ReadAsArray(
                 0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        out_row = vectorized_op(*dataset_rows)
+        out_row = dataset_pixel_op(*dataset_rows)
+        
         #Mask out the row if there is a mask
         if aoi_uri != None:
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
@@ -2732,3 +2749,29 @@ def nearly_equal(a, b, sig_fig=5):
         returns True if a and b are equal to each other within a given 
             tolerance"""
     return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
+
+    
+def make_constant_raster_from_base_uri(
+    base_dataset_uri, constant_value, out_uri, nodata_value=None,
+    dataset_type=gdal.GDT_Float32):
+    """A helper function that creates a new gdal raster from base, and fills
+        it with the constant value provided.
+
+        base_dataset_uri - the gdal base raster
+        constant_value - the value to set the new base raster to
+        out_uri - the uri of the output raster
+        nodata_value - (optional) the value to set the constant raster's nodata
+            value to.  If not specified, it will be set to constant_value - 1.0
+        dataset_type - (optional) the datatype to set the dataset to, default
+            will be a float 32 value.
+
+        returns nothing"""
+
+    if nodata_value == None:
+        nodata_value = constant_value - 1.0
+    new_raster_from_base_uri(
+        base_dataset_uri, out_uri, 'GTiff', nodata_value,
+        dataset_type)
+    base_dataset = gdal.Open(out_uri, gdal.GA_Update)
+    base_band = base_dataset.GetRasterBand(1)
+    base_band.Fill(constant_value)
