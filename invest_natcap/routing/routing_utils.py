@@ -42,7 +42,7 @@ LOGGER = logging.getLogger('routing')
 
 def route_flux(
     in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri, loss_uri,
-    flux_uri, absorption_mode, aoi_uri=None):
+    flux_uri, absorption_mode, aoi_uri=None, stream_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -67,6 +67,11 @@ def route_flux(
             the routing flux calculation will only occur on those pixels
             and neighboring pixels will either be raw outlets or
             non-contibuting inputs depending on the orientation of the DEM.
+        stream_uri - (optional) a GDAL dataset that classifies pixels as stream
+            (1) or not (0).  If during routing we hit a stream pixel, all 
+            upstream flux is considered to wash to zero because it will 
+            reach the outlet.  The advantage here is that it can't then 
+            route out of the stream
 
         returns nothing"""
     dem_uri = raster_utils.temporary_filename()
@@ -96,7 +101,7 @@ def route_flux(
     LOGGER.debug('absorption_rate_uri %s' % absorption_rate_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
+        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri)
 
 
 def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
