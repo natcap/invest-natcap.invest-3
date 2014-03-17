@@ -6,6 +6,7 @@ import logging
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
@@ -102,9 +103,10 @@ def execute(args):
     #Clip the dem and cast to a float
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
     raster_utils.vectorize_datasets(
-        [args['dem_uri']], float, clipped_dem_uri,
+        [args['dem_uri']], lambda x: x.astype(numpy.float64), clipped_dem_uri,
         gdal.GDT_Float64, dem_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
+        vectorize_op=False)
 
     #resolve plateaus 
     dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)    
@@ -142,9 +144,10 @@ def execute(args):
     _, lulc_nodata = raster_utils.extract_band_and_nodata(lulc_dataset)
     lulc_clipped_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
-        [args['landuse_uri']], int, lulc_clipped_uri,
+        [args['landuse_uri']], lambda x: x.astype(numpy.int32) , lulc_clipped_uri,
         gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
+        vectorize_op=False)
     lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
 
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate%s.tif' % file_suffix)
@@ -172,14 +175,12 @@ def execute(args):
         -1.0, exception_flag='values_required')
 
     def zero_out_retention_fn(retention, v_stream):
-        if v_stream == 1:
-            return 0.0
-        return retention
+        return numpy.where(v_stream == 1, 0.0, retention)
     raster_utils.vectorize_datasets(
         [no_stream_retention_rate_uri, v_stream_uri], zero_out_retention_fn,
         retention_rate_uri, gdal.GDT_Float64, nodata_retention, out_pixel_size,
         "intersection", dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'])
+        aoi_uri=args['watersheds_uri'], vectorize_op=False)
 
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
@@ -200,26 +201,26 @@ def execute(args):
     nodata_cp = raster_utils.get_nodata_from_uri(cp_uri)
     nodata_usle = -1.0
     def mult_rkls_cp(rkls, cp_factor, v_stream):
-        if rkls == nodata_rkls or cp_factor == nodata_cp:
-            return nodata_usle
-        return rkls * cp_factor * (1 - v_stream)
+        return numpy.where((rkls == nodata_rkls) | (cp_factor == nodata_cp),
+            nodata_usle, rkls * cp_factor * (1 - v_stream))
     raster_utils.vectorize_datasets(
         [rkls_uri, cp_uri, v_stream_uri], mult_rkls_cp, usle_uri,
         gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
+        vectorize_op=False)
 
     LOGGER.info('calculating on pixel retention RKLS-USLE')
     on_pixel_retention_uri = os.path.join(
         output_dir, 'on_pixel_retention%s.tif' % file_suffix)
     on_pixel_retention_nodata = -1.0
     def sub_rkls_usle(rkls, usle):
-        if rkls == nodata_rkls or usle == nodata_usle:
-            return nodata_usle
-        return rkls - usle
+        return numpy.where((rkls == nodata_rkls) | (usle == nodata_usle),
+            nodata_usle, rkls - usle)
     raster_utils.vectorize_datasets(
         [rkls_uri, usle_uri], sub_rkls_usle, on_pixel_retention_uri,
         gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
+        vectorize_op=False)
 
     LOGGER.info('route the sediment flux to determine upstream retention')
     #This yields sediment flux, and sediment loss which will be used for valuation
