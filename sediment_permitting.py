@@ -11,8 +11,6 @@ from invest_natcap.sediment import sediment
 from invest_natcap import raster_utils
 from invest_natcap.optimization import optimization
 
-DATA = os.path.join('test', 'invest-data')
-
 def willimate_run(workspace_dir):
 
     args = {}
@@ -20,35 +18,24 @@ def willimate_run(workspace_dir):
 
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
-    args['dem_uri'] = os.path.join(DATA, 'Base_Data/Freshwater/dem')
-    args['erosivity_uri'] = os.path.join(DATA, 'Base_Data/Freshwater/erosivity')
-    args['erodibility_uri'] = os.path.join(DATA, 'Base_Data/Freshwater/erodibility')
-    base_landuse_uri = os.path.join(DATA, 'Base_Data/Freshwater/landuse_90')
+    args['dem_uri'] = '../Base_Data/Freshwater/dem'
+    args['erosivity_uri'] = '../Base_Data/Freshwater/erosivity'
+    args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
+    base_landuse_uri = '../Base_Data/Freshwater/landuse_90'
     args['landuse_uri'] = base_landuse_uri
-    args['watersheds_uri'] = os.path.join(DATA, 'Base_Data/Freshwater/watersheds.shp')
-    args['biophysical_table_uri'] = '../data/colombia_testing/Biophysical_Colombia_new.csv'
+    args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
+    args['biophysical_table_uri'] = 'permitting_data/biophysical_table.csv'
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 75.0
-    args['sediment_threshold_table_uri'] = os.path.join(DATA, 'Sedimentation/input/sediment_threshold_table.csv')
+    args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
     sediment.execute(args)
 
-    sediment_export_base = os.path.join(args['workspace_dir'], 'output', 'sed_export.tif')
+    sediment_export_base = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
     base_sediment_export = raster_utils.aggregate_raster_values_uri(
-        sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum').total[0]
+        sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum')[0]
 
 
-    temp_dir = os.path.join(args['workspace_dir'], 'temp')
-    for temp_variable in ['TMP', 'TEMP', 'TMPDIR']:
-        try:
-            old_value = os.environ[temp_variable]
-        except KeyError:
-            old_value = None
-        os.environ[temp_variable] = temp_dir
-    os.makedirs(temp_dir)
 
-    def _reset_temp_dir():
-        shutil.rmtree(temp_dir)
-        os.makedirs(temp_dir)
 
     #######Create a mining only export lulc and export map
     only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
@@ -71,13 +58,12 @@ def willimate_run(workspace_dir):
     print 'simulating the entire watershed as mining'
     sediment.execute(args)
     args.pop('suffix')
-    _reset_temp_dir()
     
 
     ########Subtract the mining only and origina lulc map for a static permitting map
-    original_export_uri = os.path.join(args['workspace_dir'], 'output', 'sed_export.tif')
+    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
     export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
-    mining_export_uri = os.path.join(args['workspace_dir'], 'output', 'sed_export_mining.tif')
+    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
     static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
 
     def sub_export(original_export, mining_export):
@@ -90,7 +76,6 @@ def willimate_run(workspace_dir):
         static_impact_map_uri, gdal.GDT_Float32, export_nodata,
         landuse_pixel_size, "union", dataset_to_align_index=0, 
         aoi_uri=args['watersheds_uri'])
-    _reset_temp_dir()
 
 
     ########create a random permitting polygon
@@ -135,17 +120,15 @@ def willimate_run(workspace_dir):
         args['suffix'] = str(run_number)
 
         sediment.execute(args)
-        _reset_temp_dir()
 
-        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'output', 'sed_export_%s.tif' % str(run_number))
+        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export_%s.tif' % str(run_number))
 
         #Lookup the amount of sediment export on the watershed polygon
         permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
-            sediment_export_permitting, args['watersheds_uri'], 'ws_id',
-            'sum').total[0]
+            sediment_export_permitting, args['watersheds_uri'], 'ws_id', 'sum')[0]
 
         static_sediment_export = raster_utils.aggregate_raster_values_uri(
-            static_impact_map_uri, permitting_workspace_uri, 'id', 'sum').total[1]
+            static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
 
         logfile.write(str(permit_area))
         logfile.write(",")
@@ -218,14 +201,14 @@ def base_run(workspace_dir):
     #prep data from sediment run
     print 'doing the base sediment run'
     sediment.execute(args)
-    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'output', 'sed_export.tif')
+    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
     pixel_export_nodata = raster_utils.get_nodata_from_uri(pixel_export_uri)
 
     print 'doing the permitting sediment run'
     args['workspace_dir'] = os.path.join(workspace_dir, 'permitting_run')
     args['landuse_uri'] = converted_lulc_uri
     sediment.execute(args)
-    permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'output', 'sed_export.tif')
+    permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'Output', 'sed_export.tif')
 
     pixel_export_dataset = gdal.Open(pixel_export_uri)
     pixel_export_band = pixel_export_dataset.GetRasterBand(1)
@@ -293,7 +276,7 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
     layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     # Add a single ID field
-    field = ogr.FieldDefn('id', ogr.OFTInteger)
+    field = ogr.FieldDefn('id', ogr.OFTReal)
     layer.CreateField(field)
 
     while True:
@@ -354,5 +337,5 @@ def optimize_it(base_map_uri, aoi_uri, output_uri):
 
 
 if __name__ == '__main__':
-    willimate_run('./base_sediment_run')
-    #optimize_it('./base_sediment_run/base_run/output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
+    #willimate_run('./base_sediment_run')
+    optimize_it('./base_sediment_run/base_run/Output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
