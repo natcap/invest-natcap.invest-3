@@ -3,7 +3,7 @@
     "label": "Overlap Analysis Model: Fisheries and Recreation",
     "targetScript" : "invest_natcap.overlap_analysis.overlap_analysis",
     "modelName" : "overlap_analysis",
-    "localDocURI": "./documentation/marine_fish.html",
+    "localDocURI": "../documentation/marine_fish.html",
     "height": 550,
     "width" : 700,
     "elements": [
