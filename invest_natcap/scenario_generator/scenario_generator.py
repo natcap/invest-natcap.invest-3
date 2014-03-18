@@ -347,6 +347,8 @@ def execute(args):
     suitability_type = gdal.GDT_Int16
 
     def suitability_op(trans, suit):
+        if trans == 0:
+            return 0
         return ((1 - physical_suitability_weight) * trans)\
                + (physical_suitability_weight * suit)
 
