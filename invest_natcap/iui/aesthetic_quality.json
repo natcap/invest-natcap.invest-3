@@ -28,10 +28,10 @@
                                 "args_id" : "workspace_dir",
                                 "type": "folder",
                                 "label": "Workspace",
-                                "defaultValue": "../AestheticQuality/Output/",
+				"defaultValue": "../AestheticQuality",
                                 "required": true,
-                                "helpText": "Folder that contains all the required data. Results will by default be saved to this location." 
-                            },                        
+                                "helpText": "Results will be saved to this location." 
+                            },
                             {
                                 "id" : "aoi_uri",
                                 "args_id" : "aoi_uri",
@@ -135,7 +135,7 @@
                                     "args_id" : "a_coefficient",
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
-                                    "defaultValue": "0.0",
+                                    "defaultValue": "1.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,

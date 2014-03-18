@@ -133,15 +133,6 @@
                                                 "required": true
                                             },
                                             {
-                                                "id": "soil_accumulation_csv_uri",
-                                                "args_id": "soil_accumulation_csv_uri",
-                                                "type": "file",
-                                                "label": "Soil Accumulation CSV",
-                                                "defaultValue": "../BlueCarbon/input/soil_accumulation.csv",
-                                                "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
-                                                "required": true
-                                            },
-                                            {
                                                 "id": "soil_disturbance_csv_uri",
                                                 "args_id": "soil_disturbance_csv_uri",
                                                 "type": "file",
@@ -150,15 +141,6 @@
                                                 "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },                                            
-                                            {
-                                                "id": "biomass_accumulation_csv_uri",
-                                                "args_id": "biomass_accumulation_csv_uri",
-                                                "type": "file",
-                                                "label": "Biomass Accumulation CSV",
-                                                "defaultValue": "../BlueCarbon/input/biomass_accumulation.csv",
-                                                "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
-                                                "required": true
-                                            },
                                             {
                                                 "id": "biomass_disturbance_csv_uri",
                                                 "args_id": "biomass_disturbance_csv_uri",
@@ -265,7 +247,7 @@
                     },
                    {
                        "id" : "private_valuation",
-                       "type" : "container",
+                       "type" : "hiddenElement",
                        "collapsible" : true,
                        "args_id" : "private_valuation",
                        "label" : "Private market valuation.",

@@ -103,13 +103,11 @@ def execute(args):
 
     #Create folders that will be used for the rest of the model run.
     out_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
-    for path in [inter_dir, out_dir]:
-        if os.path.exists(path):
-            shutil.rmtree(path)
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
 
-        os.makedirs(path)
+    os.makedirs(out_dir)
     
     #Do all error checking for the different recruitment equations, since
     #we can't continue if we don't have data.

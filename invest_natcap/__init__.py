@@ -5,6 +5,8 @@ import locale
 import os
 import platform
 import sys
+import hashlib
+import json
 
 import build_utils
 
@@ -26,6 +28,20 @@ def is_release():
         return False
     return True
 
+def _user_hash():
+    """Returns a hash for the user, based on the machine."""
+    data = {
+        'os': platform.platform(),
+        'hostname': platform.node(),
+        'userdir': os.path.expanduser('~')
+    }
+    try:
+        md5 = hashlib.md5()
+        md5.update(json.dumps(data))
+        return md5.hexdigest()
+    except:
+        return None
+
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as
     input.  The InVEST version number is also submitted, retrieved from the
@@ -41,6 +57,7 @@ def log_model(model_name, model_version=None):
     data = {
         'model_name': model_name,
         'invest_release': __version__,
+        'user': _user_hash(),
         'system': {
             'os': platform.system(),
             'release': platform.release(),

@@ -30,6 +30,14 @@ def generate_report(reporting_args):
         reporting_args[title] - a string for the title of the html page
             (required)
 
+        reporting_args[sortable] - a boolean value indicating whether
+            the sorttable.js library should be added for table sorting
+            functionality (optional)
+
+        reporting_args[totals] - a boolean value indicating whether
+            the totals_function.js script should be added for table totals
+            functionality (optional)
+
         reporting_args[out_uri] - a URI to the output destination for the html
             page (required)
 
@@ -154,12 +162,24 @@ def generate_report(reporting_args):
             }
 
     # Add Jquery file to the elements list any time a html page is generated
-
     jquery_dict = {
             'type': 'head', 'section': 'head', 'format': 'script',
             'data_src': JQUERY_URI, 'input_type':'File'}
-
     reporting_args['elements'].insert(0, jquery_dict)
+
+    # A list of tuples of possible default js libraries / scripts to add
+    jsc_lib_list = [('totals', TOTALS_URI), ('sortable', SORTTABLE_URI)]
+    # Used to have control of how the js libraries / scripts get added
+    index = 1
+    for lib_tup in jsc_lib_list:
+        if (lib_tup[0] in reporting_args) and reporting_args[lib_tup[0]]:
+            # Build up the dictionary for the script head element
+            lib_dict = {
+                'type': 'head', 'section': 'head', 'format': 'script',
+                'data_src': lib_tup[1], 'input_type':'File'}
+            # Add dictionary to elements list
+            reporting_args['elements'].insert(index, lib_dict)
+            index = index + 1
 
     # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
@@ -316,12 +336,6 @@ def build_table(param_args):
 
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
-        # Since totalling functionality is needed, add default javascript
-        # functionality for totalling
-        totals_dict = {
-                'type': 'head', 'section': 'head', 'format': 'script',
-                'data_src': TOTALS_URI, 'input_type':'File'}
-        add_head_element(totals_dict)
         table_dict['total'] = param_args['total']
 
     # If table attributes were passed in check to see if the 'sortable' class
@@ -329,13 +343,6 @@ def build_table(param_args):
     if 'attributes' in param_args:
         table_dict['attributes'] = param_args['attributes']
         if param_args['sortable']:
-            # Since sorttable functionality is needed, add default javascript
-            # functionality for sorting column rows
-            sortable_dict = {
-                    'type': 'head', 'section': 'head', 'format': 'script',
-                    'data_src': SORTTABLE_URI, 'input_type':'File'}
-            add_head_element(sortable_dict)
-
             try:
                 class_list = table_dict['attributes']['class'] + ' sortable'
                 table_dict['attributes']['class'] = class_list

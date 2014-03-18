@@ -1095,7 +1095,7 @@ def cell_angles(cell_coords, viewpoint):
 
 def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     coordinates, obs_elev=1.75, tgt_elev=0.0, \
-    max_dist=-1., refraction_coeff=None, alg_version='python'):
+    max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
         Inputs: 

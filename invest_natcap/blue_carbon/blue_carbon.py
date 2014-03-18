@@ -283,11 +283,21 @@ def execute(args):
     carbon_field_soil = "Soil"
     carbon_field_litter = "Litter"
     carbon_field_depth = "Soil Depth"
+    carbon_acc_bio_field = "Bio_accum_rate"
+    carbon_acc_soil_field = "Soil_accum_rate"
 
     #transition matrix
-    trans_uri = args["transition_matrix_uri"]
+    trans_comment_uri = args["transition_matrix_uri"]
+
+    #remove transition comment
+    trans_uri = raster_utils.temporary_filename()
+
+    trans_file = open(trans_uri, 'w')
+    trans_file.write(open(trans_comment_uri).read().split("\n\n")[0])
+    trans_file.close()
 
     trans_field_key = "Id"
+    trans_acc = "Accumulation"
 
     #disturbance table
     dis_bio_csv_uri = args["biomass_disturbance_csv_uri"]
@@ -296,11 +306,11 @@ def execute(args):
     dis_field_key = "veg type"
     dis_field_veg_name = "veg name"
 
-    #accumulation table
-    acc_soil_csv_uri = args["soil_accumulation_csv_uri"]
-    acc_soil_field_key = "veg type"
-    acc_bio_csv_uri = args["biomass_accumulation_csv_uri"]
-    acc_bio_field_key = "veg type"
+##    #accumulation table
+##    acc_soil_csv_uri = args["soil_accumulation_csv_uri"]
+##    acc_soil_field_key = "veg type"
+##    acc_bio_csv_uri = args["biomass_accumulation_csv_uri"]
+##    acc_bio_field_key = "veg type"
 
     #half-life table
     half_life_csv_uri = args["half_life_csv_uri"]
@@ -417,14 +427,41 @@ def execute(args):
 
     ##process inputs
     #load tables from files
-    acc_soil = raster_utils.get_lookup_from_csv(acc_soil_csv_uri, acc_soil_field_key)
-    acc_bio = raster_utils.get_lookup_from_csv(acc_bio_csv_uri, acc_bio_field_key)
+##    acc_soil = raster_utils.get_lookup_from_csv(acc_soil_csv_uri, acc_soil_field_key)
+##    acc_bio = raster_utils.get_lookup_from_csv(acc_bio_csv_uri, acc_bio_field_key)
 
     dis_bio = raster_utils.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
+    #adding accumulation value to disturbance table
+    for k in dis_bio:
+        dis_bio[k][trans_acc] = 0.0
+
     dis_soil = raster_utils.get_lookup_from_csv(dis_soil_csv_uri, dis_field_key)
+    #adding accumulation values to disturbance table
+    for k in dis_soil:
+        dis_soil[k][trans_acc] = 0.0
+    
 
     trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
+
+    class InfiniteDict:
+        def __init__(self, k, v):
+            self.d = {k : v}
+
+        def __getitem__(self, k):
+            try:
+                return self.d[k]
+            except KeyError:
+                return 0.0
+
+    #constructing accumulation tables from carbon table
+    acc_soil = {}
+    for k in carbon:
+        acc_soil[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_soil_field])
+
+    acc_bio = {}
+    for k in carbon:
+        acc_bio[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_bio_field])
 
     half_life = raster_utils.get_lookup_from_csv(half_life_csv_uri, half_life_field_key)
 
@@ -434,37 +471,37 @@ def execute(args):
         for k2 in trans:
             change_types.add(trans[k1][str(k2)])
 
-    change_columns = set(acc_soil[random.choice(list(acc_soil.keys()))].keys())
-    if change_columns.issuperset(change_types):
-        LOGGER.debug("Soil accumulation table valid.")
-    else:
-        msg = "The transition matrix contains the following value(s) not in soil the accumulation table: %s", str(change_types.difference(change_columns))
-        LOGGER.error(msg)
-        raise ValueError, msg
-
-    change_columns = set(dis_soil[random.choice(list(dis_soil.keys()))].keys())
-    if change_columns.issuperset(change_types):
-        LOGGER.debug("Soil disturbance table valid.")
-    else:
-        msg = "The transition matrix contains the following value(s) not in the soil disturbance table: %s", str(change_types.difference(change_columns))
-        LOGGER.error(msg)
-        raise ValueError, msg
-
-    change_columns = set(acc_bio[random.choice(list(acc_bio.keys()))].keys())
-    if change_columns.issuperset(change_types):
-        LOGGER.debug("Biomass accumulation table valid.")
-    else:
-        msg = "The transition matrix contains the following value(s) not in the biomass accumulation table: %s", str(change_types.difference(change_columns))
-        LOGGER.error(msg)
-        raise ValueError, msg
-
-    change_columns = set(dis_bio[random.choice(list(dis_bio.keys()))].keys())
-    if change_columns.issuperset(change_types):
-        LOGGER.debug("Biomass disturbance table valid.")
-    else:
-        msg = "The transition matrix contains the following value(s) not in the biomass disturbance table: %s", str(change_types.difference(change_columns))
-        LOGGER.error(msg)
-        raise ValueError, msg
+##    change_columns = set(acc_soil[random.choice(list(acc_soil.keys()))].keys())
+##    if change_columns.issuperset(change_types):
+##        LOGGER.debug("Soil accumulation table valid.")
+##    else:
+##        msg = "The transition matrix contains the following value(s) not in soil the accumulation table: %s", str(change_types.difference(change_columns))
+##        LOGGER.error(msg)
+##        raise ValueError, msg
+##
+##    change_columns = set(dis_soil[random.choice(list(dis_soil.keys()))].keys())
+##    if change_columns.issuperset(change_types):
+##        LOGGER.debug("Soil disturbance table valid.")
+##    else:
+##        msg = "The transition matrix contains the following value(s) not in the soil disturbance table: %s", str(change_types.difference(change_columns))
+##        LOGGER.error(msg)
+##        raise ValueError, msg
+##
+##    change_columns = set(acc_bio[random.choice(list(acc_bio.keys()))].keys())
+##    if change_columns.issuperset(change_types):
+##        LOGGER.debug("Biomass accumulation table valid.")
+##    else:
+##        msg = "The transition matrix contains the following value(s) not in the biomass accumulation table: %s", str(change_types.difference(change_columns))
+##        LOGGER.error(msg)
+##        raise ValueError, msg
+##
+##    change_columns = set(dis_bio[random.choice(list(dis_bio.keys()))].keys())
+##    if change_columns.issuperset(change_types):
+##        LOGGER.debug("Biomass disturbance table valid.")
+##    else:
+##        msg = "The transition matrix contains the following value(s) not in the biomass disturbance table: %s", str(change_types.difference(change_columns))
+##        LOGGER.error(msg)
+##        raise ValueError, msg
 
     #validating data
     nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
@@ -1006,8 +1043,8 @@ def execute(args):
                           (trans_uri, "Transition Matrix"),
                           (dis_bio_csv_uri, "Biomass Disturbance"),
                           (dis_soil_csv_uri, "Soil Disturbance"),
-                          (acc_bio_csv_uri, "Biomass Accumulation"),
-                          (acc_soil_csv_uri, "Soil Accumulation"),
+                          #(acc_bio_csv_uri, "Biomass Accumulation"),
+                          #(acc_soil_csv_uri, "Soil Accumulation"),
                           (half_life_csv_uri, "Carbon Half-Lives")]:
         table = "<TABLE BORDER=1><TR><TD>" + open(csv_uri).read().strip().replace(",","</TD><TD>").replace("\n","</TD></TR><TR><TD>") + "</TD></TR></TABLE>"
 

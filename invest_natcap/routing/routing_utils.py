@@ -293,7 +293,7 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
         returns nothing"""
 
     flow_accumulation_uri = raster_utils.temporary_filename()
-    flow_accumulation(dem_uri, flow_accumulation_uri)
+    flow_accumulation(dem_uri, flow_accumulation_uri, stream_uri)
     stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
 
 

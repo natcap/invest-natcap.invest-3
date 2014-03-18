@@ -222,9 +222,6 @@ def execute(args):
 
             returns - a float value for pet"""
         return numpy.where((eto_pix == eto_nodata) | (Kc_pix == Kc_nodata), out_nodata, eto_pix * Kc_pix)
-        #if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
-        #    return out_nodata
-        #return eto_pix * Kc_pix
 
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
@@ -368,10 +365,6 @@ def execute(args):
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
         return numpy.where((fractp >= 0) & (precip != precip_nodata), fractp * precip, out_nodata)
-        #if fractp >= 0 and precip != precip_nodata:
-        #    return fractp * precip
-        #else:
-        #    return out_nodata
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
