@@ -135,7 +135,7 @@
                                     "args_id" : "a_coefficient",
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
-                                    "defaultValue": "0.0",
+                                    "defaultValue": "1.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": false,
