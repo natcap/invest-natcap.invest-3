@@ -572,47 +572,49 @@ def execute(args):
                 suitability_factors_dict[cover_id] = [(factor_uri_dict[(factor_stem, suitability_field_name, distance)], weight)]
 
         for cover_id in suitability_factors_dict:
-           if len(suitability_factors_dict[cover_id]) > 1:
-              LOGGER.info("Combining factors for cover type %i.", cover_id)
-              ds_uri = os.path.join(workspace, combined_name % cover_id)
+            if len(suitability_factors_dict[cover_id]) > 1:
+                LOGGER.info("Combining factors for cover type %i.", cover_id)
+                ds_uri = os.path.join(workspace, combined_name % cover_id)
 
-              uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
+                uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
               
-              total = float(sum(weights_list))
-              weights_list = [weight / total for weight in weights_list]
+                total = float(sum(weights_list))
+                weights_list = [weight / total for weight in weights_list]
               
-              def weighted_op(*values):
-                  return sum([ v * w for v, w in zip(values, weights_list)])
+                def weighted_op(*values):
+                    return sum([ v * w for v, w in zip(values, weights_list)])
 
-              raster_utils.vectorize_datasets(uri_list,
-                                              weighted_op,
-                                              ds_uri,
-                                              suitability_type,
-                                              transition_nodata,
-                                              cell_size,
-                                              "union")
+                raster_utils.vectorize_datasets(uri_list,
+                                                weighted_op,
+                                                ds_uri,
+                                                suitability_type,
+                                                transition_nodata,
+                                                cell_size,
+                                                "union")
 
-              suitability_factors_dict[cover_id] = ds_uri
+                suitability_factors_dict[cover_id] = ds_uri
+            else:
+                suitability_factors_dict[cover_id] = suitability_factors_dict[cover_id][0][0]
 
     suitability_dict = {}
     if args["calculate_transition"]:
         suitability_dict = suitability_transition_dict
         if args["calculate_factors"]:
-           for cover_id in suitability_factors_dict:
-              if cover_id in suitability_dict:
-                 LOGGER.info("Combining suitability for cover %i.", cover_id)
-                 ds_uri = os.path.join(workspace, factors_name % cover_id)
-                 raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
-                                                  suitability_factors_dict[cover_id]],
-                                                 suitability_op,
-                                                 ds_uri,
-                                                 transition_type,
-                                                 transition_nodata,
-                                                 cell_size,
-                                                 "union")
-                 suitability_dict[cover_id] = ds_uri
-              else:
-                  suitability_dict[cover_id] = suitability_factors_dict[cover_id]
+            for cover_id in suitability_factors_dict:
+                if cover_id in suitability_dict:
+                    LOGGER.info("Combining suitability for cover %i.", cover_id)
+                    ds_uri = os.path.join(workspace, factors_name % cover_id)
+                    raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
+                                                     suitability_factors_dict[cover_id]],
+                                                    suitability_op,
+                                                    ds_uri,
+                                                    transition_type,
+                                                    transition_nodata,
+                                                    cell_size,
+                                                    "union")
+                    suitability_dict[cover_id] = ds_uri
+                else:
+                    suitability_dict[cover_id] = suitability_factors_dict[cover_id]
     elif args["calculate_factors"]:
         suitability_dict = suitability_factors_dict
 
