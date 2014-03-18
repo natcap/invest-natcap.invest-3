@@ -435,8 +435,9 @@ def execute(args):
     if aq_args['cell_size'] < dem_cell_size:
         raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
 
-    if not os.path.isdir(args['workspace_dir']):
-        os.makedirs(args['workspace_dir'])
+    output_dir = os.path.join(aq_args['workspace_dir'], 'output')
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
 
     #local variables
     LOGGER.debug("Setting local variables.")
@@ -444,24 +445,24 @@ def execute(args):
     curvature_correction=aq_args['refraction']
 
     #intermediate files
-    aoi_dem_uri=os.path.join(aq_args['workspace_dir'],"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(aq_args['workspace_dir'],"aoi_pop.shp")
+    aoi_dem_uri=os.path.join(output_dir,"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(output_dir,"aoi_pop.shp")
 
-    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
+    viewshed_dem_uri=os.path.join(output_dir,"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(output_dir,"dem_vs_re.tif")
 
-    pop_clip_uri=os.path.join(aq_args['workspace_dir'],"pop_clip.tif")
-    pop_prj_uri=os.path.join(aq_args['workspace_dir'],"pop_prj.tif")
-    pop_vs_uri=os.path.join(aq_args['workspace_dir'],"pop_vs.tif")
+    pop_clip_uri=os.path.join(output_dir,"pop_clip.tif")
+    pop_prj_uri=os.path.join(output_dir,"pop_prj.tif")
+    pop_vs_uri=os.path.join(output_dir,"pop_vs.tif")
 
-    viewshed_reclass_uri=os.path.join(aq_args['workspace_dir'],"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(aq_args['workspace_dir'],"vshed.shp")
+    viewshed_reclass_uri=os.path.join(output_dir,"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(output_dir,"vshed.shp")
 
     #outputs
-    viewshed_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
-    viewshed_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")    
-    pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
-    overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
+    viewshed_uri=os.path.join(output_dir,"vshed.tif")
+    viewshed_quality_uri=os.path.join(output_dir,"vshed_qual.tif")    
+    pop_stats_uri=os.path.join(output_dir,"populationStats.html")
+    overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
 
     #determining best data type for viewshed
     features = get_count_feature_set_uri(aq_args['structure_uri'])
