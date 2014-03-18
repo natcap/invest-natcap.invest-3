@@ -92,7 +92,7 @@
                                 "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
                                 "validateAs": {"type": "GDAL"},
                                 "required": true,
-                                "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible and not visible."
+                                "helpText": "A population raster layer is required to determine population within the AOI's land-seascape where point features contributing to negative aesthetic quality are visible and not visible."
                             },
                             {
                                 "id" : "overlap_uri",
