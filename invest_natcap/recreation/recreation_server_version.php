@@ -51,7 +51,7 @@ if ($_POST["is_release"]=="True")
     fwrite($log,",DEBUG,Minor: " . $j . ".\n");
     fwrite($log,",DEBUG,Build: " . $n . ".\n");
 
-    if (($v > "2") or (($v == "2") and (($j >= "5") or (($j == "5") and ($n >= "4"))))){
+    if (($v > "2") or (($v == "2") and (($j > "5") or (($j == "5") and ($n >= "4"))))){
         fwrite($log,",INFO,You have a compatible version.\n");
         fflush($log);    
     }
