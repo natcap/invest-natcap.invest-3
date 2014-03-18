@@ -24,26 +24,26 @@ LOGGER = logging.getLogger('scenario_generator')
 
 
 def calculate_weights(arr, rounding=4):
-    
-   PLACES = Decimal(10) ** -(rounding)
-   
-   # get eigenvalues and vectors
-   evas, eves = eig(arr)
 
-   # get primary eigenvalue and vector
-   eva = max(evas)
-   eva_idx = evas.tolist().index(eva)
-   eve = eves.take((eva_idx,), axis=1)
+    PLACES = Decimal(10) ** -(rounding)
 
-   # priority vector = normalized primary eigenvector
+    # get eigenvalues and vectors
+    evas, eves = eig(arr)
 
-   normalized = eve / sum(eve)
+    # get primary eigenvalue and vector
+    eva = max(evas)
+    eva_idx = evas.tolist().index(eva)
+    eve = eves.take((eva_idx,), axis=1)
 
-   # turn into list of real part values
-   vector = [abs(e[0]) for e in normalized]
+    # priority vector = normalized primary eigenvector
 
-   # return nice rounded Decimal values with labels
-   return [ Decimal( str(v) ).quantize(PLACES) for v in vector ]
+    normalized = eve / sum(eve)
+
+    # turn into list of real part values
+    vector = [abs(e[0]) for e in normalized]
+
+    # return nice rounded Decimal values with labels
+    return [ Decimal( str(v) ).quantize(PLACES) for v in vector ]
 
 def calculate_priority(table_uri):
     table = [line.strip().split(",") for line in open(table_uri).readlines()]
@@ -57,7 +57,7 @@ def calculate_priority(table_uri):
     matrix = numpy.zeros((len(cover_id_list),len(cover_id_list)))
 
     for row in range(len(cover_id_list)):
-       for col in range(row+1):
+        for col in range(row+1):
             matrix[row][col] = float(table[row+1][cover_id_index_list[col]])
             matrix[col][row] = 1 / matrix[row][col]
 
@@ -66,7 +66,7 @@ def calculate_priority(table_uri):
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
     if cell_size == None:
-       cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
 
     memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
 
@@ -76,7 +76,7 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = N
 
 ##    if max_distance != None:
 ##        memory_array[memory_array > max_distance] = nodata
-    
+
     raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
 
     dataset_out = gdal.Open(dataset_out_uri, 1)
@@ -105,15 +105,15 @@ def get_transition_set_count_from_uri(dataset_uri_list):
     cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
     lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
-    
+
     #reclass rasters to compact bit space
     lulc_codes = set()
     unique_raster_values_count = {}
-    
+
     for dataset_uri in dataset_uri_list:
         unique_raster_values_count[dataset_uri] = raster_utils.unique_raster_values_count(dataset_uri)
         lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
-        
+
     lulc_codes = list(lulc_codes)
     lulc_codes.sort()
 
@@ -166,7 +166,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                                         nodata,
                                         cell_size,
                                         "union")
-    
+
         #get unique counts
         counts[i]=raster_utils.unique_raster_values_count(multi_uri, False)
 
@@ -188,7 +188,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                 dest = restore_classes[k >> shift]
             except KeyError:
                 dest = lulc_nodata
-                
+
             try:
                 transitions[key][orig][dest] = counts[key][k]
             except KeyError:
@@ -221,47 +221,47 @@ def filter_fragments(input_uri, size, output_uri):
 
     driver = gdal.GetDriverByName("GTiff")
     driver.CreateCopy(output_uri, src_ds, 0 )
-    
+
     dst_ds = gdal.Open(output_uri, 1)
     dst_band = dst_ds.GetRasterBand(1)
-    dst_array = numpy.copy(src_array) 
+    dst_array = numpy.copy(src_array)
 
     suitability_values = numpy.unique(src_array)
     if suitability_values[0] == 0:
-       suitability_values = suitability_values[1:]
+        suitability_values = suitability_values[1:]
 
     #8 connectedness preferred, 4 connectedness allowed
     for value in suitability_values:
-       mask = src_array == value # You get a mask with the polygons only
-       ones_in_mask = numpy.sum(mask)
-       print('Processing value' + str(value) + ' (found ' + \
-       str(ones_in_mask) + ' among ' + str(mask.size) + ')')
-       label_im, nb_labels = scipy.ndimage.label(mask)
-       src_array[mask] = 1
-       fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
-       fragment_labels = numpy.array(range(nb_labels + 1))
-       print('Labels', nb_labels, fragment_sizes)
-       assert fragment_sizes.size == len(fragment_labels)
-       small_fragment_mask = numpy.where(fragment_sizes <= size)
-       small_fragment_sizes = fragment_sizes[small_fragment_mask]
-       small_fragment_labels = fragment_labels[small_fragment_mask]
-       print('small fragment count', small_fragment_sizes.size)
-       combined_small_fragment_size = numpy.sum(small_fragment_sizes)
-       print('fragments to remove', combined_small_fragment_size)
-       print('small fragment sizes', small_fragment_sizes)
-       print('small fragment labels', small_fragment_labels)
-       #print('large_fragments', large_fragments.size, large_fragments)
-       removed_pixels = 0
-       for label in small_fragment_labels[1:]:
-           pixels_to_remove = numpy.where(label_im == label)
-           dst_array[pixels_to_remove] = 0
-           removed_pixels += pixels_to_remove[0].size
-           print('removed ' + str(pixels_to_remove[0].size) + \
-           ' pixels with label ' + str(label) + ', total = ' + \
-           str(removed_pixels))
-       message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
-       ', pixels removed = ' + str(removed_pixels)
-       assert removed_pixels == combined_small_fragment_size, message
+        mask = src_array == value # You get a mask with the polygons only
+        ones_in_mask = numpy.sum(mask)
+        print('Processing value' + str(value) + ' (found ' + \
+        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
+        label_im, nb_labels = scipy.ndimage.label(mask)
+        src_array[mask] = 1
+        fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+        fragment_labels = numpy.array(range(nb_labels + 1))
+        print('Labels', nb_labels, fragment_sizes)
+        assert fragment_sizes.size == len(fragment_labels)
+        small_fragment_mask = numpy.where(fragment_sizes <= size)
+        small_fragment_sizes = fragment_sizes[small_fragment_mask]
+        small_fragment_labels = fragment_labels[small_fragment_mask]
+        print('small fragment count', small_fragment_sizes.size)
+        combined_small_fragment_size = numpy.sum(small_fragment_sizes)
+        print('fragments to remove', combined_small_fragment_size)
+        print('small fragment sizes', small_fragment_sizes)
+        print('small fragment labels', small_fragment_labels)
+        #print('large_fragments', large_fragments.size, large_fragments)
+        removed_pixels = 0
+        for label in small_fragment_labels[1:]:
+            pixels_to_remove = numpy.where(label_im == label)
+            dst_array[pixels_to_remove] = 0
+            removed_pixels += pixels_to_remove[0].size
+            print('removed ' + str(pixels_to_remove[0].size) + \
+            ' pixels with label ' + str(label) + ', total = ' + \
+            str(removed_pixels))
+        message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
+        ', pixels removed = ' + str(removed_pixels)
+        assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
 
@@ -287,7 +287,7 @@ def execute(args):
     args["distance_field"] = "Dist"
 
     args["suitability_cover_id"] = "Cover ID"
-    
+
     ###
     #get parameters, set outputs
     ###
@@ -303,9 +303,9 @@ def execute(args):
 
     #it might be better to just check if factors being used
     try:
-       physical_suitability_weight = float(args["weight"])
+        physical_suitability_weight = float(args["weight"])
     except KeyError:
-       physical_suitability_weight = 0.5
+        physical_suitability_weight = 0.5
 
     ##output file names
     #absolute paths
@@ -370,11 +370,11 @@ def execute(args):
         msg = "Transition table provided but not used."
         LOGGER.error(msg)
         raise ValueError, msg
-      
+
     if args["calculate_transition"] or args["calculate_factors"]:
         #load transition table
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
-        
+
         #raise error if LULC contains cover id's not in transition table
         landcover_count_dict = raster_utils.unique_raster_values_count(landcover_uri)
         missing_lulc = set(landcover_count_dict).difference(transition_dict.keys())
@@ -387,7 +387,7 @@ def execute(args):
             raise ValueError, msg
 
         for cover_id in transition_dict:
-            #raise error if percent change for new LULC           
+            #raise error if percent change for new LULC
             if (transition_dict[cover_id][args["percent_field"]] > 0) and not (cover_id in landcover_count_dict):
                 msg = "Cover %i does not exist in LULC and therefore cannot have a percent change." % cover_id
                 LOGGER.error(msg)
@@ -398,12 +398,12 @@ def execute(args):
                 msg = "Cover %i cannot have both an increase by percent and area." % cover_id
                 LOGGER.error(msg)
                 raise ValueError, msg
-    
+
     ##factor parameters validation
     if args["calculate_factors"]:
         pass
         #error if overall physical weight not in [0, 1] range
-      
+
         ##factor table validation
         #if polygon no distance field allowed
         #if point or line, integer distance field only
@@ -415,26 +415,26 @@ def execute(args):
     if args["calculate_priorities"]:
         LOGGER.info("Calculating priorities.")
         priorities_dict = calculate_priority(args["priorities_csv_uri"])
-        
+
     #check geographic extents, projections
 
     #validate resampling size
     if args["resolution"] != "":
-       if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
-          msg = "The analysis resolution cannot be smaller than the input."
-          LOGGER.error(msg)
-          raise ValueError, msg
+        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
+            msg = "The analysis resolution cannot be smaller than the input."
+            LOGGER.error(msg)
+            raise ValueError, msg
 
-       else:
-          LOGGER.info("Resampling land cover.")
-          #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
-          raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
-          landcover_uri = landcover_resample_uri
+        else:
+            LOGGER.info("Resampling land cover.")
+            #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
+            raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
+            landcover_uri = landcover_resample_uri
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
 
     suitability_transition_dict = {}
-   
+
     if args["calculate_transition"]:
         for next_lulc in transition_dict:
             this_uri = os.path.join(workspace, transition_name % next_lulc)
@@ -453,7 +453,7 @@ def execute(args):
                                                     this_uri,
                                                     transition_type,
                                                     suitability_nodata,
-                                                    exception_flag = "values_required") 
+                                                    exception_flag = "values_required")
 
                 #changing nodata value so 0's no longer nodata
                 dataset = gdal.Open(this_uri, 1)
@@ -462,7 +462,7 @@ def execute(args):
                 dataset = None
 
                 suitability_transition_dict[next_lulc] = this_uri
-                      
+
     suitability_factors_dict = {}
     if args["calculate_factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
@@ -470,9 +470,9 @@ def execute(args):
         factor_folder = args["suitability_folder"]
 
         if args["factor_inclusion"]:
-           option_list=["ALL_TOUCHED=TRUE"]
+            option_list=["ALL_TOUCHED=TRUE"]
         else:
-           option_list = ["ALL_TOUCHED=FALSE"]
+            option_list = ["ALL_TOUCHED=FALSE"]
 
 
         for factor_id in factor_dict:
@@ -483,87 +483,87 @@ def execute(args):
 
             cover_id = int(factor_dict[factor_id][args["suitability_cover_id"]])
             weight = int(factor_dict[factor_id][args["suitability_weight"]])
-            
+
             LOGGER.debug("Found reference to factor (%s, %s, %s) for cover %i.", factor_stem, suitability_field_name, distance, cover_id)
             if not (factor_stem, suitability_field_name, distance) in factor_uri_dict:
                 factor_uri = os.path.join(factor_folder, factor)
                 if not os.path.exists(factor_uri):
-                   msg = "Missing file %s." % factor_uri
-                   LOGGER.error(msg)
-                   raise ValueError, msg
+                    msg = "Missing file %s." % factor_uri
+                    LOGGER.error(msg)
+                    raise ValueError, msg
 
                 shape_type = get_geometry_type_from_uri(factor_uri)
                 LOGGER.debug("Processing %s.", shapeTypes[shape_type])
-                
+
                 if shape_type in [5, 15, 25, 31]: #polygon
-                   LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
-                   ds_uri = os.path.join(workspace, suitability_name % (factor_stem, suitability_field_name))
+                    LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
+                    ds_uri = os.path.join(workspace, suitability_name % (factor_stem, suitability_field_name))
 
-                   burn_value = [0]
-                   suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
-                   gdal_format = gdal.GDT_Float64
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
-                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
+                    burn_value = [0]
+                    suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
+                    gdal_format = gdal.GDT_Float64
+                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
+                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
 
-                   factor_uri_dict[(factor_stem, suitability_field_name, distance)] = ds_uri
+                    factor_uri_dict[(factor_stem, suitability_field_name, distance)] = ds_uri
 
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
-                   distance = int(distance)
+                    distance = int(distance)
 
-                   ds_uri = raster_utils.temporary_filename()
-                   distance_uri = raster_utils.temporary_filename()
-                   fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
-                   normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
-                   
-                   burn_value = [0]
-                   LOGGER.info("Buffering rasterization of %s to distance of %i.", factor_stem, distance)
-                   gdal_format = gdal.GDT_Byte
-                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, 1, gdal_format)
+                    ds_uri = raster_utils.temporary_filename()
+                    distance_uri = raster_utils.temporary_filename()
+                    fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
+                    normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
 
-                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
+                    burn_value = [0]
+                    LOGGER.info("Buffering rasterization of %s to distance of %i.", factor_stem, distance)
+                    gdal_format = gdal.GDT_Byte
+                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, 1, gdal_format)
 
-                   calculate_distance_raster_uri(ds_uri, distance_uri)
+                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
-                   def threshold(value):
-                       if value > distance:
-                           return transition_nodata
-                       return value
+                    calculate_distance_raster_uri(ds_uri, distance_uri)
 
-                   raster_utils.vectorize_datasets([distance_uri],
-                                                   threshold,
-                                                   fdistance_uri,
-                                                   raster_utils.get_datatype_from_uri(distance_uri),
-                                                   transition_nodata,
-                                                   cell_size,
-                                                   "union")
+                    def threshold(value):
+                        if value > distance:
+                            return transition_nodata
+                        return value
 
-                   minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+                    raster_utils.vectorize_datasets([distance_uri],
+                                                    threshold,
+                                                    fdistance_uri,
+                                                    raster_utils.get_datatype_from_uri(distance_uri),
+                                                    transition_nodata,
+                                                    cell_size,
+                                                    "union")
 
-                   def normalize_op(value):
-                       if value == transition_nodata:
-                           return suitability_nodata
-                       else:
-                           return ((distance_scale - 1) \
+                    minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+
+                    def normalize_op(value):
+                        if value == transition_nodata:
+                            return suitability_nodata
+                        else:
+                            return ((distance_scale - 1) \
                                    - (((value - minimum) \
                                        / float(maximum - minimum)) \
                                       * (distance_scale - 1))) \
                                       + 1
 
-                   raster_utils.vectorize_datasets([fdistance_uri],
-                                                   normalize_op,
-                                                   normalized_uri,
-                                                   transition_type,
-                                                   transition_nodata,
-                                                   cell_size,
-                                                   "union")
+                    raster_utils.vectorize_datasets([fdistance_uri],
+                                                    normalize_op,
+                                                    normalized_uri,
+                                                    transition_type,
+                                                    transition_nodata,
+                                                    cell_size,
+                                                    "union")
 
-                   factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
+                    factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
 
                 else:
-                   raise ValueError, "Invalid geometry type %i." % shape_type
+                    raise ValueError, "Invalid geometry type %i." % shape_type
 
             else:
-               LOGGER.debug("Skipping already processed suitability layer.")
+                LOGGER.debug("Skipping already processed suitability layer.")
 
             LOGGER.debug("Adding factor (%s, %s, %s) to cover %i suitability list.", factor_stem, suitability_field_name, distance, cover_id)
             if cover_id in suitability_factors_dict:
@@ -577,10 +577,10 @@ def execute(args):
                 ds_uri = os.path.join(workspace, combined_name % cover_id)
 
                 uri_list, weights_list = apply(zip, suitability_factors_dict[cover_id])
-              
+
                 total = float(sum(weights_list))
                 weights_list = [weight / total for weight in weights_list]
-              
+
                 def weighted_op(*values):
                     return sum([ v * w for v, w in zip(values, weights_list)])
 
@@ -653,32 +653,32 @@ def execute(args):
         LOGGER.info("Calculating proximity.")
         cover_types = transition_dict.keys()
         for cover_id in transition_dict:
-           if transition_dict[cover_id][args["proximity_field"]] > 0 and cover_id in suitability_dict:
-              distance = int(transition_dict[cover_id][args["proximity_field"]])
-              LOGGER.info("Calculating proximity for %i.", cover_id)
-              reclass_dict = dict(zip(cover_types, [1] * len(cover_types)))
-              reclass_dict[cover_id] = 0
+            if transition_dict[cover_id][args["proximity_field"]] > 0 and cover_id in suitability_dict:
+                distance = int(transition_dict[cover_id][args["proximity_field"]])
+                LOGGER.info("Calculating proximity for %i.", cover_id)
+                reclass_dict = dict(zip(cover_types, [1] * len(cover_types)))
+                reclass_dict[cover_id] = 0
 
-              ds_uri = os.path.join(workspace, cover_name % cover_id)
-              distance_uri = raster_utils.temporary_filename()
-              fdistance_uri = os.path.join(workspace, proximity_name % cover_id)
-              normalized_uri = os.path.join(workspace, normalized_proximity_name % cover_id)
-              
-              raster_utils.reclassify_dataset_uri(landcover_uri,
+                ds_uri = os.path.join(workspace, cover_name % cover_id)
+                distance_uri = raster_utils.temporary_filename()
+                fdistance_uri = os.path.join(workspace, proximity_name % cover_id)
+                normalized_uri = os.path.join(workspace, normalized_proximity_name % cover_id)
+
+                raster_utils.reclassify_dataset_uri(landcover_uri,
                                                   reclass_dict,
                                                   ds_uri,
                                                   transition_type,
                                                   transition_nodata,
-                                                  exception_flag = "values_required") 
+                                                  exception_flag = "values_required")
 
-              calculate_distance_raster_uri(ds_uri, distance_uri)
+                calculate_distance_raster_uri(ds_uri, distance_uri)
 
-              def threshold(value):
-                  if value > distance:
-                      return transition_nodata
-                  return value
- 
-              raster_utils.vectorize_datasets([distance_uri],
+                def threshold(value):
+                    if value > distance:
+                        return transition_nodata
+                    return value
+
+                raster_utils.vectorize_datasets([distance_uri],
                                               threshold,
                                               fdistance_uri,
                                               raster_utils.get_datatype_from_uri(distance_uri),
@@ -686,27 +686,27 @@ def execute(args):
                                               cell_size,
                                               "union")
 
-              minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+                minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
 
-              def normalize_op(value):
-                  if value == transition_nodata:
-                      return suitability_nodata
-                  else:
-                      return ((distance_scale - 1) \
+                def normalize_op(value):
+                    if value == transition_nodata:
+                        return suitability_nodata
+                    else:
+                        return ((distance_scale - 1) \
                               - (((value - minimum) \
                                   / float(maximum - minimum)) \
                                  * (distance_scale - 1))) \
                                  + 1
 
-              raster_utils.vectorize_datasets([fdistance_uri],
-                                              normalize_op,
-                                              normalized_uri,
-                                              transition_type,
-                                              transition_nodata,
-                                              cell_size,
-                                              "union")
+                raster_utils.vectorize_datasets([fdistance_uri],
+                                                normalize_op,
+                                                normalized_uri,
+                                                transition_type,
+                                                transition_nodata,
+                                                cell_size,
+                                                "union")
 
-              proximity_dict[cover_id] = normalized_uri
+                proximity_dict[cover_id] = normalized_uri
 
     def constraint_op(suit, cons):
         return suit * cons
@@ -724,7 +724,7 @@ def execute(args):
             return 100
         else:
             return v
-      
+
     for cover_id in suitability_dict:
         suitability_uri = os.path.join(workspace, adjusted_suitability_name % cover_id)
         if args["calculate_constraints"]:
@@ -742,7 +742,7 @@ def execute(args):
                                                 cell_size,
                                                 "union")
                 suitability_dict[cover_id] = suitability_uri
-                
+
             else:
                 LOGGER.info("Combining suitability and constraints for %i.", cover_id)
                 uri_list = [suitability_dict[cover_id],
@@ -772,7 +772,7 @@ def execute(args):
             suitability_dict[cover_id] = suitability_uri
 
 
-   
+
     #normalize probabilities to be on a 10 point scale
     #probability raster (reclass using probability matrix)
 
@@ -787,7 +787,7 @@ def execute(args):
     ###
 
     #copy initial LULC
-    scenario_uri = os.path.join(workspace, scenario_name)            
+    scenario_uri = os.path.join(workspace, scenario_name)
 
     src_ds = gdal.Open(landcover_uri)
     n_cols = src_ds.RasterXSize
@@ -796,24 +796,24 @@ def execute(args):
     dst_ds = driver.CreateCopy(scenario_uri, src_ds, 0)
     dst_ds = None
     src_ds = None
-       
+
     #identify LULC types undergoing change
     change_list = []
     if args["calculate_priorities"]:
-       for cover_id in transition_dict:
-           percent_change = transition_dict[cover_id][args["percent_field"]]
-           area_change = transition_dict[cover_id][args["area_field"]]
-           if percent_change > 0:
-               change_list.append((priorities_dict[cover_id],
-                                   cover_id,
-                                   int((percent_change / 100.0) \
-                                   * landcover_count_dict[cover_id])))
-           elif area_change > 0:
-               change_list.append((priorities_dict[cover_id],
-                                   cover_id,
-                                   int(math.ceil(area_change / cell_size))))
-           else:
-               LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
+        for cover_id in transition_dict:
+            percent_change = transition_dict[cover_id][args["percent_field"]]
+            area_change = transition_dict[cover_id][args["area_field"]]
+            if percent_change > 0:
+                change_list.append((priorities_dict[cover_id],
+                                    cover_id,
+                                    int((percent_change / 100.0) \
+                                    * landcover_count_dict[cover_id])))
+            elif area_change > 0:
+                change_list.append((priorities_dict[cover_id],
+                                    cover_id,
+                                    int(math.ceil(area_change / cell_size))))
+            else:
+                LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
     else:
         for cover_id in transition_dict:
             percent_change = transition_dict[cover_id][args["percent_field"]]
@@ -829,7 +829,7 @@ def execute(args):
                                    int(math.ceil(area_change / cell_size))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
-        
+
 
     change_list.sort(reverse=True)
 
@@ -845,9 +845,9 @@ def execute(args):
         update_ds = {}
         update_bands = {}
         for _, update_id, _ in change_list[index+1:]:
-           update_ds[update_id] = gdal.Open(suitability_dict[cover_id], 1)
-           update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
-           
+            update_ds[update_id] = gdal.Open(suitability_dict[cover_id], 1)
+            update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
+
         #select pixels
         pixel_heap = disk_sort.sort_to_disk(suitability_dict[cover_id], cover_id)
 
@@ -863,7 +863,7 @@ def execute(args):
                 update_bands[c_id].WriteArray(numpy.array([[0]]), flat_index % n_cols, flat_index / n_cols)
 
         for c_id in update_bands:
-           update_bands[c_id] = None
+            update_bands[c_id] = None
 
         for c_id in update_bands:
             update_bands[c_id] = None
@@ -873,31 +873,31 @@ def execute(args):
 
     #apply override
     if args["override_layer"]:
-       LOGGER.info("Overriding pixels using values from field %s.", args["override_field"])
-       datasource = ogr.Open(args["override"])
-       layer = datasource.GetLayer()
-       dataset = gdal.Open(scenario_uri, 1)
+        LOGGER.info("Overriding pixels using values from field %s.", args["override_field"])
+        datasource = ogr.Open(args["override"])
+        layer = datasource.GetLayer()
+        dataset = gdal.Open(scenario_uri, 1)
 
-       if dataset == None:
-           msg = "Could not open landcover transition raster."
-           LOGGER.error(msg)
-           raise IOError, msg
+        if dataset == None:
+            msg = "Could not open landcover transition raster."
+            LOGGER.error(msg)
+            raise IOError, msg
 
-       if datasource == None:
-           msg = "Could not open override vector."
-           LOGGER.error(msg)
-           raise IOError, msg
+        if datasource == None:
+            msg = "Could not open override vector."
+            LOGGER.error(msg)
+            raise IOError, msg
 
-       if not bool(args["override_inclusion"]):
-           LOGGER.debug("Overriding all touched pixels.")
-           options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % args["override_field"]]
-       else:
-           LOGGER.debug("Overriding only pixels with covered center points.")
-           options = ["ATTRIBUTE=%s" % args["override_field"]]
-       gdal.RasterizeLayer(dataset, [1], layer, options=options)
-       dataset.FlushCache()
-       datasource = None
-       dataset = None
+        if not bool(args["override_inclusion"]):
+            LOGGER.debug("Overriding all touched pixels.")
+            options = ["ALL_TOUCHED=TRUE", "ATTRIBUTE=%s" % args["override_field"]]
+        else:
+            LOGGER.debug("Overriding only pixels with covered center points.")
+            options = ["ATTRIBUTE=%s" % args["override_field"]]
+        gdal.RasterizeLayer(dataset, [1], layer, options=options)
+        dataset.FlushCache()
+        datasource = None
+        dataset = None
 
     ###
     #tabulate coverages
@@ -907,7 +907,7 @@ def execute(args):
 
     htm = open(landcover_htm_uri,'w')
     htm.write("<html><head><title>Scenario Generator Report</title>")
-    
+
     htm.write("<style type='text/css'>")
     htm.write("table {border-collapse: collapse; font-size: 1em;}")
     htm.write("td {padding: 10px;}")
@@ -929,7 +929,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
     htm.write("\n</td></tr>")
-    
+
     htm.write("\n</table>")
 
 
@@ -945,7 +945,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
-    
+
     htm.write("\n</table>")
 
     cover_dict = {}
@@ -964,7 +964,7 @@ def execute(args):
     htm.write(generate_chart_html(cover_dict))
 
     htm.write("<h2>Transition Matrix</h2>")
-    htm.write("\n<table BORDER=1>")    
+    htm.write("\n<table BORDER=1>")
     htm.write("\n<tr><td>ID</td><td>")
     htm.write("</td><td>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
@@ -978,18 +978,18 @@ def execute(args):
                 htm.write("<td><FONT COLOR=lightgray>%i</FONT></td>" % 0)
 
         htm.write("\n</tr>")
-       
+
     htm.write("\n</table>")
 
     unconverted_cover_id_list = unconverted_pixels.keys()
     unconverted_cover_id_list.sort()
     if len(unconverted_cover_id_list) > 0:
-       htm.write("<h2>Unconverted Pixels</h2>")
-       htm.write("\n<table BORDER=1>")
-       htm.write("<tr><td>ID</td><td>Count</td></tr>")
-       for cover_id in unconverted_cover_id_list:
-          htm.write("<tr><td>%i</td><td>%i</td></tr>" % (cover_id, unconverted_pixels[cover_id]))
-       htm.write("\n</table>")
+        htm.write("<h2>Unconverted Pixels</h2>")
+        htm.write("\n<table BORDER=1>")
+        htm.write("<tr><td>ID</td><td>Count</td></tr>")
+        for cover_id in unconverted_cover_id_list:
+            htm.write("<tr><td>%i</td><td>%i</td></tr>" % (cover_id, unconverted_pixels[cover_id]))
+        htm.write("\n</table>")
     else:
         htm.write("<p><i>All target pixels converted.</i></p>")
     htm.write("\n</html>")
@@ -998,14 +998,14 @@ def execute(args):
     input_csv_list = []
 
     if args["calculate_priorities"]:
-       input_csv_list.append((args["priorities_csv_uri"], "Priorities Table"))
+        input_csv_list.append((args["priorities_csv_uri"], "Priorities Table"))
 
     if args["calculate_transition"] or args["calculate_factors"]:
         input_csv_list.append((args["transition"], "Transition Table"))
 
     if args["calculate_factors"]:
         input_csv_list.append((args["suitability"], "Factors Table"))
-    
+
     htm.write("<h1>Input Tables</h1>")
     for csv_uri, name in input_csv_list:
         table = "\n<table BORDER=1><tr><td>" + open(csv_uri).read().strip().replace(",","</td><td>").replace("\n","</td></tr><tr><td>") + "</td></tr></table>"
