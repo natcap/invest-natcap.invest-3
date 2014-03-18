@@ -136,7 +136,10 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
     rep_args['out_uri'] = uri
-
+    #Want the JS functionality for sorting and totaling to be there.
+    rep_args['sortable'] = True
+    rep_args['totals'] = True
+    
     num_cycles = len(hrv_dict.keys())
     
     t_body = []
@@ -173,8 +176,6 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Equilibrated?', 'total': False}]
 
-    LOGGER.debug("I AM IN : %s" % os.getcwd())
-
     elements = [{
                 'type': 'text',
                 'section': 'body',
@@ -201,24 +202,6 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'data_type': 'dictionary',
                 'columns': c_columns,
                 'data': c_body},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/sorttable.js',
-                'input_type': 'File'},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/jquery-1.10.2.min.js',
-                'input_type': 'File'},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/total_functions.js',
-                'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
@@ -412,7 +395,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     
                 #If a = 0
                 if age in first_age:
-                    #LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
+                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
@@ -566,6 +549,7 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
         spawners = spawner_count(cycle_dict, params_dict, cycle, do_weight)
+        LOGGER.debug("Cycle: %s, Spawners: %s" % (cycle, spawners))
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
@@ -615,13 +599,15 @@ def spawner_count(cycle_dict, params_dict, cycle, do_weight):
 
     spawner_sum = 0
 
-    for ages_dict in cycle_dict[cycle-1].values():
+    for area, ages_dict in cycle_dict[cycle-1].items():
         for age, indiv_count in ages_dict.items():
 
             weight = params_dict['Stage_Params'][age]['weight'] if do_weight else 1
             maturity = params_dict['Stage_Params'][age]['maturity']
             product = indiv_count * maturity * weight
 
+            if cycle == 2 and area == '1':
+                LOGGER.debug("Age %s: (Weight: %s, Maturity: %s, Indivs: %s)" % (age, weight, maturity, indiv_count))
             spawner_sum += product
 
     return spawner_sum
