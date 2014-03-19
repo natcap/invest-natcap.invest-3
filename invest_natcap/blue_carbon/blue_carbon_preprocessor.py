@@ -200,6 +200,9 @@ def execute(args):
                 transition_matrix.write(",%s" % values[labels_dict[original][args["lulc_type"]]][str(labels_dict[final][args["lulc_type"]])])
             else:
                 transition_matrix.write(",%s" % "None")
+    transition_matrix.write('\n\n,Replace all instances of "Disturbance"\n'
+                            ',in the above matrix with either:\n,Low '
+                            'Disturbance\n,Medium Disturbance\n,High Disturbance')
     transition_matrix.close()
 
     #open report

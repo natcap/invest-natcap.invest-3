@@ -264,7 +264,7 @@ def filter_fragments(input_uri, size, output_uri):
         assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
-
+    
 def execute(args):
     ###
     #overiding, non-standard field names
@@ -287,6 +287,10 @@ def execute(args):
     args["distance_field"] = "Dist"
 
     args["suitability_cover_id"] = "Cover ID"
+    
+    #exercise fields
+    args["returns_cover_id"] = "Cover ID"
+    args["returns_layer"] = "/Users/olwero/Dropbox/Work/Ecosystem_Services/NatCap/Olympics/2014/Scenarios/Exercise/inputtest/returns.csv"
 
     ###
     #get parameters, set outputs
@@ -338,6 +342,7 @@ def execute(args):
     raster_format = "GTiff"
     transition_type = gdal.GDT_Int16
     transition_nodata = -1
+    change_nodata = -9999
 
     #value to multiply transition matrix entries (ie covert 10 point scale to 100 point scale)
     transition_scale = 10
@@ -347,6 +352,8 @@ def execute(args):
     suitability_type = gdal.GDT_Int16
 
     def suitability_op(trans, suit):
+        if trans == 0:
+            return 0
         return ((1 - physical_suitability_weight) * trans)\
                + (physical_suitability_weight * suit)
 
@@ -708,6 +715,9 @@ def execute(args):
 
                 proximity_dict[cover_id] = normalized_uri
 
+    def es_change_op(final_es ,initial_es):
+        return final_es - initial_es
+
     def constraint_op(suit, cons):
         return suit * cons
 
@@ -1014,3 +1024,73 @@ def execute(args):
         htm.write(table)
     htm.write("\n</div>\n</body>\n</html>")
     htm.close()
+    if args["calculate_es_values"]:
+        ###
+        # Calculate Ecosystem Services values for Scenarios session
+        ###
+        
+        #load returns table
+        returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
+        carbon_dict = {}
+        agric_dict = {}
+        
+        for cover in returns_dict:
+            carbon_dict[cover] = returns_dict[cover]['Carbon']
+            agric_dict[cover] = returns_dict[cover]['Agriculture']
+    
+        #prepare output file uris
+        initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
+        initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
+        scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
+        scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
+        carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
+        agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
+        
+        #reclass landcover map by carbon_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            carbon_dict,
+                                            initial_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by carbon_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            carbon_dict,
+                                            scenario_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract carbon
+        raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
+                                        es_change_op,
+                                        carbon_change_uri,
+                                        transition_type,
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+        
+        #reclass landcover map by agric_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            agric_dict,
+                                            initial_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by agric_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            agric_dict,
+                                            scenario_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract agriculture
+        raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
+                                        es_change_op,
+                                        agriculture_change_uri,
+                                        transition_type,
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+
