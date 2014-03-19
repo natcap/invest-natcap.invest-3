@@ -295,11 +295,9 @@ def _execute_nutrient(args):
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
-    field_summaries = {
-        'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
-        }
-    field_header_order = ['mn_run_ind']
+    #Initialized summaries and header order
+    field_summaries = {}
+    field_header_order = []
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_outputs%s.shp' % file_suffix)
@@ -312,9 +310,6 @@ def _execute_nutrient(args):
     output_datasource = esri_driver.CopyDataSource(
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
-
-    add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
-    field_header_order = []
 
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
@@ -400,6 +395,7 @@ def _execute_nutrient(args):
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
             field_header_order.append('value_%s' % nutrient)
     LOGGER.info('Writing summaries to output shapefile')
+    LOGGER.debug("%s, %s" % (str(field_summaries), str(field_header_order)))
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
 
 
