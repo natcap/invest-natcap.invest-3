@@ -381,24 +381,24 @@ def _execute_nutrient(args):
             threshold_retention_tot[ws_id] = (
                 retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
 
-        field_summaries['%s_adjl_tot' % nutrient] = alv_tot
-        field_summaries['%s_exp_tot' % nutrient] = export_tot
+        field_summaries['%s_avl_tot' % nutrient] = alv_tot
         field_summaries['%s_ret_tot' % nutrient] = retention_tot
-        field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
+        field_summaries['%s_ret_adj' % nutrient] = threshold_retention_tot
+        field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_adjl_tot', '%s_exp_tot', '%s_ret_tot', '%s_ret_sm']) + field_header_order)
+            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_ret_tot', '%s_ret_adj', '%s_exp_tot']) + field_header_order)
         #Do valuation if necessary
         if valuation_lookup is not None:
             field_summaries['value_%s' % nutrient] = {}
             for ws_id, value in \
-                    field_summaries['%s_ret_sm' % nutrient].iteritems():
+                    field_summaries['%s_ret_tot' % nutrient].iteritems():
                 discount = disc(
                     valuation_lookup[ws_id]['time_span_%s' % nutrient],
                     valuation_lookup[ws_id]['discount_%s' % nutrient])
                 field_summaries['value_%s' % nutrient][ws_id] = (
-                    field_summaries['%s_ret_sm' % nutrient][ws_id] *
+                    field_summaries['%s_ret_tot' % nutrient][ws_id] *
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
-
+            field_header_order.append('value_%s' % nutrient)
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
 
