@@ -3,7 +3,7 @@
     "label": "Marine Aquaculture: Finfish",
     "targetScript" : "invest_natcap.finfish_aquaculture.finfish_aquaculture",
     "modelName" : "finfish_aquaculture",
-    "localDocURI": "./documentation/marine_fish.html",
+    "localDocURI": "../documentation/marine_fish.html",
     "height": 550,
     "width" : 700,
     "elements": [

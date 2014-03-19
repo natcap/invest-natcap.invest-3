@@ -3,7 +3,7 @@
     "label": "Overlap Analysis Management Zone Model: Fisheries and Recreation",
     "targetScript" : "invest_natcap.overlap_analysis.overlap_analysis_mz",
     "modelName" : "overlap_analysis_mz",
-    "localDocURI": "./documentation/overlap_analysis.html",
+    "localDocURI": "../documentation/overlap_analysis.html",
     "height": 550,
     "width" : 700,
     "elements": [

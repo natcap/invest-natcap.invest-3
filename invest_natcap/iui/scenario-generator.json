@@ -71,6 +71,22 @@
                     "required": true,
                     "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
                     "enabledBy": "calculate_priorities"
+                },
+                {
+                    "id": "calculate_es_values",
+                    "args_id": "calculate_es_values",
+                    "type": "checkbox",
+                    "label": "Calculate Ecosystem Values",
+                    "defaultValue": false
+                },
+                {
+                    "id": "returns_csv_uri",
+                    "args_id": "preturns_csv_uri",
+                    "label": "Ecosystem values table",
+                    "type": "file",
+                    "required": true,
+                    "defaultValue": "../ScenarioGenerator/input/returns.csv",
+                    "enabledBy": "calculate_es_values"
                 }
             ]
         },
