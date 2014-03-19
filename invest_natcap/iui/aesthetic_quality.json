@@ -88,10 +88,11 @@
                                 "id" : "pop_uri",
                                 "args_id" : "pop_uri",
                                 "type": "file",
-                                "label": "Population Raster (Optional)",
+                                "label": "Population Raster",
                                 "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
                                 "validateAs": {"type": "GDAL"},
-                                "required": true,
+                                "required": false,
+                                "returns": {"ifEmpty":"pass"},
                                 "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible and not visible."
                             },
                             {
@@ -102,6 +103,7 @@
                                 "defaultValue": "../AestheticQuality/Input/BC_parks.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": false,
+                                "returns": {"ifEmpty":"pass"},
                                 "helpText": "The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting aesthetic quality."
                             }
                             ]
@@ -138,7 +140,7 @@
                                     "defaultValue": "1.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": false,
+                                    "required": true,
                                     "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
@@ -149,7 +151,7 @@
                                     "defaultValue": "0.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": false,
+                                    "required": true,
                                     "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
@@ -160,7 +162,7 @@
                                     "defaultValue": "0.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": false,
+                                    "required": true,
                                     "helpText": "Third coefficient for the polynomial's quadratic term."
                                 },
                                 {
@@ -171,7 +173,7 @@
                                     "defaultValue": "0.0",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": false,
+                                    "required": true,
                                     "helpText": "Fourth coefficient for the polynomial's cubic exponent."
                                 },
                                 {
@@ -182,7 +184,7 @@
                                     "defaultValue": "8000.0",
                                     "validText": "-?[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": false,
+                                    "required": true,
                                     "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."
                                 }                               
                                 ]
