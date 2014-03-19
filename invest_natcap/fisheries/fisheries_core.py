@@ -248,6 +248,17 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     
             t_body.append(inner_dict)
 
+    css = """body { background-color: #EFECCA; color: #002F2F; }        
+         h1 { text-align: center }       
+         h1, h2, h3, h4, strong, th { color: #046380 }       
+         h2 { border-bottom: 1px solid #A7A37E }     
+         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }        
+         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }       
+         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }     
+         td { border-top: 5px solid #EFECCA }        
+         img { margin: 20px }"""
+
+
     t_columns =  [{'name': 'Subregion', 'total': False},
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Value', 'total': True}]
@@ -301,8 +312,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'type':'head',
                 'section':'head',
                 'format': 'style',
-                'data_src': './invest_natcap/reporting/reporting_data/table_style.css',
-                'input_type': 'File'}
+                'data_src': css,
+                'input_type': 'Text'}
                 ]
 
     rep_args['elements'] = elements
