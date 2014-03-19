@@ -4,6 +4,7 @@ import logging
 import os
 import copy
 import cmath
+import csv
 
 from osgeo import ogr
 from invest_natcap import reporting
@@ -76,6 +77,8 @@ def execute(args):
             desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir', 'Intermediate')
+
     LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
@@ -97,7 +100,10 @@ def execute(args):
                     migration_dict, args['duration'], args['do_weight'])
 
     hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
-   
+  
+    inter_csv_uri = os.path.join(inter_dir, 'Cycle_Breakdown.csv')
+    create_inter_cycle_csv(inter_csv_uri, cycle_dict, args['ordered_stages'])
+
     #If either of the two valuation variables exist, know that valuation is desired
     if 'unit_price' in args:
         #passing a subdictionary that is only the equilibrated final cycle 
@@ -111,7 +117,94 @@ def execute(args):
 
     html_page_uri = os.path.join(output_dir, 'Results_Page.html')
     create_results_page(html_page_uri, hrv_dict, equil_pt, val_var)
+    csv_page_uri = os.path.join(output_dir, 'Results_Table.csv')
+    create_results_csv(csv_page_uri, hrv_dict, equil_pt, val_var)
 
+def create_inter_cycle_csv(uri, cycle_dict, order):
+    '''Want to create an intermediate output that gives the number of
+    individuals within each area for each cycle for each age/stage.
+    cycle_dict- Contains all counts of individuals for each combination of 
+            cycle, age/stage, and area.
+            
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+    '''    
+    with open(uri, 'wb') as c_file:
+        c_writer = csv.writer(c_file)
+
+        arb_subdict = cycle_dict.itervalues().next()
+        area_names = arb_subdict.keys()
+        area_line = ['Area'] 
+        stage_line = ['Age/Stage']
+
+        for area in area_names:
+            for stage in order:
+
+                area_line.append(area)
+                stage_line.append(stage)
+
+        c_writer.writerow(area_line)
+        c_writer.writerow(stage_line)
+        c_writer.writerow([])
+
+        for cycle in range(len(cycle_dict))
+            line = [cycle]
+            
+            for i, area in enumerate(area_line):
+
+                    stage = stage_line[i]
+                    line.append(cycle_dict[cycle][area][stage]
+
+            c_writer.writerow(line)
+
+
+def create_results_csv(uri, hrv_dict, equil_pt, val_var):
+    '''Want to give a CSV output that is the same information as the HTML,
+    but in an easier-to-use-for-calculation form.'''
+
+    with open(uri, 'wb') as c_file:
+        c_writer = csv.writer(c_file)
+   
+        #Header for final results table
+        c_writer.writerow(['Final Harvest by Subregion after ' + str(equil_pt) + ' Cycles'])
+        c_writer.writerow([])
+        sum_headers_row = ['Subregion', 'Harvest']
+        if val_var is not None:
+            sum_headers_row.append('Value')
+        c_writer.writerow(sum_headers_row)
+        
+        num_cycles = len(hrv_dict.keys())
+        final_cycle = hrv_dict[num_cycles-1]
+        for area in final_cycle:
+            if area != 'Cycle_Total':
+                line = [area, final_cycle[area]]
+                if val_var is not None:
+                    line.append(val_var[area])
+                
+                    c_writer.writerow(line)
+                    
+        
+        #Starting on the second table, summed harvest by cycle
+        c_writer.writerow([])
+        c_writer.writerow(['Cycle Breakdown'])
+        c_writer.writerow([])
+        c_writer.writerow(['Cycle', 'Harvest', 'Equilibrated?'])
+
+        for cycle, inner_dict in hrv_dict.items():
+            
+            line = [cycle]
+            line.append(inner_dict['Cycle_Total'])
+
+            if cycle == equil_pt: 
+                line.append('Y')
+            else:
+                line.append('N')
+
+            c_writer.writerow(line)
+        
 
 def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
@@ -136,10 +229,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
     rep_args['out_uri'] = uri
-    #Want the JS functionality for sorting and totaling to be there.
-    rep_args['sortable'] = True
-    rep_args['totals'] = True
-    
+
     num_cycles = len(hrv_dict.keys())
     
     t_body = []
@@ -154,16 +244,6 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
             inner_dict['Value'] = '-' if val_var is None else val_var[area]
     
             t_body.append(inner_dict)
-
-    css = """body { background-color: #EFECCA; color: #002F2F; }
-    h1 { text-align: center }
-    h1, h2, h3, h4, strong, th { color: #046380 }
-    h2 { border-bottom: 1px solid #A7A37E }
-    table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
-    table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
-    td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }
-    td { border-top: 5px solid #EFECCA }
-    img { margin: 20px }"""
 
     t_columns =  [{'name': 'Subregion', 'total': False},
                 {'name': 'Harvest', 'total': True},
@@ -185,6 +265,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     c_columns = [{'name': 'Cycle', 'total': False},
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Equilibrated?', 'total': False}]
+
+    LOGGER.debug("I AM IN : %s" % os.getcwd())
 
     elements = [{
                 'type': 'text',
@@ -215,9 +297,27 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 {
                 'type':'head',
                 'section':'head',
+                'format': 'script',
+                'data_src': './invest_natcap/reporting/reporting_data/sorttable.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'script',
+                'data_src': './invest_natcap/reporting/reporting_data/jquery-1.10.2.min.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
+                'format': 'script',
+                'data_src': './invest_natcap/reporting/reporting_data/total_functions.js',
+                'input_type': 'File'},
+                {
+                'type':'head',
+                'section':'head',
                 'format': 'style',
-                'data_src': css,
-                'input_type': 'Text'}
+                'data_src': './invest_natcap/reporting/reporting_data/table_style.css',
+                'input_type': 'File'}
                 ]
 
     rep_args['elements'] = elements
@@ -405,7 +505,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     
                 #If a = 0
                 if age in first_age:
-                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
+                    #LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
@@ -559,7 +659,6 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
         #If weight is a parameter in params_dict, spawners will be biomass, not
         #number of spawners. Otherwise, just a count.
         spawners = spawner_count(cycle_dict, params_dict, cycle, do_weight)
-        LOGGER.debug("Cycle: %s, Spawners: %s" % (cycle, spawners))
 
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
@@ -609,15 +708,13 @@ def spawner_count(cycle_dict, params_dict, cycle, do_weight):
 
     spawner_sum = 0
 
-    for area, ages_dict in cycle_dict[cycle-1].items():
+    for ages_dict in cycle_dict[cycle-1].values():
         for age, indiv_count in ages_dict.items():
 
             weight = params_dict['Stage_Params'][age]['weight'] if do_weight else 1
             maturity = params_dict['Stage_Params'][age]['maturity']
             product = indiv_count * maturity * weight
 
-            if cycle == 2 and area == '1':
-                LOGGER.debug("Age %s: (Weight: %s, Maturity: %s, Indivs: %s)" % (age, weight, maturity, indiv_count))
             spawner_sum += product
 
     return spawner_sum
