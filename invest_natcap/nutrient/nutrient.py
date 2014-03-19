@@ -295,11 +295,9 @@ def _execute_nutrient(args):
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
-    field_summaries = {
-        'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
-        }
-    field_header_order = ['mn_run_ind']
+    #Initialized summaries and header order
+    field_summaries = {}
+    field_header_order = []
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_outputs%s.shp' % file_suffix)
@@ -381,12 +379,12 @@ def _execute_nutrient(args):
             threshold_retention_tot[ws_id] = (
                 retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
 
-        field_summaries['%s_adjl_tot' % nutrient] = alv_tot
-        field_summaries['%s_exp_tot' % nutrient] = export_tot
-        field_summaries['%s_ret_tot' % nutrient] = retention_tot
-        field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
+        field_summaries['%savl_tot' % nutrient] = alv_tot
+        field_summaries['%sret_tot' % nutrient] = retention_tot
+        field_summaries['%sret_adj' % nutrient] = threshold_retention_tot
+        field_summaries['%sexp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_adjl_tot', '%s_exp_tot', '%s_ret_tot', '%s_ret_sm']) + field_header_order)
+            map(lambda(x): x % nutrient, ['%sadjl_tot', '%sret_tot', '%sret_adj']) + field_header_order)
         #Do valuation if necessary
         if valuation_lookup is not None:
             field_summaries['value_%s' % nutrient] = {}
@@ -398,6 +396,7 @@ def _execute_nutrient(args):
                 field_summaries['value_%s' % nutrient][ws_id] = (
                     field_summaries['%s_ret_sm' % nutrient][ws_id] *
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
+                
 
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
