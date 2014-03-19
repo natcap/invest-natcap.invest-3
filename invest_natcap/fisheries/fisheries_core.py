@@ -229,6 +229,9 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
     rep_args['out_uri'] = uri
+    #Want the JS functionality for sorting and totaling to be there.
+    rep_args['sortable'] = True
+    rep_args['totals'] = True
 
     num_cycles = len(hrv_dict.keys())
     
@@ -294,24 +297,6 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 'data_type': 'dictionary',
                 'columns': c_columns,
                 'data': c_body},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/sorttable.js',
-                'input_type': 'File'},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/jquery-1.10.2.min.js',
-                'input_type': 'File'},
-                {
-                'type':'head',
-                'section':'head',
-                'format': 'script',
-                'data_src': './invest_natcap/reporting/reporting_data/total_functions.js',
-                'input_type': 'File'},
                 {
                 'type':'head',
                 'section':'head',
