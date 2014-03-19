@@ -77,7 +77,7 @@ def execute(args):
             desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir', 'Intermediate')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
     LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
@@ -150,13 +150,13 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
         c_writer.writerow(stage_line)
         c_writer.writerow([])
 
-        for cycle in range(len(cycle_dict))
+        for cycle in range(len(cycle_dict)):
             line = [cycle]
             
             for i, area in enumerate(area_line):
 
-                    stage = stage_line[i]
-                    line.append(cycle_dict[cycle][area][stage]
+                stage = stage_line[i]
+                line.append(cycle_dict[cycle][area][stage])
 
             c_writer.writerow(line)
 
