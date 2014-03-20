@@ -192,8 +192,6 @@ def calculate_transport(
     cdef int n_steps = 0
     while cells_to_process.size() > 0:
         n_steps += 1
-        if n_steps % 100 == 0:
-            LOGGER.info('cells_to_process.size() = %d' % (cells_to_process.size()))
         current_index = cells_to_process.top()
         cells_to_process.pop()
         current_row = current_index / n_cols
@@ -303,10 +301,21 @@ def calculate_transport(
 
             #Calculate the outflow weight
             outflow_weight = outflow_weights_cache[neighbor_row, neighbor_col]
+            
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
+            if outflow_weight < 0.0001:
+                continue
             in_flux = flux_cache[neighbor_row, neighbor_col]
+            #if n_steps % 10000 == 0:
+            #    LOGGER.debug('cells_to_process.size() = %d' % (cells_to_process.size()))
+            #    LOGGER.debug('current_row, current_col %d %d' % (current_row, current_col))
+            #    LOGGER.debug('neighbor_row, neighbor_col %d %d' % (neighbor_row, neighbor_col))
+            #    LOGGER.debug('outflow_weight %f' % (outflow_weight))
+            #    LOGGER.debug('in_flux %f' % (in_flux))
+                
+                
             if in_flux != transport_nodata:
                 absorption_rate = (
                     absorption_rate_cache[cache_row_index, current_col])
@@ -332,7 +341,8 @@ def calculate_transport(
 
                 #Calculating the flat index for the neighbor and starting
                 #at it's neighbor index of 0
-                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+                #a global neighbor row needs to be calculated
+                cells_to_process.push((current_row+row_offsets[direction_index]) * n_cols + neighbor_col)
                 cell_neighbor_to_process.push(0)
                 break
 
