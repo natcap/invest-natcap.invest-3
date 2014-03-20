@@ -71,19 +71,19 @@
                     "returns": "strings",
                     "dataType": "string",
                     "helpText": "This dropdown specifies whether the harvest numbers returned should be given in number of individuals harvested, or by the weight being harvested. If using the weight, there must be a corresponding 'weight' column in the CSV, with information about the weight of each maturity class."
-                }
+                },
+                {
+                    "id" : "sim_dur",
+                    "args_id" : "duration",
+                    "type": "text",
+                    "dataType": "int",
+                    "label": "Duration of Simulation (time steps)",
+                    "validateAs": {"type": "number"},
+                    "required": true,
+                    "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
+                } 
             ]
         },
-        {
-            "id" : "sim_dur",
-            "args_id" : "duration",
-            "type": "text",
-            "dataType": "int",
-            "label": "Duration of Simulation (time steps)",
-            "validateAs": {"type": "number"},
-            "required": true,
-            "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
-        }, 
         {
             "id": "p_cont",
             "label": "Recruitment Parameters",
