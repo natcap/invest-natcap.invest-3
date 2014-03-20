@@ -4,7 +4,7 @@
     "targetScript": "invest_natcap.routing.routedem",
     "modelName": "timber",
     "localDocURI": "../documentation/routedem.html",
-    "height": 300,
+    "height": 800,
     "width": 700,
     "elements": [
         {
@@ -34,11 +34,42 @@
                     "id" : "threshold_flow_accumulation",
                     "args_id" : "threshold_flow_accumulation",
                     "type": "text",
-                    "label": "Threshold Flow Accumluation",
+                    "label": "Threshold Flow Accumulation",
                     "defaultValue": "1000",
                     "required": true,
                     "validText": "^[0-9]+$",
                     "helpText": "The number of upstream cells that must flow into a cell before it's classified as a stream."
+                },
+                {
+                    "id" : "multiple_stream_thresholds",
+                    "args_id": "multiple_stream_thresholds",
+                    "type": "checkbox",
+                    "label": "Calculate Multiple Stream Thresholds",
+                    "defaultValue": true,
+                    "required": false,
+                    "helpText": "Select to calculate multiple stream maps. if enabled set stream threshold to lowest amount, then set upper and step size thresholds."
+                },
+                {        
+                    "id" : "threshold_flow_accumulation_upper",
+                    "args_id" : "threshold_flow_accumulation_upper",
+                    "type": "text",
+                    "label": "Threshold Flow Accumulation",
+                    "defaultValue": "2000",
+                    "required": true,
+                    "validText": "^[0-9]+$",
+                    "enabledBy": "multiple_stream_thresholds",
+                    "helpText": "The number of upstream cells that must flow into a cell before it's classified as a stream."
+                },
+                {        
+                    "id" : "threshold_flow_accumulation_stepsize",
+                    "args_id" : "threshold_flow_accumulation_stepsize",
+                    "type": "text",
+                    "label": "Threshold Flow Accumulation Range Stepsize",
+                    "defaultValue": "100",
+                    "required": true,
+                    "validText": "^[0-9]+$",
+                    "enabledBy": "multiple_stream_thresholds",
+                    "helpText": "The number cells to step up from lower to upper threshold range."
                 },
                 {        
                     "id": "resolve_plateaus_filename",

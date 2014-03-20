@@ -50,7 +50,20 @@ def execute(args):
     
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(output_directory, 'v_stream%s.tif' % file_suffix)
-
-    routing_utils.stream_threshold(flow_accumulation_uri,
+    
+    if args['multiple_stream_thresholds']:
+        lower_threshold = int(args['threshold_flow_accumulation'])
+        upper_threshold = int(args['threshold_flow_accumulation_upper'])
+        threshold_step = int(args['threshold_flow_accumulation_stepsize'])
+        
+        for threshold_amount in range(
+            lower_threshold, upper_threshold+1, threshold_step):
+            LOGGER.info("Calculating stream threshold at %s pixels" % (threshold_amount))
+            v_stream_uri = os.path.join(output_directory, 'v_stream%s_%s.tif' % (file_suffix, str(threshold_amount)))
+            
+            routing_utils.stream_threshold(
+                flow_accumulation_uri, threshold_amount, v_stream_uri)
+    else:
+        v_stream_uri = os.path.join(output_directory, 'v_stream%s.tif' % file_suffix)
+        routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
