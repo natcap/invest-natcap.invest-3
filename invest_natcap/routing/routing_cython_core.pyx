@@ -192,6 +192,9 @@ def calculate_transport(
     cdef int n_steps = 0
     while cells_to_process.size() > 0:
         n_steps += 1
+        if n_steps % 10000 == 0:
+            LOGGER.debug('Reporting every 10000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
+    
         current_index = cells_to_process.top()
         cells_to_process.pop()
         current_row = current_index / n_cols
@@ -310,14 +313,7 @@ def calculate_transport(
             if outflow_weight < 0.001:
                 continue
             in_flux = flux_cache[cache_cache_neighbor_row, neighbor_col]
-            #if n_steps % 10000 == 0:
-            #    LOGGER.debug('cells_to_process.size() = %d' % (cells_to_process.size()))
-            #    LOGGER.debug('current_row, current_col %d %d' % (current_row, current_col))
-            #    LOGGER.debug('cache_cache_neighbor_row, neighbor_col %d %d' % (cache_cache_neighbor_row, neighbor_col))
-            #    LOGGER.debug('outflow_weight %f' % (outflow_weight))
-            #    LOGGER.debug('in_flux %f' % (in_flux))
-                
-                
+
             if in_flux != transport_nodata:
                 absorption_rate = (
                     absorption_rate_cache[cache_row_index, current_col])
