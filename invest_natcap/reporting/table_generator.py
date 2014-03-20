@@ -135,7 +135,7 @@ def generate_table(table_dict, attributes=None):
         for row_index in range(len(row)):
             if total_cols[row_index]:
                 # Add row data
-                table_string += '<td class=rowDataSd>%s</td>' % row[row_index]
+                table_string += '<td class="rowDataSd">%s</td>' % row[row_index]
             else:
                 table_string += '<td>%s</td>' % row[row_index]
 
@@ -179,7 +179,7 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
     # Begin constructing the html string for the new totals row
     # Give the row a class name and have the first data element be the name or
     # header for that row
-    html_str = '<tr class=%s><td>%s</td>' % (row_class, total_name)
+    html_str = '<tr class="%s"><td>%s</td>' % (row_class, total_name)
 
     # Iterate over the number of columns and add proper row data value,
     # starting from the second column as the first columns row data value was
@@ -188,7 +188,7 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
         # Check to see if this columns values should be totaled
         if total_list[col_index]:
             # If column should be totaled then add a class name
-            html_str += '<td class=%s>--</td>' % data_class
+            html_str += '<td class="%s">--</td>' % data_class
         else:
             # If the column should not be totaled leave off the class name
             html_str += '<td>--</td>'
