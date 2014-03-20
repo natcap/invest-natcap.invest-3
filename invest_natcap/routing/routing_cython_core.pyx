@@ -95,14 +95,14 @@ def calculate_transport(
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] source_cache = (
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] loss_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))   
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] flux_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     
@@ -150,11 +150,11 @@ def calculate_transport(
 
     loss_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
     loss_band = loss_dataset.GetRasterBand(1)
     flux_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
     flux_band = flux_dataset.GetRasterBand(1)
 
     #Process flux through the grid
@@ -509,7 +509,7 @@ def percent_to_sink(
     cdef double effect_nodata = -1.0
     raster_utils.new_raster_from_base_uri(
         sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
-        gdal.GDT_Float64, fill_value=effect_nodata)
+        gdal.GDT_Float32, fill_value=effect_nodata)
     effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
     effect_band = effect_dataset.GetRasterBand(1)
 
@@ -520,8 +520,8 @@ def percent_to_sink(
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
 
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] effect_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
