@@ -438,6 +438,10 @@ def execute(args):
     else:
         aq_args['cell_size'] = dem_cell_size
 
+    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
+    if not os.path.isdir(intermediate_dir):
+        os.makedirs(intermediate_dir)
+
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -448,18 +452,18 @@ def execute(args):
     curvature_correction=aq_args['refraction']
 
     #intermediate files
-    aoi_dem_uri=os.path.join(output_dir,"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(output_dir,"aoi_pop.shp")
+    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
 
-    viewshed_dem_uri=os.path.join(output_dir,"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(output_dir,"dem_vs_re.tif")
+    viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
 
-    pop_clip_uri=os.path.join(output_dir,"pop_clip.tif")
-    pop_prj_uri=os.path.join(output_dir,"pop_prj.tif")
-    pop_vs_uri=os.path.join(output_dir,"pop_vs.tif")
+    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
+    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
+    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
 
-    viewshed_reclass_uri=os.path.join(output_dir,"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(output_dir,"vshed.shp")
+    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
 
     #outputs
     viewshed_uri=os.path.join(output_dir,"vshed.tif")
