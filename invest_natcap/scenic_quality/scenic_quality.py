@@ -11,13 +11,13 @@ from osgeo import ogr
 from osgeo import osr
 
 from invest_natcap import raster_utils
-from invest_natcap.aesthetic_quality import aesthetic_quality_core
+from invest_natcap.scenic_quality import scenic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('aesthetic_quality')
+LOGGER = logging.getLogger('scenic_quality')
 
 def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     """A URI wrapper for reproject dataset that opens the original_dataset_uri
@@ -187,7 +187,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
     # default parameter values that are not passed to this function but that
-    # aesthetic_quality_core.viewshed needs
+    # scenic_quality_core.viewshed needs
     obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
@@ -328,7 +328,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
-        aesthetic_quality_core.viewshed(input_array, cell_size, \
+        scenic_quality_core.viewshed(input_array, cell_size, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
@@ -423,7 +423,7 @@ def get_count_feature_set_uri(fs_uri):
     
 def execute(args):
     """DOCSTRING"""
-    LOGGER.info("Start Aesthetic Quality Model")
+    LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
     aq_args=args.copy()
@@ -607,7 +607,7 @@ def execute(args):
         table="""
         <html>
         <title>Marine InVEST</title>
-        <center><H1>Aesthetic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
+        <center><H1>Scenic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
         <br><br><HR><br>
         <H2>Population Statistics</H2>
 
