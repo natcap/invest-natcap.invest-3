@@ -342,8 +342,7 @@ def execute(args):
         
         raster_utils.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
-            vectorize_op=True)
+            gdal.GDT_Float32, out_nodata, cell_size, "intersection")
 
         LOGGER.debug('Finished vectorize on total_degradation') 
            
@@ -367,27 +366,21 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
-            return np.where(
-                    (degradation == out_nodata) | (habitat == out_nodata),
-                    out_nodata, 
-                    (float(habitat) * (1.0 - ((degradation**scaling_param) / 
-                            (degradation**scaling_param + ksq)))))
             # there is a nodata value if this list is not empty
-            #if degradation == out_nodata or habitat == out_nodata:
-            #    return out_nodata
+            if degradation == out_nodata or habitat == out_nodata:
+                return out_nodata
 
-            #return float(habitat) * (1.0 - ((degradation**scaling_param) / \
-            #    (degradation**scaling_param + ksq)))
+            return float(habitat) * (1.0 - ((degradation**scaling_param) / \
+                (degradation**scaling_param + ksq)))
         
-        quality_uri = os.path.join(
-                output_dir, 'quality_out' + lulc_key + suffix)
+        quality_uri = \
+            os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
         
         LOGGER.debug('Starting vectorize on quality_op') 
         
         raster_utils.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
-            vectorize_op=False)
+            gdal.GDT_Float32, out_nodata, cell_size, "intersection")
         
         LOGGER.debug('Finished vectorize on quality_op') 
 
@@ -427,12 +420,9 @@ def execute(args):
                         return - out_nodata if base or cover_x is equal to their
                             nodata values or the cover_x value
                         """
-                    return np.where(
-                            (base == base_nodata) | (cover_x == lulc_nodata),
-                            base_nodata, cover_x)
-                    #if base == base_nodata or cover_x == lulc_nodata:
-                    #    return base_nodata
-                    #return cover_x 
+                    if base == base_nodata or cover_x == lulc_nodata:
+                        return base_nodata
+                    return cover_x 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 
@@ -446,8 +436,7 @@ def execute(args):
 
                 raster_utils.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
-                    gdal.GDT_Int32, base_nodata, cell_size, "intersection",
-                    vectorize_op=False)
+                    gdal.GDT_Int32, base_nodata, cell_size, "intersection")
                 
                 LOGGER.debug('Finished vectorize on trim_op')
                 
