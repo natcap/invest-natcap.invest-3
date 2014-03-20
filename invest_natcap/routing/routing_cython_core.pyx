@@ -189,7 +189,11 @@ def calculate_transport(
 
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
+    cdef int n_steps = 0
     while cells_to_process.size() > 0:
+        n_steps += 1
+        if n_steps % 100 == 0:
+            LOGGER.info('cells_to_process.size() = %d' % (cells_to_process.size()))
         current_index = cells_to_process.top()
         cells_to_process.pop()
         current_row = current_index / n_cols
