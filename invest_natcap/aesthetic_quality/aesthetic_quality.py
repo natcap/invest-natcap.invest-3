@@ -432,8 +432,11 @@ def execute(args):
     LOGGER.debug("Validating parameters.")
     dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if aq_args['cell_size'] < dem_cell_size:
-        raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
+    if "cell_size" in aq_args:
+        if aq_args['cell_size'] < dem_cell_size:
+            raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
+    else:
+        aq_args['cell_size'] = dem_cell_size
 
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
