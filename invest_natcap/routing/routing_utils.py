@@ -208,7 +208,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
 
 def pixel_amount_exported(
     in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri,
-    in_source_uri, pixel_export_uri, aoi_uri=None):
+    in_source_uri, pixel_export_uri, aoi_uri=None, percent_to_stream_uri=None):
     """Calculates flow and absorption rates to determine the amount of source
         exported to the stream.  All datasets must be in the same projection.
         Nothing will be retained on stream pixels.
@@ -221,6 +221,8 @@ def pixel_amount_exported(
         in_source_uri - a dataset representing per pixel export
         pixel_export_uri - the output dataset uri to represent the amount
             of source exported to the stream
+        percent_to_stream_uri - (optional) if defined is the raster that's the
+            percent of export to the stream layer
 
         returns nothing"""
 
@@ -257,7 +259,11 @@ def pixel_amount_exported(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     #Calculate the percent to sink
-    effect_uri = raster_utils.temporary_filename()
+    if percent_to_stream_uri is not None:
+        effect_uri = percent_to_stream_uri
+    else:
+        effect_uri = raster_utils.temporary_filename()
+        
     routing_cython_core.percent_to_sink(
         stream_uri, export_rate_uri, outflow_direction_uri,
         outflow_weights_uri, effect_uri)

@@ -231,8 +231,12 @@ def execute(args):
         aoi_uri=args['watersheds_uri'], stream_uri=v_stream_uri)
 
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
+    percent_to_stream_uri = os.path.join(
+        intermediate_dir, 'percent_to_stream%s.tif' % file_suffix)
     routing_utils.pixel_amount_exported(
-        flow_direction_uri, dem_offset_uri, v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
+        flow_direction_uri, dem_offset_uri, v_stream_uri, retention_rate_uri, 
+        usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'],
+        percent_to_stream_uri=percent_to_stream_uri)
 
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
