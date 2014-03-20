@@ -432,8 +432,11 @@ def execute(args):
     LOGGER.debug("Validating parameters.")
     dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if aq_args['cell_size'] < dem_cell_size:
-        raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
+    if "cell_size" in aq_args:
+        if aq_args['cell_size'] < dem_cell_size:
+            raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
+    else:
+        aq_args['cell_size'] = dem_cell_size
 
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
@@ -525,95 +528,96 @@ def execute(args):
                                     viewshed_type,
                                     viewshed_nodata)
 
-    #tabulate population impact
-    LOGGER.info("Tabulating population impact.")
-    LOGGER.debug("Tabulating unaffected population.")
-    nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
-    LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
-    nodata_viewshed = raster_utils.get_nodata_from_uri(viewshed_uri)
-    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
+    if "pop_uri" in args:
+        #tabulate population impact
+        LOGGER.info("Tabulating population impact.")
+        LOGGER.debug("Tabulating unaffected population.")
+        nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
+        LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
+        nodata_viewshed = raster_utils.get_nodata_from_uri(viewshed_uri)
+        LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
 
-    #clip population
-    LOGGER.debug("Projecting AOI for population raster clip.")
-    pop_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'],
-                                          pop_wkt,
-                                          aoi_pop_uri)
+        #clip population
+        LOGGER.debug("Projecting AOI for population raster clip.")
+        pop_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
+        raster_utils.reproject_datasource_uri(aq_args['aoi_uri'],
+                                              pop_wkt,
+                                              aoi_pop_uri)
 
-    LOGGER.debug("Clipping population raster by projected AOI.")
-    raster_utils.clip_dataset_uri(aq_args['pop_uri'],
-                                  aoi_pop_uri,
-                                  pop_clip_uri,
-                                  False)
-    
-    #reproject clipped population
-    LOGGER.debug("Reprojecting clipped population raster.")
-    vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
-    reproject_dataset_uri(pop_clip_uri,
-                                       vs_wkt,
-                                       pop_prj_uri,
-                                       get_data_type_uri(pop_clip_uri))
+        LOGGER.debug("Clipping population raster by projected AOI.")
+        raster_utils.clip_dataset_uri(aq_args['pop_uri'],
+                                      aoi_pop_uri,
+                                      pop_clip_uri,
+                                      False)
+        
+        #reproject clipped population
+        LOGGER.debug("Reprojecting clipped population raster.")
+        vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
+        reproject_dataset_uri(pop_clip_uri,
+                                           vs_wkt,
+                                           pop_prj_uri,
+                                           get_data_type_uri(pop_clip_uri))
 
-    #align and resample population
-    def copy(value1, value2):
-        if value2 == nodata_viewshed:
-            return nodata_pop
-        else:
-            return value1
-    
-    LOGGER.debug("Resampling and aligning population raster.")
-    raster_utils.vectorize_datasets([pop_prj_uri, viewshed_uri],
-                                   copy,
-                                   pop_vs_uri,
-                                   get_data_type_uri(pop_prj_uri),
-                                   nodata_pop,
-                                   aq_args["cell_size"],
-                                   "intersection",
-                                   ["bilinear", "bilinear"],
-                                   1)
-    
-    pop = gdal.Open(pop_vs_uri)
-    #LOGGER.debug(pop)
-    pop_band = pop.GetRasterBand(1)
-    #LOGGER.debug(pop_band)
-    vs = gdal.Open(viewshed_uri)
-    vs_band = vs.GetRasterBand(1)
+        #align and resample population
+        def copy(value1, value2):
+            if value2 == nodata_viewshed:
+                return nodata_pop
+            else:
+                return value1
+        
+        LOGGER.debug("Resampling and aligning population raster.")
+        raster_utils.vectorize_datasets([pop_prj_uri, viewshed_uri],
+                                       copy,
+                                       pop_vs_uri,
+                                       get_data_type_uri(pop_prj_uri),
+                                       nodata_pop,
+                                       aq_args["cell_size"],
+                                       "intersection",
+                                       ["bilinear", "bilinear"],
+                                       1)
+        
+        pop = gdal.Open(pop_vs_uri)
+        #LOGGER.debug(pop)
+        pop_band = pop.GetRasterBand(1)
+        #LOGGER.debug(pop_band)
+        vs = gdal.Open(viewshed_uri)
+        vs_band = vs.GetRasterBand(1)
 
-    affected_pop = 0
-    unaffected_pop = 0
-    for row_index in range(vs_band.YSize):
-        pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
+        affected_pop = 0
+        unaffected_pop = 0
+        for row_index in range(vs_band.YSize):
+            pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
+            vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
-        pop_row[pop_row == nodata_pop]=0.0
-        vs_row[vs_row == nodata_viewshed]=-1
+            pop_row[pop_row == nodata_pop]=0.0
+            vs_row[vs_row == nodata_viewshed]=-1
 
-        affected_pop += np.sum(pop_row[vs_row > 0])
-        unaffected_pop += np.sum(pop_row[vs_row == 0])
+            affected_pop += np.sum(pop_row[vs_row > 0])
+            unaffected_pop += np.sum(pop_row[vs_row == 0])
 
-    pop_band = None
-    pop = None
-    vs_band = None
-    vs = None
+        pop_band = None
+        pop = None
+        vs_band = None
+        vs = None
 
-    table="""
-    <html>
-    <title>Marine InVEST</title>
-    <center><H1>Aesthetic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
-    <br><br><HR><br>
-    <H2>Population Statistics</H2>
+        table="""
+        <html>
+        <title>Marine InVEST</title>
+        <center><H1>Aesthetic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
+        <br><br><HR><br>
+        <H2>Population Statistics</H2>
 
-    <table border="1", cellpadding="0">
-    <tr><td align="center"><b>Number of Features Visible</b></td><td align="center"><b>Population (estimate)</b></td></tr>
-    <tr><td align="center">None visible<br> (unaffected)</td><td align="center">%i</td>
-    <tr><td align="center">1 or more<br>visible</td><td align="center">%i</td>
-    </table>
-    </html>
-    """
+        <table border="1", cellpadding="0">
+        <tr><td align="center"><b>Number of Features Visible</b></td><td align="center"><b>Population (estimate)</b></td></tr>
+        <tr><td align="center">None visible<br> (unaffected)</td><td align="center">%i</td>
+        <tr><td align="center">1 or more<br>visible</td><td align="center">%i</td>
+        </table>
+        </html>
+        """
 
-    outfile = open(pop_stats_uri, 'w')
-    outfile.write(table % (unaffected_pop, affected_pop))
-    outfile.close()
+        outfile = open(pop_stats_uri, 'w')
+        outfile.write(table % (unaffected_pop, affected_pop))
+        outfile.close()
 
     #perform overlap analysis
     LOGGER.info("Performing overlap analysis.")
@@ -637,7 +641,7 @@ def execute(args):
                                     aq_args["cell_size"],
                                     "union")
 
-    if aq_args["overlap_uri"]:  
+    if "overlap_uri" in aq_args:  
         LOGGER.debug("Copying overlap analysis features.")
         raster_utils.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
 
