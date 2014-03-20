@@ -88,21 +88,21 @@ def calculate_transport(
     cdef int n_rows = outflow_direction_dataset.RasterYSize
     
     
-    cdef int CACHE_ROWS = 2**12
+    cdef int CACHE_ROWS = 2**10
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] source_cache = (
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] loss_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))   
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] flux_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     
@@ -150,11 +150,11 @@ def calculate_transport(
 
     loss_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
     loss_band = loss_dataset.GetRasterBand(1)
     flux_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
     flux_band = flux_dataset.GetRasterBand(1)
 
     #Process flux through the grid
@@ -189,7 +189,12 @@ def calculate_transport(
 
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
+    cdef int n_steps = 0
     while cells_to_process.size() > 0:
+        n_steps += 1
+        if n_steps % 10000 == 0:
+            LOGGER.debug('Reporting every 10000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
+    
         current_index = cells_to_process.top()
         cells_to_process.pop()
         current_row = current_index / n_cols
@@ -278,17 +283,19 @@ def calculate_transport(
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
-            neighbor_row = cache_row_index+row_offsets[direction_index]
+            cache_cache_neighbor_row = (
+                cache_row_index+row_offsets[direction_index]) % CACHE_ROWS
+            neighbor_row = current_row+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if (neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
+            if (neighbor_row < 0 or neighbor_row >= n_rows or
                 neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
             #if neighbor inflows
             neighbor_direction = (
-                outflow_direction_cache[neighbor_row, neighbor_col])
+                outflow_direction_cache[cache_cache_neighbor_row, neighbor_col])
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
@@ -298,11 +305,15 @@ def calculate_transport(
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_cache[neighbor_row, neighbor_col]
+            outflow_weight = outflow_weights_cache[cache_cache_neighbor_row, neighbor_col]
+            
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
-            in_flux = flux_cache[neighbor_row, neighbor_col]
+            if outflow_weight < 0.001:
+                continue
+            in_flux = flux_cache[cache_cache_neighbor_row, neighbor_col]
+
             if in_flux != transport_nodata:
                 absorption_rate = (
                     absorption_rate_cache[cache_row_index, current_col])
@@ -328,7 +339,8 @@ def calculate_transport(
 
                 #Calculating the flat index for the neighbor and starting
                 #at it's neighbor index of 0
-                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+                #a global neighbor row needs to be calculated
+                cells_to_process.push((current_row+row_offsets[direction_index]) * n_cols + neighbor_col)
                 cell_neighbor_to_process.push(0)
                 break
 
@@ -509,7 +521,7 @@ def percent_to_sink(
     cdef double effect_nodata = -1.0
     raster_utils.new_raster_from_base_uri(
         sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
-        gdal.GDT_Float64, fill_value=effect_nodata)
+        gdal.GDT_Float32, fill_value=effect_nodata)
     effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
     effect_band = effect_dataset.GetRasterBand(1)
 
@@ -520,8 +532,8 @@ def percent_to_sink(
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
 
-    cdef numpy.ndarray[numpy.npy_float64, ndim=2] effect_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float64))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
