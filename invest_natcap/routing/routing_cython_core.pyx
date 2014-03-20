@@ -1361,7 +1361,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef double max_r = numpy.pi / 4.0
     
     #Create a flow carray and respective dataset
-    flow_nodata = -9999
+    cdef float flow_nodata = -9999
     raster_utils.new_raster_from_base_uri(
         dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
         gdal.GDT_Float32, fill_value=flow_nodata)
@@ -1610,7 +1610,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             flow_array = flow_band.ReadAsArray(
                 xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
                 
-            flow_array[1, col_index] = 9999
+            flow_array[1, col_index] = flow_nodata
             dirty_cache = 1
             
     if dirty_cache:
