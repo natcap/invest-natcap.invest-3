@@ -76,8 +76,8 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
     LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
