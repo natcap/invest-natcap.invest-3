@@ -88,7 +88,7 @@ def calculate_transport(
     cdef int n_rows = outflow_direction_dataset.RasterYSize
     
     
-    cdef int CACHE_ROWS = 2**12
+    cdef int CACHE_ROWS = 2**10
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
@@ -280,17 +280,19 @@ def calculate_transport(
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
-            neighbor_row = cache_row_index+row_offsets[direction_index]
+            cache_cache_neighbor_row = (
+                cache_row_index+row_offsets[direction_index]) % CACHE_ROWS
+            neighbor_row = current_row+row_offsets[direction_index]
             neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if (neighbor_row < 0 or neighbor_row >= CACHE_ROWS or
+            if (neighbor_row < 0 or neighbor_row >= n_rows or
                 neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
             #if neighbor inflows
             neighbor_direction = (
-                outflow_direction_cache[neighbor_row, neighbor_col])
+                outflow_direction_cache[cache_cache_neighbor_row, neighbor_col])
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
@@ -300,18 +302,18 @@ def calculate_transport(
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_cache[neighbor_row, neighbor_col]
+            outflow_weight = outflow_weights_cache[cache_cache_neighbor_row, neighbor_col]
             
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
-            if outflow_weight < 0.0001:
+            if outflow_weight < 0.001:
                 continue
-            in_flux = flux_cache[neighbor_row, neighbor_col]
+            in_flux = flux_cache[cache_cache_neighbor_row, neighbor_col]
             #if n_steps % 10000 == 0:
             #    LOGGER.debug('cells_to_process.size() = %d' % (cells_to_process.size()))
             #    LOGGER.debug('current_row, current_col %d %d' % (current_row, current_col))
-            #    LOGGER.debug('neighbor_row, neighbor_col %d %d' % (neighbor_row, neighbor_col))
+            #    LOGGER.debug('cache_cache_neighbor_row, neighbor_col %d %d' % (cache_cache_neighbor_row, neighbor_col))
             #    LOGGER.debug('outflow_weight %f' % (outflow_weight))
             #    LOGGER.debug('in_flux %f' % (in_flux))
                 
