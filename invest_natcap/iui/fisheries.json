@@ -75,6 +75,16 @@
             ]
         },
         {
+            "id" : "sim_dur",
+            "args_id" : "duration",
+            "type": "text",
+            "dataType": "int",
+            "label": "Duration of Simulation (time steps)",
+            "validateAs": {"type": "number"},
+            "required": true,
+            "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
+        }, 
+        {
             "id": "p_cont",
             "label": "Recruitment Parameters",
             "type": "container",
@@ -207,22 +217,6 @@
                         }
                     ]
                 }
-            ]
-        },
-        {    
-            "id" : "parameters_list2",
-            "type": "list",
-            "elements":[
-                {
-                    "id" : "sim_dur",
-                    "args_id" : "duration",
-                    "type": "text",
-                    "dataType": "int",
-                    "label": "Duration of Simulation (time steps)",
-                    "validateAs": {"type": "number"},
-                    "required": true,
-                    "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
-               } 
             ]
         }
     ]
