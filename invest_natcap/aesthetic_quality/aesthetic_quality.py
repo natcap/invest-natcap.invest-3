@@ -324,7 +324,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        tmp_visibility_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
@@ -332,7 +332,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
-        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        tmp_distance_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'distance_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_distance_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
@@ -340,7 +340,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+        tmp_viewshed_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
@@ -349,7 +349,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
 
         # Multiply the viewshed by its coefficient
-        scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        scaled_viewshed_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
@@ -438,6 +438,10 @@ def execute(args):
     else:
         aq_args['cell_size'] = dem_cell_size
 
+    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
+    if not os.path.isdir(intermediate_dir):
+        os.makedirs(intermediate_dir)
+
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -448,18 +452,18 @@ def execute(args):
     curvature_correction=aq_args['refraction']
 
     #intermediate files
-    aoi_dem_uri=os.path.join(output_dir,"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(output_dir,"aoi_pop.shp")
+    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
 
-    viewshed_dem_uri=os.path.join(output_dir,"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(output_dir,"dem_vs_re.tif")
+    viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
 
-    pop_clip_uri=os.path.join(output_dir,"pop_clip.tif")
-    pop_prj_uri=os.path.join(output_dir,"pop_prj.tif")
-    pop_vs_uri=os.path.join(output_dir,"pop_vs.tif")
+    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
+    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
+    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
 
-    viewshed_reclass_uri=os.path.join(output_dir,"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(output_dir,"vshed.shp")
+    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
 
     #outputs
     viewshed_uri=os.path.join(output_dir,"vshed.tif")
