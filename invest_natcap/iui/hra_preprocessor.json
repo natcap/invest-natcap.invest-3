@@ -18,7 +18,7 @@
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
-                    "defaultValue": "../HabitatRiskAssess_3_0"
+                    "defaultValue": "../HabitatRiskAssess"
                 },
                 {
                     "id":"habs_dir",
@@ -28,7 +28,7 @@
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess_3_0/Input/HabitatLayers",
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
                     "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors. This is the path to your habitat layers folder."
                 },
                 {
@@ -39,7 +39,7 @@
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess_3_0/Input/SpeciesLayers",
+                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
                     "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors. This is the path to the species layers folder."
                 },
                 {
@@ -50,7 +50,7 @@
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
                     "args_id": "stressors_dir",
-                    "defaultValue": "../HabitatRiskAssess_3_0/Input/StressorLayers"
+                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
             ]
         },
@@ -117,7 +117,7 @@
                 "args_id" : "criteria_dir",
                 "type": "hideableFileEntry",
                 "label": "Use Spatially Explicit Risk Score (shapefiles)",
-                "defaultValue": "../HabitatRiskAssess_3_0/Input/Spatially_Explicit_Criteria",
+                "defaultValue": "../HabitatRiskAssess/Input/Spatially_Explicit_Criteria",
                 "validateAs": {"type": "folder",
                             "mustExist": true},
                 "required": false,
