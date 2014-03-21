@@ -25,6 +25,10 @@ def execute(args):
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
 
+        
+    if not args['calc_p'] and not args['calc_n']:
+        raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
+    
     
     #Set up the water yield arguments that might be a little different than
     #nutrient retention
