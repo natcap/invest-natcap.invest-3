@@ -308,38 +308,6 @@ def execute(args):
 
                 returns - the total degradation score for the pixel"""
 
-            # get the access value
-            #access = raster[-1]
-            #access = raster[-1][0]
-            #new_ras = np.delete(raster, -1, 0)
-            #new_ras_shape = np.reshape(new_ras, (new_ras.shape[0], new_ras.shape[2]))
-            #arr_len = new_ras_shape.shape[1]
-            #arr_size = new_ras_shape.shape[0]
-
-
-            #sum_degradation = 0.0
-
-            # check against nodata values. since we created all the input
-            # rasters we know the nodata value will be out_nodata
-            #if out_nodata in raster:
-            #    return out_nodata
-
-
-
-            # loop through the raster list only as many times as there are
-            # groups of two. each time calulate the degradation for that threat
-            # and compound it to the sum. so at the end of this loop we will
-            # have computed the degradation for each threat on the pixel and
-            # summed them together
-
-            #original operation
-            #for index in range(len_list / 2):
-            #   step = index * 2
-            #    sum_degradation += (raster[step] * raster[step + 1] * \
-            #                        weight_list[index])
-            #return sum_degradation * access
-
-
             sum_degradation = np.zeros(raster[0].shape)
             for index in range(len(raster) / 2):
                 step = index * 2
@@ -353,25 +321,6 @@ def execute(args):
 
             #the last element in raster is access
             return np.where(nodata_mask, out_nodata, sum_degradation * raster[-1])
-
-
-
-
-            #LOGGER.debug("NewRas Shape : %s", new_ras.shape)
-            #reshaped_raster = np.reshape(new_ras_shape, (arr_size / 2, 2, arr_len))
-            #prod_raster = np.prod(reshaped_raster, 1)
-
-            #weights_sized = np.ones(prod_raster.shape)
-            #weights_final = weights_sized * weight_list[..., np.newaxis]
-            #LOGGER.debug('Weights Shape: %s', weights_final.shape)
-            #prod_final = np.multiply(prod_raster, weights_final)
-            #LOGGER.debug('Prod Shape: %s', prod_final.shape)
-            #sum_final = np.sum(prod_final, 0)
-            #LOGGER.debug('Sum Shape: %s', sum_final.shape)
-            #result = np.multiply(sum_final, access)
-            #LOGGER.debug('Result Shape: %s', result.shape)
-
-            #return np.where(np.any(raster == out_nodata), out_nodata, result)
 
         # add the access_raster onto the end of the collected raster list. The
         # access_raster will be values from the shapefile if provided or a
