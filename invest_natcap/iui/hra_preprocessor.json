@@ -39,7 +39,7 @@
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
+                    "defaultValue": "",
                     "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors. This is the path to the species layers folder."
                 },
                 {
