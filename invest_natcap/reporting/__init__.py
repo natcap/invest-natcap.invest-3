@@ -489,8 +489,8 @@ def add_svg_element(param_args):
     #style.shape_to_svg(source_uri, svg_out_uri, css_uri, param_args)
     # Open SVG
     #svg_file = codecs.open(svg_out_uri, 'rb', 'latin1')
-    file_str = "<svg width='100' height='100'><circle cx='50' cy=50' r='40'"
-                " stroke='green' stroke-width='4' fill='yellow'/></svg>"
+    file_str = ("<svg width='100' height='100'><circle cx='50' cy=50' r='40'"
+                " stroke='green' stroke-width='4' fill='yellow'/></svg>")
     #file_str = svg_file.read()
     # At the moment I think we are only interested in what lives within the svg tags
     # from the SVG file. Search for this section.
