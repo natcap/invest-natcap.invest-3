@@ -339,10 +339,10 @@ def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
         #Since we now know for sure there will be a name attribute lower case,
         #can just call it directly.
         subregion_name = feature.items()['name']
-        feature.SetField('Hrv_Total', final_cycle[subregion_name])
+        feature.SetField('Hrv_Total', "%.2f" % final_cycle[subregion_name])
 
         if val_dict is not None:
-            feature.SetField('Val_Total', val_dict[subregion_name])
+            feature.SetField('Val_Total', "%.2f" % val_dict[subregion_name])
 
         layer.SetFeature(feature)
 
