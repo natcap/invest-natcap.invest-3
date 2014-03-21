@@ -1590,7 +1590,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     break
             else:
                 #we couldn't resolve it, try again later
-                LOGGER.info("couldn't resolve direction for index %d" % (flat_index))
                 unresolved_cells_defer.push(flat_index)
                 
         if unresolved_cells.size() == 0:
@@ -1606,7 +1605,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         flat_index = unresolved_cells_defer.front()
         unresolved_cells_defer.pop()
     
-        LOGGER.info('marking unresolved flat index %d' % flat_index)
         row_index = flat_index / n_cols
         col_index = flat_index % n_cols
         #We load 3 rows at a time and we know unresolved directions can only
