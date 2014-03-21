@@ -655,9 +655,9 @@ def percent_to_sink(
             continue
 
         for neighbor_index in range(8):
-            cache_neighbor_row_index = cache_row_index + row_offsets[neighbor_index]
+            cache_neighbor_row_index = (cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
             neighbor_row_index = row_index + row_offsets[neighbor_index]
-            if cache_neighbor_row_index < 0 or cache_neighbor_row_index >= n_rows:
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                 #out of bounds
                 continue
 
