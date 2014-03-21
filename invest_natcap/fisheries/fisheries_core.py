@@ -197,7 +197,7 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         for cycle, inner_dict in hrv_dict.items():
             
             line = [cycle]
-            line.append(inner_dict['Cycle_Total'])
+            line.append("%.2f" % inner_dict['Cycle_Total'])
 
             if cycle == equil_pt: 
                 line.append('Y')
@@ -244,8 +244,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
         if area != 'Cycle_Total':
             inner_dict = {}
             inner_dict['Subregion'] = area
-            inner_dict['Harvest'] = final_cycle[area]
-            inner_dict['Value'] = '-' if val_var is None else val_var[area]
+            inner_dict['Harvest'] = "%.2f" % final_cycle[area]
+            inner_dict['Value'] = '-' if val_var is None else "%.2f" % val_var[area]
     
             t_body.append(inner_dict)
 
@@ -268,7 +268,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     for cycle in hrv_dict:
         inner_dict = {}
         inner_dict['Cycle'] = cycle
-        inner_dict['Harvest'] = hrv_dict[cycle]['Cycle_Total']
+        inner_dict['Harvest'] = "%.2f" % hrv_dict[cycle]['Cycle_Total']
 
         if cycle == equil_pt: 
             inner_dict['Equilibrated?'] = 'Y'
