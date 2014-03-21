@@ -41,11 +41,15 @@ def execute(args):
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow direction")
-    flow_direction_uri = os.path.join(output_directory, 'flow_direction%s.tif' % file_suffix)
+    prefix, suffix = os.path.splitext(args['flow_direction_filename'])
+    flow_direction_uri = os.path.join(
+        output_directory, prefix + file_suffix + suffix)
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
     
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(output_directory, 'flow_accumulation%s.tif' % file_suffix)
+    prefix, suffix = os.path.splitext(args['flow_accumulation_filename'])
+    flow_accumulation_uri = os.path.join(
+        output_directory, prefix + file_suffix + suffix)
     routing_utils.flow_accumulation(flow_direction_uri, dem_uri, flow_accumulation_uri)
     
     #classify streams from the flow accumulation raster
