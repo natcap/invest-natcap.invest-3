@@ -162,8 +162,8 @@ def execute(args):
     '''
 
     hra_args = {}
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
 
     hra_args['workspace_dir'] = args['workspace_dir']
 
