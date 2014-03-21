@@ -2,7 +2,7 @@
     "id": "window",
     "label": "RouteDEM",
     "targetScript": "invest_natcap.routing.routedem",
-    "modelName": "timber",
+    "modelName": "routedem",
     "localDocURI": "../documentation/routedem.html",
     "height": 800,
     "width": 700,
