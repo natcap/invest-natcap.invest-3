@@ -28,8 +28,8 @@ def execute(args):
     mz_args = {}
 
     workspace = args['workspace_dir']
-    output_dir = workspace + os.sep + 'Output'
-    inter_dir = workspace + os.sep + 'Intermediate'
+    output_dir = workspace + os.sep + 'output'
+    inter_dir = workspace + os.sep + 'intermediate'
         
     if not (os.path.exists(output_dir)):
         os.makedirs(output_dir)
