@@ -188,7 +188,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
     flow_length_nodata = -1.0
     flow_length_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
 
     flow_length_pixel_size = raster_utils.get_cell_size_from_uri(flow_length_uri)
 
@@ -202,7 +202,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
 
     cell_size = raster_utils.get_cell_size_from_uri(flow_direction_uri)
     raster_utils.vectorize_datasets(
-        [flow_direction_uri], flow_length, flow_length_uri, gdal.GDT_Float64,
+        [flow_direction_uri], flow_length, flow_length_uri, gdal.GDT_Float32,
         flow_length_nodata, cell_size, "intersection")
 
 
@@ -249,7 +249,7 @@ def pixel_amount_exported(
         return 1.0 - retention
     raster_utils.vectorize_datasets(
         [retention_rate_uri], retention_to_export, export_rate_uri,
-        gdal.GDT_Float64, nodata_retention, out_pixel_size, "intersection",
+        gdal.GDT_Float32, nodata_retention, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
     #Calculate flow direction and weights
@@ -280,7 +280,7 @@ def pixel_amount_exported(
         return source * effect * (1 - stream)
     raster_utils.vectorize_datasets(
         [source_uri, effect_uri, stream_uri], mult_nodata, pixel_export_uri,
-        gdal.GDT_Float64, nodata_source, out_pixel_size, "intersection",
+        gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
 

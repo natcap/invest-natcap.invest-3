@@ -196,19 +196,161 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     return unique_raster_values_count, transitions
 
-def generate_chart_html(cover_dict):
-    html = "\n<TABLE BORDER=1>"
-    html += "\n<TR><TD>Id</TD><TD>Before</TD><TD>After</TD></TR>"
+def generate_chart_html(cover_dict, cover_names_dict):
+    LOGGER.debug(cover_names_dict)
+    LOGGER.debug(cover_dict)
+    html = "\n<table BORDER=1>"
+    html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
     cover_id_list.sort()
+    
+    cover_id_list_chart = cover_names_dict.keys()
+    cover_id_list_chart.sort()
+    
+    pixcount = 0
+    for cover_id in cover_id_list:
+        pixcount += cover_dict[cover_id][0]
+    pixcount = float(pixcount)
 
     for cover_id in cover_id_list:
-       html += "\n<TR><TD>%i</TD><TD>%i</TD><TD>%i</TD></TR>" % (cover_id,
-                                                                 cover_dict[cover_id][0],
-                                                                 cover_dict[cover_id][1])
+    
+    
+       html += "\n<TR><td>%i</td><td>%i</td><td>%i</td></TR>" % (cover_id,
+                                                                 (cover_dict[cover_id][0] / pixcount) * 100,
+                                                                 (cover_dict[cover_id][1] / pixcount) * 100 )
+    html += "\n<table>"
 
-    html += "\n<TABLE>"
+    
+    
+    #create three charts for original, final and change
+    thecharts = [
+        ['Original',0],
+        ['Final',1],
+        ['Change',2]
+    ]
 
+    hainitial = ""
+    hainitialnegative = ""
+    hainitiallist = []
+    hafinal = ""
+    hafinalnegative = ""
+    hafinallist = []
+    hachange = ""
+    hachangelist = []
+    haall = []
+    initialcover = []
+    finalcover = []
+    
+    for cover_id in cover_id_list_chart:
+        LOGGER.debug(cover_id)
+        try:
+            initialcover.append((cover_dict[cover_id][0] / pixcount) * 100)
+        except KeyError:
+            initialcover.append(0)
+        try:
+            finalcover.append((cover_dict[cover_id][1] / pixcount) * 100)
+        except KeyError:
+            finalcover.append(0)        
+    #return html
+    html += "<script type='text/javascript' src='"+os.path.dirname(__file__)+"/jschart/jquery/js/jquery-1.6.2.min.js'></script>\n"
+    html += "<script type='text/javascript' src='"+os.path.dirname(__file__)+"/jschart/highcharts/js/highcharts.js'></script>\n"
+    html += "<style type='text/css'>"
+    html += "body {font-family: Arial, Helvetica, sans-serif; font-size: 0.9em;}"
+    html += "table#results {margin: 20px auto}"
+    html += "table#results th {text-align: left}"    
+    html += "</style>"
+    html += "<script type='text/javascript'>\n"
+    html += "var chart,\n"
+
+    categories = []
+    html += "categories = ["
+    for cover_id in cover_id_list_chart:
+        #pass
+         categories.append("'"+cover_names_dict[cover_id]+"'")
+    html += ",".join(categories)
+    html += "]\n"
+
+    html +="$(document).ready(function() {\n"
+
+    for x in initialcover:
+        hainitial = hainitial +str(x)+","
+        hainitialnegative = hainitialnegative + "0,"
+        hainitiallist.append(float(x))
+    temp = []
+    temp.append(hainitial)
+    temp.append(hainitialnegative)
+    haall.append(temp)
+
+    thecharts[0].append(max(hainitiallist))
+    thecharts[0].append(min(hainitiallist))
+
+    for x in finalcover:
+        hafinal = hafinal +str(x)+","
+        hafinalnegative = hafinalnegative + "0,"
+        hafinallist.append(float(x))
+    temp = []
+    temp.append(hafinal)
+    temp.append(hafinalnegative)
+    haall.append(temp)
+
+    thecharts[1].append(max(hafinallist))
+    thecharts[1].append(min(hafinallist))
+
+    for x in range(len(initialcover)):
+        hachange = hachange + str(float(finalcover[x]) - float(initialcover[x]))+","
+        hachangelist.append(float(finalcover[x]) - float(initialcover[x]))
+    #split the change values
+    hachangelistnegative = ""
+    hachangelistpositive = ""
+    for item in hachangelist:
+        if item < 0:
+            hachangelistnegative=hachangelistnegative+str(item)+","
+            hachangelistpositive=hachangelistpositive+"0,"
+        else:
+            hachangelistpositive=hachangelistpositive+str(item)+","
+            hachangelistnegative=hachangelistnegative+"0,"
+
+    temp = []
+
+    temp.append(hachangelistpositive)
+    temp.append(hachangelistnegative)
+    haall.append(temp)
+
+
+    thecharts[2].append(max(hachangelist))
+    thecharts[2].append(min(hachangelist))
+
+    if thecharts[0][2] > thecharts[1][2]:
+        thecharts[1][2] = thecharts[0][2]
+        thecharts[2][2] = thecharts[0][2]
+    else:
+        thecharts[0][2] = thecharts[1][2]
+        thecharts[2][2] = thecharts[1][2]
+
+    
+
+    for x in thecharts:
+        if x[0] == 'Change':
+            themin = x[3]
+        else:
+            themin = 0
+        html += "chart = new Highcharts.Chart({\n"
+        html += "chart: {renderTo: '"+x[0]+"container',defaultSeriesType: 'bar'},"
+        html += "title: {text: '"+x[0]+" Landcover'},"
+        html += "subtitle: {text: ''},"
+        html += "xAxis: [{categories: categories,reversed: false}, {opposite: true, reversed: false,categories: categories,linkedTo: 0}],"
+        html += "yAxis: {title: {text: null},labels: {formatter: function(){return Math.abs(this.value)}},min: "+str(themin)+",max: "+str(x[2])+"},"
+        html += "plotOptions: {series: { stacking: 'normal', showInLegend: false } },"
+        html += "tooltip: { formatter: function(){return '<b>'+ this.point.category +'</b><br/>'+'Area: '+ Highcharts.numberFormat(Math.abs(this.point.y), 0)+'%';}},"
+        html += "series: [{name: '',"
+        html += "data: ["+haall[x[1]][0]+"]}, {"
+        html += "name: '',"
+        html += "data: ["+haall[x[1]][1]+"]}]});\n"        
+    html += "});\n"
+    html += "</script>\n"
+
+    for x in thecharts:
+        html += "<div id='"+x[0]+"container' style='width: 800px; height: 400px; margin: 20px 0'></div>\n"
     return html
 
 def filter_fragments(input_uri, size, output_uri):
@@ -264,6 +406,18 @@ def filter_fragments(input_uri, size, output_uri):
         assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
+
+def sum_uri(dataset_uri, datasource_uri):
+    """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
+    total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
+    return total.__getitem__(total.keys().pop())
     
 def execute(args):
     ###
@@ -317,7 +471,7 @@ def execute(args):
 
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
     override_dataset_uri = os.path.join(workspace,"override.tif")
-    landcover_htm_uri = os.path.join(workspace,"landcover.htm")
+    landcover_htm_uri = os.path.join(workspace,"scenario-output-summary.html")
 
     raster_utils.create_directories([workspace])
 
@@ -917,7 +1071,7 @@ def execute(args):
 
     htm = open(landcover_htm_uri,'w')
     htm.write("<html><head><title>Scenario Generator Report</title>")
-
+    
     htm.write("<style type='text/css'>")
     htm.write("table {border-collapse: collapse; font-size: 1em;}")
     htm.write("td {padding: 10px;}")
@@ -926,7 +1080,7 @@ def execute(args):
     htm.write("</style>")
     htm.write("</head><body>")
     htm.write("<div style=''>")
-    htm.write("<h1>Output</h1>")
+    htm.write("<h1>Scenario Output Summary</h1>")
     htm.write("<h2>Initial Landscape</h2>")
     htm.write("\n<table BORDER=1>")
     initial_cover_id_list = unique_raster_values_count[landcover_uri].keys()
@@ -939,7 +1093,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
     htm.write("\n</td></tr>")
-
+    
     htm.write("\n</table>")
 
 
@@ -955,7 +1109,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
-
+    
     htm.write("\n</table>")
 
     cover_dict = {}
@@ -971,10 +1125,19 @@ def execute(args):
         cover_dict[cover_id] = (before, after)
 
     htm.write("<h2>Change Table</h2>")
-    htm.write(generate_chart_html(cover_dict))
+    
+    
+    cover_names_dict = {}
+
+    transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+    cover_names_dict = {}
+    for cover in transition_dict:
+        cover_names_dict[cover] =  transition_dict[cover]["Name"] 
+
+    htm.write(generate_chart_html(cover_dict, cover_names_dict))
 
     htm.write("<h2>Transition Matrix</h2>")
-    htm.write("\n<table BORDER=1>")
+    htm.write("\n<table BORDER=1>")    
     htm.write("\n<tr><td>ID</td><td>")
     htm.write("</td><td>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
@@ -988,18 +1151,18 @@ def execute(args):
                 htm.write("<td><FONT COLOR=lightgray>%i</FONT></td>" % 0)
 
         htm.write("\n</tr>")
-
+       
     htm.write("\n</table>")
 
     unconverted_cover_id_list = unconverted_pixels.keys()
     unconverted_cover_id_list.sort()
     if len(unconverted_cover_id_list) > 0:
-        htm.write("<h2>Unconverted Pixels</h2>")
-        htm.write("\n<table BORDER=1>")
-        htm.write("<tr><td>ID</td><td>Count</td></tr>")
-        for cover_id in unconverted_cover_id_list:
-            htm.write("<tr><td>%i</td><td>%i</td></tr>" % (cover_id, unconverted_pixels[cover_id]))
-        htm.write("\n</table>")
+       htm.write("<h2>Unconverted Pixels</h2>")
+       htm.write("\n<table BORDER=1>")
+       htm.write("<tr><td>ID</td><td>Count</td></tr>")
+       for cover_id in unconverted_cover_id_list:
+          htm.write("<tr><td>%i</td><td>%i</td></tr>" % (cover_id, unconverted_pixels[cover_id]))
+       htm.write("\n</table>")
     else:
         htm.write("<p><i>All target pixels converted.</i></p>")
     htm.write("\n</html>")
@@ -1008,14 +1171,14 @@ def execute(args):
     input_csv_list = []
 
     if args["calculate_priorities"]:
-        input_csv_list.append((args["priorities_csv_uri"], "Priorities Table"))
+       input_csv_list.append((args["priorities_csv_uri"], "Priorities Table"))
 
     if args["calculate_transition"] or args["calculate_factors"]:
         input_csv_list.append((args["transition"], "Transition Table"))
 
     if args["calculate_factors"]:
         input_csv_list.append((args["suitability"], "Factors Table"))
-
+    
     htm.write("<h1>Input Tables</h1>")
     for csv_uri, name in input_csv_list:
         table = "\n<table BORDER=1><tr><td>" + open(csv_uri).read().strip().replace(",","</td><td>").replace("\n","</td></tr><tr><td>") + "</td></tr></table>"
@@ -1024,73 +1187,149 @@ def execute(args):
         htm.write(table)
     htm.write("\n</div>\n</body>\n</html>")
     htm.close()
-    if args["calculate_es_values"]:
-        ###
-        # Calculate Ecosystem Services values for Scenarios session
-        ###
-        
-        #load returns table
-        returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
-        carbon_dict = {}
-        agric_dict = {}
-        
-        for cover in returns_dict:
-            carbon_dict[cover] = returns_dict[cover]['Carbon']
-            agric_dict[cover] = returns_dict[cover]['Agriculture']
+
     
-        #prepare output file uris
-        initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
-        initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
-        scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
-        scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
-        carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
-        agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
-        
-        #reclass landcover map by carbon_dict
-        raster_utils.reclassify_dataset_uri(landcover_uri,
-                                            carbon_dict,
-                                            initial_carbon_uri,
-                                            transition_type,
-                                            99999,
-                                            exception_flag = "values_required")
-                                            
-        #reclass scenario map by carbon_dict
-        raster_utils.reclassify_dataset_uri(scenario_uri,
-                                            carbon_dict,
-                                            scenario_carbon_uri,
-                                            transition_type,
-                                            99999,
-                                            exception_flag = "values_required")
-        #subtract carbon
-        raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
-                                        es_change_op,
-                                        carbon_change_uri,
+    
+    ######
+    # Calculate ecosystem values
+    ######
+    input_uri = os.sep.join(landcover_uri.split(os.sep)[:-1])    
+    
+    #exercise fields
+    args["returns_cover_id"] = "Cover ID"
+    args["returns_layer"] = os.path.join(input_uri,"returns.csv")   
+    ###
+    # Calculate Ecosystem Services values for Scenarios session
+    ###
+    
+    #load returns table
+    returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
+    carbon_dict = {}
+    agric_dict = {}
+    
+    for cover in returns_dict:
+        carbon_dict[cover] = returns_dict[cover]['Carbon']
+        agric_dict[cover] = returns_dict[cover]['Agriculture']
+
+    #prepare output file uris
+    initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
+    initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
+    scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
+    scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
+    carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
+    agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
+    landcover_shape_uri = os.path.join(input_uri, "extent.shp")
+    
+    #reclass landcover map by carbon_dict
+    raster_utils.reclassify_dataset_uri(landcover_uri,
+                                        carbon_dict,
+                                        initial_carbon_uri,
                                         transition_type,
-                                        change_nodata,
-                                        cell_size,
-                                        "union")
-        
-        #reclass landcover map by agric_dict
-        raster_utils.reclassify_dataset_uri(landcover_uri,
-                                            agric_dict,
-                                            initial_agriculture_uri,
-                                            transition_type,
-                                            99999,
-                                            exception_flag = "values_required")
-                                            
-        #reclass scenario map by agric_dict
-        raster_utils.reclassify_dataset_uri(scenario_uri,
-                                            agric_dict,
-                                            scenario_agriculture_uri,
-                                            transition_type,
-                                            99999,
-                                            exception_flag = "values_required")
-        #subtract agriculture
-        raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
-                                        es_change_op,
-                                        agriculture_change_uri,
+                                        99999,
+                                        exception_flag = "values_required")
+                                        
+    #reclass scenario map by carbon_dict
+    raster_utils.reclassify_dataset_uri(scenario_uri,
+                                        carbon_dict,
+                                        scenario_carbon_uri,
                                         transition_type,
-                                        change_nodata,
-                                        cell_size,
-                                        "union")
+                                        99999,
+                                        exception_flag = "values_required")
+    #subtract carbon
+    raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
+                                    es_change_op,
+                                    carbon_change_uri,
+                                    transition_type,
+                                    change_nodata,
+                                    cell_size,
+                                    "union")
+    
+    #reclass landcover map by agric_dict
+    raster_utils.reclassify_dataset_uri(landcover_uri,
+                                        agric_dict,
+                                        initial_agriculture_uri,
+                                        transition_type,
+                                        99999,
+                                        exception_flag = "values_required")
+                                        
+    #reclass scenario map by agric_dict
+    raster_utils.reclassify_dataset_uri(scenario_uri,
+                                        agric_dict,
+                                        scenario_agriculture_uri,
+                                        transition_type,
+                                        99999,
+                                        exception_flag = "values_required")
+    #subtract agriculture
+    raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
+                                    es_change_op,
+                                    agriculture_change_uri,
+                                    transition_type,
+                                    change_nodata,
+                                    cell_size,
+                                    "union")
+    
+    ######
+    # Write game summary
+    ######
+    #open file for scenario game summary
+    try:
+        gamesummary = open(os.path.join(workspace, "summary.csv"), "r")
+        summarylines = gamesummary.readlines()
+        runcount = []
+        for line in summarylines:
+            if 'Scenario Run #' in line:
+                runcount.append(line.replace("\n","")[14:])
+        new_run_number = int(max(runcount)) + 1
+        gamesummary.close()
+    except:
+        new_run_number = 1
+    
+    gamesummary = open(os.path.join(workspace, "summary.csv"),'a')
+    gamesummary.write("###########################################################\n\n")
+    gamesummary.write("Scenario Run #"+str(new_run_number)+"\n\n")
+    gamesummary.write("Inputs\n\n")
+    
+    
+    if args["calculate_constraints"]:    
+        datasource = ogr.Open(constraints_uri)
+        layer = datasource.GetLayer()
+        for feature in layer:
+             id = feature.GetField("porosity")
+             gamesummary.write("Porosity:,"+str(id)+"\n")
+
+    if args["calculate_transition"]:
+        transitionfile = open(args["transition"])
+        lines = transitionfile.readlines()        
+        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+        cover_names_dict = {}
+        for cover in transition_dict:
+            cover_names_dict[cover] =  transition_dict[cover]["Name"]     
+        gamesummary.write("Target cover,Source, Percent Change\n")
+        for cover in transition_dict:
+            if transition_dict[cover]["Percent Change"] > 0:
+                target = ""
+                for contributingcover in transition_dict:
+                    if transition_dict[contributingcover][str(cover)] > 0:
+                        target += cover_names_dict[contributingcover] + ";"
+                gamesummary.write(transition_dict[cover]["Name"]+","+str(target)+","+\
+                str(transition_dict[cover]["Percent Change"])+"\n")
+        transitionfile.close()        
+    
+    gamesummary.write("\n**********************************************************\n\n")
+    gamesummary.write("Outputs\n\n")
+    gamesummary.write("Total amount of ES in each map \n\n")
+    gamesummary.write(",Carbon,Food\n")
+    gamesummary.write("Current LULC,"+str(sum_uri(initial_carbon_uri, landcover_shape_uri))+","+\
+    str(sum_uri(initial_agriculture_uri, landcover_shape_uri))+"\n")
+    gamesummary.write("Scenario LULC,"+str(sum_uri(scenario_carbon_uri, landcover_shape_uri))+","+\
+    str(sum_uri(scenario_agriculture_uri, landcover_shape_uri))+"\n")
+    gamesummary.write("Score,"+str(\
+    sum_uri(scenario_carbon_uri, landcover_shape_uri)+\
+    sum_uri(scenario_agriculture_uri, landcover_shape_uri)-\
+    sum_uri(initial_carbon_uri, landcover_shape_uri)-\
+    sum_uri(initial_agriculture_uri, landcover_shape_uri)\
+    ))
+    gamesummary.write("\n\n")
+    
+    gamesummary.close()
 

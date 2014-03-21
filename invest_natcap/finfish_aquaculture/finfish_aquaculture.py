@@ -55,7 +55,7 @@ def execute(args):
     ff_aqua_args = {}
     
     workspace = args['workspace_dir']
-    output_dir = workspace + os.sep + 'Output'
+    output_dir = workspace + os.sep + 'output'
 
     if not (os.path.exists(output_dir)):
         LOGGER.debug('Creating output directory')

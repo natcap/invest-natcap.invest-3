@@ -99,7 +99,7 @@ packages = ['invest_natcap',
             'invest_natcap.coastal_vulnerability',
             'invest_natcap.overlap_analysis',
             'invest_natcap.wind_energy',
-            'invest_natcap.aesthetic_quality',
+            'invest_natcap.scenic_quality',
             'invest_natcap.habitat_risk_assessment',
             'invest_natcap.report_generation',
             'invest_natcap.routing',
@@ -169,7 +169,9 @@ if platform.system() == 'Windows':
          'invest_blue_carbon_preprocessor.py',
          'invest_test_all.py',
          'invest_scenario_generator.py',
-         'invest_aesthetic_quality.py']
+         'invest_scenic_quality.py',
+         'routedem.py',
+         ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
 
@@ -265,8 +267,8 @@ setup(name='invest_natcap',
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES),
-                   Extension(name="aesthetic_quality_cython_core",
-                             sources = ['invest_natcap/aesthetic_quality/aesthetic_quality_cython_core.pyx']),
+                   Extension(name="scenic_quality_cython_core",
+                             sources = ['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
                    Extension(name="raster_cython_utils",
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
                              language="c++"),

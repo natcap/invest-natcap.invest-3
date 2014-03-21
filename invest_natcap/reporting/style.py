@@ -8,7 +8,6 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.wkb import loads
 from matplotlib import pyplot
-from kartograph import Kartograph
 
 from invest_natcap import raster_utils
 
@@ -109,119 +108,119 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
-def shape_to_svg(shape_in_uri, image_out_uri, css_uri, args):
-    """Create a svg file from and OGR shapefile
+#def shape_to_svg(shape_in_uri, image_out_uri, css_uri, args):
+#   """Create a svg file from and OGR shapefile
 
-        shape_in_uri - a URI to the OGR shapefile to convert to an svg
-        image_out_uri - a URI path to save SVG to disk
-        css_uri - a URI to a CSS file for styling
-        args - a Dictionary with the following parameters used in creating the svg configuration:
-            size - a Tuple for width, height in pixels
-            field_id - a String for an attribute in 'source_uri' for the
-                unique field for the shapefile
-            key_id - the unique field for the shapefile
-            proj_type - a String for how the image projection should be interpreted
+#       shape_in_uri - a URI to the OGR shapefile to convert to an svg
+#       image_out_uri - a URI path to save SVG to disk
+#       css_uri - a URI to a CSS file for styling
+#       args - a Dictionary with the following parameters used in creating the svg configuration:
+#           size - a Tuple for width, height in pixels
+#           field_id - a String for an attribute in 'source_uri' for the
+#               unique field for the shapefile
+#           key_id - the unique field for the shapefile
+#           proj_type - a String for how the image projection should be interpreted
 
-        returns - Nothing
-    """
+#       returns - Nothing
+#   """
 
-    if os.path.isfile(image_out_uri):
-        os.remove(image_out_uri)
-    base_dir = os.path.dirname(image_out_uri)
+#   if os.path.isfile(image_out_uri):
+#       os.remove(image_out_uri)
+#   base_dir = os.path.dirname(image_out_uri)
 
-    # Copy the datasource to make some preprocessing adjustments
-    shape_copy_uri = os.path.join(base_dir, 'tmp_shp_copy.shp')
+#   # Copy the datasource to make some preprocessing adjustments
+#   shape_copy_uri = os.path.join(base_dir, 'tmp_shp_copy.shp')
 
-    def remove_shapefile(shape_uri):
-        drv = ogr.GetDriverByName("ESRI Shapefile")
-        drv.DeleteDataSource(shape_uri)
-        drv = None
+#   def remove_shapefile(shape_uri):
+#       drv = ogr.GetDriverByName("ESRI Shapefile")
+#       drv.DeleteDataSource(shape_uri)
+#       drv = None
 
-    def convert_ogr_fields_to_strings(orig_shape_uri, shape_copy_uri):
-        """Converts an OGR Shapefile's fields to String values by
-            creating a new OGR Shapefile, building it from the
-            originals definitions
+#   def convert_ogr_fields_to_strings(orig_shape_uri, shape_copy_uri):
+#       """Converts an OGR Shapefile's fields to String values by
+#           creating a new OGR Shapefile, building it from the
+#           originals definitions
 
-            orig_shape_uri -
+#           orig_shape_uri -
 
-            shape_copy_uri -
+#           shape_copy_uri -
 
-            returns - nothing"""
+#           returns - nothing"""
 
-        orig_shape = ogr.Open(orig_shape_uri)
-        orig_layer = orig_shape.GetLayer()
+#       orig_shape = ogr.Open(orig_shape_uri)
+#       orig_layer = orig_shape.GetLayer()
 
-        if os.path.isfile(shape_copy_uri):
-            remove_shapefile(shape_copy_uri)
+#       if os.path.isfile(shape_copy_uri):
+#           remove_shapefile(shape_copy_uri)
 
-        out_driver = ogr.GetDriverByName('ESRI Shapefile')
-        out_ds = out_driver.CreateDataSource(shape_copy_uri)
-        orig_layer_dfn = orig_layer.GetLayerDefn()
-        out_layer = out_ds.CreateLayer(
-            orig_layer_dfn.GetName(), orig_layer.GetSpatialRef(),
-            orig_layer_dfn.GetGeomType())
+#       out_driver = ogr.GetDriverByName('ESRI Shapefile')
+#       out_ds = out_driver.CreateDataSource(shape_copy_uri)
+#       orig_layer_dfn = orig_layer.GetLayerDefn()
+#       out_layer = out_ds.CreateLayer(
+#           orig_layer_dfn.GetName(), orig_layer.GetSpatialRef(),
+#           orig_layer_dfn.GetGeomType())
 
-        orig_field_count = orig_layer_dfn.GetFieldCount()
+#       orig_field_count = orig_layer_dfn.GetFieldCount()
 
-        for fld_index in range(orig_field_count):
-            orig_field = orig_layer_dfn.GetFieldDefn(fld_index)
-            out_field = ogr.FieldDefn(orig_field.GetName(), ogr.OFTString)
-            out_layer.CreateField(out_field)
+#       for fld_index in range(orig_field_count):
+#           orig_field = orig_layer_dfn.GetFieldDefn(fld_index)
+#           out_field = ogr.FieldDefn(orig_field.GetName(), ogr.OFTString)
+#           out_layer.CreateField(out_field)
 
-        for orig_feat in orig_layer:
-            out_feat = ogr.Feature(feature_def = out_layer.GetLayerDefn())
-            geom = orig_feat.GetGeometryRef()
-            out_feat.SetGeometry(geom)
+#       for orig_feat in orig_layer:
+#           out_feat = ogr.Feature(feature_def = out_layer.GetLayerDefn())
+#           geom = orig_feat.GetGeometryRef()
+#           out_feat.SetGeometry(geom)
 
-            for fld_index in range(orig_field_count):
-                field = orig_feat.GetField(fld_index)
-                out_feat.SetField(fld_index, str(field))
+#           for fld_index in range(orig_field_count):
+#               field = orig_feat.GetField(fld_index)
+#               out_feat.SetField(fld_index, str(field))
 
-            out_layer.CreateFeature(out_feat)
-            out_feat = None
+#           out_layer.CreateFeature(out_feat)
+#           out_feat = None
 
-    convert_ogr_fields_to_strings(shape_in_uri, shape_copy_uri)
+#   convert_ogr_fields_to_strings(shape_in_uri, shape_copy_uri)
 
-    aoi_sr = raster_utils.get_spatial_ref_uri(shape_copy_uri)
-    aoi_wkt = aoi_sr.ExportToWkt()
+#   aoi_sr = raster_utils.get_spatial_ref_uri(shape_copy_uri)
+#   aoi_wkt = aoi_sr.ExportToWkt()
 
-    wkt_file = open('../test/invest-data/test/data/style_data/wkt_file.txt', 'wb')
-    wkt_file.write(aoi_wkt)
-    wkt_file.close()
+#   wkt_file = open('../test/invest-data/test/data/style_data/wkt_file.txt', 'wb')
+#   wkt_file.write(aoi_wkt)
+#   wkt_file.close()
 
-    # Get the Well Known Text of the shapefile
-    wgs84_sr = osr.SpatialReference()
-    wgs84_sr.SetWellKnownGeogCS("WGS84")
-    wgs84_wkt = wgs84_sr.ExportToWkt()
+#   # Get the Well Known Text of the shapefile
+#   wgs84_sr = osr.SpatialReference()
+#   wgs84_sr.SetWellKnownGeogCS("WGS84")
+#   wgs84_wkt = wgs84_sr.ExportToWkt()
 
-    # NOTE: I think that kartograph is supposed to do the projection
-    # adjustment on the fly but it does not seem to be working for
-    # me.
+#   # NOTE: I think that kartograph is supposed to do the projection
+#   # adjustment on the fly but it does not seem to be working for
+#   # me.
 
-    # Reproject the AOI to the spatial reference of the shapefile so that the
-    # AOI can be used to clip the shapefile properly
-    tmp_uri = os.path.join(base_dir, 'tmp_shp_proj.shp')
-    raster_utils.reproject_datasource_uri(
-            shape_copy_uri, wgs84_wkt, tmp_uri)
+#   # Reproject the AOI to the spatial reference of the shapefile so that the
+#   # AOI can be used to clip the shapefile properly
+#   tmp_uri = os.path.join(base_dir, 'tmp_shp_proj.shp')
+#   raster_utils.reproject_datasource_uri(
+#           shape_copy_uri, wgs84_wkt, tmp_uri)
 
-    css = open(css_uri).read()
+#   css = open(css_uri).read()
 
-    kart = Kartograph()
+#   kart = Kartograph()
 
-    config = {"layers":
-                {"mylayer":
-                    {"src":tmp_uri,
-                     "simplify": 1,
-                     "labeling": {"key": args['field_id']},
-                     "attributes":[args['key_id']]}
-                 },
-              "proj":{"id": args['proj_type']},
-              "export":{"width":args['size'][0], "height": args['size'][1]}
-              }
+#   config = {"layers":
+#               {"mylayer":
+#                   {"src":tmp_uri,
+#                    "simplify": 1,
+#                    "labeling": {"key": args['field_id']},
+#                    "attributes":[args['key_id']]}
+#                },
+#             "proj":{"id": args['proj_type']},
+#             "export":{"width":args['size'][0], "height": args['size'][1]}
+#             }
 
-    kart.generate(config, outfile=image_out_uri, stylesheet=css)
+#   kart.generate(config, outfile=image_out_uri, stylesheet=css)
 
-    remove_shapefile(shape_copy_uri)
-    remove_shapefile(tmp_uri)
+#   remove_shapefile(shape_copy_uri)
+#   remove_shapefile(tmp_uri)
 
 

@@ -11,13 +11,13 @@ from osgeo import ogr
 from osgeo import osr
 
 from invest_natcap import raster_utils
-from invest_natcap.aesthetic_quality import aesthetic_quality_core
+from invest_natcap.scenic_quality import scenic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('aesthetic_quality')
+LOGGER = logging.getLogger('scenic_quality')
 
 def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     """A URI wrapper for reproject dataset that opens the original_dataset_uri
@@ -187,7 +187,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
     # default parameter values that are not passed to this function but that
-    # aesthetic_quality_core.viewshed needs
+    # scenic_quality_core.viewshed needs
     obs_elev = 1.0 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
@@ -324,15 +324,15 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        tmp_visibility_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
-        aesthetic_quality_core.viewshed(input_array, cell_size, \
+        scenic_quality_core.viewshed(input_array, cell_size, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
-        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        tmp_distance_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'distance_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_distance_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
@@ -340,7 +340,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+        tmp_viewshed_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
@@ -349,7 +349,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
 
         # Multiply the viewshed by its coefficient
-        scaled_viewshed_uri = os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        scaled_viewshed_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
         apply_coefficient = multiply(coefficient)
         raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
@@ -423,7 +423,7 @@ def get_count_feature_set_uri(fs_uri):
     
 def execute(args):
     """DOCSTRING"""
-    LOGGER.info("Start Aesthetic Quality Model")
+    LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
     aq_args=args.copy()
@@ -438,6 +438,10 @@ def execute(args):
     else:
         aq_args['cell_size'] = dem_cell_size
 
+    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
+    if not os.path.isdir(intermediate_dir):
+        os.makedirs(intermediate_dir)
+
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -448,18 +452,18 @@ def execute(args):
     curvature_correction=aq_args['refraction']
 
     #intermediate files
-    aoi_dem_uri=os.path.join(output_dir,"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(output_dir,"aoi_pop.shp")
+    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
 
-    viewshed_dem_uri=os.path.join(output_dir,"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(output_dir,"dem_vs_re.tif")
+    viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
 
-    pop_clip_uri=os.path.join(output_dir,"pop_clip.tif")
-    pop_prj_uri=os.path.join(output_dir,"pop_prj.tif")
-    pop_vs_uri=os.path.join(output_dir,"pop_vs.tif")
+    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
+    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
+    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
 
-    viewshed_reclass_uri=os.path.join(output_dir,"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(output_dir,"vshed.shp")
+    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
 
     #outputs
     viewshed_uri=os.path.join(output_dir,"vshed.tif")
@@ -603,7 +607,7 @@ def execute(args):
         table="""
         <html>
         <title>Marine InVEST</title>
-        <center><H1>Aesthetic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
+        <center><H1>Scenic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
         <br><br><HR><br>
         <H2>Population Statistics</H2>
 

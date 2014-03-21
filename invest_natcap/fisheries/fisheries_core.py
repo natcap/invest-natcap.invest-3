@@ -76,8 +76,8 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
     LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
@@ -157,7 +157,7 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
                 #Want to skip the heading at the beginning of stage_line, so 
                 #using i+1, since area_line won't count it.
                 stage = stage_line[i+1]
-                line.append(cycle_dict[cycle][area][stage])
+                line.append("%.2f" % cycle_dict[cycle][area][stage])
 
             c_writer.writerow(line)
 
@@ -181,9 +181,9 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         final_cycle = hrv_dict[num_cycles-1]
         for area in final_cycle:
             if area != 'Cycle_Total':
-                line = [area, final_cycle[area]]
+                line = [area, "%.2f" % final_cycle[area]]
                 if val_var is not None:
-                    line.append(val_var[area])
+                    line.append("%.2f" % val_var[area])
                 
                     c_writer.writerow(line)
                     
@@ -197,7 +197,7 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         for cycle, inner_dict in hrv_dict.items():
             
             line = [cycle]
-            line.append(inner_dict['Cycle_Total'])
+            line.append("%.2f" % inner_dict['Cycle_Total'])
 
             if cycle == equil_pt: 
                 line.append('Y')
@@ -244,8 +244,8 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
         if area != 'Cycle_Total':
             inner_dict = {}
             inner_dict['Subregion'] = area
-            inner_dict['Harvest'] = final_cycle[area]
-            inner_dict['Value'] = '-' if val_var is None else val_var[area]
+            inner_dict['Harvest'] = "%.2f" % final_cycle[area]
+            inner_dict['Value'] = '-' if val_var is None else "%.2f" % val_var[area]
     
             t_body.append(inner_dict)
 
@@ -268,7 +268,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     for cycle in hrv_dict:
         inner_dict = {}
         inner_dict['Cycle'] = cycle
-        inner_dict['Harvest'] = hrv_dict[cycle]['Cycle_Total']
+        inner_dict['Harvest'] = "%.2f" % hrv_dict[cycle]['Cycle_Total']
 
         if cycle == equil_pt: 
             inner_dict['Equilibrated?'] = 'Y'
@@ -339,10 +339,10 @@ def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
         #Since we now know for sure there will be a name attribute lower case,
         #can just call it directly.
         subregion_name = feature.items()['name']
-        feature.SetField('Hrv_Total', final_cycle[subregion_name])
+        feature.SetField('Hrv_Total', "%.2f" % final_cycle[subregion_name])
 
         if val_dict is not None:
-            feature.SetField('Val_Total', val_dict[subregion_name])
+            feature.SetField('Val_Total', "%.2f" % val_dict[subregion_name])
 
         layer.SetFeature(feature)
 

@@ -102,12 +102,14 @@ def execute(args):
     core_args = {}
 
     #Create folders that will be used for the rest of the model run.
-    out_dir = os.path.join(args['workspace_dir'], 'Output')
+    out_dir = os.path.join(args['workspace_dir'], 'output')
+    inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
+    for folder in [out_dir, inter_dir]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
 
-    os.makedirs(out_dir)
+        os.makedirs(folder)
     
     #Do all error checking for the different recruitment equations, since
     #we can't continue if we don't have data.
@@ -135,7 +137,7 @@ def execute(args):
     #parameter as a lower case. This will be used in core when we write harvest
     #and valuation results to it.
     aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
-    cp_aoi_uri = os.path.join(args['workspace_dir'], 'Output', aoi_basename + '_Results.shp')
+    cp_aoi_uri = os.path.join(args['workspace_dir'], 'output', aoi_basename + '_Results.shp')
     raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
 
     #pop the first feature to determine what the 'name' attribute is called,

@@ -1299,7 +1299,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
 
 
 def execute(args):
-    """Entry point for aesthetic quality core computation.
+    """Entry point for scenic quality core computation.
     
         Inputs:
         

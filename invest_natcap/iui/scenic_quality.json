@@ -1,14 +1,14 @@
 {
     "id" : "window",
-    "label": "Aesthetic Quality",
-    "targetScript" : "invest_natcap.aesthetic_quality.aesthetic_quality",
-    "modelName" : "aesthetic_quality",
-    "localDocURI": "../documentation/aesthetic_quality.html",
+    "label": "Scenic Quality",
+    "targetScript" : "invest_natcap.scenic_quality.scenic_quality",
+    "modelName" : "scenic_quality",
+    "localDocURI": "../documentation/scenic_quality.html",
     "height": 600,
     "width" : 700,
     "elements": [
                 {
-                "id": "aesthetic_quality_tab_group",
+                "id": "scenic_quality_tab_group",
                 "type": "tabbedGroup",
                 "elements": 
                 [
@@ -28,7 +28,7 @@
                                 "args_id" : "workspace_dir",
                                 "type": "folder",
                                 "label": "Workspace",
-				"defaultValue": "../AestheticQuality",
+				"defaultValue": "../ScenicQuality",
                                 "required": true,
                                 "helpText": "Results will be saved to this location." 
                             },
@@ -37,7 +37,7 @@
                                 "args_id" : "aoi_uri",
                                 "type": "file",
                                 "label": "Area of Interest",
-                                "defaultValue": "../AestheticQuality/Input/AOI_WCVI.shp",
+                                "defaultValue": "../ScenicQuality/Input/AOI_WCVI.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": true,
                                 "helpText": "This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
@@ -58,11 +58,11 @@
                                 "id" : "structure_uri",
                                 "args_id" : "structure_uri",
                                 "type": "file",
-                                "label": "Features impacting Aesthetic Quality",
-                                "defaultValue": "../AestheticQuality/Input/AquaWEM_points.shp",
+                                "label": "Features impacting Scenic Quality",
+                                "defaultValue": "../ScenicQuality/Input/AquaWEM_points.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": true,
-                                "helpText": "The user must specify a point feature layer that indicates locations of objects that contribute to negative aesthetic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
+                                "helpText": "The user must specify a point feature layer that indicates locations of objects that contribute to negative scenic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
                             },
                             {
                                 "id" : "dem_uri",
@@ -72,7 +72,7 @@
                                 "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
                                 "validateAs": {"type": "GDAL"},
                                 "required": true,
-                                "helpText": "An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible."
+                                "helpText": "An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
                             },                                
                             {
                                 "id" : "refraction",
@@ -94,18 +94,18 @@
                                 "validateAs": {"type": "GDAL"},
                                 "required": false,
                                 "returns": {"ifEmpty":"pass"},
-                                "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative aesthetic quality are visible and not visible."
+                                "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative scenic quality are visible and not visible."
                             },
                             {
                                 "id" : "overlap_uri",
                                 "args_id" : "overlap_uri",
                                 "type": "file",
                                 "label": "Overlap Analysis Features",
-                                "defaultValue": "../AestheticQuality/Input/BC_parks.shp",
+                                "defaultValue": "../ScenicQuality/Input/BC_parks.shp",
                                 "validateAs": {"type": "OGR"},
                                 "required": false,
                                 "returns": {"ifEmpty":"pass"},
-                                "helpText": "The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting aesthetic quality."
+                                "helpText": "The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting scenic quality."
                             }
                             ]
                         }
