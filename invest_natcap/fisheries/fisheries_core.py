@@ -157,7 +157,7 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
                 #Want to skip the heading at the beginning of stage_line, so 
                 #using i+1, since area_line won't count it.
                 stage = stage_line[i+1]
-                line.append(cycle_dict[cycle][area][stage])
+                line.append("%.2f" % cycle_dict[cycle][area][stage])
 
             c_writer.writerow(line)
 
@@ -181,9 +181,9 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         final_cycle = hrv_dict[num_cycles-1]
         for area in final_cycle:
             if area != 'Cycle_Total':
-                line = [area, final_cycle[area]]
+                line = [area, "%.2f" % final_cycle[area]]
                 if val_var is not None:
-                    line.append(val_var[area])
+                    line.append("%.2f" % val_var[area])
                 
                     c_writer.writerow(line)
                     
