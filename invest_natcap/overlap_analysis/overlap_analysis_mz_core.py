@@ -38,7 +38,7 @@ def execute(args):
 
      Returns nothing.'''
 
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
 
     #Want to run through all polygons in the AOI, and see if any intersect or
     #contain all shapefiles from all other layers. Little bit gnarly in terms 

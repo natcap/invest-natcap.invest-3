@@ -32,7 +32,7 @@ def execute(args):
             args['timber_shape_uri'].encode(filesystemencoding), 1)
 
     #Add the Output directory onto the given workspace
-    workspace_dir = args['workspace_dir'] + os.sep + 'Output/'
+    workspace_dir = args['workspace_dir'] + os.sep + 'output/'
     if not os.path.isdir(workspace_dir):
         os.makedirs(workspace_dir)
 

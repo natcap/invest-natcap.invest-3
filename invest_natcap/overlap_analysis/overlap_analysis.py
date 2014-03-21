@@ -59,8 +59,8 @@ def execute(args):
     Returns nothing.'''
 
     workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'Output')
-    intermediate_dir = os.path.join(workspace, 'Intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
     raster_utils.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
@@ -237,7 +237,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
             args['over_layer_dict']. Each raster file shows the presence or
             absence of the activity that it represents.
     Output:
-        A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
+        A raster file named ['workspace_dir']/output/hu_freq.tif. This depicts the 
         unweighted frequency of activity within a gridded area or management
         zone.
 
