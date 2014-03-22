@@ -2573,7 +2573,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s.py' % model_name, filter = QtCore.QString('Python file' +
+                '%s_parameters.py' % model_name, filter = QtCore.QString('Python file' +
                 ' (*.py);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':
@@ -2596,9 +2596,12 @@ class ExecRoot(Root):
                     return emb_ptr
 
     def save_parameters_to_file(self):
+        model = self.attributes['targetScript']
+        model_name = model.split('.')[-1]
+
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
-            ' (*.rios);;All files (*.* *)'))
+            '%s_parameters.json' % model_name, filter = QtCore.QString('InVEST Parameter file' +
+            ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
             save_handler = fileio.JSONHandler(filename)
@@ -2609,8 +2612,8 @@ class ExecRoot(Root):
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
-            filter = QtCore.QString('RIOS Lastrun file' +
-            ' (*.rios);;All files (*.* *)'))
+            filter = QtCore.QString('InVEST Parameter file' +
+            ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
             load_handler = fileio.JSONHandler(filename)
