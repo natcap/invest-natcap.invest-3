@@ -80,7 +80,7 @@
                     "id" : "threshold_flow_accumulation_upper",
                     "args_id" : "threshold_flow_accumulation_upper",
                     "type": "text",
-                    "label": "Threshold Flow Accumulation",
+                    "label": "Threshold Flow Accumulation Upper Limit",
                     "defaultValue": "2000",
                     "required": true,
                     "validText": "^[0-9]+$",
