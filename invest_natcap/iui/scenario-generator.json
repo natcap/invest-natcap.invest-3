@@ -78,7 +78,7 @@
                     "type": "checkbox",
                     "label": "Calculate ecosystem points",
                     "defaultValue": false,
-                    "helpText": "This option enables calculation of simple points for illustrating scenarios. It is till under development."
+                    "helpText": "This option enables calculation of simple points for illustrating scenarios. It is still under development."
                 }
             ]
         },
