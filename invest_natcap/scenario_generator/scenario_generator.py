@@ -197,8 +197,6 @@ def get_transition_set_count_from_uri(dataset_uri_list):
     return unique_raster_values_count, transitions
 
 def generate_chart_html(cover_dict, cover_names_dict):
-    LOGGER.debug(cover_names_dict)
-    LOGGER.debug(cover_dict)
     html = "\n<table BORDER=1>"
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
@@ -242,7 +240,6 @@ def generate_chart_html(cover_dict, cover_names_dict):
     finalcover = []
     
     for cover_id in cover_id_list_chart:
-        LOGGER.debug(cover_id)
         try:
             initialcover.append((cover_dict[cover_id][0] / pixcount) * 100)
         except KeyError:
@@ -1193,13 +1190,12 @@ def execute(args):
         ######
         # Calculate ecosystem values
         ######
-        input_uri = os.sep.join(landcover_uri.split(os.sep)[:-1])    
+        input_uri = os.path.abspath(os.path.join(landcover_uri, os.pardir))    
         
         #exercise fields
         args["returns_cover_id"] = "Cover ID"
-        args["returns_layer"] = os.path.join(input_uri,"returns.csv")  
-        LOGGER.debug("Nasser") 
-        LOGGER.debug(args["returns_layer"])
+        args["returns_layer"] = os.path.join(input_uri,"returns.csv")
+        
         ###
         # Calculate Ecosystem Services values for Scenarios session
         ###
@@ -1211,7 +1207,7 @@ def execute(args):
         
         for cover in returns_dict:
             carbon_dict[cover] = returns_dict[cover]['Carbon']
-            agric_dict[cover] = returns_dict[cover]['Agriculture']
+            agric_dict[cover] = returns_dict[cover]['Food']
     
         #prepare output file uris
         initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
