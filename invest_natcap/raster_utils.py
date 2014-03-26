@@ -607,7 +607,7 @@ def aggregate_raster_values_uri(
             associated with ints; if None dictionary returns a value over
             the entire shapefile region that intersects the raster.
         ignore_nodata - (optional) if operation == 'mean' then it does not
-            account for nodata pixels when determing the pixel_mean, otherwise
+            account for nodata pixels when determining the pixel_mean, otherwise
             all pixels in the AOI are used for calculation of the mean.  This
             does not affect hectare_mean which is calculated from the
             geometrical area of the feature.
@@ -755,7 +755,7 @@ def aggregate_raster_values_uri(
             aggregate_dict_values[attribute_id] += numpy.sum(
                 masked_values_nodata_removed)
 
-    #Initalize the dictionary to have an n_pixels field that contains the
+    #Initialize the dictionary to have an n_pixels field that contains the
     #counts of all the pixels used in the calculation.
     AggregatedValues = collections.namedtuple(
         'AggregatedValues',
