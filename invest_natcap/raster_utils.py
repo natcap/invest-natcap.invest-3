@@ -651,6 +651,10 @@ def aggregate_raster_values_uri(
 
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
+    rasterize_layer_args = {
+        'options': ['ALL_TOUCHED=TRUE'],
+    }
+    
     if shapefile_field is not None:
         LOGGER.debug('Looking up field %s', shapefile_field)
 
@@ -666,18 +670,15 @@ def aggregate_raster_values_uri(
             raise TypeError(
                 'Can only aggreggate by integer based fields, requested '
                 'field is of type  %s' % fd.GetTypeName())
-
-        gdal.RasterizeLayer(
-            mask_dataset, [1], shapefile_layer,
-            options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
+        rasterize_layer_args['options'].append(
+            'ATTRIBUTE=%s' % shapefile_field)
     else:
-        #The 9999 is a classic int32 value that is unlikely to be a nodata
-        #value.  Call me at 315-262-4786 if there is ever a collision; I'll
-        #want to know.
-        global_id_value = 9999
-        gdal.RasterizeLayer(
-            mask_dataset, [1], shapefile_layer, burn_values=[global_id_value],
-            options=['ALL_TOUCHED=TRUE'])
+        #Using 9999 here just because it's not the nodata_value for mask_dataset 
+        #above
+        rasterize_layer_args['burn_values'] = [9999]
+    
+    gdal.RasterizeLayer(
+        mask_dataset, [1], shapefile_layer, **rasterize_layer_args)
 
     #get feature areas
     num_features = shapefile_layer.GetFeatureCount()
