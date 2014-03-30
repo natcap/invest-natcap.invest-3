@@ -73,14 +73,12 @@ for poly_index in range(shapefile_layer.GetFeatureCount()):
     gdal.RasterizeLayer(
         mask_ds, [1], layer, burn_values=[1],
         options=['ALL_TOUCHED=TRUE'])
-    
+    #done with that rasterize, remove it
     layer.DeleteFeature(feat.GetFID())
     
+#Clean up temporary files
 gdal.Dataset.__swig_destroy__(mask_ds)
 ogr.DataSource.__swig_destroy__(layer_datasouce)
-#feat = geom = None  # destroy these
-# Save and close everything
-#ds = layer = feat = geom = None
     
 for x in [mask_uri, layer_dir]:
     try:
