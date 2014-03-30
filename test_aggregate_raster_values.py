@@ -45,11 +45,13 @@ layer = layer_datasouce.CreateLayer('layer_out', spat_ref, ogr.wkbPolygon)
 layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
 # Add one feature
 layer_definition = layer.GetLayerDefn()
-#values = raster_utils.aggregate_raster_values_uri(
-#    raster_uri, shapefile_uri, shapefile_field='subws_id',
-#    ignore_nodata=True, threshold_amount_lookup=None,
-#    ignore_value_list=[], process_pool=None)
 
+values = raster_utils.aggregate_raster_values_uri(
+    raster_uri, shapefile_uri, shapefile_field='subws_id',
+    ignore_nodata=True, threshold_amount_lookup=None,
+    ignore_value_list=[], process_pool=None)
+print values
+    
 poly_list = []
 for poly_index in range(shapefile_layer.GetFeatureCount()):
     print 'looping'
