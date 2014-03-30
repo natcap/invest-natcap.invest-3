@@ -24,9 +24,11 @@ import scipy.interpolate
 import scipy.sparse
 import scipy.signal
 import scipy.ndimage
+import shapely.wkt
+import shapely.ops
+from shapely import speedups
 
 import raster_cython_utils
-
 from invest_natcap.invest_core import fileio
 
 GDAL_TO_NUMPY_TYPE = {
@@ -677,87 +679,9 @@ def aggregate_raster_values_uri(
         #above
         rasterize_layer_args['burn_values'] = [9999]
     
-    gdal.RasterizeLayer(
-        mask_dataset, [1], shapefile_layer, **rasterize_layer_args)
-
-    #get feature areas
-    num_features = shapefile_layer.GetFeatureCount()
-    feature_areas = collections.defaultdict(int)
-    for index in xrange(num_features):
-        feature = shapefile_layer.GetFeature(index)
-        geom = feature.GetGeometryRef()
-        if shapefile_field is not None:
-            feature_id = feature.GetField(shapefile_field)
-            feature_areas[feature_id] = geom.GetArea()
-        else:
-            feature_areas[global_id_value] += geom.GetArea()
-    geom = None
-
-    mask_dataset.FlushCache()
-    mask_band = mask_dataset.GetRasterBand(1)
-
-    #This will store the sum/count with index of shapefile attribute
-    if shapefile_field is not None:
-        shapefile_table = extract_datasource_table_by_key(
-            shapefile_uri, shapefile_field)
-    else:
-        shapefile_table = {global_id_value: 0.0}
-    
-    #Initialize these dictionaries to have the shapefile fields in the original
-    #datasource even if we don't pick up a value later
-    aggregate_dict_values = dict(
-        [(shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
-    aggregate_dict_counts = aggregate_dict_values.copy()
-
-    #Loop over each row in out_band
-    clipped_band = clipped_raster.GetRasterBand(1)
-    pixel_min_dict = dict(
-        [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
-    pixel_max_dict = pixel_min_dict.copy()
-    for row_index in range(clipped_band.YSize):
-        mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
-        clipped_array = clipped_band.ReadAsArray(
-            0, row_index, clipped_band.XSize, 1)
-
-        for attribute_id in numpy.unique(mask_array):
-            #ignore masked values
-            if attribute_id == mask_nodata:
-                continue
-
-            #Only consider values which lie in the polygon for attribute_id
-            masked_values = clipped_array[mask_array == attribute_id]
-            #Remove the nodata and ignore values for later processing
-            masked_values_nodata_removed = (
-                masked_values[~numpy.in1d(masked_values, [raster_nodata] + 
-                ignore_value_list).reshape(masked_values.shape)])
-    
-            #Find the min and max which might not yet be calculated
-            if masked_values_nodata_removed.size > 0:
-                if pixel_min_dict[attribute_id] is None:
-                    pixel_min_dict[attribute_id] = numpy.min(
-                        masked_values_nodata_removed)
-                    pixel_max_dict[attribute_id] = numpy.max(
-                        masked_values_nodata_removed)
-                else:
-                    pixel_min_dict[attribute_id] = min(
-                        pixel_min_dict[attribute_id],
-                        numpy.min(masked_values_nodata_removed))
-                    pixel_max_dict[attribute_id] = max(
-                        pixel_max_dict[attribute_id],
-                        numpy.max(masked_values_nodata_removed))
-
-            if ignore_nodata:
-                #Only consider values which are not nodata values
-                aggregate_dict_counts[attribute_id] += (
-                    masked_values_nodata_removed.size)
-            else:
-                aggregate_dict_counts[attribute_id] += masked_values.size
-
-            aggregate_dict_values[attribute_id] += numpy.sum(
-                masked_values_nodata_removed)
-
-    #Initialize the dictionary to have an n_pixels field that contains the
-    #counts of all the pixels used in the calculation.
+    #loop over the subset of feature layers and rasterize/aggregate each one
+    aggregate_dict_values = {}
+    aggregate_dict_counts = {}
     AggregatedValues = collections.namedtuple(
         'AggregatedValues',
         'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
@@ -765,42 +689,181 @@ def aggregate_raster_values_uri(
         total={},
         pixel_mean={},
         hectare_mean={},
-        n_pixels=aggregate_dict_counts.copy(),
-        pixel_min=pixel_min_dict.copy(),
-        pixel_max=pixel_max_dict.copy())
+        n_pixels={},
+        pixel_min={},
+        pixel_max={})
+    
+    #make a shapefile that non-overlapping layers can be added to
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    layer_dir = 'tmp_folder'#temporary_folder()
+    layer_datasouce = driver.CreateDataSource(
+        os.path.join(layer_dir, 'layer_out.shp'))
+    spat_ref = get_spatial_ref_uri(shapefile_uri)
+    subset_layer = layer_datasouce.CreateLayer('layer_out', spat_ref, ogr.wkbPolygon)
+    defn = shapefile_layer.GetLayerDefn()
+    
+    #For every field, create a duplicate field and add it to the new
+    #subset_layer layer
+    defn.GetFieldCount()
+    for fld_index in range(defn.GetFieldCount()):
+        original_field = defn.GetFieldDefn(fld_index)
+        output_field = ogr.FieldDefn(original_field.GetName(),
+            original_field.GetType())
+        subset_layer.CreateField(output_field)
+    
+    #layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
+    # Add one feature
+    layer_definition = subset_layer.GetLayerDefn()
+    for poly_index in range(shapefile_layer.GetFeatureCount()):
+        print 'looping'
+        poly_feat = shapefile_layer.GetFeature(poly_index)
+        # Get the geometry of the polygon in WKT format
+        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        # Load the geometry into shapely making it a shapely object
+        shapely_polygon = shapely.wkt.loads(poly_wkt)
+        # Add the shapely polygon geometry to a list, but first simplify the
+        # geometry which smooths the edges making operations a lot faster
+        #poly_list.append(
+        #    shapely_polygon.simplify(0.01, preserve_topology=False))
 
-    for attribute_id in aggregate_dict_values:
-        if threshold_amount_lookup != None:
-            adjusted_amount = max(
-                aggregate_dict_values[attribute_id] -
-                threshold_amount_lookup[attribute_id], 0.0)
+        feat = ogr.Feature(layer_definition)
+        
+        for field_index in range(poly_feat.GetFieldCount()):
+            original_field_value = poly_feat.GetField(field_index)
+            feat.SetField(field_index, original_field_value)
+        
+        #feat.SetField('id', 123)
+        
+        geom = ogr.CreateGeometryFromWkb(shapely_polygon.wkb)
+        feat.SetGeometry(geom)
+        subset_layer.CreateFeature(feat)
+        layer_datasouce.SyncToDisk()
+    
+        mask_band = mask_dataset.GetRasterBand(1)
+        mask_band.Fill(mask_nodata)
+        mask_band = None
+        gdal.RasterizeLayer(
+            mask_dataset, [1], subset_layer, **rasterize_layer_args)
+        
+        #get feature areas
+        num_features = subset_layer.GetFeatureCount()
+        feature_areas = collections.defaultdict(int)
+        for feature in subset_layer:
+            #feature = subset_layer.GetFeature(index)
+            geom = feature.GetGeometryRef()
+            if shapefile_field is not None:
+                feature_id = feature.GetField(shapefile_field)
+                feature_areas[feature_id] = geom.GetArea()
+            else:
+                feature_areas[global_id_value] += geom.GetArea()
+        subset_layer.ResetReading()
+        geom = None
+        subset_layer.DeleteFeature(feat.GetFID())
+
+
+        mask_dataset.FlushCache()
+        mask_band = mask_dataset.GetRasterBand(1)
+
+        #This will store the sum/count with index of shapefile attribute
+        if shapefile_field is not None:
+            shapefile_table = extract_datasource_table_by_key(
+                shapefile_uri, shapefile_field)
         else:
-            adjusted_amount = aggregate_dict_values[attribute_id]
+            shapefile_table = {global_id_value: 0.0}
+        
+        #Initialize these dictionaries to have the shapefile fields in the original
+        #datasource even if we don't pick up a value later
+        current_iteration_shapefiles = dict(
+            [(shapefile_id, 0.0) for shapefile_id in 
+            shapefile_table.iterkeys()])
+        aggregate_dict_values.update(current_iteration_shapefiles.copy())
+        aggregate_dict_counts.update(current_iteration_shapefiles.copy())
+        LOGGER.debug('aggregate_dict_counts %s' % (str(aggregate_dict_counts)))
+        #Loop over each row in out_band
+        clipped_band = clipped_raster.GetRasterBand(1)
+        pixel_min_dict = dict(
+            [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
+        pixel_max_dict = pixel_min_dict.copy()
+        for row_index in range(clipped_band.YSize):
+            mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
+            clipped_array = clipped_band.ReadAsArray(
+                0, row_index, clipped_band.XSize, 1)
 
-        result_tuple.total[attribute_id] = adjusted_amount
+            for attribute_id in numpy.unique(mask_array):
+                #ignore masked values
+                if attribute_id == mask_nodata:
+                    continue
 
-        if aggregate_dict_counts[attribute_id] != 0.0:
-            n_pixels = aggregate_dict_counts[attribute_id]
-            result_tuple.pixel_mean[attribute_id] = (
-                adjusted_amount / n_pixels)
+                #Only consider values which lie in the polygon for attribute_id
+                masked_values = clipped_array[mask_array == attribute_id]
+                #Remove the nodata and ignore values for later processing
+                masked_values_nodata_removed = (
+                    masked_values[~numpy.in1d(masked_values, [raster_nodata] + 
+                    ignore_value_list).reshape(masked_values.shape)])
+        
+                #Find the min and max which might not yet be calculated
+                if masked_values_nodata_removed.size > 0:
+                    if pixel_min_dict[attribute_id] is None:
+                        pixel_min_dict[attribute_id] = numpy.min(
+                            masked_values_nodata_removed)
+                        pixel_max_dict[attribute_id] = numpy.max(
+                            masked_values_nodata_removed)
+                    else:
+                        pixel_min_dict[attribute_id] = min(
+                            pixel_min_dict[attribute_id],
+                            numpy.min(masked_values_nodata_removed))
+                        pixel_max_dict[attribute_id] = max(
+                            pixel_max_dict[attribute_id],
+                            numpy.max(masked_values_nodata_removed))
 
-            #To get the total area multiply n pixels by their area then
-            #divide by 10000 to get Ha.  Notice that's in the denominator
-            #so the * 10000 goes on the top
-            result_tuple.hectare_mean[attribute_id] = (
-                adjusted_amount / feature_areas[attribute_id] * 10000)
-        else:
-            result_tuple.pixel_mean[attribute_id] = 0.0
-            result_tuple.hectare_mean[attribute_id] = 0.0
+                if ignore_nodata:
+                    #Only consider values which are not nodata values
+                    aggregate_dict_counts[attribute_id] += (
+                        masked_values_nodata_removed.size)
+                else:
+                    aggregate_dict_counts[attribute_id] += masked_values.size
 
-    try:
-        assert_datasets_in_same_projection([raster_uri])
-    except DatasetUnprojected:
-        #doesn't make sense to calculate the hectare mean
-        LOGGER.warn(
-            'aggregate raster %s is not projected setting hectare_mean to None'
-            % raster_uri)
-        result_tuple.hectare_mean = None
+                aggregate_dict_values[attribute_id] += numpy.sum(
+                    masked_values_nodata_removed)
+
+        #Initialize the dictionary to have an n_pixels field that contains the
+        #counts of all the pixels used in the calculation.
+        result_tuple.n_pixels.update(aggregate_dict_counts.copy())
+        result_tuple.pixel_min.update(pixel_min_dict.copy())
+        result_tuple.pixel_max.update(pixel_max_dict.copy())
+            
+        for attribute_id in current_iteration_shapefiles:
+            if threshold_amount_lookup != None:
+                adjusted_amount = max(
+                    aggregate_dict_values[attribute_id] -
+                    threshold_amount_lookup[attribute_id], 0.0)
+            else:
+                adjusted_amount = aggregate_dict_values[attribute_id]
+
+            result_tuple.total[attribute_id] = adjusted_amount
+
+            if aggregate_dict_counts[attribute_id] != 0.0:
+                n_pixels = aggregate_dict_counts[attribute_id]
+                result_tuple.pixel_mean[attribute_id] = (
+                    adjusted_amount / n_pixels)
+
+                #To get the total area multiply n pixels by their area then
+                #divide by 10000 to get Ha.  Notice that's in the denominator
+                #so the * 10000 goes on the top
+                result_tuple.hectare_mean[attribute_id] = (
+                    adjusted_amount / feature_areas[attribute_id] * 10000)
+            else:
+                result_tuple.pixel_mean[attribute_id] = 0.0
+                result_tuple.hectare_mean[attribute_id] = 0.0
+
+        try:
+            assert_datasets_in_same_projection([raster_uri])
+        except DatasetUnprojected:
+            #doesn't make sense to calculate the hectare mean
+            LOGGER.warn(
+                'aggregate raster %s is not projected setting hectare_mean to None'
+                % raster_uri)
+            result_tuple.hectare_mean = None
 
     mask_band = None
     mask_dataset = None
