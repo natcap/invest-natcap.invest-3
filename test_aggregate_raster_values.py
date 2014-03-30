@@ -2,6 +2,7 @@ import cProfile
 import pstats
 
 import os
+import shutil
 import glob
 import time
 import gdal
@@ -50,7 +51,6 @@ layer_definition = layer.GetLayerDefn()
 #    ignore_value_list=[], process_pool=None)
 
 poly_list = []
-count = 0
 for poly_index in range(shapefile_layer.GetFeatureCount()):
     print 'looping'
     poly_feat = shapefile_layer.GetFeature(poly_index)
@@ -75,11 +75,15 @@ for poly_index in range(shapefile_layer.GetFeatureCount()):
         options=['ALL_TOUCHED=TRUE'])
     
     layer.DeleteFeature(feat.GetFID())
-    count += 1
     
-feat = geom = None  # destroy these
+gdal.Dataset.__swig_destroy__(mask_ds)
+ogr.DataSource.__swig_destroy__(layer_datasouce)
+#feat = geom = None  # destroy these
 # Save and close everything
-ds = layer = feat = geom = None
+#ds = layer = feat = geom = None
     
 for x in [mask_uri, layer_dir]:
-    shutil.rmtree(x)
+    try:
+        shutil.rmtree(x)
+    except:
+        os.remove(x)

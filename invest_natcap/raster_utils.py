@@ -1808,8 +1808,10 @@ def temporary_folder():
         try:
             shutil.rmtree(path)
         except OSError as exception:
-            LOGGER.debug('Tried to remove temp folder %s, but got %s',
-                path, exception)
+            #LOGGER.debug('Tried to remove temp folder %s, but got %s',
+            #    path, exception)
+            #This is okay, it means someone else deleted the folder
+            pass
 
     atexit.register(remove_folder, path)
     return path
