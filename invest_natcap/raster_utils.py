@@ -692,10 +692,11 @@ def aggregate_raster_values_uri(
         n_pixels={},
         pixel_min={},
         pixel_max={})
-    
+
+        
     #make a shapefile that non-overlapping layers can be added to
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    layer_dir = 'tmp_folder'#temporary_folder()
+    layer_dir = temporary_folder()
     layer_datasouce = driver.CreateDataSource(
         os.path.join(layer_dir, 'layer_out.shp'))
     spat_ref = get_spatial_ref_uri(shapefile_uri)
@@ -710,6 +711,27 @@ def aggregate_raster_values_uri(
         output_field = ogr.FieldDefn(original_field.GetName(),
             original_field.GetType())
         subset_layer.CreateField(output_field)
+    
+    #Initialize these dictionaries to have the shapefile fields in the original
+    #datasource even if we don't pick up a value later
+
+    #This will store the sum/count with index of shapefile attribute
+    if shapefile_field is not None:
+        shapefile_table = extract_datasource_table_by_key(
+            shapefile_uri, shapefile_field)
+    else:
+        shapefile_table = {global_id_value: 0.0}
+
+    current_iteration_shapefiles = dict(
+        [(shapefile_id, 0.0) for shapefile_id in 
+        shapefile_table.iterkeys()])
+    aggregate_dict_values = current_iteration_shapefiles.copy()
+    aggregate_dict_counts = current_iteration_shapefiles.copy()
+        
+    pixel_min_dict = dict(
+        [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
+    pixel_max_dict = pixel_min_dict.copy()
+    
     
     #layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
     # Add one feature
@@ -760,30 +782,13 @@ def aggregate_raster_values_uri(
         geom = None
         subset_layer.DeleteFeature(feat.GetFID())
 
-
         mask_dataset.FlushCache()
         mask_band = mask_dataset.GetRasterBand(1)
 
-        #This will store the sum/count with index of shapefile attribute
-        if shapefile_field is not None:
-            shapefile_table = extract_datasource_table_by_key(
-                shapefile_uri, shapefile_field)
-        else:
-            shapefile_table = {global_id_value: 0.0}
-        
-        #Initialize these dictionaries to have the shapefile fields in the original
-        #datasource even if we don't pick up a value later
-        current_iteration_shapefiles = dict(
-            [(shapefile_id, 0.0) for shapefile_id in 
-            shapefile_table.iterkeys()])
-        aggregate_dict_values.update(current_iteration_shapefiles.copy())
-        aggregate_dict_counts.update(current_iteration_shapefiles.copy())
+    
         LOGGER.debug('aggregate_dict_counts %s' % (str(aggregate_dict_counts)))
         #Loop over each row in out_band
         clipped_band = clipped_raster.GetRasterBand(1)
-        pixel_min_dict = dict(
-            [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
-        pixel_max_dict = pixel_min_dict.copy()
         for row_index in range(clipped_band.YSize):
             mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
             clipped_array = clipped_band.ReadAsArray(
