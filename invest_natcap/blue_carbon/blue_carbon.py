@@ -337,10 +337,10 @@ def execute(args):
     soil_name = os.path.join(intermediate_dir, "%i_stock_soil.tif")
     litter_name = os.path.join(intermediate_dir, "%i_stock_litter.tif")
     bio_name = os.path.join(intermediate_dir, "%i_stock_bio.tif")
-    carbon_name = "%i_total.tif"
+    carbon_name = "stock_%i.tif"
 
-    veg_stock_bio_name = os.path.join(intermediate_dir, "veg_%i_stock_biomass.tif")
-    veg_stock_soil_name = os.path.join(intermediate_dir, "veg_%i_stock_soil.tif")
+    veg_stock_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_stock_biomass.tif")
+    veg_stock_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_stock_soil.tif")
 
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
@@ -348,10 +348,10 @@ def execute(args):
     acc_bio_name = os.path.join(intermediate_dir, "%i_acc_bio.tif")
     acc_bio_co_name = os.path.join(intermediate_dir, "%i_%i_acc_bio_co.tif")
 
-    veg_acc_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_acc_bio.tif")
-    veg_acc_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_acc_soil.tif")
-    veg_dis_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_dis_bio.tif")
-    veg_dis_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_dis_soil.tif")
+    veg_acc_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_acc_bio.tif")
+    veg_acc_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_acc_soil.tif")
+    veg_dis_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_dis_bio.tif")
+    veg_dis_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_dis_soil.tif")
 
     #carbon disturbance file names
     dis_bio_co_name = os.path.join(intermediate_dir, "%i_%i_dis_bio_co.tif")
@@ -380,13 +380,13 @@ def execute(args):
     adj_undis_soil_veg_name = os.path.join(intermediate_dir, "%i_adj_undis_soil_veg_%i.tif")
     adj_undis_bio_veg_name = os.path.join(intermediate_dir, "%i_adj_undis_bio_veg_%i.tif")
 
-    veg_adj_acc_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_acc_bio.tif")
-    veg_adj_acc_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_acc_soil.tif")
-    veg_adj_dis_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_dis_bio.tif")
-    veg_adj_dis_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_dis_soil.tif")
+    veg_adj_acc_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_acc_bio.tif")
+    veg_adj_acc_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_acc_soil.tif")
+    veg_adj_dis_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_dis_bio.tif")
+    veg_adj_dis_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_dis_soil.tif")
 
-    veg_adj_em_dis_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_em_dis_bio.tif")
-    veg_adj_em_dis_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_adj_em_dis_soil.tif")
+    veg_adj_em_dis_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_em_dis_bio.tif")
+    veg_adj_em_dis_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_adj_em_dis_soil.tif")
 
     #emission file names
     veg_mask_name = os.path.join(intermediate_dir, "%i_veg_mask_%i.tif")
@@ -400,18 +400,18 @@ def execute(args):
     em_soil_veg_name = os.path.join(intermediate_dir, "%i_%i_em_soil_veg_%i.tif")
     em_bio_veg_name = os.path.join(intermediate_dir, "%i_%i_em_bio_veg_%i.tif")
 
-    veg_em_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_em_bio.tif")
-    veg_em_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_em_soil.tif")
+    veg_em_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
+    veg_em_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
     #net file names
     net_dis_bio_veg_name = os.path.join(intermediate_dir, "%i_net_dis_bio_veg_%i.tif")
     net_dis_soil_veg_name = os.path.join(intermediate_dir, "%i_net_dis_soil_veg_%i.tif")
 
     #totals
-    total_acc_soil_name = "total_soil_acc_%i_%i.tif"
-    total_acc_bio_name = "total_bio_acc_%i_%i.tif"
-    total_dis_soil_name = "total_soil_dis_%i_%i.tif"
-    total_dis_bio_name = "total_bio_dis_%i_%i.tif"
+    total_acc_soil_name = os.path.join(intermediate_dir, "soil_acc_%i_%i.tif")
+    total_acc_bio_name = os.path.join(intermediate_dir, "bio_acc_%i_%i.tif")
+    total_dis_soil_name = os.path.join(intermediate_dir, "soil_dis_%i_%i.tif")
+    total_dis_bio_name = os.path.join(intermediate_dir, "bio_dis_%i_%i.tif")
     net_sequestration_name = "net_sequest_%i_%i.tif"
 
     #uri
@@ -708,8 +708,8 @@ def execute(args):
     for veg_type in veg_type_list:
         veg_base_uri_dict[veg_type] = {}
 
-        this_veg_stock_soil_uri = os.path.join(workspace_dir, veg_stock_soil_name % veg_type)
-        this_veg_stock_bio_uri = os.path.join(workspace_dir, veg_stock_bio_name % veg_type)
+        this_veg_stock_soil_uri = os.path.join(workspace_dir, veg_stock_soil_name % (this_year, veg_type))
+        this_veg_stock_bio_uri = os.path.join(workspace_dir, veg_stock_bio_name % (this_year, veg_type))
 
         raster_utils.reclassify_dataset_uri(this_uri,
                                             veg_field_dict[veg_type][carbon_field_bio],
@@ -760,24 +760,24 @@ def execute(args):
             
             LOGGER.info("Processing vegetation type %i.", veg_type)
             #disturbance and accumulation URI's
-            this_veg_acc_bio_uri = os.path.join(workspace_dir, veg_acc_bio_name % (this_year, veg_type))
-            this_veg_acc_soil_uri = os.path.join(workspace_dir, veg_acc_soil_name % (this_year, veg_type))
-            this_veg_dis_bio_uri = os.path.join(workspace_dir, veg_dis_bio_name % (this_year, veg_type))
-            this_veg_dis_soil_uri = os.path.join(workspace_dir, veg_dis_soil_name % (this_year, veg_type))
+            this_veg_acc_bio_uri = os.path.join(workspace_dir, veg_acc_bio_name % (this_year, next_year, veg_type))
+            this_veg_acc_soil_uri = os.path.join(workspace_dir, veg_acc_soil_name % (this_year, next_year, veg_type))
+            this_veg_dis_bio_uri = os.path.join(workspace_dir, veg_dis_bio_name % (this_year, next_year, veg_type))
+            this_veg_dis_soil_uri = os.path.join(workspace_dir, veg_dis_soil_name % (this_year, next_year, veg_type))
 
             #transition adjusted URI's
-            this_veg_adj_acc_bio_uri = os.path.join(workspace_dir, veg_adj_acc_bio_name % (this_year, veg_type))
-            this_veg_adj_acc_soil_uri = os.path.join(workspace_dir, veg_adj_acc_soil_name % (this_year, veg_type))
-            this_veg_adj_dis_bio_uri = os.path.join(workspace_dir, veg_adj_dis_bio_name % (this_year, veg_type))
-            this_veg_adj_dis_soil_uri = os.path.join(workspace_dir, veg_adj_dis_soil_name % (this_year, veg_type))
+            this_veg_adj_acc_bio_uri = os.path.join(workspace_dir, veg_adj_acc_bio_name % (this_year, next_year, veg_type))
+            this_veg_adj_acc_soil_uri = os.path.join(workspace_dir, veg_adj_acc_soil_name % (this_year, next_year, veg_type))
+            this_veg_adj_dis_bio_uri = os.path.join(workspace_dir, veg_adj_dis_bio_name % (this_year, next_year, veg_type))
+            this_veg_adj_dis_soil_uri = os.path.join(workspace_dir, veg_adj_dis_soil_name % (this_year, next_year, veg_type))
 
             #emission URI's
-            this_veg_em_bio_uri = os.path.join(workspace_dir, veg_em_bio_name  % (this_year, veg_type))
-            this_veg_em_soil_uri = os.path.join(workspace_dir, veg_em_soil_name  % (this_year, veg_type))
+            this_veg_em_bio_uri = os.path.join(workspace_dir, veg_em_bio_name  % (this_year, next_year, veg_type))
+            this_veg_em_soil_uri = os.path.join(workspace_dir, veg_em_soil_name  % (this_year, next_year, veg_type))
 
             #emission adjusted URI's
-            this_veg_adj_em_dis_bio_uri = os.path.join(workspace_dir, veg_adj_em_dis_bio_name  % (this_year, veg_type))
-            this_veg_adj_em_dis_soil_uri = os.path.join(workspace_dir, veg_adj_em_dis_soil_name  % (this_year, veg_type))
+            this_veg_adj_em_dis_bio_uri = os.path.join(workspace_dir, veg_adj_em_dis_bio_name  % (this_year, next_year, veg_type))
+            this_veg_adj_em_dis_soil_uri = os.path.join(workspace_dir, veg_adj_em_dis_soil_name  % (this_year, next_year, veg_type))
 
             ##accumulation
             #biomass accumulation
