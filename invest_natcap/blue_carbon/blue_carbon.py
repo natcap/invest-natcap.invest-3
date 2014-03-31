@@ -453,6 +453,9 @@ def execute(args):
             except KeyError:
                 return 0.0
 
+        def __repr__(self):
+            return repr(self.d)
+
     #constructing accumulation tables from carbon table
     acc_soil = {}
     for k in carbon:
@@ -564,6 +567,7 @@ def execute(args):
     dis_soil_name = "dis_soil"
 
     #accumulation
+    print acc_soil
     veg_trans_acc_dict = {}
     for veg_type in veg_type_list:
         veg_trans_acc_dict[veg_type] = {}
@@ -574,7 +578,7 @@ def execute(args):
                 veg_trans_acc_dict[veg_type][component][original_lulc] = {}
                 for transition_lulc in trans:
                     if int(carbon[original_lulc][carbon_field_veg]) == veg_type:
-                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[veg_type][trans[original_lulc][str(transition_lulc)]] * conversion
+                        veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[transition_lulc][trans[original_lulc][str(transition_lulc)]] * conversion
                     else:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0.0
 
@@ -734,7 +738,7 @@ def execute(args):
 
     #create extent shapefile
     datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)        
-
+    print veg_trans_acc_dict
     totals = {}
     for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
         this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % this_year)
