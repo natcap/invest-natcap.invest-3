@@ -37,7 +37,7 @@
                                                 "validateAs": {"type": "number"},
                                                 "validText": "[1-9][0-9]*",
                                                 "dataType": "int",
-                                                "defaultValue": "2010",
+                                                "defaultValue": "2004",
                                                 "helpText": "The year of the land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },                                                                
