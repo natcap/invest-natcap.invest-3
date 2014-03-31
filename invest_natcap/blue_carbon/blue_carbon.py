@@ -342,6 +342,9 @@ def execute(args):
     veg_stock_bio_name = os.path.join(intermediate_dir, "%i_veg_%i_stock_biomass.tif")
     veg_stock_soil_name = os.path.join(intermediate_dir, "%i_veg_%i_stock_soil.tif")
 
+    #carbon litter
+    veg_litter_name = os.path.join(intermediate_dir, "%i_veg_%i_litter.tif")
+
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
     acc_soil_co_name = os.path.join(intermediate_dir, "%i_%i_acc_soil_co.tif")
@@ -759,6 +762,9 @@ def execute(args):
             totals[this_year][veg_type] = {}
             
             LOGGER.info("Processing vegetation type %i.", veg_type)
+            #litter URI's
+            this_veg_litter_uri = os.path.join(workspace_dir, veg_litter_name % (this_year, veg_type))
+            
             #disturbance and accumulation URI's
             this_veg_acc_bio_uri = os.path.join(workspace_dir, veg_acc_bio_name % (this_year, next_year, veg_type))
             this_veg_acc_soil_uri = os.path.join(workspace_dir, veg_acc_soil_name % (this_year, next_year, veg_type))
@@ -778,6 +784,14 @@ def execute(args):
             #emission adjusted URI's
             this_veg_adj_em_dis_bio_uri = os.path.join(workspace_dir, veg_adj_em_dis_bio_name  % (this_year, next_year, veg_type))
             this_veg_adj_em_dis_soil_uri = os.path.join(workspace_dir, veg_adj_em_dis_soil_name  % (this_year, next_year, veg_type))
+
+            ##litter
+            raster_utils.reclassify_dataset_uri(this_uri,
+                                                veg_field_dict[veg_type][carbon_field_litter],
+                                                this_veg_litter_uri,
+                                                gdal_type_carbon,
+                                                nodata_default_float,
+                                                exception_flag = "values_required")
 
             ##accumulation
             #biomass accumulation
@@ -845,8 +859,9 @@ def execute(args):
                                       this_veg_adj_em_dis_soil_uri)
 
             #totals
-            this_total_carbon_uri_list.append(this_veg_acc_bio_uri)
-            this_total_carbon_uri_list.append(this_veg_acc_soil_uri)
+            this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
+            this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
+            this_total_carbon_uri_list.append(this_veg_litter_uri)
             
             veg_acc_bio_uri_list.append(this_veg_acc_bio_uri)
             veg_acc_soil_uri_list.append(this_veg_acc_soil_uri)
