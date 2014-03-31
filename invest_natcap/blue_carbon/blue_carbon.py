@@ -876,22 +876,22 @@ def execute(args):
         vectorize_carbon_datasets(this_total_carbon_uri_list,
                                   add_op,
                                   this_total_carbon_uri)
-    ##carbon totals
-    vectorize_carbon_datasets(veg_acc_bio_uri_list,
-                              add_op,
-                              total_acc_bio_uri)
-
-    vectorize_carbon_datasets(veg_acc_soil_uri_list,
-                              add_op,
-                              total_acc_soil_uri)
-
-    vectorize_carbon_datasets(veg_dis_bio_uri_list,
-                              add_op,
-                              total_dis_bio_uri)
-
-    vectorize_carbon_datasets(veg_dis_soil_uri_list,
-                              add_op,
-                              total_dis_soil_uri)
+##    ##carbon totals
+##    vectorize_carbon_datasets(veg_acc_bio_uri_list,
+##                              add_op,
+##                              total_acc_bio_uri)
+##
+##    vectorize_carbon_datasets(veg_acc_soil_uri_list,
+##                              add_op,
+##                              total_acc_soil_uri)
+##
+##    vectorize_carbon_datasets(veg_dis_bio_uri_list,
+##                              add_op,
+##                              total_dis_bio_uri)
+##
+##    vectorize_carbon_datasets(veg_dis_soil_uri_list,
+##                              add_op,
+##                              total_dis_soil_uri)
 
     veg_seq_uri_list = [this_veg_acc_bio_uri,
                         this_veg_acc_soil_uri]
