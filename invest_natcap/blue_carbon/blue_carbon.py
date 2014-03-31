@@ -415,10 +415,11 @@ def execute(args):
     this_total_acc_bio_name = os.path.join(intermediate_dir, "%i_%i_bio_acc.tif")
     this_total_dis_soil_name = os.path.join(intermediate_dir, "%i_%i_soil_dis.tif")
     this_total_dis_bio_name = os.path.join(intermediate_dir, "%i_%i_bio_dis.tif")
-    net_sequestration_name = "net_sequest_%i_%i.tif"
+    net_sequestration_name = "sequest_%i_%i.tif"
+    gain_name = "gain_%i_%i.tif"
+    loss_name = "loss_%i_%i.tif"
 
     #uri
-    total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (lulc_years[0], analysis_year))
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
@@ -740,6 +741,7 @@ def execute(args):
     datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)        
     print veg_trans_acc_dict
     totals = {}
+    stock_uri_dict = {}    
     for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
         this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % this_year)
         this_total_carbon_uri_list = []
@@ -896,6 +898,9 @@ def execute(args):
         vectorize_carbon_datasets(this_total_carbon_uri_list,
                                   add_op,
                                   this_total_carbon_uri)
+
+        stock_uri_dict[this_year] = this_total_carbon_uri
+        
         ##carbon totals
         vectorize_carbon_datasets(veg_acc_bio_uri_list,
                                   add_op,
@@ -913,11 +918,42 @@ def execute(args):
                                   add_op,
                                   this_total_dis_soil_uri)
 
-    veg_seq_uri_list = [this_total_carbon_uri,
-                        os.path.join(workspace_dir, carbon_name % lulc_years[0])]
-    vectorize_carbon_datasets(veg_seq_uri_list,
-                              sub_op,
-                              total_seq_uri)
+    def pos_op(v):
+        if v is nodata_default_float:
+            return v
+        elif v >= 0:
+            return v
+        else:
+            return 0
+
+    def neg_op(v):
+        if v is nodata_default_float:
+            return v
+        elif v < 0:
+            return v * -1
+        else:
+            return 0
+        
+    for i, this_year in enumerate(lulc_years[:-1]):
+        for next_year in lulc_years[i+1:]:
+            LOGGER.info("Calculating sequestration from %i to %i.", this_year, next_year)
+            total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
+            gain_uri = os.path.join(workspace_dir, gain_name % (this_year, next_year))
+            loss_uri = os.path.join(workspace_dir, loss_name % (this_year, next_year))
+            
+            stock_uri_list = [stock_uri_dict[next_year],
+                              stock_uri_dict[this_year]]
+            vectorize_carbon_datasets(stock_uri_list,
+                                      sub_op,
+                                      total_seq_uri)
+
+            vectorize_carbon_datasets([total_seq_uri],
+                                      pos_op,
+                                      gain_uri)
+
+            vectorize_carbon_datasets([total_seq_uri],
+                                      neg_op,
+                                      loss_uri)
             
 
     ##generate csv
