@@ -568,7 +568,7 @@ def execute(args):
     dis_soil_name = "dis_soil"
 
     #accumulation
-    print acc_soil
+    #print acc_soil
     veg_trans_acc_dict = {}
     for veg_type in veg_type_list:
         veg_trans_acc_dict[veg_type] = {}
@@ -739,7 +739,7 @@ def execute(args):
 
     #create extent shapefile
     datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)        
-    print veg_trans_acc_dict
+    #print veg_trans_acc_dict
     totals = {}
     stock_uri_dict = {}    
     for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
@@ -866,9 +866,9 @@ def execute(args):
                                       this_veg_adj_em_dis_soil_uri)
 
             #totals
-            this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
-            this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
-            this_total_carbon_uri_list.append(this_veg_litter_uri)
+##            this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
+##            this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
+##            this_total_carbon_uri_list.append(this_veg_litter_uri)
             
             veg_acc_bio_uri_list.append(this_veg_acc_bio_uri)
             veg_acc_soil_uri_list.append(this_veg_acc_soil_uri)
@@ -890,6 +890,10 @@ def execute(args):
                 totals[this_year][veg_type][name] = sum_uri(uri, extent_uri)
             
             ##switch base carbon rasters
+            this_total_carbon_uri_list.append(veg_base_uri_dict[veg_type][base_veg_acc_bio])
+            this_total_carbon_uri_list.append(veg_base_uri_dict[veg_type][base_veg_acc_soil])
+            this_total_carbon_uri_list.append(this_veg_litter_uri)
+                
             veg_base_uri_dict[veg_type][base_veg_acc_bio] = this_veg_adj_acc_bio_uri
             veg_base_uri_dict[veg_type][base_veg_acc_soil] = this_veg_adj_acc_soil_uri
             veg_base_uri_dict[veg_type][base_veg_dis_bio] = this_veg_adj_em_dis_bio_uri
