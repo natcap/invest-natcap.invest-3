@@ -913,10 +913,10 @@ def execute(args):
                                   add_op,
                                   this_total_dis_soil_uri)
 
-    veg_seq_uri_list = [this_veg_acc_bio_uri,
-                        this_veg_acc_soil_uri]
+    veg_seq_uri_list = [this_total_carbon_uri,
+                        os.path.join(workspace_dir, carbon_name % lulc_years[0])]
     vectorize_carbon_datasets(veg_seq_uri_list,
-                              add_op,
+                              sub_op,
                               total_seq_uri)
             
 
