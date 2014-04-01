@@ -257,7 +257,7 @@ def execute(args):
                 
         report.write("\n</TABLE>")
 
-        report.write("\n<P><P><B>Vegitation Transition %i</B>" % (transition +1))
+        report.write("\n<P><P><B>Vegetation Transition %i</B>" % (transition +1))
         column_name_list = [""] + [str(val).ljust(transition_width, "#").replace("#", "&ensp;") for val in veg_types]
         report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
         
