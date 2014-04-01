@@ -324,7 +324,7 @@ def execute(args):
 
     ##outputs
     extent_name = "extent.shp"
-    report_name = "report.htm"
+    report_name = "core_report.htm"
     blue_carbon_csv_name = "blue_carbon.csv"
     intermediate_dir = "intermediate"
 
