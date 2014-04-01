@@ -1,10 +1,11 @@
 import cProfile
 import pstats
-
 import os
 import shutil
 import glob
 import time
+import heapq
+
 import gdal
 import numpy
 from osgeo import ogr
@@ -66,6 +67,7 @@ for poly_feat in shapefile_layer:
     print poly_fid
     poly_intersection_lookup[poly_fid] = {
         'poly': shapely_polygon,
+        'prepared': shapely.prepared.prep(shapely_polygon),
         'intersects': set(),
     }
     # Get the geometry of the polygon in WKT format
@@ -79,15 +81,45 @@ shapefile_layer.ResetReading()
 for poly_fid in poly_intersection_lookup:
     print poly_fid
     for intersect_poly_fid in poly_intersection_lookup:
-        polygon = shapely.prepared.prep(
-            poly_intersection_lookup[poly_fid]['poly'])
+        polygon = poly_intersection_lookup[poly_fid]['prepared']
         if polygon.intersects(
             poly_intersection_lookup[intersect_poly_fid]['poly']):
             poly_intersection_lookup[poly_fid]['intersects'].add(
                 intersect_poly_fid)
-
                 
-print poly_intersection_lookup
+processed_polygons = set()
+while len(poly_intersection_lookup) != len(processed_polygons):
+    #sort polygons by increasing number of intersections
+    heap = []
+    for poly_fid, poly_dict in poly_intersection_lookup.iteritems():
+        if poly_fid not in processed_polygons:
+            heapq.heappush(
+                heap, (len(poly_dict['intersects']), poly_fid, poly_dict))
+
+    #build maximal subset
+    maximal_set = set()
+    while len(heap) > 0:
+        _, poly_fid, poly_dict = heapq.heappop(heap)
+        polygon = poly_intersection_lookup[poly_fid]['prepared']
+        for maxset_fid in maximal_set:
+            if polygon.intersects(
+                poly_intersection_lookup[maxset_fid]['poly']):
+                #it intersects and can't be part of the maximal subset
+                break
+        else:
+            #we made it through without an intersection, add poly_fid to 
+            #the maximal set
+            maximal_set.add(poly_fid)
+            processed_polygons.add(poly_fid)
+            #remove that polygon and update the intersections
+            #del poly_intersection_lookup[poly_fid]
+            for poly_dict in poly_intersection_lookup.itervalues():
+                poly_dict['intersects'].discard(poly_fid)
+    print maximal_set
+        
+        
+                
+#print poly_intersection_lookup
 #Clean up temporary files
 #gdal.Dataset.__swig_destroy__(mask_ds)
 #ogr.DataSource.__swig_destroy__(layer_datasouce)
