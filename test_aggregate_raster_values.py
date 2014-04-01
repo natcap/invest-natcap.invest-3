@@ -18,8 +18,11 @@ from invest_natcap import raster_utils
 import pyximport
 pyximport.install()
 
-raster_uri =    'overlapping_polygons/sample_static_impact_map.tif'
-shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
+raster_uri = 'Peru_for_Rich/dem_50km'
+shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
+
+#raster_uri =    'overlapping_polygons/sample_static_impact_map.tif'
+#shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
 
 #raster_uri = 'test/invest-data/Base_Data/Freshwater/dem'
 #shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
@@ -48,7 +51,7 @@ layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
 layer_definition = layer.GetLayerDefn()
 
 values = raster_utils.aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, #shapefile_field='subws_id',
+    raster_uri, shapefile_uri, shapefile_field='ws_id',
     ignore_nodata=True, threshold_amount_lookup=None,
     ignore_value_list=[], process_pool=None)
 print values
