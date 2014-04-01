@@ -674,9 +674,8 @@ def aggregate_raster_values_uri(
         rasterize_layer_args['options'].append(
             'ATTRIBUTE=%s' % shapefile_field)
     else:
-        #Using 9999 here just because it's not the nodata_value for mask_dataset 
-        #above
-        rasterize_layer_args['burn_values'] = [9999]
+        global_id_value = 9999
+        rasterize_layer_args['burn_values'] = [global_id_value]
     
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}

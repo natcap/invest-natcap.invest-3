@@ -18,9 +18,11 @@ from invest_natcap import raster_utils
 import pyximport
 pyximport.install()
 
+raster_uri =    'overlapping_polygons/sample_static_impact_map.tif'
+shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
 
-raster_uri = 'test/invest-data/Base_Data/Freshwater/dem'
-shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
+#raster_uri = 'test/invest-data/Base_Data/Freshwater/dem'
+#shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
 
 mask_uri = raster_utils.temporary_filename()
 mask_nodata = 255
@@ -37,7 +39,6 @@ shapefile_layer = shapefile.GetLayer()
 
 #make a shapefile that non-overlapping layers can be added to
 driver = ogr.GetDriverByName('ESRI Shapefile')
-
 layer_dir = raster_utils.temporary_folder()
 layer_datasouce = driver.CreateDataSource(os.path.join(layer_dir, 'layer_out.shp'))
 spat_ref = raster_utils.get_spatial_ref_uri(shapefile_uri)
@@ -47,7 +48,7 @@ layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
 layer_definition = layer.GetLayerDefn()
 
 values = raster_utils.aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field='subws_id',
+    raster_uri, shapefile_uri, #shapefile_field='subws_id',
     ignore_nodata=True, threshold_amount_lookup=None,
     ignore_value_list=[], process_pool=None)
 print values
