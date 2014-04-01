@@ -5,6 +5,7 @@ import shutil
 import glob
 import time
 import heapq
+import sys
 
 import gdal
 import numpy
@@ -19,11 +20,13 @@ from invest_natcap import raster_utils
 import pyximport
 pyximport.install()
 
+#shapefile_uri = 'Servicesheds/Servicesheds_Col.shp'
+
 #raster_uri = 'Peru_for_Rich/dem_50km'
-shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
+#shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
 
 #raster_uri =    'overlapping_polygons/sample_static_impact_map.tif'
-#shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
+shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
 
 #raster_uri = 'test/invest-data/Base_Data/Freshwater/dem'
 #shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
@@ -38,8 +41,11 @@ shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
 #mask_ds = gdal.Open(mask_uri, gdal.GA_Update)
 #mask_band = mask_ds.GetRasterBand(1)
 
-shapefile = ogr.Open(shapefile_uri)
-shapefile_layer = shapefile.GetLayer()
+subsets = raster_utils.calculate_minimal_overlapping_polygon_sets(shapefile_uri)
+print subsets
+sys.exit(0)
+#shapefile = ogr.Open(shapefile_uri)
+#shapefile_layer = shapefile.GetLayer()
 
 #make a shapefile that non-overlapping layers can be added to
 #driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -88,9 +94,11 @@ for poly_fid in poly_intersection_lookup:
                 intersect_poly_fid)
                 
 processed_polygons = set()
+count = 0
 while len(poly_intersection_lookup) != len(processed_polygons):
     #sort polygons by increasing number of intersections
     heap = []
+    count += 1
     for poly_fid, poly_dict in poly_intersection_lookup.iteritems():
         if poly_fid not in processed_polygons:
             heapq.heappush(
@@ -115,9 +123,9 @@ while len(poly_intersection_lookup) != len(processed_polygons):
             #del poly_intersection_lookup[poly_fid]
             for poly_dict in poly_intersection_lookup.itervalues():
                 poly_dict['intersects'].discard(poly_fid)
-    print maximal_set
+    print count, maximal_set
         
-        
+print len(poly_intersection_lookup)
                 
 #print poly_intersection_lookup
 #Clean up temporary files

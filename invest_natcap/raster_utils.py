@@ -14,6 +14,7 @@ import exceptions
 import multiprocessing
 import multiprocessing.pool
 import tables
+import heapq
 
 from osgeo import gdal
 from osgeo import osr
@@ -2840,3 +2841,75 @@ def make_constant_raster_from_base_uri(
     base_dataset = gdal.Open(out_uri, gdal.GA_Update)
     base_band = base_dataset.GetRasterBand(1)
     base_band.Fill(constant_value)
+    
+    
+def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
+    """Calculates a list of sets of polygons that don't overlap.  Determining 
+        the minimal number of those sets is an np-complete problem so this is
+        an approximation that builds up sets of maximal subsets.
+        
+        shapefile_uri - a uri to an OGR shapefile to process
+        
+        returns a list of sets of FIDs from shapefile_uri"""
+
+    
+    shapefile = ogr.Open(shapefile_uri)
+    shapefile_layer = shapefile.GetLayer()
+    
+    poly_intersection_lookup = {}
+    LOGGER.info(
+        'Converting OGR polygons to Shapely polygons for fast intersection')
+    for poly_feat in shapefile_layer:
+        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        shapely_polygon = shapely.wkt.loads(poly_wkt)
+        poly_fid = poly_feat.GetFID()
+        print '.',
+        poly_intersection_lookup[poly_fid] = {
+            'poly': shapely_polygon,
+            'prepared': shapely.prepared.prep(shapely_polygon),
+            'intersects': set(),
+        }
+    shapefile_layer.ResetReading()
+
+    LOGGER.info('Building intersection list')
+    for poly_fid in poly_intersection_lookup:
+        print '.',
+        for intersect_poly_fid in poly_intersection_lookup:
+            polygon = poly_intersection_lookup[poly_fid]['prepared']
+            if polygon.intersects(
+                poly_intersection_lookup[intersect_poly_fid]['poly']):
+                poly_intersection_lookup[poly_fid]['intersects'].add(
+                    intersect_poly_fid)
+                    
+    count = 0
+    #Build maximal subsets
+    subset_list = []
+    while len(poly_intersection_lookup) > 0:
+        #sort polygons by increasing number of intersections
+        heap = []
+        count += 1
+        for poly_fid, poly_dict in poly_intersection_lookup.iteritems():
+            heapq.heappush(
+                heap, (len(poly_dict['intersects']), poly_fid, poly_dict))
+
+        #build maximal subset
+        maximal_set = set()
+        while len(heap) > 0:
+            _, poly_fid, poly_dict = heapq.heappop(heap)
+            for maxset_fid in maximal_set:
+                if maxset_fid in poly_intersection_lookup[poly_fid]['intersects']:
+                    #it intersects and can't be part of the maximal subset
+                    break
+            else:
+                #we made it through without an intersection, add poly_fid to 
+                #the maximal set
+                maximal_set.add(poly_fid)
+                #remove that polygon and update the intersections
+                del poly_intersection_lookup[poly_fid]
+            #remove all the polygons from intersections now that they're compuated
+        for maxset_fid in maximal_set:
+            for poly_dict in poly_intersection_lookup.itervalues():
+                poly_dict['intersects'].discard(maxset_fid)
+        print count, maximal_set
+        subset_list.append(maximal_set)
+    print len(poly_intersection_lookup)
