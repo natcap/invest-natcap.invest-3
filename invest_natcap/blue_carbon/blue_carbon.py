@@ -1139,7 +1139,8 @@ def execute(args):
 
 ##
 ##    ##clean up
-##    driver = gdal.GetDriverByName('GTiff')
+    driver = gdal.GetDriverByName('GTiff')
+    driver.Delete(zero_raster_uri)
 ##    for year in lulc_years[1:]:
 ##        LOGGER.debug("Cleaning up intermediates for year %i." % year)
 ##        driver.Delete(os.path.join(workspace_dir, above_name % year))
