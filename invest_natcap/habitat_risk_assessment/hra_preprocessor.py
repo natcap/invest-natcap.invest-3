@@ -712,7 +712,10 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
     
     with open(uri, 'rU') as hab_file:
         
-        csv_reader = csv.reader(hab_file)
+        dialect = csv.Sniffer().sniff(hab_file.read(1024))
+        hab_file.seek(0)
+        csv_reader = csv.reader(hab_file, dialect)
+        
         hab_name = csv_reader.next()[1]
         
         #Can at least initialized the habs dictionary part.
@@ -930,7 +933,9 @@ def parse_stress_buffer(uri):
 
     with open(uri, 'rU') as buff_file:
 
-        csv_reader = csv.reader(buff_file)
+        dialect = csv.Sniffer().sniff(buff_file.read(1024))
+        buff_file.seek(0)
+        csv_reader = csv.reader(buff_file, dialect)
 
         #Drain the first two lines, since just headers and blank
         for _ in range(2): 
@@ -939,7 +944,8 @@ def parse_stress_buffer(uri):
         #We know that the rest of the table will just be stressor names and their
         #mappings, so we are clear to just drain the table.
         for row in csv_reader:
-            
+          
+            LOGGER.debug(row)
             s_name = row[0]
             
             try:
