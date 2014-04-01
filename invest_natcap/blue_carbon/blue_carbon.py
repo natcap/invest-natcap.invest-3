@@ -325,7 +325,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "core_report.htm"
-    blue_carbon_csv_name = "blue_carbon.csv"
+##    blue_carbon_csv_name = "blue_carbon.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -425,7 +425,7 @@ def execute(args):
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
-    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
+##    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
 
     ##process inputs
     #load tables from files
@@ -983,47 +983,47 @@ def execute(args):
             
 
     ##generate csv
-    #open csv
-    csv = open(blue_carbon_csv_uri, 'w')
-
-    header = ["Year"]
-    for name, label in [(veg_acc_bio_name, "Acc Bio"),
-                      (veg_acc_soil_name, "Acc Soil"),
-                      (veg_dis_bio_name, "Dis Bio"),
-                      (veg_dis_soil_name, "Dis Soil"),
-##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-                      (veg_em_bio_name, "Em Bio"),
-                      (veg_em_soil_name, "Em Soil")]:
-##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-        for veg_type in veg_type_list:
-            header.append(label + (" Veg %i" % veg_type))
-
-    csv.write(",".join(header))
-
-
-    for year in lulc_years:
-        row = [str(year)]
-        for name, label in [(veg_acc_bio_name, "Acc Bio"),
-                          (veg_acc_soil_name, "Acc Soil"),
-                          (veg_dis_bio_name, "Dis Bio"),
-                          (veg_dis_soil_name, "Dis Soil"),
-    ##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-    ##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-    ##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-    ##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-                          (veg_em_bio_name, "Em Bio"),
-                          (veg_em_soil_name, "Em Soil")]:
-    ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-    ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-            for veg_type in veg_type_list:
-                row.append(str(totals[year][veg_type][name]))
-        csv.write("\n" + ",".join(row))
-
-    csv.close()
+##    #open csv
+##    csv = open(blue_carbon_csv_uri, 'w')
+##
+##    header = ["Year"]
+##    for name, label in [(veg_acc_bio_name, "Acc Bio"),
+##                      (veg_acc_soil_name, "Acc Soil"),
+##                      (veg_dis_bio_name, "Dis Bio"),
+##                      (veg_dis_soil_name, "Dis Soil"),
+####                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
+####                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
+####                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
+####                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
+##                      (veg_em_bio_name, "Em Bio"),
+##                      (veg_em_soil_name, "Em Soil")]:
+####                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
+####                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
+##        for veg_type in veg_type_list:
+##            header.append(label + (" Veg %i" % veg_type))
+##
+##    csv.write(",".join(header))
+##
+##
+##    for year in lulc_years:
+##        row = [str(year)]
+##        for name, label in [(veg_acc_bio_name, "Acc Bio"),
+##                          (veg_acc_soil_name, "Acc Soil"),
+##                          (veg_dis_bio_name, "Dis Bio"),
+##                          (veg_dis_soil_name, "Dis Soil"),
+##    ##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
+##    ##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
+##    ##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
+##    ##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
+##                          (veg_em_bio_name, "Em Bio"),
+##                          (veg_em_soil_name, "Em Soil")]:
+##    ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
+##    ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
+##            for veg_type in veg_type_list:
+##                row.append(str(totals[year][veg_type][name]))
+##        csv.write("\n" + ",".join(row))
+##
+##    csv.close()
             
 
 
@@ -1032,14 +1032,27 @@ def execute(args):
     report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
 
     #totals
-    report.write("<B>LULC/Year Input Summary</B>")
+    report.write("<B>Output Tables</B>")
+
+    ##gains and losses
+    report.write("<P><B>Carbon Gained/Lost</B>")
+    column_name_list = ["Start-End Year",
+                        "Gain",
+                        "Loss",
+                        "Net<BR>(Sequestration)"]
+
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    report.write("\n</TABLE>")
+
+    ##acunulation and disturbance
+    report.write("<P><B>Carbon Accumulation/Disturbance</B>")
     column_name_list = ["Start-End Year",
                         "Biomass Accumulation",                        
                         "Soil Accumulation",
                         "Biomass Disturbance",                        
                         "Soil Disturbance",
-                        "Emissions (Biomass)",
-                        "Emissions (Soil)"]
+                        "Emissions<BR>(Biomass)",
+                        "Emissions<BR>(Soil)"]
    
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 
