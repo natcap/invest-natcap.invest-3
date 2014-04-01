@@ -2870,6 +2870,7 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
             'intersects': set(),
         }
     shapefile_layer.ResetReading()
+    print
 
     LOGGER.info('Building intersection list')
     for poly_fid in poly_intersection_lookup:
@@ -2880,14 +2881,12 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
                 poly_intersection_lookup[intersect_poly_fid]['poly']):
                 poly_intersection_lookup[poly_fid]['intersects'].add(
                     intersect_poly_fid)
-                    
-    count = 0
+    print
     #Build maximal subsets
     subset_list = []
     while len(poly_intersection_lookup) > 0:
         #sort polygons by increasing number of intersections
         heap = []
-        count += 1
         for poly_fid, poly_dict in poly_intersection_lookup.iteritems():
             heapq.heappush(
                 heap, (len(poly_dict['intersects']), poly_fid, poly_dict))
@@ -2910,6 +2909,6 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
         for maxset_fid in maximal_set:
             for poly_dict in poly_intersection_lookup.itervalues():
                 poly_dict['intersects'].discard(maxset_fid)
-        print count, maximal_set
         subset_list.append(maximal_set)
-    print len(poly_intersection_lookup)
+    return subset_list
+    
