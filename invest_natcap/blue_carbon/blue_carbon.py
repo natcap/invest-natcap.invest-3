@@ -406,6 +406,8 @@ def execute(args):
     veg_em_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
     veg_em_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
+    em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
+
     #net file names
     net_dis_bio_veg_name = os.path.join(intermediate_dir, "%i_net_dis_bio_veg_%i.tif")
     net_dis_soil_veg_name = os.path.join(intermediate_dir, "%i_net_dis_soil_veg_%i.tif")
@@ -467,6 +469,7 @@ def execute(args):
         acc_bio[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_bio_field])
 
     half_life = raster_utils.get_lookup_from_csv(half_life_csv_uri, half_life_field_key)
+    print half_life
 
     #validate disturbance and accumulation tables
     change_types = set()
@@ -665,9 +668,18 @@ def execute(args):
 
     def half_life_op_closure(veg_type, half_life_field, alpha_t):
         def h_l_op(c):
+            if c is nodata_default_float:
+                return c
             alpha = half_life[veg_type][half_life_field]
+            #print repr(alpha_t), repr(alpha), repr(c)
             try:
-                return (1 - (0.5 ** (alpha_t/(float(alpha))))) * c
+                h_l = alpha_t/float(alpha)
+                resid = 0.5 ** h_l
+                coeff = 1 - resid
+                r = coeff * c
+##                if c > 0:
+##                    print repr(c), repr(h_l), repr(resid), repr(coeff), repr(r)
+                return r
             except ValueError:
                 #return 0 if alpha is None
                 return 0
@@ -750,12 +762,14 @@ def execute(args):
         this_total_acc_bio_uri = os.path.join(workspace_dir, this_total_acc_bio_name % (this_year, next_year))
         this_total_dis_soil_uri = os.path.join(workspace_dir, this_total_dis_soil_name % (this_year, next_year))
         this_total_dis_bio_uri = os.path.join(workspace_dir, this_total_dis_bio_name % (this_year, next_year))
+        this_total_em_uri = os.path.join(workspace_dir, em_name % (this_year, next_year))
 
         veg_acc_bio_uri_list = []
         veg_acc_soil_uri_list = []
         veg_dis_bio_uri_list = []
         veg_dis_soil_uri_list = []
         veg_seq_uri_list = []
+##        em_uri_list = []
     
         totals[this_year] = {}
 
@@ -854,6 +868,10 @@ def execute(args):
                                       half_life_op_closure(veg_type, half_life_field_soil, t),
                                       this_veg_em_soil_uri)
 
+##            em_uri_list = []
+##            em_uri_list.append(this_veg_em_bio_uri)
+##            em_uri_list.append(this_veg_em_soil_uri)
+
             ##emissions adjustment
             #emissions adjusted disturbed biomass
             vectorize_carbon_datasets([this_veg_adj_dis_bio_uri, this_veg_em_bio_uri],
@@ -906,6 +924,10 @@ def execute(args):
         stock_uri_dict[this_year] = this_total_carbon_uri
         
         ##carbon totals
+##        vectorize_carbon_datasets(em_uri_list,
+##                                  add_op,
+##                                  this_total_em_uri)
+        
         vectorize_carbon_datasets(veg_acc_bio_uri_list,
                                   add_op,
                                   this_total_acc_bio_uri)
