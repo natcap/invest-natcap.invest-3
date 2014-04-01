@@ -641,16 +641,17 @@ def aggregate_raster_values_uri(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
-        assert_datasets_projected=False, process_pool=process_pool)
+        assert_datasets_projected=False, process_pool=process_pool,
+        vectorize_op=False)
     clipped_raster = gdal.Open(clipped_raster_uri)
 
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
-    temporary_mask_filename = temporary_filename()
-    mask_dataset = new_raster_from_base(
-        clipped_raster, temporary_mask_filename, 'GTiff', mask_nodata,
+    mask_uri = temporary_filename()
+    mask_dataset = new_raster_from_base_uri(
+        clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
-
+    mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
@@ -658,8 +659,6 @@ def aggregate_raster_values_uri(
     }
     
     if shapefile_field is not None:
-        LOGGER.debug('Looking up field %s', shapefile_field)
-
         #Make sure that the layer name refers to an integer 
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
@@ -667,11 +666,11 @@ def aggregate_raster_values_uri(
             # Raise exception if user provided a field that's not in vector
             raise AttributeError(('Vector %s must have a field named %s' %
                 (shapefile_uri, shapefile_field)))
-
         if fd.GetTypeName() != 'Integer':
             raise TypeError(
                 'Can only aggreggate by integer based fields, requested '
                 'field is of type  %s' % fd.GetTypeName())
+        #Adding the rasterize by attribute option
         rasterize_layer_args['options'].append(
             'ATTRIBUTE=%s' % shapefile_field)
     else:
@@ -692,15 +691,15 @@ def aggregate_raster_values_uri(
         n_pixels={},
         pixel_min={},
         pixel_max={})
-
         
     #make a shapefile that non-overlapping layers can be added to
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
-    layer_datasouce = driver.CreateDataSource(
-        os.path.join(layer_dir, 'layer_out.shp'))
+    subset_layer_datasouce = driver.CreateDataSource(
+        os.path.join(layer_dir, 'subset_layer.shp'))
     spat_ref = get_spatial_ref_uri(shapefile_uri)
-    subset_layer = layer_datasouce.CreateLayer('layer_out', spat_ref, ogr.wkbPolygon)
+    subset_layer = subset_layer_datasouce.CreateLayer(
+        'subset_layer', spat_ref, ogr.wkbPolygon)
     defn = shapefile_layer.GetLayerDefn()
     
     #For every field, create a duplicate field and add it to the new
@@ -733,40 +732,35 @@ def aggregate_raster_values_uri(
     pixel_max_dict = pixel_min_dict.copy()
     
     
-    #layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
-    # Add one feature
-    layer_definition = subset_layer.GetLayerDefn()
-    for poly_index in range(shapefile_layer.GetFeatureCount()):
+    #Loop over each polygon and aggregate
+    subset_layer_definition = subset_layer.GetLayerDefn()
+    for poly_feat in shapefile_layer:
         print 'looping'
-        poly_feat = shapefile_layer.GetFeature(poly_index)
-        # Get the geometry of the polygon in WKT format
-        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
-        # Load the geometry into shapely making it a shapely object
-        shapely_polygon = shapely.wkt.loads(poly_wkt)
-        # Add the shapely polygon geometry to a list, but first simplify the
-        # geometry which smooths the edges making operations a lot faster
-        #poly_list.append(
-        #    shapely_polygon.simplify(0.01, preserve_topology=False))
-
-        feat = ogr.Feature(layer_definition)
         
+        #Making a shapely polygon for future intersection testing to 
+        #be implemented
+        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        shapely_polygon = shapely.wkt.loads(poly_wkt)
+        
+        feat = ogr.Feature(subset_layer_definition)
         for field_index in range(poly_feat.GetFieldCount()):
             original_field_value = poly_feat.GetField(field_index)
             feat.SetField(field_index, original_field_value)
-        
-        #feat.SetField('id', 123)
-        
+
         geom = ogr.CreateGeometryFromWkb(shapely_polygon.wkb)
         feat.SetGeometry(geom)
         subset_layer.CreateFeature(feat)
-        layer_datasouce.SyncToDisk()
-    
+        #is this necessary?
+        subset_layer_datasouce.SyncToDisk()
+
+        #nodata out the mask
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(mask_nodata)
         mask_band = None
+        
         gdal.RasterizeLayer(
             mask_dataset, [1], subset_layer, **rasterize_layer_args)
-        
+
         #get feature areas
         num_features = subset_layer.GetFeatureCount()
         feature_areas = collections.defaultdict(int)
@@ -870,10 +864,11 @@ def aggregate_raster_values_uri(
                 % raster_uri)
             result_tuple.hectare_mean = None
 
+    shapefile_layer.ResetReading()
     mask_band = None
     mask_dataset = None
     clipped_band = None
-    for filename in [temporary_mask_filename, clipped_raster_uri]:
+    for filename in [mask_uri, clipped_raster_uri]:
         try:
             os.remove(filename)
         except OSError:
