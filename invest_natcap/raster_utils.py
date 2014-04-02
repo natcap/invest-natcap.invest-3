@@ -722,7 +722,7 @@ def aggregate_raster_values_uri(
         shapefile_table = {global_id_value: 0.0}
 
     current_iteration_shapefiles = dict(
-        [(shapefile_id, 0.0) for shapefile_id in 
+        [(shapefile_id, 0.0) for shapefile_id in
         shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
@@ -783,12 +783,16 @@ def aggregate_raster_values_uri(
 
         #Loop over each row in out_band
         clipped_band = clipped_raster.GetRasterBand(1)
+        current_iteration_attribute_ids = set()
         for row_index in range(clipped_band.YSize):
             mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
             clipped_array = clipped_band.ReadAsArray(
                 0, row_index, clipped_band.XSize, 1)
-
-            for attribute_id in numpy.unique(mask_array):
+                
+            unique_ids = numpy.unique(mask_array)
+            current_iteration_attribute_ids = (
+                current_iteration_attribute_ids.union(unique_ids))
+            for attribute_id in unique_ids:
                 #ignore masked values
                 if attribute_id == mask_nodata:
                     continue
@@ -830,8 +834,9 @@ def aggregate_raster_values_uri(
         result_tuple.n_pixels.update(aggregate_dict_counts.copy())
         result_tuple.pixel_min.update(pixel_min_dict.copy())
         result_tuple.pixel_max.update(pixel_max_dict.copy())
-            
-        for attribute_id in current_iteration_shapefiles:
+        #Don't want to calculate stats for the nodata
+        current_iteration_attribute_ids.discard(mask_nodata)
+        for attribute_id in current_iteration_attribute_ids:
             if threshold_amount_lookup != None:
                 adjusted_amount = max(
                     aggregate_dict_values[attribute_id] -
@@ -849,8 +854,12 @@ def aggregate_raster_values_uri(
                 #To get the total area multiply n pixels by their area then
                 #divide by 10000 to get Ha.  Notice that's in the denominator
                 #so the * 10000 goes on the top
-                result_tuple.hectare_mean[attribute_id] = (
-                    adjusted_amount / feature_areas[attribute_id] * 10000)
+                if feature_areas[attribute_id] == 0:
+                    LOGGER.warn('feature_areas[%d]=0' % (attribute_id))
+                    result_tuple.hectare_mean[attribute_id] = 0.0
+                else:
+                    result_tuple.hectare_mean[attribute_id] = (
+                        adjusted_amount / feature_areas[attribute_id] * 10000)
             else:
                 result_tuple.pixel_mean[attribute_id] = 0.0
                 result_tuple.hectare_mean[attribute_id] = 0.0
