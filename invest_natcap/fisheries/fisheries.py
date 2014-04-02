@@ -137,7 +137,7 @@ def execute(args):
     #Calculate the classes main param info, and add it to the core args dict
     do_weight = True if args['hrv_type'] == 'Weight' else False
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
-                                args['rec_eq'], do_weight)
+                                args['rec_eq'], do_weight, args['maturity type'])
     core_args['do_weight'] = do_weight
     core_args['params_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
@@ -269,13 +269,19 @@ def parse_migration_tables(mig_folder_uri):
 
     return mig_dict
 
-def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
+def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
     Input:
         params_uri- Contains a string location of the main parameter csv file.
-
+        area_count- The expected number of subregions in the AOI.
+        rec_eq- The recruitment equation being used for this run of the model.
+        do_weight- If spawners and harvesting will be done by number of
+            individuals (False) or by weight (True)
+        mat_type- The maturity type being used. String which will either be
+            'Age Specific' or 'Stage Specific'.
+    
     Returns:
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
@@ -381,6 +387,12 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
                 is missing a Weight parameter, but you have indicated that you\
                 would like to view species harvest by weight. Please make sure\
                 that each age/stage in for the species is assigned a weight.")
+    if 'duration' not in age_params and mat_type == 'Stage Specific':
+        raise MissingParameter("The main parameter CSV for this species is \
+                missing a Duration parameter. This must be included for all \
+                stage-specific model runs. Please make sure that each stage \
+                for the species is assigned a duration.")
+
     #Want a list of the stages in order
     ordered_stages = []
 
