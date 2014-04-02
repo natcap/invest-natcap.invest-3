@@ -599,7 +599,8 @@ def vectorize_points(
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None):
+    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None,
+    all_touched=False):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -621,6 +622,8 @@ def aggregate_raster_values_uri(
         ignore_value_list - (optional) a list of values to ignore when
             calculating the stats
         process_pool - (optional) a process pool for multiprocessing
+        all_touched - (optional) if true will account for any pixel whose
+            geometry passes through the pixel, not just the center point
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
@@ -657,8 +660,11 @@ def aggregate_raster_values_uri(
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
-        'options': ['ALL_TOUCHED=TRUE'],
+        'options': [],
     }
+    
+    if all_touched:
+        rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
     
     if shapefile_field is not None:
         #Make sure that the layer name refers to an integer 
