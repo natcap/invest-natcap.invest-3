@@ -663,7 +663,7 @@ def aggregate_raster_values_uri(
         #Make sure that the layer name refers to an integer 
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
-        if fd == -1:  # -1 returned when field does not exist.
+        if fd == -1 or fd is None:  # -1 returned when field does not exist.
             # Raise exception if user provided a field that's not in vector
             raise AttributeError(('Vector %s must have a field named %s' %
                 (shapefile_uri, shapefile_field)))
@@ -734,25 +734,18 @@ def aggregate_raster_values_uri(
     
     #Loop over each polygon and aggregate
     subset_layer_definition = subset_layer.GetLayerDefn()
-    for poly_feat in shapefile_layer:
-        print 'looping'
-        
-        #Making a shapely polygon for future intersection testing to 
-        #be implemented
-        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
-        shapely_polygon = shapely.wkt.loads(poly_wkt)
-        
-        feat = ogr.Feature(subset_layer_definition)
-        for field_index in range(poly_feat.GetFieldCount()):
-            original_field_value = poly_feat.GetField(field_index)
-            feat.SetField(field_index, original_field_value)
-
-        geom = ogr.CreateGeometryFromWkb(shapely_polygon.wkb)
-        feat.SetGeometry(geom)
-        subset_layer.CreateFeature(feat)
-        #is this necessary?
+    
+    minimal_polygon_sets = calculate_minimal_overlapping_polygon_sets(
+        shapefile_uri)
+    
+    for polygon_set in minimal_polygon_sets:
+        #add polygons to subset_layer
+        LOGGER.info('processing polygon_set %s' % (str(polygon_set)))
+        for poly_fid in polygon_set:
+            poly_feat = shapefile_layer.GetFeature(poly_fid)
+            subset_layer.CreateFeature(poly_feat)
         subset_layer_datasouce.SyncToDisk()
-
+        
         #nodata out the mask
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(mask_nodata)
@@ -774,13 +767,20 @@ def aggregate_raster_values_uri(
                 feature_areas[global_id_value] += geom.GetArea()
         subset_layer.ResetReading()
         geom = None
-        subset_layer.DeleteFeature(feat.GetFID())
+        
+        #Need a complicated step to see what the FIDs are in the subset_layer
+        #then need to loop through and delete them
+        fid_to_delete = set()
+        for feature in subset_layer:
+            fid_to_delete.add(feature.GetFID())
+        subset_layer.ResetReading()
+        for fid in fid_to_delete:
+            subset_layer.DeleteFeature(fid)
+        subset_layer_datasouce.SyncToDisk()
 
         mask_dataset.FlushCache()
         mask_band = mask_dataset.GetRasterBand(1)
 
-    
-        LOGGER.debug('aggregate_dict_counts %s' % (str(aggregate_dict_counts)))
         #Loop over each row in out_band
         clipped_band = clipped_raster.GetRasterBand(1)
         for row_index in range(clipped_band.YSize):
@@ -864,7 +864,6 @@ def aggregate_raster_values_uri(
                 % raster_uri)
             result_tuple.hectare_mean = None
 
-    shapefile_layer.ResetReading()
     mask_band = None
     mask_dataset = None
     clipped_band = None
