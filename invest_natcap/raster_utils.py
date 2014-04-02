@@ -28,6 +28,7 @@ import scipy.ndimage
 import shapely.wkt
 import shapely.ops
 from shapely import speedups
+import shapely.prepared
 
 import raster_cython_utils
 from invest_natcap.invest_core import fileio
