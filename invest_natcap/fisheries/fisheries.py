@@ -97,19 +97,19 @@ def execute(args):
     #we can't continue if we don't have data.
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         if 'alpha' not in args or 'beta' not in args:
-            raise MissingRecruitmentParameter("For the recruitment equation \
+            raise MissingParameter("For the recruitment equation \
                         chosen, there are missing parameters. Both an alpha \
                         and a beta parameter are necessary. Please look at \
                         the help text provided next to the recruitment equation\
                         selection, and add the necessary additional information.")
     if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
-        raise MissingRecruitmentParameter("For the recruitment equation \
+        raise MissingParameter("For the recruitment equation \
                     chosen, there are missing parameters.  A CSV for fecundity\
                     by AOI zone is necessary. Please look at the help text \
                     provided next to the recruitment equation selection, and \
                     add the necessary additional information.")
     if args['rec_eq'] == 'Fixed' and 'fix_param' not in args:
-        raise MissingRecruitmentParameter("For the recruitment equation \
+        raise MissingParameter("For the recruitment equation \
                     chosen, there are missing parameters.  A fixed recruitment\
                     number is necessary. Please look at the help text \
                     provided next to the recruitment equation selection, and \
@@ -366,18 +366,18 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
     #Looks like 'VulnFishing' is really the only required one from this set.
     
     if 'vulnfishing' not in age_params:
-        raise MissingVulnFishingParameter("The main parameter CSV for this \
+        raise MissingParameter("The main parameter CSV for this \
                 species is missing a VulnFishing parameter. Please make sure \
                 that each age/stage for the species has a corresponding \
                 proportion that is vulnerable to fishing.")
     if 'maturity' not in age_params and \
                         rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
-        raise MissingMaturityParameter("The main parameter CSV for this \
+        raise MissingParameter("The main parameter CSV for this \
                 species is missing a Maturity parameter. Please make sure \
                 that each age/stage for the species is assigned a proportion \
                 between 0 and 1 (inclusive) which would be considered mature.")
     if 'weight' not in age_params and do_weight:
-        raise MissingWeightParameter("The main parameter CSV for this species\
+        raise MissingParameter("The main parameter CSV for this species\
                 is missing a Weight parameter, but you have indicated that you\
                 would like to view species harvest by weight. Please make sure\
                 that each age/stage in for the species is assigned a weight.")
@@ -441,7 +441,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
 
 
     if not exp_frac_exists:
-        raise MissingExpFracParameter("The main parameter CSV for this species \
+        raise MissingParameter("The main parameter CSV for this species \
                 is missing an ExplotationFraction parameter. Please make sure \
                 that each area provided within the AOI(s) has a corresponding \
                 explotation fraction.")
