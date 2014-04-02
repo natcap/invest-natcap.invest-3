@@ -22,30 +22,12 @@ class ImproperAreaParameter(Exception):
     '''This exception will occur if the area-specific headings in the main 
     parameter CSV are not included in the set of known parameters.'''
     pass
-class MissingRecruitmentParameter(Exception):
-    '''This should be raised if the dropdown equation does not match the
-    parameters provided, and additional information is needed. That might
-    be in the form of alpha/beta, the CSV, or a numerical recruitment number.
+class MissingParameter(Exception):
+    '''This is a broad exception which can be raised if the any of the parameters
+    required for a specific model run type are missing. This can include
+    recruitment parameters, vulnerability, exploitation fraction, maturity,
+    weight, or duration.
     '''
-    pass
-class MissingVulnFishingParameter(Exception):
-    '''This should be raised if the species main parameter CSV is missing a
-    VulnFishing column. It is a required input for the survival equation.'''
-    pass
-class MissingExpFracParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a ExploitationFraction for each AOI subregion included. It is a required
-    input for the survival equation.'''
-    pass
-class MissingMaturityParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a Maturity parameter for ages/stages. It is a required paramater if the
-    recruitment equation being used is B-H, Ricker, or Fecundity.'''
-    pass
-class MissingWeightParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a Weight parameter for ages/stages. It is a required paramater if the
-    recruitment equation being used is B-H, Ricker, or Fecundity.'''
     pass
 
 def execute(args):
