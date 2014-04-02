@@ -51,3 +51,8 @@ def filter_fragments(input_uri, size, output_uri):
         assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
+
+def execute(args):
+    filter_fragments(args["input_uri"],
+                     args["size"],
+                     args["ouput_uri"])
