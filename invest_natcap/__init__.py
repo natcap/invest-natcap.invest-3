@@ -19,7 +19,10 @@ import build_utils
 #from osgeo import gdal
 #gdal.UseExceptions()
 
-__version__ = build_utils.invest_version()
+try:
+    __version__ = build_utils.invest_version()
+except:
+    __version__ = 'dev'
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
@@ -27,6 +30,15 @@ def is_release():
     if __version__[0:3] == 'dev':
         return False
     return True
+
+def local_dir(source_file):
+    """Return the path to where the target_file would be on disk.  If this is
+    frozen (as with PyInstaller), this will be the folder with the executable
+    in it.  If not, it'll just be the foldername of the source_file being
+    passed in."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(source_file)
 
 def _user_hash():
     """Returns a hash for the user, based on the machine."""
