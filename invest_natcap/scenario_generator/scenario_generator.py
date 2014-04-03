@@ -526,9 +526,10 @@ def execute(args):
     #raise error if transition table provided, but not used
     if args["transition"] and not(args["calculate_transition"] or args["calculate_factors"]):
         msg = "Transition table provided but not used."
-        LOGGER.error(msg)
-        raise ValueError, msg
+        LOGGER.warn(msg)
+        #raise ValueError, msg
 
+    transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
         #load transition table
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
