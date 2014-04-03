@@ -192,8 +192,8 @@ def calculate_transport(
     cdef int n_steps = 0
     while cells_to_process.size() > 0:
         n_steps += 1
-        if n_steps % 10000 == 0:
-            LOGGER.debug('Reporting every 10000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
+        if n_steps % 100000 == 0:
+            LOGGER.debug('Reporting every 100000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
     
         current_index = cells_to_process.top()
         cells_to_process.pop()
@@ -972,8 +972,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         cache_dirty[cache_row_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        if region_count % 10000 == 0:
-            LOGGER.info('working on plateau #%d (reports every 10000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+        if region_count % 100000 == 0:
+            LOGGER.info('working on plateau #%d (reports every 100000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
         
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
