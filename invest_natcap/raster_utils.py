@@ -313,7 +313,8 @@ def new_raster_from_base(
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
     new_raster = driver.Create(
-        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
+        options=['COMPRESS=LZW'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -353,7 +354,8 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
 
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
-        outputURI.encode('utf-8'), cols, rows, bands, datatype)
+        outputURI.encode('utf-8'), cols, rows, bands, datatype,
+        options=['COMPRESS=LZW'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -503,7 +505,8 @@ def create_raster_from_vector_extents(
         rasterFile = ''
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
-    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
+    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
+        options=['COMPRESS=LZW'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -1244,7 +1247,8 @@ def resample_dataset(
 
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
+        options=['COMPRESS=LZW'])
 
     output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
 
@@ -1321,7 +1325,8 @@ def warp_reproject_dataset_uri(
     # resampled arrangement.
     output_dataset = gdal_driver.Create(
             output_uri, int((lrx - ulx)/pixel_spacing),
-            int((uly - lry)/pixel_spacing), 1, output_type)
+            int((uly - lry)/pixel_spacing), 1, output_type,
+            options=['COMPRESS=LZW'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1395,7 +1400,8 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
 
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
-        int((uly - lry)/pixel_spacing), 1, output_type)
+        int((uly - lry)/pixel_spacing), 1, output_type,
+        options=['COMPRESS=LZW'])
 
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
@@ -2026,7 +2032,8 @@ def resize_and_resample_dataset_uri(
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
+        options=['COMPRESS=LZW'])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
