@@ -100,15 +100,11 @@
                     "defaultValue": "../HabitatQuality/Input/sensitivity_samp.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
-                                    "fieldsExist": ["LULC", "NAME", "HABITAT"],
+                                    "fieldsExist": ["LULC", "HABITAT"],
                                     "restrictions": [{"field": "LULC",
                                                     "validateAs":{"type": "number",
                                                                   "allowedValues": {"pattern":"^[0-9].*"}
                                                                   }},
-                                                     {"field": "NAME",
-                                                      "validateAs": {"type": "string",
-                                                                     "allowedValues":{"pattern":"[a-zA-Z0-9_].*"}}
-                                                                  },
                                                      {"field": "HABITAT",
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"^[0]*\\.?[0-9]+$"}
