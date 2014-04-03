@@ -19,9 +19,9 @@
                     "defaultValue": "../HabitatQuality",
                     "required": true,
                     "validateAs": {"type": "folder"},
-                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                    "helpText": "Select a folder to be used as your workspace.<br/><br/><b>NOTE:</b> This workspace folder must contain a sub-folder named <i>input</i>. This <i>input</i> folder is where the model will look for the relevant threat rasters.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
                 },
-                {        
+                {
                     "id" : "current_landcover",
                     "args_id" : "landuse_cur_uri",
                     "type": "file",
@@ -29,9 +29,9 @@
                     "defaultValue": "../HabitatQuality/Input/lc_samp_cur_b/w001001.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "This must be a raster dataset that GDAL can open. Each cell should represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. The LULC codes must match the codes in the Sensitivity table"
+                    "helpText": "This must be a raster dataset that GDAL can open. The current LULC must have it's own threat rasters, where each threat raster file path has a suffix of <b>_c</b>.<br/><br/> Each cell should represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. <b>The LULC codes must match the codes in the Sensitivity table</b>."
                 },
-                {        
+                {
                     "id" : "future_landcover",
                     "args_id" : "landuse_fut_uri",
                     "type": "file",
@@ -40,9 +40,9 @@
                     "required": false,
                     "validateAs": {"type": "GDAL"},
                     "returns": {"ifEmpty": "pass"},
-                    "helpText": "This input is optional but if provided must be a raster dataset that GDAL can open. Each cell should represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. The LULC codes must match the codes in the Sensitivity table"
+                    "helpText": "This input is <b>optional</b> but if provided must be a raster dataset that GDAL can open. Inputting a future LULC will generate degradation, habitat quality, and habitat rarity (If baseline is input) outputs. The future LULC must have it's own threat rasters, where each threat raster file path has a suffix of <b>_f</b>.<br/><br/>Each cell should represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. <b>The LULC codes must match the codes in the Sensitivity table</b>."
                 },
-                {        
+                {
                     "id" : "baseline_landcover",
                     "args_id" : "landuse_bas_uri",
                     "type": "file",
@@ -51,8 +51,8 @@
                     "required": false,
                     "validateAs": {"type": "GDAL"},
                     "returns": {"ifEmpty": "pass"},
-                    "helpText": "This input is optional but if provided must be a raster dataset that GDAL can open. Each cell should  represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. The LULC codes must match the codes in the Sensitivity table. If possible the baseline map should refer to a time when intensive management of the landscape was relatively rare."
-                },       
+                    "helpText": "This input is <b>optional</b> but if provided must be a raster dataset that GDAL can open. If the baseline LULC is provided, rarity outputs will be created for the current and future LULC. The baseline LULC can have it's own threat rasters (optional), where each threat raster file path has a suffix of <b>_b</b>. If no threat rasters are found, degradation and habitat quality outputs will not be generated for the baseline LULC.<br/><br/> Each cell should  represent a LULC code as an Integer. The dataset should be in a projection where the units are in meters and the projection used should be defined. The LULC codes must match the codes in the Sensitivity table. If possible the baseline map should refer to a time when intensive management of the landscape was relatively rare."
+                },
                 {
                     "id" : "threats_data",
                     "args_id": "threats_uri",
@@ -74,7 +74,7 @@
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"(^[0]*\\.?[0-9]+$)|(^[1]\\.?[0]+$)"}
                                                                   }}]},
-                    "helpText":"A CSV file of all the threats for the model to consider. Each row in the table is a degradation source and each column contains a different attribute of each degradation source (THREAT, MAX_DIST, WEIGHT, DECAY). See the user's guide for valid values for these columns."
+                    "helpText":"A CSV file of all the threats for the model to consider. Each row in the table is a degradation source and each column contains a different attribute of each degradation source (THREAT, MAX_DIST, WEIGHT).<br/><br/><b>THREAT:</b> The name of the threat source and this name must match exactly to the name of the threat raster and to the name of it's corresponding column in the sensitivity table. <b>NOTE:</b> The threat raster path should have a suffix indicator ( _c, _f, _b ) and the sensitivity column should have a prefix indicator (L_). The THREAT name in the threat table should not include either the suffix or prefix. <br/><br/><b>MAX_DIST:</b> A number in kilometres (km) for the maximum distance a threat has an affect.<br/><br/><b>WEIGHT:</b> A floating point value between 0 and 1 for the the threats weight relative to the other threats. Depending on the type of habitat under review, certain threats may cause greater degradation than other threats.<br/><br/>See the user's guide for valid values for these columns."
                 },
                 {
                     "id" : "accessibility_threats",
@@ -83,14 +83,14 @@
                     "label": "Accessibility to threats (optional)",
                     "defaultValue": "../HabitatQuality/Input/access_samp.shp",
                     "required": false,
-                    "validateAs": {"type": "OGR", 
-                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"},
                                                "type": "polygons"
                                              }],
                                    "fieldsExist": ["ACCESS"]
                                    },
                     "returns": {"ifEmpty": "pass"},
-                    "helpText": "This must be a polygon shapefile that OGR can open. The input contains data on the relative protection that legal / institutional / social / physical barriers provide against threats. Should contain polygons with values ranging from 0 - 1 where 1 is fully accessible. Any cells not covered by a polygon will be set to 1."
+                    "helpText": "This must be a polygon shapefile that OGR can open. The input contains data on the relative protection that legal / institutional / social / physical barriers provide against threats. The shapefile layer should contain polygons with a field <b>ACCESS</b>. The <b>ACCESS</b> values should range from 0 - 1, where 1 is fully accessible. Any cells not covered by a polygon will be set to 1."
                 },
                 {
                     "id" : "sensitivity_data",
@@ -113,7 +113,7 @@
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"^[0]*\\.?[0-9]+$"}
                                                                   }}]},
-                    "helpText":"A CSV file of LULC types, whether or not the are considered habitat, and, for LULC types that are habitat, their specific sensitivity to each threat. Each row is a LULC type with the following columns: LULC, NAME, HABITAT, L_THREAT1, L_THREAT2, ... Each L_THREATN should match exactly with the threat names given in the threat CSV file, where the THREATN is what matches. Please see the users guide for more detailed information on proper column values and column names for each threat."
+                    "helpText":"A CSV file of LULC types, whether or not the are considered habitat, and, for LULC types that are habitat, their specific sensitivity to each threat. Each row is a LULC type with the following columns: <b>LULC, HABITAT, L_THREAT1, L_THREAT2, ...</b><br/><br/><b>LULC:</b> Integer values that reflect each LULC code found in current, future, and baseline rasters.<br/><br/><b>HABITAT:</b> A value of 0 or 1 (presence / absence) or a value between 0 and 1 (continuum) depicting the suitability of habitat.<br/><br/><b>L_THREATN:</b> Each L_THREATN should match exactly with the threat names given in the threat CSV file, where the THREATN is the name that matches. This is an floating point value between 0 and 1 that represents the sensitivity of a habitat to a threat. <br/><br/>.Please see the users guide for more detailed information on proper column values and column names for each threat."
                 },
                 {
                     "id" : "half_saturation_constant",
@@ -125,8 +125,8 @@
                     "label": "Half-saturation constant",
                     "defaultValue": "0.5",
                     "required": true,
-                    "helpText":"A positive floating point value that is defaulted at 30. This is the value of the parameter k in equation (4). In general, set k to half of the highest grid cell degradation value on the landscape. To perform this model calibration you will have to run the model once to find the highest degradation value and set k for your landscape. Note that the choice of k only determines the spread and central tendency of habitat quality cores."
-                },                         
+                    "helpText":"A positive floating point value that is defaulted at 0.5. This is the value of the parameter k in equation (4). In general, set k to half of the highest grid cell degradation value on the landscape. To perform this model calibration you will have to run the model once to find the highest degradation value and set k for your landscape. Note that the choice of k only determines the spread and central tendency of habitat quality cores and does not affect the rank."
+                },
                 {
                     "id" : "results_suffix",
                     "args_id" : "suffix",
@@ -137,8 +137,8 @@
                     "defaultValue": "",
                     "required": false,
                     "returns": {"ifEmpty": "pass"},
-                    "helpText":"A String that will be added to the end of the output uris."
-                }                         
+                    "helpText":"A String that will be added to the end of the output file paths."
+                }
             ]
         }
     ]
