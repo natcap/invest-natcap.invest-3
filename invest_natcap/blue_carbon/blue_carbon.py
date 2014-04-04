@@ -469,7 +469,7 @@ def execute(args):
         acc_bio[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_bio_field])
 
     half_life = raster_utils.get_lookup_from_csv(half_life_csv_uri, half_life_field_key)
-    print half_life
+    #print half_life
 
     #validate disturbance and accumulation tables
     change_types = set()
@@ -581,10 +581,12 @@ def execute(args):
             for original_lulc in trans:
                 veg_trans_acc_dict[veg_type][component][original_lulc] = {}
                 for transition_lulc in trans:
-                    if int(carbon[original_lulc][carbon_field_veg]) == veg_type:
+                    if int(carbon[transition_lulc][carbon_field_veg]) == veg_type:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = component_dict[transition_lulc][trans[original_lulc][str(transition_lulc)]] * conversion
                     else:
                         veg_trans_acc_dict[veg_type][component][(original_lulc, transition_lulc)] = 0.0
+
+    #print veg_trans_acc_dict
 
     #disturbance
     trans_dis_dict = {}
@@ -593,7 +595,7 @@ def execute(args):
         trans_dis_dict[component] = {}
         for original_lulc in trans:
             for transition_lulc in trans:
-                trans_dis_dict[component][(original_lulc, transition_lulc)] = component_dict[carbon[transition_lulc][carbon_field_veg]][trans[original_lulc][str(transition_lulc)]]
+                trans_dis_dict[component][(original_lulc, transition_lulc)] = component_dict[carbon[original_lulc][carbon_field_veg]][trans[original_lulc][str(transition_lulc)]]
 
     ##vectorize datasets operations
     #standard ops
