@@ -593,7 +593,7 @@ def execute(args):
         trans_dis_dict[component] = {}
         for original_lulc in trans:
             for transition_lulc in trans:
-                trans_dis_dict[component][(original_lulc, transition_lulc)] = component_dict[carbon[original_lulc][carbon_field_veg]][trans[original_lulc][str(transition_lulc)]]
+                trans_dis_dict[component][(original_lulc, transition_lulc)] = component_dict[carbon[transition_lulc][carbon_field_veg]][trans[original_lulc][str(transition_lulc)]]
 
     ##vectorize datasets operations
     #standard ops
