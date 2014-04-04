@@ -81,7 +81,6 @@ class TestFisheries(invest_natcap.testing.GISTest):
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
 
-    @SkipTest
     def test_age_no_gender_smoke(self):
         #Going to use Blue Crab for testing.
         args = {}
@@ -100,7 +99,6 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         fisheries.execute(args)
 
-    @SkipTest
     def test_age_gendered_smoke(self):
         #Using DC for gendered testing.
         args = {}
@@ -120,7 +118,6 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         fisheries.execute(args)
     
-    @SkipTest
     def test_stage_no_gender_smoke(self):
         #Using white shrimp for stage testing.
         args = {}
@@ -139,7 +136,6 @@ class TestFisheries(invest_natcap.testing.GISTest):
 
         fisheries.execute(args)
 
-    @SkipTest
     def test_age_no_gender_migration(self):
         #Using lobster to test a model which uses migration.
         args = {}
