@@ -22,8 +22,8 @@ pyximport.install()
 
 #shapefile_uri = 'Servicesheds/Servicesheds_Col.shp'
 
-raster_uri = 'Peru_for_Rich/dem_50km'
-shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
+#raster_uri = 'Peru_for_Rich/dem_50km'
+#shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
 
 #raster_uri =    'overlapping_polygons/sample_static_impact_map.tif'
 #shapefile_uri = 'overlapping_polygons/servicesheds_col.shp'
@@ -56,9 +56,15 @@ shapefile_uri = 'Peru_for_Rich/serv_clip50in.shp'
 # Add one feature
 #layer_definition = layer.GetLayerDefn()
 
+#raster_uri = './test/invest-data/test/data/smooth_rasters/constant.tif'
+#shapefile_uri = './test/invest-data/test/data/smooth_rasters/smooth_raster_bound.shp'
+
+raster_uri ='C:/Users/rich/Documents/Hydropower_new_aggregate/output/per_pixel/wyield.tif'
+shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
+
 start = time.time()
 values = raster_utils.aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field='ws_id',
+    raster_uri, shapefile_uri, shapefile_field='subws_id',
     ignore_nodata=True, threshold_amount_lookup=None,
     ignore_value_list=[], process_pool=None)
 print values

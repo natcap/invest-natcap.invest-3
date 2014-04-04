@@ -313,7 +313,8 @@ def new_raster_from_base(
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
     new_raster = driver.Create(
-        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
+        options=['COMPRESS=LZW'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -353,7 +354,8 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
 
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
-        outputURI.encode('utf-8'), cols, rows, bands, datatype)
+        outputURI.encode('utf-8'), cols, rows, bands, datatype,
+        options=['COMPRESS=LZW'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -503,7 +505,8 @@ def create_raster_from_vector_extents(
         rasterFile = ''
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
-    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
+    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
+        options=['COMPRESS=LZW'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -599,7 +602,8 @@ def vectorize_points(
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None):
+    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None,
+    all_touched=False):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -621,6 +625,8 @@ def aggregate_raster_values_uri(
         ignore_value_list - (optional) a list of values to ignore when
             calculating the stats
         process_pool - (optional) a process pool for multiprocessing
+        all_touched - (optional) if true will account for any pixel whose
+            geometry passes through the pixel, not just the center point
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
@@ -657,8 +663,11 @@ def aggregate_raster_values_uri(
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
-        'options': ['ALL_TOUCHED=TRUE'],
+        'options': [],
     }
+    
+    if all_touched:
+        rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
     
     if shapefile_field is not None:
         #Make sure that the layer name refers to an integer 
@@ -1238,7 +1247,8 @@ def resample_dataset(
 
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
+        options=['COMPRESS=LZW'])
 
     output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
 
@@ -1315,7 +1325,8 @@ def warp_reproject_dataset_uri(
     # resampled arrangement.
     output_dataset = gdal_driver.Create(
             output_uri, int((lrx - ulx)/pixel_spacing),
-            int((uly - lry)/pixel_spacing), 1, output_type)
+            int((uly - lry)/pixel_spacing), 1, output_type,
+            options=['COMPRESS=LZW'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1389,7 +1400,8 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
 
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
-        int((uly - lry)/pixel_spacing), 1, output_type)
+        int((uly - lry)/pixel_spacing), 1, output_type,
+        options=['COMPRESS=LZW'])
 
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
@@ -1630,29 +1642,32 @@ def get_rat_as_dictionary(dataset):
     return rat_dictionary
 
 def gaussian_filter_dataset_uri(
-    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None):
+    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
     """A callthrough to gaussian filter dataset"""
 
     dataset = gdal.Open(dataset_uri)
     gaussian_filter_dataset(
-        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir)
+        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir,
+        constant_factor=constant_factor)
 
 
 def gaussian_filter_dataset(
-    dataset, sigma, out_uri, out_nodata, temp_dir=None):
+    dataset, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
     """A memory efficient gaussian filter function that operates on
-       the dataset level and creates a new dataset that's filtered.
-       It will treat any nodata value in dataset as 0, and re-nodata
-       that area after the filter.
+        the dataset level and creates a new dataset that's filtered.
+        It will treat any nodata value in dataset as 0, and re-nodata
+        that area after the filter.
 
-       dataset - a gdal dataset
-       sigma - the sigma value of a gaussian filter
-       out_uri - the uri output of the filtered dataset
-       out_nodata - the nodata value of dataset
-       temp_dir - (optional) the directory in which to store the memory
-           mapped arrays.  If left off will use the system temp
-           directory.  If defined the directory must exist on the
-           filesystem (a temporary folder will be created inside of temp_dir).
+        dataset - a gdal dataset
+        sigma - the sigma value of a gaussian filter
+        out_uri - the uri output of the filtered dataset
+        out_nodata - the nodata value of dataset
+        temp_dir - (optional) the directory in which to store the memory
+            mapped arrays.  If left off will use the system temp
+            directory.  If defined the directory must exist on the
+            filesystem (a temporary folder will be created inside of temp_dir).
+        constant_factor - a factor to multiply the output by.  Helpful when
+            normalizing from the gaussian blur
 
        returns the filtered dataset created at out_uri"""
 
@@ -1694,14 +1709,14 @@ def gaussian_filter_dataset(
         #Just the mask for this row
         mask_row = row_array == source_nodata
         row_array[mask_row] = 0.0
-        source_array[row_index, :] = row_array
+        source_array[row_index, :] = row_array * constant_factor
 
         #remember the mask in the memory mapped array
         mask_array[row_index, :] = mask_row
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
-        source_array, sigma = sigma, output = dest_array)
+        source_array, sigma=sigma, output=dest_array)
 
     LOGGER.info('mask the result back to nodata where originally nodata')
     dest_array[mask_array] = out_nodata
@@ -2020,7 +2035,8 @@ def resize_and_resample_dataset_uri(
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
+        options=['COMPRESS=LZW'])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
