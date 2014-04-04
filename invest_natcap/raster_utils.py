@@ -1642,29 +1642,32 @@ def get_rat_as_dictionary(dataset):
     return rat_dictionary
 
 def gaussian_filter_dataset_uri(
-    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None):
+    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
     """A callthrough to gaussian filter dataset"""
 
     dataset = gdal.Open(dataset_uri)
     gaussian_filter_dataset(
-        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir)
+        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir,
+        constant_factor=constant_factor)
 
 
 def gaussian_filter_dataset(
-    dataset, sigma, out_uri, out_nodata, temp_dir=None):
+    dataset, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
     """A memory efficient gaussian filter function that operates on
-       the dataset level and creates a new dataset that's filtered.
-       It will treat any nodata value in dataset as 0, and re-nodata
-       that area after the filter.
+        the dataset level and creates a new dataset that's filtered.
+        It will treat any nodata value in dataset as 0, and re-nodata
+        that area after the filter.
 
-       dataset - a gdal dataset
-       sigma - the sigma value of a gaussian filter
-       out_uri - the uri output of the filtered dataset
-       out_nodata - the nodata value of dataset
-       temp_dir - (optional) the directory in which to store the memory
-           mapped arrays.  If left off will use the system temp
-           directory.  If defined the directory must exist on the
-           filesystem (a temporary folder will be created inside of temp_dir).
+        dataset - a gdal dataset
+        sigma - the sigma value of a gaussian filter
+        out_uri - the uri output of the filtered dataset
+        out_nodata - the nodata value of dataset
+        temp_dir - (optional) the directory in which to store the memory
+            mapped arrays.  If left off will use the system temp
+            directory.  If defined the directory must exist on the
+            filesystem (a temporary folder will be created inside of temp_dir).
+        constant_factor - a factor to multiply the output by.  Helpful when
+            normalizing from the gaussian blur
 
        returns the filtered dataset created at out_uri"""
 
@@ -1706,14 +1709,14 @@ def gaussian_filter_dataset(
         #Just the mask for this row
         mask_row = row_array == source_nodata
         row_array[mask_row] = 0.0
-        source_array[row_index, :] = row_array
+        source_array[row_index, :] = row_array * constant_factor
 
         #remember the mask in the memory mapped array
         mask_array[row_index, :] = mask_row
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
-        source_array, sigma = sigma, output = dest_array)
+        source_array, sigma=sigma, output=dest_array)
 
     LOGGER.info('mask the result back to nodata where originally nodata')
     dest_array[mask_array] = out_nodata
