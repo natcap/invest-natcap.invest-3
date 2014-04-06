@@ -1733,4 +1733,24 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         flow_direction_uri, distance_uri, 'GTiff', distance_nodata,
         gdal.GDT_Float32, fill_value=distance_nodata)
 
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    
+    n_cols, n_rows = raster_utils.get_row_col_from_uri(
+        flow_direction_uri)
+        
+    cdef queue[int] visit_queue
+    
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] buffer_array = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
+    
+    #build up the stream pixel indexes
+    for row_index in range(n_rows):
+        dem_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols,
+            win_ysize=1, buf_obj=buffer_array)
+        for col_index in range(n_cols):
+            if buffer_array[0, col_index] == 1:
+                #it's a stream, remember that
+                visit_queue.push(row_index * n_cols + col_index)
     
