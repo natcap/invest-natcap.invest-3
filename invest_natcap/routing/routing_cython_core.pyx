@@ -1713,3 +1713,18 @@ def find_sinks(dem_uri):
     tmp_sink_set = numpy.empty((sink_set_index,), dtype=numpy.int32)
     tmp_sink_set[0:sink_set_index] = sink_set[0:sink_set_index]
     return tmp_sink_set
+
+    
+def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
+    """This function calculates the flow downhill distance to the stream layers
+    
+        flow_direction_uri - a raster with d-infinity flow directions
+        stream_uri - a raster where 1 indicates a stream all other values
+            ignored must be same dimensions and projection as
+            flow_direction_uri)
+        distance_uri - an output raster that will be the same dimensions as
+            the input rasters where each pixel is in linear units the drainage
+            from that point to a stream.
+            
+        returns nothing"""
+    pass

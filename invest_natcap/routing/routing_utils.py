@@ -335,7 +335,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             
         returns nothing"""
     routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_out_uri)
-    
+
 
 def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     """This function calculates the flow downhill distance to the stream layers
@@ -350,4 +350,5 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             
         returns nothing"""
         
-    pass
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, distance_uri)
