@@ -1727,4 +1727,10 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             from that point to a stream.
             
         returns nothing"""
-    pass
+    
+    cdef float distance_nodata = -9999
+    raster_utils.new_raster_from_base_uri(
+        flow_direction_uri, distance_uri, 'GTiff', distance_nodata,
+        gdal.GDT_Float32, fill_value=distance_nodata)
+
+    
