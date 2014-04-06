@@ -1744,9 +1744,12 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] buffer_array = (
         numpy.empty((1, n_cols), dtype=numpy.float32))
     
+    stream_ds = gdal.Open(stream_uri)
+    stream_band = stream_ds.GetRasterBand(1)
+    
     #build up the stream pixel indexes
     for row_index in range(n_rows):
-        dem_band.ReadAsArray(
+        stream_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols,
             win_ysize=1, buf_obj=buffer_array)
         for col_index in range(n_cols):
