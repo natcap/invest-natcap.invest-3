@@ -32,7 +32,7 @@ class TestFisheries(invest_natcap.testing.GISTest):
         bc_no_mat = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_mat.csv'
         shrimp_no_weight = './invest-data/test/data/fisheries/CSVs/shrimp_missing_weight.csv'
         bc_no_vuln = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
-        bc_no_exploit = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
+        bc_no_exploit = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_exploit.csv'
 
         bc_area_count = 1
         shrimp_area_count = 1
