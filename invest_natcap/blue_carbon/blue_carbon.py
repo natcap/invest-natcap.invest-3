@@ -280,6 +280,12 @@ def execute(args):
     #copy LULC for analysis year
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
+    #carbon schedule
+    if "carbon_schedule" in args:
+        carbon_schedule_field_key = "Year"
+        carbon_schedule_field_rate = args["carbon_schedule_field"]
+        carbon_schedule_csv = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
+
     #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
 
@@ -995,7 +1001,7 @@ def execute(args):
     #open csv
     csv = open(blue_carbon_csv_uri, 'w')
 
-    header = ["Start Year", "End Year", "Emissions"]
+    header = ["Start Year", "End Year", "Emissions", "Social Cost"]
 
     csv.write(",".join(header))
 
@@ -1030,6 +1036,12 @@ def execute(args):
                 emissions += totals[year][veg_type][veg_em_soil_name] * c
 
             row.append(str(emissions))
+
+            if "carbon_schedule" in args:
+                try:
+                    row.append(str(emissions * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
+                except KeyError:
+                    row.append("")
                     
             csv.write("\n" + ",".join(row))
 

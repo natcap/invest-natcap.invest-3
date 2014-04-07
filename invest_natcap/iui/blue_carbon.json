@@ -312,7 +312,7 @@
                 },
                 {
                    "id" : "social_valuation",
-                   "type" : "hiddenElement",
+                   "type" : "container",
                    "collapsible" : true,
                    "args_id" : "social_valuation",
                    "label" : "Social market valuation.",
