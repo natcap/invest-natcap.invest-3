@@ -61,14 +61,14 @@ class TestFisheries(invest_natcap.testing.GISTest):
                         shrimp_area_count, 'Fixed', True, 'Stage Specific')
         self.assertRaises(fisheries.MissingParameter,
                         fisheries.parse_main_csv, bc_no_mat, 
-                        bc_area_count, 'Ricker', True, 'Age Specific')
+                        bc_area_count, 'Ricker', False, 'Age Specific')
         self.assertRaises(fisheries.MissingParameter,
                         fisheries.parse_main_csv, bc_no_vuln, 
-                        bc_area_count, 'Ricker', True, 'Age Specific')
+                        bc_area_count, 'Ricker', False, 'Age Specific')
         self.assertRaises(fisheries.MissingParameter,
                         fisheries.parse_main_csv, bc_no_exploit, 
-                        bc_area_count, 'Ricker', True, 'Age Specific')
-
+                        bc_area_count, 'Ricker', False, 'Age Specific')
+    #@SkipTest
     def test_fecundity_csv_parse(self):
        '''Since none of the models currently use fecundity for their
        recruitment, need to test to make sure that it actually parses the way I
