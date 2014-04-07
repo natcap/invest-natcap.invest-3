@@ -32,6 +32,7 @@ class TestFisheries(invest_natcap.testing.GISTest):
         bc_no_mat = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_mat.csv'
         shrimp_no_weight = './invest-data/test/data/fisheries/CSVs/shrimp_missing_weight.csv'
         bc_no_vuln = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
+        bc_no_exploit = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
 
         bc_area_count = 1
         shrimp_area_count = 1
@@ -63,7 +64,10 @@ class TestFisheries(invest_natcap.testing.GISTest):
                         bc_area_count, 'Ricker', True, 'Age Specific')
         self.assertRaises(fisheries.MissingParameter,
                         fisheries.parse_main_csv, bc_no_vuln, 
-                        shrimp_area_count, 'Ricker', True, 'Age Specific')
+                        bc_area_count, 'Ricker', True, 'Age Specific')
+        self.assertRaises(fisheries.MissingParameter,
+                        fisheries.parse_main_csv, bc_no_exploit, 
+                        bc_area_count, 'Ricker', True, 'Age Specific')
 
     def test_fecundity_csv_parse(self):
        '''Since none of the models currently use fecundity for their
