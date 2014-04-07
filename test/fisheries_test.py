@@ -27,6 +27,13 @@ class TestFisheries(invest_natcap.testing.GISTest):
         
         lobster_multi_area = './invest-data/test/data/fisheries/CSVs/lobster_multi_area.csv'
 
+        #All the files missing area or stage parameters
+        shrimp_no_dur = './invest-data/test/data/fisheries/CSVs/shrimp_missing_duration.csv'
+        bc_no_mat = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_mat.csv'
+        shrimp_no_weight = './invest-data/test/data/fisheries/CSVs/shrimp_missing_weight.csv'
+        bc_no_vuln = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
+
+        bc_area_count = 1
         shrimp_area_count = 1
         lobster_area_count = 9
         
@@ -43,7 +50,21 @@ class TestFisheries(invest_natcap.testing.GISTest):
         self.assertRaises(fisheries.ImproperAreaParameter,
                         fisheries.parse_main_csv, shrimp_bad_area, 
                         shrimp_area_count, 'Fixed', True, 'Age Specific')
-   
+  
+        #Exception raises for all the missing stage/area columns. 
+        self.assertRaises(fisheries.MissingParameter,
+                        fisheries.parse_main_csv, shrimp_no_dur, 
+                        shrimp_area_count, 'Fixed', True, 'Stage Specific')
+        self.assertRaises(fisheries.MissingParameter,
+                        fisheries.parse_main_csv, shrimp_no_weight, 
+                        shrimp_area_count, 'Fixed', True, 'Stage Specific')
+        self.assertRaises(fisheries.MissingParameter,
+                        fisheries.parse_main_csv, bc_no_mat, 
+                        bc_area_count, 'Ricker', True, 'Age Specific')
+        self.assertRaises(fisheries.MissingParameter,
+                        fisheries.parse_main_csv, bc_no_vuln, 
+                        shrimp_area_count, 'Ricker', True, 'Age Specific')
+
     def test_fecundity_csv_parse(self):
        '''Since none of the models currently use fecundity for their
        recruitment, need to test to make sure that it actually parses the way I
