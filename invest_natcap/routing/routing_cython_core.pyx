@@ -1713,3 +1713,47 @@ def find_sinks(dem_uri):
     tmp_sink_set = numpy.empty((sink_set_index,), dtype=numpy.int32)
     tmp_sink_set[0:sink_set_index] = sink_set[0:sink_set_index]
     return tmp_sink_set
+
+    
+def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
+    """This function calculates the flow downhill distance to the stream layers
+    
+        flow_direction_uri - a raster with d-infinity flow directions
+        stream_uri - a raster where 1 indicates a stream all other values
+            ignored must be same dimensions and projection as
+            flow_direction_uri)
+        distance_uri - an output raster that will be the same dimensions as
+            the input rasters where each pixel is in linear units the drainage
+            from that point to a stream.
+            
+        returns nothing"""
+    
+    cdef float distance_nodata = -9999
+    raster_utils.new_raster_from_base_uri(
+        flow_direction_uri, distance_uri, 'GTiff', distance_nodata,
+        gdal.GDT_Float32, fill_value=distance_nodata)
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(
+        flow_direction_uri)
+        
+    cdef queue[int] visit_queue
+    
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] buffer_array = (
+        numpy.empty((1, n_cols), dtype=numpy.float32))
+    
+    stream_ds = gdal.Open(stream_uri)
+    stream_band = stream_ds.GetRasterBand(1)
+    
+    #build up the stream pixel indexes
+    for row_index in range(n_rows):
+        stream_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols,
+            win_ysize=1, buf_obj=buffer_array)
+        for col_index in range(n_cols):
+            if buffer_array[0, col_index] == 1:
+                #it's a stream, remember that
+                visit_queue.push(row_index * n_cols + col_index)
+    
