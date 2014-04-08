@@ -338,7 +338,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "core_report.htm"
-    blue_carbon_csv_name = "emissions.csv"
+    blue_carbon_csv_name = "cost.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -1001,7 +1001,10 @@ def execute(args):
     #open csv
     csv = open(blue_carbon_csv_uri, 'w')
 
-    header = ["Start Year", "End Year", "Emissions", "Social Cost"]
+    header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
+
+    if "carbon_schedule" in args:
+        header.append("Social Cost (%s)" % carbon_schedule_field_rate)
 
     csv.write(",".join(header))
 
@@ -1011,7 +1014,15 @@ def execute(args):
             LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
 
             row = [str(this_year), str(next_year)]
+            accumulation = 0
             emissions = 0
+            sequestration = 0
+            
+
+            for source in [veg_acc_bio_name,
+                           veg_acc_soil_name]:
+                for veg_type in veg_type_list:
+                    accumulation += totals[year][veg_type][source] / float((lulc_years+[analysis_year])[i+1] - year)
 
             for veg_type in veg_type_list:
                 try:
@@ -1035,11 +1046,15 @@ def execute(args):
                     c = 0
                 emissions += totals[year][veg_type][veg_em_soil_name] * c
 
+            sequestration = accumulation - emissions
+            
+            row.append(str(accumulation))
             row.append(str(emissions))
+            row.append(str(sequestration))
 
             if "carbon_schedule" in args:
                 try:
-                    row.append(str(emissions * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
+                    row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
                 except KeyError:
                     row.append("")
                     
