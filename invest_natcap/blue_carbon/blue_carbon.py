@@ -1197,29 +1197,49 @@ def execute(args):
                           (half_life_csv_uri, "Decay Rates (Half-Life)")]:
         csv = open(csv_uri)
         table = "<TABLE BORDER=1><TR><TD><B>"
-        table += "</B></TD><TD><B>".join([td.replace(" ","<BR>",1) for td in csv.readline().strip().split(",")])
+        table += "</B></TD><TD><B>".join([td.replace(" (","<BR>(",1) for td in csv.readline().strip().split(",")])
         table += "</B></TD></TR>\n"
         for line in csv:
             table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
         table += "</TABLE>"
 
+        csv.close()
+        
         report.write("<P><P><B>%s</B>" % name)
         report.write(table)
-
     
-    for csv_uri, name in [(trans_uri, "Transition Matrix"),
-                          (dis_bio_csv_uri, "Biomass Disturbance"),
+    csv_uri= trans_uri
+    name = "Transition Matrix"
+    
+    csv = open(csv_uri)
+    table = "<TABLE BORDER=1><TR><TD><B>"
+    table += csv.readline().strip().replace(",","</B></TD><TD><B>")
+    table += "</B></TD></TR>\n"
+    for line in csv:
+        table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
+    table += "</TABLE>"
+
+    report.write("<P><P><B>%s</B>" % name)
+    report.write(table)
+
+    csv.close()
+
+    for csv_uri, name in [(dis_bio_csv_uri, "Biomass Disturbance"),
                           (dis_soil_csv_uri, "Soil Disturbance")]:
         csv = open(csv_uri)
         table = "<TABLE BORDER=1><TR><TD><B>"
         table += csv.readline().strip().replace(",","</B></TD><TD><B>")
         table += "</B></TD></TR>\n"
         for line in csv:
-            table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
+            line = line.strip().split(",")
+            line = line[:2] + [str(float(v) * 100)+"%" for v in line[2:]]
+            table += "<TR><TD>" + ",".join(line).replace(",","</TD><TD>") + "</TD></TR>\n"
         table += "</TABLE>"
 
         report.write("<P><P><B>%s</B>" % name)
         report.write(table)
+
+        csv.close()
     
     #close report
     report.write("\n</BODY></HTML>")
