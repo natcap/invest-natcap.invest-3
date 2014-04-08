@@ -1004,8 +1004,8 @@ def execute(args):
     header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
 
     if "social_valuation" in args:
-        header.append("Social Value")
-        header.append("Social Cost (%s)" % carbon_schedule_field_rate)
+        header.append("Social Value (%s)" % carbon_schedule_field_rate)
+        header.append("Social Cost")
 
     if "private_valuation" in args:
         header.append("Private Value")
