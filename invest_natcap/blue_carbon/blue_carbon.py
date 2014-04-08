@@ -328,8 +328,8 @@ def execute(args):
     #half-life table
     half_life_csv_uri = args["half_life_csv_uri"]
     half_life_field_key = "veg type"
-    half_life_field_bio = "biomass"
-    half_life_field_soil = "soil"
+    half_life_field_bio = "biomass (years)"
+    half_life_field_soil = "soil (years)"
 
 ##    #valuation flags
 ##    private_valuation = args["private_valuation"]
@@ -1193,27 +1193,23 @@ def execute(args):
     #input CSVs
     report.write("<P><P><B>Input Tables</B><P><P>")
 
-    csv_uri = carbon_uri
-    name = "Stock Carbon"
+    for csv_uri, name in [(carbon_uri, "Stock Carbon"),
+                          (half_life_csv_uri, "Decay Rates (Half-Life)")]:
+        csv = open(csv_uri)
+        table = "<TABLE BORDER=1><TR><TD><B>"
+        table += "</B></TD><TD><B>".join([td.replace(" ","<BR>",1) for td in csv.readline().strip().split(",")])
+        table += "</B></TD></TR>\n"
+        for line in csv:
+            table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
+        table += "</TABLE>"
 
-    csv = open(csv_uri)
-    table = "<TABLE BORDER=1><TR><TD><B>"
-    table += "</B></TD><TD><B>".join([td.replace(" ","<BR>",1) for td in csv.readline().strip().split(",")])
-    table += "</B></TD></TR>\n"
-    for line in csv:
-        table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
-    table += "</TABLE>"
-
-    report.write("<P><P><B>%s</B>" % name)
-    report.write(table)
+        report.write("<P><P><B>%s</B>" % name)
+        report.write(table)
 
     
     for csv_uri, name in [(trans_uri, "Transition Matrix"),
                           (dis_bio_csv_uri, "Biomass Disturbance"),
-                          (dis_soil_csv_uri, "Soil Disturbance"),
-                          #(acc_bio_csv_uri, "Biomass Accumulation"),
-                          #(acc_soil_csv_uri, "Soil Accumulation"),
-                          (half_life_csv_uri, "Decay Rates (Half-Life)")]:
+                          (dis_soil_csv_uri, "Soil Disturbance")]:
         csv = open(csv_uri)
         table = "<TABLE BORDER=1><TR><TD><B>"
         table += csv.readline().strip().replace(",","</B></TD><TD><B>")
