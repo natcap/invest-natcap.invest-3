@@ -1095,6 +1095,24 @@ def execute(args):
                         "Net<BR>(Sequestration)"]
 
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for this_year, next_year in zip(lulc_years[:-1], (lulc_years+[analysis_year])[1:]):
+        row = ["%i-%i" % (this_year, next_year)]
+
+        total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
+        gain_uri = os.path.join(workspace_dir, gain_name % (this_year, next_year))
+        loss_uri = os.path.join(workspace_dir, loss_name % (this_year, next_year))
+
+        gain = sum_uri(gain_uri, extent_uri)
+        loss = sum_uri(loss_uri, extent_uri)
+        total_seq = sum_uri(total_seq_uri, extent_uri)
+        
+        row.append(str(gain))
+        row.append(str(loss))
+        row.append(str(total_seq))
+
+        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(row))
+
     report.write("\n</TABLE>")
 
     ##acunulation and disturbance
@@ -1109,8 +1127,8 @@ def execute(args):
    
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 
-    for this_year in lulc_years:
-        row = [str(this_year) + "-"]
+    for i, this_year in enumerate(lulc_years):
+        row = ["%i-%i" % (this_year, (lulc_years+[analysis_year])[i+1])]
 
         for name in [veg_acc_bio_name,
                      veg_dis_bio_name,
@@ -1136,67 +1154,13 @@ def execute(args):
 
     report.write("\n</TABLE>")
 
-##    #emissions
-##    report.write("<P><P><B>Carbon Lost/Gained</B>")
-##
-##    column_name_list = ["Year","Gained","Lost","Sequestration"]
-##
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##    
-##    for this_year in range(lulc_years[0],analysis_year+1):
-##        if this_year in lulc_years: # + [analysis_year]:
-##            row = ["<B>%i</B>" % this_year]
-##            start_year = this_year
-##            stop_year = (lulc_years + [analysis_year])[lulc_years.index(start_year)+1]
-##            span = float(stop_year - start_year)
-##            acc_total = 0
-##            for veg_type in veg_type_list:
-##                acc_total += totals[this_year][veg_type][veg_acc_bio_name] + totals[this_year][veg_type][veg_acc_soil_name]
-##        else:
-##            row = [this_year]
-##                
-##        em_total = 0
-##        this_span = stop_year - this_year
-##        for veg_type in veg_type_list:
-##            try:
-##                bio_alpha = float(half_life[veg_type][half_life_field_bio])
-##
-##                bio_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ bio_alpha)))
-##                bio_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ bio_alpha)))
-##                bio_co = bio_stop_co - bio_start_co
-##
-##                em_total += totals[start_year][veg_type][veg_em_bio_name] * bio_co
-##
-##            except ValueError:
-##                pass
-##
-##            try:
-##                soil_alpha = float(half_life[veg_type][half_life_field_soil])
-##
-##                soil_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ soil_alpha)))
-##                soil_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ soil_alpha)))
-##                soil_co = soil_stop_co - soil_start_co
-##
-##                em_total += totals[start_year][veg_type][veg_em_soil_name] * soil_co
-##                
-##            except ValueError:
-##                pass
-##            
-##        row.extend([acc_total / span, em_total])
-##        row.append(row[-2]-row[-1])
-##
-##        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
-##
-##    report.write("\n</TABLE>")
-
-
     #input CSVs
     report.write("<P><P><B>Input Tables</B><P><P>")
 
     for csv_uri, name in [(carbon_uri, "Stock Carbon"),
                           (half_life_csv_uri, "Decay Rates (Half-Life)")]:
         csv = open(csv_uri)
-        table = "<TABLE BORDER=1><TR><TD><B>"
+        table = "\n<TABLE BORDER=1><TR><TD><B>"
         table += "</B></TD><TD><B>".join([td.replace(" (","<BR>(",1) for td in csv.readline().strip().split(",")])
         table += "</B></TD></TR>\n"
         for line in csv:
@@ -1212,7 +1176,7 @@ def execute(args):
     name = "Transition Matrix"
     
     csv = open(csv_uri)
-    table = "<TABLE BORDER=1><TR><TD><B>"
+    table = "\n<TABLE BORDER=1><TR><TD><B>"
     table += csv.readline().strip().replace(",","</B></TD><TD><B>")
     table += "</B></TD></TR>\n"
     for line in csv:
@@ -1227,7 +1191,7 @@ def execute(args):
     for csv_uri, name in [(dis_bio_csv_uri, "Biomass Disturbance"),
                           (dis_soil_csv_uri, "Soil Disturbance")]:
         csv = open(csv_uri)
-        table = "<TABLE BORDER=1><TR><TD><B>"
+        table = "\n<TABLE BORDER=1><TR><TD><B>"
         table += csv.readline().strip().replace(",","</B></TD><TD><B>")
         table += "</B></TD></TR>\n"
         for line in csv:
