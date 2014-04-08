@@ -212,6 +212,13 @@ def alignment_check_uri(dataset_uri_list):
 
     return True
 
+def emissions_interpolation(start_year, end_year, this_year, next_year, alpha):
+    """
+    returns the proportion of the half-life contained within the subrange
+    """
+    return ((1 - (0.5 ** ((next_year - start_year)/alpha))) - (1 - (0.5 ** ((this_year - start_year)/alpha))))/(1 - (0.5 ** ((end_year - start_year)/alpha)))
+    
+
 def execute(args):
     """Entry point for the blue carbon model.
 
@@ -273,6 +280,12 @@ def execute(args):
     #copy LULC for analysis year
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
+    #carbon schedule
+    if "carbon_schedule" in args:
+        carbon_schedule_field_key = "Year"
+        carbon_schedule_field_rate = args["carbon_schedule_field"]
+        carbon_schedule_csv = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
+
     #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
 
@@ -325,7 +338,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "core_report.htm"
-##    blue_carbon_csv_name = "blue_carbon.csv"
+    blue_carbon_csv_name = "emissions.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -425,7 +438,7 @@ def execute(args):
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
-##    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
+    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
 
     ##process inputs
     #load tables from files
@@ -985,47 +998,54 @@ def execute(args):
             
 
     ##generate csv
-##    #open csv
-##    csv = open(blue_carbon_csv_uri, 'w')
-##
-##    header = ["Year"]
-##    for name, label in [(veg_acc_bio_name, "Acc Bio"),
-##                      (veg_acc_soil_name, "Acc Soil"),
-##                      (veg_dis_bio_name, "Dis Bio"),
-##                      (veg_dis_soil_name, "Dis Soil"),
-####                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-####                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-####                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-####                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-##                      (veg_em_bio_name, "Em Bio"),
-##                      (veg_em_soil_name, "Em Soil")]:
-####                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-####                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-##        for veg_type in veg_type_list:
-##            header.append(label + (" Veg %i" % veg_type))
-##
-##    csv.write(",".join(header))
-##
-##
-##    for year in lulc_years:
-##        row = [str(year)]
-##        for name, label in [(veg_acc_bio_name, "Acc Bio"),
-##                          (veg_acc_soil_name, "Acc Soil"),
-##                          (veg_dis_bio_name, "Dis Bio"),
-##                          (veg_dis_soil_name, "Dis Soil"),
-##    ##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-##    ##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-##    ##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-##    ##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-##                          (veg_em_bio_name, "Em Bio"),
-##                          (veg_em_soil_name, "Em Soil")]:
-##    ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-##    ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-##            for veg_type in veg_type_list:
-##                row.append(str(totals[year][veg_type][name]))
-##        csv.write("\n" + ",".join(row))
-##
-##    csv.close()
+    #open csv
+    csv = open(blue_carbon_csv_uri, 'w')
+
+    header = ["Start Year", "End Year", "Emissions", "Social Cost"]
+
+    csv.write(",".join(header))
+
+    for i, year in enumerate(lulc_years):
+        for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
+                                        range(year+1, (lulc_years+[analysis_year])[i+1]+1)):
+            LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
+
+            row = [str(this_year), str(next_year)]
+            emissions = 0
+
+            for veg_type in veg_type_list:
+                try:
+                    c = emissions_interpolation(year,
+                                                (lulc_years+[analysis_year])[i+1],
+                                                this_year,
+                                                next_year,
+                                                float(half_life[veg_type][half_life_field_bio]))
+                except ValueError:
+                    c = 0
+                emissions += totals[year][veg_type][veg_em_bio_name] * c
+
+            for veg_type in veg_type_list:
+                try:
+                    c = emissions_interpolation(year,
+                                                (lulc_years+[analysis_year])[i+1],
+                                                this_year,
+                                                next_year,
+                                                float(half_life[veg_type][half_life_field_soil]))
+                except ValueError:
+                    c = 0
+                emissions += totals[year][veg_type][veg_em_soil_name] * c
+
+            row.append(str(emissions))
+
+            if "carbon_schedule" in args:
+                try:
+                    row.append(str(emissions * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
+                except KeyError:
+                    row.append("")
+                    
+            csv.write("\n" + ",".join(row))
+
+    csv.close()
             
 
 

@@ -15,9 +15,9 @@ $(document).ready(function(){
             //Get table data value for checkbox total
             var $sumColumn = $table.find('tr.checkTotal td:eq(' + $td.index() + ')');
             //Get the current total or 0 if not defined
-            var currVal = $sumColumn.html() || 0;
+            var currVal = parseFloat($sumColumn.html().split(',').join('')) || 0;
             //Update the total value
-            var upVal = +currVal + +$td.html();
+            var upVal = +currVal + parseFloat($td.html().split(',').join(''));
             //Set new total value
             $sumColumn.html(upVal);
             });
