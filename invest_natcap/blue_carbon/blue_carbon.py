@@ -338,7 +338,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "core_report.htm"
-    blue_carbon_csv_name = "cost.csv"
+    blue_carbon_csv_name = "sequestration.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -1003,8 +1003,14 @@ def execute(args):
 
     header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
 
-    if "carbon_schedule" in args:
+    if "social_valuation" in args:
+        header.append("Social Value")
         header.append("Social Cost (%s)" % carbon_schedule_field_rate)
+
+    if "private_valuation" in args:
+        header.append("Private Value")
+        header.append("Private Discount")
+        header.append("Private Cost")
 
     csv.write(",".join(header))
 
@@ -1052,11 +1058,21 @@ def execute(args):
             row.append(str(emissions))
             row.append(str(sequestration))
 
-            if "carbon_schedule" in args:
+            if "social_valuation" in args:
                 try:
+                    row.append(str(carbon_schedule_csv[this_year][carbon_schedule_field_rate]))
                     row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
                 except KeyError:
                     row.append("")
+                    row.append("")
+
+            if "private_valuation" in args:
+                price = float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (this_year-lulc_years[0]))
+                discount = (1 + (float(args["discount_rate"])/float(100))) ** (this_year-lulc_years[0])
+
+                row.append(str(price))
+                row.append(str(discount))
+                row.append(str(sequestration * price / discount))
                     
             csv.write("\n" + ",".join(row))
 
