@@ -1736,6 +1736,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     
+    cdef int row_index, col_index, n_rows, n_cols
     n_rows, n_cols = raster_utils.get_row_col_from_uri(
         flow_direction_uri)
         
@@ -1748,6 +1749,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     stream_band = stream_ds.GetRasterBand(1)
     
     #build up the stream pixel indexes
+    
     for row_index in range(n_rows):
         stream_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols,
