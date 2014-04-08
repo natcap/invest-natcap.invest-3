@@ -1736,7 +1736,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     
-    n_cols, n_rows = raster_utils.get_row_col_from_uri(
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(
         flow_direction_uri)
         
     cdef queue[int] visit_queue
