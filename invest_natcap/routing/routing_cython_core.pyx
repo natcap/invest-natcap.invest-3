@@ -1885,7 +1885,11 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
                 
             if it_flows_here:
+                if distance_cache[cache_neighbor_row_index, neighbor_col_index] == 0:
+                    #this is a stream, we don't want to add to it
+                    continue
                 if distance_cache[cache_neighbor_row_index, neighbor_col_index] == distance_nodata:
+                    #not touched yet, set distance to zero and push on the visit queue
                     distance_cache[cache_neighbor_row_index, neighbor_col_index] = 0
                     visit_queue.push(
                         neighbor_row_index * n_cols + neighbor_col_index)
