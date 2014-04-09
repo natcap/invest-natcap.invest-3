@@ -25,4 +25,3 @@ routing_utils.stream_threshold(
     flow_accumulation_uri, flow_threshold, stream_uri)
 routing_utils.distance_to_stream(
     flow_direction_uri, stream_uri, distance_uri)
-    
