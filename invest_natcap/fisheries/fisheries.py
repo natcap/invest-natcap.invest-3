@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import csv
+import sys
 
 from osgeo import ogr
 from invest_natcap.fisheries import fisheries_core
@@ -321,9 +322,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
         #In some cases, line[0] may contain the name of the model 
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
-        LOGGER.debug(line)
+        #LOGGER.debug(line)
         while line[0] == '' or line[1] == '':
-            LOGGER.debug(line)
+            #LOGGER.debug(line)
             line = csv_reader.next()
         
         #Once we get here, know that we're into the area/age vars.
@@ -331,7 +332,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
         #to switch over to area specific stuff.
         
         while line[0] != '':
-            LOGGER.debug(line)
+            #LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
         
@@ -360,13 +361,16 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
     age_params = map(lambda x: x.lower(), age_params)
     
     #Want to make sure that the headers are in the acceptable set.
-    LOGGER.debug("AGE PARAMS: %s" % age_params)
+    #LOGGER.debug("AGE PARAMS: %s" % age_params)
     for param in age_params:
     
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
+
+    LOGGER.debug("uri: %s" % params_uri)
+    LOGGER.debug("Age_Params: %s" % age_params)
 
     #Want to make sure that all required parameters exist
     #Looks like 'VulnFishing' is really the only required one from this set.
@@ -451,7 +455,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
        
             main_dict['Area_Params'][curr_area_name][short_param_name] = float(param_value)
 
-
+    LOGGER.debug("uri: %s" % params_uri)
+    LOGGER.debug("Exp_Frac: %s" % exp_frac_exists)
+    
     if not exp_frac_exists:
         raise MissingParameter("The main parameter CSV for this species \
                 is missing an ExplotationFraction parameter. Please make sure \

@@ -212,6 +212,13 @@ def alignment_check_uri(dataset_uri_list):
 
     return True
 
+def emissions_interpolation(start_year, end_year, this_year, next_year, alpha):
+    """
+    returns the proportion of the half-life contained within the subrange
+    """
+    return ((1 - (0.5 ** ((next_year - start_year)/alpha))) - (1 - (0.5 ** ((this_year - start_year)/alpha))))/(1 - (0.5 ** ((end_year - start_year)/alpha)))
+    
+
 def execute(args):
     """Entry point for the blue carbon model.
 
@@ -273,18 +280,24 @@ def execute(args):
     #copy LULC for analysis year
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
+    #carbon schedule
+    if "carbon_schedule" in args:
+        carbon_schedule_field_key = "Year"
+        carbon_schedule_field_rate = args["carbon_schedule_field"]
+        carbon_schedule_csv = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
+
     #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
 
     carbon_field_key = "Id"
     carbon_field_veg = "Veg Type"
-    carbon_field_above = "Above"
-    carbon_field_below = "Below"
-    carbon_field_soil = "Soil"
-    carbon_field_litter = "Litter"
+    carbon_field_above = "Above (Mg / ha)"
+    carbon_field_below = "Below (Mg / ha)"
+    carbon_field_soil = "Soil (Mg / ha)"
+    carbon_field_litter = "Litter (Mg / ha)"
     carbon_field_depth = "Soil Depth"
-    carbon_acc_bio_field = "Bio_accum_rate"
-    carbon_acc_soil_field = "Soil_accum_rate"
+    carbon_acc_bio_field = "Bio_accum_rate (Mg / ha / yr)"
+    carbon_acc_soil_field = "Soil_accum_rate (Mg / ha / yr)"
 
     #transition matrix
     trans_comment_uri = args["transition_matrix_uri"]
@@ -315,8 +328,8 @@ def execute(args):
     #half-life table
     half_life_csv_uri = args["half_life_csv_uri"]
     half_life_field_key = "veg type"
-    half_life_field_bio = "biomass"
-    half_life_field_soil = "soil"
+    half_life_field_bio = "biomass (years)"
+    half_life_field_soil = "soil (years)"
 
 ##    #valuation flags
 ##    private_valuation = args["private_valuation"]
@@ -325,7 +338,7 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "core_report.htm"
-##    blue_carbon_csv_name = "blue_carbon.csv"
+    blue_carbon_csv_name = "sequestration.csv"
     intermediate_dir = "intermediate"
 
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
@@ -425,7 +438,7 @@ def execute(args):
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
-##    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
+    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
 
     ##process inputs
     #load tables from files
@@ -985,47 +998,85 @@ def execute(args):
             
 
     ##generate csv
-##    #open csv
-##    csv = open(blue_carbon_csv_uri, 'w')
-##
-##    header = ["Year"]
-##    for name, label in [(veg_acc_bio_name, "Acc Bio"),
-##                      (veg_acc_soil_name, "Acc Soil"),
-##                      (veg_dis_bio_name, "Dis Bio"),
-##                      (veg_dis_soil_name, "Dis Soil"),
-####                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-####                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-####                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-####                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-##                      (veg_em_bio_name, "Em Bio"),
-##                      (veg_em_soil_name, "Em Soil")]:
-####                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-####                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-##        for veg_type in veg_type_list:
-##            header.append(label + (" Veg %i" % veg_type))
-##
-##    csv.write(",".join(header))
-##
-##
-##    for year in lulc_years:
-##        row = [str(year)]
-##        for name, label in [(veg_acc_bio_name, "Acc Bio"),
-##                          (veg_acc_soil_name, "Acc Soil"),
-##                          (veg_dis_bio_name, "Dis Bio"),
-##                          (veg_dis_soil_name, "Dis Soil"),
-##    ##                      (veg_adj_acc_bio_name, this_veg_adj_acc_bio_uri),
-##    ##                      (veg_adj_acc_soil_name, this_veg_adj_acc_soil_uri),
-##    ##                      (veg_adj_dis_bio_name, this_veg_adj_dis_bio_uri),
-##    ##                      (veg_adj_dis_soil_name, this_veg_adj_dis_soil_uri),
-##                          (veg_em_bio_name, "Em Bio"),
-##                          (veg_em_soil_name, "Em Soil")]:
-##    ##                      (veg_adj_em_dis_bio_name, this_veg_adj_em_dis_bio_uri),
-##    ##                      (veg_adj_em_dis_soil_name, this_veg_adj_em_dis_soil_uri)]:
-##            for veg_type in veg_type_list:
-##                row.append(str(totals[year][veg_type][name]))
-##        csv.write("\n" + ",".join(row))
-##
-##    csv.close()
+    #open csv
+    csv = open(blue_carbon_csv_uri, 'w')
+
+    header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
+
+    if "social_valuation" in args:
+        header.append("Social Value (%s)" % carbon_schedule_field_rate)
+        header.append("Social Cost")
+
+    if "private_valuation" in args:
+        header.append("Private Value")
+        header.append("Private Discount")
+        header.append("Private Cost")
+
+    csv.write(",".join(header))
+
+    for i, year in enumerate(lulc_years):
+        for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
+                                        range(year+1, (lulc_years+[analysis_year])[i+1]+1)):
+            LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
+
+            row = [str(this_year), str(next_year)]
+            accumulation = 0
+            emissions = 0
+            sequestration = 0
+            
+
+            for source in [veg_acc_bio_name,
+                           veg_acc_soil_name]:
+                for veg_type in veg_type_list:
+                    accumulation += totals[year][veg_type][source] / float((lulc_years+[analysis_year])[i+1] - year)
+
+            for veg_type in veg_type_list:
+                try:
+                    c = emissions_interpolation(year,
+                                                (lulc_years+[analysis_year])[i+1],
+                                                this_year,
+                                                next_year,
+                                                float(half_life[veg_type][half_life_field_bio]))
+                except ValueError:
+                    c = 0
+                emissions += totals[year][veg_type][veg_em_bio_name] * c
+
+            for veg_type in veg_type_list:
+                try:
+                    c = emissions_interpolation(year,
+                                                (lulc_years+[analysis_year])[i+1],
+                                                this_year,
+                                                next_year,
+                                                float(half_life[veg_type][half_life_field_soil]))
+                except ValueError:
+                    c = 0
+                emissions += totals[year][veg_type][veg_em_soil_name] * c
+
+            sequestration = accumulation - emissions
+            
+            row.append(str(accumulation))
+            row.append(str(emissions))
+            row.append(str(sequestration))
+
+            if "social_valuation" in args:
+                try:
+                    row.append(str(carbon_schedule_csv[this_year][carbon_schedule_field_rate]))
+                    row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
+                except KeyError:
+                    row.append("")
+                    row.append("")
+
+            if "private_valuation" in args:
+                price = float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (this_year-lulc_years[0]))
+                discount = (1 + (float(args["discount_rate"])/float(100))) ** (this_year-lulc_years[0])
+
+                row.append(str(price))
+                row.append(str(discount))
+                row.append(str(sequestration * price / discount))
+                    
+            csv.write("\n" + ",".join(row))
+
+    csv.close()
             
 
 
@@ -1044,6 +1095,24 @@ def execute(args):
                         "Net<BR>(Sequestration)"]
 
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    for this_year, next_year in zip(lulc_years[:-1], (lulc_years+[analysis_year])[1:]):
+        row = ["%i-%i" % (this_year, next_year)]
+
+        total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
+        gain_uri = os.path.join(workspace_dir, gain_name % (this_year, next_year))
+        loss_uri = os.path.join(workspace_dir, loss_name % (this_year, next_year))
+
+        gain = sum_uri(gain_uri, extent_uri)
+        loss = sum_uri(loss_uri, extent_uri)
+        total_seq = sum_uri(total_seq_uri, extent_uri)
+        
+        row.append(str(gain))
+        row.append(str(loss))
+        row.append(str(total_seq))
+
+        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(row))
+
     report.write("\n</TABLE>")
 
     ##acunulation and disturbance
@@ -1058,8 +1127,8 @@ def execute(args):
    
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 
-    for this_year in lulc_years:
-        row = [str(this_year) + "-"]
+    for i, this_year in enumerate(lulc_years):
+        row = ["%i-%i" % (this_year, (lulc_years+[analysis_year])[i+1])]
 
         for name in [veg_acc_bio_name,
                      veg_dis_bio_name,
@@ -1085,73 +1154,56 @@ def execute(args):
 
     report.write("\n</TABLE>")
 
-##    #emissions
-##    report.write("<P><P><B>Carbon Lost/Gained</B>")
-##
-##    column_name_list = ["Year","Gained","Lost","Sequestration"]
-##
-##    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-##    
-##    for this_year in range(lulc_years[0],analysis_year+1):
-##        if this_year in lulc_years: # + [analysis_year]:
-##            row = ["<B>%i</B>" % this_year]
-##            start_year = this_year
-##            stop_year = (lulc_years + [analysis_year])[lulc_years.index(start_year)+1]
-##            span = float(stop_year - start_year)
-##            acc_total = 0
-##            for veg_type in veg_type_list:
-##                acc_total += totals[this_year][veg_type][veg_acc_bio_name] + totals[this_year][veg_type][veg_acc_soil_name]
-##        else:
-##            row = [this_year]
-##                
-##        em_total = 0
-##        this_span = stop_year - this_year
-##        for veg_type in veg_type_list:
-##            try:
-##                bio_alpha = float(half_life[veg_type][half_life_field_bio])
-##
-##                bio_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ bio_alpha)))
-##                bio_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ bio_alpha)))
-##                bio_co = bio_stop_co - bio_start_co
-##
-##                em_total += totals[start_year][veg_type][veg_em_bio_name] * bio_co
-##
-##            except ValueError:
-##                pass
-##
-##            try:
-##                soil_alpha = float(half_life[veg_type][half_life_field_soil])
-##
-##                soil_start_co = 1 - (0.5 ** (-1 * ((span - this_span)/ soil_alpha)))
-##                soil_stop_co = 1 - (0.5 ** (-1 * ((span - (this_span - 1))/ soil_alpha)))
-##                soil_co = soil_stop_co - soil_start_co
-##
-##                em_total += totals[start_year][veg_type][veg_em_soil_name] * soil_co
-##                
-##            except ValueError:
-##                pass
-##            
-##        row.extend([acc_total / span, em_total])
-##        row.append(row[-2]-row[-1])
-##
-##        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in row]))
-##
-##    report.write("\n</TABLE>")
-
-
     #input CSVs
     report.write("<P><P><B>Input Tables</B><P><P>")
+
     for csv_uri, name in [(carbon_uri, "Stock Carbon"),
-                          (trans_uri, "Transition Matrix"),
-                          (dis_bio_csv_uri, "Biomass Disturbance"),
-                          (dis_soil_csv_uri, "Soil Disturbance"),
-                          #(acc_bio_csv_uri, "Biomass Accumulation"),
-                          #(acc_soil_csv_uri, "Soil Accumulation"),
                           (half_life_csv_uri, "Decay Rates (Half-Life)")]:
-        table = "<TABLE BORDER=1><TR><TD>" + open(csv_uri).read().strip().replace(",","</TD><TD>").replace("\n","</TD></TR><TR><TD>") + "</TD></TR></TABLE>"
+        csv = open(csv_uri)
+        table = "\n<TABLE BORDER=1><TR><TD><B>"
+        table += "</B></TD><TD><B>".join([td.replace(" (","<BR>(",1) for td in csv.readline().strip().split(",")])
+        table += "</B></TD></TR>\n"
+        for line in csv:
+            table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
+        table += "</TABLE>"
+
+        csv.close()
+        
+        report.write("<P><P><B>%s</B>" % name)
+        report.write(table)
+    
+    csv_uri= trans_uri
+    name = "Transition Matrix"
+    
+    csv = open(csv_uri)
+    table = "\n<TABLE BORDER=1><TR><TD><B>"
+    table += csv.readline().strip().replace(",","</B></TD><TD><B>")
+    table += "</B></TD></TR>\n"
+    for line in csv:
+        table += "<TR><TD>" + line.strip().replace(",","</TD><TD>") + "</TD></TR>\n"
+    table += "</TABLE>"
+
+    report.write("<P><P><B>%s</B>" % name)
+    report.write(table)
+
+    csv.close()
+
+    for csv_uri, name in [(dis_bio_csv_uri, "Biomass Disturbance"),
+                          (dis_soil_csv_uri, "Soil Disturbance")]:
+        csv = open(csv_uri)
+        table = "\n<TABLE BORDER=1><TR><TD><B>"
+        table += csv.readline().strip().replace(",","</B></TD><TD><B>")
+        table += "</B></TD></TR>\n"
+        for line in csv:
+            line = line.strip().split(",")
+            line = line[:2] + [str(float(v) * 100)+"%" for v in line[2:]]
+            table += "<TR><TD>" + ",".join(line).replace(",","</TD><TD>") + "</TD></TR>\n"
+        table += "</TABLE>"
 
         report.write("<P><P><B>%s</B>" % name)
         report.write(table)
+
+        csv.close()
     
     #close report
     report.write("\n</BODY></HTML>")
