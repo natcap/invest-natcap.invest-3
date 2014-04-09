@@ -281,9 +281,10 @@ def execute(args):
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
     #carbon schedule
+    carbon_schedule_field_key = "Year"
+    carbon_schedule_field_rate = "Price"
+
     if "carbon_schedule" in args:
-        carbon_schedule_field_key = "Year"
-        carbon_schedule_field_rate = args["carbon_schedule_field"]
         carbon_schedule_csv = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
 
     #carbon pools table
@@ -1003,16 +1004,23 @@ def execute(args):
 
     header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
 
-    if "social_valuation" in args:
-        header.append("Social Value (%s)" % carbon_schedule_field_rate)
-        header.append("Social Cost")
+##    if "social_valuation" in args:
+##        header.append("Social Value (%s)" % carbon_schedule_field_rate)
+##        header.append("Social Cost")
 
     if "private_valuation" in args:
-        header.append("Private Value")
-        header.append("Private Discount")
-        header.append("Private Cost")
+        header.append("Value")
+        header.append("Discount Factor")
+        header.append("Cost")
 
     csv.write(",".join(header))
+
+    if not "private_valuation" in args:
+        carbon_schedule = {}
+        for year in range(lulc_years[0], analysis_year+1):
+            carbon_schedule[year] = {carbon_schedule_field_rate: float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
+    else:
+        carbon_schedule = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
 
     for i, year in enumerate(lulc_years):
         for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
@@ -1058,16 +1066,17 @@ def execute(args):
             row.append(str(emissions))
             row.append(str(sequestration))
 
-            if "social_valuation" in args:
-                try:
-                    row.append(str(carbon_schedule_csv[this_year][carbon_schedule_field_rate]))
-                    row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
-                except KeyError:
-                    row.append("")
-                    row.append("")
+##            if "social_valuation" in args:
+##                try:
+##                    row.append(str(carbon_schedule_csv[this_year][carbon_schedule_field_rate]))
+##                    row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
+##                except KeyError:
+##                    row.append("")
+##                    row.append("")
 
             if "private_valuation" in args:
-                price = float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (this_year-lulc_years[0]))
+                print repr(carbon_schedule[this_year][carbon_schedule_field_rate])
+                price = float(carbon_schedule[this_year][carbon_schedule_field_rate])
                 discount = (1 + (float(args["discount_rate"])/float(100))) ** (this_year-lulc_years[0])
 
                 row.append(str(price))
