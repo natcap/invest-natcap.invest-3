@@ -1744,8 +1744,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         
     cdef queue[int] visit_queue
     
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] buffer_array = (
-        numpy.empty((1, n_cols), dtype=numpy.float32))
+    
     
     stream_ds = gdal.Open(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
@@ -1754,7 +1753,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     distance_ds = gdal.Open(distance_uri, gdal.GA_Update)
     distance_band = distance_ds.GetRasterBand(1)
     
-    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = 'C:/Users/rich/Documents/RouteDEM_2/test_outflow_weights.tif'#raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
     calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
@@ -1769,6 +1768,8 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int CACHE_ROWS = 2**10
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] stream_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
         numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache = (
@@ -1787,10 +1788,10 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     for row_index in range(n_rows):
         stream_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
-            buf_obj=buffer_array)
+            buf_obj=stream_cache[0].reshape((1,n_cols)))
         distance_cache[0, :] = distance_nodata
         for col_index in range(n_cols):
-            if buffer_array[0, col_index] == 1:
+            if stream_cache[0, col_index] == 1:
                 #it's a stream, remember that
                 visit_queue.push(row_index * n_cols + col_index)
                 distance_cache[0, col_index] = 0.0
@@ -1848,6 +1849,9 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             outflow_weights_band.ReadAsArray(
                 xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
                 win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
+            stream_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols, 
+                win_ysize=1, buf_obj=stream_cache[cache_row_index].reshape((1,n_cols)))
             cache_tag[cache_row_index] = cache_row_tag
                 
         cache_row_index = row_index % CACHE_ROWS
@@ -1884,12 +1888,8 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
             
-            if neighbor_outflow_weight == 0.0:
-                #numerically zero
-                continue
-            
             if it_flows_here:
-                if distance_cache[cache_neighbor_row_index, neighbor_col_index] == 0:
+                if stream_cache[cache_neighbor_row_index, neighbor_col_index] == 1:
                     #this is a stream, we don't want to add to it
                     continue
                 if distance_cache[cache_neighbor_row_index, neighbor_col_index] == distance_nodata:
@@ -1917,4 +1917,4 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     for dataset in [outflow_weights_ds, outflow_direction_ds]:
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
-        os.remove(dataset_uri)
+        pass#os.remove(dataset_uri)
