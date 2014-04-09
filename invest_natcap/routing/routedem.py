@@ -71,3 +71,9 @@ def execute(args):
         v_stream_uri = os.path.join(output_directory, 'v_stream%s.tif' % file_suffix)
         routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
+
+    if args['calculate_downstream_distance']:
+        prefix, suffix = os.path.splitext(args['downstream_distance_filename'])
+        distance_uri = os.path.join(
+            output_directory, prefix + file_suffix + suffix)
+        routing_utils.distance_to_stream(flow_direction_uri, v_stream_uri, distance_uri)
