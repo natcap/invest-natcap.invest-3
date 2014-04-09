@@ -1883,7 +1883,11 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 #the offset neighbor flows into this cell
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
-                
+            
+            if neighbor_outflow_weight == 0.0:
+                #numerically zero
+                continue
+            
             if it_flows_here:
                 if distance_cache[cache_neighbor_row_index, neighbor_col_index] == 0:
                     #this is a stream, we don't want to add to it
