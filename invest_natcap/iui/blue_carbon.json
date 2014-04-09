@@ -251,6 +251,7 @@
                        "collapsible" : true,
                        "args_id" : "private_valuation",
                        "label" : "Valuation",
+                       "defaultValue" : true,
                        "elements" : [
                                        {
                                            "id" : "private_valuation_list",
@@ -281,12 +282,21 @@
                                                                 "helpText": "The discount rate as an integer percent. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
                                                             {
+                                                                "id" : "price_table",
+                                                                "args_id" : "price_table",
+                                                                "type" : "checkbox",
+                                                                "label" : "Use price table",
+                                                                "defaultValue": true
+                                                            },
+                                                            {
                                                                     "id": "carbon_schedule",
                                                                     "args_id": "carbon_schedule",
                                                                     "type": "file",
                                                                     "label": "Carbon Price Table",
                                                                     "defaultValue": "../BlueCarbon/input/SCC.csv",
                                                                     "helpText": "The social cost of carbon table. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                    "enabledBy" : "price_table",
+                                                                    "required" : true
                                                             },                                                            
                                                             {
                                                                 "id": "carbon_value",
@@ -299,6 +309,8 @@
                                                                 "defaultValue": "43.00",
                                                                 "validateAs": {"type": "number"},
                                                                 "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "disabledBy" : "price_table",
+                                                                "required" : true
                                                             },
                                                             {
                                                                 "id": "rate_change",
@@ -312,6 +324,8 @@
                                                                 "defaultValue": "0",
                                                                 "validateAs": {"type": "number"},
                                                                 "helpText": "The integer percent increase of the price of carbon per year. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "disabledBy" : "price_table",
+                                                                "required" : true
                                                             }
                                                         ]
                                                 }
