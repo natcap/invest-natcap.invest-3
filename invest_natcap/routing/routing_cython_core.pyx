@@ -1753,7 +1753,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     distance_ds = gdal.Open(distance_uri, gdal.GA_Update)
     distance_band = distance_ds.GetRasterBand(1)
     
-    outflow_weights_uri = 'C:/Users/rich/Documents/RouteDEM_2/test_outflow_weights.tif'#raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
     calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
