@@ -116,6 +116,25 @@
                     "required": true,
                     "enabledBy": "calculate_slope",
                     "helpText": "The filename of the output slope raster, it will go in the project workspace."
+                },
+                {
+                    "id" : "calculate_downstream_distance",
+                    "args_id": "calculate_downstream_distance",
+                    "type": "checkbox",
+                    "label": "Calculate Distance to stream",
+                    "defaultValue": true,
+                    "required": false,
+                    "helpText": "Select to calculate a distance to stream raster, based on uppper threshold limit."
+                },
+                {
+                    "id" : "downstream_distance_filename",
+                    "args_id" : "downstream_distance_filename",
+                    "type": "text",
+                    "label": "Downstream Distance Filename",
+                    "defaultValue": "downstream_distance.tif",
+                    "required": true,
+                    "enabledBy": "calculate_slope",
+                    "helpText": "The filename of the output slope raster, it will go in the project workspace."
                 }
             ]
         }

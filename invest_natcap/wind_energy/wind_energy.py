@@ -321,10 +321,8 @@ def execute(args):
 
             returns - out_nodata if 'bath' does not fall within the range, or
                 'bath' if it does"""
-        if bath >= max_depth and bath <= min_depth:
-            return bath
-        else:
-            return out_nodata
+        return np.where(
+                ((bath >= max_depth) & (bath <= min_depth)), bath, out_nodata)
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
    
@@ -337,7 +335,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
-            assert_datasets_projected=projected)
+            assert_datasets_projected=projected, vectorize_op = False)
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
@@ -540,10 +538,12 @@ def execute(args):
 
             returns - a float of either out_nodata or rasters[0]"""
         
-        if out_nodata in rasters:
-            return out_nodata
-        else:
-            return rasters[0] 
+        nodata_mask = np.empty(rasters[0].shape, dtype=np.int8)
+        nodata_mask[:] = 0
+        for array in rasters:
+            nodata_mask = nodata_mask | (array == out_nodata)
+
+        return np.where(nodata_mask, out_nodata, rasters[0])
 
     # Output URIs for final Density and Harvested rasters after they've been
     # masked by depth and distance
@@ -570,13 +570,13 @@ def execute(args):
     raster_utils.vectorize_datasets(
             density_mask_list, mask_out_depth_dist, density_masked_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
-            assert_datasets_projected = projected)
+            assert_datasets_projected = projected, vectorize_op = False)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     raster_utils.vectorize_datasets(
             harvest_mask_list, mask_out_depth_dist, harvested_masked_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
-            assert_datasets_projected = projected)
+            assert_datasets_projected = projected, vectorize_op = False)
 
     # Create the farm polygon shapefile, which is an example of how big the farm
     # will be with a rough representation of its dimensions. 
@@ -1047,7 +1047,8 @@ def execute(args):
         LOGGER.info('Mask out depth and [distance] areas from Valuation raster')
         raster_utils.vectorize_datasets(
                 valuation_mask_list, mask_out_depth_dist, valuation_uri,
-                gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+                gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
+                vectorize_op = False)
 
     LOGGER.info('Wind Energy Valuation Model Complete')
 
