@@ -70,6 +70,7 @@ then
         timber_test.py
         wave_energy_test.py
         wind_energy_test.py
+        wind_energy_core_test.py
         hydropower_test.py
         coastal_vulnerability_test.py
     	marine_water_quality_regression_test.py

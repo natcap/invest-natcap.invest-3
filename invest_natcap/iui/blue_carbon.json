@@ -250,7 +250,8 @@
                        "type" : "container",
                        "collapsible" : true,
                        "args_id" : "private_valuation",
-                       "label" : "Private market valuation.",
+                       "label" : "Valuation",
+                       "defaultValue" : true,
                        "elements" : [
                                        {
                                            "id" : "private_valuation_list",
@@ -268,30 +269,48 @@
                                                                 "helpText": "The units for the price per unit of carbon type. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
                                                             {
-                                                                "id": "carbon_value",
-                                                                "args_id": "carbon_value",
-                                                                "type": "text",
-                                                                "width": 70,
-                                                                "label": "Value of Carbon (USD/metric ton)",
-                                                                "required": true,
-                                                                "dataType": "float",
-                                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                                                "defaultValue": "43.00",
-                                                                "validateAs": {"type": "number"},
-                                                                "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
-                                                            },
-                                                            {
                                                                 "id": "discount_rate",
                                                                 "args_id": "discount_rate",
                                                                 "type": "text",
                                                                 "width": 70,
-                                                                "label": "Market discount in price of Carbon (%)",
+                                                                "label": "Discount rate for Carbon (%)",
                                                                 "required": true,
                                                                 "dataType": "int",
                                                                 "validText": "-?([0-9]+)?\\.[0-9]+",
                                                                 "defaultValue": "7",
                                                                 "validateAs": {"type": "number"},
                                                                 "helpText": "The discount rate as an integer percent. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
+                                                            },
+                                                            {
+                                                                "id" : "price_table",
+                                                                "args_id" : "price_table",
+                                                                "type" : "checkbox",
+                                                                "label" : "Use price table",
+                                                                "defaultValue": true
+                                                            },
+                                                            {
+                                                                    "id": "carbon_schedule",
+                                                                    "args_id": "carbon_schedule",
+                                                                    "type": "file",
+                                                                    "label": "Carbon Price Table",
+                                                                    "defaultValue": "../BlueCarbon/input/SCC.csv",
+                                                                    "helpText": "The social cost of carbon table. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                    "enabledBy" : "price_table",
+                                                                    "required" : true
+                                                            },                                                            
+                                                            {
+                                                                "id": "carbon_value",
+                                                                "args_id": "carbon_value",
+                                                                "type": "text",
+                                                                "width": 70,
+                                                                "label": "Value of Carbon (USD/metric ton)",
+                                                                "dataType": "float",
+                                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                                                "defaultValue": "43.00",
+                                                                "validateAs": {"type": "number"},
+                                                                "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "disabledBy" : "price_table",
+                                                                "required" : true
                                                             },
                                                             {
                                                                 "id": "rate_change",
@@ -304,45 +323,13 @@
                                                                 "validText": "-?([0-9]+)?\\.[0-9]+",
                                                                 "defaultValue": "0",
                                                                 "validateAs": {"type": "number"},
-                                                                "helpText": "The integer percent increase of the price of carbon per year. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
+                                                                "helpText": "The integer percent increase of the price of carbon per year. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "disabledBy" : "price_table",
+                                                                "required" : true
                                                             }
-                                                       ]
-                                   }
-                                ]
-                },
-                {
-                   "id" : "social_valuation",
-                   "type" : "container",
-                   "collapsible" : true,
-                   "args_id" : "social_valuation",
-                   "label" : "Social market valuation.",
-                   "elements" : [
-                                   {
-                                       "id" : "social_valuation_list",
-                                       "type" : "list",
-                                       "elements" : [
-                                                        {
-                                                            "id": "carbon_schedule",
-                                                            "args_id": "carbon_schedule",
-                                                            "type": "file",
-                                                            "label": "SCC Table",
-                                                            "defaultValue": "../BlueCarbon/input/SCC.csv",
-                                                            "helpText": "The social cost of carbon table. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
-                                                            "required": true
-                                                        },
-                                                        {
-                                                            "id": "carbon_schedule_field",
-                                                            "args_id": "carbon_schedule_field",
-                                                            "type": "OGRFieldDropdown",
-                                                            "label": "SCC field",
-                                                            "enabledBy": "carbon_schedule",
-                                                            "defaultValue": 1,
-                                                            "helpText": "The field in the SCC table that contains the value for carbon. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
-                                                            "returns": "strings"
-                                                        }
-                                                    ]
-                                   }
+                                                        ]
+                                                }
+                                            ]
+                                        }
                                 ]
                 }
-            ]
-}

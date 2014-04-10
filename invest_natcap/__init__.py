@@ -36,9 +36,12 @@ def local_dir(source_file):
     frozen (as with PyInstaller), this will be the folder with the executable
     in it.  If not, it'll just be the foldername of the source_file being
     passed in."""
+    source_dirname = os.path.dirname(source_file)
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(source_file)
+        package_dirname = os.path.dirname(__file__)
+        relpath = os.path.relpath(source_dirname, package_dirname)
+        return os.path.join(os.path.dirname(sys._MEIPASS), relpath)
+    return source_dirname
 
 def _user_hash():
     """Returns a hash for the user, based on the machine."""

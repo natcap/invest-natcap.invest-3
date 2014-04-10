@@ -281,9 +281,10 @@ def execute(args):
     lulc_uri_dict[analysis_year]=lulc_uri_dict[lulc_years[-1]]
 
     #carbon schedule
+    carbon_schedule_field_key = "Year"
+    carbon_schedule_field_rate = "Price"
+
     if "carbon_schedule" in args:
-        carbon_schedule_field_key = "Year"
-        carbon_schedule_field_rate = args["carbon_schedule_field"]
         carbon_schedule_csv = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
 
     #carbon pools table
@@ -999,84 +1000,78 @@ def execute(args):
 
     ##generate csv
     #open csv
-    csv = open(blue_carbon_csv_uri, 'w')
+    if args["private_valuation"]:            
+        csv = open(blue_carbon_csv_uri, 'w')
 
-    header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
+        header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
 
-    if "social_valuation" in args:
-        header.append("Social Value (%s)" % carbon_schedule_field_rate)
-        header.append("Social Cost")
+        header.append("Value")
+        header.append("Discount Factor")
+        header.append("Cost")
 
-    if "private_valuation" in args:
-        header.append("Private Value")
-        header.append("Private Discount")
-        header.append("Private Cost")
+        csv.write(",".join(header))
 
-    csv.write(",".join(header))
+        if not args["price_table"]:
+            carbon_schedule = {}
+            for year in range(lulc_years[0], analysis_year+1):
+                carbon_schedule[year] = {carbon_schedule_field_rate: float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
+        else:
+            carbon_schedule = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
 
-    for i, year in enumerate(lulc_years):
-        for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
-                                        range(year+1, (lulc_years+[analysis_year])[i+1]+1)):
-            LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
+        for i, year in enumerate(lulc_years):
+            for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
+                                            range(year+1, (lulc_years+[analysis_year])[i+1]+1)):
+                LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
 
-            row = [str(this_year), str(next_year)]
-            accumulation = 0
-            emissions = 0
-            sequestration = 0
-            
+                row = [str(this_year), str(next_year)]
+                accumulation = 0
+                emissions = 0
+                sequestration = 0
+                
 
-            for source in [veg_acc_bio_name,
-                           veg_acc_soil_name]:
+                for source in [veg_acc_bio_name,
+                               veg_acc_soil_name]:
+                    for veg_type in veg_type_list:
+                        accumulation += totals[year][veg_type][source] / float((lulc_years+[analysis_year])[i+1] - year)
+
                 for veg_type in veg_type_list:
-                    accumulation += totals[year][veg_type][source] / float((lulc_years+[analysis_year])[i+1] - year)
+                    try:
+                        c = emissions_interpolation(year,
+                                                    (lulc_years+[analysis_year])[i+1],
+                                                    this_year,
+                                                    next_year,
+                                                    float(half_life[veg_type][half_life_field_bio]))
+                    except ValueError:
+                        c = 0
+                    emissions += totals[year][veg_type][veg_em_bio_name] * c
 
-            for veg_type in veg_type_list:
-                try:
-                    c = emissions_interpolation(year,
-                                                (lulc_years+[analysis_year])[i+1],
-                                                this_year,
-                                                next_year,
-                                                float(half_life[veg_type][half_life_field_bio]))
-                except ValueError:
-                    c = 0
-                emissions += totals[year][veg_type][veg_em_bio_name] * c
+                for veg_type in veg_type_list:
+                    try:
+                        c = emissions_interpolation(year,
+                                                    (lulc_years+[analysis_year])[i+1],
+                                                    this_year,
+                                                    next_year,
+                                                    float(half_life[veg_type][half_life_field_soil]))
+                    except ValueError:
+                        c = 0
+                    emissions += totals[year][veg_type][veg_em_soil_name] * c
 
-            for veg_type in veg_type_list:
-                try:
-                    c = emissions_interpolation(year,
-                                                (lulc_years+[analysis_year])[i+1],
-                                                this_year,
-                                                next_year,
-                                                float(half_life[veg_type][half_life_field_soil]))
-                except ValueError:
-                    c = 0
-                emissions += totals[year][veg_type][veg_em_soil_name] * c
+                sequestration = accumulation - emissions
+                
+                row.append(str(accumulation))
+                row.append(str(emissions))
+                row.append(str(sequestration))
 
-            sequestration = accumulation - emissions
-            
-            row.append(str(accumulation))
-            row.append(str(emissions))
-            row.append(str(sequestration))
-
-            if "social_valuation" in args:
-                try:
-                    row.append(str(carbon_schedule_csv[this_year][carbon_schedule_field_rate]))
-                    row.append(str(sequestration * float(carbon_schedule_csv[this_year][carbon_schedule_field_rate])))
-                except KeyError:
-                    row.append("")
-                    row.append("")
-
-            if "private_valuation" in args:
-                price = float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (this_year-lulc_years[0]))
+                price = float(carbon_schedule[this_year][carbon_schedule_field_rate])
                 discount = (1 + (float(args["discount_rate"])/float(100))) ** (this_year-lulc_years[0])
 
                 row.append(str(price))
                 row.append(str(discount))
                 row.append(str(sequestration * price / discount))
-                    
-            csv.write("\n" + ",".join(row))
+                        
+                csv.write("\n" + ",".join(row))
 
-    csv.close()
+        csv.close()
             
 
 
