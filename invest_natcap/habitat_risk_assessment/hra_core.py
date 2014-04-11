@@ -103,8 +103,8 @@ def execute(args):
 
     Returns nothing.
     '''
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
    
     LOGGER.info('Applying CSV criteria to rasters.')
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h_s_c'],

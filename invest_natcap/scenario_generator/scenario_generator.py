@@ -197,8 +197,6 @@ def get_transition_set_count_from_uri(dataset_uri_list):
     return unique_raster_values_count, transitions
 
 def generate_chart_html(cover_dict, cover_names_dict):
-    LOGGER.debug(cover_names_dict)
-    LOGGER.debug(cover_dict)
     html = "\n<table BORDER=1>"
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
@@ -242,7 +240,6 @@ def generate_chart_html(cover_dict, cover_names_dict):
     finalcover = []
     
     for cover_id in cover_id_list_chart:
-        LOGGER.debug(cover_id)
         try:
             initialcover.append((cover_dict[cover_id][0] / pixcount) * 100)
         except KeyError:
@@ -529,9 +526,10 @@ def execute(args):
     #raise error if transition table provided, but not used
     if args["transition"] and not(args["calculate_transition"] or args["calculate_factors"]):
         msg = "Transition table provided but not used."
-        LOGGER.error(msg)
-        raise ValueError, msg
+        LOGGER.warn(msg)
+        #raise ValueError, msg
 
+    transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
         #load transition table
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
@@ -1189,147 +1187,148 @@ def execute(args):
     htm.close()
 
     
+    if args["calculate_es_values"]:
+        ######
+        # Calculate ecosystem values
+        ######
+        input_uri = os.path.abspath(os.path.join(landcover_uri, os.pardir))    
+        
+        #exercise fields
+        args["returns_cover_id"] = "Cover ID"
+        args["returns_layer"] = os.path.join(input_uri,"returns.csv")
+        
+        ###
+        # Calculate Ecosystem Services values for Scenarios session
+        ###
+        
+        #load returns table
+        returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
+        carbon_dict = {}
+        agric_dict = {}
+        
+        for cover in returns_dict:
+            carbon_dict[cover] = returns_dict[cover]['Carbon']
+            agric_dict[cover] = returns_dict[cover]['Food']
     
-    ######
-    # Calculate ecosystem values
-    ######
-    input_uri = os.sep.join(landcover_uri.split(os.sep)[:-1])    
-    
-    #exercise fields
-    args["returns_cover_id"] = "Cover ID"
-    args["returns_layer"] = os.path.join(input_uri,"returns.csv")   
-    ###
-    # Calculate Ecosystem Services values for Scenarios session
-    ###
-    
-    #load returns table
-    returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
-    carbon_dict = {}
-    agric_dict = {}
-    
-    for cover in returns_dict:
-        carbon_dict[cover] = returns_dict[cover]['Carbon']
-        agric_dict[cover] = returns_dict[cover]['Agriculture']
-
-    #prepare output file uris
-    initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
-    initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
-    scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
-    scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
-    carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
-    agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
-    landcover_shape_uri = os.path.join(input_uri, "extent.shp")
-    
-    #reclass landcover map by carbon_dict
-    raster_utils.reclassify_dataset_uri(landcover_uri,
-                                        carbon_dict,
-                                        initial_carbon_uri,
+        #prepare output file uris
+        initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
+        initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
+        scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
+        scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
+        carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
+        agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
+        landcover_shape_uri = os.path.join(input_uri, "extent.shp")
+        
+        #reclass landcover map by carbon_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            carbon_dict,
+                                            initial_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by carbon_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            carbon_dict,
+                                            scenario_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract carbon
+        raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
+                                        es_change_op,
+                                        carbon_change_uri,
                                         transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-                                        
-    #reclass scenario map by carbon_dict
-    raster_utils.reclassify_dataset_uri(scenario_uri,
-                                        carbon_dict,
-                                        scenario_carbon_uri,
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+        
+        #reclass landcover map by agric_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            agric_dict,
+                                            initial_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by agric_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            agric_dict,
+                                            scenario_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract agriculture
+        raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
+                                        es_change_op,
+                                        agriculture_change_uri,
                                         transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-    #subtract carbon
-    raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
-                                    es_change_op,
-                                    carbon_change_uri,
-                                    transition_type,
-                                    change_nodata,
-                                    cell_size,
-                                    "union")
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+        
+        ######
+        # Write game summary
+        ######
+        #open file for scenario game summary
+        try:
+            gamesummary = open(os.path.join(workspace, "summary.csv"), "r")
+            summarylines = gamesummary.readlines()
+            runcount = []
+            for line in summarylines:
+                if 'Scenario Run #' in line:
+                    runcount.append(line.replace("\n","")[14:])
+            new_run_number = int(max(runcount)) + 1
+            gamesummary.close()
+        except:
+            new_run_number = 1
+        
+        gamesummary = open(os.path.join(workspace, "summary.csv"),'a')
+        gamesummary.write("###########################################################\n\n")
+        gamesummary.write("Scenario Run #"+str(new_run_number)+"\n\n")
+        gamesummary.write("Inputs\n\n")
+        
+        
+        if args["calculate_constraints"]:    
+            datasource = ogr.Open(constraints_uri)
+            layer = datasource.GetLayer()
+            for feature in layer:
+                 id = feature.GetField("porosity")
+                 gamesummary.write("Porosity:,"+str(id)+"\n")
     
-    #reclass landcover map by agric_dict
-    raster_utils.reclassify_dataset_uri(landcover_uri,
-                                        agric_dict,
-                                        initial_agriculture_uri,
-                                        transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-                                        
-    #reclass scenario map by agric_dict
-    raster_utils.reclassify_dataset_uri(scenario_uri,
-                                        agric_dict,
-                                        scenario_agriculture_uri,
-                                        transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-    #subtract agriculture
-    raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
-                                    es_change_op,
-                                    agriculture_change_uri,
-                                    transition_type,
-                                    change_nodata,
-                                    cell_size,
-                                    "union")
-    
-    ######
-    # Write game summary
-    ######
-    #open file for scenario game summary
-    try:
-        gamesummary = open(os.path.join(workspace, "summary.csv"), "r")
-        summarylines = gamesummary.readlines()
-        runcount = []
-        for line in summarylines:
-            if 'Scenario Run #' in line:
-                runcount.append(line.replace("\n","")[14:])
-        new_run_number = int(max(runcount)) + 1
+        if args["calculate_transition"]:
+            transitionfile = open(args["transition"])
+            lines = transitionfile.readlines()        
+            transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+            cover_names_dict = {}
+            for cover in transition_dict:
+                cover_names_dict[cover] =  transition_dict[cover]["Name"]     
+            gamesummary.write("Target cover,Source, Percent Change\n")
+            for cover in transition_dict:
+                if transition_dict[cover]["Percent Change"] > 0:
+                    target = ""
+                    for contributingcover in transition_dict:
+                        if transition_dict[contributingcover][str(cover)] > 0:
+                            target += cover_names_dict[contributingcover] + ";"
+                    gamesummary.write(transition_dict[cover]["Name"]+","+str(target)+","+\
+                    str(transition_dict[cover]["Percent Change"])+"\n")
+            transitionfile.close()        
+        
+        gamesummary.write("\n**********************************************************\n\n")
+        gamesummary.write("Outputs\n\n")
+        gamesummary.write("Total amount of ES in each map \n\n")
+        gamesummary.write(",Carbon,Food\n")
+        gamesummary.write("Current LULC,"+str(sum_uri(initial_carbon_uri, landcover_shape_uri))+","+\
+        str(sum_uri(initial_agriculture_uri, landcover_shape_uri))+"\n")
+        gamesummary.write("Scenario LULC,"+str(sum_uri(scenario_carbon_uri, landcover_shape_uri))+","+\
+        str(sum_uri(scenario_agriculture_uri, landcover_shape_uri))+"\n")
+        gamesummary.write("Score,"+str(\
+        sum_uri(scenario_carbon_uri, landcover_shape_uri)+\
+        sum_uri(scenario_agriculture_uri, landcover_shape_uri)-\
+        sum_uri(initial_carbon_uri, landcover_shape_uri)-\
+        sum_uri(initial_agriculture_uri, landcover_shape_uri)\
+        ))
+        gamesummary.write("\n\n")
+        
         gamesummary.close()
-    except:
-        new_run_number = 1
-    
-    gamesummary = open(os.path.join(workspace, "summary.csv"),'a')
-    gamesummary.write("###########################################################\n\n")
-    gamesummary.write("Scenario Run #"+str(new_run_number)+"\n\n")
-    gamesummary.write("Inputs\n\n")
-    
-    
-    if args["calculate_constraints"]:    
-        datasource = ogr.Open(constraints_uri)
-        layer = datasource.GetLayer()
-        for feature in layer:
-             id = feature.GetField("porosity")
-             gamesummary.write("Porosity:,"+str(id)+"\n")
-
-    if args["calculate_transition"]:
-        transitionfile = open(args["transition"])
-        lines = transitionfile.readlines()        
-        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
-        cover_names_dict = {}
-        for cover in transition_dict:
-            cover_names_dict[cover] =  transition_dict[cover]["Name"]     
-        gamesummary.write("Target cover,Source, Percent Change\n")
-        for cover in transition_dict:
-            if transition_dict[cover]["Percent Change"] > 0:
-                target = ""
-                for contributingcover in transition_dict:
-                    if transition_dict[contributingcover][str(cover)] > 0:
-                        target += cover_names_dict[contributingcover] + ";"
-                gamesummary.write(transition_dict[cover]["Name"]+","+str(target)+","+\
-                str(transition_dict[cover]["Percent Change"])+"\n")
-        transitionfile.close()        
-    
-    gamesummary.write("\n**********************************************************\n\n")
-    gamesummary.write("Outputs\n\n")
-    gamesummary.write("Total amount of ES in each map \n\n")
-    gamesummary.write(",Carbon,Food\n")
-    gamesummary.write("Current LULC,"+str(sum_uri(initial_carbon_uri, landcover_shape_uri))+","+\
-    str(sum_uri(initial_agriculture_uri, landcover_shape_uri))+"\n")
-    gamesummary.write("Scenario LULC,"+str(sum_uri(scenario_carbon_uri, landcover_shape_uri))+","+\
-    str(sum_uri(scenario_agriculture_uri, landcover_shape_uri))+"\n")
-    gamesummary.write("Score,"+str(\
-    sum_uri(scenario_carbon_uri, landcover_shape_uri)+\
-    sum_uri(scenario_agriculture_uri, landcover_shape_uri)-\
-    sum_uri(initial_carbon_uri, landcover_shape_uri)-\
-    sum_uri(initial_agriculture_uri, landcover_shape_uri)\
-    ))
-    gamesummary.write("\n\n")
-    
-    gamesummary.close()
 

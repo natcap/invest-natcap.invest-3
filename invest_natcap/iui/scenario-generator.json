@@ -71,6 +71,14 @@
                     "required": true,
                     "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
                     "enabledBy": "calculate_priorities"
+                },
+                {
+                    "id": "calculate_es_values",
+                    "args_id": "calculate_es_values",
+                    "type": "checkbox",
+                    "label": "Calculate ecosystem points",
+                    "defaultValue": false,
+                    "helpText": "This option enables calculation of simple points for illustrating scenarios. It is still under development."
                 }
             ]
         },

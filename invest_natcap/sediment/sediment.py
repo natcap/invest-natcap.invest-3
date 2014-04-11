@@ -250,31 +250,40 @@ def execute(args):
     #Create the service field sums
     field_summaries['sed_ret_dr'] = {}
     field_summaries['sed_ret_wq'] = {}
-    for ws_id, value in field_summaries['upret_tot'].iteritems():
-        #The 1.26 comes from the InVEST user's guide
-        field_summaries['sed_ret_dr'][ws_id] = (value - 
-            sediment_threshold_table[ws_id]['dr_deadvol'] * 
-            1.26 / sediment_threshold_table[ws_id]['dr_time'])
-        field_summaries['sed_ret_wq'][ws_id] = (value - 
-            sediment_threshold_table[ws_id]['wq_annload'])
+    try:
+        for ws_id, value in field_summaries['upret_tot'].iteritems():
+            #The 1.26 comes from the InVEST user's guide
+            field_summaries['sed_ret_dr'][ws_id] = (value - 
+                sediment_threshold_table[ws_id]['dr_deadvol'] * 
+                1.26 / sediment_threshold_table[ws_id]['dr_time'])
+            field_summaries['sed_ret_wq'][ws_id] = (value - 
+                sediment_threshold_table[ws_id]['wq_annload'])
 
-        #Clamp any negatives to 0
-        for out_field in ['sed_ret_dr', 'sed_ret_wq']:
-            if field_summaries[out_field][ws_id] < 0.0:
-                field_summaries[out_field][ws_id] = 0.0
+            #Clamp any negatives to 0
+            for out_field in ['sed_ret_dr', 'sed_ret_wq']:
+                if field_summaries[out_field][ws_id] < 0.0:
+                    field_summaries[out_field][ws_id] = 0.0
     
+    except KeyError as e:
+        raise Exception('The sediment threshold table does not have an entry '
+            'for watershed ID %d' % (ws_id))
+
     if 'sediment_valuation_table_uri' in args:
         sediment_valuation_table = raster_utils.get_lookup_from_csv(
             args['sediment_valuation_table_uri'], 'ws_id')
         field_summaries['sed_val_dr'] = {}
         field_summaries['sed_val_wq'] = {}
-        for ws_id, value in field_summaries['upret_tot'].iteritems():
-            for expense_type in ['dr', 'wq']:
-                discount = disc(sediment_valuation_table[ws_id][expense_type + '_time'],
-                                sediment_valuation_table[ws_id][expense_type + '_disc'])
-                field_summaries['sed_val_' + expense_type][ws_id] = \
-                    field_summaries['sed_ret_' + expense_type][ws_id] * \
-                    sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
+        try:
+            for ws_id, value in field_summaries['upret_tot'].iteritems():
+                for expense_type in ['dr', 'wq']:
+                    discount = disc(sediment_valuation_table[ws_id][expense_type + '_time'],
+                                    sediment_valuation_table[ws_id][expense_type + '_disc'])
+                    field_summaries['sed_val_' + expense_type][ws_id] = \
+                        field_summaries['sed_ret_' + expense_type][ws_id] * \
+                        sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
+        except KeyError as e:
+            raise Exception('Sediment valuation table missing watershed ID %d'
+                % (ws_id))
 
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % file_suffix)

@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import csv
+import sys
 
 from osgeo import ogr
 from invest_natcap.fisheries import fisheries_core
@@ -22,30 +23,12 @@ class ImproperAreaParameter(Exception):
     '''This exception will occur if the area-specific headings in the main 
     parameter CSV are not included in the set of known parameters.'''
     pass
-class MissingRecruitmentParameter(Exception):
-    '''This should be raised if the dropdown equation does not match the
-    parameters provided, and additional information is needed. That might
-    be in the form of alpha/beta, the CSV, or a numerical recruitment number.
+class MissingParameter(Exception):
+    '''This is a broad exception which can be raised if the any of the parameters
+    required for a specific model run type are missing. This can include
+    recruitment parameters, vulnerability, exploitation fraction, maturity,
+    weight, or duration.
     '''
-    pass
-class MissingVulnFishingParameter(Exception):
-    '''This should be raised if the species main parameter CSV is missing a
-    VulnFishing column. It is a required input for the survival equation.'''
-    pass
-class MissingExpFracParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a ExploitationFraction for each AOI subregion included. It is a required
-    input for the survival equation.'''
-    pass
-class MissingMaturityParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a Maturity parameter for ages/stages. It is a required paramater if the
-    recruitment equation being used is B-H, Ricker, or Fecundity.'''
-    pass
-class MissingWeightParameter(Exception):
-    '''Exception should be raised if the species main parameter CSV is missing
-    a Weight parameter for ages/stages. It is a required paramater if the
-    recruitment equation being used is B-H, Ricker, or Fecundity.'''
     pass
 
 def execute(args):
@@ -115,19 +98,19 @@ def execute(args):
     #we can't continue if we don't have data.
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         if 'alpha' not in args or 'beta' not in args:
-            raise MissingRecruitmentParameter("For the recruitment equation \
+            raise MissingParameter("For the recruitment equation \
                         chosen, there are missing parameters. Both an alpha \
                         and a beta parameter are necessary. Please look at \
                         the help text provided next to the recruitment equation\
                         selection, and add the necessary additional information.")
     if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
-        raise MissingRecruitmentParameter("For the recruitment equation \
+        raise MissingParameter("For the recruitment equation \
                     chosen, there are missing parameters.  A CSV for fecundity\
                     by AOI zone is necessary. Please look at the help text \
                     provided next to the recruitment equation selection, and \
                     add the necessary additional information.")
     if args['rec_eq'] == 'Fixed' and 'fix_param' not in args:
-        raise MissingRecruitmentParameter("For the recruitment equation \
+        raise MissingParameter("For the recruitment equation \
                     chosen, there are missing parameters.  A fixed recruitment\
                     number is necessary. Please look at the help text \
                     provided next to the recruitment equation selection, and \
@@ -155,7 +138,7 @@ def execute(args):
     #Calculate the classes main param info, and add it to the core args dict
     do_weight = True if args['hrv_type'] == 'Weight' else False
     classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
-                                args['rec_eq'], do_weight)
+                                args['rec_eq'], do_weight, args['maturity_type'])
     core_args['do_weight'] = do_weight
     core_args['params_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
@@ -287,13 +270,19 @@ def parse_migration_tables(mig_folder_uri):
 
     return mig_dict
 
-def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
+def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
     Input:
         params_uri- Contains a string location of the main parameter csv file.
-
+        area_count- The expected number of subregions in the AOI.
+        rec_eq- The recruitment equation being used for this run of the model.
+        do_weight- If spawners and harvesting will be done by number of
+            individuals (False) or by weight (True)
+        mat_type- The maturity type being used. String which will either be
+            'Age Specific' or 'Stage Specific'.
+    
     Returns:
         params_dict- Dictionary containing all information from the csv file.
             Should have age/stage specific information, as well as area-specific
@@ -333,9 +322,9 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #In some cases, line[0] may contain the name of the model 
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
-        LOGGER.debug(line)
+        #LOGGER.debug(line)
         while line[0] == '' or line[1] == '':
-            LOGGER.debug(line)
+            #LOGGER.debug(line)
             line = csv_reader.next()
         
         #Once we get here, know that we're into the area/age vars.
@@ -343,7 +332,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
         #to switch over to area specific stuff.
         
         while line[0] != '':
-            LOGGER.debug(line)
+            #LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
         
@@ -372,7 +361,7 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
     age_params = map(lambda x: x.lower(), age_params)
     
     #Want to make sure that the headers are in the acceptable set.
-    LOGGER.debug("AGE PARAMS: %s" % age_params)
+    #LOGGER.debug("AGE PARAMS: %s" % age_params)
     for param in age_params:
     
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
@@ -380,25 +369,34 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
                     Acceptable age/stage-specific parameters include \
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
+    LOGGER.debug("uri: %s" % params_uri)
+    LOGGER.debug("Age_Params: %s" % age_params)
+
     #Want to make sure that all required parameters exist
     #Looks like 'VulnFishing' is really the only required one from this set.
     
     if 'vulnfishing' not in age_params:
-        raise MissingVulnFishingParameter("The main parameter CSV for this \
+        raise MissingParameter("The main parameter CSV for this \
                 species is missing a VulnFishing parameter. Please make sure \
                 that each age/stage for the species has a corresponding \
                 proportion that is vulnerable to fishing.")
     if 'maturity' not in age_params and \
                         rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
-        raise MissingMaturityParameter("The main parameter CSV for this \
+        raise MissingParameter("The main parameter CSV for this \
                 species is missing a Maturity parameter. Please make sure \
                 that each age/stage for the species is assigned a proportion \
                 between 0 and 1 (inclusive) which would be considered mature.")
     if 'weight' not in age_params and do_weight:
-        raise MissingWeightParameter("The main parameter CSV for this species\
+        raise MissingParameter("The main parameter CSV for this species\
                 is missing a Weight parameter, but you have indicated that you\
                 would like to view species harvest by weight. Please make sure\
                 that each age/stage in for the species is assigned a weight.")
+    if 'duration' not in age_params and mat_type == 'Stage Specific':
+        raise MissingParameter("The main parameter CSV for this species is \
+                missing a Duration parameter. This must be included for all \
+                stage-specific model runs. Please make sure that each stage \
+                for the species is assigned a duration.")
+
     #Want a list of the stages in order
     ordered_stages = []
 
@@ -457,9 +455,11 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight):
        
             main_dict['Area_Params'][curr_area_name][short_param_name] = float(param_value)
 
-
+    LOGGER.debug("uri: %s" % params_uri)
+    LOGGER.debug("Exp_Frac: %s" % exp_frac_exists)
+    
     if not exp_frac_exists:
-        raise MissingExpFracParameter("The main parameter CSV for this species \
+        raise MissingParameter("The main parameter CSV for this species \
                 is missing an ExplotationFraction parameter. Please make sure \
                 that each area provided within the AOI(s) has a corresponding \
                 explotation fraction.")
