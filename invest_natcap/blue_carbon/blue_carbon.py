@@ -420,6 +420,12 @@ def execute(args):
     veg_em_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
     veg_em_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
+    acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_value.tif")
+    em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_value.tif")
+    em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_value.tif")
+    value_name = os.path.join(intermediate_dir, "%i_%i_value.tif")
+    
+
     em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
 
     #net file names
@@ -1000,7 +1006,8 @@ def execute(args):
 
     ##generate csv
     #open csv
-    if args["private_valuation"]:            
+    if args["private_valuation"]:
+        #tabulate results
         csv = open(blue_carbon_csv_uri, 'w')
 
         header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
@@ -1018,9 +1025,17 @@ def execute(args):
         else:
             carbon_schedule = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
 
-        for i, year in enumerate(lulc_years):
-            for this_year, next_year in zip(range(year, (lulc_years+[analysis_year])[i+1]),
-                                            range(year+1, (lulc_years+[analysis_year])[i+1]+1)):
+        period_op_dict = {}
+        for start_year, end_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
+            period_op_dict[start_year] = {}
+            period_op_dict[start_year]["accumulation_divisor"] = end_year - start_year
+            period_op_dict[start_year]["biomass_half_life"] = {}
+            period_op_dict[start_year]["soil_half_life"] = {}
+            period_op_dict[start_year]["price"] = {}
+            period_op_dict[start_year]["discount_factor"] = {}
+            
+            for this_year, next_year in zip(range(start_year, end_year),
+                                            range(start_year + 1, end_year + 1)):
                 LOGGER.debug("Interpolating from %i to %i.", this_year, next_year)
 
                 row = [str(this_year), str(next_year)]
@@ -1028,33 +1043,38 @@ def execute(args):
                 emissions = 0
                 sequestration = 0
                 
-
                 for source in [veg_acc_bio_name,
                                veg_acc_soil_name]:
                     for veg_type in veg_type_list:
-                        accumulation += totals[year][veg_type][source] / float((lulc_years+[analysis_year])[i+1] - year)
+                        accumulation += totals[start_year][veg_type][source] / period_op_dict[start_year]["accumulation_divisor"]
 
+                period_op_dict[start_year]["biomass_half_life"][this_year] = {}
                 for veg_type in veg_type_list:
                     try:
-                        c = emissions_interpolation(year,
-                                                    (lulc_years+[analysis_year])[i+1],
+                        c = emissions_interpolation(start_year,
+                                                    end_year,
                                                     this_year,
                                                     next_year,
                                                     float(half_life[veg_type][half_life_field_bio]))
                     except ValueError:
                         c = 0
-                    emissions += totals[year][veg_type][veg_em_bio_name] * c
 
+                    period_op_dict[start_year]["biomass_half_life"][this_year][veg_type] = c
+                    emissions += totals[start_year][veg_type][veg_em_bio_name] * c
+
+                period_op_dict[start_year]["soil_half_life"][this_year] = {}
                 for veg_type in veg_type_list:
                     try:
-                        c = emissions_interpolation(year,
-                                                    (lulc_years+[analysis_year])[i+1],
+                        c = emissions_interpolation(start_year,
+                                                    end_year,
                                                     this_year,
                                                     next_year,
                                                     float(half_life[veg_type][half_life_field_soil]))
                     except ValueError:
                         c = 0
-                    emissions += totals[year][veg_type][veg_em_soil_name] * c
+
+                    period_op_dict[start_year]["soil_half_life"][this_year][veg_type] = c
+                    emissions += totals[start_year][veg_type][veg_em_soil_name] * c
 
                 sequestration = accumulation - emissions
                 
@@ -1063,7 +1083,11 @@ def execute(args):
                 row.append(str(sequestration))
 
                 price = float(carbon_schedule[this_year][carbon_schedule_field_rate])
+                period_op_dict[start_year]["price"][this_year] = price
+                
                 discount = (1 + (float(args["discount_rate"])/float(100))) ** (this_year-lulc_years[0])
+
+                period_op_dict[start_year]["discount_factor"][this_year] = discount
 
                 row.append(str(price))
                 row.append(str(discount))
@@ -1072,6 +1096,94 @@ def execute(args):
                 csv.write("\n" + ",".join(row))
 
         csv.close()
+
+        #generate value rasters
+        for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
+            LOGGER.info("Generating valuation rasters for era %i to %i.",
+                        this_year,
+                        next_year)
+
+            #converting period variables into era variables
+            accumulation_factor = 0
+            for period in period_op_dict[this_year]["price"]:
+                price = period_op_dict[this_year]["price"][period]
+                discount = period_op_dict[this_year]["discount_factor"][period]
+                acc_fraction = period_op_dict[this_year]["accumulation_divisor"]
+
+                accumulation_factor += acc_fraction * price / float(discount)
+
+            emission_biomass_veg_factor_dict = {}
+            emission_soil_veg_factor_dict = {}
+            for veg_type in veg_type_list:
+                emission_biomass_veg_factor_dict[veg_type]= 0
+                emission_soil_veg_factor_dict[veg_type] = 0
+                
+                for period in period_op_dict[this_year]["price"]:
+                    price = period_op_dict[this_year]["price"][period]
+                    discount = period_op_dict[this_year]["discount_factor"][period]
+                    bio_fract = period_op_dict[this_year]["biomass_half_life"][period][veg_type]
+                    soil_fract = period_op_dict[this_year]["soil_half_life"][period][veg_type]
+
+                    emission_biomass_veg_factor_dict[veg_type] += bio_fract * price / float(discount)
+                    emission_soil_veg_factor_dict[veg_type] += soil_fract * price / float(discount)
+
+            #create value rasters
+            LOGGER.debug("Calculating accumulation value raster.")
+            def acc_price_op(*values):
+                if nodata_default_float in values:
+                    return nodata_default_float
+                else:
+                    return sum([v * accumulation_factor for v in values])
+
+            acc_uri_list = []
+            for veg_type in veg_type_list:
+                acc_uri_list.append(os.path.join(workspace_dir, veg_acc_bio_name % (this_year, next_year, veg_type)))
+                acc_uri_list.append(os.path.join(workspace_dir, veg_acc_soil_name % (this_year, next_year, veg_type)))
+
+            acc_value_uri = os.path.join(workspace_dir, acc_value_name  % (this_year, next_year))
+            vectorize_carbon_datasets(acc_uri_list,
+                                      acc_price_op,
+                                      acc_value_uri)
+
+            LOGGER.debug("Calculating biomass emissions value raster.")
+            def em_op_closure(indecies, em_dict):
+                def em_op(*values):
+                    if nodata_default_float in values:
+                        return nodata_default_float
+                    else:
+                        return sum([v * em_dict[i]  for v, i in zip(values, indecies)])
+                return em_op
+
+            em_uri_list = []
+            em_uri_veg_type_list = []
+            for veg_type in veg_type_list:
+                em_uri_list.append(os.path.join(workspace_dir, veg_em_bio_name  % (this_year, next_year, veg_type)))
+                em_uri_veg_type_list.append(veg_type)
+
+            em_bio_value_uri = os.path.join(workspace_dir, em_bio_value_name  % (this_year, next_year))
+            vectorize_carbon_datasets(em_uri_list,
+                                      em_op_closure(em_uri_veg_type_list, emission_biomass_veg_factor_dict),
+                                      em_bio_value_uri)            
+
+            LOGGER.debug("Calculating soil emissions value raster.")
+            em_uri_list = []
+            em_uri_veg_type_list = []
+            for veg_type in veg_type_list:
+                em_uri_list.append(os.path.join(workspace_dir, veg_em_soil_name  % (this_year, next_year, veg_type)))
+                em_uri_veg_type_list.append(veg_type)
+
+            em_soil_value_uri = os.path.join(workspace_dir, em_soil_value_name  % (this_year, next_year))
+            vectorize_carbon_datasets(em_uri_list,
+                                      em_op_closure(em_uri_veg_type_list, emission_soil_veg_factor_dict),
+                                      em_soil_value_uri)            
+
+            LOGGER.debug("Calculating sequestration value raster.")
+            value_uri = os.path.join(workspace_dir, value_name  % (this_year, next_year))
+            vectorize_carbon_datasets([acc_value_uri,
+                                       em_bio_value_uri,
+                                       em_soil_value_uri],
+                                      sub_op,
+                                      value_uri)
             
 
 
@@ -1227,3 +1339,4 @@ def execute(args):
 ##    debug_log.flush()
 ##    debug_log = None
 ##    debug_log_file.close()
+
