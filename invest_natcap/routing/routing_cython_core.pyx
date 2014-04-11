@@ -1757,6 +1757,8 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     outflow_weights_ds = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
+    cdef float outflow_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
     outflow_direction_ds = gdal.Open(outflow_direction_uri)
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
     
@@ -1804,16 +1806,16 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int step_count = 0
     cdef int downstream_index, downstream_processed, downstream_uncalculated
     while visit_stack.size() > 0:
-        if step_count % 100000 == 0:
-            LOGGER.info(
-                'visit_stack on stream distance size: %d (reports every 100,000 steps)' %
-                visit_stack.size())
-        step_count += 1
         current_index = visit_stack.top()
         visit_stack.pop()
         
         row_index = current_index / n_cols
         col_index = current_index % n_cols
+        if step_count % 100000 == 0:
+            LOGGER.info(
+                'visit_stack on stream distance size: %d, row/col %d %d (reports every 100,000 steps)' %
+                (visit_stack.size(), row_index, col_index))
+        step_count += 1
         #see if we need to update the row cache
         for cache_row_offset in range(-1, 2):
             neighbor_row_index = row_index + cache_row_offset
@@ -1881,8 +1883,13 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
 
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
-
-                    if neighbor_distance == distance_nodata:
+                    neighbor_outflow_weight = (
+                        outflow_weights_cache[cache_row_index, col_index])
+                        
+                    #make sure that downstream neighbor isn't processed and
+                    #isn't a nodata pixel for some reason
+                    if (neighbor_distance == distance_nodata and
+                        neighbor_outflow_weight != outflow_nodata):
                         visit_stack.push(neighbor_row_index * n_cols + neighbor_col_index)
                         downstream_uncalculated = True
                         
@@ -1911,10 +1918,13 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
 
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
+                    neighbor_outflow_weight = (
+                        outflow_weights_cache[cache_row_index, col_index])
 
-                    distance_cache[cache_row_index, col_index] = (
-                        neighbor_distance * outflow_weight + cell_size)
-                    cache_dirty[cache_row_index] = 1
+                    if neighbor_outflow_weight != outflow_nodata:
+                        distance_cache[cache_row_index, col_index] = (
+                            neighbor_distance * outflow_weight + cell_size)
+                        cache_dirty[cache_row_index] = 1
                 #invert outflow weight for the next iteration
                 outflow_weight = 1.0 - outflow_weight
 
@@ -1951,12 +1961,13 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
             
-            if it_flows_here:
-                if distance_cache[cache_neighbor_row_index, neighbor_col_index] == distance_nodata:
-                    #not touched yet, set distance push on the visit stack
-                    visit_stack.push(
-                        neighbor_row_index * n_cols + neighbor_col_index)
-                
+            if (it_flows_here and neighbor_outflow_weight > 0.0 and
+                distance_cache[cache_neighbor_row_index, neighbor_col_index] ==
+                distance_nodata):
+                #not touched yet, set distance push on the visit stack
+                visit_stack.push(
+                    neighbor_row_index * n_cols + neighbor_col_index)
+            
     #see if we need to save the cache
     for cache_row_index in range(CACHE_ROWS):
         if cache_dirty[cache_row_index]:
