@@ -1222,7 +1222,7 @@ def execute(args):
 
     report.write("\n</TABLE>")
 
-    ##acunulation and disturbance
+    ##accumulation and disturbance
     report.write("<P><B>Carbon Accumulation/Disturbance</B>")
     column_name_list = ["Start-End Year",
                         "Biomass Accumulation",                        
@@ -1260,6 +1260,36 @@ def execute(args):
                                                                                          row[6]]]))
 
     report.write("\n</TABLE>")
+
+    #valuation
+    if args["private_valuation"]:
+        report.write("\n<P><P><B>Valuation</B>")
+        column_name_list = ["Start-End Year",
+                            "Accumulation",                        
+                            "Biomass Emission",                        
+                            "Soil Emission",
+                            "Sequestration"]
+       
+        report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+        for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
+            row = ["%i-%i" % (this_year, next_year)]
+
+            acc_value_uri = os.path.join(workspace_dir, acc_value_name  % (this_year, next_year))
+            em_bio_value_uri = os.path.join(workspace_dir, em_bio_value_name  % (this_year, next_year))
+            em_soil_value_uri = os.path.join(workspace_dir, em_soil_value_name  % (this_year, next_year))
+            value_uri = os.path.join(workspace_dir, value_name  % (this_year, next_year))
+
+            for uri in [acc_value_uri,
+                        em_bio_value_uri,
+                        em_soil_value_uri,
+                        value_uri]:
+
+                row.append(str(sum_uri(uri, extent_uri)))
+
+            report.write("<TR><TD>" + "</TD><TD>".join(row) + "</TR></TD>")
+
+        report.write("\n</TABLE>")
 
     #input CSVs
     report.write("<P><P><B>Input Tables</B><P><P>")
