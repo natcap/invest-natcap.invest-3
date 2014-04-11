@@ -1742,9 +1742,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     n_rows, n_cols = raster_utils.get_row_col_from_uri(
         flow_direction_uri)
         
-    cdef queue[int] visit_queue
-    
-    
+    cdef stack[int] visit_stack
     
     stream_ds = gdal.Open(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
@@ -1793,12 +1791,12 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         for col_index in range(n_cols):
             if stream_cache[0, col_index] == 1:
                 #it's a stream, remember that
-                visit_queue.push(row_index * n_cols + col_index)
+                visit_stack.push(row_index * n_cols + col_index)
                 distance_cache[0, col_index] = 0.0
         distance_band.WriteArray(
             distance_cache[0].reshape((1,n_cols)), xoff=0, yoff=row_index)
         
-    LOGGER.info('number of stream pixels %d' % (visit_queue.size()))
+    LOGGER.info('number of stream pixels %d' % (visit_stack.size()))
     
     cdef int current_index, cache_row_offset, neighbor_row_index
     cdef int cache_row_index, cache_row_tag
@@ -1807,14 +1805,15 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
     cdef int it_flows_here
     cdef int step_count = 0
-    while visit_queue.size() > 0:
+    cdef int downstream_index, downstream_processed, missing_index
+    while visit_stack.size() > 0:
         if step_count % 100000 == 0:
             LOGGER.info(
-                'visit_queue on stream distance size: %d (reports every 100,000 steps)' %
-                visit_queue.size())
+                'visit_stack on stream distance size: %d (reports every 100,000 steps)' %
+                visit_stack.size())
         step_count += 1
-        current_index = visit_queue.front()
-        visit_queue.pop()
+        current_index = visit_stack.top()
+        visit_stack.pop()
         
         row_index = current_index / n_cols
         col_index = current_index % n_cols
@@ -1853,9 +1852,68 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 xoff=0, yoff=neighbor_row_index, win_xsize=n_cols, 
                 win_ysize=1, buf_obj=stream_cache[cache_row_index].reshape((1,n_cols)))
             cache_tag[cache_row_index] = cache_row_tag
-                
+
         cache_row_index = row_index % CACHE_ROWS
         current_distance = distance_cache[cache_row_index, col_index]
+
+        outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+        if current_distance == distance_nodata:
+            #check to see if downstream neighbors are processed
+            missing_indices = []
+            for downstream_index in range(2):
+                if outflow_weight > 0.0:
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
+                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                    if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                        #out of bounds
+                        continue
+
+                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+                    if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                        #out of bounds
+                        continue
+
+                    neighbor_distance = distance_cache[
+                        cache_neighbor_row_index, neighbor_col_index]
+
+                    if neighbor_distance == distance_nodata:
+
+                        missing_indices.append(
+                            neighbor_row_index * n_cols + neighbor_col_index)
+
+            if len(missing_index) > 0:
+                #missing downstream calculations, calcualte them and return later
+                visit_stack.push(current_index)
+                for missing_index in missing_indices:
+                    visit_stack.push(missing_index)
+                continue
+
+            #calculate current
+            for downstream_index in range(2):
+                if outflow_weight > 0.0:
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
+                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                    if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                        #out of bounds
+                        continue
+
+                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+                    if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                        #out of bounds
+                        continue
+
+                    neighbor_distance = distance_cache[
+                        cache_neighbor_row_index, neighbor_col_index]
+
+
+
+        #for upstream pixels
+            #if upstream uncalculated; push upstream pixels
+
+
+
         for neighbor_index in range(8):
             cache_neighbor_row_index = (
                 cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
@@ -1895,7 +1953,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 if distance_cache[cache_neighbor_row_index, neighbor_col_index] == distance_nodata:
                     #not touched yet, set distance to zero and push on the visit queue
                     distance_cache[cache_neighbor_row_index, neighbor_col_index] = 0
-                    visit_queue.push(
+                    visit_stack.push(
                         neighbor_row_index * n_cols + neighbor_col_index)
                 cell_travel_distance = cell_size
                 if neighbor_index % 2 == 1:
