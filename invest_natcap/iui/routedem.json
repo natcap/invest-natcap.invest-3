@@ -133,7 +133,7 @@
                     "label": "Downstream Distance Filename",
                     "defaultValue": "downstream_distance.tif",
                     "required": true,
-                    "enabledBy": "calculate_slope",
+                    "enabledBy": "calculate_downstream_distance",
                     "helpText": "The filename of the output slope raster, it will go in the project workspace."
                 }
             ]
