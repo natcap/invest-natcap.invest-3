@@ -1805,6 +1805,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int it_flows_here
     cdef int step_count = 0
     cdef int downstream_index, downstream_processed, downstream_uncalculated
+
     while visit_stack.size() > 0:
         current_index = visit_stack.top()
         visit_stack.pop()
@@ -1924,15 +1925,12 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
 
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
-                    neighbor_outflow_weight = (
-                        outflow_weights_cache[cache_row_index, col_index])
 
-                    if neighbor_outflow_weight != outflow_nodata:
+                    if neighbor_distance != distance_nodata:
                         distance_cache[cache_row_index, col_index] += (
                             neighbor_distance * outflow_weight + cell_size)
 
         #push any upstream neighbors that inflow onto the stack
-        #LOGGER.debug('distance_cache[cache_row_index, col_index] = %f' % (distance_cache[cache_row_index, col_index]))
         for neighbor_index in range(8):
             cache_neighbor_row_index = (
                 cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
