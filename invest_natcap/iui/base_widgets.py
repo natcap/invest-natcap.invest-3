@@ -1455,8 +1455,11 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
-        # the default folder to open.
-        default_folder = os.path.expanduser('~')
+        # if there is currently some text in the file entry, get its folder
+        if os.path.isdir(oldText):
+            default_folder = unicode(oldText, 'utf-8')
+        else:
+            default_folder = os.path.dirname(unicode(oldText, 'utf-8'))
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' +
