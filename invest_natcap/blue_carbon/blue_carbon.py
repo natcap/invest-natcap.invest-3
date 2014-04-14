@@ -1010,11 +1010,11 @@ def execute(args):
         #tabulate results
         csv = open(blue_carbon_csv_uri, 'w')
 
-        header = ["Start Year", "End Year", "Accumulation", "Emissions", "Sequestration"]
-
-        header.append("Value")
-        header.append("Discount Factor")
-        header.append("Cost")
+        header = ["Start Year", "End Year", "Accumulation"]
+##        header += ["Veg %i Bio Emissions" % i for i in veg_type_list]
+##        header += ["Veg %i Soil Emissions" % i for i in veg_type_list]
+        header += ["Total Emissions", "Sequestration", "Value",
+                   "Discount Factor", "Cost"]
 
         csv.write(",".join(header))
 
@@ -1048,6 +1048,8 @@ def execute(args):
                     for veg_type in veg_type_list:
                         accumulation += totals[start_year][veg_type][source] / period_op_dict[start_year]["accumulation_divisor"]
 
+                row.append(str(accumulation))
+
                 period_op_dict[start_year]["biomass_half_life"][this_year] = {}
                 for veg_type in veg_type_list:
                     try:
@@ -1060,6 +1062,8 @@ def execute(args):
                         c = 0
 
                     period_op_dict[start_year]["biomass_half_life"][this_year][veg_type] = c
+##                    row.append(str(totals[start_year][veg_type][veg_em_bio_name] * c))
+                    
                     emissions += totals[start_year][veg_type][veg_em_bio_name] * c
 
                 period_op_dict[start_year]["soil_half_life"][this_year] = {}
@@ -1074,11 +1078,12 @@ def execute(args):
                         c = 0
 
                     period_op_dict[start_year]["soil_half_life"][this_year][veg_type] = c
+##                    row.append(str(totals[start_year][veg_type][veg_em_soil_name] * c))
+                    
                     emissions += totals[start_year][veg_type][veg_em_soil_name] * c
 
                 sequestration = accumulation - emissions
                 
-                row.append(str(accumulation))
                 row.append(str(emissions))
                 row.append(str(sequestration))
 
@@ -1097,6 +1102,7 @@ def execute(args):
 
         csv.close()
 
+
         #generate value rasters
         for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
             LOGGER.info("Generating valuation rasters for era %i to %i.",
@@ -1105,12 +1111,14 @@ def execute(args):
 
             #converting period variables into era variables
             accumulation_factor = 0
+            LOGGER.debug("Accumulation factor: %s" % str(accumulation_factor))            
             for period in period_op_dict[this_year]["price"]:
                 price = period_op_dict[this_year]["price"][period]
                 discount = period_op_dict[this_year]["discount_factor"][period]
-                acc_fraction = period_op_dict[this_year]["accumulation_divisor"]
+                acc_fraction = 1 / float(period_op_dict[this_year]["accumulation_divisor"])
 
                 accumulation_factor += acc_fraction * price / float(discount)
+                LOGGER.debug("Accumulation factor: %s" % str(accumulation_factor))                
 
             emission_biomass_veg_factor_dict = {}
             emission_soil_veg_factor_dict = {}
