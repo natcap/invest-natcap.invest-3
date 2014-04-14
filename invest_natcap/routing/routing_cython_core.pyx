@@ -1868,7 +1868,11 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             #check to see if downstream neighbors are processed
             downstream_uncalculated = False
             for downstream_index in range(2):
-                if outflow_weight > 0.0:
+                outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+                if downstream_index == 1:
+                    outflow_weight = 1.0 - outflow_weight
+
+                if outflow_weight > 0.001:
                     cache_neighbor_row_index = (
                         cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
                     neighbor_row_index = row_index + row_offsets[neighbor_index]
@@ -1892,17 +1896,19 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                         neighbor_outflow_weight != outflow_nodata):
                         visit_stack.push(neighbor_row_index * n_cols + neighbor_col_index)
                         downstream_uncalculated = True
-                        
-                #invert outflow weight for the next iteration
-                outflow_weight = 1.0 - outflow_weight
 
             if downstream_uncalculated:
                 #need to process downstream first
                 continue
                 
             #calculate current
-            outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+            distance_cache[cache_row_index, col_index] = 0
+            cache_dirty[cache_row_index] = 1
             for downstream_index in range(2):
+                outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+                if downstream_index == 1:
+                    outflow_weight = 1.0 - outflow_weight
+
                 if outflow_weight > 0.0:
                     cache_neighbor_row_index = (
                         cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
@@ -1922,13 +1928,11 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                         outflow_weights_cache[cache_row_index, col_index])
 
                     if neighbor_outflow_weight != outflow_nodata:
-                        distance_cache[cache_row_index, col_index] = (
+                        distance_cache[cache_row_index, col_index] += (
                             neighbor_distance * outflow_weight + cell_size)
-                        cache_dirty[cache_row_index] = 1
-                #invert outflow weight for the next iteration
-                outflow_weight = 1.0 - outflow_weight
 
         #push any upstream neighbors that inflow onto the stack
+        #LOGGER.debug('distance_cache[cache_row_index, col_index] = %f' % (distance_cache[cache_row_index, col_index]))
         for neighbor_index in range(8):
             cache_neighbor_row_index = (
                 cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS

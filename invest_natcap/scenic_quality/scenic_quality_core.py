@@ -7,12 +7,12 @@ import logging
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-import aesthetic_quality_cython_core
+import scenic_quality_cython_core
 
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('aesthetic_quality_core')
+LOGGER = logging.getLogger('scenic_quality_core')
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
@@ -1166,7 +1166,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Viewer's coordiantes relative to the viewshed 
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
+    scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
     max_dist)
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
@@ -1195,7 +1195,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances_sq, visibility, visibility_map)
     else:
-        aesthetic_quality_cython_core.sweep_through_angles(angles, add_events,\
+        scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
         center_events, remove_events, I, J, distances_sq, visibility, \
         visibility_map)
 
