@@ -944,7 +944,7 @@ def execute(args):
                                   this_total_carbon_uri)
 
         stock_uri_dict[this_year] = this_total_carbon_uri
-        
+       
         ##carbon totals
 ##        vectorize_carbon_datasets(em_uri_list,
 ##                                  add_op,
@@ -966,6 +966,33 @@ def execute(args):
                                   add_op,
                                   this_total_dis_soil_uri)
 
+    #analysis year raster
+    this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % analysis_year)
+    this_total_carbon_uri_list = []
+    for veg_type in veg_type_list:
+        this_veg_litter_uri = os.path.join(workspace_dir,
+                                           veg_litter_name % (lulc_years[-1],
+                                                              veg_type))
+
+        this_veg_adj_acc_bio_uri = os.path.join(workspace_dir,
+                                                veg_adj_acc_bio_name % (lulc_years[-1],
+                                                                        analysis_year,
+                                                                        veg_type))
+        this_veg_adj_acc_soil_uri = os.path.join(workspace_dir,
+                                                 veg_adj_acc_soil_name % (lulc_years[-1],
+                                                                          analysis_year,
+                                                                          veg_type))
+
+        this_total_carbon_uri_list.append(this_veg_litter_uri)
+        this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
+        this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
+    
+    vectorize_carbon_datasets(this_total_carbon_uri_list,
+                              add_op,
+                              this_total_carbon_uri)
+
+    stock_uri_dict[analysis_year] = this_total_carbon_uri
+
     def pos_op(v):
         if v is nodata_default_float:
             return v
@@ -982,8 +1009,8 @@ def execute(args):
         else:
             return 0
         
-    for i, this_year in enumerate(lulc_years[:-1]):
-        for next_year in lulc_years[i+1:]:
+    for i, this_year in enumerate(lulc_years):
+        for next_year in (lulc_years+[analysis_year])[i+1:]:
             LOGGER.info("Calculating sequestration from %i to %i.", this_year, next_year)
             total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
             gain_uri = os.path.join(workspace_dir, gain_name % (this_year, next_year))
@@ -1211,7 +1238,7 @@ def execute(args):
 
     report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
 
-    for this_year, next_year in zip(lulc_years[:-1], (lulc_years+[analysis_year])[1:]):
+    for this_year, next_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
         row = ["%i-%i" % (this_year, next_year)]
 
         total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
