@@ -5,6 +5,7 @@ import time
 import traceback
 import platform
 import logging
+import threading
 
 from PyQt4 import QtGui, QtCore
 
@@ -21,6 +22,27 @@ IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 ENCODING = sys.getfilesystemencoding()
 print('IUI_DIR: %s' % IUI_DIR)
 
+# This data object is intended to be a thread-safe way to interact with data
+# values that may be altered while our multi-threaded UI is running.
+class Data(object):
+    def __init__(self):
+        self.data = {
+            'last_dir': ''
+        }
+        self.lock = threading.Lock()
+
+    def __getitem__(self, key):
+        self.lock.acquire()
+        data = self.data[key]
+        self.lock.release()
+        return data
+
+    def __setitem__(self, key, value):
+        self.lock.acquire()
+        self.data[key] = value
+        self.lock.release()
+
+DATA = Data()  # common data is stored here, protected by thread-safe methods
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -1455,8 +1477,15 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
-        # if there is currently some text in the file entry, get its folder
-        if os.path.isdir(oldText):
+        if len(oldText) == 0:
+            # if there is no text in the file entry, get the last folder
+            # visited.
+            if len(DATA['last_dir']) > 0:
+                default_folder = DATA['last_dir']
+            else:
+                default_folder = os.path.expanduser('~')
+        elif os.path.isdir(oldText):
+            # if there is currently some text in the file entry, get its folder
             default_folder = unicode(oldText, 'utf-8')
         else:
             default_folder = os.path.dirname(unicode(oldText, 'utf-8'))
@@ -1477,6 +1506,11 @@ class FileButton(QtGui.QPushButton):
             self.URIfield.setText(oldText)
         else:
             self.URIfield.setText(filename)
+            filename = unicode(filename, 'utf-8')
+            if os.path.isdir(filename):
+                DATA['last_dir'] = filename
+            else:
+                DATA['last_dir'] = os.path.dirname(filename)
 
 class SliderSpinBox(DynamicPrimitive):
     """expects these attributes:
