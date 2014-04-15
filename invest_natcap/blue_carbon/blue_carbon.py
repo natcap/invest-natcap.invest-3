@@ -423,7 +423,7 @@ def execute(args):
     acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_value.tif")
     em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_value.tif")
     em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_value.tif")
-    value_name = os.path.join(intermediate_dir, "%i_%i_value.tif")
+    value_name = "%i_%i_value.tif"
     
 
     em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
