@@ -277,7 +277,7 @@
                                                                 "required": true,
                                                                 "dataType": "int",
                                                                 "validText": "-?([0-9]+)?\\.[0-9]+",
-                                                                "defaultValue": "7",
+                                                                "defaultValue": "5",
                                                                 "validateAs": {"type": "number"},
                                                                 "helpText": "The discount rate as an integer percent. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
@@ -293,7 +293,7 @@
                                                                     "args_id": "carbon_schedule",
                                                                     "type": "file",
                                                                     "label": "Carbon Price Table",
-                                                                    "defaultValue": "../BlueCarbon/input/SCC.csv",
+                                                                    "defaultValue": "../BlueCarbon/input/SCC5.csv",
                                                                     "helpText": "The social cost of carbon table. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                                     "enabledBy" : "price_table",
                                                                     "required" : true

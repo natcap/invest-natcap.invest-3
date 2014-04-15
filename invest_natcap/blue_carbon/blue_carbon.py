@@ -420,10 +420,10 @@ def execute(args):
     veg_em_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
     veg_em_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
-    acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_value.tif")
-    em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_value.tif")
-    em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_value.tif")
-    value_name = "%i_%i_value.tif"
+    acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_npv.tif")
+    em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_npv.tif")
+    em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_npv.tif")
+    value_name = "%i_%i_npv.tif"
     
 
     em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
@@ -1045,12 +1045,20 @@ def execute(args):
 
         csv.write(",".join(header))
 
+        if args["carbon_units"] == "Carbon Dioxide (CO2)":
+            price_conversion = ((15.9994 * 2) + 12.0107)/12.0107
+        else:
+            price_conversion = 1
+
         if not args["price_table"]:
             carbon_schedule = {}
             for year in range(lulc_years[0], analysis_year+1):
-                carbon_schedule[year] = {carbon_schedule_field_rate: float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
+                carbon_schedule[year] = {carbon_schedule_field_rate: float(carbon_conversion * args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
         else:
             carbon_schedule = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
+
+            for k in carbon_schedule:
+                carbon_schedule[k][carbon_schedule_field_rate] *= price_conversion
 
         period_op_dict = {}
         for start_year, end_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
