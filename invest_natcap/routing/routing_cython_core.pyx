@@ -1798,7 +1798,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     
     cdef int current_index, cache_row_offset, neighbor_row_index
     cdef int cache_row_index, cache_row_tag
-    cdef int neighbor_outflow_direction, neighbor_index
+    cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef int neighbor_col_index
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
     cdef float outflow_weight, neighbor_distance
@@ -1870,18 +1870,20 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             downstream_uncalculated = False
             for downstream_index in range(2):
                 outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+                outflow_direction = outflow_direction_cache[cache_row_index, col_index]
                 if downstream_index == 1:
                     outflow_weight = 1.0 - outflow_weight
+                    outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.001:
                     cache_neighbor_row_index = (
-                        cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
-                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
+                    neighbor_row_index = row_index + row_offsets[outflow_direction]
                     if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                         #out of bounds
                         continue
 
-                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+                    neighbor_col_index = col_index + col_offsets[outflow_direction]
                     if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                         #out of bounds
                         continue
@@ -1907,18 +1909,21 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             cache_dirty[cache_row_index] = 1
             for downstream_index in range(2):
                 outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+                outflow_direction = outflow_direction_cache[cache_row_index, col_index]
+                
                 if downstream_index == 1:
                     outflow_weight = 1.0 - outflow_weight
+                    outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.0:
                     cache_neighbor_row_index = (
-                        cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
-                    neighbor_row_index = row_index + row_offsets[neighbor_index]
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
+                    neighbor_row_index = row_index + row_offsets[outflow_direction]
                     if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                         #out of bounds
                         continue
 
-                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+                    neighbor_col_index = col_index + col_offsets[outflow_direction]
                     if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                         #out of bounds
                         continue
