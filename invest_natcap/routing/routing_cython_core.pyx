@@ -1875,7 +1875,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                     outflow_weight = 1.0 - outflow_weight
                     outflow_direction = (outflow_direction + 1) % 8
 
-                if outflow_weight > 0.001:
+                if outflow_weight > 0.0:
                     cache_neighbor_row_index = (
                         cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_row_index = row_index + row_offsets[outflow_direction]
