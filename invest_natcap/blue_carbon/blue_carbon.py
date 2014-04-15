@@ -1236,7 +1236,7 @@ def execute(args):
                         "Loss",
                         "Net<BR>(Sequestration)"]
 
-    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
     for this_year, next_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
         row = ["%i-%i" % (this_year, next_year)]
@@ -1249,11 +1249,11 @@ def execute(args):
         loss = sum_uri(loss_uri, extent_uri)
         total_seq = sum_uri(total_seq_uri, extent_uri)
         
-        row.append(str(gain))
-        row.append(str(loss))
-        row.append(str(total_seq))
+        row.append(str(int(gain)))
+        row.append(str(int(loss)))
+        row.append(str(int(total_seq)))
 
-        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(row))
+        report.write("\n<TR><TD ALIGN=\"RIGHT\">%s</TD></TR>" % "</TD><TD ALIGN=\"RIGHT\">".join(row))
 
     report.write("\n</TABLE>")
 
@@ -1267,7 +1267,7 @@ def execute(args):
                         "Emissions<BR>(Biomass)",
                         "Emissions<BR>(Soil)"]
    
-    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
     for i, this_year in enumerate(lulc_years):
         row = ["%i-%i" % (this_year, (lulc_years+[analysis_year])[i+1])]
@@ -1286,26 +1286,26 @@ def execute(args):
             row.append(total)
         row.append(row[1]+row[3]-row[5]-row[6])        
 
-        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in [row[0],
-                                                                                         row[1],
-                                                                                         row[3],
-                                                                                         row[2],
-                                                                                         row[4],
-                                                                                         row[5],
-                                                                                         row[6]]]))
+        report.write("<TR><TD ALIGN=\"RIGHT\">%s</TD></TR>" % "</TD><TD ALIGN=\"RIGHT\">".join([str(value) for value in [row[0],
+                                                                                         int(row[1]),
+                                                                                         int(row[3]),
+                                                                                         int(row[2]),
+                                                                                         int(row[4]),
+                                                                                         int(row[5]),
+                                                                                         int(row[6])]]))
 
     report.write("\n</TABLE>")
 
     #valuation
     if args["private_valuation"]:
-        report.write("\n<P><P><B>Valuation</B>")
+        report.write("\n<P><P><B>Valuation (in specified valuation currency)</B>")
         column_name_list = ["Start-End Year",
                             "Accumulation",                        
                             "Biomass Emission",                        
                             "Soil Emission",
                             "Sequestration"]
        
-        report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+        report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
         for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
             row = ["%i-%i" % (this_year, next_year)]
@@ -1320,9 +1320,9 @@ def execute(args):
                         em_soil_value_uri,
                         value_uri]:
 
-                row.append(str(sum_uri(uri, extent_uri)))
+                row.append(str(int(sum_uri(uri, extent_uri))))
 
-            report.write("<TR><TD>" + "</TD><TD>".join(row) + "</TR></TD>")
+            report.write("<TR><TD ALIGN=\"RIGHT\">" + "</TD><TD ALIGN=\"RIGHT\">".join(row) + "</TR></TD>")
 
         report.write("\n</TABLE>")
 
