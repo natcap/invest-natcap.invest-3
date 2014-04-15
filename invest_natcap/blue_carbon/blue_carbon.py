@@ -1222,7 +1222,7 @@ def execute(args):
                                       value_uri)
             value_uri_list.append(value_uri)
 
-        total_value_uri = os.path.join(worspace_dir, value_name % (lulc_years[0], analysis_year))
+        total_value_uri = os.path.join(workspace_dir, value_name % (lulc_years[0], analysis_year))
         vectorize_carbon_datasets(value_uri_list,
                                   add_op,
                                   total_value_uri)
