@@ -99,6 +99,10 @@ def generate_report(reporting_args):
                         'attr' - a dictionary that has key value pairs for
                             optional tag attributes (optional). Ex:
                             'attr': {'class': 'offsets'}
+                        'td_class' - a String to assign as a class name to
+                            the table data tags under the column. Each
+                            table data tag under the column will have a class
+                            attribute assigned to 'td_class' value (optional)
 
                 'total'- a boolean value for whether there should be a constant
                     total row at the bottom of the table that sums the column
@@ -285,6 +289,10 @@ def build_table(param_args):
                         'attr' - a dictionary that has key value pairs for
                             optional tag attributes (optional). Ex:
                             'attr': {'class': 'offsets'}
+                        'td_class' - a String to assign as a class name to
+                            the table data tags under the column. Each
+                            table data tag under the column will have a class
+                            attribute assigned to 'td_class' value (optional)
 
             param_args['total'] - a boolean value where if True a constant
                 total row will be placed at the bottom of the table that sums the

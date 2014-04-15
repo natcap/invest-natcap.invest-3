@@ -808,7 +808,7 @@ class TestReportingPackage(testing.GISTest):
             talk to each other.
         """
 
-        #raise SkipTest
+        raise SkipTest
 
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -828,9 +828,9 @@ class TestReportingPackage(testing.GISTest):
                        {'Sediment':'36', 'Nitrogen':'70', 'Phosphorous':'60','parcel_id':'3'},
                        {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
 
-        columns = [{'name': 'parcel_id', 'total':False, 'attr':{'class':'tr_head'}},
-                   {'name': 'Nitrogen', 'total':True, 'attr':{'class':'nit scientific'}},
-                   {'name': 'Sediment', 'total':True, 'attr':{'class':'sed'}},
+        columns = [{'name': 'parcel_id', 'total':False, 'attr':{'class':'tr_head'}, 'td_class':'tr_head'},
+                   {'name': 'Nitrogen', 'total':True, 'attr':{'class':'nit scientific'}, 'td_class':'nit'},
+                   {'name': 'Sediment', 'total':True, 'attr':{'class':'sed'}, 'td_class':'sed'},
                    {'name': 'Phosphorous', 'total':True, 'attr':{'class':'pho'}}]
 
         pop_groups = []
@@ -844,9 +844,9 @@ class TestReportingPackage(testing.GISTest):
         columns_pop = [
                 {'name': 'municipalities', 'total':False},
                 {'name': 'pop', 'total':False},
-                {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}},
-                {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}},
-                {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}},
+                {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+                {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+                {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
                 {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
                 {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
                 {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
@@ -911,6 +911,84 @@ class TestReportingPackage(testing.GISTest):
                         'data_src': json_impacts_uri,
                         'input_type':'File',
                         'attributes':{'id':'impact-data'}}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_generate_html_tables(self):
+        """Regression test for making a html page where two tables
+            talk to each other.
+        """
+
+        #raise SkipTest
+
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+
+        output_uri = os.path.join(TEST_OUT, 'html_test_classes_tables.html')
+        reg_uri = os.path.join(
+                REGRESSION_DATA, 'regres_html_test_multi_tables.html')
+
+        csv_uri = os.path.join(JSON_DATA, 'csv_test.csv')
+
+        sample_dict = [{'Sediment':'130', 'Nitrogen':'100', 'Phosphorous':'60', 'parcel_id':'1'},
+                       {'Sediment':'96', 'Nitrogen':'50', 'Phosphorous':'60','parcel_id':'2'},
+                       {'Sediment':'36', 'Nitrogen':'70', 'Phosphorous':'60','parcel_id':'3'},
+                       {'Sediment':'50', 'Nitrogen':'85', 'Phosphorous':'60','parcel_id':'4'}]
+
+        columns = [{'name': 'parcel_id', 'total':False, 'attr':{'class':'tr_head'}, 'td_class':'tr_head'},
+                   {'name': 'Nitrogen', 'total':True, 'attr':{'class':'nit scientific'}, 'td_class':'nit'},
+                   {'name': 'Sediment', 'total':True, 'attr':{'class':'sed'}, 'td_class':'sed'},
+                   {'name': 'Phosphorous', 'total':True, 'attr':{'class':'pho'}}]
+
+        pop_groups = []
+
+        columns_pop = [
+                {'name': 'municipalities', 'total':False},
+                {'name': 'pop', 'total':False},
+                {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+                {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+                {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+                {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
+                {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
+                {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
+                {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
+
+        report_args = {
+                'title': 'Sortable Table',
+                'sortable' : True,
+                'totals' : True,
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'total':True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'parcel_id',
+                        'data': sample_dict,
+                        'attributes': {'id':'parcel_table'}},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'text': '<p>Here is a sortable table!</p>'},
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': False,
+                        'total':False,
+                        'data_type':'dictionary',
+                        'columns':columns_pop,
+                        'data': pop_groups,
+                        'attributes': {'class': 'multi_class'}}
                     ],
                 'out_uri': output_uri}
 

@@ -19,6 +19,10 @@ def generate_table(table_dict, attributes=None):
                     'attr' - a dictionary that has key value pairs for
                         optional tag attributes (optional). Ex:
                         'attr': {'class': 'offsets'}
+                    'td_class' - a String to assign as a class name to
+                            the table data tags under the column. Each
+                            table data tag under the column will have a class
+                            attribute assigned to 'td_class' value (optional)
 
             'rows' - a list of dictionaries that represent the rows. Each
                 dictionaries keys should match the column names found in
@@ -41,7 +45,7 @@ def generate_table(table_dict, attributes=None):
                     (optional)
                     Example: {'class': 'sorttable', 'id': 'parcel_table'}
 
-        returns - a string representing an html table
+            returns - a string representing an html table
     """
 
     # Initialize the string that will store the html representation of the table
@@ -79,6 +83,38 @@ def generate_table(table_dict, attributes=None):
     # headers should be allowed to be totaled
     total_cols = get_dictionary_values_ordered(table_cols, 'total')
 
+    def construct_td_classes(table_columns):
+        """Creates a list of tuples based on whether a column has
+            'td_class' attribute present. If present the first index
+            in the tuple is set to True and the second is set to a
+            String value for the value of the 'td_class' attribute.
+            If not present, the first index is set to False and None
+            is set for the second.
+
+            table_columns - a Python list of dictionaries representing
+                the columns of the table
+
+            returns - a list of tuples, the first index in the tuple of type
+                boolean and the second of type String
+        """
+        # List to hold the tuples
+        table_data_list = []
+        for col_dict in table_columns:
+            if 'td_class' in col_dict:
+                # If 'td_class' is a key in 'col_dict', then set the
+                # tuple to True with the it's String value
+                table_data_list.append((True, col_dict['td_class']))
+            else:
+                # If 'td_class' is not a key in 'col_dict', then
+                # set the tuple to False with a value of None
+                table_data_list.append((False, None))
+
+        return table_data_list
+
+    # Get a list of tuples representing if the key 'td_class'
+    # is found in 'table_cols' and if so set the value
+    tdata_tuples = construct_td_classes(table_cols)
+
     def attr_to_string(attr_dict):
         """Concatenates a string from key value pairs in 'attr_dict'.
             The string is generated in such a way where each key is
@@ -115,12 +151,12 @@ def generate_table(table_dict, attributes=None):
 
     if add_checkbox_total:
         footer_string += add_totals_row(
-                col_headers, total_cols, 'Selected Total', True)
+                col_headers, total_cols, 'Selected Total', True, tdata_tuples)
 
     # Add any total rows as 'tfoot' elements in the table
     if 'total' in table_dict and table_dict['total']:
         footer_string += add_totals_row(
-                col_headers, total_cols, 'Total', False)
+                col_headers, total_cols, 'Total', False, tdata_tuples)
 
     if not footer_string == '':
         table_string += '<tfoot>%s</tfoot>' % footer_string
@@ -131,13 +167,23 @@ def generate_table(table_dict, attributes=None):
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
         table_string += '<tr>'
-        #for row_data in row:
+        # Iterate over each row data, where the index indicates the column
+        # index as well
         for row_index in range(len(row)):
             if total_cols[row_index]:
+                class_str = 'rowDataSd '
+                if tdata_tuples[row_index][0]:
+                    class_str += tdata_tuples[row_index][1]
                 # Add row data
-                table_string += '<td class="rowDataSd">%s</td>' % row[row_index]
+                table_string += ('<td class="%s">%s</td>' %
+                                    (class_str, row[row_index]))
             else:
-                table_string += '<td>%s</td>' % row[row_index]
+                if tdata_tuples[row_index][0]:
+                    class_str = tdata_tuples[row_index][1]
+                    table_string += ('<td class="%s">%s</td>' %
+                                        (class_str, row[row_index]))
+                else:
+                    table_string += '<td>%s</td>' % row[row_index]
 
         table_string += '</tr>'
 
@@ -146,7 +192,8 @@ def generate_table(table_dict, attributes=None):
 
     return table_string
 
-def add_totals_row(col_headers, total_list, total_name, checkbox_total):
+def add_totals_row(col_headers, total_list, total_name, checkbox_total,
+                    tdata_tuples):
     """Construct a totals row as an html string. Creates one row element with
         data where the row gets a class name and the data get a class name if
         the corresponding column is a totalable column
@@ -162,7 +209,12 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
         checkbox_total - a boolean value that distinguishes whether a checkbox
             total row is being added or a regular total row. Checkbox total row
             is True. This will determine the row class name and row data class
-            name
+            name (required)
+
+        tdata_tuples - a list of tuples where the first index in the tuple is a
+            boolean which indicates if a table data element has a attribute
+            class. The second index is the String value of that class or None
+            (required)
 
         return - a string representing the html contents of a row which should
             later be used in a 'tfoot' element"""
@@ -178,8 +230,14 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
 
     # Begin constructing the html string for the new totals row
     # Give the row a class name and have the first data element be the name or
-    # header for that row
-    html_str = '<tr class="%s"><td>%s</td>' % (row_class, total_name)
+    # header for that row. Also assign table data a class if tdata_tuples
+    # indicates to do so
+    if tdata_tuples[0][0]:
+        class_name = tdata_tuples[0][1]
+        html_str = ('<tr class="%s"><td class="%s">%s</td>' %
+                        (row_class, class_name, total_name))
+    else:
+        html_str = '<tr class="%s"><td>%s</td>' % (row_class, total_name)
 
     # Iterate over the number of columns and add proper row data value,
     # starting from the second column as the first columns row data value was
@@ -187,11 +245,20 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total):
     for col_index in range(1, len(col_headers)):
         # Check to see if this columns values should be totaled
         if total_list[col_index]:
+            # Set temp variable that may need to be adjusted
+            comp_class = data_class
+            # Add table data class name if true
+            if tdata_tuples[col_index][0]:
+                comp_class = comp_class + ' ' + tdata_tuples[col_index][1]
             # If column should be totaled then add a class name
-            html_str += '<td class="%s">--</td>' % data_class
+            html_str += '<td class="%s">--</td>' % comp_class
         else:
-            # If the column should not be totaled leave off the class name
-            html_str += '<td>--</td>'
+            # Add table data class name if true
+            if tdata_tuples[col_index][0]:
+                html_str += '<td class="%s">--</td>' % tdata_tuples[col_index][1]
+            else:
+                # If the column should not be totaled leave off the class name
+                html_str += '<td>--</td>'
 
     html_str += '</tr>'
 
@@ -248,7 +315,8 @@ def add_checkbox_column(col_list, row_list):
             in that order"""
 
     # Insert a new column dictionary in the list in the second spot
-    col_list.insert(1, {'name':'Select', 'total':False})
+    col_list.insert(1, {'name':'Select', 'total':False,
+                        'attr':{'class':'checkbox'}, 'td_class':'checkbox'})
 
     LOGGER.debug('Columns with Checkboxes: %s', col_list)
 
