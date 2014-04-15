@@ -1812,11 +1812,11 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         
         row_index = current_index / n_cols
         col_index = current_index % n_cols
+        step_count += 1
         if step_count % 100000 == 0:
             LOGGER.info(
                 'visit_stack on stream distance size: %d, row/col %d %d (reports every 100,000 steps)' %
                 (visit_stack.size(), row_index, col_index))
-        step_count += 1
         #see if we need to update the row cache
         for cache_row_offset in range(-1, 2):
             neighbor_row_index = row_index + cache_row_offset
@@ -1861,7 +1861,8 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             continue
         
         outflow_weight = outflow_weights_cache[cache_row_index, col_index]
-        if stream_cache[cache_row_index, col_index] == 1:
+        
+        if stream_cache[cache_row_index, col_index] == 1 or outflow_weight == outflow_nodata:
             #it's a stream, set distance to zero
             distance_cache[cache_row_index, col_index] = 0
             cache_dirty[cache_row_index] = 1
@@ -1891,8 +1892,14 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
                     neighbor_outflow_weight = (
-                        outflow_weights_cache[cache_row_index, col_index])
-                        
+                        outflow_weights_cache[cache_neighbor_row_index, col_index])
+                    
+                    if step_count % 100000 == 0:
+                        LOGGER.info(
+                            'outflow_weight %f, neighbor_outflow_weight %f  (reports every 100,000 steps)' %
+                            (outflow_weight, neighbor_outflow_weight))
+                    
+                    
                     #make sure that downstream neighbor isn't processed and
                     #isn't a nodata pixel for some reason
                     if (neighbor_distance == distance_nodata and
