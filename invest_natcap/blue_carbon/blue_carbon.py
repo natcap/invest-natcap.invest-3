@@ -1131,6 +1131,7 @@ def execute(args):
 
 
         #generate value rasters
+        value_uri_list = []
         for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
             LOGGER.info("Generating valuation rasters for era %i to %i.",
                         this_year,
@@ -1219,6 +1220,12 @@ def execute(args):
                                        em_soil_value_uri],
                                       sub_op,
                                       value_uri)
+            value_uri_list.append(value_uri)
+
+        total_value_uri = os.path.join(worspace_dir, value_name % (lulc_years[0], analysis_year))
+        vectorize_carbon_datasets(value_uri_list,
+                                  add_op,
+                                  total_value_uri)
             
 
 
