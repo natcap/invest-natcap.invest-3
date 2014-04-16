@@ -193,8 +193,8 @@ def calculate_transport(
     cdef int n_steps = 0
     while cells_to_process.size() > 0:
         n_steps += 1
-        if n_steps % 100000 == 0:
-            LOGGER.debug('Reporting every 100000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
+        if n_steps % 1000000 == 0:
+            LOGGER.info('Reporting every 1000000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
     
         current_index = cells_to_process.top()
         cells_to_process.pop()
@@ -1801,10 +1801,10 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef int neighbor_col_index
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
-    cdef float outflow_weight, neighbor_distance
+    cdef float outflow_weight, neighbor_distance, step_size
     cdef int it_flows_here
     cdef int step_count = 0
-    cdef int downstream_index, downstream_processed, downstream_uncalculated
+    cdef int downstream_index, downstream_uncalculated
 
     while visit_stack.size() > 0:
         current_index = visit_stack.top()
@@ -1813,10 +1813,10 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         row_index = current_index / n_cols
         col_index = current_index % n_cols
         step_count += 1
-        if step_count % 100000 == 0:
+        if step_count % 1000000 == 0:
             LOGGER.info(
-                'visit_stack on stream distance size: %d, row/col %d %d (reports every 100,000 steps)' %
-                (visit_stack.size(), row_index, col_index))
+                'visit_stack on stream distance size: %d (reports every 1000000 steps)' %
+                (visit_stack.size()))
         #see if we need to update the row cache
         for cache_row_offset in range(-1, 2):
             neighbor_row_index = row_index + cache_row_offset
@@ -1877,8 +1877,6 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                     outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.0:
-                    cache_neighbor_row_index = (
-                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_row_index = row_index + row_offsets[outflow_direction]
                     if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                         #out of bounds
@@ -1889,16 +1887,12 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                         #out of bounds
                         continue
 
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
                     neighbor_outflow_weight = (
                         outflow_weights_cache[cache_neighbor_row_index, col_index])
-                    
-                    if step_count % 100000 == 0:
-                        LOGGER.info(
-                            'outflow_weight %f, neighbor_outflow_weight %f  (reports every 100,000 steps)' %
-                            (outflow_weight, neighbor_outflow_weight))
-                    
                     
                     #make sure that downstream neighbor isn't processed and
                     #isn't a nodata pixel for some reason
@@ -1914,17 +1908,15 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
             #calculate current
             distance_cache[cache_row_index, col_index] = 0
             cache_dirty[cache_row_index] = 1
+            outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+            outflow_direction = outflow_direction_cache[cache_row_index, col_index]
             for downstream_index in range(2):
-                outflow_weight = outflow_weights_cache[cache_row_index, col_index]
-                outflow_direction = outflow_direction_cache[cache_row_index, col_index]
                 
                 if downstream_index == 1:
                     outflow_weight = 1.0 - outflow_weight
                     outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.0:
-                    cache_neighbor_row_index = (
-                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_row_index = row_index + row_offsets[outflow_direction]
                     if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                         #out of bounds
@@ -1935,27 +1927,34 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                         #out of bounds
                         continue
 
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
+                        
+                    if outflow_direction % 2 == 1:
+                        #increase distance by a square root of 2 for diagonal
+                        step_size = cell_size * 1.41421356237
+                    else:
+                        step_size = cell_size
 
                     if neighbor_distance != distance_nodata:
                         distance_cache[cache_row_index, col_index] += (
-                            neighbor_distance * outflow_weight + cell_size)
+                            neighbor_distance * outflow_weight + step_size)
 
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
-            cache_neighbor_row_index = (
-                cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
             neighbor_row_index = row_index + row_offsets[neighbor_index]
             if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
                 #out of bounds
                 continue
-
             neighbor_col_index = col_index + col_offsets[neighbor_index]
             if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                 #out of bounds
                 continue
 
+            cache_neighbor_row_index = (
+                cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
             neighbor_outflow_direction = outflow_direction_cache[
                 cache_neighbor_row_index, neighbor_col_index]
             #if the neighbor is no data, don't try to set that
@@ -1970,7 +1969,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 #the neighbor flows into this cell
                 it_flows_here = True
 
-            if (neighbor_outflow_direction - 1) % 8 == inflow_offsets[neighbor_index]:
+            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
                 #the offset neighbor flows into this cell
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
