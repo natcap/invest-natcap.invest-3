@@ -373,34 +373,34 @@ def filter_fragments(input_uri, size, output_uri):
     for value in suitability_values:
         mask = src_array == value # You get a mask with the polygons only
         ones_in_mask = numpy.sum(mask)
-        print('Processing value' + str(value) + ' (found ' + \
-        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
+##        print('Processing value' + str(value) + ' (found ' + \
+##        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
         label_im, nb_labels = scipy.ndimage.label(mask)
         src_array[mask] = 1
         fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
         fragment_labels = numpy.array(range(nb_labels + 1))
-        print('Labels', nb_labels, fragment_sizes)
-        assert fragment_sizes.size == len(fragment_labels)
+##        print('Labels', nb_labels, fragment_sizes)
+##        assert fragment_sizes.size == len(fragment_labels)
         small_fragment_mask = numpy.where(fragment_sizes <= size)
         small_fragment_sizes = fragment_sizes[small_fragment_mask]
         small_fragment_labels = fragment_labels[small_fragment_mask]
-        print('small fragment count', small_fragment_sizes.size)
+##        print('small fragment count', small_fragment_sizes.size)
         combined_small_fragment_size = numpy.sum(small_fragment_sizes)
-        print('fragments to remove', combined_small_fragment_size)
-        print('small fragment sizes', small_fragment_sizes)
-        print('small fragment labels', small_fragment_labels)
-        #print('large_fragments', large_fragments.size, large_fragments)
+##        print('fragments to remove', combined_small_fragment_size)
+##        print('small fragment sizes', small_fragment_sizes)
+##        print('small fragment labels', small_fragment_labels)
+##        print('large_fragments', large_fragments.size, large_fragments)
         removed_pixels = 0
         for label in small_fragment_labels[1:]:
             pixels_to_remove = numpy.where(label_im == label)
             dst_array[pixels_to_remove] = 0
             removed_pixels += pixels_to_remove[0].size
-            print('removed ' + str(pixels_to_remove[0].size) + \
-            ' pixels with label ' + str(label) + ', total = ' + \
-            str(removed_pixels))
-        message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
-        ', pixels removed = ' + str(removed_pixels)
-        assert removed_pixels == combined_small_fragment_size, message
+##            print('removed ' + str(pixels_to_remove[0].size) + \
+##            ' pixels with label ' + str(label) + ', total = ' + \
+##            str(removed_pixels))
+##        message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
+##        ', pixels removed = ' + str(removed_pixels)
+##        assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
 
@@ -998,6 +998,7 @@ def execute(args):
     #change pixels
     scenario_ds = gdal.Open(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
+    scenario_array = scenario_band.ReadAsArray()
 
     unconverted_pixels = {}
     for index, (priority, cover_id, count) in enumerate(change_list):
@@ -1006,30 +1007,102 @@ def execute(args):
         #open all lower priority suitability rasters and assign changed pixels value of 0
         update_ds = {}
         update_bands = {}
+        update_arrays = {}
         for _, update_id, _ in change_list[index+1:]:
-            update_ds[update_id] = gdal.Open(suitability_dict[cover_id], 1)
+            update_ds[update_id] = gdal.Open(suitability_dict[update_id], 1)
             update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
+            update_arrays[update_id] = update_bands[update_id].ReadAsArray()
 
-        #select pixels
-        pixel_heap = disk_sort.sort_to_disk(suitability_dict[cover_id], cover_id)
+        ##select pixels
+        #open suitability raster
+        src_ds = gdal.Open(suitability_dict[cover_id], 1)
+        src_band = src_ds.GetRasterBand(1)
+        src_array = src_band.ReadAsArray()                
 
-        for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
-            if n == count or value == 0:
-                if value == 0:
-                    LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
-                    unconverted_pixels[cover_id] = count - (n -1)
+        pixels_changed = 0
+        suitability_values = list(numpy.unique(src_array))
+        suitability_values.sort(reverse=True)
+        if suitability_values[-1]==0:
+            suitability_values.pop(-1)
+        for suitability_score in suitability_values:
+            if pixels_changed == count:
+                LOGGER.debug("All necessay pixels converted.")
                 break
-            scenario_band.WriteArray(numpy.array([[cover_id]]), flat_index % n_cols, flat_index / n_cols)
 
-            for c_id in update_bands:
-                update_bands[c_id].WriteArray(numpy.array([[0]]), flat_index % n_cols, flat_index / n_cols)
+            LOGGER.debug("Checking pixels with suitability of %i.", suitability_score)
 
-        for c_id in update_bands:
-            update_bands[c_id] = None
+            #mask out everything except the current suitability score
+            mask = src_array == suitability_score
 
-        for c_id in update_bands:
-            update_bands[c_id] = None
+            #label patches
+            label_im, nb_labels = scipy.ndimage.label(mask)
+            
+            #get patch sizes
+            patch_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+            patch_labels = numpy.array(range(1, nb_labels + 1))
 
+            #randomize patch order
+            numpy.random.shuffle(patch_labels)
+
+            #check patches for conversion
+            for label in patch_labels:
+                patch = numpy.where(label_im == label)
+                if patch_sizes[label] + pixels_changed > count:
+                    LOGGER.debug("Converting part of patch %i.", label)
+
+                    #mask out everything except the current patch
+                    patch_mask = numpy.zeros_like(scenario_array)
+                    patch_mask[patch] = 1
+
+                    #calculate the distance to exit the patch
+                    tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
+                    tmp_array = tmp_array[patch]
+
+                    #select the number of pixels that need to be converted
+                    tmp_index = numpy.argsort(tmp_array)
+                    tmp_index = tmp_index[:count - pixels_changed]
+
+                    #convert the selected pixels into coordinates
+                    pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    pixels_to_change = pixels_to_change[tmp_index]
+                    pixels_to_change = apply(zip, pixels_to_change)
+
+                    #change the pixels in the scenario
+                    scenario_array[pixels_to_change] = cover_id
+
+                    pixels_changed = count                                        
+
+                    #alter other suitability rasters to prevent double conversion
+                    for _, update_id, _ in change_list[index+1:]:
+                        update_arrays[update_id][pixels_to_change] = 0
+
+                    break
+
+                else:
+                    LOGGER.debug("Converting patch %i.", label)
+                    #convert patch, increase count of changes
+                    scenario_array[patch] = cover_id
+                    pixels_changed += patch_sizes[label]
+
+                    #alter other suitability rasters to prevent double conversion
+                    for _, update_id, _ in change_list[index+1:]:
+                        update_arrays[update_id][patch] = 0
+
+        #report and record unchanged pixels
+        if pixels_changed < count:
+            LOGGER.warn("Not all pixels converted.")
+            unconverted_pixels[cover_id] = count - pixels_changed
+
+
+        #write new suitability arrays
+        for _, update_id, _ in change_list[index+1:]:
+            update_bands[update_id].WriteArray(update_arrays[update_id])
+            update_arrays[update_id] = None
+            update_bands[update_id] = None
+            update_ds[update_id] = None
+
+    scenario_band.WriteArray(scenario_array)
+    scenario_array = None
     scenario_band = None
     scenario_ds = None
 
