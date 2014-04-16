@@ -1970,7 +1970,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
                 #the neighbor flows into this cell
                 it_flows_here = True
 
-            if (neighbor_outflow_direction - 1) % 8 == inflow_offsets[neighbor_index]:
+            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
                 #the offset neighbor flows into this cell
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
