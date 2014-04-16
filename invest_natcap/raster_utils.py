@@ -204,11 +204,15 @@ def get_cell_size_from_uri(dataset_uri):
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
     #take absolute value since sometimes negative widths/heights
-    if not nearly_equal(abs(geotransform[1]), abs(geotransform[5])):
-        raise ValueError(
-            "Raster %s has non-square pixels of size (%f, %f) " %
-            (dataset_uri, geotransform[1], geotransform[5]))
-    size_meters = abs(geotransform[1]) * linear_units
+    try:
+        numpy.testing.assert_approx_equal(
+            abs(geotransform[1]), abs(geotransform[5]))
+        size_meters = abs(geotransform[1]) * linear_units
+    except AssertionError as e:
+        LOGGER.warn(e)
+        size_meters = (
+            abs(geotransform[1]) + abs(geotransform[5])) / 2.0 * linear_units
+
     return size_meters
 
 
@@ -2829,19 +2833,7 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
     
     return carray
 
-def nearly_equal(a, b, sig_fig=5):
-    """Test if two floats are equal to each other within a tolerance
-    
-        a - numeric input
-        b - numeric input
-        sig_fig - (optional) an integer describing the number of significant
-            digits default is 5
-            
-        returns True if a and b are equal to each other within a given 
-            tolerance"""
-    return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
 
-    
 def make_constant_raster_from_base_uri(
     base_dataset_uri, constant_value, out_uri, nodata_value=None,
     dataset_type=gdal.GDT_Float32):

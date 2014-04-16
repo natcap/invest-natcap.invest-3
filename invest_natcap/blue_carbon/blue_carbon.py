@@ -420,10 +420,10 @@ def execute(args):
     veg_em_bio_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
     veg_em_soil_name = os.path.join(intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
-    acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_value.tif")
-    em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_value.tif")
-    em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_value.tif")
-    value_name = os.path.join(intermediate_dir, "%i_%i_value.tif")
+    acc_value_name = os.path.join(intermediate_dir, "%i_%i_acc_npv.tif")
+    em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_npv.tif")
+    em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_npv.tif")
+    value_name = "%i_%i_npv.tif"
     
 
     em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
@@ -944,7 +944,7 @@ def execute(args):
                                   this_total_carbon_uri)
 
         stock_uri_dict[this_year] = this_total_carbon_uri
-        
+       
         ##carbon totals
 ##        vectorize_carbon_datasets(em_uri_list,
 ##                                  add_op,
@@ -966,6 +966,33 @@ def execute(args):
                                   add_op,
                                   this_total_dis_soil_uri)
 
+    #analysis year raster
+    this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % analysis_year)
+    this_total_carbon_uri_list = []
+    for veg_type in veg_type_list:
+        this_veg_litter_uri = os.path.join(workspace_dir,
+                                           veg_litter_name % (lulc_years[-1],
+                                                              veg_type))
+
+        this_veg_adj_acc_bio_uri = os.path.join(workspace_dir,
+                                                veg_adj_acc_bio_name % (lulc_years[-1],
+                                                                        analysis_year,
+                                                                        veg_type))
+        this_veg_adj_acc_soil_uri = os.path.join(workspace_dir,
+                                                 veg_adj_acc_soil_name % (lulc_years[-1],
+                                                                          analysis_year,
+                                                                          veg_type))
+
+        this_total_carbon_uri_list.append(this_veg_litter_uri)
+        this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
+        this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
+    
+    vectorize_carbon_datasets(this_total_carbon_uri_list,
+                              add_op,
+                              this_total_carbon_uri)
+
+    stock_uri_dict[analysis_year] = this_total_carbon_uri
+
     def pos_op(v):
         if v is nodata_default_float:
             return v
@@ -982,8 +1009,8 @@ def execute(args):
         else:
             return 0
         
-    for i, this_year in enumerate(lulc_years[:-1]):
-        for next_year in lulc_years[i+1:]:
+    for i, this_year in enumerate(lulc_years):
+        for next_year in (lulc_years+[analysis_year])[i+1:]:
             LOGGER.info("Calculating sequestration from %i to %i.", this_year, next_year)
             total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
             gain_uri = os.path.join(workspace_dir, gain_name % (this_year, next_year))
@@ -1018,12 +1045,20 @@ def execute(args):
 
         csv.write(",".join(header))
 
+        if args["carbon_units"] == "Carbon Dioxide (CO2)":
+            price_conversion = ((15.9994 * 2) + 12.0107)/12.0107
+        else:
+            price_conversion = 1
+
         if not args["price_table"]:
             carbon_schedule = {}
             for year in range(lulc_years[0], analysis_year+1):
-                carbon_schedule[year] = {carbon_schedule_field_rate: float(args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
+                carbon_schedule[year] = {carbon_schedule_field_rate: float(carbon_conversion * args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
         else:
             carbon_schedule = raster_utils.get_lookup_from_csv(args["carbon_schedule"], carbon_schedule_field_key)
+
+            for k in carbon_schedule:
+                carbon_schedule[k][carbon_schedule_field_rate] *= price_conversion
 
         period_op_dict = {}
         for start_year, end_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
@@ -1104,6 +1139,7 @@ def execute(args):
 
 
         #generate value rasters
+        value_uri_list = []
         for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
             LOGGER.info("Generating valuation rasters for era %i to %i.",
                         this_year,
@@ -1192,6 +1228,12 @@ def execute(args):
                                        em_soil_value_uri],
                                       sub_op,
                                       value_uri)
+            value_uri_list.append(value_uri)
+
+        total_value_uri = os.path.join(workspace_dir, value_name % (lulc_years[0], analysis_year))
+        vectorize_carbon_datasets(value_uri_list,
+                                  add_op,
+                                  total_value_uri)
             
 
 
@@ -1209,9 +1251,9 @@ def execute(args):
                         "Loss",
                         "Net<BR>(Sequestration)"]
 
-    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
-    for this_year, next_year in zip(lulc_years[:-1], (lulc_years+[analysis_year])[1:]):
+    for this_year, next_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
         row = ["%i-%i" % (this_year, next_year)]
 
         total_seq_uri = os.path.join(workspace_dir, net_sequestration_name % (this_year, next_year))
@@ -1222,11 +1264,11 @@ def execute(args):
         loss = sum_uri(loss_uri, extent_uri)
         total_seq = sum_uri(total_seq_uri, extent_uri)
         
-        row.append(str(gain))
-        row.append(str(loss))
-        row.append(str(total_seq))
+        row.append(str(int(gain)))
+        row.append(str(int(loss)))
+        row.append(str(int(total_seq)))
 
-        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(row))
+        report.write("\n<TR><TD ALIGN=\"RIGHT\">%s</TD></TR>" % "</TD><TD ALIGN=\"RIGHT\">".join(row))
 
     report.write("\n</TABLE>")
 
@@ -1240,7 +1282,7 @@ def execute(args):
                         "Emissions<BR>(Biomass)",
                         "Emissions<BR>(Soil)"]
    
-    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
     for i, this_year in enumerate(lulc_years):
         row = ["%i-%i" % (this_year, (lulc_years+[analysis_year])[i+1])]
@@ -1259,26 +1301,26 @@ def execute(args):
             row.append(total)
         row.append(row[1]+row[3]-row[5]-row[6])        
 
-        report.write("<TR><TD>%s</TD></TR>" % "</TD><TD>".join([str(value) for value in [row[0],
-                                                                                         row[1],
-                                                                                         row[3],
-                                                                                         row[2],
-                                                                                         row[4],
-                                                                                         row[5],
-                                                                                         row[6]]]))
+        report.write("<TR><TD ALIGN=\"RIGHT\">%s</TD></TR>" % "</TD><TD ALIGN=\"RIGHT\">".join([str(value) for value in [row[0],
+                                                                                         int(row[1]),
+                                                                                         int(row[3]),
+                                                                                         int(row[2]),
+                                                                                         int(row[4]),
+                                                                                         int(row[5]),
+                                                                                         int(row[6])]]))
 
     report.write("\n</TABLE>")
 
     #valuation
     if args["private_valuation"]:
-        report.write("\n<P><P><B>Valuation</B>")
+        report.write("\n<P><P><B>Valuation (in specified valuation currency)</B>")
         column_name_list = ["Start-End Year",
                             "Accumulation",                        
                             "Biomass Emission",                        
                             "Soil Emission",
                             "Sequestration"]
        
-        report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+        report.write("\n<TABLE BORDER=1><TR><TD ALIGN=\"CENTER\"><B>%s</B></TD></TR>" % "</B></TD><TD ALIGN=\"CENTER\"><B>".join(column_name_list))
 
         for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
             row = ["%i-%i" % (this_year, next_year)]
@@ -1293,9 +1335,9 @@ def execute(args):
                         em_soil_value_uri,
                         value_uri]:
 
-                row.append(str(sum_uri(uri, extent_uri)))
+                row.append(str(int(sum_uri(uri, extent_uri))))
 
-            report.write("<TR><TD>" + "</TD><TD>".join(row) + "</TR></TD>")
+            report.write("<TR><TD ALIGN=\"RIGHT\">" + "</TD><TD ALIGN=\"RIGHT\">".join(row) + "</TR></TD>")
 
         report.write("\n</TABLE>")
 
