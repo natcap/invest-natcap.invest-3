@@ -1801,7 +1801,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef int neighbor_col_index
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
-    cdef float outflow_weight, neighbor_distance
+    cdef float outflow_weight, neighbor_distance, step_size
     cdef int it_flows_here
     cdef int step_count = 0
     cdef int downstream_index, downstream_processed, downstream_uncalculated
@@ -1937,10 +1937,16 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
 
                     neighbor_distance = distance_cache[
                         cache_neighbor_row_index, neighbor_col_index]
+                        
+                    if outflow_direction % 2 == 1:
+                        #increase distance by a square root of 2 for diagonal
+                        step_size = cell_size * 1.41421356237
+                    else:
+                        step_size = cell_size
 
                     if neighbor_distance != distance_nodata:
                         distance_cache[cache_row_index, col_index] += (
-                            neighbor_distance * outflow_weight + cell_size)
+                            neighbor_distance * outflow_weight + step_size)
 
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
