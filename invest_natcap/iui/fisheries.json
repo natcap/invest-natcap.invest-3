@@ -27,6 +27,7 @@
                     "type": "file",
                     "label": "Area(s) of Interest",
                     "required": true,
+                    "defaultValue": "../Fisheries/Input/Lob_Belize_Subregions.shp",
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
@@ -38,6 +39,7 @@
                     "args_id" : "class_params_uri",
                     "type": "file",
                     "label": "Parameters for Age Classes and Area(s)",
+                    "defaultValue": "../Fisheries/Input/caribbean_spiny_lobster_main_params.csv",
                     "required": true,
                     "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
                 },
@@ -46,6 +48,7 @@
                     "args_id" : "maturity_type",
                     "type": "dropdown",
                     "label": "Maturity Type",
+                    "defaultValue": "Age Specific",
                     "required": true,
                     "options" : ["Age Specific", "Stage Specific"],
                     "returns": "strings",
@@ -66,6 +69,7 @@
                     "args_id" : "hrv_type",
                     "type": "dropdown",
                     "label": "Biomass and Harvest by Weight or Numbers?",
+                    "defaultValue": "Weight",
                     "required": true,
                     "options" : ["Numbers", "Weight"],
                     "returns": "strings",
@@ -79,6 +83,7 @@
                     "dataType": "int",
                     "label": "Duration of Simulation (time steps)",
                     "validateAs": {"type": "number"},
+                    "defaultValue": "100",
                     "required": true,
                     "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
                 } 
@@ -98,6 +103,7 @@
                         "args_id" : "rec_eq",
                         "type": "dropdown",
                         "label": "Recruitment Equation",
+                        "defaultValue": "Beverton-Holt",
                         "required": true,
                         "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
                         "returns": "strings",
@@ -110,6 +116,7 @@
                         "type": "text",
                         "dataType": "float",
                         "label": "Alpha (Beverton-Holt/Ricker)",
+                        "defaultValue": "5770000",
                         "required": false,
                         "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An alpha parameter should be entered here if you selected either of those two equations in the dropdown menu above."
@@ -120,6 +127,7 @@
                         "type": "text",
                         "dataType": "float",
                         "label": "Beta (Beverton-Holt/Ricker)",
+                        "defaultValue": "2885000",
                         "required": false,
                         "validateAs": {"type": "number"},
                         "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An beta parameter should be entered here if you selected either of those two equations in the dropdown menu above."
@@ -166,6 +174,7 @@
             "id": "do_migration",
             "label": "Migration",
             "type": "container",
+            "defaultValue": true,
             "collapsible": true,
             "elements":[
                 {
@@ -177,6 +186,7 @@
                             "args_id" : "mig_params_uri",
                             "type": "folder",
                             "label": "Migration Matrix CSV Folder",
+                            "defaultValue": "../Fisheries/Input/Caribbean_Spiny_Lobster_migration",
                             "required": false,
                             "validateAs": {"type": "folder"},
                             "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
@@ -189,6 +199,7 @@
             "id": "do_val",
             "label": "Valuation",
             "type": "container",
+            "defaultValue": true,
             "collapsible": true,
             "elements":[
                 {
@@ -200,6 +211,7 @@
                             "args_id" : "frac_post_process",
                             "type": "text",
                             "label": "Fraction After Processing",
+                            "defaultValue": "0.286332579995172",
                             "required": true,
                             "dataType": "float",
                             "validateAs": {"type":"number"},
@@ -210,6 +222,7 @@
                             "args_id" : "unit_price",
                             "type": "text",
                             "label": "Unit Price",
+                            "defaultValue": "29.9320213844594",
                             "required": true,
                             "dataType": "float",
                             "validateAs": {"type": "number"},

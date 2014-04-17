@@ -197,8 +197,6 @@ def get_transition_set_count_from_uri(dataset_uri_list):
     return unique_raster_values_count, transitions
 
 def generate_chart_html(cover_dict, cover_names_dict):
-    LOGGER.debug(cover_names_dict)
-    LOGGER.debug(cover_dict)
     html = "\n<table BORDER=1>"
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
@@ -242,7 +240,6 @@ def generate_chart_html(cover_dict, cover_names_dict):
     finalcover = []
     
     for cover_id in cover_id_list_chart:
-        LOGGER.debug(cover_id)
         try:
             initialcover.append((cover_dict[cover_id][0] / pixcount) * 100)
         except KeyError:
@@ -376,34 +373,34 @@ def filter_fragments(input_uri, size, output_uri):
     for value in suitability_values:
         mask = src_array == value # You get a mask with the polygons only
         ones_in_mask = numpy.sum(mask)
-        print('Processing value' + str(value) + ' (found ' + \
-        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
+##        print('Processing value' + str(value) + ' (found ' + \
+##        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
         label_im, nb_labels = scipy.ndimage.label(mask)
         src_array[mask] = 1
         fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
         fragment_labels = numpy.array(range(nb_labels + 1))
-        print('Labels', nb_labels, fragment_sizes)
-        assert fragment_sizes.size == len(fragment_labels)
+##        print('Labels', nb_labels, fragment_sizes)
+##        assert fragment_sizes.size == len(fragment_labels)
         small_fragment_mask = numpy.where(fragment_sizes <= size)
         small_fragment_sizes = fragment_sizes[small_fragment_mask]
         small_fragment_labels = fragment_labels[small_fragment_mask]
-        print('small fragment count', small_fragment_sizes.size)
+##        print('small fragment count', small_fragment_sizes.size)
         combined_small_fragment_size = numpy.sum(small_fragment_sizes)
-        print('fragments to remove', combined_small_fragment_size)
-        print('small fragment sizes', small_fragment_sizes)
-        print('small fragment labels', small_fragment_labels)
-        #print('large_fragments', large_fragments.size, large_fragments)
+##        print('fragments to remove', combined_small_fragment_size)
+##        print('small fragment sizes', small_fragment_sizes)
+##        print('small fragment labels', small_fragment_labels)
+##        print('large_fragments', large_fragments.size, large_fragments)
         removed_pixels = 0
         for label in small_fragment_labels[1:]:
             pixels_to_remove = numpy.where(label_im == label)
             dst_array[pixels_to_remove] = 0
             removed_pixels += pixels_to_remove[0].size
-            print('removed ' + str(pixels_to_remove[0].size) + \
-            ' pixels with label ' + str(label) + ', total = ' + \
-            str(removed_pixels))
-        message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
-        ', pixels removed = ' + str(removed_pixels)
-        assert removed_pixels == combined_small_fragment_size, message
+##            print('removed ' + str(pixels_to_remove[0].size) + \
+##            ' pixels with label ' + str(label) + ', total = ' + \
+##            str(removed_pixels))
+##        message = 'Ones in mask = ' + str(combined_small_fragment_size) + \
+##        ', pixels removed = ' + str(removed_pixels)
+##        assert removed_pixels == combined_small_fragment_size, message
 
     dst_band.WriteArray(dst_array)
 
@@ -529,9 +526,10 @@ def execute(args):
     #raise error if transition table provided, but not used
     if args["transition"] and not(args["calculate_transition"] or args["calculate_factors"]):
         msg = "Transition table provided but not used."
-        LOGGER.error(msg)
-        raise ValueError, msg
+        LOGGER.warn(msg)
+        #raise ValueError, msg
 
+    transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
         #load transition table
         transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
@@ -1000,6 +998,7 @@ def execute(args):
     #change pixels
     scenario_ds = gdal.Open(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
+    scenario_array = scenario_band.ReadAsArray()
 
     unconverted_pixels = {}
     for index, (priority, cover_id, count) in enumerate(change_list):
@@ -1008,30 +1007,102 @@ def execute(args):
         #open all lower priority suitability rasters and assign changed pixels value of 0
         update_ds = {}
         update_bands = {}
+        update_arrays = {}
         for _, update_id, _ in change_list[index+1:]:
-            update_ds[update_id] = gdal.Open(suitability_dict[cover_id], 1)
+            update_ds[update_id] = gdal.Open(suitability_dict[update_id], 1)
             update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
+            update_arrays[update_id] = update_bands[update_id].ReadAsArray()
 
-        #select pixels
-        pixel_heap = disk_sort.sort_to_disk(suitability_dict[cover_id], cover_id)
+        ##select pixels
+        #open suitability raster
+        src_ds = gdal.Open(suitability_dict[cover_id], 1)
+        src_band = src_ds.GetRasterBand(1)
+        src_array = src_band.ReadAsArray()                
 
-        for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
-            if n == count or value == 0:
-                if value == 0:
-                    LOGGER.debug("Incomplete conversion. Only %i pixels converted for %i.", n, cover_id)
-                    unconverted_pixels[cover_id] = count - (n -1)
+        pixels_changed = 0
+        suitability_values = list(numpy.unique(src_array))
+        suitability_values.sort(reverse=True)
+        if suitability_values[-1]==0:
+            suitability_values.pop(-1)
+        for suitability_score in suitability_values:
+            if pixels_changed == count:
+                LOGGER.debug("All necessay pixels converted.")
                 break
-            scenario_band.WriteArray(numpy.array([[cover_id]]), flat_index % n_cols, flat_index / n_cols)
 
-            for c_id in update_bands:
-                update_bands[c_id].WriteArray(numpy.array([[0]]), flat_index % n_cols, flat_index / n_cols)
+            LOGGER.debug("Checking pixels with suitability of %i.", suitability_score)
 
-        for c_id in update_bands:
-            update_bands[c_id] = None
+            #mask out everything except the current suitability score
+            mask = src_array == suitability_score
 
-        for c_id in update_bands:
-            update_bands[c_id] = None
+            #label patches
+            label_im, nb_labels = scipy.ndimage.label(mask)
+            
+            #get patch sizes
+            patch_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+            patch_labels = numpy.array(range(1, nb_labels + 1))
 
+            #randomize patch order
+            numpy.random.shuffle(patch_labels)
+
+            #check patches for conversion
+            for label in patch_labels:
+                patch = numpy.where(label_im == label)
+                if patch_sizes[label] + pixels_changed > count:
+                    LOGGER.debug("Converting part of patch %i.", label)
+
+                    #mask out everything except the current patch
+                    patch_mask = numpy.zeros_like(scenario_array)
+                    patch_mask[patch] = 1
+
+                    #calculate the distance to exit the patch
+                    tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
+                    tmp_array = tmp_array[patch]
+
+                    #select the number of pixels that need to be converted
+                    tmp_index = numpy.argsort(tmp_array)
+                    tmp_index = tmp_index[:count - pixels_changed]
+
+                    #convert the selected pixels into coordinates
+                    pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    pixels_to_change = pixels_to_change[tmp_index]
+                    pixels_to_change = apply(zip, pixels_to_change)
+
+                    #change the pixels in the scenario
+                    scenario_array[pixels_to_change] = cover_id
+
+                    pixels_changed = count                                        
+
+                    #alter other suitability rasters to prevent double conversion
+                    for _, update_id, _ in change_list[index+1:]:
+                        update_arrays[update_id][pixels_to_change] = 0
+
+                    break
+
+                else:
+                    LOGGER.debug("Converting patch %i.", label)
+                    #convert patch, increase count of changes
+                    scenario_array[patch] = cover_id
+                    pixels_changed += patch_sizes[label]
+
+                    #alter other suitability rasters to prevent double conversion
+                    for _, update_id, _ in change_list[index+1:]:
+                        update_arrays[update_id][patch] = 0
+
+        #report and record unchanged pixels
+        if pixels_changed < count:
+            LOGGER.warn("Not all pixels converted.")
+            unconverted_pixels[cover_id] = count - pixels_changed
+
+
+        #write new suitability arrays
+        for _, update_id, _ in change_list[index+1:]:
+            update_bands[update_id].WriteArray(update_arrays[update_id])
+            update_arrays[update_id] = None
+            update_bands[update_id] = None
+            update_ds[update_id] = None
+
+    scenario_band.WriteArray(scenario_array)
+    scenario_array = None
     scenario_band = None
     scenario_ds = None
 
@@ -1189,147 +1260,148 @@ def execute(args):
     htm.close()
 
     
+    if args["calculate_es_values"]:
+        ######
+        # Calculate ecosystem values
+        ######
+        input_uri = os.path.abspath(os.path.join(landcover_uri, os.pardir))    
+        
+        #exercise fields
+        args["returns_cover_id"] = "Cover ID"
+        args["returns_layer"] = os.path.join(input_uri,"returns.csv")
+        
+        ###
+        # Calculate Ecosystem Services values for Scenarios session
+        ###
+        
+        #load returns table
+        returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
+        carbon_dict = {}
+        agric_dict = {}
+        
+        for cover in returns_dict:
+            carbon_dict[cover] = returns_dict[cover]['Carbon']
+            agric_dict[cover] = returns_dict[cover]['Food']
     
-    ######
-    # Calculate ecosystem values
-    ######
-    input_uri = os.sep.join(landcover_uri.split(os.sep)[:-1])    
-    
-    #exercise fields
-    args["returns_cover_id"] = "Cover ID"
-    args["returns_layer"] = os.path.join(input_uri,"returns.csv")   
-    ###
-    # Calculate Ecosystem Services values for Scenarios session
-    ###
-    
-    #load returns table
-    returns_dict = raster_utils.get_lookup_from_csv(args["returns_layer"], args["returns_cover_id"])
-    carbon_dict = {}
-    agric_dict = {}
-    
-    for cover in returns_dict:
-        carbon_dict[cover] = returns_dict[cover]['Carbon']
-        agric_dict[cover] = returns_dict[cover]['Agriculture']
-
-    #prepare output file uris
-    initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
-    initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
-    scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
-    scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
-    carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
-    agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
-    landcover_shape_uri = os.path.join(input_uri, "extent.shp")
-    
-    #reclass landcover map by carbon_dict
-    raster_utils.reclassify_dataset_uri(landcover_uri,
-                                        carbon_dict,
-                                        initial_carbon_uri,
+        #prepare output file uris
+        initial_carbon_uri = os.path.join(workspace, "initial_carbon.tif")
+        initial_agriculture_uri = os.path.join(workspace, "initial_agriculture.tif")
+        scenario_carbon_uri = os.path.join(workspace, "scenario_carbon.tif")
+        scenario_agriculture_uri = os.path.join(workspace, "scenario_agriculture.tif")
+        carbon_change_uri = os.path.join(workspace, "carbon_change.tif")
+        agriculture_change_uri = os.path.join(workspace, "agriculture_change.tif")
+        landcover_shape_uri = os.path.join(input_uri, "extent.shp")
+        
+        #reclass landcover map by carbon_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            carbon_dict,
+                                            initial_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by carbon_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            carbon_dict,
+                                            scenario_carbon_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract carbon
+        raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
+                                        es_change_op,
+                                        carbon_change_uri,
                                         transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-                                        
-    #reclass scenario map by carbon_dict
-    raster_utils.reclassify_dataset_uri(scenario_uri,
-                                        carbon_dict,
-                                        scenario_carbon_uri,
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+        
+        #reclass landcover map by agric_dict
+        raster_utils.reclassify_dataset_uri(landcover_uri,
+                                            agric_dict,
+                                            initial_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+                                            
+        #reclass scenario map by agric_dict
+        raster_utils.reclassify_dataset_uri(scenario_uri,
+                                            agric_dict,
+                                            scenario_agriculture_uri,
+                                            transition_type,
+                                            99999,
+                                            exception_flag = "values_required")
+        #subtract agriculture
+        raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
+                                        es_change_op,
+                                        agriculture_change_uri,
                                         transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-    #subtract carbon
-    raster_utils.vectorize_datasets([scenario_carbon_uri, initial_carbon_uri],
-                                    es_change_op,
-                                    carbon_change_uri,
-                                    transition_type,
-                                    change_nodata,
-                                    cell_size,
-                                    "union")
+                                        change_nodata,
+                                        cell_size,
+                                        "union")
+        
+        ######
+        # Write game summary
+        ######
+        #open file for scenario game summary
+        try:
+            gamesummary = open(os.path.join(workspace, "summary.csv"), "r")
+            summarylines = gamesummary.readlines()
+            runcount = []
+            for line in summarylines:
+                if 'Scenario Run #' in line:
+                    runcount.append(line.replace("\n","")[14:])
+            new_run_number = int(max(runcount)) + 1
+            gamesummary.close()
+        except:
+            new_run_number = 1
+        
+        gamesummary = open(os.path.join(workspace, "summary.csv"),'a')
+        gamesummary.write("###########################################################\n\n")
+        gamesummary.write("Scenario Run #"+str(new_run_number)+"\n\n")
+        gamesummary.write("Inputs\n\n")
+        
+        
+        if args["calculate_constraints"]:    
+            datasource = ogr.Open(constraints_uri)
+            layer = datasource.GetLayer()
+            for feature in layer:
+                 id = feature.GetField("porosity")
+                 gamesummary.write("Porosity:,"+str(id)+"\n")
     
-    #reclass landcover map by agric_dict
-    raster_utils.reclassify_dataset_uri(landcover_uri,
-                                        agric_dict,
-                                        initial_agriculture_uri,
-                                        transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-                                        
-    #reclass scenario map by agric_dict
-    raster_utils.reclassify_dataset_uri(scenario_uri,
-                                        agric_dict,
-                                        scenario_agriculture_uri,
-                                        transition_type,
-                                        99999,
-                                        exception_flag = "values_required")
-    #subtract agriculture
-    raster_utils.vectorize_datasets([scenario_agriculture_uri, initial_agriculture_uri],
-                                    es_change_op,
-                                    agriculture_change_uri,
-                                    transition_type,
-                                    change_nodata,
-                                    cell_size,
-                                    "union")
-    
-    ######
-    # Write game summary
-    ######
-    #open file for scenario game summary
-    try:
-        gamesummary = open(os.path.join(workspace, "summary.csv"), "r")
-        summarylines = gamesummary.readlines()
-        runcount = []
-        for line in summarylines:
-            if 'Scenario Run #' in line:
-                runcount.append(line.replace("\n","")[14:])
-        new_run_number = int(max(runcount)) + 1
+        if args["calculate_transition"]:
+            transitionfile = open(args["transition"])
+            lines = transitionfile.readlines()        
+            transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+            cover_names_dict = {}
+            for cover in transition_dict:
+                cover_names_dict[cover] =  transition_dict[cover]["Name"]     
+            gamesummary.write("Target cover,Source, Percent Change\n")
+            for cover in transition_dict:
+                if transition_dict[cover]["Percent Change"] > 0:
+                    target = ""
+                    for contributingcover in transition_dict:
+                        if transition_dict[contributingcover][str(cover)] > 0:
+                            target += cover_names_dict[contributingcover] + ";"
+                    gamesummary.write(transition_dict[cover]["Name"]+","+str(target)+","+\
+                    str(transition_dict[cover]["Percent Change"])+"\n")
+            transitionfile.close()        
+        
+        gamesummary.write("\n**********************************************************\n\n")
+        gamesummary.write("Outputs\n\n")
+        gamesummary.write("Total amount of ES in each map \n\n")
+        gamesummary.write(",Carbon,Food\n")
+        gamesummary.write("Current LULC,"+str(sum_uri(initial_carbon_uri, landcover_shape_uri))+","+\
+        str(sum_uri(initial_agriculture_uri, landcover_shape_uri))+"\n")
+        gamesummary.write("Scenario LULC,"+str(sum_uri(scenario_carbon_uri, landcover_shape_uri))+","+\
+        str(sum_uri(scenario_agriculture_uri, landcover_shape_uri))+"\n")
+        gamesummary.write("Score,"+str(\
+        sum_uri(scenario_carbon_uri, landcover_shape_uri)+\
+        sum_uri(scenario_agriculture_uri, landcover_shape_uri)-\
+        sum_uri(initial_carbon_uri, landcover_shape_uri)-\
+        sum_uri(initial_agriculture_uri, landcover_shape_uri)\
+        ))
+        gamesummary.write("\n\n")
+        
         gamesummary.close()
-    except:
-        new_run_number = 1
-    
-    gamesummary = open(os.path.join(workspace, "summary.csv"),'a')
-    gamesummary.write("###########################################################\n\n")
-    gamesummary.write("Scenario Run #"+str(new_run_number)+"\n\n")
-    gamesummary.write("Inputs\n\n")
-    
-    
-    if args["calculate_constraints"]:    
-        datasource = ogr.Open(constraints_uri)
-        layer = datasource.GetLayer()
-        for feature in layer:
-             id = feature.GetField("porosity")
-             gamesummary.write("Porosity:,"+str(id)+"\n")
-
-    if args["calculate_transition"]:
-        transitionfile = open(args["transition"])
-        lines = transitionfile.readlines()        
-        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
-        cover_names_dict = {}
-        for cover in transition_dict:
-            cover_names_dict[cover] =  transition_dict[cover]["Name"]     
-        gamesummary.write("Target cover,Source, Percent Change\n")
-        for cover in transition_dict:
-            if transition_dict[cover]["Percent Change"] > 0:
-                target = ""
-                for contributingcover in transition_dict:
-                    if transition_dict[contributingcover][str(cover)] > 0:
-                        target += cover_names_dict[contributingcover] + ";"
-                gamesummary.write(transition_dict[cover]["Name"]+","+str(target)+","+\
-                str(transition_dict[cover]["Percent Change"])+"\n")
-        transitionfile.close()        
-    
-    gamesummary.write("\n**********************************************************\n\n")
-    gamesummary.write("Outputs\n\n")
-    gamesummary.write("Total amount of ES in each map \n\n")
-    gamesummary.write(",Carbon,Food\n")
-    gamesummary.write("Current LULC,"+str(sum_uri(initial_carbon_uri, landcover_shape_uri))+","+\
-    str(sum_uri(initial_agriculture_uri, landcover_shape_uri))+"\n")
-    gamesummary.write("Scenario LULC,"+str(sum_uri(scenario_carbon_uri, landcover_shape_uri))+","+\
-    str(sum_uri(scenario_agriculture_uri, landcover_shape_uri))+"\n")
-    gamesummary.write("Score,"+str(\
-    sum_uri(scenario_carbon_uri, landcover_shape_uri)+\
-    sum_uri(scenario_agriculture_uri, landcover_shape_uri)-\
-    sum_uri(initial_carbon_uri, landcover_shape_uri)-\
-    sum_uri(initial_agriculture_uri, landcover_shape_uri)\
-    ))
-    gamesummary.write("\n\n")
-    
-    gamesummary.close()
 

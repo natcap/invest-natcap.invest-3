@@ -79,7 +79,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
-    LOGGER.debug("Weight is: %s" % args['do_weight'])
+    #LOGGER.debug("Weight is: %s" % args['do_weight'])
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
 
@@ -88,7 +88,7 @@ def execute(args):
         cycle_dict)
 
     migration_dict = args['migrate_dict'] if 'migrate_dict' in args else None
-    LOGGER.debug("MIGRATION: %s" % migration_dict)
+    #LOGGER.debug("MIGRATION: %s" % migration_dict)
 
     if args['maturity_type'] == "Age Specific":
         age_structured_cycle(args['params_dict'], args['is_gendered'],
@@ -281,7 +281,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
                 {'name': 'Harvest', 'total': True},
                 {'name': 'Equilibrated?', 'total': False}]
 
-    LOGGER.debug("I AM IN : %s" % os.getcwd())
+    #LOGGER.debug("I AM IN : %s" % os.getcwd())
 
     elements = [{
                 'type': 'text',
@@ -527,15 +527,16 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                         calc_indiv_count(cycle_dict, migration_dict, area, 
                                                 prev_age, cycle)
                     if area == '1' and age == '3' and cycle == 1:
-                        LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (prev_num_indivs, prev_survival))
-
+                        #LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (prev_num_indivs, prev_survival))
+                        pass
+                        
                     cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
 
     for cycle in cycle_dict:
         for area in cycle_dict[cycle]:
             if area == '1':
                 for age in cycle_dict[cycle][area]:
-                    LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
+                    #LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
                     pass
 
 def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
@@ -622,7 +623,8 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
 
     indivs_in_area = prev_indiv_in_area * prev_mig_in_area
     if cycle == 1 and age == '2':
-        LOGGER.debug("Area %s x==x: %s" % (area, indivs_in_area))
+        #LOGGER.debug("Area %s x==x: %s" % (area, indivs_in_area))
+        pass
 
     incoming_pop = 0
 

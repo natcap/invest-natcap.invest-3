@@ -13,13 +13,13 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-
+import invest_natcap
 from invest_natcap import raster_utils
 import table_generator
 import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
-REPORTING_DATA = os.path.join(os.path.dirname(__file__), 'reporting_data/')
+REPORTING_DATA = os.path.join(invest_natcap.local_dir(__file__), 'reporting_data/')
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')

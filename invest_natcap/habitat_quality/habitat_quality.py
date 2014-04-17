@@ -250,8 +250,7 @@ def execute(args):
             # compute sigma to be used in a gaussian filter.  Sigma is
             # derived from using equation 12.2 in users manual and the
             # gaussian equation. 2.99573 is from users guide and old code
-            sigma = \
-                math.sqrt(dr_pixel / (2.99573 * 2.0))
+            sigma = math.sqrt(dr_pixel / (2.99573 * 2.0))
             LOGGER.debug('Sigma for gaussian : %s', sigma)
 
             filtered_threat_uri = \
@@ -260,7 +259,8 @@ def execute(args):
             # blur the threat raster based on the effect of the threat over
             # distance
             raster_utils.gaussian_filter_dataset_uri(
-                    threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
+                    threat_dataset_uri, sigma, filtered_threat_uri, out_nodata,
+                    constant_factor=2*math.pi*sigma**2)
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
