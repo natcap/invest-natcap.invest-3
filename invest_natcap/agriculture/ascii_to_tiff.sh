@@ -15,7 +15,7 @@ done
 for f in $ASCII
 do
 #fix .asc headers
-head -n +6 $f | sed -e 's/^[ \t]*//' > $OUTPUT\tmp.asc
-tail -n +7 $f >> $OUTPUT\tmp.asc
-gdal_translate -of GTiff $OUTPUT\tmp.asc $f.tif
+head -n +6 $f | sed -e 's/^[ \t]*//' > $OUTPUT/tmp.asc
+tail -n +7 $f >> $OUTPUT/tmp.asc
+gdal_translate -of GTiff $OUTPUT/tmp.asc $f.tif
 done
