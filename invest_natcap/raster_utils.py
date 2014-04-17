@@ -1818,7 +1818,7 @@ def reclassify_dataset(
                 undefined_set = unique_set.difference(valid_set)
                 raise UndefinedValue(
                     "The following values were in the raster but not in the "
-                    "value_map %s" % (undefined_set))
+                    "value_map %s" % (list(undefined_set)))
 
         row_array = map_array[numpy.ix_([0], row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
