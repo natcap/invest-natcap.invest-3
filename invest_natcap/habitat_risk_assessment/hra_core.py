@@ -522,6 +522,24 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_dict = {}
     avgs_r_sum = {}
 
+    #Set a temp filename for the AOI raster.
+    #aoi_rast_uri = raster_utils.temporary_filename()
+    aoi_rast_uri = os.path.join(inter_dir, 'HAHAHAHAHA.tif')
+
+    #Need an arbitrary element upon which to base the new raster.
+    arb_raster_uri = next(risk_dict.itervalues())
+    LOGGER.debug("arb_uri: %s" % arb_raster_uri)
+    
+
+    #Use the first overlap raster as the base for the AOI
+    raster_utils.new_raster_from_base_uri(arb_raster_uri, aoi_rast_uri, 'GTiff', 
+                                -1, gdal.GDT_Float32)
+
+    #This rasterize should burn a unique burn ID int to each. Need to have a dictionary which
+    #associates each burn ID with the AOI 'name' attribute that's required. 
+    raster_utils.rasterize_layer_uri(aoi_rast_uri, cp_aoi_uri, 
+                                option_list=["ATTRIBUTE=BURN_ID", "ALL_TOUCHED=TRUE"])
+    
     for pair in risk_dict:
         h, s = pair
 
@@ -548,7 +566,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         LOGGER.debug("Entering new funct.")
         rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
         rast_labels = ['E', 'C', 'H', 'H_S']
-        over_pix_sums = aggregate_multi_rasters_uri(cp_aoi_uri, rast_uri_list, rast_labels, [0])
+        over_pix_sums = aggregate_multi_rasters_uri(aoi_rast_uri, rast_uri_list, rast_labels, [0])
         LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
         LOGGER.debug("Exiting new funct.")
         
@@ -631,13 +649,13 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
 
     return avgs_dict, name_map.values()
 
-def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels, ignore_value_list=[]):
+def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
     each overlap of raster and AOI.
 
     Input:
-        aoi_uri- The location of an AOI shape file which MUST have individual ID
+        aoi_uri- The location of an AOI raster which MUST have individual ID
             numbers with the attribute name 'BURN_ID' for each feature on the map.
         rast_uris- List of locations of the rasters which should be overlapped 
             with the AOI.
@@ -652,15 +670,6 @@ def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels, ignore_value_li
                 rast_label: [200, 2567.97], ...
             }
     '''
-    aoi_rast_uri = raster_utils.temporary_filename()
-
-    #Use the first overlap raster as the base for the AOI
-    raster_utils.new_raster_from_base_uri(rast_uris[1], aoi_rast_uri, 'GTiff', 
-                                -1, gdal.GDT_Float32)
-
-    #This rasterize should burn a unique burn ID int to each. Need to have a dictionary which
-    #associates each burn ID with the AOI 'name' attribute that's required. 
-    raster_utils.rasterize_layer_uri(aoi_rast_uri, aoi_uri, option_list=["ATTRIBUTE=BURN_ID", "ALL_TOUCHED=TRUE"])
     
     cell_size = raster_utils.get_cell_size_from_uri(aoi_rast_uri)
     nodata = raster_utils.get_nodata_from_uri(aoi_rast_uri)
