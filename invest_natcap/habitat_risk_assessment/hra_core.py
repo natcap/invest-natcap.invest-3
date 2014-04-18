@@ -548,7 +548,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         LOGGER.debug("Entering new funct.")
         rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
         rast_labels = ['E', 'C', 'H', 'H_S']
-        over_pix_sums = aggregate_multi_rasters_uri(cp_aoi_uri, rast_uri_list, rast_labels)
+        over_pix_sums = aggregate_multi_rasters_uri(cp_aoi_uri, rast_uri_list, rast_labels, [0])
+        LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
         LOGGER.debug("Exiting new funct.")
         
         for burn_value in over_pix_sums:
@@ -560,34 +561,36 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             if over_pix_sums[burn_value]['H'][0] == 0:
                 frac_over = 0.
             else:
-                frac_over = over_pix_sums[burn_value]['H_S'][0] / over_pix_sums[burn_value]['H'][0]
+                #Casting to float because otherwise we end up with integer division issues.
+                frac_over = over_pix_sums[burn_value]['H_S'][0] / float(over_pix_sums[burn_value]['H'][0])
                 
             s_o_score = max_risk * frac_over + (1-frac_over)
-            
+
             if frac_over == 0.:
                 e_score = 0.
-
             #Know here that there is overlap. So now check whether we have
             #scoring from users. If no, just use spatial overlap. 
-            e_mean = over_pix_sums[burn_value]['E'][1] / over_pix_sums[burn_value]['E'][0]
-            if e_mean == 0.:
-                e_score = s_o_score
-            
-            #If there is, want to average the spatial overlap into everything
-            #else.
             else:
-                e_score = (e_mean + s_o_score) / 2
-       
-            #If my E is 0 (indicating that there's no spatial overlap), then
+                e_mean = over_pix_sums[burn_value]['E'][1] / over_pix_sums[burn_value]['E'][0]
+                
+                if e_mean == 0.:
+                    e_score = s_o_score
+            
+                #If there is, want to average the spatial overlap into everything
+                #else.
+                else:
+                    e_score = (e_mean + s_o_score) / 2
+            
+            #If there's no habitat, my E is 0 (indicating that there's no spatial overlap), then
             #my C and risk scores should also be 0. Setting E to 0 should
             #cascade to also make risk 0.
             if e_score == 0.:
-                avgs_dict[h][s].append({'Name': subregion_name, 'E': e_score,
-                           'C': 0.})
+                avgs_dict[h][s].append({'Name': subregion_name, 'E': 0.,
+                               'C': 0.})
             else:
                 c_mean = over_pix_sums[burn_value]['C'][1] / over_pix_sums[burn_value]['C'][0]
                 avgs_dict[h][s].append({'Name': subregion_name, 'E': e_score,
-                           'C': c_mean})
+                               'C': c_mean})
             
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
@@ -628,7 +631,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
 
     return avgs_dict, name_map.values()
 
-def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels):
+def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels, ignore_value_list=[]):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
     each overlap of raster and AOI.
@@ -640,7 +643,8 @@ def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels):
             with the AOI.
         rast_labels- Names for each raster layer that will be retrievable from the
             output dictionary.
-
+        ignore_value_list- Optional argument that provides a list of values which should
+            be ignored if they crop up for a pixel value of one of the layers.
     Returns:
         layer_overlap_info-
             {AOI Data Value 1: 
@@ -711,7 +715,7 @@ def aggregate_multi_rasters_uri(aoi_uri, rast_uris, rast_labels):
                         layer_overlap_info[aoi_pix][layer_name] = [0, 0.]
                     
                     layer_pix = rows_dict[layer_name][(0, col_index)] 
-                    if layer_pix != nodata:
+                    if layer_pix != nodata and layer_pix not in ignore_value_list:
                         layer_overlap_info[aoi_pix][layer_name][0] += 1
                         layer_overlap_info[aoi_pix][layer_name][1] += layer_pix
    
