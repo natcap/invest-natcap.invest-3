@@ -20,5 +20,5 @@ done
 
 for f in $NC
 do
-gdal_translate -of GTiff $f $f.tif
+gdal_translate -of GTiff -a_srs EPSG:4326 $f $f.tif
 done
