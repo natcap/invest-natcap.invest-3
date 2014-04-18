@@ -72,7 +72,7 @@ def execute(args):
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
 
-    csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
+    csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri'], 'rU'))
     biophysical_table = {}
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row

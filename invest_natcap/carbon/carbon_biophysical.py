@@ -738,7 +738,7 @@ def _carbon_pool_in_hwp_from_parcel(carbonPerCut, start_years, timeSpan, harvest
     omega = math.log(2) / decay
     #Recall that xrange is nonexclusive on the upper bound, so it corresponds
     #to the -1 in the summation terms given in the user's manual
-    for t in xrange(int(math.ceil(start_years / harvestFreq))):
+    for t in xrange(int(math.ceil(float(start_years) / harvestFreq))):
         carbonSum += (1 - math.exp(-omega)) / (omega *
             math.exp((timeSpan - t * harvestFreq) * omega))
     return carbonSum * carbonPerCut

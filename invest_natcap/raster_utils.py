@@ -204,11 +204,15 @@ def get_cell_size_from_uri(dataset_uri):
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
     #take absolute value since sometimes negative widths/heights
-    if not nearly_equal(abs(geotransform[1]), abs(geotransform[5])):
-        raise ValueError(
-            "Raster %s has non-square pixels of size (%f, %f) " %
-            (dataset_uri, geotransform[1], geotransform[5]))
-    size_meters = abs(geotransform[1]) * linear_units
+    try:
+        numpy.testing.assert_approx_equal(
+            abs(geotransform[1]), abs(geotransform[5]))
+        size_meters = abs(geotransform[1]) * linear_units
+    except AssertionError as e:
+        LOGGER.warn(e)
+        size_meters = (
+            abs(geotransform[1]) + abs(geotransform[5])) / 2.0 * linear_units
+
     return size_meters
 
 
@@ -314,7 +318,7 @@ def new_raster_from_base(
     driver = gdal.GetDriverByName(gdal_format)
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -355,7 +359,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
         outputURI.encode('utf-8'), cols, rows, bands, datatype,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -506,7 +510,7 @@ def create_raster_from_vector_extents(
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -1248,7 +1252,7 @@ def resample_dataset(
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
 
     output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
 
@@ -1326,7 +1330,7 @@ def warp_reproject_dataset_uri(
     output_dataset = gdal_driver.Create(
             output_uri, int((lrx - ulx)/pixel_spacing),
             int((uly - lry)/pixel_spacing), 1, output_type,
-            options=['COMPRESS=LZW'])
+            options=['COMPRESS=LZW', 'BIGTIFF=YES'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1401,7 +1405,7 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
         int((uly - lry)/pixel_spacing), 1, output_type,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
 
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
@@ -1814,7 +1818,7 @@ def reclassify_dataset(
                 undefined_set = unique_set.difference(valid_set)
                 raise UndefinedValue(
                     "The following values were in the raster but not in the "
-                    "value_map %s" % (undefined_set))
+                    "value_map %s" % (list(undefined_set)))
 
         row_array = map_array[numpy.ix_([0], row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
@@ -2036,7 +2040,7 @@ def resize_and_resample_dataset_uri(
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=['COMPRESS=LZW'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
@@ -2829,19 +2833,7 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
     
     return carray
 
-def nearly_equal(a, b, sig_fig=5):
-    """Test if two floats are equal to each other within a tolerance
-    
-        a - numeric input
-        b - numeric input
-        sig_fig - (optional) an integer describing the number of significant
-            digits default is 5
-            
-        returns True if a and b are equal to each other within a given 
-            tolerance"""
-    return a==b or int(a*10**sig_fig) == int(b*10**sig_fig)
 
-    
 def make_constant_raster_from_base_uri(
     base_dataset_uri, constant_value, out_uri, nodata_value=None,
     dataset_type=gdal.GDT_Float32):
