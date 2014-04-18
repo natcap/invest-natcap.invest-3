@@ -11,6 +11,7 @@ import matplotlib.pyplot
 import re
 import random
 import shutil
+import numpy
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -171,9 +172,9 @@ def execute(args):
     shutil.rmtree(unecessary_folder)
 
     #Want to remove that AOI copy that we used for ID number->name translation.
-    if 'aoi_tables' in args:
-        unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
-        os.remove(unnecessary_file)
+    #if 'aoi_tables' in args:
+    #    unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
+    #    os.remove(unnecessary_file)
 
     #Want to print out our warnings as the last possible things in the
     #console window.
@@ -521,6 +522,24 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_dict = {}
     avgs_r_sum = {}
 
+    #Set a temp filename for the AOI raster.
+    #aoi_rast_uri = raster_utils.temporary_filename()
+    aoi_rast_uri = os.path.join(inter_dir, 'HAHAHAHAHA.tif')
+
+    #Need an arbitrary element upon which to base the new raster.
+    arb_raster_uri = next(risk_dict.itervalues())
+    LOGGER.debug("arb_uri: %s" % arb_raster_uri)
+    
+
+    #Use the first overlap raster as the base for the AOI
+    raster_utils.new_raster_from_base_uri(arb_raster_uri, aoi_rast_uri, 'GTiff', 
+                                -1, gdal.GDT_Float32)
+
+    #This rasterize should burn a unique burn ID int to each. Need to have a dictionary which
+    #associates each burn ID with the AOI 'name' attribute that's required. 
+    raster_utils.rasterize_layer_uri(aoi_rast_uri, cp_aoi_uri, 
+                                option_list=["ATTRIBUTE=BURN_ID", "ALL_TOUCHED=TRUE"])
+    
     for pair in risk_dict:
         h, s = pair
 
@@ -530,85 +549,67 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         if s not in avgs_dict[h]:
             avgs_dict[h][s] = []
 
-        #The way that aggregate_raster_values is written, it does not include an
-        #entry for any AOI feature that does not overlap a valid pixel.
-        #Thus, we want to initialize ALL to 0, then just update if there is any
-        #change.
-        e_agg_dict = dict.fromkeys(ids, 0)
-        c_agg_dict = dict.fromkeys(ids, 0)
-        hs_agg_dict = dict.fromkeys(ids, 0)
-        h_agg_dict = dict.fromkeys(ids, 0)
-
-        #GETTING MEANS OF THE E RASTERS HERE
-
         #Just going to have to pull explicitly. Too late to go back and
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
                                     ']_E_Risk_Raster.tif')
 
-        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                e_rast_uri, cp_aoi_uri, 'BURN_ID', 
-                ignore_value_list = [0]).pixel_mean)
-
+        c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
+                                ']_C_Risk_Raster.tif')
+        
         #Now, we are going to modify the e value by the spatial overlap value.
         #Get S.O value first.
         h_rast_uri = os.path.join(inter_dir, 'Habitat_Rasters', h + '.tif')
         hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
                                             h + ']_S[' + s + '].tif')
 
-        hs_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                hs_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
-        h_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                h_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
+        LOGGER.debug("Entering new funct.")
+        rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
+        rast_labels = ['E', 'C', 'H', 'H_S']
+        over_pix_sums = aggregate_multi_rasters_uri(aoi_rast_uri, rast_uri_list, rast_labels, [0])
+        LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
+        LOGGER.debug("Exiting new funct.")
         
-        #GETTING MEANS OF THE C RASTER HERE
+        for burn_value in over_pix_sums:
+            
+            subregion_name = name_map[burn_value]
 
-        c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
-                                ']_C_Risk_Raster.tif')
-
-        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                c_rast_uri, cp_aoi_uri, 'BURN_ID', 
-                ignore_value_list=[0]).pixel_mean)
-
-        #Now, want to place all values into the dictionary. Since we know that
-        #the names of the attributes will be the same for each dictionary, can
-        #just use the names of one to index into the rest.
-        for ident in c_agg_dict:
-   
-            name = name_map[ident]
-           
-            #Might be the case that neither exists within the subregion. In that
-            #case we want to short circuit in order to avoid divide by 0 errors.
-            if h_agg_dict[ident] in [0, 0.]:
+            #For a given layer under the AOI, first list item is #of pix,
+            #second is pix sum
+            if over_pix_sums[burn_value]['H'][0] == 0:
                 frac_over = 0.
             else:
-                frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
-            
+                #Casting to float because otherwise we end up with integer division issues.
+                frac_over = over_pix_sums[burn_value]['H_S'][0] / float(over_pix_sums[burn_value]['H'][0])
+                
             s_o_score = max_risk * frac_over + (1-frac_over)
-            LOGGER.debug("Spatial Overlap Score: %s, E_Score: %s" % (s_o_score, e_agg_dict[ident]))
+
             if frac_over == 0.:
                 e_score = 0.
-            
             #Know here that there is overlap. So now check whether we have
             #scoring from users. If no, just use spatial overlap. 
-            elif e_agg_dict[ident] in [0, 0.]:
-                e_score = s_o_score
-            
-            #If there is, want to average the spatial overlap into everything
-            #else.
             else:
-                e_score = (e_agg_dict[ident] + s_o_score) / 2
-
-            #If my E is 0 (indicating that there's no spatial overlap), then
+                e_mean = over_pix_sums[burn_value]['E'][1] / over_pix_sums[burn_value]['E'][0]
+                
+                if e_mean == 0.:
+                    e_score = s_o_score
+            
+                #If there is, want to average the spatial overlap into everything
+                #else.
+                else:
+                    e_score = (e_mean + s_o_score) / 2
+            
+            #If there's no habitat, my E is 0 (indicating that there's no spatial overlap), then
             #my C and risk scores should also be 0. Setting E to 0 should
             #cascade to also make risk 0.
             if e_score == 0.:
-                avgs_dict[h][s].append({'Name': name, 'E': e_score,
-                           'C': 0.})
+                avgs_dict[h][s].append({'Name': subregion_name, 'E': 0.,
+                               'C': 0.})
             else:
-                avgs_dict[h][s].append({'Name': name, 'E': e_score,
-                           'C': c_agg_dict[ident]})
-    
+                c_mean = over_pix_sums[burn_value]['C'][1] / over_pix_sums[burn_value]['C'][0]
+                avgs_dict[h][s].append({'Name': subregion_name, 'E': e_score,
+                               'C': c_mean})
+            
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
@@ -632,8 +633,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
                 else:
                     avgs_r_sum[h][sub_dict['Name']] = r_val
 
-    LOGGER.debug("AVGS_R_SUM: %s" % avgs_r_sum)
-
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
@@ -648,8 +647,88 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
                 else:
                     sub_dict['R_Pct'] = sub_dict['Risk']/curr_total_risk
 
-
     return avgs_dict, name_map.values()
+
+def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
+    '''Will take a stack of rasters and an AOI, and return a dictionary
+    containing the number of overlap pixels, and the value of those pixels for
+    each overlap of raster and AOI.
+
+    Input:
+        aoi_uri- The location of an AOI raster which MUST have individual ID
+            numbers with the attribute name 'BURN_ID' for each feature on the map.
+        rast_uris- List of locations of the rasters which should be overlapped 
+            with the AOI.
+        rast_labels- Names for each raster layer that will be retrievable from the
+            output dictionary.
+        ignore_value_list- Optional argument that provides a list of values which should
+            be ignored if they crop up for a pixel value of one of the layers.
+    Returns:
+        layer_overlap_info-
+            {AOI Data Value 1: 
+                {rast_label: [#of pix, pix value],
+                rast_label: [200, 2567.97], ...
+            }
+    '''
+    
+    cell_size = raster_utils.get_cell_size_from_uri(aoi_rast_uri)
+    nodata = raster_utils.get_nodata_from_uri(aoi_rast_uri)
+
+    rast_uris = [aoi_rast_uri] + rast_uris
+
+    #Want to create a set of temporary filenames, just need to be sure to clean them up at the end.
+    temp_rast_uris = [raster_utils.temporary_filename() for _ in range(len(rast_uris))]
+    
+    raster_utils.align_dataset_list(rast_uris, temp_rast_uris, ['nearest']*len(rast_uris),
+                        cell_size, "dataset", 0, dataset_to_bound_index=0)
+    
+    rast_ds_list = [gdal.Open(uri) for uri in temp_rast_uris]
+    rast_bands = [ds.GetRasterBand(1) for ds in rast_ds_list]
+    
+    #Get the AOI to use for line by line, then cell by cell iterration.
+    aoi_band = rast_bands[0]
+
+    n_cols = aoi_band.XSize
+    n_rows = aoi_band.YSize
+
+    #Set up numpy arrays that currently hold only zeros, but will be used for
+    #each row read.
+    aoi_row = numpy.zeros((1, n_cols), numpy.float64, 'C')
+
+    rows_dict = {}
+    for layer_name in rast_labels:
+        rows_dict[layer_name] = numpy.zeros((1, n_cols), numpy.float64, 'C') 
+
+    #Now iterate through every cell of the aOI, and concat everything that's
+    #undr it and store that.
+    layer_overlap_info = {}
+    for row_index in range(n_rows):
+
+        aoi_band.ReadAsArray(yoff = row_index, win_xsize = n_cols, win_ysize=1, buf_obj=aoi_row)
+
+        for idx, layer_name in enumerate(rast_labels):
+            rast_bands[idx+1].ReadAsArray(yoff = row_index, win_xsize = n_cols, 
+                                win_ysize=1, buf_obj = rows_dict[layer_name])
+
+        for col_index in range(n_cols):
+            
+            aoi_pix = aoi_row[(0, col_index)]
+
+            if aoi_pix != nodata:
+                if aoi_pix not in layer_overlap_info:
+                    layer_overlap_info[aoi_pix] = {}
+
+                for layer_name in rast_labels:
+                    if layer_name not in layer_overlap_info[aoi_pix]:
+                        #First in tuple is num of pix, second is sum of val.
+                        layer_overlap_info[aoi_pix][layer_name] = [0, 0.]
+                    
+                    layer_pix = rows_dict[layer_name][(0, col_index)] 
+                    if layer_pix != nodata and layer_pix not in ignore_value_list:
+                        layer_overlap_info[aoi_pix][layer_name][0] += 1
+                        layer_overlap_info[aoi_pix][layer_name][1] += layer_pix
+   
+    return layer_overlap_info
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same h-s calculation as used for the individual E/C 
@@ -882,8 +961,6 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             num_stress[h] += 1
         else:
             num_stress[h] = 1
-    
-    curr_top_risk = None
     
     #This is the user definied threshold overlap of stressors, multipled by the
     #maximum potential risk for any given overlap between habitat and stressor
