@@ -523,8 +523,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     #Set a temp filename for the AOI raster.
-    #aoi_rast_uri = raster_utils.temporary_filename()
-    aoi_rast_uri = os.path.join(inter_dir, 'HAHAHAHAHA.tif')
+    aoi_rast_uri = raster_utils.temporary_filename()
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
@@ -799,6 +798,31 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             equation. Want to add all of the numerators (r/dq), then divide by
             the denoms added together (1/dq).'''
 
+            value = numpy.zeros(pixels[0].shape)
+            denom_val = numpy.zeros(pixels[0].shape)
+            all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+            all_nodata[:] = True
+
+            for i in range(len(pixels)):
+                valid_mask = pixels[i] != -1
+                value = numpy.where(valid_mask, pixels[i] + value, value)
+                denom_val = numpy.where(
+                    valid_mask, curr_denoms[curr_crit_names[i]] + denom_val, denom_val)
+                
+                #Bitwise and- if both are true, will still return True
+                all_nodata = ~valid_mask & all_nodata
+            
+
+            #turn off dividie by zero warning because we probably will divide by zero
+            olderr = numpy.seterr(divide='ignore')
+            result = numpy.where(denom_val != 0, value / denom_val, 0.0)
+            #return numpy error state to old value
+            numpy.seterr(**olderr)
+
+            #mask out nodata stacks
+            return numpy.where(all_nodata, -1, result)
+
+            '''
             all_nodata = True
             for p in pixels:
                 if p not in [-1., -1]:
@@ -822,7 +846,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             else:
         
                 value = value / denom_val
-                return value
+                return value'''
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
@@ -834,7 +858,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, -1., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=None)
+                    aoi_uri=None, vectorize_op=False)
 
 def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
@@ -868,7 +892,22 @@ def make_ecosys_risk_raster(dir, h_dict):
     def add_e_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
-        all_nodata = True
+        
+        value = numpy.zeros(pixels[0].shape)
+        all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        all_nodata[:] = True
+        
+        for i in range(len(pixels)):
+            valid_mask = pixels[i] != -1
+            
+            value = numpy.where(valid_mask, pixels[i] + value, value) 
+
+            all_nodata = ~valid_mask & all_nodata
+
+        return numpy.where(all_nodata, -1, value)
+         
+        
+        '''all_nodata = True
         for p in pixels:
             if p != nodata:
                 all_nodata = False
@@ -883,12 +922,12 @@ def make_ecosys_risk_raster(dir, h_dict):
 
                 pixel_sum += p
 
-        return pixel_sum
+        return pixel_sum'''
      
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
                 gdal.GDT_Float32, -1., pixel_size, "union", 
                 resample_method_list=None, dataset_to_align_index=0,
-                aoi_uri=None)
+                aoi_uri=None, vectorize_op=False)
 
 def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     '''This function will take in the current rasterized risk files for each
@@ -1889,18 +1928,21 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                         '_Indiv_C_Raster.tif')
         def burn_numerator_risk_single(pixel):
-            
-            if pixel == base_nodata:
+           
+            return numpy.where(pixel == base_nodata, 
+                                base_nodata, risk_crit_rate_numerator)
+            '''if pixel == base_nodata:
                 return base_nodata
 
             else:
                 return risk_crit_rate_numerator
-
+            '''
         raster_utils.vectorize_datasets([base_ds_uri], 
                             burn_numerator_risk_single, single_crit_C_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None,
+                            vectorize_op=False)
 
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
