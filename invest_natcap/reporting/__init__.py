@@ -165,6 +165,7 @@ def generate_report(reporting_args):
             'svg': add_svg_element
             }
 
+    LOGGER.debug('Adding default JavaScript libs')
     # Add Jquery file to the elements list any time a html page is generated
     jquery_dict = {
             'type': 'head', 'section': 'head', 'format': 'script',
@@ -217,6 +218,8 @@ def write_html(html_obj, out_uri):
         out_uri - a URI for the output html file
 
         returns - nothing"""
+
+    LOGGER.debug('Writing HTML page')
 
     # Start the string that will be written as the html file
     html_str = '<html>'
@@ -332,7 +335,8 @@ def build_table(param_args):
     else:
         data_list = input_data
 
-    LOGGER.debug('Data Collected from Input Source: %s', data_list)
+    #LOGGER.debug('Data Collected from Input Source: %s', data_list)
+    LOGGER.debug('Data Collected from Input Source')
 
     # Add the columns data to the final dictionary that is to be passed
     # off to the table generator
@@ -367,8 +371,8 @@ def build_table(param_args):
     if 'checkbox' in param_args and param_args['checkbox']:
         table_dict['checkbox'] = True
 
-    LOGGER.debug('Final Table Dictionary: %s', table_dict)
-
+    #LOGGER.debug('Final Table Dictionary: %s', table_dict)
+    LOGGER.debug('Calling table_generator')
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict)

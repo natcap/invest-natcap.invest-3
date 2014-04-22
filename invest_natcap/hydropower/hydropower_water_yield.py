@@ -221,7 +221,9 @@ def execute(args):
             Kc_pix - a float value for Kc coefficient
 
             returns - a float value for pet"""
-        return numpy.where((eto_pix == eto_nodata) | (Kc_pix == Kc_nodata), out_nodata, eto_pix * Kc_pix)
+        return numpy.where(
+                (eto_pix == eto_nodata) | (Kc_pix == Kc_nodata),
+                out_nodata, eto_pix * Kc_pix)
 
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
@@ -326,11 +328,9 @@ def execute(args):
            precip - numpy array with the precipitation raster values (mm)
 
            returns - water yield value (mm)"""
-        return numpy.where((fractp == out_nodata) & (precip == precip_nodata), out_nodata, (1.0 - fractp) * precip)
-        #if fractp == out_nodata or precip == precip_nodata:
-        #    return out_nodata
-        #else:
-        #    return (1.0 - fractp) * precip
+        return numpy.where(
+                (fractp == out_nodata) & (precip == precip_nodata),
+                out_nodata, (1.0 - fractp) * precip)
 
     LOGGER.debug('Performing wyield operation')
     # Create clipped wyield_clipped raster
@@ -364,7 +364,9 @@ def execute(args):
 
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
-        return numpy.where((fractp >= 0) & (precip != precip_nodata), fractp * precip, out_nodata)
+        return numpy.where(
+                (fractp >= 0) & (precip != precip_nodata),
+                fractp * precip, out_nodata)
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
