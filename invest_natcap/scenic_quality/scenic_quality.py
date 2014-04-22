@@ -154,23 +154,23 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Extract nodata
     nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
     
-    # Build I and J arrays, and save them to disk
-    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
-    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    I_uri = raster_utils.temporary_filename()
-    J_uri = raster_utils.temporary_filename()
-    shutil.copy(in_dem_uri, I_uri)
-    I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    i_band = I_raster.GetRasterBand(1)
-    i_band.WriteArray(I)
-    i_band = None
-    I_raster = None
-    shutil.copy(in_dem_uri, J_uri)
-    J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    j_band = J_raster.GetRasterBand(1)
-    j_band.WriteArray(J)
-    j_band = None
-    J_raster = None
+    ## Build I and J arrays, and save them to disk
+    #rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    #I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    #I_uri = raster_utils.temporary_filename()
+    #J_uri = raster_utils.temporary_filename()
+    #shutil.copy(in_dem_uri, I_uri)
+    #I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    #i_band = I_raster.GetRasterBand(1)
+    #i_band.WriteArray(I)
+    #i_band = None
+    #I_raster = None
+    #shutil.copy(in_dem_uri, J_uri)
+    #J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    #j_band = J_raster.GetRasterBand(1)
+    #j_band.WriteArray(J)
+    #j_band = None
+    #J_raster = None
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
@@ -181,8 +181,8 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
 
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
+    #raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+    #    255, gdal.GDT_Byte, fill_value = 255)
 
     # Call the non-uri version of viewshed.
     #compute_viewshed(input_array, visibility_uri, in_structure_uri,
