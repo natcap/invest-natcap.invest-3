@@ -155,10 +155,10 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
     
     ## Build I and J arrays, and save them to disk
-    #rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
     #I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    #I_uri = raster_utils.temporary_filename()
-    #J_uri = raster_utils.temporary_filename()
+    I_uri = raster_utils.temporary_filename()
+    J_uri = raster_utils.temporary_filename()
     #shutil.copy(in_dem_uri, I_uri)
     #I_raster = gdal.Open(I_uri, gdal.GA_Update)
     #i_band = I_raster.GetRasterBand(1)
