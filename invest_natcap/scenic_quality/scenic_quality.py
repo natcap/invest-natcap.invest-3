@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('scenic_quality')
 
-def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
+def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     """A URI wrapper for reproject dataset that opens the original_dataset_uri
         before passing it to reproject_dataset.
 
@@ -35,7 +35,7 @@ def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
 
     raster_utils.calculate_raster_stats_uri(original_dataset_uri)
 
-def reproject_dataset(original_dataset, output_wkt, output_uri,
+def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
     """A function to reproject and resample a GDAL dataset given an output pixel size
         and output reference and uri.
@@ -47,6 +47,8 @@ def reproject_dataset(original_dataset, output_wkt, output_uri,
        output_type - gdal type of the output    
 
        return projected dataset"""
+
+    original_dataset = gdal.Open(original_dataset_uri)
 
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
@@ -73,8 +75,9 @@ def reproject_dataset(original_dataset, output_wkt, output_uri,
                               y_size, 1, output_type)
 
     # Set the nodata value
-    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
-    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
+    original_band = original_dataset.GetRasterBand(1)
+    out_nodata = original_band.GetNoDataValue()
+    original_band.SetNoDataValue(out_nodata)
 
     # Set the geotransform
     output_dataset.SetGeoTransform(geo_t)
@@ -85,7 +88,7 @@ def reproject_dataset(original_dataset, output_wkt, output_uri,
                         original_sr.ExportToWkt(), output_sr.ExportToWkt(),
                         gdal.GRA_Bilinear)
     
-    return output_dataset
+    raster_utils.calculate_raster_stats_uri(output_dataset_uri)
 
 
 def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
@@ -125,7 +128,9 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
 
 def get_data_type_uri(ds_uri):
     raster_ds = gdal.Open(ds_uri)
-    raster_data_type = raster_ds.GetRasterBand(1).DataType
+    band = raster_ds.GetRasterBand(1)
+    raster_data_type = band.DataType
+    band = None
     raster_ds = None
 
     return raster_data_type
@@ -156,13 +161,16 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     J_uri = raster_utils.temporary_filename()
     shutil.copy(in_dem_uri, I_uri)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    I_raster.GetRasterBand(1).WriteArray(I)
+    i_band = I_raster.GetRasterBand(1)
+    i_band.WriteArray(I)
+    i_band = None
     I_raster = None
     shutil.copy(in_dem_uri, J_uri)
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    J_raster.GetRasterBand(1).WriteArray(J)
+    j_band = J_raster.GetRasterBand(1)
+    j_band.WriteArray(J)
+    j_band = None
     J_raster = None
-
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
@@ -198,7 +206,8 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
     input_raster = gdal.Open(in_dem_uri)
-    input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_band = input_raster.GetRasterBand(1)
+    input_array = input_band.ReadAsArray()
     input_raster = None
 
     # Compute the distance for each point
@@ -287,47 +296,47 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
-        print("feature " + str(f))
-        feature = layer.GetFeature(f)
-        field_count = feature.GetFieldCount()
-        # Check for feature information (radius, coeff, height)
-        for field in range(field_count):
-            field_def = feature.GetFieldDefnRef(field)
-            field_name = field_def.GetNameRef()
-            if (field_name.upper() == 'RADIUS2') or \
-                (field_name.upper() == 'RADIUS'):
-                max_dist = abs(int(feature.GetField(field)))
-                assert max_dist is not None, "max distance can't be None"
-                max_dist = int(max_dist/cell_size)
-            if field_name.lower() == 'coeff':
-                coefficient = float(feature.GetField(field))
-                assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'OFFSETA':
-                obs_elev = float(feature.GetField(field))
-                assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name.lower() == 'OFFSETB':
-                tgt_elev = float(feature.GetField(field))
-                assert tgt_elev is not None, "OFFSETB can't be None"
+        #print("feature " + str(f))
+        #feature = layer.GetFeature(f)
+        #field_count = feature.GetFieldCount()
+        ## Check for feature information (radius, coeff, height)
+        #for field in range(field_count):
+        #    field_def = feature.GetFieldDefnRef(field)
+        #    field_name = field_def.GetNameRef()
+        #    if (field_name.upper() == 'RADIUS2') or \
+        #        (field_name.upper() == 'RADIUS'):
+        #        max_dist = abs(int(feature.GetField(field)))
+        #        assert max_dist is not None, "max distance can't be None"
+        #        max_dist = int(max_dist/cell_size)
+        #    if field_name.lower() == 'coeff':
+        #        coefficient = float(feature.GetField(field))
+        #        assert coefficient is not None, "feature coeff can't be None"
+        #    if field_name.lower() == 'OFFSETA':
+        #        obs_elev = float(feature.GetField(field))
+        #        assert obs_elev is not None, "OFFSETA can't be None"
+        #    if field_name.lower() == 'OFFSETB':
+        #        tgt_elev = float(feature.GetField(field))
+        #        assert tgt_elev is not None, "OFFSETB can't be None"
                 
-        geometry = feature.GetGeometryRef()
-        assert geometry is not None
-        message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
-        ' point is "POINT"'
-        assert geometry.GetGeometryName() == 'POINT', message
-        x = geometry.GetX()
-        y = geometry.GetY()
-        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
-        #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
-        #'distance radius is ' + str(max_dist) + " pixels.")
+        #geometry = feature.GetGeometryRef()
+        #assert geometry is not None
+        #message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+        #' point is "POINT"'
+        #assert geometry.GetGeometryName() == 'POINT', message
+        #x = geometry.GetX()
+        #y = geometry.GetY()
+        #j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        #i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        ##print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
+        ##'distance radius is ' + str(max_dist) + " pixels.")
 
-        array_shape = (rows, cols)
+        #array_shape = (rows, cols)
     
         #tmp_visibility_uri = raster_utils.temporary_filename()
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(in_dem_uri, \
-        tmp_visibility_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
+        raster_utils.new_raster_from_base_uri( \
+            in_dem_uri, tmp_visibility_uri, 'GTiff', \
+            255, gdal.GDT_Byte, fill_value = 255)
         #scenic_quality_core.viewshed(input_array, cell_size, \
         #array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         #max_dist, refr_coeff)
