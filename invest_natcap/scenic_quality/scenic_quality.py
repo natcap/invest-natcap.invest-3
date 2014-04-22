@@ -325,7 +325,7 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     
         #tmp_visibility_uri = raster_utils.temporary_filename()
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        raster_utils.new_raster_from_base_uri(in_dem_uri, \
         tmp_visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
         #scenic_quality_core.viewshed(input_array, cell_size, \
@@ -365,10 +365,11 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     # Accumulate result to combined raster
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
-    viewshed_uri_list = [in_dem_uri]
     LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
-    raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
-    visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    raster_utils.vectorize_datasets( \
+        viewshed_uri_list, lambda *x: 0., \
+        visibility_uri, gdal.GDT_Byte, 255, cell_size, "union")
+        #visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
     sys.exit(-1)
     ## Numpy method:
     ##Create the output raster from the first in the input list
