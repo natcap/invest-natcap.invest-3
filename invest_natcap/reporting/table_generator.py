@@ -48,6 +48,8 @@ def generate_table(table_dict, attributes=None):
             returns - a string representing an html table
     """
 
+    LOGGER.debug('Generating HTML Table String')
+
     # Initialize the string that will store the html representation of the table
     table_string = ''
 
@@ -318,14 +320,14 @@ def add_checkbox_column(col_list, row_list):
     col_list.insert(1, {'name':'Select', 'total':False,
                         'attr':{'class':'checkbox'}, 'td_class':'checkbox'})
 
-    LOGGER.debug('Columns with Checkboxes: %s', col_list)
+    #LOGGER.debug('Columns with Checkboxes: %s', col_list)
 
     # For each dictionary in the row list add a 'Select' key which
     # refers to the new column and set the value as a checkbox
     for val in row_list:
         val['Select'] = '<input type=checkbox name=cb value=1>'
 
-    LOGGER.debug('Rows with Checkboxes: %s', row_list)
+    #LOGGER.debug('Rows with Checkboxes: %s', row_list)
 
     # Return a tuple of the updated / modified column and row list of
     # dictionaries

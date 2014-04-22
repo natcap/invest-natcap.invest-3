@@ -8,6 +8,8 @@ import shutil
 import os
 import logging
 
+import numpy
+
 LOGGER = logging.getLogger('pollination_core')
 
 
@@ -275,10 +277,12 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
 
     raster_utils.vectorize_datasets(
         [uris['nesting'], uris['floral']],
-        lambda x, y: (x * y) * species_weight if x != nodata else nodata,
+        lambda x, y: numpy.where(x != nodata, numpy.multiply(numpy.multiply(x,
+            y), species_weight), nodata),
         dataset_out_uri=uris['species_abundance'],
         datatype_out=gdal.GDT_Float32, nodata_out=nodata,
-        pixel_size_out=pixel_size, bounding_box_mode='intersection')
+        pixel_size_out=pixel_size, bounding_box_mode='intersection',
+        vectorize_op=False)
 
 
 def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
@@ -323,12 +327,13 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     LOGGER.debug('Setting all agricultural pixels to 0')
     raster_utils.vectorize_datasets(
         dataset_uri_list=[farm_abundance_temp_uri, ag_map],
-        dataset_pixel_op=lambda x, y: x if y == 1.0 else nodata,
+        dataset_pixel_op=lambda x, y: numpy.where(y == 1.0, x, nodata),
         dataset_out_uri=uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=pixel_size,
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
@@ -389,12 +394,14 @@ def add_two_rasters(raster_1, raster_2, out_uri):
 
     raster_utils.vectorize_datasets(
         dataset_uri_list=[raster_1, raster_2],
-        dataset_pixel_op=lambda x, y: x + y if y != nodata else nodata,
+        dataset_pixel_op=lambda x, y: numpy.where(y != nodata, numpy.add(x, y),
+            nodata),
         dataset_out_uri=out_uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=min_pixel_size,
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
     # If we saved the output file to a temp folder, remove the file that we're
     # trying to avoid and save the temp file to the old file's location.
@@ -443,12 +450,14 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
     raster_utils.vectorize_datasets(
         dataset_uri_list=[rasters['farm_value'], rasters['farm_abundance']],
-        dataset_pixel_op=lambda x, y: x / y if x != nodata else nodata,
+        dataset_pixel_op=lambda x, y: numpy.where(x != nodata, numpy.divide(x,
+            y), nodata),
         dataset_out_uri=out_uris['species_value'],
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=min_pixel_size,
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
     LOGGER.debug('Applying a gaussian filter to the ratio raster.')
     raster_utils.gaussian_filter_dataset_uri(
@@ -463,23 +472,26 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
     LOGGER.debug('Saving service value raster to %s', temp_service_uri)
     raster_utils.vectorize_datasets(
         [rasters['species_abundance'], out_uris['species_value_blurred']],
-        lambda x, y: part_wild * x * y if x != nodata else nodata,
+        lambda x, y: numpy.where(x != nodata, numpy.multiply(part_wild,
+            numpy.multiply(x, y)), nodata),
         dataset_out_uri=temp_service_uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=min_pixel_size,
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
     # Set all agricultural pixels to 0.  This is according to issue 761.
     LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
     raster_utils.vectorize_datasets(
         dataset_uri_list=[rasters['ag_map'], temp_service_uri],
-        dataset_pixel_op=lambda x, y: 0.0 if x == 0 else y,
+        dataset_pixel_op=lambda x, y: numpy.where(x == 0, 0.0, y),
         dataset_out_uri=out_uris['service_value'],
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=min_pixel_size,
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
     LOGGER.debug('Finished calculating service value')
 
@@ -501,6 +513,7 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     # Calculate the yield raster
     kappa_c = float(half_sat)
     nu_c = float(wild_poll)
+    nu_c_invert = 1.0 - nu_c
     in_nodata = raster_utils.get_nodata_from_uri(in_raster)
 
     # This function is a vectorize-compatible implementation of the yield
@@ -510,9 +523,9 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
         foraging score on the landscape on this pixel aross all pollinators.
         This function applies the 'expected yield' function from the
         documentation."""
-        if frm_avg == in_nodata:
-            return out_nodata
-        return (1.0 - nu_c) + (nu_c * (frm_avg / (frm_avg + kappa_c)))
+        return numpy.where(frm_avg == in_nodata, out_nodata,
+            nu_c_invert + (nu_c * numpy.divide(frm_avg,
+            frm_avg + kappa_c)))
 
     # Apply the yield calculation to the foraging_average raster
     raster_utils.vectorize_datasets(
@@ -522,7 +535,8 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
         datatype_out=gdal.GDT_Float32,
         nodata_out=out_nodata,
         pixel_size_out=raster_utils.get_cell_size_from_uri(in_raster),
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
 
 def divide_raster(raster, divisor, uri):
@@ -545,12 +559,14 @@ def divide_raster(raster, divisor, uri):
     nodata = raster_utils.get_nodata_from_uri(raster)
     raster_utils.vectorize_datasets(
         dataset_uri_list=[raster],
-        dataset_pixel_op=lambda x: x / divisor if x != nodata else nodata,
+        dataset_pixel_op=lambda x: numpy.where(x == nodata, nodata,
+            x / divisor),
         dataset_out_uri=uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
         pixel_size_out=raster_utils.get_cell_size_from_uri(raster),
-        bounding_box_mode='intersection')
+        bounding_box_mode='intersection',
+        vectorize_op=False)
 
     raster = None
     if temp_dir != None:
