@@ -323,14 +323,16 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-    #    #tmp_visibility_uri = raster_utils.temporary_filename()
-    #    tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-    #    raster_utils.new_raster_from_base_uri(visibility_uri, \
-    #    tmp_visibility_uri, 'GTiff', \
-    #    255, gdal.GDT_Byte, fill_value = 255)
-    #    scenic_quality_core.viewshed(input_array, cell_size, \
-    #    array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
-    #    max_dist, refr_coeff)
+        #tmp_visibility_uri = raster_utils.temporary_filename()
+        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_visibility_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+        #scenic_quality_core.viewshed(input_array, cell_size, \
+        #array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
+        #max_dist, refr_coeff)
+        viewshed_uri_list.append(tmp_visibility_uri)
+        
     #    # Compute the distance
     #    #tmp_distance_uri = raster_utils.temporary_filename() 
     #    tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
