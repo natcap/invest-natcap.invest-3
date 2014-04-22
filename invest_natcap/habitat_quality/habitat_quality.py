@@ -454,19 +454,6 @@ def execute(args):
                     except KeyError:
                         code_index[code] = 0.0
 
-                #def map_ratio(cover):
-                #    """Vectorized operation used to map a dictionary to a
-                #        lulc raster
-#
-#                        cover - refers to the 'new_cover' raster generated above
-#
-#                        return - rarity_nodata if code is not in the dictionary,
-#                            otherwise return the rarity index pertaining to that
-#                            code"""
-#                    if cover in code_index:
-#                        return code_index[cover]
-#                    return rarity_nodata
-
                 rarity_uri = os.path.join(
                     output_dir, 'rarity' + lulc_cover + suffix)
 
@@ -475,10 +462,6 @@ def execute(args):
                 raster_utils.reclassify_dataset_uri(
                         new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
                         rarity_nodata)
-
-                #raster_utils.vectorize_datasets(
-                #    [new_cover_uri], map_ratio, rarity_uri, gdal.GDT_Float32,
-                #    rarity_nodata, cell_size, "intersection")
 
                 LOGGER.debug('Finished vectorize on map_ratio')
 
