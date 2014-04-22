@@ -17,5 +17,5 @@ do
 #fix .asc headers
 head -n +6 $f | sed -e 's/^[ \t]*//' > $OUTPUT/tmp.asc
 tail -n +7 $f >> $OUTPUT/tmp.asc
-gdal_translate -of GTiff -co="COMPRESS=LZW" -a_srs EPSG:4326 $OUTPUT/tmp.asc $f.tif
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $OUTPUT/tmp.asc $f.tif
 done
