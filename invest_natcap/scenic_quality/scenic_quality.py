@@ -288,40 +288,40 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
         print("feature " + str(f))
-    #    feature = layer.GetFeature(f)
-    #    field_count = feature.GetFieldCount()
-    #    # Check for feature information (radius, coeff, height)
-    #    for field in range(field_count):
-    #        field_def = feature.GetFieldDefnRef(field)
-    #        field_name = field_def.GetNameRef()
-    #        if (field_name.upper() == 'RADIUS2') or \
-    #            (field_name.upper() == 'RADIUS'):
-    #            max_dist = abs(int(feature.GetField(field)))
-    #            assert max_dist is not None, "max distance can't be None"
-    #            max_dist = int(max_dist/cell_size)
-    #        if field_name.lower() == 'coeff':
-    #            coefficient = float(feature.GetField(field))
-    #            assert coefficient is not None, "feature coeff can't be None"
-    #        if field_name.lower() == 'OFFSETA':
-    #            obs_elev = float(feature.GetField(field))
-    #            assert obs_elev is not None, "OFFSETA can't be None"
-    #        if field_name.lower() == 'OFFSETB':
-    #            tgt_elev = float(feature.GetField(field))
-    #            assert tgt_elev is not None, "OFFSETB can't be None"
+        feature = layer.GetFeature(f)
+        field_count = feature.GetFieldCount()
+        # Check for feature information (radius, coeff, height)
+        for field in range(field_count):
+            field_def = feature.GetFieldDefnRef(field)
+            field_name = field_def.GetNameRef()
+            if (field_name.upper() == 'RADIUS2') or \
+                (field_name.upper() == 'RADIUS'):
+                max_dist = abs(int(feature.GetField(field)))
+                assert max_dist is not None, "max distance can't be None"
+                max_dist = int(max_dist/cell_size)
+            if field_name.lower() == 'coeff':
+                coefficient = float(feature.GetField(field))
+                assert coefficient is not None, "feature coeff can't be None"
+            if field_name.lower() == 'OFFSETA':
+                obs_elev = float(feature.GetField(field))
+                assert obs_elev is not None, "OFFSETA can't be None"
+            if field_name.lower() == 'OFFSETB':
+                tgt_elev = float(feature.GetField(field))
+                assert tgt_elev is not None, "OFFSETB can't be None"
                 
-    #    geometry = feature.GetGeometryRef()
-    #    assert geometry is not None
-    #    message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
-    #    ' point is "POINT"'
-    #    assert geometry.GetGeometryName() == 'POINT', message
-    #    x = geometry.GetX()
-    #    y = geometry.GetY()
-    #    j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-    #    i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
-    #    #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
-    #    #'distance radius is ' + str(max_dist) + " pixels.")
+        geometry = feature.GetGeometryRef()
+        assert geometry is not None
+        message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+        ' point is "POINT"'
+        assert geometry.GetGeometryName() == 'POINT', message
+        x = geometry.GetX()
+        y = geometry.GetY()
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
+        #'distance radius is ' + str(max_dist) + " pixels.")
 
-    #    array_shape = (rows, cols)
+        array_shape = (rows, cols)
     
     #    #tmp_visibility_uri = raster_utils.temporary_filename()
     #    tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
@@ -360,7 +360,7 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     
     #layer = None
     #shapefile = None
-    ## Accumulate result to combined raster
+    # Accumulate result to combined raster
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
     viewshed_uri_list = [in_dem_uri]
