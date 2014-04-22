@@ -361,15 +361,6 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     #layer = None
     #shapefile = None
     ## Accumulate result to combined raster
-    ## The vectorize_dataset method segfaults--trying with numpy instead.
-    #def accumulate(*x):
-    #    #result = sum(x)
-    #    #print('type of x', type(x), type(x[0]), x)
-    #    #x = np.array(x)
-    #    #result = np.sum(x)
-    #    #print('result', result)
-    #    #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
-    #    return 0.
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
     viewshed_uri_list = [in_dem_uri]
