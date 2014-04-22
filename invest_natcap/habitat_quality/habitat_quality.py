@@ -364,7 +364,7 @@ def execute(args):
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata, 
                     (float(habitat) * (1.0 - ((degradation**scaling_param) / 
-                        (degradation**scaling_param + ksq)))
+                        (degradation**scaling_param + ksq)))))
 
         quality_uri = \
             os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
