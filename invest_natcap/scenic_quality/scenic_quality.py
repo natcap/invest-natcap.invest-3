@@ -208,6 +208,7 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     input_raster = gdal.Open(in_dem_uri)
     input_band = input_raster.GetRasterBand(1)
     input_array = input_band.ReadAsArray()
+    input_band = None
     input_raster = None
 
     # Compute the distance for each point
