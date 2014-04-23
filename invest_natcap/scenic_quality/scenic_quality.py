@@ -377,8 +377,9 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     LOGGER.debug('visibility_uri' + visibility_uri)
     LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
     raster_utils.vectorize_datasets( \
-        viewshed_uri_list, lambda *x: 0., \
+        viewshed_uri_list, lambda *x: np.zeros_like(x[0]), \
         visibility_uri, gdal.GDT_Byte, 255, cell_size, "union")
+        #visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op = False)
         #visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
     sys.exit(-1)
     ## Numpy method:
