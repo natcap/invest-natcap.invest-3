@@ -1017,7 +1017,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         for i in range(1, len(pixels)):
             high_hs = high_hs | (pixels[i] / float(max_risk) > .666)
 
-        return numpy.where(high_hs | high_h_mask, 1, -1)
+        return numpy.where(high_hs | high_h_mask, 3, -1)
 
         '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
@@ -1052,7 +1052,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                     ((pixels[i] / float(max_risk) < .666) &
                     (pixels[i] / float(max_risk) > .333))
 
-        return numpy.where(med_hs | med_h_mask, 1, -1)
+        return numpy.where(med_hs | med_h_mask, 2, -1)
         '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk 
