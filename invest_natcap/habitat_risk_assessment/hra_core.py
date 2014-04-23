@@ -1105,6 +1105,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
     def combo_risk_raster(l_pix, m_pix, h_pix):
 
+        
+
         '''if h_pix != -1.:
             return 3
         elif m_pix != -1.:
