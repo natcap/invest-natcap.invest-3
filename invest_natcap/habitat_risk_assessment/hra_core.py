@@ -1008,7 +1008,18 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
     def high_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        #H_Raster is first in the stack.
+        high_h_mask = numpy.where(pixels[0] != -1, 
+                    pixels[0] / float(user_max_risk) > .666, False)
+
+        high_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            high_hs = high_hs | (pixels[i] / float(max_risk) > .666)
+
+        return numpy.where(high_hs | high_h_mask, 1, -1)
+
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk
 
@@ -1025,11 +1036,24 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered high risk. Can return nodata.
-        return -1.
+        return -1.'''
 
     def med_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        med_h_mask = numpy.where(pixels[0] != -1, 
+                    (pixels[0] / float(user_max_risk) < .666) & 
+                    (pixels[0] / float(user_max_risk) > .333), 
+                    False)
+
+        med_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            med_hs = med_hs | \
+                    ((pixels[i] / float(max_risk) < .666) &
+                    (pixels[i] / float(max_risk) > .333))
+
+        return numpy.where(med_hs | med_h_mask, 1, -1)
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk 
 
@@ -1046,11 +1070,21 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered med risk. Can return nodata.
-        return -1.
+        return -1.'''
     
     def low_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        low_h_mask = numpy.where(pixels[0] != -1, 
+                    pixels[0] / float(user_max_risk) < .333, False)
+
+        low_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            low_hs = low_hs | (pixels[i] / float(max_risk) < .333)
+
+        return numpy.where(low_hs | low_h_mask, 1, -1)
+        
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk
 
@@ -1067,18 +1101,18 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered low risk. Can return nodata.
-        return -1.
+        return -1.'''
 
     def combo_risk_raster(l_pix, m_pix, h_pix):
 
-        if h_pix != -1.:
+        '''if h_pix != -1.:
             return 3
         elif m_pix != -1.:
             return 2
         elif l_pix != -1.:
             return 1
         else:
-            return -1.
+            return -1.'''
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -1097,7 +1131,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
@@ -1105,7 +1139,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
@@ -1113,7 +1147,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Want to do another vectorize in order to create a single shapefile
         #with high, medium, low values.
@@ -1123,7 +1157,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets([l_out_uri_r, m_out_uri_r, h_out_uri_r], 
                         combo_risk_raster, single_raster_uri_r, gdal.GDT_Float32, 
                         -1., grid_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None,
+                        vectorize_op=False)
        
         raster_to_polygon(single_raster_uri_r, single_raster_uri,
                             h, 'VALUE')
