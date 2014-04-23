@@ -1010,12 +1010,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #H_Raster is first in the stack.
         high_h_mask = numpy.where(pixels[0] != -1, 
-                    pixels[0] / float(user_max_risk) > .666, False)
+                    pixels[0] / float(user_max_risk) >= .666, False)
 
         high_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
         
         for i in range(1, len(pixels)):
-            high_hs = high_hs | (pixels[i] / float(max_risk) > .666)
+            high_hs = high_hs | (pixels[i] / float(max_risk) >= .666)
 
         return numpy.where(high_hs | high_h_mask, 3, -1)
 
@@ -1042,7 +1042,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         med_h_mask = numpy.where(pixels[0] != -1, 
                     (pixels[0] / float(user_max_risk) < .666) & 
-                    (pixels[0] / float(user_max_risk) > .333), 
+                    (pixels[0] / float(user_max_risk) >= .333), 
                     False)
 
         med_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
@@ -1050,7 +1050,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         for i in range(1, len(pixels)):
             med_hs = med_hs | \
                     ((pixels[i] / float(max_risk) < .666) &
-                    (pixels[i] / float(max_risk) > .333))
+                    (pixels[i] / float(max_risk) >= .333))
 
         return numpy.where(med_hs | med_h_mask, 2, -1)
         '''#We know that the overarching habitat pixel is the first in the list
@@ -1075,12 +1075,16 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     def low_risk_raster(*pixels):
 
         low_h_mask = numpy.where(pixels[0] != -1, 
-                    pixels[0] / float(user_max_risk) < .333, False)
+                    (pixels[0] / float(user_max_risk) < .333) & 
+                    (pixels[0] / float(user_max_risk) >= 0), 
+                    False)
 
         low_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
         
         for i in range(1, len(pixels)):
-            low_hs = low_hs | (pixels[i] / float(max_risk) < .333)
+            low_hs = low_hs | \
+                    ((pixels[i] / float(user_max_risk) < .333) & 
+                    (pixels[i] / float(user_max_risk) >= 0)) 
 
         return numpy.where(low_hs | low_h_mask, 1, -1)
         
@@ -1103,9 +1107,17 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #considered low risk. Can return nodata.
         return -1.'''
 
-    def combo_risk_raster(l_pix, m_pix, h_pix):
+    def combo_risk_raster(*pixels):
+        #We actually know that there will be a l_pix, m_pix, and h_pix
+        #But it's easier to just loop through all of them.
 
+        combo_risk = numpy.zeros(pixels[0].shape)
+        combo_risk[:] = -1
+
+        for layer in pixels:
+            combo_risk = numpy.where(layer != -1, layer, combo_risk)
         
+        return combo_risk
 
         '''if h_pix != -1.:
             return 3
@@ -1273,7 +1285,20 @@ def make_hab_risk_raster(dir, risk_dict):
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
-        all_nodata = True
+        #Pulling the first one in teh list to use for masking purposes.
+        value = numpy.zeros(pixels[0].shape)
+        all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        all_nodata[:] = True
+        
+        for i in range(len(pixels)):
+            valid_mask = pixels[i] != -1
+            
+            value = numpy.where(valid_mask, pixels[i] + value, value) 
+
+            all_nodata = ~valid_mask & all_nodata
+
+        return numpy.where(all_nodata, -1, value)
+        '''all_nodata = True
         for p in pixels:
             if p != nodata:
                 all_nodata = False
@@ -1288,7 +1313,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
                 pixel_sum += p
 
-        return pixel_sum
+        return pixel_sum'''
 
 
     #This will give us two lists where we have only the unique habs and
@@ -1325,7 +1350,7 @@ def make_hab_risk_raster(dir, risk_dict):
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
                         gdal.GDT_Float32, -1., pixel_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         h_rasters[h] = out_uri 
         h_s_rasters[h] = ds_list
@@ -1480,15 +1505,21 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     Returns the URI for a raster representing the multiplied E raster, C raster, 
     and the base raster.
     '''
-    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
    
     #Rules should be similar to euclidean risk in that nothing happens
     #without there being c_pixels there.
     def combine_risk_mult(b_pix, e_pix, c_pix):
 
-        if c_pix == c_nodata:
+        risk_map = numpy.zeros(b_pix.shape)
+        risk_map[:] = -1
+        
+        risk_map = numpy.where(b_pix == -1 & c_pix != -1, 0, risk_map)
+        risk_map = numpy.where(b_pix != -1 & c_pix != -1,
+                    b_pix * c_pix, risk_map)
+
+
+        '''if c_pix == c_nodata:
             return base_nodata
     
         #Here, we know that c_pix is not nodata, but want to return 0 if
@@ -1499,12 +1530,12 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         #Here, we know that c_pix isn't nodata, and that overlap exists, so
         #can just straight multiply.
         else:
-            return e_pix * c_pix
+            return e_pix * c_pix'''
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult,
                     risk_uri, gdal.GDT_Float32, -1., grid_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=None)
+                    aoi_uri=None, vectorize_op=False)
 
 def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
