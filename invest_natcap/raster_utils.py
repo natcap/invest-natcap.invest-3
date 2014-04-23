@@ -2721,35 +2721,25 @@ def get_dataset_projection_wkt_uri(dataset_uri):
 def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     """Return a dict from unique int values in the dataset to their frequency.
 
-    Note that this uses numpy.bincount(), which requires that all values
-    be nonnegative ints.
-
     dataset_uri - uri to a gdal dataset of some integer type
+    ignore_nodata - if set to false, the nodata count is also included in the
+        result
+    
+    returns dictionary of values to count.
     """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
-
-    itemfreq = {}
+    
+    itemfreq = collections.defaultdict(int)
     for row_index in range(band.YSize):
         array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-
-        if ignore_nodata:
-            # Remove the nodata values.
-            masked = numpy.ma.masked_equal(array, nodata)
-            array = masked.compressed()
-
-        counts = numpy.bincount(array)
-
-        for value, count in enumerate(counts):
-            if not count:
+        for val in numpy.unique(array):
+            if ignore_nodata and val == nodata:
                 continue
-            try:
-                itemfreq[int(value)] += int(count)
-            except KeyError:
-                itemfreq[int(value)] = int(count)
-
+            itemfreq[val] += numpy.count_nonzero(cur_array==val)
+            
     return itemfreq
 
     
