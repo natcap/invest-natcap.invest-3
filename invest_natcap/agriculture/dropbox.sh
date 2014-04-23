@@ -32,8 +32,8 @@ done
 echo "Converting to TIFF."
 for f in $TMP/*.nc
 do
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f $f.tif
-mv $f.tif $DESTINATION/$CLIMATE
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$CLIMATE
 rm $f
 done
 
@@ -63,8 +63,8 @@ done
 echo "Converting to TIFF."
 for f in $TMP/*.nc
 do
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f $f.tif
-mv $f.tif $DESTINATION/$CROPRANK
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$CROPRANK
 rm $f
 done
 
@@ -94,8 +94,8 @@ done
 echo "Converting to TIFF."
 for f in $TMP/*.nc
 do
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f $f.tif
-mv $f.tif $DESTINATION/$FERTILIZER
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$FERTILIZER
 rm $f
 done
 
@@ -122,8 +122,8 @@ do
 #fix .asc headers
 head -n +6 $f | sed -e 's/^[ \t]*//' > $TMP/tmp.asc
 tail -n +7 $f >> $TMP/tmp.asc
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc $f.tif
-mv $f.tif $DESTINATION/$MONFREDA
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$MONFREDA
 rm $f
 done
 
@@ -150,8 +150,8 @@ do
 #fix .asc headers
 head -n +6 $f | sed -e 's/^[ \t]*//' > $TMP/tmp.asc
 tail -n +7 $f >> $TMP/tmp.asc
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc $f.tif
-mv $f.tif $DESTINATION/$MONFREDA/$NUTRIENT
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$MONFREDA/$NUTRIENT
 rm $f
 done
 
@@ -180,8 +180,8 @@ do
 #fix .asc headers
 head -n +6 $f | sed -e 's/^[ \t]*//' > $TMP/tmp.asc
 tail -n +7 $f >> $TMP/tmp.asc
-gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc $f.tif
-mv $f.tif $DESTINATION/$MONFREDA/$GROUP
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $TMP/tmp.asc ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION/$MONFREDA/$GROUP
 rm $f
 done
 
