@@ -288,7 +288,11 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
         Returns nothing.
         """
     base_raster = gdal.Open(base_uri)
-    new_raster_from_base(base_raster, *args, **kwargs)
+    new_raster = new_raster_from_base(base_raster, *args, **kwargs)
+    gdal.Dataset.__swig_destroy__(new_raster)
+    gdal.Dataset.__swig_destroy__(base_raster)
+    new_raster = None
+    base_raster = None
 
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None):
@@ -331,6 +335,7 @@ def new_raster_from_base(
     band = None
 
     return new_raster
+
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
