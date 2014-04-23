@@ -255,11 +255,11 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     #    return compute
 
 
-    # Setup valuation function
-    a = args["a_coefficient"]
-    b = args["b_coefficient"]
-    c = args["c_coefficient"]
-    d = args["d_coefficient"]
+    ## Setup valuation function
+    #a = args["a_coefficient"]
+    #b = args["b_coefficient"]
+    #c = args["c_coefficient"]
+    #d = args["d_coefficient"]
 
     #valuation_function = None
     #max_valuation_radius = args['max_valuation_radius']
@@ -281,9 +281,9 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     # Base path uri
     base_uri = os.path.split(visibility_uri)[0]
 
-    # Temporary files that will be used 
-    distance_uri = raster_utils.temporary_filename()
-    viewshed_uri = raster_utils.temporary_filename()
+    ## Temporary files that will be used 
+    #distance_uri = raster_utils.temporary_filename()
+    #viewshed_uri = raster_utils.temporary_filename()
 
 
     # The model extracts each viewpoint from the shapefile
@@ -294,6 +294,8 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
+    layer = None
+    shapefile = None
     viewshed_uri_list = []
     #print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
@@ -509,21 +511,21 @@ def execute(args):
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
-    LOGGER.debug("Clipping DEM by projected AOI.")
-    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    #LOGGER.debug("Clipping DEM by projected AOI.")
+    #raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
-    LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
-    LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
+    #LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
+    #LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
 
-    nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
+    #nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
 
-    def no_zeros(value):
-        if value == nodata_dem:
-            return nodata_dem
-        elif value < 0:
-            return 0
-        else:
-            return value
+    #def no_zeros(value):
+    #    if value == nodata_dem:
+    #        return nodata_dem
+    #    elif value < 0:
+    #        return 0
+    #    else:
+    #        return value
 
     #raster_utils.vectorize_datasets([viewshed_dem_uri],
     #                                no_zeros,
