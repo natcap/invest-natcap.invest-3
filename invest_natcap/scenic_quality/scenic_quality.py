@@ -524,17 +524,18 @@ def execute(args):
         else:
             return value
 
-    raster_utils.vectorize_datasets([viewshed_dem_uri],
-                                    no_zeros,
-                                    viewshed_dem_reclass_uri,
-                                    get_data_type_uri(viewshed_dem_uri),
-                                    nodata_dem,
-                                    aq_args["cell_size"],
-                                    "union")
+    #raster_utils.vectorize_datasets([viewshed_dem_uri],
+    #                                no_zeros,
+    #                                viewshed_dem_reclass_uri,
+    #                                get_data_type_uri(viewshed_dem_uri),
+    #                                nodata_dem,
+    #                                aq_args["cell_size"],
+    #                                "union")
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    compute_viewshed_uri(viewshed_dem_reclass_uri,
+    #compute_viewshed_uri(viewshed_dem_reclass_uri,
+    compute_viewshed_uri(viewshed_dem_uri,
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,
