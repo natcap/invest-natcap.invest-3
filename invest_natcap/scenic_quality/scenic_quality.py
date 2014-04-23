@@ -286,17 +286,17 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     viewshed_uri = raster_utils.temporary_filename()
 
 
-    ## The model extracts each viewpoint from the shapefile
-    #point_list = []
-    #shapefile = ogr.Open(in_structure_uri)
-    #assert shapefile is not None
-    #layer = shapefile.GetLayer(0)
-    #assert layer is not None
-    #iGT = gdal.InvGeoTransform(GT)[1]
-    #feature_count = layer.GetFeatureCount()
+    # The model extracts each viewpoint from the shapefile
+    point_list = []
+    shapefile = ogr.Open(in_structure_uri)
+    assert shapefile is not None
+    layer = shapefile.GetLayer(0)
+    assert layer is not None
+    iGT = gdal.InvGeoTransform(GT)[1]
+    feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
     #print('Number of viewpoints: ' + str(feature_count))
-    for f in range(10): #range(feature_count):
+    for f in range(feature_count):
         #print("feature " + str(f))
         #feature = layer.GetFeature(f)
         #field_count = feature.GetFieldCount()
