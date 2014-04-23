@@ -205,54 +205,54 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
-    input_raster = gdal.Open(in_dem_uri)
-    input_band = input_raster.GetRasterBand(1)
-    input_array = input_band.ReadAsArray()
-    input_band = None
-    input_raster = None
+    #input_raster = gdal.Open(in_dem_uri)
+    #input_band = input_raster.GetRasterBand(1)
+    #input_array = input_band.ReadAsArray()
+    #input_band = None
+    #input_raster = None
 
-    # Compute the distance for each point
-    def compute_distance(vi, vj, cell_size):
-        def compute(i, j, v):
-            if v == 1:
-                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-            else:
-                return -1.
-        return compute
+    ## Compute the distance for each point
+    #def compute_distance(vi, vj, cell_size):
+    #    def compute(i, j, v):
+    #        if v == 1:
+    #            return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
+    #        else:
+    #            return -1.
+    #    return compute
 
-    # Apply the valuation functions to the distance
-    def polynomial(a, b, c, d, max_valuation_radius):
-        def compute(x, v):
-            if v==1:
-                if x < 1000:
-                    return a + b*1000 + c*1000**2 + d*1000**3 - \
-                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*x + c*x**2 + d*x**3
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
+    ## Apply the valuation functions to the distance
+    #def polynomial(a, b, c, d, max_valuation_radius):
+    #    def compute(x, v):
+    #        if v==1:
+    #            if x < 1000:
+    #                return a + b*1000 + c*1000**2 + d*1000**3 - \
+    #                    (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
+    #            elif x <= max_valuation_radius:
+    #                return a + b*x + c*x**2 + d*x**3
+    #            else:
+    #                return 0.
+    #        else:
+    #            return 0.
+    #    return compute
 
-    def logarithmic(a, b, max_valuation_radius):
-        def compute(x, v):
-            if v==1:
-                if x < 1000:
-                    return a + b*math.log(1000) - (b/1000)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*math.log(x)
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
+    #def logarithmic(a, b, max_valuation_radius):
+    #    def compute(x, v):
+    #        if v==1:
+    #            if x < 1000:
+    #                return a + b*math.log(1000) - (b/1000)*(1000-x)
+    #            elif x <= max_valuation_radius:
+    #                return a + b*math.log(x)
+    #            else:
+    #                return 0.
+    #        else:
+    #            return 0.
+    #    return compute
 
-    # Multiply a value by a constant
-    def multiply(c):
-        def compute(x):
-            return x*c
-        return compute
+    ## Multiply a value by a constant
+    #def multiply(c):
+    #    def compute(x):
+    #        return x*c
+    #    return compute
 
 
     # Setup valuation function
@@ -261,22 +261,22 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     c = args["c_coefficient"]
     d = args["d_coefficient"]
 
-    valuation_function = None
-    max_valuation_radius = args['max_valuation_radius']
-    if "polynomial" in args["valuation_function"]:
-        print("Polynomial")
-        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
-    elif "logarithmic" in args['valuation_function']:
-        print("logarithmic")
-        valuation_function = logarithmic(a, b, max_valuation_radius)
+    #valuation_function = None
+    #max_valuation_radius = args['max_valuation_radius']
+    #if "polynomial" in args["valuation_function"]:
+    #    print("Polynomial")
+    #    valuation_function = polynomial(a, b, c, d, max_valuation_radius)
+    #elif "logarithmic" in args['valuation_function']:
+    #    print("logarithmic")
+    #    valuation_function = logarithmic(a, b, max_valuation_radius)
 
-    assert valuation_function is not None
+    #assert valuation_function is not None
     
-    # Make sure the values don't become too small at max_valuation_radius:
-    edge_value = valuation_function(max_valuation_radius, 1)
-    message = "Valuation function can't be negative if evaluated at " + \
-    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
-    assert edge_value >= 0., message
+    ## Make sure the values don't become too small at max_valuation_radius:
+    #edge_value = valuation_function(max_valuation_radius, 1)
+    #message = "Valuation function can't be negative if evaluated at " + \
+    #str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+    #assert edge_value >= 0., message
         
     # Base path uri
     base_uri = os.path.split(visibility_uri)[0]
@@ -286,17 +286,17 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     viewshed_uri = raster_utils.temporary_filename()
 
 
-    # The model extracts each viewpoint from the shapefile
-    point_list = []
-    shapefile = ogr.Open(in_structure_uri)
-    assert shapefile is not None
-    layer = shapefile.GetLayer(0)
-    assert layer is not None
-    iGT = gdal.InvGeoTransform(GT)[1]
-    feature_count = layer.GetFeatureCount()
+    ## The model extracts each viewpoint from the shapefile
+    #point_list = []
+    #shapefile = ogr.Open(in_structure_uri)
+    #assert shapefile is not None
+    #layer = shapefile.GetLayer(0)
+    #assert layer is not None
+    #iGT = gdal.InvGeoTransform(GT)[1]
+    #feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
-    print('Number of viewpoints: ' + str(feature_count))
-    for f in range(feature_count):
+    #print('Number of viewpoints: ' + str(feature_count))
+    for f in range(10): #range(feature_count):
         #print("feature " + str(f))
         #feature = layer.GetFeature(f)
         #field_count = feature.GetFieldCount()
