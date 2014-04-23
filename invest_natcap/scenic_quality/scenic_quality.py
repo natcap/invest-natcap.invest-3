@@ -287,15 +287,16 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 
 
     # The model extracts each viewpoint from the shapefile
-    point_list = []
-    shapefile = ogr.Open(in_structure_uri)
-    assert shapefile is not None
-    layer = shapefile.GetLayer(0)
-    assert layer is not None
-    iGT = gdal.InvGeoTransform(GT)[1]
-    feature_count = layer.GetFeatureCount()
-    layer = None
-    shapefile = None
+    #point_list = []
+    #shapefile = ogr.Open(in_structure_uri)
+    #assert shapefile is not None
+    #layer = shapefile.GetLayer(0)
+    #assert layer is not None
+    #iGT = gdal.InvGeoTransform(GT)[1]
+    #feature_count = layer.GetFeatureCount()
+    feature_count = 15
+    #layer = None
+    #shapefile = None
     viewshed_uri_list = []
     #print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
@@ -339,7 +340,7 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             in_dem_uri, tmp_visibility_uri, 'GTiff', \
-            255, gdal.GDT_Byte, fill_value = 255)
+            255, gdal.GDT_Byte, fill_value=255)
         #scenic_quality_core.viewshed(input_array, cell_size, \
         #array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         #max_dist, refr_coeff)
@@ -380,8 +381,8 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
     raster_utils.vectorize_datasets( \
         viewshed_uri_list, lambda *x: np.zeros_like(x[0]), \
-        visibility_uri, gdal.GDT_Byte, 255, cell_size, "union")
-        #visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op = False)
+        visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op=False)
+        #visibility_uri, gdal.GDT_Byte, 255, cell_size, "union")
         #visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
     sys.exit(-1)
     ## Numpy method:
