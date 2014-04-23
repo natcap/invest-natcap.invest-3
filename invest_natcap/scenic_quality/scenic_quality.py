@@ -287,16 +287,15 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 
 
     # The model extracts each viewpoint from the shapefile
-    #point_list = []
-    #shapefile = ogr.Open(in_structure_uri)
-    #assert shapefile is not None
-    #layer = shapefile.GetLayer(0)
-    #assert layer is not None
-    #iGT = gdal.InvGeoTransform(GT)[1]
-    #feature_count = layer.GetFeatureCount()
-    feature_count = 15
-    #layer = None
-    #shapefile = None
+    point_list = []
+    shapefile = ogr.Open(in_structure_uri)
+    assert shapefile is not None
+    layer = shapefile.GetLayer(0)
+    assert layer is not None
+    iGT = gdal.InvGeoTransform(GT)[1]
+    feature_count = layer.GetFeatureCount()
+    layer = None
+    shapefile = None
     viewshed_uri_list = []
     #print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
@@ -448,85 +447,85 @@ def execute(args):
     """DOCSTRING"""
     LOGGER.info("Start Scenic Quality Model")
 
-    ##create copy of args
+    #create copy of args
     aq_args=args.copy()
 
-    ##validate input
-    #LOGGER.debug("Validating parameters.")
-    #dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
-    #LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    #if "cell_size" in aq_args:
-    #    if aq_args['cell_size'] < dem_cell_size:
-    #        raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
-    #else:
-    #    aq_args['cell_size'] = dem_cell_size
+    #validate input
+    LOGGER.debug("Validating parameters.")
+    dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
+    LOGGER.debug("DEM cell size: %f" % dem_cell_size)
+    if "cell_size" in aq_args:
+        if aq_args['cell_size'] < dem_cell_size:
+            raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
+    else:
+        aq_args['cell_size'] = dem_cell_size
 
     intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
-    #if not os.path.isdir(intermediate_dir):
-    #    os.makedirs(intermediate_dir)
+    if not os.path.isdir(intermediate_dir):
+        os.makedirs(intermediate_dir)
 
     output_dir = os.path.join(aq_args['workspace_dir'], 'output')
-    #if not os.path.isdir(output_dir):
-    #    os.makedirs(output_dir)
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
 
-    ##local variables
-    #LOGGER.debug("Setting local variables.")
-    #z_factor=1
+    #local variables
+    LOGGER.debug("Setting local variables.")
+    z_factor=1
     curvature_correction=aq_args['refraction']
 
-    ##intermediate files
-    #aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
-    #aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
+    #intermediate files
+    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
 
     viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
-    #viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
+    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
 
-    #pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
-    #pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
-    #pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
+    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
+    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
+    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
 
-    #viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
-    #viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
+    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
 
-    ##outputs
+    #outputs
     viewshed_uri=os.path.join(output_dir,"vshed.tif")
-    #viewshed_quality_uri=os.path.join(output_dir,"vshed_qual.tif")    
-    #pop_stats_uri=os.path.join(output_dir,"populationStats.html")
-    #overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
+    viewshed_quality_uri=os.path.join(output_dir,"vshed_qual.tif")    
+    pop_stats_uri=os.path.join(output_dir,"populationStats.html")
+    overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
 
-    ##determining best data type for viewshed
-    #features = get_count_feature_set_uri(aq_args['structure_uri'])
-    #if features < 2 ** 16:
-    #    viewshed_type = gdal.GDT_UInt16
-    #    viewshed_nodata = (2 ** 16) - 1
-    #elif features < 2 ** 32:
-    #    viewshed_type = gdal.GDT_UInt32
-    #    viewshed_nodata = (2 ** 32) - 1
-    #else:
-    #    raise ValueError, "Too many structures."
+    #determining best data type for viewshed
+    features = get_count_feature_set_uri(aq_args['structure_uri'])
+    if features < 2 ** 16:
+        viewshed_type = gdal.GDT_UInt16
+        viewshed_nodata = (2 ** 16) - 1
+    elif features < 2 ** 32:
+        viewshed_type = gdal.GDT_UInt32
+        viewshed_nodata = (2 ** 32) - 1
+    else:
+        raise ValueError, "Too many structures."
     
-    ##clip DEM by AOI and reclass
-    #LOGGER.info("Clipping DEM by AOI.")
+    #clip DEM by AOI and reclass
+    LOGGER.info("Clipping DEM by AOI.")
 
-    #LOGGER.debug("Projecting AOI for DEM.")
-    #dem_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    #raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
+    LOGGER.debug("Projecting AOI for DEM.")
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
-    #LOGGER.debug("Clipping DEM by projected AOI.")
-    #raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    LOGGER.debug("Clipping DEM by projected AOI.")
+    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
-    #LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
-    #LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
+    LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
+    LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
 
-    #nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
+    nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
 
-    #def no_zeros(value):
-    #    if value == nodata_dem:
-    #        return nodata_dem
-    #    elif value < 0:
-    #        return 0
-    #    else:
-    #        return value
+    def no_zeros(value):
+        if value == nodata_dem:
+            return nodata_dem
+        elif value < 0:
+            return 0
+        else:
+            return value
 
     #raster_utils.vectorize_datasets([viewshed_dem_uri],
     #                                no_zeros,
