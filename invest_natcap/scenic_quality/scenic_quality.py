@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 
 import numpy as np
@@ -268,6 +269,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     distance_uri = raster_utils.temporary_filename()
     viewshed_uri = raster_utils.temporary_filename()
 
+
     # The model extracts each viewpoint from the shapefile
     point_list = []
     shapefile = ogr.Open(in_structure_uri)
@@ -275,6 +277,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     layer = shapefile.GetLayer(0)
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
+    shapefile = Null
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
@@ -288,27 +291,18 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             field_name = field_def.GetNameRef()
             if (field_name.upper() == 'RADIUS2') or \
                 (field_name.upper() == 'RADIUS'):
-                field_type = field_def.GetType()
-                message = 'Wrong field type for radius: ' + str(field_type) + \
-                ' expected 0 (ogr.OFTInteger)'
-                assert field_type == ogr.OFTInteger, message
-                max_dist = abs(feature.GetFieldAsInteger(field))
+                max_dist = abs(int(feature.GetField(field)))
                 assert max_dist is not None, "max distance can't be None"
                 max_dist = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
-                field_type = field_def.GetType()
-                message = 'Wrong field type for coeff: ' + str(field_type) + \
-                ' expected 2 (ogr.OFTReal)'
-                assert field_type == ogr.OFTReal, message
-                coefficient = feature.GetFieldAsDouble(field)    
+                coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'height':
-                field_type = field_def.GetType()
-                message = 'Wrong field type for height: ' + str(field_type) + \
-                ' expected 2 (ogr.OFTReal)'
-                assert field_type == ogr.OFTReal, message
-                height = feature.GetFieldAsDouble(field)
-                assert height is not None, "height can't be None"
+            if field_name.lower() == 'OFFSETA':
+                obs_elev = float(feature.GetField(field))
+                assert obs_elev is not None, "OFFSETA can't be None"
+            if field_name.lower() == 'OFFSETB':
+                tgt_elev = float(feature.GetField(field))
+                assert tgt_elev is not None, "OFFSETB can't be None"
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
@@ -324,7 +318,8 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        tmp_visibility_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        #tmp_visibility_uri = raster_utils.temporary_filename()
+        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_visibility_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
@@ -332,7 +327,8 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
         # Compute the distance
-        tmp_distance_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        #tmp_distance_uri = raster_utils.temporary_filename() 
+        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_distance_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
@@ -340,7 +336,8 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
         # Apply the valuation function
-        tmp_viewshed_uri = raster_utils.temporary_filename() #os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+        #tmp_viewshed_uri = raster_utils.temporary_filename()
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
@@ -355,32 +352,38 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     # Accumulate result to combined raster
-    ## The vectorize_dataset method segfaults--trying with numpy instead.
-    #def accumulate(*x):
-    #    #print('type of x', type(x), type(x[0]), x)
-    #    x = np.array(x)
-    #    #result = np.sum(x)
-    #    #print('result', result)
-    #    #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
-    #    return 0.
-    ##raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
-    ##visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
-    # Numpy method:
-    #Create the output raster from the first in the input list
-    raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
-    visibility_uri, 'GTiff', 0., gdal.GDT_Float64)
-    # Open the first raster and sum up the values using numpy
-    raster = gdal.Open(viewshed_uri_list[0])
-    accum_array = raster.GetRasterBand(1).ReadAsArray()
-    for uri in viewshed_uri_list[1:]:
-        nodata = raster_utils.get_nodata_from_uri(uri)
-        raster = gdal.Open(uri)
-        array = raster.GetRasterBand(1).ReadAsArray()
-        accum_array += array
+    # The vectorize_dataset method segfaults--trying with numpy instead.
+    def accumulate(*x):
+        #result = sum(x)
+        #print('type of x', type(x), type(x[0]), x)
+        #x = np.array(x)
+        #result = np.sum(x)
+        #print('result', result)
+        #return raster_utils.gdal_cast(result, gdal.GDT_Float64)
+        return 0.
+    LOGGER.debug('Summing up everything using vectorize_datasets...')
+    raster_utils.vectorize_datasets(viewshed_uri_list, lambda *x: 0., \
+    visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
+    ## Numpy method:
+    ##Create the output raster from the first in the input list
+    #raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
+    #visibility_uri, 'GTiff', 0., gdal.GDT_Float64)
+    ## Open the first raster and sum up the values using numpy
+    #raster = gdal.Open(viewshed_uri_list[0])
+    #accum_array = raster.GetRasterBand(1).ReadAsArray()
+    #for uri in viewshed_uri_list[1:]:
+    #    nodata = raster_utils.get_nodata_from_uri(uri)
+    #    raster = gdal.Open(uri)
+    #    array = raster.GetRasterBand(1).ReadAsArray()
+    #    accum_array += array
     # Store the accumulated value in the output uri
+    raster =None
     raster = gdal.Open(visibility_uri, gdal.GA_Update)
     band = raster.GetRasterBand(1)
+    LOGGER.debug('%s %s' % (visibility_uri, np.sum(accum_array)))
     band.WriteArray(accum_array)
+    raster = None
+    sys.exit(-1)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)

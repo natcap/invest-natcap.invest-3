@@ -360,14 +360,15 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
+            habitat_float = habitat.astype(np.float32)
+
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata, 
-                    (float(habitat) * (1.0 - ((degradation**scaling_param) / 
+                    (habitat_float * (1.0 - ((degradation**scaling_param) / 
                         (degradation**scaling_param + ksq)))))
 
-        quality_uri = \
-            os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
+        quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
 
         LOGGER.debug('Starting vectorize on quality_op')
 
@@ -453,27 +454,14 @@ def execute(args):
                     except KeyError:
                         code_index[code] = 0.0
 
-                def map_ratio(cover):
-                    """Vectorized operation used to map a dictionary to a
-                        lulc raster
-
-                        cover - refers to the 'new_cover' raster generated above
-
-                        return - rarity_nodata if code is not in the dictionary,
-                            otherwise return the rarity index pertaining to that
-                            code"""
-                    if cover in code_index:
-                        return code_index[cover]
-                    return rarity_nodata
-
                 rarity_uri = os.path.join(
                     output_dir, 'rarity' + lulc_cover + suffix)
 
                 LOGGER.debug('Starting vectorize on map_ratio')
 
-                raster_utils.vectorize_datasets(
-                    [new_cover_uri], map_ratio, rarity_uri, gdal.GDT_Float32,
-                    rarity_nodata, cell_size, "intersection")
+                raster_utils.reclassify_dataset_uri(
+                        new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
+                        rarity_nodata)
 
                 LOGGER.debug('Finished vectorize on map_ratio')
 
