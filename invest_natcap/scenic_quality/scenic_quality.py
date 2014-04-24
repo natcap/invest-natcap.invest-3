@@ -102,9 +102,9 @@ def reclassify_quantile_dataset_uri( \
 
     quantile_breaks = [0]
     for quantile in quantile_list:
-        LOGGER.debug('quantile %f' % quantile)
         quantile_breaks.append(scipy.stats.scoreatpercentile(
                 memory_array_flat, quantile, (0.0, np.amax(memory_array_flat))))
+        LOGGER.debug('quantile %f: %f', quantile, quantile_breaks[-1])
 
     def reclass(value):
         if value == nodata_ds:
@@ -112,6 +112,8 @@ def reclassify_quantile_dataset_uri( \
         else:
             for new_value,quantile_break in enumerate(quantile_breaks):
                 if value <= quantile_break:
+                    if value:
+                        LOGGER.debug('value %f -> %f', value, new_value)
                     return new_value
         raise ValueError, "Value was not within quantiles."
 
@@ -223,9 +225,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
             if v == 1:
-                print('vi', vi, 'vj', vj, 'i', i, 'j', j)
-                print('vi - i', vi - i, 'vj - j', vj - j)
-                print('distance', ((vi - i)**2 + (vj - j)**2)**.5)
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
@@ -537,8 +536,8 @@ def execute(args):
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
     quantile_list = [25,50,75,100]
-    LOGGER.debug('reclassify input' + str(viewshed_uri))
-    LOGGER.debug('reclassify output' + str(viewshed_quality_uri))
+    LOGGER.debug('reclassify input %s', viewshed_uri)
+    LOGGER.debug('reclassify output %s', viewshed_quality_uri)
     reclassify_quantile_dataset_uri(viewshed_uri,
                                     quantile_list,
                                     viewshed_quality_uri,
@@ -594,9 +593,7 @@ def execute(args):
                                        1)
         
         pop = gdal.Open(pop_vs_uri)
-        #LOGGER.debug(pop)
         pop_band = pop.GetRasterBand(1)
-        #LOGGER.debug(pop_band)
         vs = gdal.Open(viewshed_uri)
         vs_band = vs.GetRasterBand(1)
 
