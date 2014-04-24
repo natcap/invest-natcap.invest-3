@@ -1357,80 +1357,6 @@ def warp_reproject_dataset_uri(
 
     calculate_raster_stats_uri(output_uri)
 
-def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
-    """A URI wrapper for reproject dataset that opens the original_dataset_uri
-        before passing it to reproject_dataset.
-
-       original_dataset_uri - a URI to a gdal Dataset on disk
-
-       All other arguments to reproject_dataset are passed in.
-
-       return - nothing"""
-
-    original_dataset = gdal.Open(original_dataset_uri)
-    reproject_dataset(original_dataset, *args, **kwargs)
-
-def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
-                      output_type = gdal.GDT_Float32):
-    """Reproject and resample a GDAL dataset given an output pixel size
-        and output reference and uri.
-
-       original_dataset - a gdal Dataset to reproject
-       pixel_spacing - output dataset pixel size in projected linear units
-       output_wkt - output project in Well Known Text
-       output_uri - location on disk to dump the reprojected dataset
-       output_type - gdal type of the output
-
-       return projected dataset"""
-
-    original_sr = osr.SpatialReference()
-    original_sr.ImportFromWkt(original_dataset.GetProjection())
-
-    output_sr = osr.SpatialReference()
-    output_sr.ImportFromWkt(output_wkt)
-
-    tx = osr.CoordinateTransformation(original_sr, output_sr)
-
-    # Get the Geotransform vector
-    geo_t = original_dataset.GetGeoTransform()
-    x_size = original_dataset.RasterXSize # Raster xsize
-    y_size = original_dataset.RasterYSize # Raster ysize
-    # Work out the boundaries of the new dataset in the target projection
-    (ulx, uly, _) = tx.TransformPoint(geo_t[0], geo_t[3])
-    (lrx, lry, _) = tx.TransformPoint(geo_t[0] + geo_t[1]*x_size,
-                                      geo_t[3] + geo_t[5]*y_size)
-
-    gdal_driver = gdal.GetDriverByName('GTiff')
-    # The size of the raster is given the new projection and pixel spacing
-    # Using the values we calculated above. Also, setting it to store one band
-    # and to use Float32 data type.
-
-    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
-
-    output_dataset = gdal_driver.Create(
-        output_uri, int((lrx - ulx)/pixel_spacing),
-        int((uly - lry)/pixel_spacing), 1, output_type,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
-
-    # Set the nodata value
-    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
-    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
-
-    # Calculate the new geotransform
-    output_geo = (ulx, pixel_spacing, geo_t[2],
-               uly, geo_t[4], -pixel_spacing)
-
-    # Set the geotransform
-    output_dataset.SetGeoTransform(output_geo)
-    output_dataset.SetProjection (output_sr.ExportToWkt())
-
-    # Perform the projection/resampling
-    gdal.ReprojectImage(
-        original_dataset, output_dataset, original_sr.ExportToWkt(),
-        output_sr.ExportToWkt(), gdal.GRA_Bilinear)
-
-    return output_dataset
-
 def reproject_datasource_uri(original_dataset_uri, output_wkt, output_uri):
     """URI wrapper for reproject_datasource that takes in the uri for the
         datasource that is to be projected instead of the datasource itself.
@@ -2726,35 +2652,25 @@ def get_dataset_projection_wkt_uri(dataset_uri):
 def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     """Return a dict from unique int values in the dataset to their frequency.
 
-    Note that this uses numpy.bincount(), which requires that all values
-    be nonnegative ints.
-
     dataset_uri - uri to a gdal dataset of some integer type
+    ignore_nodata - if set to false, the nodata count is also included in the
+        result
+    
+    returns dictionary of values to count.
     """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
-
-    itemfreq = {}
+    
+    itemfreq = collections.defaultdict(int)
     for row_index in range(band.YSize):
         array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-
-        if ignore_nodata:
-            # Remove the nodata values.
-            masked = numpy.ma.masked_equal(array, nodata)
-            array = masked.compressed()
-
-        counts = numpy.bincount(array)
-
-        for value, count in enumerate(counts):
-            if not count:
+        for val in numpy.unique(array):
+            if ignore_nodata and val == nodata:
                 continue
-            try:
-                itemfreq[int(value)] += int(count)
-            except KeyError:
-                itemfreq[int(value)] = int(count)
-
+            itemfreq[val] += numpy.count_nonzero(cur_array==val)
+            
     return itemfreq
 
     

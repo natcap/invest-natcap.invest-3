@@ -523,8 +523,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     #Set a temp filename for the AOI raster.
-    #aoi_rast_uri = raster_utils.temporary_filename()
-    aoi_rast_uri = os.path.join(inter_dir, 'HAHAHAHAHA.tif')
+    aoi_rast_uri = raster_utils.temporary_filename()
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
@@ -799,6 +798,31 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             equation. Want to add all of the numerators (r/dq), then divide by
             the denoms added together (1/dq).'''
 
+            value = numpy.zeros(pixels[0].shape)
+            denom_val = numpy.zeros(pixels[0].shape)
+            all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+            all_nodata[:] = True
+
+            for i in range(len(pixels)):
+                valid_mask = pixels[i] != -1
+                value = numpy.where(valid_mask, pixels[i] + value, value)
+                denom_val = numpy.where(
+                    valid_mask, curr_denoms[curr_crit_names[i]] + denom_val, denom_val)
+                
+                #Bitwise and- if both are true, will still return True
+                all_nodata = ~valid_mask & all_nodata
+            
+
+            #turn off dividie by zero warning because we probably will divide by zero
+            olderr = numpy.seterr(divide='ignore')
+            result = numpy.where(denom_val != 0, value / denom_val, 0.0)
+            #return numpy error state to old value
+            numpy.seterr(**olderr)
+
+            #mask out nodata stacks
+            return numpy.where(all_nodata, -1, result)
+
+            '''
             all_nodata = True
             for p in pixels:
                 if p not in [-1., -1]:
@@ -822,7 +846,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             else:
         
                 value = value / denom_val
-                return value
+                return value'''
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
@@ -834,7 +858,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, -1., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=None)
+                    aoi_uri=None, vectorize_op=False)
 
 def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
@@ -868,7 +892,22 @@ def make_ecosys_risk_raster(dir, h_dict):
     def add_e_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
-        all_nodata = True
+        
+        value = numpy.zeros(pixels[0].shape)
+        all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        all_nodata[:] = True
+        
+        for i in range(len(pixels)):
+            valid_mask = pixels[i] != -1
+            
+            value = numpy.where(valid_mask, pixels[i] + value, value) 
+
+            all_nodata = ~valid_mask & all_nodata
+
+        return numpy.where(all_nodata, -1, value)
+         
+        
+        '''all_nodata = True
         for p in pixels:
             if p != nodata:
                 all_nodata = False
@@ -883,12 +922,12 @@ def make_ecosys_risk_raster(dir, h_dict):
 
                 pixel_sum += p
 
-        return pixel_sum
+        return pixel_sum'''
      
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
                 gdal.GDT_Float32, -1., pixel_size, "union", 
                 resample_method_list=None, dataset_to_align_index=0,
-                aoi_uri=None)
+                aoi_uri=None, vectorize_op=False)
 
 def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     '''This function will take in the current rasterized risk files for each
@@ -969,7 +1008,18 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
     def high_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        #H_Raster is first in the stack.
+        high_h_mask = numpy.where(pixels[0] != -1, 
+                    pixels[0] / float(user_max_risk) >= .666, False)
+
+        high_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            high_hs = high_hs | (pixels[i] / float(max_risk) >= .666)
+
+        return numpy.where(high_hs | high_h_mask, 3, -1)
+
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk
 
@@ -986,11 +1036,24 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered high risk. Can return nodata.
-        return -1.
+        return -1.'''
 
     def med_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        med_h_mask = numpy.where(pixels[0] != -1, 
+                    (pixels[0] / float(user_max_risk) < .666) & 
+                    (pixels[0] / float(user_max_risk) >= .333), 
+                    False)
+
+        med_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            med_hs = med_hs | \
+                    ((pixels[i] / float(max_risk) < .666) &
+                    (pixels[i] / float(max_risk) >= .333))
+
+        return numpy.where(med_hs | med_h_mask, 2, -1)
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk 
 
@@ -1007,11 +1070,25 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered med risk. Can return nodata.
-        return -1.
+        return -1.'''
     
     def low_risk_raster(*pixels):
 
-        #We know that the overarching habitat pixel is the first in the list
+        low_h_mask = numpy.where(pixels[0] != -1, 
+                    (pixels[0] / float(user_max_risk) < .333) & 
+                    (pixels[0] / float(user_max_risk) >= 0), 
+                    False)
+
+        low_hs = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        
+        for i in range(1, len(pixels)):
+            low_hs = low_hs | \
+                    ((pixels[i] / float(user_max_risk) < .333) & 
+                    (pixels[i] / float(user_max_risk) >= 0)) 
+
+        return numpy.where(low_hs | low_h_mask, 1, -1)
+        
+        '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk
 
@@ -1028,18 +1105,28 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered low risk. Can return nodata.
-        return -1.
+        return -1.'''
 
-    def combo_risk_raster(l_pix, m_pix, h_pix):
+    def combo_risk_raster(*pixels):
+        #We actually know that there will be a l_pix, m_pix, and h_pix
+        #But it's easier to just loop through all of them.
 
-        if h_pix != -1.:
+        combo_risk = numpy.zeros(pixels[0].shape)
+        combo_risk[:] = -1
+
+        for layer in pixels:
+            combo_risk = numpy.where(layer != -1, layer, combo_risk)
+        
+        return combo_risk
+
+        '''if h_pix != -1.:
             return 3
         elif m_pix != -1.:
             return 2
         elif l_pix != -1.:
             return 1
         else:
-            return -1.
+            return -1.'''
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -1058,7 +1145,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
@@ -1066,7 +1153,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
@@ -1074,7 +1161,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         #Want to do another vectorize in order to create a single shapefile
         #with high, medium, low values.
@@ -1084,7 +1171,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         raster_utils.vectorize_datasets([l_out_uri_r, m_out_uri_r, h_out_uri_r], 
                         combo_risk_raster, single_raster_uri_r, gdal.GDT_Float32, 
                         -1., grid_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None,
+                        vectorize_op=False)
        
         raster_to_polygon(single_raster_uri_r, single_raster_uri,
                             h, 'VALUE')
@@ -1197,7 +1285,20 @@ def make_hab_risk_raster(dir, risk_dict):
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
-        all_nodata = True
+        #Pulling the first one in teh list to use for masking purposes.
+        value = numpy.zeros(pixels[0].shape)
+        all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
+        all_nodata[:] = True
+        
+        for i in range(len(pixels)):
+            valid_mask = pixels[i] != -1
+            
+            value = numpy.where(valid_mask, pixels[i] + value, value) 
+
+            all_nodata = ~valid_mask & all_nodata
+
+        return numpy.where(all_nodata, -1, value)
+        '''all_nodata = True
         for p in pixels:
             if p != nodata:
                 all_nodata = False
@@ -1212,7 +1313,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
                 pixel_sum += p
 
-        return pixel_sum
+        return pixel_sum'''
 
 
     #This will give us two lists where we have only the unique habs and
@@ -1249,7 +1350,7 @@ def make_hab_risk_raster(dir, risk_dict):
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
                         gdal.GDT_Float32, -1., pixel_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
         h_rasters[h] = out_uri 
         h_s_rasters[h] = ds_list
@@ -1404,15 +1505,22 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     Returns the URI for a raster representing the multiplied E raster, C raster, 
     and the base raster.
     '''
-    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
    
     #Rules should be similar to euclidean risk in that nothing happens
     #without there being c_pixels there.
     def combine_risk_mult(b_pix, e_pix, c_pix):
 
-        if c_pix == c_nodata:
+        risk_map = numpy.zeros(b_pix.shape)
+        risk_map[:] = -1
+        
+        risk_map = numpy.where(b_pix == -1 & c_pix != -1, 0, risk_map)
+        risk_map = numpy.where(b_pix != -1 & c_pix != -1,
+                    e_pix * c_pix, risk_map)
+
+        return risk_map
+
+        '''if c_pix == c_nodata:
             return base_nodata
     
         #Here, we know that c_pix is not nodata, but want to return 0 if
@@ -1423,12 +1531,12 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         #Here, we know that c_pix isn't nodata, and that overlap exists, so
         #can just straight multiply.
         else:
-            return e_pix * c_pix
+            return e_pix * c_pix'''
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult,
                     risk_uri, gdal.GDT_Float32, -1., grid_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=None)
+                    aoi_uri=None, vectorize_op=False)
 
 def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
@@ -1448,8 +1556,6 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''
     #Already have base open for nodata values, just using pixel_size
     #version of the function.
-    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
 
     #we need to know very explicitly which rasters are being passed in which
@@ -1457,7 +1563,26 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     #be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
-        #If there is no C data (no habitat/overlap), we will always be 
+        b_mask = b_pix != -1
+        c_mask = c_pix != -1
+
+        #Want to make sure that the decay is applied to E first, then that
+        #product is what is used as the new E
+        e_vals = (b_pix * e_pix) - 1
+        c_vals = c_pix -1
+        
+        e_vals = e_vals ** 2
+        c_vals = c_vals ** 2
+
+        risk_map = numpy.sqrt(e_vals + c_vals)
+        
+        risk_map = numpy.where(c_mask, risk_map, -1)
+        risk_map = numpy.where(c_mask & ~b_mask, 0, risk_map)
+       
+        return risk_map
+
+
+        '''#If there is no C data (no habitat/overlap), we will always be 
         #returning nodata.
         if c_pix == c_nodata:
             return base_nodata
@@ -1488,12 +1613,13 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
             #Combine, and take the sqrt
             value = math.sqrt(e_val + c_val)
             
-            return value
+            return value'''
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., 
                     grid_size, "union", resample_method_list=None, 
-                    dataset_to_align_index=0, aoi_uri=None)
+                    dataset_to_align_index=0, aoi_uri=None,
+                    vectorize_op=False)
 
 def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -1510,7 +1636,6 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     Returns nothing.
     '''
     grid_size = raster_utils.get_cell_size_from_uri(h_s_base_uri)
-    nodata = raster_utils.get_nodata_from_uri(h_s_base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1523,8 +1648,29 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     def add_e_pix(*pixels):
 
+        h_s_pixels = pixels[2::]
 
-        h_base_pix = pixels[0]
+        value = numpy.zeros(pixels[0].shape)
+        denom_val = numpy.zeros(pixels[0].shape)
+        
+        for i in range(len(h_s_pixels)):
+            valid_mask = h_s_pixels[i] != -1
+            value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        denom_dict[crit_name_list[i]] + denom_val, 
+                        denom_val)
+
+        #turn off dividie by zero warning because we probably will divide by zero
+        olderr = numpy.seterr(divide='ignore')
+        result = numpy.where(denom_val != 0, value / denom_val, 0)
+        #return numpy error state to old value
+        numpy.seterr(**olderr)
+
+        result[pixels[0] == -1] = -1
+
+        return result
+
+        '''h_base_pix = pixels[0]
         h_s_base_pix = pixels[1]
         h_s_pixels = pixels[2::]
 
@@ -1556,14 +1702,14 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
                 value += p
                 denom_val += denom_dict[crit_name_list[i]]
 
-        return value / denom_val
+        return value / denom_val'''
 
     uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
     raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri):
     '''Should return a raster burned with a 'C' raster that is a combination
@@ -1600,8 +1746,48 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
     h_count = len(h_list)
 
     def add_c_pix(*pixels):
-     
-        h_base_pix = pixels[0]
+    
+        h_pixels = pixels[2:h_count+2]
+        h_s_pixels = pixels[2+h_count::]
+       
+        value = numpy.zeros(pixels[0].shape)
+        denom_val = numpy.zeros(pixels[0].shape)
+
+        for i in range(len(h_pixels)):
+            valid_mask = h_pixels[i] != -1
+            value = numpy.where(valid_mask, h_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        h_denom_dict[h_names[i]] + denom_val, 
+                        denom_val)
+        
+        #The h will need to get put into the h_s, so might as well have the
+        #h_s loop start with the average returned from h.
+        #This will essentiall treat all resilience criteria (h) as a single
+        #entry alongside the h_s criteria.
+        value = value / h_count
+        denom_val = denom_val / h_count
+
+        for i in range(len(h_s_pixels)):
+            valid_mask = h_pixels[i] != -1
+            value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        h_s_denom_dict[h_s_names[i]] + denom_val, 
+                        denom_val)
+            
+        #turn off dividie by zero warning because we probably will divide by zero
+        olderr = numpy.seterr(divide='ignore')
+        result = numpy.where(denom_val != 0, value / denom_val, 0)
+        #return numpy error state to old value
+        numpy.seterr(**olderr)
+
+        #Where there's just habitat but nothing else, we want 0, but evrything
+        #outside that habitat should be nodata.
+        result[pixels[0] == -1] = -1
+
+        return result
+        
+
+        '''h_base_pix = pixels[0]
         h_s_base_pix = pixels[1]
         h_pixels = pixels[2:h_count+2]
         h_s_pixels = pixels[2+h_count::]
@@ -1640,13 +1826,14 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
                 h_s_denom_value += h_s_denom_dict[h_s_names[i]]
 
         
-        return h_s_value / h_s_denom_value
+        return h_s_value / h_s_denom_value'''
 
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
+
 def copy_raster(in_uri, out_uri):
     '''Quick function that will copy the raster in in_raster, and put it
     into out_raster.'''
@@ -1806,15 +1993,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #crit_rate_numerator as the burn value.
         def burn_numerator_single_hs(pixel):
 
-            if pixel == base_nodata:
+            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+
+            '''if pixel == base_nodata:
                 return base_nodata
             else:
-                return crit_rate_numerator
+                return crit_rate_numerator'''
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_C_uri, gdal.GDT_Float32, -1., 
                         base_pixel_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -1838,17 +2027,18 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             def burn_numerator_hs(pixel):
 
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (dq * w))
+                '''if pixel == crit_nodata:
                     return crit_nodata
 
                 else:
                     burn_rating = float(pixel) / (dq * w)
-                    return burn_rating
+                    return burn_rating'''
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
             crit_lists['Risk']['h_s_c'][pair].append(crit_C_uri)
 
@@ -1889,18 +2079,21 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                         '_Indiv_C_Raster.tif')
         def burn_numerator_risk_single(pixel):
-            
-            if pixel == base_nodata:
+           
+            return numpy.where(pixel == base_nodata, 
+                                base_nodata, risk_crit_rate_numerator)
+            '''if pixel == base_nodata:
                 return base_nodata
 
             else:
                 return risk_crit_rate_numerator
-
+            '''
         raster_utils.vectorize_datasets([base_ds_uri], 
                             burn_numerator_risk_single, single_crit_C_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None,
+                            vectorize_op=False)
 
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
@@ -1909,18 +2102,20 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                                                   '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
-            
-            if pixel == base_nodata:
+           
+            return numpy.where(pixel == -1, -1, rec_crit_rate_numerator)
+
+            '''if pixel == base_nodata:
                 return base_nodata
 
             else:
-                return rec_crit_rate_numerator
+                return rec_crit_rate_numerator'''
 
         raster_utils.vectorize_datasets([base_ds_uri], 
                             burn_numerator_rec_single, single_crit_rec_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         crit_lists['Recovery'][h].append(single_crit_rec_uri)
         
@@ -1941,18 +2136,20 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                                     crit_name + '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+
+                '''if pixel == crit_nodata:
                     return -1.
 
                 else:
                     burn_rating = float(pixel) / (w*dq)
-                    return burn_rating
+                    return burn_rating'''
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
                                 crit_C_uri, gdal.GDT_Float32, -1., 
                                 base_pixel_size, "union", 
                                 resample_method_list=None, 
-                                dataset_to_align_index=0, aoi_uri=None)
+                                dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
             
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
