@@ -88,10 +88,12 @@ def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
                         original_sr.ExportToWkt(), output_sr.ExportToWkt(),
                         gdal.GRA_Bilinear)
     
-    raster_utils.calculate_raster_stats_uri(output_dataset_uri)
+    raster_utils.calculate_raster_stats_uri(output_uri)
 
 
-def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
+def reclassify_quantile_dataset_uri( \
+    dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
+
     nodata_ds = raster_utils.get_nodata_from_uri(dataset_uri)
 
     memory_file_uri = raster_utils.temporary_filename()
@@ -382,11 +384,14 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     layer = None
     shapefile = None
     # Accumulate result to combined raster
+    def sum_rasters(*x):
+        x = np.array(x)
+        return np.sum(x, axis = 0)
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
     LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
     raster_utils.vectorize_datasets( \
-        viewshed_uri_list, lambda *x: np.zeros_like(x[0]), \
+        viewshed_uri_list, sum_rasters, \
         visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op=False)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
@@ -532,7 +537,8 @@ def execute(args):
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
     quantile_list = [25,50,75,100]
-    print('Trying to open', viewshed_uri)
+    LOGGER.debug('reclassify input' + str(viewshed_uri))
+    LOGGER.debug('reclassify output' + str(viewshed_quality_uri))
     reclassify_quantile_dataset_uri(viewshed_uri,
                                     quantile_list,
                                     viewshed_quality_uri,
