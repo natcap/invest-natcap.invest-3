@@ -1516,8 +1516,9 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         
         risk_map = numpy.where(b_pix == -1 & c_pix != -1, 0, risk_map)
         risk_map = numpy.where(b_pix != -1 & c_pix != -1,
-                    b_pix * c_pix, risk_map)
+                    e_pix * c_pix, risk_map)
 
+        return risk_map
 
         '''if c_pix == c_nodata:
             return base_nodata
@@ -1555,8 +1556,6 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''
     #Already have base open for nodata values, just using pixel_size
     #version of the function.
-    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
 
     #we need to know very explicitly which rasters are being passed in which
@@ -1564,7 +1563,26 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     #be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
-        #If there is no C data (no habitat/overlap), we will always be 
+        b_mask = b_pix != -1
+        c_mask = c_pix != -1
+
+        #Want to make sure that the decay is applied to E first, then that
+        #product is what is used as the new E
+        e_vals = (b_pix * e_pix) - 1
+        c_vals = c_pix -1
+        
+        e_vals = e_vals ** 2
+        c_vals = c_vals ** 2
+
+        risk_map = numpy.sqrt(e_vals + c_vals)
+        
+        risk_map = numpy.where(c_mask, risk_map, -1)
+        risk_map = numpy.where(c_mask & ~b_mask, 0, risk_map)
+       
+        return risk_map
+
+
+        '''#If there is no C data (no habitat/overlap), we will always be 
         #returning nodata.
         if c_pix == c_nodata:
             return base_nodata
@@ -1595,12 +1613,13 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
             #Combine, and take the sqrt
             value = math.sqrt(e_val + c_val)
             
-            return value
+            return value'''
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., 
                     grid_size, "union", resample_method_list=None, 
-                    dataset_to_align_index=0, aoi_uri=None)
+                    dataset_to_align_index=0, aoi_uri=None,
+                    vectorize_op=False)
 
 def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -1630,8 +1649,29 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     def add_e_pix(*pixels):
 
+        h_s_pixels = pixels[2::]
 
-        h_base_pix = pixels[0]
+        value = numpy.zeros(pixels[0].shape)
+        denom_val = numpy.zeros(pixels[0].shape)
+        
+        for i in range(len(h_s_pixels)):
+            valid_mask = h_s_pixels[i] != -1
+            value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        denom_dict[crit_name_list[i]] + denom_val, 
+                        denom_val)
+
+        #turn off dividie by zero warning because we probably will divide by zero
+        olderr = numpy.seterr(divide='ignore')
+        result = numpy.where(denom_val != 0, value / denom_val, 0)
+        #return numpy error state to old value
+        numpy.seterr(**olderr)
+
+        result[pixels[0] == -1] = -1
+
+        return result
+
+        '''h_base_pix = pixels[0]
         h_s_base_pix = pixels[1]
         h_s_pixels = pixels[2::]
 
@@ -1663,14 +1703,14 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
                 value += p
                 denom_val += denom_dict[crit_name_list[i]]
 
-        return value / denom_val
+        return value / denom_val'''
 
     uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
     raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri):
     '''Should return a raster burned with a 'C' raster that is a combination
