@@ -1746,8 +1746,48 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
     h_count = len(h_list)
 
     def add_c_pix(*pixels):
-     
-        h_base_pix = pixels[0]
+    
+        h_pixels = pixels[2:h_count+2]
+        h_s_pixels = pixels[2+h_count::]
+       
+        value = numpy.zeros(pixels[0].shape)
+        denom_val = numpy.zeros(pixels[0].shape)
+
+        for i in range(len(h_pixels)):
+            valid_mask = h_pixels[i] != -1
+            value = numpy.where(valid_mask, h_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        h_denom_dict[h_names[i]] + denom_val, 
+                        denom_val)
+        
+        #The h will need to get put into the h_s, so might as well have the
+        #h_s loop start with the average returned from h.
+        #This will essentiall treat all resilience criteria (h) as a single
+        #entry alongside the h_s criteria.
+        value = value / h_count
+        denom_val = denom_val / h_count
+
+        for i in range(len(h_s_pixels)):
+            valid_mask = h_pixels[i] != -1
+            value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
+            denom_val = numpy.where(valid_mask, 
+                        h_s_denom_dict[h_s_names[i]] + denom_val, 
+                        denom_val)
+            
+        #turn off dividie by zero warning because we probably will divide by zero
+        olderr = numpy.seterr(divide='ignore')
+        result = numpy.where(denom_val != 0, value / denom_val, 0)
+        #return numpy error state to old value
+        numpy.seterr(**olderr)
+
+        #Where there's just habitat but nothing else, we want 0, but evrything
+        #outside that habitat should be nodata.
+        result[pixels[0] == -1] = -1
+
+        return result
+        
+
+        '''h_base_pix = pixels[0]
         h_s_base_pix = pixels[1]
         h_pixels = pixels[2:h_count+2]
         h_s_pixels = pixels[2+h_count::]
@@ -1786,13 +1826,14 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
                 h_s_denom_value += h_s_denom_dict[h_s_names[i]]
 
         
-        return h_s_value / h_s_denom_value
+        return h_s_value / h_s_denom_value'''
 
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=None)
+                        aoi_uri=None, vectorize_op=False)
+
 def copy_raster(in_uri, out_uri):
     '''Quick function that will copy the raster in in_raster, and put it
     into out_raster.'''
@@ -1952,15 +1993,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #crit_rate_numerator as the burn value.
         def burn_numerator_single_hs(pixel):
 
-            if pixel == base_nodata:
+            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+
+            '''if pixel == base_nodata:
                 return base_nodata
             else:
-                return crit_rate_numerator
+                return crit_rate_numerator'''
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_C_uri, gdal.GDT_Float32, -1., 
                         base_pixel_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -1984,17 +2027,18 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             def burn_numerator_hs(pixel):
 
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (dq * w))
+                '''if pixel == crit_nodata:
                     return crit_nodata
 
                 else:
                     burn_rating = float(pixel) / (dq * w)
-                    return burn_rating
+                    return burn_rating'''
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
             crit_lists['Risk']['h_s_c'][pair].append(crit_C_uri)
 
@@ -2058,18 +2102,20 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                                                   '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
-            
-            if pixel == base_nodata:
+           
+            return numpy.where(pixel == -1, -1, rec_crit_rate_numerator)
+
+            '''if pixel == base_nodata:
                 return base_nodata
 
             else:
-                return rec_crit_rate_numerator
+                return rec_crit_rate_numerator'''
 
         raster_utils.vectorize_datasets([base_ds_uri], 
                             burn_numerator_rec_single, single_crit_rec_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         crit_lists['Recovery'][h].append(single_crit_rec_uri)
         
@@ -2090,18 +2136,20 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                                     crit_name + '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+
+                '''if pixel == crit_nodata:
                     return -1.
 
                 else:
                     burn_rating = float(pixel) / (w*dq)
-                    return burn_rating
+                    return burn_rating'''
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
                                 crit_C_uri, gdal.GDT_Float32, -1., 
                                 base_pixel_size, "union", 
                                 resample_method_list=None, 
-                                dataset_to_align_index=0, aoi_uri=None)
+                                dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
             
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
