@@ -4,14 +4,37 @@ SOURCE=~/tmp_source
 TMP=~/tmp_destination
 DESTINATION=~/ag_converted
 
-CLIMATE=ClimateBinAnalysis
-
 rm -rf $SOURCE
 rm -rf $TMP
 rm -rf $DESTINATION
 
 mkdir $TMP
 mkdir $DESTINATION
+
+echo "Setting up folders for OECD income data."
+ln -s ~/Dropbox/data\ for\ model/ $SOURCE
+
+echo "Copying compressed source."
+cp $SOURCE/OECDIncomeData.nc.gz $TMP
+
+f=$TMP/OECDIncomeData.nc.gz
+
+echo "Expanding compressed source."
+gunzip $f
+
+f=$TMP/OECDIncomeData.nc
+
+echo "Converting to TIFF."
+gdal_translate -of GTiff -co "COMPRESS=LZW" -a_srs EPSG:4326 $f ${f%.*}.tif
+mv ${f%.*}.tif $DESTINATION
+rm $f
+
+rm -rf $SOURCE
+rm -rf $TMP
+
+mkdir $TMP
+
+CLIMATE=ClimateBinAnalysis
 
 echo "Setting up folders for climate."
 ln -s ~/Dropbox/data\ for\ model/ClimateBinAnalysis/ $SOURCE
