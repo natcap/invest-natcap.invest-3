@@ -156,43 +156,49 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     
     ## Build I and J arrays, and save them to disk
     rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
-    #I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    I_uri = raster_utils.temporary_filename()
-    J_uri = raster_utils.temporary_filename()
-    #shutil.copy(in_dem_uri, I_uri)
-    #I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    #i_band = I_raster.GetRasterBand(1)
-    #i_band.WriteArray(I)
-    #i_band = None
-    #I_raster = None
-    #shutil.copy(in_dem_uri, J_uri)
-    #J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    #j_band = J_raster.GetRasterBand(1)
-    #j_band.WriteArray(J)
-    #j_band = None
-    #J_raster = None
+    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
+    # Base path uri
+    base_uri = os.path.split(out_viewshed_uri)[0]
+    I_uri = os.path.join(base_uri, 'I.tif')
+    J_uri = os.path.join(base_uri, 'J.tif')
+    #I_uri = raster_utils.temporary_filename()
+    #J_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
+        -32768., gdal.GDT_Float32, fill_value = -32768.)
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_band = I_raster.GetRasterBand(1)
+    I_band.WriteArray(I)
+    I_band = None
+    I_raster = None
+    raster_utils.new_raster_from_base_uri(in_dem_uri, J_uri, 'GTiff', \
+        -32768., gdal.GDT_Float32, fill_value = -32768.)
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_band = J_raster.GetRasterBand(1)
+    J_band.WriteArray(J)
+    J_band = None
+    J_raster = None
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
-    #input_raster = gdal.Open(in_dem_uri)
-    #input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    #input_raster = None
+    input_raster = gdal.Open(in_dem_uri)
+    input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_raster = None
 
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
-    #raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-    #    255, gdal.GDT_Byte, fill_value = 255)
+    raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
 
     # Call the non-uri version of viewshed.
-    #compute_viewshed(input_array, visibility_uri, in_structure_uri,
-    compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,
+    #compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,
+    compute_viewshed(input_array, visibility_uri, in_structure_uri,
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
     refr_coeff, args)
 
 
-#def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
+#def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
+def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
     refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
@@ -205,16 +211,19 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
-    input_raster = gdal.Open(in_dem_uri)
-    input_band = input_raster.GetRasterBand(1)
-    input_array = input_band.ReadAsArray()
-    input_band = None
-    input_raster = None
+    #input_raster = gdal.Open(in_dem_uri)
+    #input_band = input_raster.GetRasterBand(1)
+    #input_array = input_band.ReadAsArray()
+    #input_band = None
+    #input_raster = None
 
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
             if v == 1:
+                print('vi', vi, 'vj', vj, 'i', i, 'j', j)
+                print('vi - i', vi - i, 'vj - j', vj - j)
+                print('distance', ((vi - i)**2 + (vj - j)**2)**.5)
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
@@ -336,42 +345,42 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
         #tmp_visibility_uri = raster_utils.temporary_filename()
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
-            in_dem_uri, tmp_visibility_uri, 'GTiff', \
+            visibility_uri, tmp_visibility_uri, 'GTiff', \
             255, gdal.GDT_Byte, fill_value=255)
-        #scenic_quality_core.viewshed(input_array, cell_size, \
-        #array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
-        #max_dist, refr_coeff)
+        scenic_quality_core.viewshed(input_array, cell_size, \
+        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
+        max_dist, refr_coeff)
         viewshed_uri_list.append(tmp_visibility_uri)
         
-    #    # Compute the distance
-    #    #tmp_distance_uri = raster_utils.temporary_filename() 
-    #    tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
-    #    raster_utils.new_raster_from_base_uri(visibility_uri, \
-    #    tmp_distance_uri, 'GTiff', \
-    #    255, gdal.GDT_Byte, fill_value = 255)
-    #    distance_fn = compute_distance(i,j, cell_size)
-    #    raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
-    #    distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
-    #    # Apply the valuation function
-    #    #tmp_viewshed_uri = raster_utils.temporary_filename()
-    #    tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+        # Compute the distance
+        #tmp_distance_uri = raster_utils.temporary_filename() 
+        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_distance_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+        distance_fn = compute_distance(i,j, cell_size)
+        raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
+        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        # Apply the valuation function
+        #tmp_viewshed_uri = raster_utils.temporary_filename()
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
-    #    raster_utils.vectorize_datasets(
-    #        [tmp_distance_uri, tmp_visibility_uri],
-    #        valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
-    #        "union")
+        raster_utils.vectorize_datasets(
+            [tmp_distance_uri, tmp_visibility_uri],
+            valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
+            "union")
 
 
-    #    # Multiply the viewshed by its coefficient
-    #    scaled_viewshed_uri = raster_utils.temporary_filename() 
-    #    #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
-    #    apply_coefficient = multiply(coefficient)
-    #    raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
-    #    scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
-    #    viewshed_uri_list.append(scaled_viewshed_uri)
+        # Multiply the viewshed by its coefficient
+        scaled_viewshed_uri = raster_utils.temporary_filename() 
+        #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        apply_coefficient = multiply(coefficient)
+        raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
+        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+        viewshed_uri_list.append(scaled_viewshed_uri)
     
-    #layer = None
-    #shapefile = None
+    layer = None
+    shapefile = None
     # Accumulate result to combined raster
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
@@ -379,28 +388,6 @@ def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
     raster_utils.vectorize_datasets( \
         viewshed_uri_list, lambda *x: np.zeros_like(x[0]), \
         visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op=False)
-        #visibility_uri, gdal.GDT_Byte, 255, cell_size, "union")
-        #visibility_uri, gdal.GDT_Float64, 0., cell_size, "union")
-    sys.exit(-1)
-    ## Numpy method:
-    ##Create the output raster from the first in the input list
-    #raster_utils.new_raster_from_base_uri(viewshed_uri_list[0], \
-    #visibility_uri, 'GTiff', 0., gdal.GDT_Float64)
-    ## Open the first raster and sum up the values using numpy
-    #raster = gdal.Open(viewshed_uri_list[0])
-    #accum_array = raster.GetRasterBand(1).ReadAsArray()
-    #for uri in viewshed_uri_list[1:]:
-    #    nodata = raster_utils.get_nodata_from_uri(uri)
-    #    raster = gdal.Open(uri)
-    #    array = raster.GetRasterBand(1).ReadAsArray()
-    #    accum_array += array
-    # Store the accumulated value in the output uri
-    raster =None
-    raster = gdal.Open(visibility_uri, gdal.GA_Update)
-    band = raster.GetRasterBand(1)
-    LOGGER.debug('%s %s' % (visibility_uri, np.sum(accum_array)))
-    band.WriteArray(accum_array)
-    raster = None
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -525,18 +512,17 @@ def execute(args):
         else:
             return value
 
-    #raster_utils.vectorize_datasets([viewshed_dem_uri],
-    #                                no_zeros,
-    #                                viewshed_dem_reclass_uri,
-    #                                get_data_type_uri(viewshed_dem_uri),
-    #                                nodata_dem,
-    #                                aq_args["cell_size"],
-    #                                "union")
+    raster_utils.vectorize_datasets([viewshed_dem_uri],
+                                    no_zeros,
+                                    viewshed_dem_reclass_uri,
+                                    get_data_type_uri(viewshed_dem_uri),
+                                    nodata_dem,
+                                    aq_args["cell_size"],
+                                    "union")
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    #compute_viewshed_uri(viewshed_dem_reclass_uri,
-    compute_viewshed_uri(viewshed_dem_uri,
+    compute_viewshed_uri(viewshed_dem_reclass_uri,
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,
