@@ -345,7 +345,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
-            255, gdal.GDT_Byte, fill_value=255)
+            255, gdal.GDT_Float64, fill_value=255)
         scenic_quality_core.viewshed(input_array, cell_size, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
@@ -498,6 +498,7 @@ def execute(args):
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
+    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
     raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")

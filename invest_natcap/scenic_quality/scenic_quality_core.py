@@ -1175,7 +1175,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - obs_elev)
+    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
@@ -1195,6 +1195,11 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances_sq, visibility, visibility_map)
     else:
+        print('angles', type(angles[0]))
+        print('add', type(add_events[0]))
+        print('center', type(center_events[0]))
+        print('remove', type(remove_events[0]))
+        print('visibility', type(visibility[0]))
         scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
         center_events, remove_events, I, J, distances_sq, visibility, \
         visibility_map)
