@@ -112,8 +112,6 @@ def reclassify_quantile_dataset_uri( \
         else:
             for new_value,quantile_break in enumerate(quantile_breaks):
                 if value <= quantile_break:
-                    if value:
-                        LOGGER.debug('value %f -> %f', value, new_value)
                     return new_value
         raise ValueError, "Value was not within quantiles."
 
@@ -351,7 +349,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         scenic_quality_core.viewshed(input_array, cell_size, \
         array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
         max_dist, refr_coeff)
-        viewshed_uri_list.append(tmp_visibility_uri)
         
         # Compute the distance
         #tmp_distance_uri = raster_utils.temporary_filename() 
@@ -384,7 +381,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     shapefile = None
     # Accumulate result to combined raster
     def sum_rasters(*x):
-        x = np.array(x)
+        x = [x_i/2 for x_i in x]
         return np.sum(x, axis = 0)
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
