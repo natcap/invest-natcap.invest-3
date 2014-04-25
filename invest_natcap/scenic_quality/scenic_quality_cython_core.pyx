@@ -138,7 +138,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             viewpoint_to_cell_col = col - viewpoint_col
             # Skip if cell is too far
             d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
-            #print('max_dist', max_dist, 'max_dist_sq', max_dist_sq, 'd', d)
             if d > max_dist_sq:
                 continue
             # Skip if cell falls on the viewpoint

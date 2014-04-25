@@ -1189,17 +1189,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= np.sqrt(distances_sq)
 
     if alg_version is 'python':
-        #print('angles', angles)
-        #print('viewshed shape', viewshed_shape)
-        #print('center_events', center_events)
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances_sq, visibility, visibility_map)
     else:
-        print('angles', type(angles[0]))
-        print('add', type(add_events[0]))
-        print('center', type(center_events[0]))
-        print('remove', type(remove_events[0]))
-        print('visibility', type(visibility[0]))
         scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
         center_events, remove_events, I, J, distances_sq, visibility, \
         visibility_map)
