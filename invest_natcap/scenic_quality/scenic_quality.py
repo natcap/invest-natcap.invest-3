@@ -385,7 +385,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
     raster_utils.vectorize_datasets( \
         viewshed_uri_list, sum_rasters, \
-        visibility_uri, gdal.GDT_Byte, 255, cell_size, "union", vectorize_op=False)
+        visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", vectorize_op=False)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
