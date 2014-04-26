@@ -303,7 +303,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
-    #print('Number of viewpoints: ' + str(feature_count))
+    print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
         print("feature " + str(f))
         feature = layer.GetFeature(f)
@@ -336,8 +336,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         y = geometry.GetY()
         j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
-        #print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j), \
-        #'distance radius is ' + str(max_dist) + " pixels.")
 
         array_shape = (rows, cols)
     
@@ -381,7 +379,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     shapefile = None
     # Accumulate result to combined raster
     def sum_rasters(*x):
-        x = [x_i/2 for x_i in x]
         return np.sum(x, axis = 0)
     LOGGER.debug('Summing up everything using vectorize_datasets...')
     LOGGER.debug('visibility_uri' + visibility_uri)
