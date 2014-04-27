@@ -974,33 +974,29 @@ def calculate_slope(
 
         returns nothing"""
 
-    LOGGER = logging.getLogger('calculateSlope')
-    LOGGER.debug(dem_dataset_uri)
-    dem_dataset = gdal.Open(dem_dataset_uri)
+    LOGGER = logging.getLogger('calculate_slope')
+    LOGGER.info('calculate slope on %s' % (dem_dataset_uri))
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
-    LOGGER.debug(out_pixel_size)
-    _, dem_nodata = extract_band_and_nodata(dem_dataset)
+    dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
     dem_small_uri = temporary_filename()
     #cast the dem to a floating point one if it's not already
     dem_float_nodata = float(dem_nodata)
 
     vectorize_datasets(
-        [dem_dataset_uri], float, dem_small_uri,
+        [dem_dataset_uri], lambda x: x.astype(numpy.float32), dem_small_uri,
         gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool)
+        dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool,
+        vectorize_op=False)
 
     LOGGER.debug("calculate slope")
 
     slope_nodata = -9999.0
-    dem_small_dataset = gdal.Open(dem_small_uri)
-    new_raster_from_base(
-        dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
+    new_raster_from_base_uri(
+        dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
-
     calculate_raster_stats_uri(slope_uri)
-
-    dem_small_dataset = None
+    
     os.remove(dem_small_uri)
 
 
