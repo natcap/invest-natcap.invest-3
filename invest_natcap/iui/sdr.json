@@ -96,9 +96,9 @@
 		    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
-				  "fieldsExist": ["lucode", "sedret_eff", "usle_c", "usle_p"]
+				  "fieldsExist": ["lucode", "usle_c", "usle_p"]
 				  },
-		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment user's guide for more information about these fields."
+		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST sediment user's guide for more information about these fields."
 		},
 		{        
 		    "id" : "threshold_flow_accumulation",
@@ -121,32 +121,6 @@
 				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
 				  },
 		    "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the user's guide for the meaning of these fields."
-		}
-	    ]
-	},
-	{
-	    "id" : "valuation_container",
-	    "args_id" : "valuation_container",
-	    "type" : "container",
-	    "label" : "Valuation",
-	    "collapsible" : true,
-	    "defaultValue" : false,
-	    "elements" : [
-		{
-		    "id" : "valuation_list",
-		    "type" : "list",
-		    "elements" : [
-			{        
-			    "id" : "sediment_valuation_table_uri",
-			    "args_id" : "sediment_valuation_table_uri",
-			    "type": "file",
-			    "label": "Sediment valuation table",
-			    "defaultValue": "../Sedimentation/input/sediment_valuation_table.csv",
-			    "required": true,
-			    "validateAs": {"type": "CSV"},
-			    "helpText": "A table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the user's guide for the meaning of these fields."
-			}
-		    ]
 		}
 	    ]
 	}
