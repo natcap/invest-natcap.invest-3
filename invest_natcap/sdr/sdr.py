@@ -38,16 +38,11 @@ def execute(args):
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
-        args['reservoir_locations_uri'] - a uri to an input shape file with
-            points indicating reservoir locations with IDs. (optional)
-        args['reservoir_properties_uri'] - a uri to an input CSV table
-            describing properties of input reservoirs provided in the
-            reservoirs_uri shapefile (optional)
         args['biophysical_table_uri'] - a uri to an input CSV file with
             biophysical information about each of the land use classes.
         args['threshold_flow_accumulation'] - an integer describing the number
             of upstream cells that must flow int a cell before it's considered
-            part of a stream.  required if 'v_stream_uri' is not provided.
+            part of a stream.  required if 'stream_uri' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
         args['sediment_threshold_table_uri'] - A uri to a csv that contains
@@ -80,9 +75,15 @@ def execute(args):
             try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
-                    raise Exception('Value should be within range 0..1 offending value table %s, lulc_code %s, value %s' % (table_key, str(lulc_code), str(float_value)))
+                    raise Exception(
+                        'Value should be within range 0..1 offending value '
+                        'table %s, lulc_code %s, value %s' % (
+                            table_key, str(lulc_code), str(float_value)))
             except ValueError as e:
-                raise Exception('Value is not a floating point value within range 0..1 offending value table %s, lulc_code %s, value %s' % (table_key, str(lulc_code), table[table_key]))
+                raise Exception(
+                    'Value is not a floating point value within range 0..1 '
+                    'offending value table %s, lulc_code %s, value %s' % (
+                        table_key, str(lulc_code), table[table_key]))
         
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -94,18 +95,29 @@ def execute(args):
             os.makedirs(directory)
 
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
-
-    #Clip the dem and cast to a float
-    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
-    raster_utils.vectorize_datasets(
-        [args['dem_uri']], lambda x: x.astype(numpy.float64), clipped_dem_uri,
-        gdal.GDT_Float64, dem_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
-        vectorize_op=False)
-
+    
+    #align the datasets
+    aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
+    aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
+    aligned_erosivity_uri = os.path.join(
+        intermediate_dir, 'aligned_erosivity.tif')
+    aligned_erodiability_uri = os.path.join(
+        intermediate_dir, 'aligned_erodibility.tif')
+    
+    input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
+        args['erodibility_uri']]
+    dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
+        aligned_erosivity_uri, aligned_erodiability_uri]
+    raster_utils.align_dataset_list(
+        input_list, dataset_out_uri_list, 
+        ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
+        0, aoi_uri=args['watersheds_uri'])
+    
     #resolve plateaus 
-    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)    
-    routing_cython_core.resolve_flat_regions_for_drainage(clipped_dem_uri, dem_offset_uri)
+    dem_offset_uri = os.path.join(
+        intermediate_dir, 'dem_offset%s.tif' % file_suffix)    
+    routing_cython_core.resolve_flat_regions_for_drainage(
+        aligned_dem_uri, dem_offset_uri)
     
     #Calculate slope
     LOGGER.info("Calculating slope")
@@ -114,18 +126,21 @@ def execute(args):
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+    flow_accumulation_uri = os.path.join(
+        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+    flow_direction_uri = os.path.join(
+        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
 
     routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    routing_utils.flow_accumulation(
+        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
     
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(output_dir, 'v_stream%s.tif' % file_suffix)
+    stream_uri = os.path.join(output_dir, 'stream%s.tif' % file_suffix)
 
     routing_utils.stream_threshold(flow_accumulation_uri,
-        float(args['threshold_flow_accumulation']), v_stream_uri)
+        float(args['threshold_flow_accumulation']), stream_uri)
 
     #Calculate LS term
     LOGGER.info('calculate ls term')
@@ -169,10 +184,10 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float64,
         -1.0, exception_flag='values_required')
 
-    def zero_out_retention_fn(retention, v_stream):
-        return numpy.where(v_stream == 1, 0.0, retention)
+    def zero_out_retention_fn(retention, stream):
+        return numpy.where(stream == 1, 0.0, retention)
     raster_utils.vectorize_datasets(
-        [no_stream_retention_rate_uri, v_stream_uri], zero_out_retention_fn,
+        [no_stream_retention_rate_uri, stream_uri], zero_out_retention_fn,
         retention_rate_uri, gdal.GDT_Float64, nodata_retention, out_pixel_size,
         "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'], vectorize_op=False)
@@ -187,7 +202,7 @@ def execute(args):
     LOGGER.info('calculating rkls')
     rkls_uri = os.path.join(output_dir, 'rkls%s.tif' % file_suffix)
     calculate_rkls(
-        ls_uri, args['erosivity_uri'], args['erodibility_uri'], v_stream_uri,
+        ls_uri, args['erosivity_uri'], args['erodibility_uri'], stream_uri,
         rkls_uri)
 
     LOGGER.info('calculating USLE')
@@ -195,11 +210,11 @@ def execute(args):
     nodata_rkls = raster_utils.get_nodata_from_uri(rkls_uri)
     nodata_cp = raster_utils.get_nodata_from_uri(cp_uri)
     nodata_usle = -1.0
-    def mult_rkls_cp(rkls, cp_factor, v_stream):
+    def mult_rkls_cp(rkls, cp_factor, stream):
         return numpy.where((rkls == nodata_rkls) | (cp_factor == nodata_cp),
-            nodata_usle, rkls * cp_factor * (1 - v_stream))
+            nodata_usle, rkls * cp_factor * (1 - stream))
     raster_utils.vectorize_datasets(
-        [rkls_uri, cp_uri, v_stream_uri], mult_rkls_cp, usle_uri,
+        [rkls_uri, cp_uri, stream_uri], mult_rkls_cp, usle_uri,
         gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
@@ -225,13 +240,13 @@ def execute(args):
     routing_utils.route_flux(
         flow_direction_uri, dem_offset_uri, usle_uri, retention_rate_uri,
         upstream_on_pixel_retention_uri, sed_flux_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'], stream_uri=v_stream_uri)
+        aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
 
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     percent_to_stream_uri = os.path.join(
         intermediate_dir, 'percent_to_stream%s.tif' % file_suffix)
     routing_utils.pixel_amount_exported(
-        flow_direction_uri, dem_offset_uri, v_stream_uri, retention_rate_uri, 
+        flow_direction_uri, dem_offset_uri, stream_uri, retention_rate_uri, 
         usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'],
         percent_to_stream_uri=percent_to_stream_uri)
 
@@ -452,25 +467,25 @@ def calculate_rkls(
     cell_size = raster_utils.get_cell_size_from_uri(ls_factor_uri)
     cell_area_ha = cell_size ** 2 / 10000.0
 
-    def rkls_function(ls_factor, erosivity, erodibility, v_stream):
+    def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculates the USLE equation
         
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
         erodibility - related to the potential for soil to erode
-        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+        stream - 1 or 0 depending if there is a stream there.  If so, no
             potential soil loss due to USLE
         
         returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
             defined, nodata if some are not defined, 0 if in a stream
-            (v_stream)"""
+            (stream)"""
 
         rkls = numpy.where(
-            v_stream == 1, 0.0,
+            stream == 1, 0.0,
             ls_factor * erosivity * erodibility * cell_area_ha)
         return numpy.where(
             (ls_factor == ls_factor_nodata) | (erosivity == erosivity_nodata) |
-            (erodibility == erodibility_nodata) | (v_stream == stream_nodata),
+            (erodibility == erodibility_nodata) | (stream == stream_nodata),
             usle_nodata, rkls)
         
     dataset_uri_list = [
