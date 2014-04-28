@@ -101,13 +101,13 @@ def execute(args):
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
     aligned_erosivity_uri = os.path.join(
         intermediate_dir, 'aligned_erosivity.tif')
-    aligned_erodiability_uri = os.path.join(
+    aligned_erodibility_uri = os.path.join(
         intermediate_dir, 'aligned_erodibility.tif')
     
     input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
         args['erodibility_uri']]
     dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
-        aligned_erosivity_uri, aligned_erodiability_uri]
+        aligned_erosivity_uri, aligned_erodibility_uri]
     raster_utils.align_dataset_list(
         input_list, dataset_out_uri_list, 
         ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
@@ -164,88 +164,39 @@ def execute(args):
         aligned_lulc_uri, lulc_to_c, w_factor_uri, gdal.GDT_Float64,
         w_nodata, exception_flag='values_required')
     
-
-#####################
-
-    
-    LOGGER.info('building retention fraction raster from lulc')
-    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
-    lulc_to_retention_dict = \
-        dict([(lulc_code, float(table['sedret_eff'])) \
-                  for (lulc_code, table) in biophysical_table.items()])
-    
-    no_stream_retention_rate_uri = raster_utils.temporary_filename()
-    nodata_retention = -1.0
-    raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float64,
-        -1.0, exception_flag='values_required')
-
-    def zero_out_retention_fn(retention, stream):
-        return numpy.where(stream == 1, 0.0, retention)
-    raster_utils.vectorize_datasets(
-        [no_stream_retention_rate_uri, stream_uri], zero_out_retention_fn,
-        retention_rate_uri, gdal.GDT_Float64, nodata_retention, out_pixel_size,
-        "intersection", dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'], vectorize_op=False)
-
-    LOGGER.info('building cp raster from lulc')
-    lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
-    cp_uri = os.path.join(intermediate_dir, 'cp%s.tif' % file_suffix)
-    raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float64,
-        -1.0, exception_flag='values_required')
+    cp_factor_uri = os.path.join(
+        intermediate_dir, 'cp_factor%s.tif' % file_suffix)
+    lulc_to_cp = dict(
+        [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for 
+        (lulc_code, table) in biophysical_table.items()])
+    cp_nodata = -1.0
+    raster_utils.reclassify_dataset_uri(
+        aligned_lulc_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
+        cp_nodata, exception_flag='values_required')
 
     LOGGER.info('calculating rkls')
     rkls_uri = os.path.join(output_dir, 'rkls%s.tif' % file_suffix)
     calculate_rkls(
-        ls_uri, args['erosivity_uri'], args['erodibility_uri'], stream_uri,
-        rkls_uri)
+        aligned_lulc_uri, aligned_erosivity_uri, aligned_erodibility_uri, 
+        stream_uri, rkls_uri)
 
     LOGGER.info('calculating USLE')
     usle_uri = os.path.join(output_dir, 'usle%s.tif' % file_suffix)
     nodata_rkls = raster_utils.get_nodata_from_uri(rkls_uri)
-    nodata_cp = raster_utils.get_nodata_from_uri(cp_uri)
+    nodata_cp = raster_utils.get_nodata_from_uri(cp_factor_uri)
     nodata_usle = -1.0
     def mult_rkls_cp(rkls, cp_factor, stream):
         return numpy.where((rkls == nodata_rkls) | (cp_factor == nodata_cp),
             nodata_usle, rkls * cp_factor * (1 - stream))
     raster_utils.vectorize_datasets(
-        [rkls_uri, cp_uri, stream_uri], mult_rkls_cp, usle_uri,
+        [rkls_uri, cp_factor_uri, stream_uri], mult_rkls_cp, usle_uri,
         gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 
-    LOGGER.info('calculating on pixel retention RKLS-USLE')
-    on_pixel_retention_uri = os.path.join(
-        output_dir, 'on_pixel_retention%s.tif' % file_suffix)
-    on_pixel_retention_nodata = -1.0
-    def sub_rkls_usle(rkls, usle):
-        return numpy.where((rkls == nodata_rkls) | (usle == nodata_usle),
-            nodata_usle, rkls - usle)
-    raster_utils.vectorize_datasets(
-        [rkls_uri, usle_uri], sub_rkls_usle, on_pixel_retention_uri,
-        gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
-        vectorize_op=False)
 
-    LOGGER.info('route the sediment flux to determine upstream retention')
-    #This yields sediment flux, and sediment loss which will be used for valuation
-    upstream_on_pixel_retention_uri = os.path.join(
-        output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
-    sed_flux_uri = raster_utils.temporary_filename()
-    routing_utils.route_flux(
-        flow_direction_uri, dem_offset_uri, usle_uri, retention_rate_uri,
-        upstream_on_pixel_retention_uri, sed_flux_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
-
-    sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
-    percent_to_stream_uri = os.path.join(
-        intermediate_dir, 'percent_to_stream%s.tif' % file_suffix)
-    routing_utils.pixel_amount_exported(
-        flow_direction_uri, dem_offset_uri, stream_uri, retention_rate_uri, 
-        usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'],
-        percent_to_stream_uri=percent_to_stream_uri)
-
+    ##########################
+    
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
