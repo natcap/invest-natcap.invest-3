@@ -159,40 +159,14 @@ def execute(args):
         (lulc_code, table) in biophysical_table.items()])
     lulc_nodata = raster_utils.get_nodata_from_uri(aligned_lulc_uri)
     w_nodata = -1.0
-    def map_lulc_to_c(lulc):
-        all_mapped = numpy.empty(lulc.shape, dtype=numpy.bool)
-        c_array = numpy.empty(lulc.shape, dtype=numpy.float)
-        for lulc_key, c_val in lulc_to_c.iteritems():
-            lulc_mask = lulc == lulc_key
-            all_mapped = all_mapped | lulc_mask
-            c_array[lulc_mask] = c_val
-        nodata_mask = lulc == lulc_nodata
-        all_mapped = all_mapped | nodata_mask
-        c_array[nodata_mask] = w_nodata
-        if not all_mapped.all():
-            raise Exception(
-                'There was not a usle_c value for at least the following lulc '
-                'codes %s' % (str(numpy.unique(lulc[~all_mapped]))))
-        return c_array
-        
-    raster_utils.vectorize_datasets(
-        [aligned_lulc_uri], map_lulc_to_c,
-        w_factor_uri, gdal.GDT_Float64, w_nodata, out_pixel_size,
-        "intersection", dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'], vectorize_op=False)
-    #Clip the LULC
     
-    export_rate_uri = os.path.join(intermediate_dir, 'export_rate%s.tif' % file_suffix)
-    retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate%s.tif' % file_suffix)
+    raster_utils.reclassify_dataset_uri(
+        aligned_lulc_uri, lulc_to_c, w_factor_uri, gdal.GDT_Float64,
+        w_nodata, exception_flag='values_required')
+    
 
-    LOGGER.info('building export fraction raster from lulc')
-    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
-    lulc_to_export_dict = \
-        dict([(lulc_code, 1.0 - float(table['sedret_eff'])) \
-                  for (lulc_code, table) in biophysical_table.items()])
-    raster_utils.reclassify_dataset(
-        aligned_lulc_uri, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float64,
-        -1.0, exception_flag='values_required')
+#####################
+
     
     LOGGER.info('building retention fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
