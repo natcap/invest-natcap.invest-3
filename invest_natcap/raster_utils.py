@@ -1672,13 +1672,53 @@ def gaussian_filter_dataset(
 def reclassify_dataset_uri(
     dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
     exception_flag='none'):
-    """A callthrough for the reclassify_dataset function that is uri only"""
+    """A function to reclassify values in dataset
+        to any output type.  If there are values in the dataset that are not in
+        value map, they will be mapped to out_nodata.
 
-    dataset = gdal.Open(dataset_uri)
-    reclassify_dataset(
-        dataset, value_map, raster_out_uri, out_datatype, out_nodata,
-        exception_flag=exception_flag)
+        dataset_uri - a uri to a gdal dataset
+        value_map - a dictionary of values of {source_value: dest_value, ...}
+            where source_value's type is a postive integer type and dest_value
+            is of type out_datatype.
+        raster_out_uri - the uri for the output raster
+        out_datatype - the type for the output dataset
+        out_nodata - the nodata value for the output raster.  Must be the same
+            type as out_datatype
+        exception_flag - either 'none' or 'values_required'.
+            If 'values_required' raise an exception if there is a value in the
+            raster that is not found in value_map
 
+       returns the new reclassified dataset GDAL raster, or raises an Exception
+           if exception_flag == 'values_required' and the value from
+           'key_raster' is not a key in 'attr_dict'"""
+
+    nodata = get_nodata_from_uri(dataset_uri)
+    
+    def map_dataset_to_value(original_values):
+        all_mapped = numpy.empty(original_values.shape, dtype=numpy.bool)
+        out_array = numpy.empty(original_values.shape, dtype=numpy.float)
+        for key, value in value_map.iteritems():
+            mask = original_values == key
+            all_mapped = all_mapped | mask
+            out_array[mask] = value
+        nodata_mask = original_values == nodata
+        all_mapped = all_mapped | nodata_mask
+        out_array[nodata_mask] = out_nodata
+        if not all_mapped.all() and exception_flag == 'values_required':
+            raise Exception(
+                'There was not a value for at least the following codes '
+                'codes %s for this file %s' % (
+                    str(numpy.unique(original_values[~all_mapped])),
+                    dataset_uri))
+        return out_array
+        
+    out_pixel_size = get_cell_size_from_uri(dataset_uri)
+    vectorize_datasets(
+        [dataset_uri], map_dataset_to_value,
+        raster_out_uri, out_datatype, out_nodata, out_pixel_size,
+        "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+    
 
 def reclassify_dataset(
     dataset, value_map, raster_out_uri, out_datatype, out_nodata,
