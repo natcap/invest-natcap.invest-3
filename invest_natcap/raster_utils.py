@@ -2665,8 +2665,8 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     
     itemfreq = collections.defaultdict(int)
     for row_index in range(band.YSize):
-        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-        for val in numpy.unique(array):
+        cur_array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
+        for val in numpy.unique(cur_array):
             if ignore_nodata and val == nodata:
                 continue
             itemfreq[val] += numpy.count_nonzero(cur_array==val)
