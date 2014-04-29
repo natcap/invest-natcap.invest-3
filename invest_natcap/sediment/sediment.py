@@ -70,7 +70,7 @@ def execute(args):
     sediment_threshold_table = raster_utils.get_lookup_from_csv(
         args['sediment_threshold_table_uri'], 'ws_id')
 
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['dem_uri'])
 
     csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri'], 'rU'))
     biophysical_table = {}
@@ -204,7 +204,7 @@ def execute(args):
     raster_utils.vectorize_datasets(
         [rkls_uri, cp_uri, v_stream_uri], mult_rkls_cp, usle_uri,
         gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
+        dataset_to_align_index=2, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 
     LOGGER.info('calculating on pixel retention RKLS-USLE')
