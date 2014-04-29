@@ -518,8 +518,8 @@ class Executor(threading.Thread):
             if '_process_pool' in args:
                 raise Exception("There's already a process_pool, aborting!")
             args['_process_pool'] = None
-#            process_pool = raster_utils.PoolNoDaemon()
-#            args['_process_pool'] = process_pool
+            process_pool = raster_utils.PoolNoDaemon()
+            args['_process_pool'] = process_pool
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special

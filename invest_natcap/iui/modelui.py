@@ -6,6 +6,7 @@ import time
 import json
 from optparse import OptionParser
 import logging
+import multiprocessing
 
 from PyQt4 import QtGui, QtCore
 
@@ -113,6 +114,7 @@ def getFlatDefaultArgumentsDictionary(args):
 
 
 def main(uri, use_gui=True):
+    multiprocessing.freeze_support()
     # get the existing QApplication instance, or creating a new one if
     # necessary.
     app = QtGui.QApplication.instance()
