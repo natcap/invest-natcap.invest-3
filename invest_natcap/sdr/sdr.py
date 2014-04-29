@@ -194,6 +194,55 @@ def execute(args):
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 
+    #calculate W_bar
+    zero_absorption_source_uri = raster_utils.temporary_filename()
+    loss_uri = raster_utils.temporary_filename()
+    #need this for low level route_flux function
+    raster_utils.make_constant_raster_from_base_uri(
+        aligned_dem_uri, 0.0, zero_absorption_source_uri)
+
+    
+    LOGGER.info("calculating w_bar")
+    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
+    routing_utils.route_flux(
+        flow_direction_uri, dem_offset_uri, w_factor_uri,
+        zero_absorption_source_uri, loss_uri, w_bar_uri, 'flux_only',
+        aoi_uri=args['watersheds_uri'])
+    w_bar_nodata = raster_utils.get_nodata_from_uri(w_bar_uri)
+    
+    LOGGER.info("calculating s_bar")
+    s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
+    routing_utils.route_flux(
+        flow_direction_uri, dem_offset_uri, slope_uri,
+        zero_absorption_source_uri, loss_uri, s_bar_uri, 'flux_only',
+        aoi_uri=args['watersheds_uri'])
+    s_bar_nodata = raster_utils.get_nodata_from_uri(s_bar_uri)
+        
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
+        flow_accumulation_uri)
+        
+    LOGGER.info('calculating d_up')
+    d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
+    cell_area = out_pixel_size ** 2
+    d_up_nodata = -1.0
+    def d_up(w_bar, s_bar, flow_accumulation):
+        """Calculate the d_up index"""
+        
+        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        return numpy.where(
+            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) & 
+            (flow_accumulation != flow_accumulation_nodata), d_up_array,
+            d_up_nodata)
+    
+    raster_utils.vectorize_datasets(
+        [w_bar_uri, s_bar_uri, flow_accumulation_uri], d_up, d_up_uri, 
+        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+
+    
+    #Calculate Dup
+    
 
     ##########################
     
