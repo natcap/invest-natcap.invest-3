@@ -1002,7 +1002,7 @@ def calculate_slope(
 
 def clip_dataset_uri(
         source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
-        assert_projections, process_pool=None):
+        assert_projections=True, process_pool=None):
     """This function will clip source_dataset to the bounding box of the
         polygons in aoi_datasource and mask out the values in source_dataset
         outside of the AOI with the nodata values in source_dataset.
@@ -1033,19 +1033,16 @@ def clip_dataset_uri(
         nodata = calculate_value_not_in_dataset(source_dataset)
 
     LOGGER.info("clip_dataset nodata value is %s" % nodata)
-
-    def op(x):
-        return x
-
+    gdal.Dataset.__swig_destroy__(source_dataset)
     source_dataset = None
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
     vectorize_datasets(
-        [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
+        [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
         assert_datasets_projected=assert_projections,
-        process_pool=process_pool)
+        process_pool=process_pool, vectorize_op=False)
 
 
 def extract_band_and_nodata(dataset, get_array=False):
