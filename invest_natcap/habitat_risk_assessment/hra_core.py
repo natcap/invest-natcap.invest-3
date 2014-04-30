@@ -700,14 +700,37 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
 
     #Now iterate through every cell of the aOI, and concat everything that's
     #undr it and store that.
-    layer_overlap_info = {}
+
+    #this defaults a dictionary so we can initalize layer_overlap_info[aoi_pix][layer_name] = [0,0.]
+    layer_overlap_info = collections.defaultdict(
+        lambda: collections.defaultdict(lambda: list([0,0.])))
     for row_index in range(n_rows):
 
-        aoi_band.ReadAsArray(yoff = row_index, win_xsize = n_cols, win_ysize=1, buf_obj=aoi_row)
+        aoi_band.ReadAsArray(yoff=row_index, win_xsize=n_cols, win_ysize=1, buf_obj=aoi_row)
 
         for idx, layer_name in enumerate(rast_labels):
-            rast_bands[idx+1].ReadAsArray(yoff = row_index, win_xsize = n_cols, 
-                                win_ysize=1, buf_obj = rows_dict[layer_name])
+            rast_bands[idx+1].ReadAsArray(yoff=row_index, win_xsize=n_cols, 
+                                win_ysize=1, buf_obj=rows_dict[layer_name])
+
+        for aoi_pix_value in numpy.unique(aoi_row):
+            if aoi_pix_value == nodata:
+                continue
+
+            aoi_mask = (aoi_row == aoi_pix_value)
+
+            for layer_name in rast_labels:
+                valid_rows_dict_mask = (rows_dict[layer_name] != nodata) & aoi_mask
+                for ignore_value in ignore_value_list:
+                    valid_rows_dict_mask = valid_rows_dict_mask & (rows_dict[layer_name] != ignore_value)
+                
+                layer_sum = numpy.sum(rows_dict[layer_name][valid_rows_dict_mask])
+                layer_count = numpy.count_nonzero(valid_rows_dict_mask)
+
+                layer_overlap_info[aoi_pix_value][layer_name][0] += layer_count
+                layer_overlap_info[aoi_pix_value][layer_name][1] += layer_sum
+    return layer_overlap_info
+
+'''
 
         for col_index in range(n_cols):
             
@@ -726,8 +749,7 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
                     if layer_pix != nodata and layer_pix not in ignore_value_list:
                         layer_overlap_info[aoi_pix][layer_name][0] += 1
                         layer_overlap_info[aoi_pix][layer_name][1] += layer_pix
-   
-    return layer_overlap_info
+'''   
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same h-s calculation as used for the individual E/C 
