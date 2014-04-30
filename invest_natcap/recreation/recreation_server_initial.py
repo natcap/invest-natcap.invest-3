@@ -339,8 +339,17 @@ def execute(args, config):
                                                             aoi_name)
         if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
             msg = "The AOI contains invalid geometry."
-            LOGGER.error(msg)
-            raise ValueError, msg
+            LOGGER.warning(msg)
+
+            msg = "Attempting to fix AOI geometry."
+            LOGGER.warning(msg)
+
+            recreation_server_core.make_valide_execute(cur, aoi_name, geometry_column_name)
+
+            if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
+                msg = "The AOI contains invalid geometry that could not be automatically fixed."
+                LOGGER.error(msg)
+                raise ValueError, msg
         
         LOGGER.info("Imported AOI.")
         LOGGER.debug("Imported AOI with SRID %i", aoi_srid)
