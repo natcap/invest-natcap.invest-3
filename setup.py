@@ -108,6 +108,7 @@ packages = ['invest_natcap',
             'invest_natcap.ntfp',
             'invest_natcap.blue_carbon',
             'invest_natcap.scenario_generator',
+            'invest_natcap.sdr',
             ]
 
 def get_iui_resource_data_files(lib_path):
@@ -171,6 +172,7 @@ if platform.system() == 'Windows':
          'invest_scenario_generator.py',
          'invest_scenic_quality.py',
          'routedem.py',
+         'invest_sdr.py',
          ]
 
     from py2exe.build_exe import py2exe as py2exeCommand

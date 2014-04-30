@@ -974,39 +974,35 @@ def calculate_slope(
 
         returns nothing"""
 
-    LOGGER = logging.getLogger('calculateSlope')
-    LOGGER.debug(dem_dataset_uri)
-    dem_dataset = gdal.Open(dem_dataset_uri)
+    LOGGER = logging.getLogger('calculate_slope')
+    LOGGER.info('calculate slope on %s' % (dem_dataset_uri))
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
-    LOGGER.debug(out_pixel_size)
-    _, dem_nodata = extract_band_and_nodata(dem_dataset)
+    dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
     dem_small_uri = temporary_filename()
     #cast the dem to a floating point one if it's not already
     dem_float_nodata = float(dem_nodata)
 
     vectorize_datasets(
-        [dem_dataset_uri], float, dem_small_uri,
+        [dem_dataset_uri], lambda x: x.astype(numpy.float32), dem_small_uri,
         gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool)
+        dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool,
+        vectorize_op=False)
 
     LOGGER.debug("calculate slope")
 
     slope_nodata = -9999.0
-    dem_small_dataset = gdal.Open(dem_small_uri)
-    new_raster_from_base(
-        dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
+    new_raster_from_base_uri(
+        dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
-
     calculate_raster_stats_uri(slope_uri)
-
-    dem_small_dataset = None
+    
     os.remove(dem_small_uri)
 
 
 def clip_dataset_uri(
         source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
-        assert_projections, process_pool=None):
+        assert_projections=True, process_pool=None):
     """This function will clip source_dataset to the bounding box of the
         polygons in aoi_datasource and mask out the values in source_dataset
         outside of the AOI with the nodata values in source_dataset.
@@ -1037,19 +1033,16 @@ def clip_dataset_uri(
         nodata = calculate_value_not_in_dataset(source_dataset)
 
     LOGGER.info("clip_dataset nodata value is %s" % nodata)
-
-    def op(x):
-        return x
-
+    gdal.Dataset.__swig_destroy__(source_dataset)
     source_dataset = None
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
     vectorize_datasets(
-        [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
+        [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
         assert_datasets_projected=assert_projections,
-        process_pool=process_pool)
+        process_pool=process_pool, vectorize_op=False)
 
 
 def extract_band_and_nodata(dataset, get_array=False):
@@ -1676,13 +1669,53 @@ def gaussian_filter_dataset(
 def reclassify_dataset_uri(
     dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
     exception_flag='none'):
-    """A callthrough for the reclassify_dataset function that is uri only"""
+    """A function to reclassify values in dataset
+        to any output type.  If there are values in the dataset that are not in
+        value map, they will be mapped to out_nodata.
 
-    dataset = gdal.Open(dataset_uri)
-    reclassify_dataset(
-        dataset, value_map, raster_out_uri, out_datatype, out_nodata,
-        exception_flag=exception_flag)
+        dataset_uri - a uri to a gdal dataset
+        value_map - a dictionary of values of {source_value: dest_value, ...}
+            where source_value's type is a postive integer type and dest_value
+            is of type out_datatype.
+        raster_out_uri - the uri for the output raster
+        out_datatype - the type for the output dataset
+        out_nodata - the nodata value for the output raster.  Must be the same
+            type as out_datatype
+        exception_flag - either 'none' or 'values_required'.
+            If 'values_required' raise an exception if there is a value in the
+            raster that is not found in value_map
 
+       returns the new reclassified dataset GDAL raster, or raises an Exception
+           if exception_flag == 'values_required' and the value from
+           'key_raster' is not a key in 'attr_dict'"""
+
+    nodata = get_nodata_from_uri(dataset_uri)
+    
+    def map_dataset_to_value(original_values):
+        all_mapped = numpy.empty(original_values.shape, dtype=numpy.bool)
+        out_array = numpy.empty(original_values.shape, dtype=numpy.float)
+        for key, value in value_map.iteritems():
+            mask = original_values == key
+            all_mapped = all_mapped | mask
+            out_array[mask] = value
+        nodata_mask = original_values == nodata
+        all_mapped = all_mapped | nodata_mask
+        out_array[nodata_mask] = out_nodata
+        if not all_mapped.all() and exception_flag == 'values_required':
+            raise Exception(
+                'There was not a value for at least the following codes '
+                'codes %s for this file %s' % (
+                    str(numpy.unique(original_values[~all_mapped])),
+                    dataset_uri))
+        return out_array
+        
+    out_pixel_size = get_cell_size_from_uri(dataset_uri)
+    vectorize_datasets(
+        [dataset_uri], map_dataset_to_value,
+        raster_out_uri, out_datatype, out_nodata, out_pixel_size,
+        "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+    
 
 def reclassify_dataset(
     dataset, value_map, raster_out_uri, out_datatype, out_nodata,
