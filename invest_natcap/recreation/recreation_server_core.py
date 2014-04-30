@@ -1940,6 +1940,6 @@ def make_valid_execute(cur, table_name, geometry_column_name):
 def make_valid_sql(table_name, geometry_column_name):
     sql = "UPDATE %s SET %s=ST_MakeValid(%s)"
 
-    sql = sql % (table_name, geo_column_name, geometry_column_name)
+    sql = sql % (table_name, geometry_column_name, geometry_column_name)
 
     return sql
