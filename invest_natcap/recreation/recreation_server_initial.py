@@ -400,9 +400,22 @@ def execute(args, config):
         for table_name in user_simple_predictors + user_compound_predictors:
             if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
                 LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
-                halt = True
+
+                msg = "Attempting to fix the geometry of predictor %s."
+                LOGGER.warn(msg, table_name)
+
+                recreation_server_core.make_valid_execute(cur, table_name, geometry_column_name)
+                if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+                    msg = "Predictor %s contains geometry that could ot be automatically fixed."
+                    LOGGER.error(msg, table_name)
+                    halt = True
+
+                else:
+                    msg = "Predictor %s geometry now valid."
+                    LOGGER.info(msg, table_name)
+                
         if halt:
-            msg = "One or more predictors contain invalid geometry."
+            msg = "One or more predictors contain invalid geometry that could not be automatically fixed."
             LOGGER.error(msg)
             raise ValueError, msg
 
