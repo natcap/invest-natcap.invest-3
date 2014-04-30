@@ -204,65 +204,55 @@ def execute(args):
     flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
         flow_accumulation_uri)
     
-    LOGGER.info("calculating w_bar")
+    
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
-    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
-    routing_utils.route_flux(
-        flow_direction_uri, dem_offset_uri, w_factor_uri,
-        zero_absorption_source_uri, loss_uri, w_accumulation_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'])
-    w_bar_nodata = raster_utils.get_nodata_from_uri(w_accumulation_uri)
-    
-    def w_bar_op(w_accumulation, flow_accumulation):
-        return numpy.where(
-            (w_accumulation != w_bar_nodata) & (flow_accumulation != flow_accumulation_nodata), 
-            w_accumulation / flow_accumulation, w_bar_nodata)
-    raster_utils.vectorize_datasets(
-        [w_accumulation_uri, flow_accumulation_uri], w_bar_op, w_bar_uri, 
-        gdal.GDT_Float32, w_bar_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-    
-    LOGGER.info("calculating s_bar")
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+    for factor_uri, accumulation_uri in [
+        (w_factor_uri, w_accumulation_uri), (slope_uri, s_accumulation_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        routing_utils.route_flux(
+            flow_direction_uri, dem_offset_uri, factor_uri,
+            zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
+            aoi_uri=args['watersheds_uri'])
+            
+    
+    LOGGER.info("calculating w_bar")
+    
+    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
+    w_bar_nodata = raster_utils.get_nodata_from_uri(w_accumulation_uri)
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
-    routing_utils.route_flux(
-        flow_direction_uri, dem_offset_uri, slope_uri,
-        zero_absorption_source_uri, loss_uri, s_accumulation_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'])
     s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
+    for bar_nodata, accumulation_uri, bar_uri in [
+        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        def bar_op(base_accumulation, flow_accumulation):
+            return numpy.where(
+                (base_accumulation != bar_nodata) & (flow_accumulation != flow_accumulation_nodata), 
+                base_accumulation / flow_accumulation, bar_nodata)
+        raster_utils.vectorize_datasets(
+            [accumulation_uri, flow_accumulation_uri], bar_op, bar_uri, 
+            gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
+            dataset_to_align_index=0, vectorize_op=False)
     
-    def s_bar_op(s_accumulation, flow_accumulation):
-        return numpy.where(
-            (s_accumulation != s_bar_nodata) & (flow_accumulation != flow_accumulation_nodata), s_accumulation / flow_accumulation, s_bar_nodata)
-    raster_utils.vectorize_datasets(
-        [s_accumulation_uri, flow_accumulation_uri], s_bar_op, s_bar_uri, 
-        gdal.GDT_Float32, s_bar_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-        
-        
-    
-        
     LOGGER.info('calculating d_up')
     d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
     cell_area = out_pixel_size ** 2
     d_up_nodata = -1.0
     def d_up(w_bar, s_bar, flow_accumulation):
-        """Calculate the d_up index"""
-        
+        """Calculate the d_up index
+            w_bar * s_bar * sqrt(upstream area) """
         d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
         return numpy.where(
             (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) & 
             (flow_accumulation != flow_accumulation_nodata), d_up_array,
             d_up_nodata)
-    
     raster_utils.vectorize_datasets(
         [w_bar_uri, s_bar_uri, flow_accumulation_uri], d_up, d_up_uri, 
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-
-    
-    #Calculate Dup
+    return
     
 
     ##########################
