@@ -64,6 +64,8 @@ def execute_30(**args):
 
     if '_process_pool' not in args:
         args['_process_pool'] = None
+    else:
+        LOGGER.debug('Found a process pool: %s', args['_process_pool'])
 
     file_suffix = carbon_utils.make_suffix(args)
     dirs = carbon_utils.setup_dirs(args['workspace_dir'],

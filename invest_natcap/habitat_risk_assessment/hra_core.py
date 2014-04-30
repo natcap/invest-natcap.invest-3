@@ -2159,18 +2159,19 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             
             def burn_numerator_rec(pixel):
             
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                '''if pixel == crit_nodata:
                     return 0.
 
                 else:
                     burn_rating = float(pixel) / dq
-                    return burn_rating
+                    return burn_rating'''
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_rec,
                                 crit_recov_uri, gdal.GDT_Float32, -1., 
                                 base_pixel_size, "union", 
                                 resample_method_list=None, 
-                                dataset_to_align_index=0, aoi_uri=None)
+                                dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
 
@@ -2223,16 +2224,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #array. Anywhere that we have nodata, leave alone. Otherwise, use
         #crit_rate_numerator as the burn value.
         def burn_numerator_single_hs(pixel):
-
-            if pixel == base_nodata:
+            
+            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+            '''if pixel == base_nodata:
                 return base_nodata
             else:
-                return crit_rate_numerator
+                return crit_rate_numerator'''
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_E_uri, gdal.GDT_Float32, -1., 
                         base_pixel_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -2256,17 +2258,18 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             def burn_numerator_hs(pixel):
 
-                if pixel == crit_nodata:
+                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                '''if pixel == crit_nodata:
                     return crit_nodata
 
                 else:
                     burn_rating = float(pixel) / (dq * w)
-                    return burn_rating
+                    return burn_rating'''
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
             crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
    
