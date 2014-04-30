@@ -123,7 +123,8 @@ def execute(args):
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_offset_uri, slope_uri)
-
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
@@ -252,9 +253,23 @@ def execute(args):
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-    return
+    
+    LOGGER.info('calculate WS factor')
+    ws_factor_uri = os.path.join(
+        intermediate_dir, 'ws_factor%s.tif' % file_suffix)
+    ws_nodata = -1.0
+    def ws_op(w_factor, s_factor):
+        return numpy.where(
+            (w_factor != w_nodata) & (s_factor != slope_nodata),
+            w_factor * s_factor, ws_nodata)
+            
+    raster_utils.vectorize_datasets(
+        [w_factor_uri, slope_uri], ws_op, ws_factor_uri, 
+        gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
     
 
+    return
     ##########################
     
     LOGGER.info('generating report')
