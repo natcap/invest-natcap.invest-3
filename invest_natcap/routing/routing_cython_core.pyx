@@ -2229,11 +2229,12 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
                     if neighbor_d_dn != d_dn_nodata:
                         if ws_factor != 0.0:
                             d_dn_cache[cache_row_index, col_index] += (
-                                neighbor_d_dn * outflow_weight + step_size/ws_factor)
+                                (neighbor_d_dn + step_size/ws_factor) * 
+                                outflow_weight)
                         else:
                             d_dn_cache[cache_row_index, col_index] += (
-                                neighbor_d_dn * outflow_weight)
-
+                                (neighbor_d_dn * outflow_weight))
+                                
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
             neighbor_row_index = row_index + row_offsets[neighbor_index]
