@@ -268,6 +268,11 @@ def execute(args):
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
+    
+    d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
+    routing_cython_core.calculate_d_dn(
+        flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
+    
 
     return
     ##########################

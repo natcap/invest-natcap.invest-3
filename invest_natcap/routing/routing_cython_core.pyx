@@ -1993,3 +1993,295 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
         pass#os.remove(dataset_uri)
+
+        
+def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
+    """This function calculates the flow downhill distance to the stream layers
+    
+        flow_direction_uri - a raster with d-infinity flow directions
+        stream_uri - a raster where 1 indicates a stream all other values
+            ignored must be same dimensions and projection as
+            flow_direction_uri)
+        distance_uri - an output raster that will be the same dimensions as
+            the input rasters where each pixel is in linear units the drainage
+            from that point to a stream.
+            
+        returns nothing"""
+    
+    cdef float d_dn_nodata = -9999.0
+    raster_utils.new_raster_from_base_uri(
+        flow_direction_uri, d_dn_uri, 'GTiff', d_dn_nodata,
+        gdal.GDT_Float32, fill_value=d_dn_nodata)
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+    
+    cdef int row_index, col_index, n_rows, n_cols
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(
+        flow_direction_uri)
+        
+    cdef stack[int] visit_stack
+    
+    stream_ds = gdal.Open(stream_uri)
+    stream_band = stream_ds.GetRasterBand(1)
+    cdef float cell_size = raster_utils.get_cell_size_from_uri(stream_uri)
+    
+    d_dn_ds = gdal.Open(d_dn_uri, gdal.GA_Update)
+    d_dn_band = d_dn_ds.GetRasterBand(1)
+    
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
+    calculate_flow_weights(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
+    outflow_weights_ds = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
+    cdef float outflow_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
+    outflow_direction_ds = gdal.Open(outflow_direction_uri)
+    outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
+    
+    ws_factor_ds = gdal.Open(ws_factor_uri)
+    ws_factor_band = outflow_direction_ds.GetRasterBand(1)
+    
+    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
+    
+    cdef int CACHE_ROWS = 2**10
+    if CACHE_ROWS > n_rows:
+        CACHE_ROWS = n_rows
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] stream_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] d_dn_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] ws_factor_cache = (
+        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))    
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
+        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
+    cache_tag[:] = -1
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
+        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+    cache_dirty[:] = 0
+    
+    #build up the stream pixel indexes
+    for row_index in range(n_rows):
+        stream_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
+            buf_obj=stream_cache[0].reshape((1,n_cols)))
+        for col_index in range(n_cols):
+            if stream_cache[0, col_index] == 1:
+                #it's a stream, remember that
+                visit_stack.push(row_index * n_cols + col_index)
+                
+    LOGGER.info('number of stream pixels %d' % (visit_stack.size()))
+    
+    cdef int current_index, cache_row_offset, neighbor_row_index
+    cdef int cache_row_index, cache_row_tag
+    cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
+    cdef int neighbor_col_index
+    cdef float neighbor_outflow_weight, current_d_dn
+    cdef float outflow_weight, neighbor_d_dn, step_size, ws_factor
+    cdef int it_flows_here
+    cdef int step_count = 0
+    cdef int downstream_index, downstream_uncalculated
+
+    while visit_stack.size() > 0:
+        current_index = visit_stack.top()
+        visit_stack.pop()
+        
+        row_index = current_index / n_cols
+        col_index = current_index % n_cols
+        step_count += 1
+        if step_count % 1000000 == 0:
+            LOGGER.info(
+                'visit_stack on stream distance size: %d (reports every 1000000 steps)' %
+                (visit_stack.size()))
+        #see if we need to update the row cache
+        for cache_row_offset in range(-1, 2):
+            neighbor_row_index = row_index + cache_row_offset
+            #see if that row is out of bounds
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            #otherwise check if the cache needs an update
+            cache_row_index = neighbor_row_index % CACHE_ROWS
+            cache_row_tag = neighbor_row_index / CACHE_ROWS
+            
+            if cache_tag[cache_row_index] == cache_row_tag:
+                #cache is up to date, so skip
+                continue
+                
+            #see if we need to save the cache
+            if cache_dirty[cache_row_index]:
+                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+                d_dn_band.WriteArray(
+                    d_dn_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+                cache_dirty[cache_row_index] = 0
+                
+            #load a new row
+            d_dn_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=d_dn_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_direction_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
+            outflow_weights_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
+            ws_factor_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
+                win_ysize=1, buf_obj=ws_factor_cache[cache_row_index].reshape((1,n_cols)))                    
+            stream_band.ReadAsArray(
+                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols, 
+                win_ysize=1, buf_obj=stream_cache[cache_row_index].reshape((1,n_cols)))
+            cache_tag[cache_row_index] = cache_row_tag
+
+        cache_row_index = row_index % CACHE_ROWS
+        current_d_dn = d_dn_cache[cache_row_index, col_index]
+
+        if current_d_dn != d_dn_nodata:
+            #if cell is already defined, then skip
+            continue
+        
+        outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+        
+        if stream_cache[cache_row_index, col_index] == 1 or outflow_weight == outflow_nodata:
+            #it's a stream, set distance to zero
+            d_dn_cache[cache_row_index, col_index] = 0
+            cache_dirty[cache_row_index] = 1
+        else:
+            #check to see if downstream neighbours are processed
+            downstream_uncalculated = False
+            for downstream_index in range(2):
+                outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+                outflow_direction = outflow_direction_cache[cache_row_index, col_index]
+                if downstream_index == 1:
+                    outflow_weight = 1.0 - outflow_weight
+                    outflow_direction = (outflow_direction + 1) % 8
+
+                if outflow_weight > 0.0:
+                    neighbor_row_index = row_index + row_offsets[outflow_direction]
+                    if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                        #out of bounds
+                        continue
+
+                    neighbor_col_index = col_index + col_offsets[outflow_direction]
+                    if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                        #out of bounds
+                        continue
+
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
+                    neighbor_d_dn = d_dn_cache[
+                        cache_neighbor_row_index, neighbor_col_index]
+                    neighbor_outflow_weight = (
+                        outflow_weights_cache[cache_neighbor_row_index, col_index])
+                    
+                    #make sure that downstream neighbor isn't processed and
+                    #isn't a nodata pixel for some reason
+                    if (neighbor_d_dn == d_dn_nodata and
+                        neighbor_outflow_weight != outflow_nodata):
+                        visit_stack.push(neighbor_row_index * n_cols + neighbor_col_index)
+                        downstream_uncalculated = True
+
+            if downstream_uncalculated:
+                #need to process downstream first
+                continue
+                
+            #calculate current
+            d_dn_cache[cache_row_index, col_index] = 0
+            cache_dirty[cache_row_index] = 1
+            outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+            outflow_direction = outflow_direction_cache[cache_row_index, col_index]
+            ws_factor = ws_factor_cache[cache_row_index, col_index]
+            for downstream_index in range(2):
+                
+                if downstream_index == 1:
+                    outflow_weight = 1.0 - outflow_weight
+                    outflow_direction = (outflow_direction + 1) % 8
+
+                if outflow_weight > 0.0:
+                    neighbor_row_index = row_index + row_offsets[outflow_direction]
+                    if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                        #out of bounds
+                        continue
+
+                    neighbor_col_index = col_index + col_offsets[outflow_direction]
+                    if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                        #out of bounds
+                        continue
+
+                    cache_neighbor_row_index = (
+                        cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
+                    neighbor_d_dn = d_dn_cache[
+                        cache_neighbor_row_index, neighbor_col_index]
+                        
+                    if outflow_direction % 2 == 1:
+                        #increase distance by a square root of 2 for diagonal
+                        step_size = cell_size * 1.41421356237
+                    else:
+                        step_size = cell_size
+
+                    if neighbor_d_dn != d_dn_nodata:
+                        if ws_factor != 0.0:
+                            d_dn_cache[cache_row_index, col_index] += (
+                                neighbor_d_dn * outflow_weight + step_size/ws_factor)
+                        else:
+                            d_dn_cache[cache_row_index, col_index] += (
+                                neighbor_d_dn * outflow_weight)
+
+        #push any upstream neighbors that inflow onto the stack
+        for neighbor_index in range(8):
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                #out of bounds
+                continue
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
+            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                #out of bounds
+                continue
+
+            cache_neighbor_row_index = (
+                cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
+            neighbor_outflow_direction = outflow_direction_cache[
+                cache_neighbor_row_index, neighbor_col_index]
+            #if the neighbor is no data, don't try to set that
+            if neighbor_outflow_direction == outflow_direction_nodata:
+                continue
+
+            neighbor_outflow_weight = outflow_weights_cache[
+                cache_neighbor_row_index, neighbor_col_index]
+            
+            it_flows_here = False
+            if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
+                #the neighbor flows into this cell
+                it_flows_here = True
+
+            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
+                #the offset neighbor flows into this cell
+                it_flows_here = True
+                neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
+            
+            if (it_flows_here and neighbor_outflow_weight > 0.0 and
+                d_dn_cache[cache_neighbor_row_index, neighbor_col_index] ==
+                d_dn_nodata):
+                #not touched yet, set distance push on the visit stack
+                visit_stack.push(
+                    neighbor_row_index * n_cols + neighbor_col_index)
+            
+    #see if we need to save the cache
+    for cache_row_index in range(CACHE_ROWS):
+        if cache_dirty[cache_row_index]:
+            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
+            d_dn_band.WriteArray(
+                d_dn_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
+            cache_dirty[cache_row_index] = 0        
+    
+    for dataset in [outflow_weights_ds, outflow_direction_ds]:
+        gdal.Dataset.__swig_destroy__(dataset)
+    for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
+        pass#os.remove(dataset_uri)
