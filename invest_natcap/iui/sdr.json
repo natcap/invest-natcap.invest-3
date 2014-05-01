@@ -1,0 +1,129 @@
+{
+    "id" : "window",
+    "label": "Sediment Delivery Model (SDR)",
+    "targetScript" : "invest_natcap.sdr.sdr",
+    "modelName" : "sdr",
+    "localDocURI": "../documentation/sediment_retention.html",
+    "height": 700,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+		{
+		    "id" : "workspace",
+		    "args_id" : "workspace_dir",
+		    "type": "folder",
+		    "label": "Workspace",
+		    "defaultValue": "../Sedimentation",
+		    "required": true,
+                    "helpText":"This is the directory in which the output and intermediate files will be saved."
+		},
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
+                },
+		{
+		    "id" : "dem_uri",
+		    "args_id" : "dem_uri",
+		    "type": "file",
+		    "label": "DEM Raster",
+		    "defaultValue": "../Base_Data/Freshwater/dem",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the Working with the DEM section of the InVEST user's guide for more information."
+		},
+		{        
+		    "id" : "erosivity_uri",
+		    "args_id" : "erosivity_uri",
+		    "type": "file",
+		    "label": "Erosivity Raster",
+		    "defaultValue": "../Base_Data/Freshwater/erosivity",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset, with an erosivity index value for each cell. This variable depends on the intensity and duration of rainfall in the area of interest. The greater the intensity and duration of the rain storm, the higher the erosion potential. The erosivity index is widely used, but in case of its absence, there are methods and equations to help generate a grid using climatic data. The units are MJ*mm/(ha*h*yr)."
+		},
+		{        
+		    "id" : "erodibility_uri",
+		    "args_id" : "erodibility_uri",
+		    "type": "file",
+		    "label": "Erodibility Raster",
+		    "defaultValue": "../Base_Data/Freshwater/erodibility",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "This is a GIS raster dataset, with a soil erodibility value for each cell which is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
+		},
+		{        
+		    "id" : "landuse_uri",
+		    "args_id" : "landuse_uri",
+		    "type": "file",
+		    "label": "LULC Raster",
+		    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset, with an integer LULC code for each cell."
+		},
+		{        
+		    "id" : "watersheds_uri",
+		    "args_id" : "watersheds_uri",
+		    "type": "file",
+		    "label": "Watershed Polygons",
+		    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+		    "required": true,
+		    "validateAs": {"type": "OGR",
+				   "layers": [{"name": {"inheritFrom": "file"}, 
+					       "type": "polygons",
+					       "projection": {"exists": true}
+					      }],
+				   "fieldsExist": ["ws_id"]
+				  },
+		    "helpText": "This is a layer of watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
+		},
+		{        
+		    "id" : "biophysical_table_uri",
+		    "args_id" : "biophysical_table_uri",
+		    "type": "file",
+		    "label": "Biophysical Table",
+		    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
+		    "required": true,
+		    "validateAs": {"type": "CSV",
+				  "fieldsExist": ["lucode", "usle_c", "usle_p"]
+				  },
+		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST sediment user's guide for more information about these fields."
+		},
+		{        
+		    "id" : "threshold_flow_accumulation",
+		    "args_id" : "threshold_flow_accumulation",
+		    "type": "text",
+		    "label": "Threshold Flow Accumluation",
+		    "defaultValue": "1000",
+		    "required": true,
+		    "validText": "^[0-9]+$",
+		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+		},
+		{        
+		    "id" : "sediment_threshold_table_uri",
+		    "args_id" : "sediment_threshold_table_uri",
+		    "type": "file",
+		    "label": "Sediment threshold table",
+		    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
+		    "required": true,
+		    "validateAs": {"type": "CSV",
+				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
+				  },
+		    "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the user's guide for the meaning of these fields."
+		}
+	    ]
+	}
+    ]
+}
+

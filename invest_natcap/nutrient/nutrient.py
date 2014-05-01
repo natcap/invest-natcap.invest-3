@@ -191,11 +191,11 @@ def _execute_nutrient(args):
             threshold_lookup[nutrient_id][ws_id] = (
                 value['thresh_%s' % (nutrient_id)])
 
-    landuse_pixel_size = raster_utils.get_cell_size_from_uri(
-        args['lulc_uri'])
+    dem_pixel_size = raster_utils.get_cell_size_from_uri(
+        args['dem_uri'])
     #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
-    cell_area_ha = landuse_pixel_size ** 2 / 10000.0
-    out_pixel_size = landuse_pixel_size
+    cell_area_ha = dem_pixel_size ** 2 / 10000.0
+    out_pixel_size = dem_pixel_size
 
     #Align all the input rasters
     dem_uri = raster_utils.temporary_filename()
@@ -204,7 +204,7 @@ def _execute_nutrient(args):
     raster_utils.align_dataset_list(
         [args['dem_uri'], args['pixel_yield_uri'], args['lulc_uri']],
         [dem_uri, water_yield_uri, lulc_uri], ['nearest'] * 3,
-        out_pixel_size, 'intersection', dataset_to_align_index=2,
+        out_pixel_size, 'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
     nodata_landuse = raster_utils.get_nodata_from_uri(lulc_uri)

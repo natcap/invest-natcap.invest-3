@@ -144,32 +144,17 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
         stream_uri - (input) the uri of the output stream dataset
 
         returns nothing"""
-
-    flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
-    stream_nodata = 255
-    stream_dataset = raster_utils.new_raster_from_base(
-        flow_accumulation_dataset, stream_uri, 'GTiff', stream_nodata,
-        gdal.GDT_Byte)
-    stream_band = stream_dataset.GetRasterBand(1)
-    stream_band.Fill(stream_nodata)
-    stream_data_file = tempfile.TemporaryFile()
-    stream_array = raster_utils.load_memory_mapped_array(
-        stream_uri, stream_data_file)
-    stream_array[:] = stream_nodata
-
-    flow_accumulation_data_file = tempfile.TemporaryFile()
-    flow_accumulation_array = raster_utils.load_memory_mapped_array(
-        flow_accumulation_uri, flow_accumulation_data_file)
-
-    _, flow_accumulation_nodata = \
-        raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
-
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) *
-                 (flow_accumulation_array >= float(flow_threshold))] = 1
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) *
-                 (flow_accumulation_array < float(flow_threshold))] = 0
-
-    stream_band.WriteArray(stream_array)
+    
+    flow_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    def classify_stream(flow_accumulation):
+        #mask and convert to 0/1
+        stream_mask = (flow_accumulation >= flow_threshold).astype(numpy.byte)
+        return numpy.where(flow_accumulation != flow_nodata, stream_mask, 255)
+        
+    raster_utils.vectorize_datasets(
+        [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte, 
+        255, raster_utils.get_cell_size_from_uri(flow_accumulation_uri),
+        'intersection', vectorize_op=False)
 
 
 def calculate_flow_length(flow_direction_uri, flow_length_uri):
