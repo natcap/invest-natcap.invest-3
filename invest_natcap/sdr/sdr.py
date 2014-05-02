@@ -296,10 +296,12 @@ def execute(args):
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
+    LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     routing_cython_core.calculate_d_dn(
         flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
     
+    LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
     ic_nodata = -9999.0
     d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
@@ -313,6 +315,7 @@ def execute(args):
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
         
+    LOGGER.info('calculate sdr')
     sdr_factor_uri = os.path.join(intermediate_dir, 'sdr_factor%s.tif' % file_suffix)
     sdr_nodata = -9999.0
     k = 2
@@ -327,10 +330,17 @@ def execute(args):
         gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-    
-    
-    return
-    ##########################
+    LOGGER.info('calculate sed export')
+    sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
+    sed_export_nodata = -1.0
+    def sed_export_op(usle, sdr):
+        nodata_mask = (usle == nodata_usle) & (sdr == sdr_nodata)
+        return numpy.where(
+            nodata_mask, sed_export_nodata, usle * sdr)
+    raster_utils.vectorize_datasets(
+        [usle_uri, sdr_factor_uri], sed_export_op, sed_export_uri, 
+        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
     
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -338,46 +348,7 @@ def execute(args):
     field_summaries = {
         'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_tot': raster_utils.aggregate_raster_values_uri(upstream_on_pixel_retention_uri, args['watersheds_uri'], 'ws_id').total,
         }
-
-    #Create the service field sums
-    field_summaries['sed_ret_dr'] = {}
-    field_summaries['sed_ret_wq'] = {}
-    try:
-        for ws_id, value in field_summaries['upret_tot'].iteritems():
-            #The 1.26 comes from the InVEST user's guide
-            field_summaries['sed_ret_dr'][ws_id] = (value - 
-                sediment_threshold_table[ws_id]['dr_deadvol'] * 
-                1.26 / sediment_threshold_table[ws_id]['dr_time'])
-            field_summaries['sed_ret_wq'][ws_id] = (value - 
-                sediment_threshold_table[ws_id]['wq_annload'])
-
-            #Clamp any negatives to 0
-            for out_field in ['sed_ret_dr', 'sed_ret_wq']:
-                if field_summaries[out_field][ws_id] < 0.0:
-                    field_summaries[out_field][ws_id] = 0.0
-    
-    except KeyError as e:
-        raise Exception('The sediment threshold table does not have an entry '
-            'for watershed ID %d' % (ws_id))
-
-    if 'sediment_valuation_table_uri' in args:
-        sediment_valuation_table = raster_utils.get_lookup_from_csv(
-            args['sediment_valuation_table_uri'], 'ws_id')
-        field_summaries['sed_val_dr'] = {}
-        field_summaries['sed_val_wq'] = {}
-        try:
-            for ws_id, value in field_summaries['upret_tot'].iteritems():
-                for expense_type in ['dr', 'wq']:
-                    discount = disc(sediment_valuation_table[ws_id][expense_type + '_time'],
-                                    sediment_valuation_table[ws_id][expense_type + '_disc'])
-                    field_summaries['sed_val_' + expense_type][ws_id] = \
-                        field_summaries['sed_ret_' + expense_type][ws_id] * \
-                        sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
-        except KeyError as e:
-            raise Exception('Sediment valuation table missing watershed ID %d'
-                % (ws_id))
 
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % file_suffix)
@@ -407,21 +378,6 @@ def execute(args):
 
     original_datasource.Destroy()
     datasource_copy.Destroy()
-
-
-def disc(years, percent_rate):
-    """Calculate discount rate for a given number of years
-    
-        years - an integer number of years
-        percent_rate - a discount rate in percent
-
-        returns the discount rate for the number of years to use in 
-            a calculation like yearly_cost * disc(years, percent_rate)"""
-
-    discount = 0.0
-    for time_index in range(int(years) - 1):
-        discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
-    return discount
 
     
 def calculate_ls_factor(
