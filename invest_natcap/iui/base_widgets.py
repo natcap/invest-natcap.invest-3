@@ -1480,7 +1480,11 @@ class FileButton(QtGui.QPushButton):
             QLineEdit before we open the dialog.  Then, if the user presses
             'Cancel', we can restore the previous field contents."""
 
-        oldText = self.URIfield.text()
+        try:
+            oldText = unicode(self.URIfield.text(), 'utf-8')
+        except TypeError:
+            # thrown when we're decoding a unicode to unicode
+            oldText = self.URIfield.text()
         filename = ''
 
         if len(oldText) == 0:
@@ -1492,9 +1496,9 @@ class FileButton(QtGui.QPushButton):
                 default_folder = os.path.expanduser('~')
         elif os.path.isdir(oldText):
             # if there is currently some text in the file entry, get its folder
-            default_folder = unicode(oldText, 'utf-8')
+            default_folder = oldText
         else:
-            default_folder = os.path.dirname(unicode(oldText, 'utf-8'))
+            default_folder = os.path.dirname(oldText)
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' +
@@ -1512,7 +1516,12 @@ class FileButton(QtGui.QPushButton):
             self.URIfield.setText(oldText)
         else:
             self.URIfield.setText(filename)
-            filename = unicode(filename, 'utf-8')
+            try:
+                filename = unicode(filename, 'utf-8')
+            except TypeError:
+                # when we're trying to decode a unicode to a unicode object,
+                # just use the original object.
+                pass
             if os.path.isdir(filename):
                 DATA['last_dir'] = filename
             else:
@@ -1795,7 +1804,13 @@ class TableHandler(Dropdown):
                 self.dropdown.setCurrentIndex(self.loaded_state['index'])
 
     def get_element_state(self):
-        return {'key': unicode(self.dropdown.currentText(), 'utf-8'),
+        current_text = self.dropdown.currentText()
+        try:
+            current_text = unicode(current_text, 'utf-8')
+        except TypeError:
+            # when casting a unicode obj. to unicode, just use original.
+            pass
+        return {'key': current_text,
                 'index': self.dropdown.currentIndex(),
                 'linked_uri': self.handler.uri}
 
@@ -2591,7 +2606,12 @@ class ExecRoot(Root):
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
                 '%s_archive.json' % model_name, filter = QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
-            filename = unicode(filename)
+            try:
+                filename = unicode(filename)
+            except TypeError:
+                # can't cast unicode to unicode
+                pass
+
             if filename != '':
                 arguments = self.assembleOutputDict()
                 invest_natcap.iui.fileio.save_model_run_json(arguments, model, filename)
@@ -2621,7 +2641,12 @@ class ExecRoot(Root):
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
                 '%s_parameters.py' % model_name, filter = QString('Python file' +
                 ' (*.py);;All files (*.* *)'))
-            filename = unicode(filename)
+            try:
+                filename = unicode(filename)
+            except TypeError:
+                # can't cast unicode to unicode
+                pass
+
             if filename != '':
                 arguments = self.assembleOutputDict()
                 invest_natcap.iui.fileio.save_model_run(arguments, model, filename)
@@ -2790,7 +2815,12 @@ class ExecRoot(Root):
             #Check if workspace has an output directory, prompt the user that 
             #it will be overwritten
             try:
-                uri = unicode(self.allElements['workspace'].textField.text())
+                uri = self.allElements['workspace'].textField.text()
+                try:
+                    uri = unicode(uri)
+                except TypeError:
+                    # can't cast unicode to unicode`
+                    pass
                 if os.path.isdir(os.path.join(uri,'output')) or \
                         os.path.isdir(os.path.join(uri,'Output')):
                     dialog = WarningDialog()
