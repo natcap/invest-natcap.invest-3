@@ -296,12 +296,25 @@ def execute(args):
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-    
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     routing_cython_core.calculate_d_dn(
         flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
     
-
+    ic_factor_uri = os.path.join(intermediate_dir, 'ic_%s.tif' % file_suffix)
+    ic_nodata = -1.0
+    d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
+    d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
+    def ic_op(d_up, d_dn):
+        nodata_mask = (d_up == d_up_nodata) & (d_dn == d_dn_nodata)
+        return numpy.where(
+            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+    raster_utils.vectorize_datasets(
+        [d_up_uri, d_dn_uri], ic_op, ic_factor_uri, 
+        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+    
+    
     return
     ##########################
     
