@@ -2042,7 +2042,7 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
     
     ws_factor_ds = gdal.Open(ws_factor_uri)
-    ws_factor_band = outflow_direction_ds.GetRasterBand(1)
+    ws_factor_band = ws_factor_ds.GetRasterBand(1)
     
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
@@ -2219,7 +2219,7 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
                         cache_row_index + row_offsets[outflow_direction]) % CACHE_ROWS
                     neighbor_d_dn = d_dn_cache[
                         cache_neighbor_row_index, neighbor_col_index]
-                        
+
                     if outflow_direction % 2 == 1:
                         #increase distance by a square root of 2 for diagonal
                         step_size = cell_size * 1.41421356237
@@ -2227,14 +2227,10 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
                         step_size = cell_size
 
                     if neighbor_d_dn != d_dn_nodata:
-                        if ws_factor != 0.0:
-                            d_dn_cache[cache_row_index, col_index] += (
-                                (neighbor_d_dn + step_size/ws_factor) * 
-                                outflow_weight)
-                        else:
-                            d_dn_cache[cache_row_index, col_index] += (
-                                (neighbor_d_dn * outflow_weight))
-                                
+                        d_dn_cache[cache_row_index, col_index] += (
+                            (neighbor_d_dn + step_size/ws_factor) * 
+                            outflow_weight)
+
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
             neighbor_row_index = row_index + row_offsets[neighbor_index]
