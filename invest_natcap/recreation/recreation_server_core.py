@@ -1931,3 +1931,15 @@ def not_valid_count_execute(cur, table_name, geo_column_name):
 
     return n
     
+def make_valid_execute(cur, table_name, geometry_column_name):
+    sql = make_valid_sql(table_name, geometry_column_name)
+    LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
+    cur.execute(sql)
+
+
+def make_valid_sql(table_name, geometry_column_name):
+    sql = "UPDATE %s SET %s=ST_MakeValid(%s)"
+
+    sql = sql % (table_name, geometry_column_name, geometry_column_name)
+
+    return sql
