@@ -982,7 +982,12 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return unicode(value, 'utf-8')
+        try:
+            value = unicode(value, 'utf-8')
+        except TypeError:
+            # when casting unicode to unicode
+            pass
+        return value
 
     def setValue(self, text):
         """Set the value of self.textField.
