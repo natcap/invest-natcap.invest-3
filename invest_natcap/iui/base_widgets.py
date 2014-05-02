@@ -9,6 +9,12 @@ import threading
 
 from PyQt4 import QtGui, QtCore
 
+try:
+    QString = QtCore.QString
+except AttributeError:
+    # For when we can't use API version 1
+    QString = unicode
+
 import invest_natcap.iui
 import iui_validator
 import executor
@@ -1448,7 +1454,7 @@ class FileButton(QtGui.QPushButton):
                         "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"],
                         "DBF": ["[DBF] dBase legacy file (*dbf *.DBF)"]
                        }
-        self.last_filter = QtCore.QString()
+        self.last_filter = QString()
 
         filters = self.filters['all']
         if filetype == 'file':
@@ -1458,7 +1464,7 @@ class FileButton(QtGui.QPushButton):
                 except:
                     print 'Could not find filters for %s' % filter.upper()
 
-        self.filter_string = QtCore.QString(';;'.join(filters))
+        self.filter_string = QString(';;'.join(filters))
 
         #connect the button (self) with the filename function.
         self.clicked.connect(self.getFileName)
@@ -1958,7 +1964,7 @@ class OperationDialog(QtGui.QDialog):
 
             returns nothing."""
 
-        self.statusArea.insertPlainText(QtCore.QString(text))
+        self.statusArea.insertPlainText(QString(text))
         self.cursor.movePosition(QtGui.QTextCursor.End)
         self.statusArea.setTextCursor(self.cursor)
 
@@ -2580,7 +2586,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_archive.json' % model_name, filter = QtCore.QString('JSON file' +
+                '%s_archive.json' % model_name, filter = QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':
@@ -2610,7 +2616,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_parameters.py' % model_name, filter = QtCore.QString('Python file' +
+                '%s_parameters.py' % model_name, filter = QString('Python file' +
                 ' (*.py);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':
@@ -2637,7 +2643,7 @@ class ExecRoot(Root):
         model_name = model.split('.')[-1]
 
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            '%s_parameters.json' % model_name, filter = QtCore.QString('InVEST Parameter file' +
+            '%s_parameters.json' % model_name, filter = QString('InVEST Parameter file' +
             ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
@@ -2649,7 +2655,7 @@ class ExecRoot(Root):
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
-            filter = QtCore.QString('InVEST Parameter file' +
+            filter = QString('InVEST Parameter file' +
             ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
