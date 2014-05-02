@@ -121,9 +121,24 @@ def execute(args):
     
     #Calculate slope
     LOGGER.info("Calculating slope")
-    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_offset_uri, slope_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
+    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
+    def threshold_slope(slope):
+        '''Threshold slope between 0.001 and 1.0'''
+        slope_copy = slope.copy()
+        nodata_mask = slope == slope_nodata
+        slope_copy[slope < 0.001] = 0.001
+        slope_copy[slope > 1.0] = 1.0
+        slope_copy[nodata_mask] = slope_nodata
+        return slope_copy
+    raster_utils.vectorize_datasets(
+        [original_slope_uri], threshold_slope, thresholded_slope_uri,
+        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    
     
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
@@ -148,12 +163,14 @@ def execute(args):
     ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
     ls_nodata = -1.0
     calculate_ls_factor(
-        flow_accumulation_uri, slope_uri, flow_direction_uri, ls_uri, ls_nodata)
+        flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
 
     #Calculate the W factor
     LOGGER.info('calculate per pixel W')
-    w_factor_uri = os.path.join(
+    original_w_factor_uri = os.path.join(
         intermediate_dir, 'w_factor%s.tif' % file_suffix)
+    thresholded_w_factor_uri = os.path.join(
+        intermediate_dir, 'thresholded_w_factor%s.tif' % file_suffix)
     #map lulc to biophysical table
     lulc_to_c = dict(
         [(lulc_code, float(table['usle_c'])) for 
@@ -162,8 +179,19 @@ def execute(args):
     w_nodata = -1.0
     
     raster_utils.reclassify_dataset_uri(
-        aligned_lulc_uri, lulc_to_c, w_factor_uri, gdal.GDT_Float64,
+        aligned_lulc_uri, lulc_to_c, original_w_factor_uri, gdal.GDT_Float64,
         w_nodata, exception_flag='values_required')
+    def threshold_w(w_val):
+        '''Threshold w to 0.001'''
+        w_val_copy = w_val.copy()
+        nodata_mask = w_val == w_nodata
+        w_val_copy[w_val < 0.001] = 0.001
+        w_val_copy[nodata_mask] = w_nodata
+        return w_val_copy
+    raster_utils.vectorize_datasets(
+        [original_w_factor_uri], threshold_w, thresholded_w_factor_uri,
+        gdal.GDT_Float64, w_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
     
     cp_factor_uri = os.path.join(
         intermediate_dir, 'cp_factor%s.tif' % file_suffix)
@@ -209,7 +237,7 @@ def execute(args):
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
-        (w_factor_uri, w_accumulation_uri), (slope_uri, s_accumulation_uri)]:
+        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s" % (accumulation_uri))
         routing_utils.route_flux(
             flow_direction_uri, dem_offset_uri, factor_uri,
@@ -264,7 +292,7 @@ def execute(args):
             w_factor * s_factor, ws_nodata)
             
     raster_utils.vectorize_datasets(
-        [w_factor_uri, slope_uri], ws_op, ws_factor_uri, 
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_uri, 
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
