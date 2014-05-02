@@ -2523,6 +2523,9 @@ class MainWindow(QtGui.QMainWindow):
         self.save_to_python.triggered.connect(self.ui.save_to_python)
         self.save_to_json.triggered.connect(self.ui.save_to_json)
 
+    def exec_(self):
+        self.show()
+
 class ExecRoot(Root):
     def __init__(self, uri, layout=None, object_registrar=None,
             main_window=None, version=None):
