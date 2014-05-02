@@ -300,8 +300,8 @@ def execute(args):
     routing_cython_core.calculate_d_dn(
         flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
     
-    ic_factor_uri = os.path.join(intermediate_dir, 'ic_%s.tif' % file_suffix)
-    ic_nodata = -1.0
+    ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
+    ic_nodata = -9999.0
     d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
     d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
     def ic_op(d_up, d_dn):
@@ -311,6 +311,20 @@ def execute(args):
     raster_utils.vectorize_datasets(
         [d_up_uri, d_dn_uri], ic_op, ic_factor_uri, 
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+        
+    sdr_factor_uri = os.path.join(intermediate_dir, 'sdr_factor%s.tif' % file_suffix)
+    sdr_nodata = -9999.0
+    k = 2
+    ic_0 = 0.5
+    sdr_max = 0.8
+    def sdr_op(ic_factor):
+        nodata_mask = (ic_factor == ic_nodata)
+        return numpy.where(
+            nodata_mask, sdr_nodata, sdr_max/(1+numpy.exp((ic_0-ic_factor)/k)))
+    raster_utils.vectorize_datasets(
+        [ic_factor_uri], sdr_op, sdr_factor_uri, 
+        gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
     
