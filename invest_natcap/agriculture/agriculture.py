@@ -7,13 +7,5 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('agriculture')
 
-def netcdf_info_uri(uri):
-    f = scipy.io.netcdf.netcdf_file(uri, 'r')
-
-    for k in f.variables.keys():
-        if k in f.dimensions.keys():
-            LOGGER.debug("NetCDF contains variable %s of dimension %s.", k, f.dimensions[k])
-        else:
-            LOGGER.debug("NetCDF contains variable %s of shape %s.", k, f.variables[k].shape)
-            
-    f.close()
+def execute(args):
+    pass
