@@ -665,7 +665,7 @@ def aggregate_raster_values_uri(
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
     mask_uri = temporary_filename()
-    mask_dataset = new_raster_from_base_uri(
+    new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
     mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
