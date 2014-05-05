@@ -9,6 +9,12 @@ import threading
 
 from PyQt4 import QtGui, QtCore
 
+try:
+    QString = QtCore.QString
+except AttributeError:
+    # For when we can't use API version 1
+    QString = unicode
+
 import invest_natcap.iui
 import iui_validator
 import executor
@@ -976,7 +982,12 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return unicode(value, 'utf-8')
+        try:
+            value = unicode(value, 'utf-8')
+        except TypeError:
+            # when casting unicode to unicode
+            pass
+        return value
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -1448,7 +1459,7 @@ class FileButton(QtGui.QPushButton):
                         "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"],
                         "DBF": ["[DBF] dBase legacy file (*dbf *.DBF)"]
                        }
-        self.last_filter = QtCore.QString()
+        self.last_filter = QString()
 
         filters = self.filters['all']
         if filetype == 'file':
@@ -1458,7 +1469,7 @@ class FileButton(QtGui.QPushButton):
                 except:
                     print 'Could not find filters for %s' % filter.upper()
 
-        self.filter_string = QtCore.QString(';;'.join(filters))
+        self.filter_string = QString(';;'.join(filters))
 
         #connect the button (self) with the filename function.
         self.clicked.connect(self.getFileName)
@@ -1474,7 +1485,11 @@ class FileButton(QtGui.QPushButton):
             QLineEdit before we open the dialog.  Then, if the user presses
             'Cancel', we can restore the previous field contents."""
 
-        oldText = self.URIfield.text()
+        try:
+            oldText = unicode(self.URIfield.text(), 'utf-8')
+        except TypeError:
+            # thrown when we're decoding a unicode to unicode
+            oldText = self.URIfield.text()
         filename = ''
 
         if len(oldText) == 0:
@@ -1486,9 +1501,9 @@ class FileButton(QtGui.QPushButton):
                 default_folder = os.path.expanduser('~')
         elif os.path.isdir(oldText):
             # if there is currently some text in the file entry, get its folder
-            default_folder = unicode(oldText, 'utf-8')
+            default_folder = oldText
         else:
-            default_folder = os.path.dirname(unicode(oldText, 'utf-8'))
+            default_folder = os.path.dirname(oldText)
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' +
@@ -1506,7 +1521,12 @@ class FileButton(QtGui.QPushButton):
             self.URIfield.setText(oldText)
         else:
             self.URIfield.setText(filename)
-            filename = unicode(filename, 'utf-8')
+            try:
+                filename = unicode(filename, 'utf-8')
+            except TypeError:
+                # when we're trying to decode a unicode to a unicode object,
+                # just use the original object.
+                pass
             if os.path.isdir(filename):
                 DATA['last_dir'] = filename
             else:
@@ -1789,7 +1809,13 @@ class TableHandler(Dropdown):
                 self.dropdown.setCurrentIndex(self.loaded_state['index'])
 
     def get_element_state(self):
-        return {'key': unicode(self.dropdown.currentText(), 'utf-8'),
+        current_text = self.dropdown.currentText()
+        try:
+            current_text = unicode(current_text, 'utf-8')
+        except TypeError:
+            # when casting a unicode obj. to unicode, just use original.
+            pass
+        return {'key': current_text,
                 'index': self.dropdown.currentIndex(),
                 'linked_uri': self.handler.uri}
 
@@ -1958,7 +1984,7 @@ class OperationDialog(QtGui.QDialog):
 
             returns nothing."""
 
-        self.statusArea.insertPlainText(QtCore.QString(text))
+        self.statusArea.insertPlainText(QString(text))
         self.cursor.movePosition(QtGui.QTextCursor.End)
         self.statusArea.setTextCursor(self.cursor)
 
@@ -2517,6 +2543,9 @@ class MainWindow(QtGui.QMainWindow):
         self.save_to_python.triggered.connect(self.ui.save_to_python)
         self.save_to_json.triggered.connect(self.ui.save_to_json)
 
+    def exec_(self):
+        self.show()
+
 class ExecRoot(Root):
     def __init__(self, uri, layout=None, object_registrar=None,
             main_window=None, version=None):
@@ -2580,9 +2609,14 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_archive.json' % model_name, filter = QtCore.QString('JSON file' +
+                '%s_archive.json' % model_name, filter = QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
-            filename = unicode(filename)
+            try:
+                filename = unicode(filename)
+            except TypeError:
+                # can't cast unicode to unicode
+                pass
+
             if filename != '':
                 arguments = self.assembleOutputDict()
                 invest_natcap.iui.fileio.save_model_run_json(arguments, model, filename)
@@ -2610,9 +2644,14 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_parameters.py' % model_name, filter = QtCore.QString('Python file' +
+                '%s_parameters.py' % model_name, filter = QString('Python file' +
                 ' (*.py);;All files (*.* *)'))
-            filename = unicode(filename)
+            try:
+                filename = unicode(filename)
+            except TypeError:
+                # can't cast unicode to unicode
+                pass
+
             if filename != '':
                 arguments = self.assembleOutputDict()
                 invest_natcap.iui.fileio.save_model_run(arguments, model, filename)
@@ -2637,7 +2676,7 @@ class ExecRoot(Root):
         model_name = model.split('.')[-1]
 
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            '%s_parameters.json' % model_name, filter = QtCore.QString('InVEST Parameter file' +
+            '%s_parameters.json' % model_name, filter = QString('InVEST Parameter file' +
             ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
@@ -2649,7 +2688,7 @@ class ExecRoot(Root):
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
-            filter = QtCore.QString('InVEST Parameter file' +
+            filter = QString('InVEST Parameter file' +
             ' (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
@@ -2781,7 +2820,12 @@ class ExecRoot(Root):
             #Check if workspace has an output directory, prompt the user that 
             #it will be overwritten
             try:
-                uri = unicode(self.allElements['workspace'].textField.text())
+                uri = self.allElements['workspace'].textField.text()
+                try:
+                    uri = unicode(uri)
+                except TypeError:
+                    # can't cast unicode to unicode`
+                    pass
                 if os.path.isdir(os.path.join(uri,'output')) or \
                         os.path.isdir(os.path.join(uri,'Output')):
                     dialog = WarningDialog()
