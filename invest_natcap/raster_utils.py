@@ -127,6 +127,8 @@ def get_nodata_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
+    if nodata is None:
+        LOGGER.warn("Warning the nodata value in %s is not set" % (dataset_uri))
     return nodata
 
 def get_datatype_from_uri(dataset_uri):
@@ -665,7 +667,7 @@ def aggregate_raster_values_uri(
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
     mask_uri = temporary_filename()
-    mask_dataset = new_raster_from_base_uri(
+    new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
     mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
@@ -1668,7 +1670,7 @@ def gaussian_filter_dataset(
 
 def reclassify_dataset_uri(
     dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
-    exception_flag='none'):
+    exception_flag='none', assert_dataset_projected=True):
     """A function to reclassify values in dataset
         to any output type.  If there are values in the dataset that are not in
         value map, they will be mapped to out_nodata.
@@ -1684,6 +1686,9 @@ def reclassify_dataset_uri(
         exception_flag - either 'none' or 'values_required'.
             If 'values_required' raise an exception if there is a value in the
             raster that is not found in value_map
+        assert_dataset_projected - (optional) if True this operation will
+            test if the input dataset is not projected and raise an exception
+            if so.
 
        returns the new reclassified dataset GDAL raster, or raises an Exception
            if exception_flag == 'values_required' and the value from
@@ -1714,7 +1719,7 @@ def reclassify_dataset_uri(
         [dataset_uri], map_dataset_to_value,
         raster_out_uri, out_datatype, out_nodata, out_pixel_size,
         "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+        vectorize_op=False, assert_datasets_projected=assert_dataset_projected)
     
 
 def reclassify_dataset(
