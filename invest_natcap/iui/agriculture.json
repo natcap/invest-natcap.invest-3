@@ -66,11 +66,11 @@
                                                                         "enabledBy" : "use_crop_map"
                                                                     },
                                                                     {
-                                                                        "id" : "crop_table",
-                                                                        "args_id" : "crop_table",
+                                                                        "id" : "reclass_table",
+                                                                        "args_id" : "reclass_table",
                                                                         "type": "file",
-                                                                        "label": "Crop Codes",
-                                                                        "defaultValue": "",
+                                                                        "label": "Crop Reclass Table",
+                                                                        "defaultValue": "../Agriculture/input/reclass_table.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
