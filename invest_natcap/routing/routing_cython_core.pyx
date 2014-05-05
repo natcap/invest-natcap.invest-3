@@ -838,7 +838,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         
     #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)
-    cdef double nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    raw_nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    
+    cdef double nodata_value
+    if raw_nodata_value is not None:
+        nodata_value = raw_nodata_value
+    else:
+        LOGGER.warn("Nodata value not set, defaulting to -9999.9")
+        nodata_value = -9999.9
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         INF)

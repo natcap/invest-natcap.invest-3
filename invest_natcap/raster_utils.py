@@ -127,6 +127,8 @@ def get_nodata_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
+    if nodata is None:
+        LOGGER.warn("Warning the nodata value in %s is not set" % (dataset_uri))
     return nodata
 
 def get_datatype_from_uri(dataset_uri):
