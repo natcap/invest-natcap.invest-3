@@ -13,8 +13,8 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('agriculture')
 
 def execute(args):
-    gdal_type_cover = gdal.GDT_Int16
-    nodata_int = 0
+    gdal_type_cover = gdal.GDT_Int32
+    nodata_int = -1
     
     intermediate_dir = "intermediate"
 
@@ -48,6 +48,8 @@ def execute(args):
     for crop in reclass_table_csv_dict:
         reclass_table[crop] = reclass_table_csv_dict[crop][reclass_table_field_invest]
 
+    reclass_table[0] = 0
+
     raster_utils.reclassify_dataset_uri(crop_cover_uri,
                                         reclass_table,
                                         reclass_crop_cover_uri,
@@ -60,7 +62,7 @@ def execute(args):
     report = open(report_uri, 'w')
     report.write("<HTML>")
     
-    report.write("\n<TABLE>")
+    report.write("\n<TABLE BORDER=1>")
     report.write("\n<TR><TD>Crop</TD><TD>Count</TD></TR>")
 
     crop_counts = raster_utils.unique_raster_values_count(reclass_crop_cover_uri)
@@ -69,8 +71,8 @@ def execute(args):
 
     for crop in crop_counts_keys:
         report.write("\n<TR><TD>%i</TD><TD>%i</TD></TR>" % (crop,
-                                                            crop_counts_keys[crop]))
+                                                            crop_counts[crop]))
 
-    report.write("\n<\TABLE>")
+    report.write("\n</TABLE>")
     report.write("\n</HTML>")
     report.close()
