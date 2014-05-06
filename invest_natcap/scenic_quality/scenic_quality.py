@@ -316,6 +316,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                 (field_name.upper() == 'RADIUS'):
                 max_dist = abs(int(feature.GetField(field)))
                 assert max_dist is not None, "max distance can't be None"
+                if max_dist < args['max_valuation_radius']:
+                    LOGGER.warning( \
+                        'Valuation radius > maximum visibility distance: ' + \
+                        '(' + str(args['max_valuation_radius']) + ' < ' + \
+                        str(max_dist) + ')')
+                    LOGGER.warning( \
+                        'The valuation is performed beyond what is visible')
                 max_dist = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
                 coefficient = float(feature.GetField(field))
