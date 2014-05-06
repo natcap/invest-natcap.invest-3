@@ -995,6 +995,8 @@ def execute(args):
 
     change_list.sort(reverse=True)
 
+    LOGGER.debug("Change list: %s", change_list)
+
     #change pixels
     scenario_ds = gdal.Open(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
