@@ -337,7 +337,7 @@ def execute(args):
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     sed_export_nodata = -1.0
     def sed_export_op(usle, sdr):
-        nodata_mask = (usle == nodata_usle) & (sdr == sdr_nodata)
+        nodata_mask = (usle == nodata_usle) | (sdr == sdr_nodata)
         return numpy.where(
             nodata_mask, sed_export_nodata, usle * sdr)
     raster_utils.vectorize_datasets(
