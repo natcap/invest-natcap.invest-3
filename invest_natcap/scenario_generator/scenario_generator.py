@@ -995,6 +995,8 @@ def execute(args):
 
     change_list.sort(reverse=True)
 
+    LOGGER.debug("Change list: %s", change_list)
+
     #change pixels
     scenario_ds = gdal.Open(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
@@ -1017,7 +1019,22 @@ def execute(args):
         #open suitability raster
         src_ds = gdal.Open(suitability_dict[cover_id], 1)
         src_band = src_ds.GetRasterBand(1)
-        src_array = src_band.ReadAsArray()                
+        src_array = src_band.ReadAsArray()
+
+        LOGGER.debug("Size of src_array: %s", src_array.shape)
+
+        mesh_rows, mesh_cols = numpy.meshgrid(range(src_array.shape[0]),
+                                              range(src_array.shape[1]),
+                                              indexing="ij")
+
+        LOGGER.debug("Size mesh_rows: %s", mesh_rows.shape)
+        LOGGER.debug("Size mesh_cols: %s", mesh_cols.shape)
+
+        mesh_rows = mesh_rows.flatten()
+        mesh_cols = mesh_cols.flatten()
+
+        LOGGER.debug("Size mesh_rows: %s", mesh_rows.shape)
+        LOGGER.debug("Size mesh_cols: %s", mesh_cols.shape)
 
         pixels_changed = 0
         suitability_values = list(numpy.unique(src_array))
@@ -1039,14 +1056,35 @@ def execute(args):
             
             #get patch sizes
             patch_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+            patch_size_index = []
+            for patch in range(len(patch_sizes)):
+                patch_size_index.append(sum(patch_sizes[:patch+1]))
+                
             patch_labels = numpy.array(range(1, nb_labels + 1))
+            patch_spatial_index = numpy.argsort(label_im, axis=None)
+
+            LOGGER.debug("patch_spatial_index.shape: %s", patch_spatial_index.shape)
 
             #randomize patch order
             numpy.random.shuffle(patch_labels)
 
+            LOGGER.debug("patch_sizes: %s", patch_sizes)
+            LOGGER.debug("patch_size_index: %s", patch_size_index)
+
             #check patches for conversion
             for label in patch_labels:
-                patch = numpy.where(label_im == label)
+                LOGGER.debug("Processing patch %i.", label)
+                LOGGER.debug("Patch size: %i", patch_sizes[label])
+                LOGGER.debug("Flat index start: %i", patch_size_index[label])
+                LOGGER.debug("Flat index end: %i", patch_size_index[label]+patch_sizes[label])
+                
+                flat_patch = patch_spatial_index[patch_size_index[label]:patch_size_index[label]+patch_sizes[label]]
+
+                LOGGER.debug("flat_patch: %s", flat_patch)
+                LOGGER.debug("Max of flat_patch: %i", numpy.amax(flat_patch))
+                
+                patch = (mesh_rows[flat_patch], mesh_cols[flat_patch])
+                
                 if patch_sizes[label] + pixels_changed > count:
                     LOGGER.debug("Converting part of patch %i.", label)
 
