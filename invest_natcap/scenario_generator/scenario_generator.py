@@ -1083,7 +1083,9 @@ def execute(args):
                 LOGGER.debug("flat_patch: %s", flat_patch)
                 LOGGER.debug("Max of flat_patch: %i", numpy.amax(flat_patch))
                 
-                patch = (mesh_rows[flat_patch], mesh_cols[flat_patch])
+                patch = (mesh_rows[flat_patch] - 1, mesh_cols[flat_patch] - 1)
+
+                LOGGER.debug("patch: %s", patch)
                 
                 if patch_sizes[label] + pixels_changed > count:
                     LOGGER.debug("Converting part of patch %i.", label)
