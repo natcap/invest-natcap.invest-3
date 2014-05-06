@@ -647,7 +647,7 @@ class InformationButton(QtGui.QPushButton):
         title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
         body = '<div style="color:black">%s</div>' % (self.body_text)
 
-        return str(title + body + width_table)
+        return title + body + width_table
 
 class ErrorButton(InformationButton):
     def __init__(self, title, body_text=''):
