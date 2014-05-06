@@ -33,7 +33,7 @@
                                                                         "args_id" : "workspace_dir",
                                                                         "type": "folder",
                                                                         "label": "Workspace",
-                                                                        "defaultValue": "../Agriculture",
+                                                                        "defaultValue": "../Agriculture/output",
                                                                         "required": true,
                                                                         "helpText": "Select a folder to be used as your workspace."
                                                                     },
@@ -42,7 +42,7 @@
                                                                         "args_id": "use_crop_map",
                                                                         "type" : "checkbox",
                                                                         "label" : "Use crop map",
-                                                                        "defaultValue" : false,
+                                                                        "defaultValue" : true,
                                                                         "required" : false
                                                                     },
                                                                     {
@@ -50,7 +50,7 @@
                                                                         "args_id" : "area_of_interest",
                                                                         "type": "file",
                                                                         "label": "Area of interest",
-                                                                        "defaultValue": "../Agriculture/input/aoi.shp",
+                                                                        "defaultValue": "",
                                                                         "validateAs": {"type": "OGR"},
                                                                         "required": true,
                                                                         "disabledBy" : "use_crop_map"
@@ -60,17 +60,17 @@
                                                                         "args_id" : "crop_file_name",
                                                                         "type": "file",
                                                                         "label": "Crop Map",
-                                                                        "defaultValue": "",
+                                                                        "defaultValue": "../Agriculture/input/crop_map.tif",
                                                                         "validateAs": {"type": "GDAL"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
                                                                     },
                                                                     {
-                                                                        "id" : "crop_table",
-                                                                        "args_id" : "crop_table",
+                                                                        "id" : "reclass_table",
+                                                                        "args_id" : "reclass_table",
                                                                         "type": "file",
-                                                                        "label": "Crop Codes",
-                                                                        "defaultValue": "",
+                                                                        "label": "Crop Reclass Table",
+                                                                        "defaultValue": "../Agriculture/input/reclass_table.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"

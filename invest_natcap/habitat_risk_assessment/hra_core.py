@@ -72,7 +72,7 @@ def execute(args):
         args['aoi_tables']- May or may not exist within this model run, but if it
             does, the user desires to have the average risk values by 
             stressor/habitat using E/C axes for each feature in the AOI layer
-            specified by 'aoi_tables'. If the risk_eq is 'Euclidea', this will
+            specified by 'aoi_tables'. If the risk_eq is 'Euclidean', this will
             create risk plots, otherwise it will just create the standard HTML
             table for either 'Euclidean' or 'Multiplicative.'
         args['aoi_key']- The form of the word 'Name' that the aoi layer uses
@@ -168,8 +168,8 @@ def execute(args):
     
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
-    unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
-    shutil.rmtree(unecessary_folder)
+    #unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
+    #shutil.rmtree(unecessary_folder)
 
     #Want to remove that AOI copy that we used for ID number->name translation.
     #if 'aoi_tables' in args:
@@ -1790,7 +1790,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         denom_val = denom_val / h_count
 
         for i in range(len(h_s_pixels)):
-            valid_mask = h_pixels[i] != -1
+            valid_mask = h_s_pixels[i] != -1
             value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
             denom_val = numpy.where(valid_mask, 
                         h_s_denom_dict[h_s_names[i]] + denom_val, 
