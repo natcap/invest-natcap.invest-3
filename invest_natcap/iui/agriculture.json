@@ -33,7 +33,7 @@
                                                                         "args_id" : "workspace_dir",
                                                                         "type": "folder",
                                                                         "label": "Workspace",
-                                                                        "defaultValue": "../Agriculture",
+                                                                        "defaultValue": "../Agriculture/output",
                                                                         "required": true,
                                                                         "helpText": "Select a folder to be used as your workspace."
                                                                     },
