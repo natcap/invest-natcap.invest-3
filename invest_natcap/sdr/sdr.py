@@ -307,7 +307,7 @@ def execute(args):
     d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
     d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
     def ic_op(d_up, d_dn):
-        nodata_mask = (d_up == d_up_nodata) & (d_dn == d_dn_nodata)
+        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
         return numpy.where(
             nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
     raster_utils.vectorize_datasets(
@@ -321,12 +321,15 @@ def execute(args):
     k = 2
     ic_0 = 0.5
     sdr_max = 0.8
-    def sdr_op(ic_factor):
+    def sdr_op(ic_factor, stream):
         nodata_mask = (ic_factor == ic_nodata)
-        return numpy.where(
+        sdr = numpy.where(
             nodata_mask, sdr_nodata, sdr_max/(1+numpy.exp((ic_0-ic_factor)/k)))
+        #mask out the stream layer
+        return numpy.where(stream == 1, 0.0, sdr)
+            
     raster_utils.vectorize_datasets(
-        [ic_factor_uri], sdr_op, sdr_factor_uri, 
+        [ic_factor_uri, stream_uri], sdr_op, sdr_factor_uri, 
         gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
