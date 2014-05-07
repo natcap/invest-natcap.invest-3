@@ -61,16 +61,19 @@ def execute(args):
     #create report
     report = open(report_uri, 'w')
     report.write("<HTML>")
-    
-    report.write("\n<TABLE BORDER=1>")
-    report.write("\n<TR><TD>Crop</TD><TD>Count</TD></TR>")
 
-    crop_counts = raster_utils.unique_raster_values_count(reclass_crop_cover_uri)
+    report.write("<B>Crop Cover</B>")
+    report.write("\n<TABLE BORDER=1>")
+    report.write("\n<TR><TD>%s</TD><TD>%s</TD><TD>Count</TD></TR>" % (reclass_table_field_key,
+                                                                      reclass_table_field_invest))
+
+    crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
     crop_counts_keys = crop_counts.keys()
     crop_counts_keys.sort()
 
     for crop in crop_counts_keys:
-        report.write("\n<TR><TD>%i</TD><TD>%i</TD></TR>" % (crop,
+        report.write("\n<TR><TD>%i</TD><TD>%i</TD><TD>%i</TD></TR>" % (crop,
+                                                            reclass_table[crop],
                                                             crop_counts[crop]))
 
     report.write("\n</TABLE>")
