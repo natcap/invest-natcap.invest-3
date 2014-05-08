@@ -91,7 +91,7 @@ def execute(args):
     LOGGER.info("Interpolating kh_km2_day onto raster")
     raster_utils.vectorize_points_uri(
         args['tide_e_points_uri'], 'E_km2_day', tide_e_uri)
-    if 'adv_uv_points_uri' in args:
+    if 'adv_uv_points_uri' in args and args['adv_uv_points_uri'] != '':
         #if adv_uv_points is not defined, then those are all 0 rasters
         LOGGER.info("Interpolating U_m_sec_ onto raster")
         raster_utils.vectorize_points_uri(
