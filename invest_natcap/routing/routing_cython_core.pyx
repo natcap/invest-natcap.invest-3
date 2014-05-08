@@ -816,6 +816,45 @@ cdef void _build_flat_set(
     
     cdef int w_row_index, w_col_index
 
+ 
+def fill_pits(dem_uri, dem_out_uri):
+    """This function fills regions in a DEM that don't drain to the edge
+        of the dataset.  The resulting DEM will likely have plateaus where the
+        pits are filled.
+        
+        dem_uri - the original dem URI
+        dem_out_uri - the original dem with pits raised to the highest drain
+            value
+            
+        returns nothing"""
+    dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
+    cdef int n_rows = dem_ds.RasterYSize
+    cdef int n_cols = dem_ds.RasterXSize
+        
+    #copy the dem to a different dataset so we know the type
+    dem_band = dem_ds.GetRasterBand(1)
+    raw_nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    
+    cdef double nodata_value
+    if raw_nodata_value is not None:
+        nodata_value = raw_nodata_value
+    else:
+        LOGGER.warn("Nodata value not set, defaulting to -9999.9")
+        nodata_value = -9999.9
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
+        INF)
+    dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
+    dem_out_band = dem_out_ds.GetRasterBand(1)
+    cdef int row_index, col_index
+    for row_index in range(n_rows):
+        dem_out_array = dem_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+        dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
+
+    
+
+    
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
