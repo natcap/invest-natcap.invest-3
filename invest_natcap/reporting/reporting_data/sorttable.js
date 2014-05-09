@@ -148,9 +148,9 @@ sorttable = {
 	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
 	        }
 	        /* If you want a stable sort, uncomment the following line */
-	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
 	        /* and comment out this one */
-	        row_array.sort(this.sorttable_sortfunction);
+	        //row_array.sort(this.sorttable_sortfunction);
 
 	        tb = this.sorttable_tbody;
 	        for (var j=0; j<row_array.length; j++) {
@@ -207,6 +207,10 @@ sorttable = {
 
     hasInputs = (typeof node.getElementsByTagName == 'function') &&
                  node.getElementsByTagName('input').length;
+    //DOUG added this to properly catch a checkbox input type for sorting
+    if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
 
     if (node.getAttribute("sorttable_customkey") != null) {
       return node.getAttribute("sorttable_customkey");
