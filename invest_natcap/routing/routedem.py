@@ -26,11 +26,20 @@ def execute(args):
         os.makedirs(output_directory)
     file_suffix = ''
     dem_uri = args['dem_uri']
+    
+    LOGGER.info('resolving filling pits')
+    
+    prefix, suffix = os.path.splitext(args['pit_filled_filename'])
+    dem_pit_filled_uri =  os.path.join(output_directory, prefix + file_suffix + suffix)  
+    routing_utils.fill_pits(dem_uri, dem_pit_filled_uri)
+    dem_uri = dem_pit_filled_uri
+    
     LOGGER.info('resolving plateaus')
     prefix, suffix = os.path.splitext(args['resolve_plateaus_filename'])
     dem_offset_uri = os.path.join(output_directory, prefix + file_suffix + suffix)    
-    routing_cython_core.resolve_flat_regions_for_drainage(args['dem_uri'], dem_offset_uri)
+    routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
     dem_uri = dem_offset_uri
+    
 
     #Calculate slope
     if args['calculate_slope']:

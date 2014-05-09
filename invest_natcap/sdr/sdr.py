@@ -45,9 +45,6 @@ def execute(args):
             part of a stream.  required if 'stream_uri' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
-        args['sediment_threshold_table_uri'] - A uri to a csv that contains
-            fields 'ws_id', 'dr_time', 'dr_deadvol', 'wq_annload' where 'ws_id'
-            correspond to watershed input ids.
         
         returns nothing."""
 
@@ -58,9 +55,6 @@ def execute(args):
             file_suffix = '_' + file_suffix
     except KeyError:
         file_suffix = ''
-    #Load the sediment threshold table
-    sediment_threshold_table = raster_utils.get_lookup_from_csv(
-        args['sediment_threshold_table_uri'], 'ws_id')
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
 

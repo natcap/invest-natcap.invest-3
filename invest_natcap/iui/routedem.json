@@ -31,6 +31,15 @@
                     "helpText": "A base DEM to execute the routing functionality across."
                 },
                 {        
+                    "id": "pit_filled_filename",
+                    "args_id" : "pit_filled_filename",
+                    "type": "text",
+                    "label": "Pit Filled DEM Filename",
+                    "defaultValue": "pit_filled_dem.tif",
+                    "required": true,
+                    "helpText": "The filename of the output raster with pits filled in. It will go in the project workspace."
+                },
+                {        
                     "id": "resolve_plateaus_filename",
                     "args_id" : "resolve_plateaus_filename",
                     "type": "text",
