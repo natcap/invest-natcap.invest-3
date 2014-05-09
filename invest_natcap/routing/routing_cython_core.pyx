@@ -1391,10 +1391,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             max_distance+1-dem_edge_offset_array+offset_array, 0.0)
 
         dem_array += offset_array / 10000.0
-            
-        #dem_array[mask_array] = (dem_array[mask_array] + 
-        #                         (dem_sink_offset_array[mask_array] * 2.0 +
-        #                          (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
+
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
 
     
