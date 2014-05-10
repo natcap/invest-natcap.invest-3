@@ -364,8 +364,8 @@ def execute(args):
 
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
-                    out_nodata, 
-                    (habitat_float * (1.0 - ((degradation**scaling_param) / 
+                    out_nodata,
+                    (habitat_float * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
         quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
@@ -540,7 +540,7 @@ def make_dictionary_from_csv(csv_uri, key_field):
        returns - a python dictionary
     """
     out_dict = {}
-    csv_file = open(csv_uri)
+    csv_file = open(csv_uri, 'rU')
     reader = csv.DictReader(csv_file)
     for row in reader:
         out_dict[row[key_field]] = row
