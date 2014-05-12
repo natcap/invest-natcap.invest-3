@@ -8,122 +8,34 @@
     "width": 700,
     "elements": [
         {
-            "id": "hra_preprocess_list",
-            "type": "list",
+            "id": "output_list",
+            "label": "Output Parameters",
+            "type": "container",
+            "collapsible": false,
             "elements": [
                 {
-                    "id":"output_dir",
+                    "id":"workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
-                    "defaultValue": "../HabitatRiskAssess",
-                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                    "defaultValue": "../HabitatSuitability",
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
                 },
+                
                 {
-                    "id":"habs_dir",
-                    "args_id": "habitats_dir",
-                    "type": "hideableFileEntry",
-                    "label": "Calculate Risk to Habitats?",
+                    "id" : "output_cell_size",
+                    "type": "text",
+                    "width": 70,
+                    "validText": "[0-9]+",
+                    "dataType": "float",
+                    "args_id": "output_cell_size",
+                    "label": "Output Cell Size (optional)",
                     "required": false,
-                    "validateAs": {"type": "folder",
-		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
-                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors. This is the path to your habitat layers folder."
-                },
-                {
-                    "id":"species_dir",
-                    "args_id": "species_dir",
-                    "type": "hideableFileEntry",
-                    "label": "Calculate Risk to Species?",
-                    "required": false,
-                    "validateAs": {"type": "folder",
-		    		  "mustExist": true},
                     "defaultValue": "",
-                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors. This is the path to the species layers folder."
-                },
-                {
-                    "id":"stressor_dir",
-                    "type": "folder",
-                    "label": "Directory for Stressors Layers",
-                    "required": true,
-                    "validateAs": {"type": "folder",
-		    		  "mustExist": true},
-                    "args_id": "stressors_dir",
-                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers",
-                    "helpText": "This is the path to the stressors layers folder."
+                    "helpText": "The output cell size of the suitability masks.  If left blank will default to the smallest cell size of the input biophysical layers."
                 }
-            ]
-        },
-        {
-            "id" : "cur_lulc_box",
-            "type": "container",
-            "collapsible" : false,
-            "label": "Criteria",
-            "elements": [
-                {
-                    "id": "help_label",
-                    "type": "label",
-                    "label": "(Choose at least 1 criteria for each category below, and at least 4 total.)"
-                },
-                {
-                    "id": "exp_crit",
-                    "type": "multi",
-                    "args_id": "exposure_crits",
-                    "label": "Exposure",
-                    "sampleElement": {"id": "sample_id",
-                                      "type": "text",
-                                      "label": "Input Criteria",
-                                      "validateAs": {"type": "text"},
-                                      "helpText": "Exposure criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the exposure portion of habitat risk."},
-                    "defaultValue": ["Temporal Overlap Rating", "Management Effectiveness", "Intensity Rating"],
-                    "linkText": "Add Another"
-                },  
-                {
-                    "id": "sens_crit",
-                    "type": "multi",
-                    "args_id": "sensitivity_crits",
-                    "label": "Consequence- Sensitivity",
-                    "sampleElement": {"id": "sample_id",
-                                      "type": "text",
-                                      "label": "Input Criteria",
-                                      "validateAs": {"type": "text"},
-                                      "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the consequence portion of habitat risk."},
-                    "defaultValue": ["Frequency of Disturbance", "Change in Area Rating", "Change in Structure Rating"],
-                    "linkText": "Add Another"
-                },  
-                {
-                    "id": "res_crit",
-                    "type": "multi",
-                    "args_id": "resilience_crits",
-                    "label": "Consequence- Resilience",
-                    "sampleElement": {"id": "sample_id",
-                                      "type": "text",
-                                      "label": "Input Criteria",
-                                      "validateAs": {"type": "text"},
-                                      "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run. These criteria will be applied to the consequence portion of habitat risk."},
-                    "defaultValue": ["Recruitment Rate", "Natural Mortality Rate", 
-                                    "Connectivity Rate", "Recovery Time"],
-                    "linkText": "Add Another"
-                }  
-            ]
-        },
-        {
-            "id": "hra_preprocess_list",
-            "type": "list",
-            "elements": [
-            {
-                "id" : "crit_dir",
-                "args_id" : "criteria_dir",
-                "type": "hideableFileEntry",
-                "label": "Use Spatially Explicit Risk Score (shapefiles)",
-                "defaultValue": "../HabitatRiskAssess/Input/Spatially_Explicit_Criteria",
-                "validateAs": {"type": "folder",
-                            "mustExist": true},
-                "required": false,
-                "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
-            }
             ]
         }
     ]
