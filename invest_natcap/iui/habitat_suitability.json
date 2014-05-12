@@ -44,9 +44,9 @@
             ]
         },
         {
-            "id": "biophysical_layer",
+            "id": "biophysical_layers",
             "type": "multi",
-            "args_id": "biophysical_layer",
+            "args_id": "biophysical_layers",
             "label": "Biophysical Layer List",
             "sampleElement": {
                "id": "biophysical_uri",
@@ -57,6 +57,22 @@
                 "args_id": "biophysical_uri",
                 "defaultValue": "",
                 "helpText": "A raster that's a biophysical property."
+            }
+        },
+        {
+            "id": "model_suitabilityt_tables",
+            "type": "multi",
+            "args_id": "model_suitabilityt_tables",
+            "label": "Model Suitability Tables",
+            "sampleElement": {
+               "id": "habitat_biophysical_suitability_table_uri",
+                "type": "file",
+                "label": "Habitat Biophysical Suitability Layer",
+                "required": true,
+                "validateAs": {"type": "CSV"},
+                "args_id": "habitat_biophysical_suitability_table_uri",
+                "defaultValue": "",
+                "helpText": "A CSV that has habitat suitability curves on it."
             }
         }
     ]
