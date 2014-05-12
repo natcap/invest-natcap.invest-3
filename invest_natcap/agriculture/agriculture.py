@@ -31,6 +31,8 @@ def execute(args):
 
     raster_table_uri = args["raster_table"]
     raster_table_field_key = "Id"
+    raster_table_field_short_name = "Short Name"
+    raster_table_other_short_name = "Other"
 
 
     reclass_crop_cover_uri = os.path.join(os.path.join(workspace_dir,
@@ -49,6 +51,11 @@ def execute(args):
     #raster table
     raster_table_csv_dict = raster_utils.get_lookup_from_csv(raster_table_uri,
                                                              raster_table_field_key)
+
+    if 0 in raster_table_csv_dict:
+        raise ValueError, "There should not be an entry in the raster table for cover 0."
+    
+    raster_table_csv_dict[0] = {raster_table_field_short_name: raster_table_other_short_name}
 
     #reclass crop cover
     reclass_table_csv_dict = raster_utils.get_lookup_from_csv(reclass_table_uri,
@@ -74,9 +81,10 @@ def execute(args):
 
     report.write("<B>Crop Cover</B>")
     report.write("\n<TABLE BORDER=1>")
-    row_html = "\n<TR><TD ALIGN=CENTER>%s</TD><TD ALIGN=CENTER>%s</TD><TD ALIGN=RIGHT>%s</TD></TR>"
+    row_html = "\n<TR><TD ALIGN=CENTER>%s</TD><TD ALIGN=CENTER>%s</TD><TD ALIGN=CENTER>%s</TD><TD ALIGN=RIGHT>%s</TD></TR>"
     report.write(row_html % (reclass_table_field_key,
                              reclass_table_field_invest,
+                             raster_table_field_short_name,
                              "Square Meters"))
 
     crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
@@ -86,6 +94,7 @@ def execute(args):
     for crop in crop_counts_keys:
         report.write(row_html % (str(crop),
                                  str(reclass_table[crop]),
+                                 raster_table_csv_dict[reclass_table[crop]][raster_table_field_short_name].title(),
                                  str(round(crop_counts[crop] * cell_size, 2))))
 
     report.write("\n</TABLE>")
