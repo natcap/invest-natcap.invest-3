@@ -42,6 +42,22 @@
                     ]
                 }
             ]
+        },
+        {
+            "id": "biophysical_layer",
+            "type": "multi",
+            "args_id": "biophysical_layer",
+            "label": "Biophysical Layer List",
+            "sampleElement": {
+               "id": "biophysical_uri",
+                "type": "file",
+                "label": "Biophysical Layer",
+                "required": true,
+                "validateAs": {"type": "GDAL"},
+                "args_id": "biophysical_uri",
+                "defaultValue": "",
+                "helpText": "A raster that's a biophysical property."
+            }
         }
     ]
 }
