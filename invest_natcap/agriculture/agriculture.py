@@ -29,6 +29,9 @@ def execute(args):
     reclass_table_field_key = "Input Value"
     reclass_table_field_invest = "InVEST Value"
 
+    raster_table_uri = args["raster_table"]
+    raster_table_field_key = "Id"
+
 
     reclass_crop_cover_uri = os.path.join(os.path.join(workspace_dir,
                                                        intermediate_dir),
@@ -39,6 +42,13 @@ def execute(args):
     #data validation and setup
     if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
         os.makedirs(os.path.join(workspace_dir, intermediate_dir))
+
+    cell_size = raster_utils.get_cell_size_from_uri(crop_cover_uri)
+    LOGGER.debug("Crop cover cell size %s square meters.", cell_size)
+
+    #raster table
+    raster_table_csv_dict = raster_utils.get_lookup_from_csv(raster_table_uri,
+                                                             raster_table_field_key)
 
     #reclass crop cover
     reclass_table_csv_dict = raster_utils.get_lookup_from_csv(reclass_table_uri,
@@ -64,17 +74,19 @@ def execute(args):
 
     report.write("<B>Crop Cover</B>")
     report.write("\n<TABLE BORDER=1>")
-    report.write("\n<TR><TD>%s</TD><TD>%s</TD><TD>Count</TD></TR>" % (reclass_table_field_key,
-                                                                      reclass_table_field_invest))
+    row_html = "\n<TR><TD ALIGN=CENTER>%s</TD><TD ALIGN=CENTER>%s</TD><TD ALIGN=RIGHT>%s</TD></TR>"
+    report.write(row_html % (reclass_table_field_key,
+                             reclass_table_field_invest,
+                             "Square Meters"))
 
     crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
     crop_counts_keys = crop_counts.keys()
     crop_counts_keys.sort()
 
     for crop in crop_counts_keys:
-        report.write("\n<TR><TD>%i</TD><TD>%i</TD><TD>%i</TD></TR>" % (crop,
-                                                            reclass_table[crop],
-                                                            crop_counts[crop]))
+        report.write(row_html % (str(crop),
+                                 str(reclass_table[crop]),
+                                 str(round(crop_counts[crop] * cell_size, 2))))
 
     report.write("\n</TABLE>")
     report.write("\n</HTML>")
