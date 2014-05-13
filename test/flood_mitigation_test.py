@@ -156,7 +156,11 @@ class FloodMitigationTest(unittest.TestCase):
         flow_direction_uri = os.path.join(self.workspace, 'flow_direction.tif')
 
         resampled_runoff_uri = os.path.join(self.workspace, 'runoff_resamp.tif')
-        raster_utils.resample_dataset(storm_runoff, 200, resampled_runoff_uri)
+        
+        bounding_box = raster_utils.get_bounding_box(storm_runoff)
+        raster_utils.resize_and_resample_dataset_uri(
+                storm_runoff, bounding_box, 200, resampled_runoff_uri,
+                gdal.GRA_Bilinear)
 
         routing_utils.flow_direction_inf(self.dem_small, flow_direction_uri)
 
