@@ -692,7 +692,8 @@ def execute(args):
 
         grid_file.close()
 
-
+        # It's possible that no land points were provided, and we need to
+        # handle both cases
         if land_dict:
             land_exists = True
         else:
@@ -703,18 +704,11 @@ def execute(args):
 
         grid_ds_uri = os.path.join(inter_dir, 'val_grid_points%s.shp' % suffix)
 
-        if land_exists:
-            land_ds_uri = os.path.join(inter_dir, 'val_land_points%s.shp' % suffix)
-
-        # Create a point shapefile from the grid and land point dictionaries.
+        # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
         raster_utils.dictionary_to_point_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri)
-
-        if land_exists:
-            raster_utils.dictionary_to_point_shapefile(
-                    land_dict, 'land_points', land_ds_uri)
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
@@ -722,56 +716,61 @@ def execute(args):
         # what then????????
         grid_projected_uri = os.path.join(
                 inter_dir, 'grid_point_projected%s.shp' % suffix)
-
-        if land_exists:
-            land_projected_uri = os.path.join(
-                    inter_dir, 'land_point_projected%s.shp' % suffix)
-
         clip_and_reproject_shapefile(grid_ds_uri, aoi_uri, grid_projected_uri)
 
         if land_exists:
-            clip_and_reproject_shapefile(land_ds_uri, aoi_uri, land_projected_uri)
+            land_ds_uri = os.path.join(
+                inter_dir, 'val_land_points%s.shp' % suffix)
+            # Create a point shapefile from the land point dictionary.
+            # This makes it easier for future distance calculations and
+            # provides a nice intermediate output for users
+            raster_utils.dictionary_to_point_shapefile(
+                    land_dict, 'land_points', land_ds_uri)
 
-        LOGGER.info('Calculating distances using grid points')
+            # In case any of the above points lie outside the AOI, clip the
+            # shapefiles and then project them to the AOI as well.
+            # NOTE: There could be an error here where NO points lie within
+            # the AOI, what then????????
+            land_projected_uri = os.path.join(
+                    inter_dir, 'land_point_projected%s.shp' % suffix)
+            clip_and_reproject_shapefile(
+                land_ds_uri, aoi_uri, land_projected_uri)
 
-        # Get the shortest distances from each grid point to the land points
-        if land_exists:
+            # Get the shortest distances from each grid point to the land
+            # points
             grid_to_land_dist_local = point_to_polygon_distance(
                     grid_projected_uri, land_projected_uri)
 
-        # Add the distances for land to grid points as a new field  onto the
-        # land points datasource
-        LOGGER.debug('Adding land to grid distances to land point datasource')
-        if land_exists:
+            # Add the distances for land to grid points as a new field onto the
+            # land points datasource
+            LOGGER.debug(
+                'Adding land to grid distances to land point datasource')
             land_to_grid_field = 'L2G'
             add_field_to_shape_given_list(
-                    land_projected_uri, grid_to_land_dist_local, land_to_grid_field)
+                    land_projected_uri, grid_to_land_dist_local,
+                    land_to_grid_field)
 
-        # In order to get the proper land to grid distances that each ocean
-        # point corresponds to, we need to build up a KDTree from the land
-        # points geometries and then iterate through each wind energy point
-        # seeing which land point it is closest to. Knowing which land point is
-        # closest allows us to add the proper land to grid distance to the wind
-        # energy point ocean points.
+            # In order to get the proper land to grid distances that each ocean
+            # point corresponds to, we need to build up a KDTree from the land
+            # points geometries and then iterate through each wind energy point
+            # seeing which land point it is closest to. Knowing which land
+            # point is closest allows us to add the proper land to grid
+            # distance to the wind energy point ocean points.
 
-        # Get the land points geometries
-        if land_exists:
+            # Get the land points geometries
             land_geoms = get_points_geometries(land_projected_uri)
 
-        # Build a dictionary from the land points datasource so that we can
-        # have access to what land point has what land to grid distance
+            # Build a dictionary from the land points datasource so that we can
+            # have access to what land point has what land to grid distance
 
-        if land_exists:
             land_dict = get_dictionary_from_shape(land_projected_uri)
             LOGGER.debug('land_dict : %s', land_dict)
 
-        # Build up the KDTree for land points geometries
-        if land_exists:
+            # Build up the KDTree for land points geometries
             kd_tree = spatial.KDTree(land_geoms)
 
-        # Initialize a list to store all the proper grid to land distances to
-        # add to the wind energy point datasource later
-        if land_exists:
+            # Initialize a list to store all the proper grid to land distances
+            # to add to the wind energy point datasource later
             grid_to_land_dist = []
 
         def get_grid_land_dist(wind_points_data_uri):
@@ -794,7 +793,7 @@ def execute(args):
 
                 # Get the shortest distance and closest index from the land
                 # points
-                dist, closest_index = kd_tree.query(point)
+                _, closest_index = kd_tree.query(point)
 
                 # Knowing the closest index we can look into the land geoms
                 # lists, pull that lat/long key, and then use that to index
@@ -803,7 +802,9 @@ def execute(args):
                 grid_to_land_dist.append(l2g_dist)
 
             wind_energy_points = None
+
         if land_exists:
+            # Calculate and add grid to land point distances
             get_grid_land_dist(final_wind_points_uri)
             land_shape_uri = land_projected_uri
         else:
@@ -831,7 +832,7 @@ def execute(args):
         # Set each value in the array to the constant distance for land to grid
         # points
         grid_to_land_dist = grid_to_land_dist * avg_grid_distance
-
+        # Indicate that land polygon will be used for distances
         land_exists = True
 
     # Get constants from val_parameters_dict to make it more readable
@@ -881,28 +882,25 @@ def execute(args):
     if land_exists:
         land_to_ocean_dist = point_to_polygon_distance(
                 land_shape_uri, final_wind_points_uri)
-    else:
-        grid_to_ocean_dist = point_to_polygon_distance(
-                grid_shape_uri, final_wind_points_uri)
-
-    # Add the ocean to land distance value for each point as a new field
-    if land_exists:
+        # Add the ocean to land distance value for each point as a new field
         ocean_to_land_field = 'O2L_km'
         LOGGER.info('Adding ocean to land distances')
         add_field_to_shape_given_list(
                 final_wind_points_uri, land_to_ocean_dist, ocean_to_land_field)
-    else:
-        grid_to_ocean_field = 'g2o_km'
-        LOGGER.info('Adding grid to ocean distances')
-        add_field_to_shape_given_list(
-                final_wind_points_uri, grid_to_ocean_dist, grid_to_ocean_field)
-
-    # Add the grid to land distance value for each point as a new field
-    if land_exists:
+        # Add the grid to land distance value for each point as a new field
         land_to_grid_field = 'L2G_km'
         LOGGER.info('Adding land to grid distances')
         add_field_to_shape_given_list(
                 final_wind_points_uri, grid_to_land_dist, land_to_grid_field)
+    # No land points, get distance as crow flies from ocean points to grid
+    else:
+        grid_to_ocean_dist = point_to_polygon_distance(
+                grid_shape_uri, final_wind_points_uri)
+        # Add the ocean to grid distance value for each point as a new field
+        grid_to_ocean_field = 'g2o_km'
+        LOGGER.info('Adding grid to ocean distances')
+        add_field_to_shape_given_list(
+                final_wind_points_uri, grid_to_ocean_dist, grid_to_ocean_field)
 
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_of_turbines
@@ -953,26 +951,23 @@ def execute(args):
             levelized_index = feat.GetFieldIndex(levelized_cost_field)
             co2_index = feat.GetFieldIndex(carbon_field)
             energy_index = feat.GetFieldIndex('Harv_MWhr')
-
+            # If using land for distances, get ocean to land and land to grid
+            # distances, else use grid to ocean distances
             if land_exists:
                 o2l_index = feat.GetFieldIndex(ocean_to_land_field)
                 l2g_index = feat.GetFieldIndex(land_to_grid_field)
                 o2l_val = feat.GetField(o2l_index)
                 l2g_val = feat.GetField(l2g_index)
                 total_cable_dist = o2l_val + l2g_val
-
             else:
                 g2o_index = feat.GetFieldIndex(grid_to_ocean_field)
                 total_cable_dist = feat.GetField(g2o_index)
+
             # The energy value converted from MWhr/yr (Mega Watt hours as output
             # from CK's biophysical model equations) to kWhr for the
             # valuation model
             energy_val = feat.GetField(energy_index) * 1000.0
-            #o2l_val = feat.GetField(o2l_index)
-            #l2g_val = feat.GetField(l2g_index)
 
-            # Get the total cable distance
-            #total_cable_dist = o2l_val + l2g_val
             # Initialize cable cost variable
             cable_cost = 0
 
