@@ -305,9 +305,10 @@ def execute(args):
 
     #remove transition comment
     trans_uri = raster_utils.temporary_filename()
-
     trans_file = open(trans_uri, 'w')
-    trans_file.write(open(trans_comment_uri).read().split("\n\n")[0])
+    trans_comment_table = open(trans_comment_uri).readlines()
+    row_count = len(trans_comment_table[0].strip().strip(",").split(","))
+    trans_file.write("".join(trans_comment_table[:row_count-1]))
     trans_file.close()
 
     trans_field_key = "Id"
