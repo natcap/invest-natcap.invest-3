@@ -109,18 +109,6 @@
 		    "required": true,
 		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
-		},
-		{        
-		    "id" : "sediment_threshold_table_uri",
-		    "args_id" : "sediment_threshold_table_uri",
-		    "type": "file",
-		    "label": "Sediment threshold table",
-		    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
-		    "required": true,
-		    "validateAs": {"type": "CSV",
-				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
-				  },
-		    "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the user's guide for the meaning of these fields."
 		}
 	    ]
 	}

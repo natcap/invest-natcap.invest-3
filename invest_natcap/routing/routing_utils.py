@@ -303,7 +303,20 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
        returns nothing"""
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
 
+
+def fill_pits(dem_uri, dem_out_uri):
+    """This function fills regions in a DEM that don't drain to the edge
+        of the dataset.  The resulting DEM will likely have plateaus where the
+        pits are filled.
+        
+        dem_uri - the original dem URI
+        dem_out_uri - the original dem with pits raised to the highest drain
+            value
+            
+        returns nothing"""
+    routing_cython_core.fill_pits(dem_uri, dem_out_uri)
     
+
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one

@@ -259,8 +259,7 @@ def execute(args):
             # blur the threat raster based on the effect of the threat over
             # distance
             raster_utils.gaussian_filter_dataset_uri(
-                    threat_dataset_uri, sigma, filtered_threat_uri, out_nodata,
-                    constant_factor=2*math.pi*sigma**2)
+                    threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
@@ -364,8 +363,8 @@ def execute(args):
 
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
-                    out_nodata, 
-                    (habitat_float * (1.0 - ((degradation**scaling_param) / 
+                    out_nodata,
+                    (habitat_float * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
         quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
@@ -540,7 +539,7 @@ def make_dictionary_from_csv(csv_uri, key_field):
        returns - a python dictionary
     """
     out_dict = {}
-    csv_file = open(csv_uri)
+    csv_file = open(csv_uri, 'rU')
     reader = csv.DictReader(csv_file)
     for row in reader:
         out_dict[row[key_field]] = row

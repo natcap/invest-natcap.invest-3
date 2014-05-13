@@ -816,6 +816,79 @@ cdef void _build_flat_set(
     
     cdef int w_row_index, w_col_index
 
+ 
+def fill_pits(dem_uri, dem_out_uri):
+    """This function fills regions in a DEM that don't drain to the edge
+        of the dataset.  The resulting DEM will likely have plateaus where the
+        pits are filled.
+        
+        dem_uri - the original dem URI
+        dem_out_uri - the original dem with pits raised to the highest drain
+            value
+            
+        returns nothing"""
+        
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    
+    dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
+    cdef int n_rows = dem_ds.RasterYSize
+    cdef int n_cols = dem_ds.RasterXSize
+        
+    #copy the dem to a different dataset so we know the type
+    dem_band = dem_ds.GetRasterBand(1)
+    raw_nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
+    
+    cdef double nodata_value
+    if raw_nodata_value is not None:
+        nodata_value = raw_nodata_value
+    else:
+        LOGGER.warn("Nodata value not set, defaulting to -9999.9")
+        nodata_value = -9999.9
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
+        INF)
+    dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
+    dem_out_band = dem_out_ds.GetRasterBand(1)
+    cdef int row_index, col_index, neighbor_index
+    cdef float min_dem_value, cur_dem_value, neighbor_dem_value
+    cdef int pit_count = 0
+    
+    for row_index in range(n_rows):
+        dem_out_array = dem_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+        dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
+    
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array
+    
+    for row_index in range(1, n_rows - 1):
+        #load 3 rows at a time
+        dem_array = dem_out_band.ReadAsArray(
+            xoff=0, yoff=row_index-1, win_xsize=n_cols, win_ysize=3)
+        
+        for col_index in range(1, n_cols - 1):
+            min_dem_value = nodata_value
+            cur_dem_value = dem_array[1, col_index]
+            if cur_dem_value == nodata_value:
+                continue
+            for neighbor_index in range(8):
+                neighbor_dem_value = dem_array[
+                    1 + row_offsets[neighbor_index],
+                    col_index + col_offsets[neighbor_index]]
+                if neighbor_dem_value == nodata_value:
+                    continue
+                if (neighbor_dem_value < min_dem_value or 
+                    min_dem_value == nodata_value):
+                    min_dem_value = neighbor_dem_value
+            if min_dem_value > cur_dem_value:
+                #it's a pit, bump it up
+                dem_array[1, col_index] = min_dem_value
+                pit_count += 1
+            
+        dem_out_band.WriteArray(
+            dem_array[1, :].reshape((1,n_cols)), xoff=0, yoff=row_index)
+    LOGGER.info("%d pits were filled." % (pit_count,))
+        
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -1281,11 +1354,11 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             buf_obj=row_array)
         try:
             max_distance = max(
-                max_distance, numpy.max(row_array[row_array!=INF]))
+                max_distance, numpy.max(row_array[(row_array!=INF) & (row_array!=nodata_value)]))
         except ValueError:
             #no non-infinity elements, that's normal
             pass
-    
+    LOGGER.debug("max_distance %s" % (str(max_distance)))
     #Add the final offsets to the dem array
     dem_array = numpy.empty((1, n_cols), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset_array = (
@@ -1303,10 +1376,22 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
             buf_obj=dem_edge_offset_array)
         mask_array = ((dem_sink_offset_array != INF) &
-                      (dem_edge_offset_array != INF))
-        dem_array[mask_array] = (dem_array[mask_array] + 
-                                 (dem_sink_offset_array[mask_array] * 2.0 +
-                                  (max_distance+1-dem_edge_offset_array[mask_array])) / 10000.0)
+                      (dem_edge_offset_array != INF) &
+                      (dem_sink_offset_array != MAX_DISTANCE) &
+                      (dem_edge_offset_array != MAX_DISTANCE))
+
+        offset_array = numpy.where(
+            (dem_sink_offset_array != INF) & 
+            (dem_sink_offset_array != MAX_DISTANCE), 
+            2.0*dem_sink_offset_array, 0.0)
+            
+        offset_array = numpy.where(
+            (dem_edge_offset_array != INF) & 
+            (dem_edge_offset_array != MAX_DISTANCE), 
+            max_distance+1-dem_edge_offset_array+offset_array, 0.0)
+
+        dem_array += offset_array / 10000.0
+
         dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
 
     
