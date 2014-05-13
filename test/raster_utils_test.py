@@ -16,23 +16,6 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
-    def test_resample_dataset(self):
-        base_dir = 'invest-data/test/data/test_out/resample_dataset'
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
-        output_uri = os.path.join(base_dir, 'resampled.tif')
-        base_uri = 'invest-data/test/data/sediment_test_data/dem'
-        dataset = gdal.Open(base_uri)
-
-        pixel_size = 1000.0
-
-        raster_utils.resample_dataset(
-            base_uri, pixel_size, output_uri, resample_method=gdal.GRA_Bilinear)
-
-        #TODO: add regression test
-
-
     def test_reclassify_dataset(self):
         base_dir = 'invest-data/test/data/test_out/reclassify_dataset'
         if not os.path.exists(base_dir):
