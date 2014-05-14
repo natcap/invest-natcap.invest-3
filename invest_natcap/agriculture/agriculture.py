@@ -133,6 +133,82 @@ def execute(args):
                                           reclass_name)
     
     report_uri = os.path.join(workspace_dir, report_name)
+
+    if args["calculate_nutrition"]:
+        nutrition_table_uri = args["nutrition_table"]
+        
+        nutrition_table_fields = {"Protein (N x 6.25) g per 100 g" : "protein",
+                                  "Total lipid (g per 100 g)" : "lipids",
+                                  "Energy (kj) per 100 g" : "kJ",
+                                  "Calcium (g per 100g)" : "Ca",
+                                  "Iron (g per 100g)" : "Fe",
+                                  "Magnesium (g per 100g)" : "Mg",
+                                  "Phosphorus (g per 100g)" : "P",
+                                  "Potassium (g per 100 g)" : "K",
+                                  "Sodium (g per 100g)" : "Na",
+                                  "Zinc (g per 100g)" : "Zn",
+                                  "Copper (g per 100g)" : "Cu",
+                                  "Fluoride  F (g per 100g)" : "F",
+                                  "Manganese (g per 100g)" : "Mn",
+                                  "Selenium (g per 100g)" : "Se",
+                                  "Vitamin A (IU per 100g)" : "vit_A",
+                                  "Carotene  beta (g per 100g)": "carotene_B",
+                                  "Carotene  alpha (g per 100g)" : "carotene_A",
+                                  "Vitamin E (alpha-tocopherol) g per 100g" : "vit_E",
+                                  "Cryptoxanthin  beta (g per 100g)" : "C_xanthin_B",
+                                  "Lycopene (g per 100g)" : "lycopene",
+                                  "Lutein + zeaxanthin (g per 100g)" : "Lutein_Zeaxanthin",
+                                  "Tocopherol  beta (g per 100g)" : "Tocopherol_B",
+                                  "Tocopherol gamma (g per 100g)" : "Tocopherol_G",
+                                  "Tocopherol  Delta (g per 100g)" : "Tocopherol_D",
+                                  "Vitamin C (g per 100g)" : "vit_C",
+                                  "Thiamin (g per 100g)" : "vit_B1",
+                                  "Riboflavin (g per 100g)" : "vit_B2",
+                                  "Niacin (g per 100g)" : "vit_B3",
+                                  "Pantothenic acid (g per 100 g)" : "vit_B5",
+                                  "Vitamin B6 (g per 100g)" : "vit_B6",
+                                  "Folate  total (g per 100g)" : "vit_B9",
+                                  "Vitamin B-12 (g per 100g)" : "vit_B12",
+                                  "Vitamin K (g per 100g)" : "vit_K"}
+
+        nutrition_table_fields_order = ["Protein (N x 6.25) g per 100 g",
+                                        "Total lipid (g per 100 g)",
+                                        "Energy (kj) per 100 g",
+                                        "Calcium (g per 100g)",
+                                        "Iron (g per 100g)",
+                                        "Magnesium (g per 100g)",
+                                        "Phosphorus (g per 100g)",
+                                        "Potassium (g per 100 g)",
+                                        "Sodium (g per 100g)",
+                                        "Zinc (g per 100g)",
+                                        "Copper (g per 100g)",
+                                        "Fluoride  F (g per 100g)",
+                                        "Manganese (g per 100g)",
+                                        "Selenium (g per 100g)",
+                                        "Vitamin A (IU per 100g)",
+                                        "Carotene  beta (g per 100g)",
+                                        "Carotene  alpha (g per 100g)",
+                                        "Vitamin E (alpha-tocopherol) g per 100g",
+                                        "Cryptoxanthin  beta (g per 100g)",
+                                        "Lycopene (g per 100g)",
+                                        "Lutein + zeaxanthin (g per 100g)",
+                                        "Tocopherol  beta (g per 100g)",
+                                        "Tocopherol gamma (g per 100g)",
+                                        "Tocopherol  Delta (g per 100g)",
+                                        "Vitamin C (g per 100g)",
+                                        "Thiamin (g per 100g)",
+                                        "Riboflavin (g per 100g)",
+                                        "Niacin (g per 100g)",
+                                        "Pantothenic acid (g per 100 g)",
+                                        "Vitamin B6 (g per 100g)",
+                                        "Folate  total (g per 100g)",
+                                        "Vitamin B-12 (g per 100g)",
+                                        "Vitamin K (g per 100g)"]
+        
+        nutrition_table_field_id = "Id"
+
+        nutrition_table_dict = raster_utils.get_lookup_from_csv(nutrition_table_uri,
+                                                           nutrition_table_field_id)
     
     #data validation and setup
     if not os.path.exists(intermediate_uri):
@@ -202,13 +278,20 @@ def execute(args):
                                         dataset_to_bound_index=0,
                                         assert_datasets_projected=False)
 
-        #statistics[crop] = {statistics_field_yield : sum_uri(crop_yield_uri) * cell_size}
-        statistics[crop] = {statistics_field_production : 0}
+        statistics[crop] = {statistics_field_production : sum_uri(crop_yield_uri) * cell_size}
+        #statistics[crop] = {statistics_field_production : 0}
+
+    if args["calculate_nutrition"]:
+        LOGGER.debug("Calculate nutrition.")
+
+    if args["calculate_valuation"]:
+        LOGGER.debug("Calculate valuation.")
 
     #create report
     report = open(report_uri, 'w')
     report.write("<HTML>")
 
+    #cover summary
     report.write("<B>Crop Cover</B>")
     report.write("\n<TABLE BORDER=1>")
     row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
@@ -230,10 +313,28 @@ def execute(args):
         LOGGER.debug("Writing crop %i statistics to table.", crop)
         report.write(row_html % (str(crop),
                                  str(reclass_table[crop]),
-                                 raster_table_csv_dict[reclass_table[crop]][raster_table_field_short_name].title(),
+                                 raster_table_csv_dict[reclass_table[crop]][raster_table_field_short_name],
                                  str(round(crop_counts[crop] * cell_size, 2)),
                                  str(round(statistics[crop][statistics_field_production],2))))
 
     report.write("\n</TABLE>")
+
+    #nutrition summary
+    if args["calculate_nutrition"]:
+        LOGGER.info("Generating nutrition table.")
+
+        report.write("\n<P><B>Nutrition</B>")
+
+        report.write("\n<TABLE BORDER=1>")
+        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
+        row_html += ("<TD ALIGN=RIGHT>%s</TD>" * len(nutrition_table_fields_order)) + "</TR>"
+        header_row = [reclass_table_field_key,
+                      reclass_table_field_invest,
+                      raster_table_field_short_name]
+        for nutrient in nutrition_table_fields_order:
+            header_row.append(nutrition_table_fields[nutrient])
+        report.write(row_html % tuple(header_row))
+
+    
     report.write("\n</HTML>")
     report.close()
