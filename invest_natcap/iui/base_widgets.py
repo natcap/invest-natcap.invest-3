@@ -2125,6 +2125,8 @@ class TabbedGroup(QtGui.QTabWidget, DynamicGroup):
             tab.set_index(index)
             self.addTab(tab, tab.attributes['label'])
 
+        self.setMinimumSize(self.sizeHint())
+
     def set_active_tab(self):
         """Update the active tab in this tabbedgroup to be the leftmost enabled
             tab.  If there are no enabled tabs, the active tab should be the
