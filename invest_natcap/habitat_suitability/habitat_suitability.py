@@ -4,6 +4,8 @@ import os
 import logging
 import csv
 
+import gdal
+import numpy
 import scipy
 
 from invest_natcap import raster_utils
@@ -83,7 +85,7 @@ def execute(args):
             ('oyster_habitat_suitability_depth_table_uri', 'Depth'),
         }
     biophysical_to_interp = {}
-    for biophysical_uri, (habitat_suitability_table_uri, key) in \
+    for biophysical_uri_key, (habitat_suitability_table_uri, key) in \
             biophysical_to_table.iteritems():
         csv_dict_reader = csv.DictReader(
             open(args[habitat_suitability_table_uri], 'rU'))
@@ -92,7 +94,36 @@ def execute(args):
         for row in csv_dict_reader:
             suitability_list.append(row['Suitability'])
             value_list.append(row[key])
-        biophysical_to_interp[biophysical_uri] = scipy.interpolate.interp1d(
-            value_list, suitability_list, kind='linear', copy=True,
+        LOGGER.debug(value_list)
+        LOGGER.debug(suitability_list)
+        biophysical_to_interp[biophysical_uri_key] = scipy.interpolate.interp1d(
+            value_list, suitability_list, kind='linear',
             bounds_error=False, fill_value=0.0)
-            
+    biophysical_to_habitat_quality = {
+        'salinity_biophysical_uri': os.path.join(
+            output_dir, 'oyster_salinity_suitability.tif'),
+        'temperature_biophysical_uri': os.path.join(
+            output_dir, 'oyster_temperature_suitability.tif'),
+        'depth_biophysical_uri':  os.path.join(
+            output_dir, 'oyster_depth_suitability.tif'),
+    }
+    #classify the biophysical maps into habitat quality maps
+    for biophysical_uri_key, interpolator in biophysical_to_interp.iteritems():
+        biophysical_nodata = raster_utils.get_nodata_from_uri(
+            aligned_raster_stack[biophysical_uri_key])
+        LOGGER.debug(aligned_raster_stack[biophysical_uri_key])
+        reclass_nodata = -1.0
+        n_rows, n_cols = raster_utils.get_row_col_from_uri(
+            aligned_raster_stack[biophysical_uri_key])
+        def reclass_op(values):
+            """reclasses a value into an interpolated value"""
+            nodata_mask = values == biophysical_nodata
+            LOGGER.debug(values)
+            return numpy.where(
+                nodata_mask, reclass_nodata, 
+                interpolator(values))
+        raster_utils.vectorize_datasets(
+            [aligned_raster_stack[biophysical_uri_key]], reclass_op,
+            biophysical_to_habitat_quality[biophysical_uri_key],
+            gdal.GDT_Float32, reclass_nodata, out_pixel_size, "intersection",
+            dataset_to_align_index=0, vectorize_op=False)
