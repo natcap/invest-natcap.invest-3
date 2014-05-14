@@ -2241,6 +2241,12 @@ def vectorize_datasets(
             inefficiently invoke the function on individual elements.
             """
     
+    if type(dataset_uri_list) != list:
+        raise ValueError(
+            "dataset_uri_list was not passed in as a list, maybe a single "
+            "file was passed in?  Here is its value: %s" % 
+            (str(dataset_uri_list)))
+            
     if aoi_uri == None:
         assert_file_existance(dataset_uri_list)
     else:
@@ -2251,12 +2257,6 @@ def vectorize_datasets(
             "%s is used as an output file, but it is also an input file "
             "in the input list %s" % (dataset_out_uri, str(dataset_uri_list)))
 
-    if type(dataset_uri_list) != list:
-        raise ValueError(
-            "dataset_uri_list was not passed in as a list, maybe a single "
-            "file was passed in?  Here is its value: %s" % 
-            (str(dataset_uri_list)))
-            
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
