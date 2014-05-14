@@ -174,6 +174,7 @@ if platform.system() == 'Windows':
          'invest_scenic_quality.py',
          'routedem.py',
          'invest_sdr.py',
+         'invest_habitat_suitability.py',
          ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
