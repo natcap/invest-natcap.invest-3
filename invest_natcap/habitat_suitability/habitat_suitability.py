@@ -177,6 +177,10 @@ def execute(args):
     oyster_suitability_datasource_uri = os.path.join(
         output_dir, 'oyster_habitat_suitability_mask.shp')
     
+    if os.path.isfile(oyster_suitability_datasource_uri):
+        os.remove(oyster_suitability_datasource_uri)
+
+    
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     oyster_suitability_datasource = output_driver.CreateDataSource(
         oyster_suitability_datasource_uri)
