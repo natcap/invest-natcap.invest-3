@@ -2153,11 +2153,15 @@ class Tab(DynamicGroup):
         super(Tab, self).__init__(attributes, layout, registrar)
         self.index = None
 
-        if 'condenseElements' in self.attributes:
-            self.LOGGER.debug('Condense elements=%s',
-                self.attributes['condenseElements'])
-            if self.attributes['condenseElements'] == True:
-                layout.insertStretch(-1)
+
+        # default condenseElements to True if not otherwise specified.
+        if 'condenseElements' not in self.attributes:
+            self.attributes['condenseElements'] = True
+
+        self.LOGGER.debug('Condense elements=%s',
+            self.attributes['condenseElements'])
+        if self.attributes['condenseElements'] == True:
+            layout.insertStretch(-1)
 
 
     def set_index(self, index):
