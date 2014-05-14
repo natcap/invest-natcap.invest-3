@@ -109,6 +109,7 @@ packages = ['invest_natcap',
             'invest_natcap.blue_carbon',
             'invest_natcap.scenario_generator',
             'invest_natcap.sdr',
+            'invest_natcap.habitat_suitability',
             ]
 
 def get_iui_resource_data_files(lib_path):
