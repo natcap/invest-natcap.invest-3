@@ -890,9 +890,9 @@ def aggregate_raster_values_uri(
         except DatasetUnprojected:
             #doesn't make sense to calculate the hectare mean
             LOGGER.warn(
-                'aggregate raster %s is not projected setting hectare_mean to None'
+                'aggregate raster %s is not projected setting hectare_mean to {}'
                 % raster_uri)
-            result_tuple.hectare_mean = None
+            result_tuple.hectare_mean.clear()
 
     mask_band = None
     mask_dataset = None
@@ -2298,6 +2298,12 @@ def vectorize_datasets(
             "%s is used as an output file, but it is also an input file "
             "in the input list %s" % (dataset_out_uri, str(dataset_uri_list)))
 
+    if type(dataset_uri_list) != list:
+        raise ValueError(
+            "dataset_uri_list was not passed in as a list, maybe a single "
+            "file was passed in?  Here is its value: %s" % 
+            (str(dataset_uri_list)))
+            
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
