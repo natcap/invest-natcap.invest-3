@@ -111,8 +111,6 @@ def execute(args):
         biophysical_nodata = raster_utils.get_nodata_from_uri(
             aligned_raster_stack[biophysical_uri_key])
         LOGGER.debug(aligned_raster_stack[biophysical_uri_key])
-        n_rows, n_cols = raster_utils.get_row_col_from_uri(
-            aligned_raster_stack[biophysical_uri_key])
         def reclass_op(values):
             """reclasses a value into an interpolated value"""
             nodata_mask = values == biophysical_nodata
@@ -138,6 +136,12 @@ def execute(args):
             running_mask = running_mask | (values[index] == reclass_nodata)
         return numpy.where(
             running_mask, reclass_nodata, running_product**(1./len(values)))
+    
+    raster_utils.vectorize_datasets(
+        biophysical_to_habitat_quality.values(), geo_mean,
+        oyster_suitability_uri, gdal.GDT_Float32, reclass_nodata,
+        out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
     
        
     
