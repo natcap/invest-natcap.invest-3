@@ -92,10 +92,8 @@ def execute(args):
         suitability_list = []
         value_list = []
         for row in csv_dict_reader:
-            suitability_list.append(row['Suitability'])
-            value_list.append(row[key])
-        LOGGER.debug(value_list)
-        LOGGER.debug(suitability_list)
+            suitability_list.append(float(row['Suitability']))
+            value_list.append(float(row[key]))
         biophysical_to_interp[biophysical_uri_key] = scipy.interpolate.interp1d(
             value_list, suitability_list, kind='linear',
             bounds_error=False, fill_value=0.0)
@@ -118,7 +116,6 @@ def execute(args):
         def reclass_op(values):
             """reclasses a value into an interpolated value"""
             nodata_mask = values == biophysical_nodata
-            LOGGER.debug(values)
             return numpy.where(
                 nodata_mask, reclass_nodata, 
                 interpolator(values))
