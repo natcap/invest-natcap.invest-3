@@ -587,7 +587,12 @@ def execute(args):
         else:
             LOGGER.info("Resampling land cover.")
             #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
-            raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
+            bounding_box = raster_utils.get_bounding_box(landcover_uri)
+            raster_utils.resize_and_resample_dataset_uri(landcover_uri,
+                                                         bounding_box,
+                                                         args["resolution"],
+                                                         landcover_resample_uri,
+                                                         gdal.GRA_NearestNeighbour)
             landcover_uri = landcover_resample_uri
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)

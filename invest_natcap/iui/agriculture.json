@@ -94,6 +94,15 @@
                                                                         "validateAs": {"type": "GDAL"},
                                                                         "required": false,
                                                                         "enabledBy" : "use_crop_map"
+                                                                    },
+                                                                    {
+                                                                        "id" : "raster_table",
+                                                                        "args_id": "raster_table",
+                                                                        "type": "file",
+                                                                        "label" : "Raster table",
+                                                                        "defaultValue" : "../Agriculture/input/rasters.csv",
+                                                                        "validateAs": {"type": "CSV"},
+                                                                        "required": true
                                                                     }
                                                                 ]
                                                             }

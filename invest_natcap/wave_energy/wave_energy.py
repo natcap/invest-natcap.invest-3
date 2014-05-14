@@ -29,10 +29,10 @@ def execute(args):
         wave power raster, net present value raster, percentile rasters for the
         previous three, and a point shapefile of the wave points with
         attributes.
-        
+
         args - a pythong dictionary that houses the inputs for the model
 
-        args['workspace_dir'] - Where the intermediate and output folder/files  
+        args['workspace_dir'] - Where the intermediate and output folder/files
             will be saved. (required)
 
         args['wave_base_data_uri'] - Directory location of wave base data
@@ -334,8 +334,8 @@ def execute(args):
 
         clipped_wave_shape = ogr.Open(point_shape_uri, 1)
         dem_gt = raster_utils.get_geotransform_uri(dataset_uri)
-        dem_matrix = raster_utils.load_memory_mapped_array(
-                dataset_uri, tmp_dem_path, array_type=None)
+        dem_matrix = raster_utils.load_dataset_to_carray(
+            dataset_uri, tmp_dem_path, array_type=None)
 
         # Create a new field for the depth attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
