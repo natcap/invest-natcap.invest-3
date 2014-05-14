@@ -22,6 +22,8 @@ def execute(args):
         
         workspace_dir - uri to workspace directory for output files
         output_cell_size - (optional) size of output cells
+        habitat_threshold - a value to threshold the habitat score values to 
+            0 and 1
         depth_biophysical_uri - uri to a depth raster 
         salinity_biophysical_uri - uri to salinity raster
         temperature_biophysical_uri - uri to temperature raster
@@ -143,5 +145,20 @@ def execute(args):
         out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-       
+     #calculate the geometric mean of the suitability rasters
+    oyster_suitability_mask_uri = os.path.join(
+        output_dir, 'oyster_habitat_suitability_mask.tif')
+    
+    def threshold(value):
+        """Threshold the values to args['habitat_threshold']"""
+        
+        threshold_value = value >= args['habitat_threshold']
+        return numpy.where(
+            value == reclass_nodata, reclass_nodata, threshold_value)
+            
+    raster_utils.vectorize_datasets(
+        [oyster_suitability_uri], threshold,
+        oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
+        out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
     
