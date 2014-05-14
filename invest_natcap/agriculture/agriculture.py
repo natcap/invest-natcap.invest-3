@@ -16,7 +16,7 @@ def execute(args):
     gdal_type_cover = gdal.GDT_Int32
     gdal_type_float = gdal.GDT_Float32
     nodata_int = -1
-    nodata_float = -1
+    nodata_float = -1.0
     
     intermediate_dir = "intermediate"
 
@@ -95,7 +95,7 @@ def execute(args):
             if crop_yield == nodata_float:
                 return nodata_float
             elif cover != crop:
-                return 0
+                return 0.0
             else:
                 return crop_yield
 
