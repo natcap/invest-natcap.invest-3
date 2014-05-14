@@ -4,6 +4,9 @@ import os
 import logging
 import csv
 
+
+import osr
+import ogr
 import gdal
 import numpy
 import scipy
@@ -161,4 +164,27 @@ def execute(args):
         oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
         out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
+        
+    #polygonalize output mask
+    output_mask_ds = gdal.Open(oyster_suitability_mask_uri)
+    output_mask_band = output_mask_ds.GetRasterBand(1)
+    output_mask_wkt = output_mask_ds.GetProjection()
     
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_mask_wkt)
+    
+    
+    oyster_suitability_datasource_uri = os.path.join(
+        output_dir, 'oyster_habitat_suitability_mask.shp')
+    
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    oyster_suitability_datasource = output_driver.CreateDataSource(
+        oyster_suitability_datasource_uri)
+    oyster_suitability_layer = oyster_suitability_datasource.CreateLayer(
+            'oyster', output_sr, ogr.wkbPolygon)
+            
+    field = ogr.FieldDefn('pixel_value', ogr.OFTReal)
+    oyster_suitability_layer.CreateField(field)
+
+    gdal.Polygonize(
+        output_mask_band, output_mask_band, oyster_suitability_layer, 0)
