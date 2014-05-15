@@ -134,6 +134,8 @@ def execute(args):
     
     report_uri = os.path.join(workspace_dir, report_name)
 
+    print args
+
     if args["calculate_nutrition"]:
         nutrition_table_uri = args["nutrition_table"]
         
@@ -204,11 +206,49 @@ def execute(args):
                                         "Folate  total (g per 100g)",
                                         "Vitamin B-12 (g per 100g)",
                                         "Vitamin K (g per 100g)"]
+
+        nutrition_table_mask = [args["nutrient_protein"],
+                                args["nutrient_lipids"],
+                                args["nutrient_energy"],
+                                args["nutrient_calcium"],
+                                args["nutrient_iron"],
+                                args["nutrient_magnesium"],
+                                args["nutrient_potassium"],
+                                args["nutrient_sodium"],
+                                args["nutrient_zinc"],
+                                args["nutrient_copper"],
+                                args["nutrient_flouride"],
+                                args["nutrient_manganese"],
+                                args["nutrient_selenium"],
+                                args["nutrient_vit_a"],
+                                args["nutrient_carotene_b"],
+                                args["nutrient_carotene_a"],
+                                args["nutrient_vit_e"],
+                                args["nutrient_cryptoxanthin"],
+                                args["nutrient_lycopene"],
+                                args["nutrient_lutein"],
+                                args["nutrient_tocopherol_b"],
+                                args["nutrient_tocopherol_g"],
+                                args["nutrient_tocopherol_d"],
+                                args["nutrient_vit_c"],
+                                args["nutrient_vit_b1"],
+                                args["nutrient_vit_b2"],
+                                args["nutrient_vit_b3"],
+                                args["nutrient_vit_b5"],
+                                args["nutrient_vit_b6"],
+                                args["nutrient_vit_b9"],
+                                args["nutrient_vit_b12"],
+                                args["nutrient_vit_k"]]
         
         nutrition_table_field_id = "Id"
 
         nutrition_table_dict = raster_utils.get_lookup_from_csv(nutrition_table_uri,
                                                            nutrition_table_field_id)
+
+        nutrient_selection = []
+        for nutrient, inclusion in zip(nutrition_table_fields_order, nutrition_table_mask):
+            if inclusion:
+                nutrient_selection.append(nutrient)
     
     #data validation and setup
     if not os.path.exists(intermediate_uri):
@@ -327,11 +367,11 @@ def execute(args):
 
         report.write("\n<TABLE BORDER=1>")
         row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
-        row_html += ("<TD ALIGN=RIGHT>%s</TD>" * len(nutrition_table_fields_order)) + "</TR>"
+        row_html += ("<TD ALIGN=RIGHT>%s</TD>" * len(nutrient_selection)) + "</TR>"
         header_row = [reclass_table_field_key,
                       reclass_table_field_invest,
                       raster_table_field_short_name]
-        for nutrient in nutrition_table_fields_order:
+        for nutrient in nutrient_selection:
             header_row.append(nutrition_table_fields[nutrient])
         report.write(row_html % tuple(header_row))
 
