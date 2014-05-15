@@ -247,14 +247,14 @@
                                             "id" : "nutrient_carotene_b",
                                             "args_id" : "nutrient_carotene_b",
                                             "type" : "checkbox",
-                                            "label" : "Carotene ß",
+                                            "label" : "Carotene β",
                                             "defaultValue" : true
                                         },
                                         {
                                             "id" : "nutrient_carotene_a",
                                             "args_id" : "nutrient_carotene_a",
                                             "type" : "checkbox",
-                                            "label" : "Carotene A",
+                                            "label" : "Carotene α",
                                             "defaultValue" : true
                                         },
                                         {
@@ -282,28 +282,28 @@
                                             "id" : "nutrient_lutein",
                                             "args_id" : "nutrient_lutein",
                                             "type" : "checkbox",
-                                            "label" : "Lutein & Zeaxanthin",
+                                            "label" : "Lutein and Zeaxanthin",
                                             "defaultValue" : true
                                         },
                                         {
                                             "id" : "nutrient_tocopherol_b",
                                             "args_id" : "nutrient_tocopherol_b",
                                             "type" : "checkbox",
-                                            "label" : "Tocopherol B",
+                                            "label" : "Tocopherol β",
                                             "defaultValue" : true
                                         },
                                         {
                                             "id" : "nutrient_tocopherol_g",
                                             "args_id" : "nutrient_tocopherol_g",
                                             "type" : "checkbox",
-                                            "label" : "Tocopherol G",
+                                            "label" : "Tocopherol γ",
                                             "defaultValue" : true
                                         },
                                         {
                                             "id" : "nutrient_tocopherol_d",
                                             "args_id" : "nutrient_tocopherol_d",
                                             "type" : "checkbox",
-                                            "label" : "tocopherol D",
+                                            "label" : "Tocopherol δ",
                                             "defaultValue" : true
                                         },
                                         {
