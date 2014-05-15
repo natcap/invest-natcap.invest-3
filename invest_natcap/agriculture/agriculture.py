@@ -100,6 +100,8 @@ def execute(args):
     gdal_type_float = gdal.GDT_Float32
     nodata_int = -1
     nodata_float = -1.0
+
+    table_precision = 2
     
     intermediate_dir = "intermediate"
 
@@ -122,7 +124,7 @@ def execute(args):
 
     raster_table_field_yield = "Monfreda_yield"
 
-    crop_yield_name = "%i_yield.tif"
+    crop_yield_name = "yield_%i.tif"
     
     statistics = {}
     statistics_field_production = "Production"
@@ -133,6 +135,8 @@ def execute(args):
                                           reclass_name)
     
     report_uri = os.path.join(workspace_dir, report_name)
+
+    nutrient_name = "nutrient_%s.tif"
 
     if args["calculate_nutrition"]:
         nutrition_table_uri = args["nutrition_table"]
@@ -204,11 +208,49 @@ def execute(args):
                                         "Folate  total (g per 100g)",
                                         "Vitamin B-12 (g per 100g)",
                                         "Vitamin K (g per 100g)"]
+
+        nutrition_table_mask = [args["nutrient_protein"],
+                                args["nutrient_lipids"],
+                                args["nutrient_energy"],
+                                args["nutrient_calcium"],
+                                args["nutrient_iron"],
+                                args["nutrient_magnesium"],
+                                args["nutrient_potassium"],
+                                args["nutrient_sodium"],
+                                args["nutrient_zinc"],
+                                args["nutrient_copper"],
+                                args["nutrient_flouride"],
+                                args["nutrient_manganese"],
+                                args["nutrient_selenium"],
+                                args["nutrient_vit_a"],
+                                args["nutrient_carotene_b"],
+                                args["nutrient_carotene_a"],
+                                args["nutrient_vit_e"],
+                                args["nutrient_cryptoxanthin"],
+                                args["nutrient_lycopene"],
+                                args["nutrient_lutein"],
+                                args["nutrient_tocopherol_b"],
+                                args["nutrient_tocopherol_g"],
+                                args["nutrient_tocopherol_d"],
+                                args["nutrient_vit_c"],
+                                args["nutrient_vit_b1"],
+                                args["nutrient_vit_b2"],
+                                args["nutrient_vit_b3"],
+                                args["nutrient_vit_b5"],
+                                args["nutrient_vit_b6"],
+                                args["nutrient_vit_b9"],
+                                args["nutrient_vit_b12"],
+                                args["nutrient_vit_k"]]
         
         nutrition_table_field_id = "Id"
 
         nutrition_table_dict = raster_utils.get_lookup_from_csv(nutrition_table_uri,
                                                            nutrition_table_field_id)
+
+        nutrient_selection = []
+        for nutrient, inclusion in zip(nutrition_table_fields_order, nutrition_table_mask):
+            if inclusion:
+                nutrient_selection.append(nutrient)
     
     #data validation and setup
     if not os.path.exists(intermediate_uri):
@@ -246,6 +288,7 @@ def execute(args):
                                         exception_flag = "values_required",
                                         assert_dataset_projected = False)
 
+    #create yield rasters
     invest_crops = raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys()
     invest_crops.sort()
     if invest_crops[0] == 0:
@@ -279,10 +322,38 @@ def execute(args):
                                         assert_datasets_projected=False)
 
         statistics[crop] = {statistics_field_production : sum_uri(crop_yield_uri) * cell_size}
-        #statistics[crop] = {statistics_field_production : 0}
 
     if args["calculate_nutrition"]:
         LOGGER.debug("Calculate nutrition.")
+        for nutrient in nutrient_selection:
+            LOGGER.debug("Creating %s raster.", nutrition_table_fields[nutrient])
+
+            reclass_table = {}
+            for crop in invest_crops:
+                try:
+                    reclass_table[crop] = nutrition_table_dict[crop][nutrient]
+                except KeyError:
+                    LOGGER.warn("No nutrition information for crop %i, setting values to 0.", crop)
+                    reclass_table[crop] = 0.0
+                    
+            reclass_table[0] = 0.0
+            
+            nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrition_table_fields[nutrient])
+
+            raster_utils.reclassify_dataset_uri(reclass_crop_cover_uri,
+                                            reclass_table,
+                                            nutrient_uri,
+                                            gdal_type_float,
+                                            nodata_float,
+                                            exception_flag = "values_required",
+                                            assert_dataset_projected = False)
+
+        for crop in invest_crops:
+            for nutrient in nutrient_selection:
+                try:
+                    statistics[crop][nutrient] = str(round(statistics[crop][statistics_field_production] * nutrition_table_dict[crop][nutrient], table_precision))
+                except KeyError:
+                    statistics[crop][nutrient] = "NA"         
 
     if args["calculate_valuation"]:
         LOGGER.debug("Calculate valuation.")
@@ -310,12 +381,13 @@ def execute(args):
         crop_counts_keys.pop(0)
 
     for crop in crop_counts_keys:
-        LOGGER.debug("Writing crop %i statistics to table.", crop)
+        LOGGER.debug("Writing crop %i yield statistics to table.", crop)
+        invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
         report.write(row_html % (str(crop),
-                                 str(reclass_table[crop]),
-                                 raster_table_csv_dict[reclass_table[crop]][raster_table_field_short_name],
-                                 str(round(crop_counts[crop] * cell_size, 2)),
-                                 str(round(statistics[crop][statistics_field_production],2))))
+                                 str(invest_crop),
+                                 raster_table_csv_dict[invest_crop][raster_table_field_short_name],
+                                 str(round(crop_counts[crop] * cell_size, table_precision)),
+                                 str(round(statistics[invest_crop][statistics_field_production], table_precision))))
 
     report.write("\n</TABLE>")
 
@@ -327,13 +399,27 @@ def execute(args):
 
         report.write("\n<TABLE BORDER=1>")
         row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
-        row_html += ("<TD ALIGN=RIGHT>%s</TD>" * len(nutrition_table_fields_order)) + "</TR>"
+        row_html += ("<TD ALIGN=RIGHT>%s</TD>" * len(nutrient_selection)) + "</TR>"
         header_row = [reclass_table_field_key,
                       reclass_table_field_invest,
                       raster_table_field_short_name]
-        for nutrient in nutrition_table_fields_order:
+        for nutrient in nutrient_selection:
             header_row.append(nutrition_table_fields[nutrient])
         report.write(row_html % tuple(header_row))
+
+        for crop in crop_counts_keys:
+            LOGGER.debug("Writing crop %i nutrtion statistics to table.", crop)
+            invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
+            
+            row = [str(crop),
+                   str(invest_crop),
+                   raster_table_csv_dict[invest_crop][raster_table_field_short_name]]
+            
+            row += [statistics[invest_crop][nutrient] for nutrient in nutrient_selection]
+                   
+            report.write(row_html % tuple(row))
+
+        report.write("\n</TABLE>")
 
     
     report.write("\n</HTML>")
