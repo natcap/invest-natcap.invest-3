@@ -76,8 +76,12 @@ class DynamicElement(QtGui.QWidget):
 
         # Save a local logger instance with the logger name reflecting the class
         # we're in.
-        self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
-            (self.__class__.__name__, attributes['id'][0:10]))
+        try:
+            self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
+                (self.__class__.__name__, attributes['id'][0:10]))
+        except KeyError as e:
+            print "cant' find ID %s %s" % (str(attributes), self.__class__.__name__)
+            raise e
         self.LOGGER.setLevel(logging.ERROR)
 
         self.LOGGER.debug('Initializing element %s', attributes['id'])
