@@ -77,6 +77,7 @@ CMD_CLASSES = {
 }
 
 packages = ['invest_natcap',
+            'invest_natcap.agriculture',
             'invest_natcap.carbon',
             'invest_natcap.dbfpy',
             'invest_natcap.hydropower',
