@@ -147,7 +147,8 @@ if platform.system() == 'Windows':
 
     #These are the exes that will get built
     py2exe_args['console'] = \
-        ['invest_carbon.py',
+        ['invest_agriculture.py',
+         'invest_carbon.py',
          'invest_wave_energy.py',
          'invest_hra.py',
          'invest_hra_preprocessor.py',
