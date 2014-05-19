@@ -127,7 +127,17 @@
                                                                         "type" : "checkbox",
                                                                         "label": "Calculate valuation",
                                                                         "defaultValue" : true
-                                                                    }   
+                                                                    },
+                                                                    {
+                                                                        "id": "valuation_table",
+                                                                        "args_id" : "valuation_table",
+                                                                        "type": "file",
+                                                                        "label": "Valuation CSV",
+                                                                        "defaultValue" : "../Agriculture/input/Agcost_data_Data.csv",
+                                                                        "validateAs": {"type": "CSV"},
+                                                                        "required" : true,
+                                                                        "enabledBy" : "calculate_valuation"
+                                                                    }                                                                    
                                                                 ]
                                                             }
                                                         ]
