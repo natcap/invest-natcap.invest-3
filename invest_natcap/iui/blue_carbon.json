@@ -264,7 +264,7 @@
                                                                 "label": "Price in terms of metric tons of",
                                                                 "options": ["Carbon (C)",
                                                                             "Carbon Dioxide (CO2)"],
-                                                                "defaultValue": 0,
+                                                                "defaultValue": 1,
                                                                 "required": true,
                                                                 "helpText": "The units for the price per unit of carbon type. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
