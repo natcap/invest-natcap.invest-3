@@ -29,6 +29,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     g_array = numpy.empty(input_mask_array.shape, dtype=numpy.float)
     print g_array.shape
     print n_rows
+    #phase one, calculate column G(x,y)
     for col_index in xrange(n_cols):
         b_array = input_mask_array[:, col_index] == 0
         if b_array[0]:
@@ -49,7 +50,12 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                 g_array[row_index, col_index] = (
                     1.0 + g_array[row_index + 1, col_index])
     
-    #phase one, calculate column G(x,y)
+    #phase 2
+    for row_index in xrange(n_rows):
+        q_index = 0
+        s_array = numpy.zeros(n_cols)
+        t_array = numpy.zeros(n_cols)
+        for u_index in xrange(n_rows)
     
     
     
