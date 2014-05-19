@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('blue_carbon_preprocessor')
 
-def get_transition_set_count_from_uri(dataset_uri_list):
+def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
     cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
     lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
@@ -104,6 +104,15 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                 transitions[key][orig][dest] = counts[key][k]
             except KeyError:
                 transitions[key][orig] = {dest : counts[key][k]}
+
+    if ignore_nodata:
+        for r in unique_raster_values_count:
+            if lulc_nodata in unique_raster_values_count[r]:
+                unique_raster_values_count[r].pop(lulc_nodata)
+
+        for r in transitions:
+            if lulc_nodata in transitions[r]:
+                transitions[r].pop(lulc_nodata)
 
     return unique_raster_values_count, transitions
                 
