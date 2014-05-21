@@ -23,6 +23,17 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     
     n_cols = input_mask_ds.RasterXSize
     n_rows = input_mask_ds.RasterYSize
+   
+    projection = input_mask_ds.GetProjection()
+    geotransform = input_mask_ds.GetGeoTransform()
+    driver = gdal.GetDriverByName('GTiff')
+    output_raster = driver.Create(
+        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+    output_raster.SetProjection(projection)
+    output_raster.SetGeoTransform(geotransform)
+    output_band = output_raster.GetRasterBand(1)
+    output_band.SetNoDataValue(-1)
     
     numerical_inf = n_cols + n_rows
     
@@ -84,6 +95,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
             if u_index == t_array[q_index]:
                 q_index -= 1
     
+    output_band.WriteArray(dt)
     
 if __name__ == '__main__':    
     input_mask_uri = 'C:/Users/rich/Documents/HabitatSuitability/output/oyster_habitat_suitability_mask.tif'
