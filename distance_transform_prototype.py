@@ -50,7 +50,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
             g_array[0, col_index] = numerical_inf
         
         for row_index in xrange(1, n_rows):
-            if b_array[0]:
+            if b_array[row_index]:
                 g_array[row_index, col_index] = 0.0
             else:
                 g_array[row_index, col_index] = (
@@ -90,7 +90,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                     s_array[q_index] = u_index
                     t_array[q_index] = w
         
-        for u_index in xrange(n_cols - 1, 0, -1):
+        for u_index in xrange(n_cols-1, -1, -1):
             dt[row_index, u_index] = f(u_index, s_array[q_index])
             if u_index == t_array[q_index]:
                 q_index -= 1
