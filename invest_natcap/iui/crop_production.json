@@ -1,9 +1,9 @@
 {
     "id" : "window",
-    "label": "Agriculture",
-    "targetScript" : "invest_natcap.agriculture.agriculture",
-    "modelName" : "recreation_client_init",
-    "localDocURI": "../documentation/agriculture.html",
+    "label": "Crop Production",
+    "targetScript" : "invest_natcap.crop_production.crop_production",
+    "modelName" : "crop_production",
+    "localDocURI": "../documentation/crop_production.html",
     "condenseElements" : true,
     "height": 800,
     "width" : 700,
@@ -33,7 +33,7 @@
                                                                         "args_id" : "workspace_dir",
                                                                         "type": "folder",
                                                                         "label": "Workspace",
-                                                                        "defaultValue": "../Agriculture/output",
+                                                                        "defaultValue": "../CropProduction/output",
                                                                         "required": true,
                                                                         "helpText": "Select a folder to be used as your workspace."
                                                                     },
@@ -60,7 +60,7 @@
                                                                         "args_id" : "crop_file_name",
                                                                         "type": "file",
                                                                         "label": "Crop Map",
-                                                                        "defaultValue": "../Agriculture/input/crop_map.tif",
+                                                                        "defaultValue": "../CropProduction/input/crop_map.tif",
                                                                         "validateAs": {"type": "GDAL"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
@@ -70,7 +70,7 @@
                                                                         "args_id" : "reclass_table",
                                                                         "type": "file",
                                                                         "label": "Crop Reclass Table",
-                                                                        "defaultValue": "../Agriculture/input/reclass_table.csv",
+                                                                        "defaultValue": "../CropProduction/input/reclass_table.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
@@ -100,7 +100,7 @@
                                                                         "args_id": "raster_table",
                                                                         "type": "file",
                                                                         "label" : "Raster table",
-                                                                        "defaultValue" : "../Agriculture/input/rasters.csv",
+                                                                        "defaultValue" : "../CropProduction/input/rasters.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true
                                                                     },
@@ -116,7 +116,7 @@
                                                                         "args_id" : "nutrition_table",
                                                                         "type": "file",
                                                                         "label": "Nutrition CSV",
-                                                                        "defaultValue" : "../Agriculture/input/cropNutrient.csv",
+                                                                        "defaultValue" : "../CropProduction/input/cropNutrient.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required" : true,
                                                                         "enabledBy" : "calculate_nutrition"
@@ -133,7 +133,7 @@
                                                                         "args_id" : "valuation_table",
                                                                         "type": "file",
                                                                         "label": "Valuation CSV",
-                                                                        "defaultValue" : "../Agriculture/input/Agcost_data_Data.csv",
+                                                                        "defaultValue" : "../CropProduction/input/Agcost_data_Data.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required" : true,
                                                                         "enabledBy" : "calculate_valuation"
