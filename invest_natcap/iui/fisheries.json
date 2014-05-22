@@ -165,6 +165,7 @@
                     "dataType": "float",
                     "label": "Initial Number of Recruits",
                     "required": true,
+                    "defaultValue": "4686959.42894736",
                     "validateAs": {"type":"number"},
                     "helpText": "The initial number of recruits that will be placed into the model. If there are multiple AOI zones, this initial number will be split equally amongst them."
                 }
