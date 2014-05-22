@@ -42,15 +42,15 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     print n_rows
     print 'phase 1'
     #phase one, calculate column G(x,y)
+    b_array = input_mask_array == 0
     for col_index in xrange(n_cols):
-        b_array = input_mask_array[:, col_index] == 0
-        if b_array[0]:
+        if b_array[0, col_index]:
             g_array[0, col_index] = 0
         else:
             g_array[0, col_index] = numerical_inf
         
         for row_index in xrange(1, n_rows):
-            if b_array[row_index]:
+            if b_array[row_index, col_index]:
                 g_array[row_index, col_index] = 0.0
             else:
                 g_array[row_index, col_index] = (
@@ -64,21 +64,24 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     
     #phase 2
     print 'phase 2'
-    
     dt = numpy.zeros(input_mask_array.shape)
     for row_index in xrange(n_rows):
     
         def f(x, i):
             return (x - i)**2 + g_array[row_index, i]**2
-        
-        def sep(i, u):
+
+        def sep(u, i):
             return (u**2 - i**2 + g_array[row_index, u]**2 - g_array[row_index, i]**2) / (2 * (u - i))
             
         q_index = 0
         s_array = numpy.zeros(n_cols)
         t_array = numpy.zeros(n_cols)
         for u_index in xrange(1, n_cols):
-            while q_index >= 0 and f(t_array[q_index], s_array[q_index]) > f(t_array[q_index], u_index):
+            #print s_array
+            #print t_array
+            while (q_index >= 0 and 
+                f(t_array[q_index], s_array[q_index]) > 
+                f(t_array[q_index], u_index)):
                 q_index -= 1
             if q_index < 0:
                q_index = 0
