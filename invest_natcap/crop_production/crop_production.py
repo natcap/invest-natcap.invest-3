@@ -138,6 +138,8 @@ def execute(args):
 
     nutrient_name = "nutrient_%s.tif"
 
+    valuation_table_field_subregion = "Subregion"
+
     if args["calculate_nutrition"]:
         nutrition_table_uri = args["nutrition_table"]
         
@@ -324,7 +326,7 @@ def execute(args):
         statistics[crop] = {statistics_field_production : sum_uri(crop_yield_uri) * cell_size}
 
     if args["calculate_nutrition"]:
-        LOGGER.debug("Calculate nutrition.")
+        LOGGER.debug("Calculating nutrition.")
         for nutrient in nutrient_selection:
             LOGGER.debug("Creating %s raster.", nutrition_table_fields[nutrient])
 
@@ -356,13 +358,14 @@ def execute(args):
                     statistics[crop][nutrient] = "NA"         
 
     if args["calculate_valuation"]:
-        LOGGER.debug("Calculate valuation.")
+        LOGGER.debug("Calculating valuation.")
 
     #create report
     report = open(report_uri, 'w')
     report.write("<HTML>")
 
     #cover summary
+    LOGGER.debug("Generating coverage table.")
     report.write("<B>Crop Cover</B>")
     report.write("\n<TABLE BORDER=1>")
     row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
@@ -421,6 +424,20 @@ def execute(args):
 
         report.write("\n</TABLE>")
 
+    if args["calculate_valuation"]:
+        LOGGER.debug("Generating valuation table.")
+        report.write("\n<P><B>Valuation</B>")
+        report.write("\n<TABLE BORDER=1>")
+        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 4) + "</TR>"
+
+        header_row = (reclass_table_field_key,
+                      reclass_table_field_invest,
+                      raster_table_field_short_name,
+                      valuation_table_field_subregion)
+
+        report.write(row_html % header_row)
+        
+        report.write("\n</TABLE>")
     
     report.write("\n</HTML>")
     report.close()

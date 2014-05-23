@@ -38,9 +38,18 @@ def local_dir(source_file):
     passed in."""
     source_dirname = os.path.dirname(source_file)
     if getattr(sys, 'frozen', False):
-        package_dirname = os.path.dirname(__file__)
-        relpath = os.path.relpath(source_dirname, package_dirname)
-        return os.path.join(os.path.dirname(sys._MEIPASS), relpath)
+        # sys.frozen is True when we're in either a py2exe or pyinstaller
+        # build.
+        # sys._MEIPASS exists, we're in a Pyinstaller build.
+        if getattr(sys, '_MEIPASS', False) != False:
+            package_dirname = os.path.dirname(__file__)
+            relpath = os.path.relpath(source_dirname, package_dirname)
+            return os.path.join(os.path.dirname(sys._MEIPASS), relpath)
+        else:
+            # assume that if we're in a frozen build, we're in py2exe.  When in
+            # py2exe, the directory structure is maintained, so we just return
+            # the source_dirname.
+            pass
     return source_dirname
 
 def _user_hash():
