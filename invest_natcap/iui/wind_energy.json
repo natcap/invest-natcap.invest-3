@@ -83,7 +83,7 @@
                     "args_id" : "suffix",
                     "type": "text",
                     "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
+                    "validText": "[a-zA-Z0-9_]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
@@ -202,18 +202,6 @@
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
                         },
                         {
-                            "id" : "dollar_per_kWh",
-                            "args_id" : "dollar_per_kWh",
-                            "type": "text",
-                            "label": "Price of Energy per Kilowatt Hour ($/kWh)",
-                            "defaultValue": "",
-                            "validText" : "^[0-9]*\\.?[0-9]+$",
-                            "validateAs" : {"type" : "number",
-                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                            "required": true,
-                            "helpText": "The price of energy per kilowatt hour. Please consult the User's Guide for determining this value."
-                        },
-                        {
                             "id" : "discount_rate",
                             "args_id" : "discount_rate",
                             "type": "text",
@@ -262,6 +250,55 @@
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
                             "helpText": "<b>Always required, but NOT used in the model if Grid Points provided</b><br/><br/>A number in kilometres that is only used if grid points are NOT used in valuation. When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points. See the User's Guide for a description of the approach and the method used to calculate the default value."
+                        },
+                        {
+                            "id" : "price_table",
+                            "args_id" : "price_table",
+                            "type" : "checkbox",
+                            "label" : "Use Price Table",
+                            "defaultValue": true,
+                            "helpText" : "When checked the model will use the social cost of wind energy table provided in the input below. If not checked the price per year will be determined using the price of energy input and the annual rate of change."
+                        },
+                        {
+                            "id": "wind_schedule",
+                            "args_id": "wind_schedule",
+                            "type": "file",
+                            "label": "Wind Energy Price Table",
+                            "defaultValue": "",
+                            "helpText": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm. They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><td>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr><td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td><td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above. In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
+                            "enabledBy" : "price_table",
+                            "required" : true
+                        },
+                        {
+                            "id": "wind_price",
+                            "args_id": "wind_price",
+                            "type": "text",
+                            "width": 70,
+                            "label": "Price of Energy per Kilowatt Hour ($/kWh)",
+                            "dataType": "float",
+                            "defaultValue": "",
+                            "validText" : "^[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                            "helpText": "The price of energy per kilowatt hour. This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below. Please consult the User's Guide for determining this value.",
+                            "disabledBy" : "price_table",
+                            "required" : true
+                        },
+                        {
+                            "id": "rate_change",
+                            "args_id": "rate_change",
+                            "type": "text",
+                            "width": 70,
+                            "label": "Annual Rate of Change in Price of Wind Energy (%)",
+                            "required": true,
+                            "dataType": "float",
+                            "defaultValue": "0",
+                            "validText" : "[-+]?[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "[-+]?[0-9]*\\.?[0-9]+$"}},
+                            "helpText": "The rate of change as a percent for the price of wind energy per year.",
+                            "disabledBy" : "price_table",
+                            "required" : true
                         }
                     ]
                 }
