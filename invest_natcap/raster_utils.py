@@ -2882,7 +2882,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     
     numerical_inf = n_cols + n_rows
     
-    print 'phase 1'
+    LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
     b_array = input_mask_array == 1
     g_array = numpy.empty((n_rows, n_cols), dtype=numpy.int)
@@ -2906,12 +2906,9 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                 g_array[row_index, col_index] = (
                     1 + g_array[row_index + 1, col_index])
     
-    #output_band.WriteArray(g_array)
-    #return
     
-    #phase 2
-    print 'phase 2'
-    #print g_array
+    LOGGER.info('Distance Transform Phase 2')
+    
     dt = numpy.zeros(b_array.shape)
     for row_index in xrange(n_rows):
     
