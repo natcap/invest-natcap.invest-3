@@ -2866,19 +2866,17 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     input_mask_band = input_mask_ds.GetRasterBand(1)
     input_mask_array = input_mask_band.ReadAsArray()
     
+    input_nodata = get_nodata_from_uri(input_mask_uri)
+    
     n_cols = input_mask_ds.RasterXSize
     n_rows = input_mask_ds.RasterYSize
    
-    projection = input_mask_ds.GetProjection()
-    geotransform = input_mask_ds.GetGeoTransform()
-    driver = gdal.GetDriverByName('GTiff')
-    output_raster = driver.Create(
-        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
-    output_raster.SetProjection(projection)
-    output_raster.SetGeoTransform(geotransform)
-    output_band = output_raster.GetRasterBand(1)
-    output_band.SetNoDataValue(-1)
+    output_nodata = -1.0
+    new_raster_from_base_uri(
+        input_mask_uri, output_distance_uri, 'GTiff', output_nodata,
+        gdal.GDT_Float32)
+    output_dataset = gdal.Open(output_distance_uri, gdal.GA_Update)
+    output_band = output_dataset.GetRasterBand(1)
     
     numerical_inf = n_cols + n_rows
     
@@ -2942,5 +2940,5 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
             dt[row_index, u_index] = f(u_index, s_array[q_index])
             if u_index == t_array[q_index]:
                 q_index -= 1
-
+    dt[input_mask_array == input_nodata] = output_nodata
     output_band.WriteArray(numpy.sqrt(dt))
