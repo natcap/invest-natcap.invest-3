@@ -748,7 +748,7 @@ def execute(args):
                 def weighted_op(*values):
                     return sum([ v * w for v, w in zip(values, weights_list)])
 
-                raster_utils.vectorize_datasets(uri_list,
+                raster_utils.vectorize_datasets(list(uri_list),
                                                 weighted_op,
                                                 ds_uri,
                                                 suitability_type,
