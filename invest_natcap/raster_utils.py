@@ -2971,11 +2971,11 @@ def transpose_datasets(input_uri, output_uri):
     output_band.SetNoDataValue(nodata)
 
     #write transposed array
-    for row_index in xrange(n_rows):
-        row_array = input_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+    for col_index in xrange(n_cols):
+        col_array = input_band.ReadAsArray(
+            xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         output_band.WriteArray(
-            row_array.reshape((n_cols, 1)),
-            xoff=row_index)
+            col_array.reshape((1, n_rows)),
+            yoff=col_index)
             
     
