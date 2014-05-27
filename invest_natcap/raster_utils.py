@@ -2942,3 +2942,40 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                 q_index -= 1
     dt[input_mask_array == input_nodata] = output_nodata
     output_band.WriteArray(numpy.sqrt(dt))
+    
+    
+def transpose_datasets(input_uri, output_uri):
+    """Transpose the input dataset from rows to columns and columns to rows
+        
+        input_uri - a gdal raster 
+        output_uri - an output transposed raster
+            
+        returns nothing"""
+    
+    input_ds = gdal.Open(input_uri)
+    input_band = input_ds.GetRasterBand(1)
+    nodata = input_band.GetNoDataValue()
+    n_cols = input_ds.RasterXSize
+    n_rows = input_ds.RasterYSize
+    projection = input_ds.GetProjection()
+    geotransform = input_ds.GetGeoTransform()
+    driver = gdal.GetDriverByName('GTiff')
+    
+    #transpose the rows and columns
+    output_ds = driver.Create(
+        output_uri.encode('utf-8'), n_rows, n_cols, 1, input_band.DataType,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+    output_ds.SetProjection(projection)
+    output_ds.SetGeoTransform(geotransform)
+    output_band = output_ds.GetRasterBand(1)
+    output_band.SetNoDataValue(nodata)
+
+    #write transposed array
+    for row_index in xrange(n_rows):
+        row_array = input_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+        output_band.WriteArray(
+            row_array.reshape((n_cols, 1)),
+            xoff=row_index)
+            
+    
