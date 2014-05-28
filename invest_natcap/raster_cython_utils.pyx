@@ -148,7 +148,7 @@ cdef int _sep(int i, int u, int gu, int gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
-#@cython.boundscheck(False)
+@cython.boundscheck(False)
 def _distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
@@ -173,7 +173,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     #create a transposed g function
     file_handle, g_dataset_uri = tempfile.mkstemp()
     os.close(file_handle)
-    cdef float g_nodata = -1.0
+    cdef int g_nodata = -1
     
     input_projection = input_mask_ds.GetProjection()
     input_geotransform = input_mask_ds.GetGeoTransform()
@@ -201,7 +201,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
     
-    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array_transposed
+    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array_transposed = (
+        numpy.empty((1, n_rows), dtype=numpy.int32))
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
     cdef int col_index, row_index, q_index, u_index, w
@@ -209,7 +210,6 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         
-        g_array_transposed = numpy.empty((1, n_rows), dtype=numpy.int32)
         #named _transposed so we remember column is flipped to row
         if b_array[0, 0]:
             g_array_transposed[0, 0] = 0
@@ -234,9 +234,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
             g_array_transposed, xoff=0, yoff=col_index)
 
     LOGGER.info('Distance Transform Phase 2')
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(n_cols, dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] t_array = numpy.zeros(n_cols, dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty((1, n_cols), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(
+        n_cols, dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.int32_t, ndim=1] t_array = numpy.zeros(
+        n_cols, dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty(
+        (1, n_cols), dtype=numpy.float32)
     
     for row_index in xrange(n_rows):
         g_array_transposed = g_band.ReadAsArray(
@@ -270,12 +273,9 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         b_array = input_mask_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         
+        dt = numpy.sqrt(dt)
         dt[b_array == input_nodata] = output_nodata
-        
-        old_settings = numpy.seterr(invalid='ignore')
-        output_band.WriteArray(
-            numpy.sqrt(dt), xoff=0, yoff=row_index)
-        numpy.seterr(**old_settings)
+        output_band.WriteArray(dt, xoff=0, yoff=row_index)
         
     gdal.Dataset.__swig_destroy__(g_dataset)
     try:
