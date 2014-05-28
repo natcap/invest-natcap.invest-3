@@ -489,7 +489,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
         #This will be used for each 0 age in the cycle. 
         rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
                                             rec_dict, gender_var, cycle, do_weight)
-                            
+        LOGGER.debug("C: %s, R: %s" % (cycle, rec_sans_disp))                    
         for area in params_dict['Area_Params'].keys():
 
             #Initialize current area within cycle.
@@ -502,7 +502,7 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     
                 #If a = 0
                 if age in first_age:
-                    #LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
+                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
@@ -589,7 +589,7 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
                     curr_num_indivs = \
                         calc_indiv_count(cycle_dict, migration_dict, area, stage,
                                             cycle)
-                    prob_surv_stay = calc_prob_surv_stay(params_dict, prev_stage, area) 
+                    prob_surv_stay = calc_prob_surv_stay(params_dict, stage, area) 
                     prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
 
                     cycle_dict[cycle][area][stage] = (prev_num_indivs * prob_surv_grow) + \
@@ -642,6 +642,7 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
             inc_prime = prev_indivs_prime * mig_prime_to_area
             incoming_pop += inc_prime
     
+    LOGGER.debug("Cycle: %s, Area: %s, Age: %s, Orig: %s, New: %s" % (cycle, area, age, indivs_in_area, incoming_pop)) 
     return indivs_in_area + incoming_pop
 
 def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, do_weight):

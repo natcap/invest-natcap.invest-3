@@ -523,16 +523,17 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     #Set a temp filename for the AOI raster.
-    aoi_rast_uri = raster_utils.temporary_filename()
+    #aoi_rast_uri = raster_utils.temporary_filename()
+    aoi_rast_uri = '/home/kathryn/Documents/Carla_Data/aoi_temp_raster.tif'
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
     LOGGER.debug("arb_uri: %s" % arb_raster_uri)
-    
+    pixel_size = raster_utils.get_cell_size_from_uri(arb_raster_uri)  
 
     #Use the first overlap raster as the base for the AOI
-    raster_utils.new_raster_from_base_uri(arb_raster_uri, aoi_rast_uri, 'GTiff', 
-                                -1, gdal.GDT_Float32)
+    raster_utils.create_raster_from_vector_extents_uri(cp_aoi_uri, pixel_size,
+                            gdal.GDT_Float32, -1, aoi_rast_uri) 
 
     #This rasterize should burn a unique burn ID int to each. Need to have a dictionary which
     #associates each burn ID with the AOI 'name' attribute that's required. 

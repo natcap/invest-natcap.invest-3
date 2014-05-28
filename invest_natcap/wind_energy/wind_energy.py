@@ -38,6 +38,10 @@ class HubHeightError(Exception):
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
     pass
+class TimePeriodError(Exception):
+    """A custom error message for when the number of years does not match
+        the number of years given in the price table"""
+    pass
 
 def execute(args):
     """This module handles the execution of the wind energy model
@@ -95,7 +99,15 @@ def execute(args):
         args[avg_grid_distance] - a float for the average distance in kilometers
             from a grid connection point to a land connection point
             (required for valuation if grid connection points are not provided)
-
+        args[price_table] - a bool indicating whether to use the wind energy
+            price table or not (required)
+        args[wind_schedule] - a URI to a CSV file for the yearly prices of
+            wind energy for the lifespan of the farm (required if 'price_table'
+            is true)
+        args[wind_price] - a float for the wind energy price at year 0
+            (required if price_table is false)
+        args[rate_change] - a float as a percent for the annual rate of change
+            in the price of wind energy. (required if price_table is false)
         returns - nothing"""
 
     LOGGER.debug('Starting the Wind Energy Model')
@@ -867,16 +879,50 @@ def execute(args):
 
     time = int(val_parameters_dict['time_period'])
 
-    # Dollar per kiloWatt hour
-    dollar_per_kwh = float(args['dollar_per_kWh'])
+    # If Price Table provided use that for price of energy
+    if args["price_table"]:
+        csv_file = open(args["wind_schedule"], 'rU')
+        csv_reader = csv.DictReader(csv_file)
+        price_dict = {}
+
+        # Making a shallow copy of the attribute 'fieldnames' explicitly to
+        # edit to all the fields to lowercase because it is more readable
+        # and easier than editing the attribute itself
+        field_names = csv_reader.fieldnames
+        for index in range(len(field_names)):
+            field_names[index] = field_names[index].lower()
+        # Build up temporary dictionary for year and price
+        for row in csv_reader:
+            price_dict[int(row['year'])] = float(row['price'])
+        csv_file.close()
+
+        # Get the years or time steps and sort
+        year_keys = price_dict.keys()
+        year_keys.sort()
+
+        if len(year_keys) != time + 1:
+            raise TimePeriodError("The 'time' argument in the global parameter"
+                "file must equal the number years provided in the table.")
+
+        # Save the price values into a list where the indices of the list
+        # indicate the time steps for the lifespand of the wind farm
+        price_list = []
+        for index in xrange(len(year_keys)):
+            price_list.append(price_dict[year_keys[index]])
+    else:
+        # Convert rate of change from percent to decimal value
+        change_rate = float(args["rate_change"]) / 100.0
+        wind_price = float(args["wind_price"])
+        # Build up a list of price values where the indices of the list
+        # are the time steps for the lifespan of the farm and values
+        # are adjusted based on the rate of change
+        price_list = []
+        for time_step in xrange(time + 1):
+            price_list.append(wind_price * (1 + change_rate) ** (time_step))
 
     # The total mega watt compacity of the wind farm where mega watt is the
     # turbines rated power
     total_mega_watt = mega_watt * number_of_turbines
-
-    # The price per kWh for energy converted to units of millions of dollars to
-    # correspond to the units for valuation costs
-    mill_dollar_per_kwh = dollar_per_kwh / 1000000
 
     # Get the shortest distances from each ocean point to the land points
     if land_exists:
@@ -993,24 +1039,41 @@ def execute(args):
             # The cost to decommission the farm
             decommish_capex = decom * capex / disc_time
 
-            # The revenue in millions of dollars for the wind farm. The
-            # energy_val is in kWh the farm.
-            rev = energy_val * mill_dollar_per_kwh
+            # Variable to store the summation of the revenue less the
+            # ongoing costs, adjusted for discount rate
             comp_one_sum = 0
+            # Variable to store the numerator summation part of the
+            # levelized cost
             levelized_cost_sum = 0
+            # Variable to store the denominator summation part of the
+            # levelized cost
             levelized_cost_denom = 0
 
             # Calculate the total NPV summation over the lifespan of the wind
             # farm as well as the levelized cost
-            for year in range(1, time + 1):
-                # Calcuate the first component summation of the NPV equation
-                comp_one_sum = \
+            for year in xrange(len(price_list)):
+                # Dollar per kiloWatt hour
+                dollar_per_kwh = float(price_list[year])
+
+                # The price per kWh for energy converted to units of millions of dollars to
+                # correspond to the units for valuation costs
+                mill_dollar_per_kwh = dollar_per_kwh / 1000000
+
+                # If year is 0 then it is considered a construction year where
+                # revenue is 0 and we do NOT accrue any ongoing costs
+                if year != 0:
+                    # The revenue in millions of dollars for the wind farm. The
+                    # energy_val is in kWh the farm.
+                    rev = energy_val * mill_dollar_per_kwh
+
+                    # Calcuate the first component summation of the NPV equation
+                    comp_one_sum = \
                         comp_one_sum + (rev - ongoing_capex) / disc_const**year
 
-                # Calculate the numerator summation value for levelized
-                # cost of energy
-                levelized_cost_sum = levelized_cost_sum + (
-                        (ongoing_capex / disc_const**year))
+                    # Calculate the numerator summation value for levelized
+                    # cost of energy
+                    levelized_cost_sum = levelized_cost_sum + (
+                            (ongoing_capex / disc_const**year))
 
                 # Calculate the denominator summation value for levelized
                 # cost of energy

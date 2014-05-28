@@ -98,8 +98,8 @@ def sum_uri(dataset_uri):
 def execute(args):
     gdal_type_cover = gdal.GDT_Int32
     gdal_type_float = gdal.GDT_Float32
-    nodata_int = -1
-    nodata_float = -1.0
+    nodata_int = 0
+    nodata_float = 0.0
 
     table_precision = 2
     
@@ -123,11 +123,21 @@ def execute(args):
     raster_table_other_short_name = "Other"
 
     raster_table_field_yield = "Monfreda_yield"
+    raster_table_field_area = "Monfreda_harea"
 
-    crop_yield_name = "yield_%i.tif"
+    crop_yield_name = "%i_yield_masked.tif"
+    clip_yield_name = "%i_yield_clip.tif"
+    projected_yield_name = "%i_yield_prj.tif"
+
+    crop_area_name = "%i_area_masked.tif"
+    clip_area_name = "%i_area_clip.tif"
+    projected_area_name = "%i_area_prj.tif"
+
+    crop_production_name = "%i_prod.tif"
     
     statistics = {}
     statistics_field_production = "Production"
+    statistics_field_intensity = "Intensity (%)"
 
     intermediate_uri = os.path.join(workspace_dir, intermediate_dir)
     
@@ -139,6 +149,20 @@ def execute(args):
     nutrient_name = "nutrient_%s.tif"
 
     valuation_table_field_subregion = "Subregion"
+
+    extent_name = "extent.shp"
+    extent_4326_name = "extent_4326.shp"
+    sr_4326 = osr.SpatialReference()
+    sr_4326.ImportFromEPSG(4326)
+    wkt = sr_4326.ExportToWkt()
+    extent_uri = os.path.join(intermediate_uri, extent_name)
+    extent_4326_uri = os.path.join(intermediate_uri, extent_4326_name)
+
+    output_wkt = raster_utils.get_dataset_projection_wkt_uri(crop_cover_uri)
+
+    datasource_from_dataset_bounding_box_uri(crop_cover_uri, extent_uri)
+
+    raster_utils.reproject_datasource_uri(extent_uri, wkt, extent_4326_uri)
 
     if args["calculate_nutrition"]:
         nutrition_table_uri = args["nutrition_table"]
@@ -291,39 +315,115 @@ def execute(args):
                                         assert_dataset_projected = False)
 
     #create yield rasters
-    invest_crops = raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys()
+    invest_crop_counts = raster_utils.unique_raster_values_count(reclass_crop_cover_uri)
+    invest_crops = invest_crop_counts.keys()
     invest_crops.sort()
     if invest_crops[0] == 0:
         invest_crops.pop(0)
 
+    nodata_yield = -9999
     def yield_op_closure(crop):
         def yield_op(cover, crop_yield):
-            if crop_yield == nodata_float:
+            if crop_yield == nodata_yield or cover != crop:
                 return nodata_float
-            elif cover != crop:
-                return 0.0
             else:
                 return crop_yield
 
         return yield_op
 
+    nodata_area = -9999
+    def area_op_closure(crop):
+        def area_op(cover, crop_area):
+            if crop_area == nodata_area or cover != crop:
+                return nodata_float
+            else:
+                return crop_area
+
+        return area_op
+
+    def production_op(crop_yield, crop_area):
+        if nodata_float in [crop_yield, crop_area]:
+            return nodata_float
+        else:
+            return crop_yield * crop_area
     
     for crop in invest_crops:
         LOGGER.debug("Separating out crop %i.", crop)
+        yield_uri = os.path.join(raster_path, raster_table_csv_dict[crop][raster_table_field_yield])
+        area_uri = os.path.join(raster_path, raster_table_csv_dict[crop][raster_table_field_area])
+        
+        clip_yield_uri = os.path.join(intermediate_uri, clip_yield_name % crop)
+        project_yield_uri = os.path.join(intermediate_uri, projected_yield_name % crop)
         crop_yield_uri = os.path.join(intermediate_uri, crop_yield_name % crop)
+        
+        clip_area_uri = os.path.join(intermediate_uri, clip_area_name % crop)
+        project_area_uri = os.path.join(intermediate_uri, projected_area_name % crop)
+        crop_area_uri = os.path.join(intermediate_uri, crop_area_name % crop)
+
+        crop_production_uri = os.path.join(intermediate_uri, crop_production_name % crop)
+
+        ##process yield dataset
+        #clip
+        raster_utils.clip_dataset_uri(yield_uri,
+                                      extent_4326_uri,
+                                      clip_yield_uri,
+                                      assert_projections=False)
+        #project
+        raster_utils.warp_reproject_dataset_uri(clip_yield_uri,
+                                                cell_size,
+                                                output_wkt,
+                                                "nearest",
+                                                project_yield_uri)
+        #mask
         raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                         os.path.join(raster_path,
-                                                      raster_table_csv_dict[crop][raster_table_field_yield])],
+                                         project_yield_uri],
                                         yield_op_closure(crop),
                                         crop_yield_uri,
                                         gdal_type_float,
                                         nodata_float,
                                         cell_size,
                                         "dataset",
-                                        dataset_to_bound_index=0,
-                                        assert_datasets_projected=False)
+                                        dataset_to_bound_index=0)
 
-        statistics[crop] = {statistics_field_production : sum_uri(crop_yield_uri) * cell_size}
+        ##process area dataset
+        #clip
+        raster_utils.clip_dataset_uri(area_uri,
+                                      extent_4326_uri,
+                                      clip_area_uri,
+                                      assert_projections=False)
+        #project
+        raster_utils.warp_reproject_dataset_uri(clip_area_uri,
+                                                cell_size,
+                                                output_wkt,
+                                                "nearest",
+                                                project_area_uri)
+        #mask
+        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                         project_area_uri],
+                                        area_op_closure(crop),
+                                        crop_area_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0)
+
+        ##calculate production
+        raster_utils.vectorize_datasets([crop_yield_uri,
+                                         crop_area_uri],
+                                        production_op,
+                                        crop_production_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0)
+        
+
+        statistics[crop] = {}
+        statistics[crop][statistics_field_production] = sum_uri(crop_production_uri) * cell_size
+        statistics[crop][statistics_field_intensity] = 100 * sum_uri(crop_area_uri) / invest_crop_counts[crop]
+        
 
     if args["calculate_nutrition"]:
         LOGGER.debug("Calculating nutrition.")
@@ -369,11 +469,12 @@ def execute(args):
     report.write("<B>Crop Cover</B>")
     report.write("\n<TABLE BORDER=1>")
     row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
-    row_html += ("<TD ALIGN=RIGHT>%s</TD>" * 2) + "</TR>"
+    row_html += ("<TD ALIGN=RIGHT>%s</TD>" * 3) + "</TR>"
     report.write(row_html % (reclass_table_field_key,
                              reclass_table_field_invest,
                              raster_table_field_short_name,
-                             "Square Meters",
+                             "Extent (m^2)",
+                             statistics_field_intensity,
                              statistics_field_production))
 
     crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
@@ -390,6 +491,7 @@ def execute(args):
                                  str(invest_crop),
                                  raster_table_csv_dict[invest_crop][raster_table_field_short_name],
                                  str(round(crop_counts[crop] * cell_size, table_precision)),
+                                 str(round(statistics[invest_crop][statistics_field_intensity], table_precision)),
                                  str(round(statistics[invest_crop][statistics_field_production], table_precision))))
 
     report.write("\n</TABLE>")
