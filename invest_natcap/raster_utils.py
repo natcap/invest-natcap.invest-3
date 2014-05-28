@@ -42,9 +42,9 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float32: numpy.float32,
     gdal.GDT_Float64: numpy.float64
     }
-    
+
 class NoDaemonProcess(multiprocessing.Process):
-    """A class to make non-deamonic pools in case we want to have pools of 
+    """A class to make non-deamonic pools in case we want to have pools of
         pools"""
     # make 'daemon' attribute always return False
     def _get_daemon(self):
@@ -57,7 +57,7 @@ class NoDaemonProcess(multiprocessing.Process):
 # because the latter is only a wrapper function, not a proper class.
 class PoolNoDaemon(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
-    
+
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
 class SpatialExtentOverlapException(Exception):
@@ -78,25 +78,25 @@ class OrderedDict(DictMixin):
     def __init__(self):
         self._keys = []
         self._data = {}
-        
-        
+
+
     def __setitem__(self, key, value):
         if key not in self._data:
             self._keys.append(key)
         self._data[key] = value
-        
+
     def __getitem__(self, key):
         return self._data[key]
-    
-    
+
+
     def __delitem__(self, key):
         del self._data[key]
         self._keys.remove(key)
-        
-        
+
+
     def keys(self):
         return list(self._keys)
-        
+
     def copy(self):
         copyDict = odict()
         copyDict._data = self._data.copy()
@@ -192,11 +192,11 @@ def get_cell_size_from_uri(dataset_uri):
     """Returns the cell size of the dataset in meters.  Raises an exception
         if the raster is not square since this'll break most of the raster_utils
         algorithms.
-        
+
         dataset_uri - uri to a gdal dataset
-        
+
         returns cell size of the dataset in meters"""
-        
+
     srs = osr.SpatialReference()
     dataset = gdal.Open(dataset_uri)
     if dataset == None:
@@ -316,7 +316,7 @@ def new_raster_from_base(
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
         fill_value - (optional) the value to fill in the raster on creation
         n_rows - (optional) if set makes the resulting raster have n_rows in it
-            if not, the number of rows of the outgoing dataset are equal to 
+            if not, the number of rows of the outgoing dataset are equal to
             the base.
         n_cols - (optional) similar to n_rows, but for the columns.
 
@@ -683,12 +683,12 @@ def aggregate_raster_values_uri(
     rasterize_layer_args = {
         'options': [],
     }
-    
+
     if all_touched:
         rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
-    
+
     if shapefile_field is not None:
-        #Make sure that the layer name refers to an integer 
+        #Make sure that the layer name refers to an integer
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
         if fd == -1 or fd is None:  # -1 returned when field does not exist.
@@ -705,7 +705,7 @@ def aggregate_raster_values_uri(
     else:
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
-    
+
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}
     aggregate_dict_counts = {}
@@ -719,7 +719,7 @@ def aggregate_raster_values_uri(
         n_pixels={},
         pixel_min={},
         pixel_max={})
-        
+
     #make a shapefile that non-overlapping layers can be added to
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
@@ -729,7 +729,7 @@ def aggregate_raster_values_uri(
     subset_layer = subset_layer_datasouce.CreateLayer(
         'subset_layer', spat_ref, ogr.wkbPolygon)
     defn = shapefile_layer.GetLayerDefn()
-    
+
     #For every field, create a duplicate field and add it to the new
     #subset_layer layer
     defn.GetFieldCount()
@@ -738,7 +738,7 @@ def aggregate_raster_values_uri(
         output_field = ogr.FieldDefn(original_field.GetName(),
             original_field.GetType())
         subset_layer.CreateField(output_field)
-    
+
     #Initialize these dictionaries to have the shapefile fields in the original
     #datasource even if we don't pick up a value later
 
@@ -754,18 +754,18 @@ def aggregate_raster_values_uri(
         shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
-        
+
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()
-    
-    
+
+
     #Loop over each polygon and aggregate
     subset_layer_definition = subset_layer.GetLayerDefn()
-    
+
     minimal_polygon_sets = calculate_minimal_overlapping_polygon_sets(
         shapefile_uri)
-    
+
     for polygon_set in minimal_polygon_sets:
         #add polygons to subset_layer
         LOGGER.info('processing polygon_set %s' % (str(polygon_set)))
@@ -773,12 +773,12 @@ def aggregate_raster_values_uri(
             poly_feat = shapefile_layer.GetFeature(poly_fid)
             subset_layer.CreateFeature(poly_feat)
         subset_layer_datasouce.SyncToDisk()
-        
+
         #nodata out the mask
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(mask_nodata)
         mask_band = None
-        
+
         gdal.RasterizeLayer(
             mask_dataset, [1], subset_layer, **rasterize_layer_args)
 
@@ -795,7 +795,7 @@ def aggregate_raster_values_uri(
                 feature_areas[global_id_value] += geom.GetArea()
         subset_layer.ResetReading()
         geom = None
-        
+
         #Need a complicated step to see what the FIDs are in the subset_layer
         #then need to loop through and delete them
         fid_to_delete = set()
@@ -816,7 +816,7 @@ def aggregate_raster_values_uri(
             mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
             clipped_array = clipped_band.ReadAsArray(
                 0, row_index, clipped_band.XSize, 1)
-                
+
             unique_ids = numpy.unique(mask_array)
             current_iteration_attribute_ids = (
                 current_iteration_attribute_ids.union(unique_ids))
@@ -829,9 +829,9 @@ def aggregate_raster_values_uri(
                 masked_values = clipped_array[mask_array == attribute_id]
                 #Remove the nodata and ignore values for later processing
                 masked_values_nodata_removed = (
-                    masked_values[~numpy.in1d(masked_values, [raster_nodata] + 
+                    masked_values[~numpy.in1d(masked_values, [raster_nodata] +
                     ignore_value_list).reshape(masked_values.shape)])
-        
+
                 #Find the min and max which might not yet be calculated
                 if masked_values_nodata_removed.size > 0:
                     if pixel_min_dict[attribute_id] is None:
@@ -1005,7 +1005,7 @@ def calculate_slope(
         dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
     calculate_raster_stats_uri(slope_uri)
-    
+
     os.remove(dem_small_uri)
 
 
@@ -1237,18 +1237,18 @@ def warp_reproject_dataset_uri(
         from the original dataset.
 
         original_dataset_uri - a URI to a gdal Dataset to written to disk
-        
+
         pixel_spacing - output dataset pixel size in projected linear units
-        
+
         output_wkt - output project in Well Known Text
-        
+
         resampling_method - a String representing the one of the following
             resampling methods: "nearest|bilinear|cubic|cubic_spline|lanczos"
-        
+
         output_uri - location on disk to dump the reprojected dataset
 
         return projected dataset"""
-    
+
     # A dictionary to map the resampling method input string to the gdal type
     resample_dict = {
         "nearest": gdal.GRA_NearestNeighbour,
@@ -1257,7 +1257,7 @@ def warp_reproject_dataset_uri(
         "cubic_spline": gdal.GRA_CubicSpline,
         "lanczos": gdal.GRA_Lanczos
         }
-    
+
     # Get the nodata value and datatype from the original dataset
     output_type = get_datatype_from_uri(original_dataset_uri)
     out_nodata = get_nodata_from_uri(original_dataset_uri)
@@ -1455,8 +1455,8 @@ def unique_raster_values_uri(dataset_uri):
         returns a list of dataset's unique non-nodata values"""
 
     return unique_raster_values(gdal.Open(dataset_uri))
-    
-    
+
+
 def unique_raster_values(dataset):
     """Returns a list of the unique integer values on the given dataset
 
@@ -1489,8 +1489,8 @@ def get_rat_as_dictionary_uri(dataset_uri):
 
     ds = gdal.Open(dataset_uri)
     return get_rat_as_dictionary(ds)
-    
-    
+
+
 def get_rat_as_dictionary(dataset):
     """Returns the RAT of the first band of dataset as a dictionary.
 
@@ -1655,7 +1655,7 @@ def reclassify_dataset_uri(
            'key_raster' is not a key in 'attr_dict'"""
 
     nodata = get_nodata_from_uri(dataset_uri)
-    
+
     def map_dataset_to_value(original_values):
         all_mapped = numpy.empty(original_values.shape, dtype=numpy.bool)
         out_array = numpy.empty(original_values.shape, dtype=numpy.float)
@@ -1673,14 +1673,14 @@ def reclassify_dataset_uri(
                     str(numpy.unique(original_values[~all_mapped])),
                     dataset_uri))
         return out_array
-        
+
     out_pixel_size = get_cell_size_from_uri(dataset_uri)
     vectorize_datasets(
         [dataset_uri], map_dataset_to_value,
         raster_out_uri, out_datatype, out_nodata, out_pixel_size,
         "intersection", dataset_to_align_index=0,
         vectorize_op=False, assert_datasets_projected=assert_dataset_projected)
-    
+
 
 def reclassify_dataset(
     dataset, value_map, raster_out_uri, out_datatype, out_nodata,
@@ -2027,14 +2027,14 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
-    
+
     #make sure that the input lists are of the same length
-    if not reduce(lambda x,y: x if x==y else False, 
+    if not reduce(lambda x,y: x if x==y else False,
         [len(dataset_uri_list), len(dataset_out_uri_list),
         len(resample_method_list)]):
         raise Exception("dataset_uri_list, dataset_out_uri_list, and "
             "resample_method_list must be the same length")
-        
+
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
@@ -2081,7 +2081,7 @@ def align_dataset_list(
             bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
 
 
-    if (bounding_box[0] >= bounding_box[2] or 
+    if (bounding_box[0] >= bounding_box[2] or
             bounding_box[1] <= bounding_box[3]) and mode == "intersection":
         raise Exception("The datasets' intersection is empty "
                         "(i.e., not all the datasets touch each other).")
@@ -2107,7 +2107,7 @@ def align_dataset_list(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
         if process_pool:
             result_list.append(process_pool.apply_async(
-                resize_and_resample_dataset_uri, 
+                resize_and_resample_dataset_uri,
                 args=[original_dataset_uri, bounding_box, out_pixel_size,
                 out_dataset_uri, resample_method]))
         else:
@@ -2154,7 +2154,7 @@ def align_dataset_list(
                 dataset_row = out_band.ReadAsArray(
                     0, row_index, n_cols, 1)
                 out_band.WriteArray(numpy.where(
-                    mask_row, nodata_out, dataset_row), 
+                    mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
         #Remove the mask aoi if necessary
@@ -2165,23 +2165,23 @@ def align_dataset_list(
 def assert_file_existance(dataset_uri_list):
     """Verify that the uris passed in the argument exist on the filesystem
         if not, raise an exeception indicating which files do not exist
-        
+
         dataset_uri_list - a list of relative or absolute file paths to validate
-        
+
         returns nothing, but raises an IOError if any files are not found"""
-        
+
     not_found_uris = []
     for uri in dataset_uri_list:
         if not os.path.exists(uri):
             not_found_uris.append(uri)
-            
+
     if len(not_found_uris) != 0:
         error_message = (
-            "The following files do not exist on the filesystem: " + 
+            "The following files do not exist on the filesystem: " +
             str(not_found_uris))
         raise exceptions.IOError(error_message)
-        
-        
+
+
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
@@ -2244,21 +2244,21 @@ def vectorize_datasets(
         process_pool - (optional) a process pool for multiprocessing
         vectorize_op - (optional) if true the model will try to numpy.vectorize
             dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
-            array broadcasting, set this parameter to False, else it may 
+            array broadcasting, set this parameter to False, else it may
             inefficiently invoke the function on individual elements.
             """
-    
+
     if type(dataset_uri_list) != list:
         raise ValueError(
             "dataset_uri_list was not passed in as a list, maybe a single "
-            "file was passed in?  Here is its value: %s" % 
+            "file was passed in?  Here is its value: %s" %
             (str(dataset_uri_list)))
-            
+
     if aoi_uri == None:
         assert_file_existance(dataset_uri_list)
     else:
         assert_file_existance(dataset_uri_list + [aoi_uri])
-        
+
     if dataset_out_uri in dataset_uri_list:
         raise ValueError(
             "%s is used as an output file, but it is also an input file "
@@ -2308,18 +2308,18 @@ def vectorize_datasets(
         aoi_datasource = None
 
     dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
-    
+
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-        
+
     for row_index in range(n_rows):
         for dataset_index in range(len(aligned_bands)):
             aligned_bands[dataset_index].ReadAsArray(
                 0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
         out_row = dataset_pixel_op(*dataset_rows)
-        
+
         #Mask out the row if there is a mask
         if aoi_uri != None:
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
@@ -2659,14 +2659,14 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     dataset_uri - uri to a gdal dataset of some integer type
     ignore_nodata - if set to false, the nodata count is also included in the
         result
-    
+
     returns dictionary of values to count.
     """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
-    
+
     itemfreq = collections.defaultdict(int)
     for row_index in range(band.YSize):
         cur_array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
@@ -2674,10 +2674,10 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
             if ignore_nodata and val == nodata:
                 continue
             itemfreq[val] += numpy.count_nonzero(cur_array==val)
-            
+
     return itemfreq
 
-    
+
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_values=[], option_list=[]):
     """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
@@ -2699,21 +2699,21 @@ def rasterize_layer_uri(
     raster = gdal.Open(raster_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     layer = shapefile.GetLayer()
-    
+
     gdal.RasterizeLayer(
         raster, [1], layer, burn_values=burn_values, options=option_list)
-        
+
     raster = None
     shapefile = None
 
-    
+
 def create_carray(h5file_uri, type, shape):
     """Creates an empty pytables chunked array given a file type and size.
-    
+
         h5file_uri - a uri to store the carray
         type - an h5file type
         shape - a tuple indicating rows/columns"""
-        
+
     h5file = tables.openFile(h5file_uri, mode='w')
     root = h5file.root
     filters = tables.Filters(complevel=0)
@@ -2723,39 +2723,39 @@ def create_carray(h5file_uri, type, shape):
 
 def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
     """Loads a GDAL dataset into a h5file chunked array.
-    
+
         ds_uri - uri to a GDAL dataset
         h5file_uri - uri to a file that the chunked array will exist on disk
         array_type - (optional) if specified is a GDAL type for what the output
             array should be cast to
 
         returns chunked array representing the original gdal dataset"""
-    
+
     ds = gdal.Open(ds_uri)
     band = ds.GetRasterBand(1)
     if array_type is None:
         array_type = band.DataType
-    
+
     map_gdal_type_to_atom = {
         gdal.GDT_Int16: tables.Int16Atom(),
         gdal.GDT_Int32: tables.Int32Atom(),
         gdal.GDT_UInt16: tables.UInt16Atom(),
         gdal.GDT_UInt32: tables.UInt32Atom(),
         gdal.GDT_Byte: tables.Int8Atom(),
-        gdal.GDT_Float64: tables.Float64Atom(), 
+        gdal.GDT_Float64: tables.Float64Atom(),
         gdal.GDT_Float32: tables.Float32Atom()
     }
 
 
-    
+
     carray = create_carray(
         h5file_uri, map_gdal_type_to_atom[array_type],
         (ds.RasterYSize, ds.RasterXSize))
-    
+
     for row_index in xrange(ds.RasterYSize):
         carray[row_index,:] = band.ReadAsArray(
             0, row_index, ds.RasterXSize, 1)[0]
-    
+
     return carray
 
 
@@ -2783,21 +2783,21 @@ def make_constant_raster_from_base_uri(
     base_dataset = gdal.Open(out_uri, gdal.GA_Update)
     base_band = base_dataset.GetRasterBand(1)
     base_band.Fill(constant_value)
-    
-    
+
+
 def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
-    """Calculates a list of sets of polygons that don't overlap.  Determining 
+    """Calculates a list of sets of polygons that don't overlap.  Determining
         the minimal number of those sets is an np-complete problem so this is
         an approximation that builds up sets of maximal subsets.
-        
+
         shapefile_uri - a uri to an OGR shapefile to process
-        
+
         returns a list of sets of FIDs from shapefile_uri"""
 
-    
+
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
-    
+
     poly_intersection_lookup = {}
     LOGGER.info(
         'Converting OGR polygons to Shapely polygons for fast intersection')
@@ -2842,7 +2842,7 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
                     #it intersects and can't be part of the maximal subset
                     break
             else:
-                #we made it through without an intersection, add poly_fid to 
+                #we made it through without an intersection, add poly_fid to
                 #the maximal set
                 maximal_set.add(poly_fid)
                 #remove that polygon and update the intersections
@@ -2853,84 +2853,84 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
                 poly_dict['intersects'].discard(maxset_fid)
         subset_list.append(maximal_set)
     return subset_list
-    
+
 
 def distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
-        
+
         input_mask_uri - a gdal raster to calculate distance from the 0 value
             pixels
-            
+
         output_distance_uri - will make a float raster w/ same dimensions and
             projection as input_mask_uri where all non-zero values of
             input_mask_uri are equal to the euclidean distance to the closest
             0 pixel.
-            
+
         returns nothing"""
-    
+
     input_mask_ds = gdal.Open(input_mask_uri)
     input_mask_band = input_mask_ds.GetRasterBand(1)
     input_mask_array = input_mask_band.ReadAsArray()
-    
+
     input_nodata = get_nodata_from_uri(input_mask_uri)
-    
+
     n_cols = input_mask_ds.RasterXSize
     n_rows = input_mask_ds.RasterYSize
-   
+
     output_nodata = -1.0
     new_raster_from_base_uri(
         input_mask_uri, output_distance_uri, 'GTiff', output_nodata,
         gdal.GDT_Float32)
     output_dataset = gdal.Open(output_distance_uri, gdal.GA_Update)
     output_band = output_dataset.GetRasterBand(1)
-    
+
     numerical_inf = n_cols + n_rows
-    
+
     LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
     b_array = input_mask_array == 1
     g_array = numpy.empty((n_rows, n_cols), dtype=numpy.int)
-        
+
     for col_index in xrange(n_cols):
         if b_array[0, col_index]:
             g_array[0, col_index] = 0
         else:
             g_array[0, col_index] = numerical_inf
-        
+
         for row_index in xrange(1, n_rows):
             if b_array[row_index, col_index]:
                 g_array[row_index, col_index] = 0.0
             else:
                 g_array[row_index, col_index] = (
                     1 + g_array[row_index - 1, col_index])
-    
+
         for row_index in xrange(n_rows-2, -1, -1):
-            if (g_array[row_index + 1, col_index] < 
+            if (g_array[row_index + 1, col_index] <
                 g_array[row_index, col_index]):
                 g_array[row_index, col_index] = (
                     1 + g_array[row_index + 1, col_index])
-    
-    
+
+
     LOGGER.info('Distance Transform Phase 2')
-    
+
     dt = numpy.zeros(b_array.shape)
     for row_index in xrange(n_rows):
-    
+
         def f(x, i):
             return (x-i)**2 + g_array[row_index, i]**2
-    
+
         def sep(i, u):
             return (u**2 - i**2 + g_array[row_index, u]**2 - g_array[row_index, i]**2) / (2*(u-i))
-    
+
         q_index = 0
         s_array = numpy.zeros(n_cols, dtype=numpy.int)
         t_array = numpy.zeros(n_cols, dtype=numpy.int)
         for u_index in xrange(1, n_cols):
             #print s_array
             #print t_array
-            while (q_index >= 0 and 
-                f(t_array[q_index], s_array[q_index]) > 
+            while (q_index >= 0 and
+                f(t_array[q_index], s_array[q_index]) >
                 f(t_array[q_index], u_index)):
                 q_index -= 1
             if q_index < 0:
@@ -2942,23 +2942,23 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                     q_index += 1
                     s_array[q_index] = u_index
                     t_array[q_index] = w
-        
+
         for u_index in xrange(n_cols-1, -1, -1):
             dt[row_index, u_index] = f(u_index, s_array[q_index])
             if u_index == t_array[q_index]:
                 q_index -= 1
     dt[input_mask_array == input_nodata] = output_nodata
     output_band.WriteArray(numpy.sqrt(dt))
-    
-    
+
+
 def transpose_datasets(input_uri, output_uri):
     """Transpose the input dataset from rows to columns and columns to rows
-        
-        input_uri - a gdal raster 
+
+        input_uri - a gdal raster
         output_uri - an output transposed raster
-            
+
         returns nothing"""
-    
+
     input_ds = gdal.Open(input_uri)
     input_band = input_ds.GetRasterBand(1)
     nodata = input_band.GetNoDataValue()
@@ -2967,7 +2967,7 @@ def transpose_datasets(input_uri, output_uri):
     projection = input_ds.GetProjection()
     geotransform = input_ds.GetGeoTransform()
     driver = gdal.GetDriverByName('GTiff')
-    
+
     #transpose the rows and columns
     output_ds = driver.Create(
         output_uri.encode('utf-8'), n_rows, n_cols, 1, input_band.DataType,
@@ -2984,5 +2984,4 @@ def transpose_datasets(input_uri, output_uri):
         output_band.WriteArray(
             col_array.reshape((1, n_rows)),
             yoff=col_index)
-            
-    
+
