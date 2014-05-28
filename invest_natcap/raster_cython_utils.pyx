@@ -249,24 +249,27 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         s_array[0] = 0
         t_array[0] = 0
         for u_index in xrange(1, n_cols):
-            #print s_array
-            #print t_array
             while (q_index >= 0 and
-                _f(t_array[q_index], s_array[q_index], g_array_transposed[s_array[q_index], 0]) >
+                _f(t_array[q_index], s_array[q_index], 
+                    g_array_transposed[s_array[q_index], 0]) >
                 _f(t_array[q_index], u_index, g_array_transposed[u_index, 0])):
                 q_index -= 1
             if q_index < 0:
                q_index = 0
                s_array[0] = u_index
             else:
-                w = 1 + _sep(s_array[q_index], u_index, g_array_transposed[u_index, 0], g_array_transposed[s_array[q_index], 0])
+                w = 1 + _sep(
+                    s_array[q_index], u_index, g_array_transposed[u_index, 0],
+                    g_array_transposed[s_array[q_index], 0])
                 if w < n_cols:
                     q_index += 1
                     s_array[q_index] = u_index
                     t_array[q_index] = w
 
         for u_index in xrange(n_cols-1, -1, -1):
-            dt[0, u_index] = _f(u_index, s_array[q_index], g_array_transposed[s_array[q_index], 0])
+            dt[0, u_index] = _f(
+                u_index, s_array[q_index],
+                g_array_transposed[s_array[q_index], 0])
             if u_index == t_array[q_index]:
                 q_index -= 1
         
