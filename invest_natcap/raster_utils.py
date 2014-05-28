@@ -2878,14 +2878,14 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     input_nodata = get_nodata_from_uri(input_mask_uri)
 
     #create a transposed g function
-    g_dataset_uri = 'g.tif'
+    g_dataset_uri = temporary_filename()
     g_nodata = -1.0
     new_raster_from_base_uri(
         input_mask_uri, g_dataset_uri, 'GTiff', g_nodata, gdal.GDT_Float32,
         n_rows=n_cols, n_cols=n_rows)
     g_dataset = gdal.Open(g_dataset_uri, gdal.GA_Update)
     g_band = g_dataset.GetRasterBand(1)
-        
+
     output_nodata = -1.0
     new_raster_from_base_uri(
         input_mask_uri, output_distance_uri, 'GTiff', output_nodata,
@@ -2924,7 +2924,6 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                 g_array_transposed[0, row_index]):
                 g_array_transposed[0, row_index] = (
                     1 + g_array_transposed[0, row_index + 1])
-        LOGGER.debug(g_array_transposed)
         g_band.WriteArray(
             g_array_transposed, xoff=0, yoff=col_index)
 
@@ -2933,8 +2932,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
         dt = numpy.empty((1, n_cols))
         g_array_transposed = g_band.ReadAsArray(
             xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
-        LOGGER.debug(g_array_transposed)
-
+        
         def f(x, i):
             return (x-i)**2 + g_array_transposed[i, 0]**2
 
@@ -2973,8 +2971,13 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
         output_band.WriteArray(
             numpy.sqrt(dt), xoff=0, yoff=row_index)
         
+    gdal.Dataset.__swig_destroy__(g_dataset)
+    try:
+        os.remove(g_dataset_uri)
+    except OSError:
+        LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
 
-
+    
 def transpose_datasets(input_uri, output_uri):
     """Transpose the input dataset from rows to columns and columns to rows
 
