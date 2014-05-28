@@ -2890,38 +2890,3 @@ def distance_transform_edt(
         os.remove(mask_as_byte_uri)
     except OSError:
         LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
-    
-def transpose_datasets(input_uri, output_uri):
-    """Transpose the input dataset from rows to columns and columns to rows
-
-        input_uri - a gdal raster
-        output_uri - an output transposed raster
-
-        returns nothing"""
-
-    input_ds = gdal.Open(input_uri)
-    input_band = input_ds.GetRasterBand(1)
-    nodata = input_band.GetNoDataValue()
-    n_cols = input_ds.RasterXSize
-    n_rows = input_ds.RasterYSize
-    projection = input_ds.GetProjection()
-    geotransform = input_ds.GetGeoTransform()
-    driver = gdal.GetDriverByName('GTiff')
-
-    #transpose the rows and columns
-    output_ds = driver.Create(
-        output_uri.encode('utf-8'), n_rows, n_cols, 1, input_band.DataType,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
-    output_ds.SetProjection(projection)
-    output_ds.SetGeoTransform(geotransform)
-    output_band = output_ds.GetRasterBand(1)
-    output_band.SetNoDataValue(nodata)
-
-    #write transposed array
-    for col_index in xrange(n_cols):
-        col_array = input_band.ReadAsArray(
-            xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
-        output_band.WriteArray(
-            col_array.reshape((1, n_rows)),
-            yoff=col_index)
-
