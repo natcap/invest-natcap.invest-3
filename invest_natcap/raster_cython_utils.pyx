@@ -140,7 +140,15 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
 
+cdef int _f(int x, int i, int gi):
+    return (x-i)*(x-i)+ gi*gi
+
+@cython.cdivision(True)
+cdef int _sep(int i, int u, int gu, int gi):
+    return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
+        
+#@cython.boundscheck(False)
 def _distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
@@ -172,7 +180,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     driver = gdal.GetDriverByName('GTiff')
     #invert the rows and columns since it's a transpose
     g_dataset = driver.Create(
-        g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Float32,
+        g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Int32,
         options=['COMPRESS=LZW', 'BIGTIFF=YES'])
     g_dataset.SetProjection(input_projection)
     g_dataset.SetGeoTransform(input_geotransform)
@@ -193,14 +201,15 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
     
-    cdef numpy.ndarray[numpy.float32_t, ndim=2] g_array_transposed
+    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array_transposed
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
+    cdef int col_index, row_index, q_index, u_index, w
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         
-        g_array_transposed = numpy.empty((1, n_rows), dtype=numpy.float32)
+        g_array_transposed = numpy.empty((1, n_rows), dtype=numpy.int32)
         #named _transposed so we remember column is flipped to row
         if b_array[0, 0]:
             g_array_transposed[0, 0] = 0
@@ -210,7 +219,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         #pass 1 go down
         for row_index in xrange(1, n_rows):
             if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
-                g_array_transposed[0, row_index] = 0.0
+                g_array_transposed[0, row_index] = 0
             else:
                 g_array_transposed[0, row_index] = (
                     1 + g_array_transposed[0, row_index - 1])
@@ -225,39 +234,36 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
             g_array_transposed, xoff=0, yoff=col_index)
 
     LOGGER.info('Distance Transform Phase 2')
+    cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(n_cols, dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.int32_t, ndim=1] t_array = numpy.zeros(n_cols, dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty((1, n_cols), dtype=numpy.float32)
+    
     for row_index in xrange(n_rows):
-        dt = numpy.empty((1, n_cols))
         g_array_transposed = g_band.ReadAsArray(
             xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
         
-        def f(x, i, g):
-            return (x-i)**2 + g[i, 0]**2
-
-        def sep(i, u, g):
-            return (u**2 - i**2 + g[u, 0]**2 - g[i, 0]**2) / (2*(u-i))
-
         q_index = 0
-        s_array = numpy.zeros(n_cols, dtype=numpy.int)
-        t_array = numpy.zeros(n_cols, dtype=numpy.int)
+        s_array[0] = 0
+        t_array[0] = 0
         for u_index in xrange(1, n_cols):
             #print s_array
             #print t_array
             while (q_index >= 0 and
-                f(t_array[q_index], s_array[q_index], g_array_transposed) >
-                f(t_array[q_index], u_index, g_array_transposed)):
+                _f(t_array[q_index], s_array[q_index], g_array_transposed[s_array[q_index], 0]) >
+                _f(t_array[q_index], u_index, g_array_transposed[u_index, 0])):
                 q_index -= 1
             if q_index < 0:
                q_index = 0
                s_array[0] = u_index
             else:
-                w = 1 + sep(s_array[q_index], u_index, g_array_transposed)
+                w = 1 + _sep(s_array[q_index], u_index, g_array_transposed[u_index, 0], g_array_transposed[s_array[q_index], 0])
                 if w < n_cols:
                     q_index += 1
                     s_array[q_index] = u_index
                     t_array[q_index] = w
 
         for u_index in xrange(n_cols-1, -1, -1):
-            dt[0, u_index] = f(u_index, s_array[q_index], g_array_transposed)
+            dt[0, u_index] = _f(u_index, s_array[q_index], g_array_transposed[s_array[q_index], 0])
             if u_index == t_array[q_index]:
                 q_index -= 1
         
