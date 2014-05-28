@@ -2873,12 +2873,18 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     input_mask_ds = gdal.Open(input_mask_uri)
     input_mask_band = input_mask_ds.GetRasterBand(1)
     input_mask_array = input_mask_band.ReadAsArray()
-
-    input_nodata = get_nodata_from_uri(input_mask_uri)
-
     n_cols = input_mask_ds.RasterXSize
     n_rows = input_mask_ds.RasterYSize
 
+    input_nodata = get_nodata_from_uri(input_mask_uri)
+
+    #create a transposed g function
+    g_dataset_uri = 'g.tif'
+    g_nodata = -1.0
+    new_raster_from_base_uri(
+        input_mask_uri, g_dataset_uri, 'GTiff', g_nodata, gdal.GDT_Float32,
+        n_rows=n_cols, n_cols=n_rows)
+        
     output_nodata = -1.0
     new_raster_from_base_uri(
         input_mask_uri, output_distance_uri, 'GTiff', output_nodata,
