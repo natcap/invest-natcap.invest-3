@@ -2032,7 +2032,8 @@ def align_dataset_list(
     if not reduce(lambda x,y: x if x==y else False,
         [len(dataset_uri_list), len(dataset_out_uri_list),
         len(resample_method_list)]):
-        raise Exception("dataset_uri_list, dataset_out_uri_list, and "
+        raise Exception(
+            "dataset_uri_list, dataset_out_uri_list, and "
             "resample_method_list must be the same length")
 
     if assert_datasets_projected:
