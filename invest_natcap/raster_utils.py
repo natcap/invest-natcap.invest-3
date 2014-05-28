@@ -297,9 +297,10 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     base_raster = None
 
 def new_raster_from_base(
-    base, output_uri, gdal_format, nodata, datatype, fill_value=None):
+    base, output_uri, gdal_format, nodata, datatype, fill_value=None,
+    n_rows=None, n_cols=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
-        dimensions and geotranforms of the base GDAL raster dataset.
+        geotranforms of the base GDAL raster dataset.
 
         base - a the GDAL raster dataset to base output size, and transforms on
         output_uri - a string URI to the new output raster dataset.
@@ -314,11 +315,17 @@ def new_raster_from_base(
             pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
         fill_value - (optional) the value to fill in the raster on creation
+        n_rows - (optional) if set makes the resulting raster have n_rows in it
+            if not, the number of rows of the outgoing dataset are equal to 
+            the base.
+        n_cols - (optional) similar to n_rows, but for the columns.
 
         returns a new GDAL raster dataset."""
 
-    n_cols = base.RasterXSize
-    n_rows = base.RasterYSize
+    if n_rows is None:
+        n_rows = base.RasterYSize
+    if n_cols is None:
+        n_cols = base.RasterXSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
