@@ -2872,7 +2872,6 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
 
     input_mask_ds = gdal.Open(input_mask_uri)
     input_mask_band = input_mask_ds.GetRasterBand(1)
-    input_mask_array = input_mask_band.ReadAsArray()
     n_cols = input_mask_ds.RasterXSize
     n_rows = input_mask_ds.RasterYSize
 
@@ -2884,6 +2883,8 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     new_raster_from_base_uri(
         input_mask_uri, g_dataset_uri, 'GTiff', g_nodata, gdal.GDT_Float32,
         n_rows=n_cols, n_cols=n_rows)
+    g_dataset = gdal.Open(g_dataset_uri, gdal.GA_Update)
+    g_band = g_dataset.GetRasterBand(1)
         
     output_nodata = -1.0
     new_raster_from_base_uri(
@@ -2896,39 +2897,49 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
 
     LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
-    b_array = input_mask_array == 1
-    g_array = numpy.empty((n_rows, n_cols), dtype=numpy.int)
+    #g_array = numpy.empty((n_rows, n_cols), dtype=numpy.int)
 
     for col_index in xrange(n_cols):
-        if b_array[0, col_index]:
-            g_array[0, col_index] = 0
+        b_array = input_mask_band.ReadAsArray(
+            xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
+        
+        #named _transposed so we remember column is flipped to row
+        g_array_transposed = numpy.empty((1, n_rows))
+        if b_array[0, 0]:
+            g_array_transposed[0, 0] = 0
         else:
-            g_array[0, col_index] = numerical_inf
+            g_array_transposed[0, 0] = numerical_inf
 
+        #pass 1 go down
         for row_index in xrange(1, n_rows):
-            if b_array[row_index, col_index]:
-                g_array[row_index, col_index] = 0.0
+            if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
+                g_array_transposed[0, row_index] = 0.0
             else:
-                g_array[row_index, col_index] = (
-                    1 + g_array[row_index - 1, col_index])
+                g_array_transposed[0, row_index] = (
+                    1 + g_array_transposed[0, row_index - 1])
 
+        #pass 2 come back up
         for row_index in xrange(n_rows-2, -1, -1):
-            if (g_array[row_index + 1, col_index] <
-                g_array[row_index, col_index]):
-                g_array[row_index, col_index] = (
-                    1 + g_array[row_index + 1, col_index])
-
+            if (g_array_transposed[0, row_index + 1] <
+                g_array_transposed[0, row_index]):
+                g_array_transposed[0, row_index] = (
+                    1 + g_array_transposed[0, row_index + 1])
+        LOGGER.debug(g_array_transposed)
+        g_band.WriteArray(
+            g_array_transposed, xoff=0, yoff=col_index)
 
     LOGGER.info('Distance Transform Phase 2')
-
-    dt = numpy.zeros(b_array.shape)
     for row_index in xrange(n_rows):
+        dt = numpy.empty((1, n_cols))
+        g_array_transposed = g_band.ReadAsArray(
+            xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
+        LOGGER.debug(g_array_transposed)
 
         def f(x, i):
-            return (x-i)**2 + g_array[row_index, i]**2
+            return (x-i)**2 + g_array_transposed[i, 0]**2
 
         def sep(i, u):
-            return (u**2 - i**2 + g_array[row_index, u]**2 - g_array[row_index, i]**2) / (2*(u-i))
+            return (u**2 - i**2 + g_array_transposed[u, 0]**2 - g_array_transposed[i, 0]**2) / (2*(u-i))
 
         q_index = 0
         s_array = numpy.zeros(n_cols, dtype=numpy.int)
@@ -2951,11 +2962,17 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
                     t_array[q_index] = w
 
         for u_index in xrange(n_cols-1, -1, -1):
-            dt[row_index, u_index] = f(u_index, s_array[q_index])
+            dt[0, u_index] = f(u_index, s_array[q_index])
             if u_index == t_array[q_index]:
                 q_index -= 1
-    dt[input_mask_array == input_nodata] = output_nodata
-    output_band.WriteArray(numpy.sqrt(dt))
+        
+        b_array = input_mask_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+        
+        dt[b_array == input_nodata] = output_nodata
+        output_band.WriteArray(
+            numpy.sqrt(dt), xoff=0, yoff=row_index)
+        
 
 
 def transpose_datasets(input_uri, output_uri):
