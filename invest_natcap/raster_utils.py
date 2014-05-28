@@ -2856,12 +2856,13 @@ def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
     return subset_list
 
 
-def distance_transform_edt(input_mask_uri, output_distance_uri):
+def distance_transform_edt(
+    input_mask_uri, output_distance_uri, process_pool=None):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
 
-        input_mask_uri - a gdal raster to calculate distance from the 0 value
-            pixels
+        input_mask_uri - a gdal raster to calculate distance from the non 0
+            value pixels
 
         output_distance_uri - will make a float raster w/ same dimensions and
             projection as input_mask_uri where all non-zero values of
@@ -2870,10 +2871,25 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
 
         returns nothing"""
 
+    mask_as_byte_uri = temporary_filename()
+    nodata = get_nodata_from_uri(input_mask_uri)
+    out_pixel_size = get_cell_size_from_uri(input_mask_uri)
+    def to_byte(x):
+        return numpy.where(x == nodata, 255, x != 0)
+    LOGGER.info('converting input mask to byte dataset')
+    vectorize_datasets(
+        [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
+        nodata, out_pixel_size, "union",
+        dataset_to_align_index=0, assert_datasets_projected=False, 
+        process_pool=process_pool, vectorize_op=False)
+    
     #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
-        input_mask_uri, output_distance_uri)
-    
+        mask_as_byte_uri, output_distance_uri)
+    try:
+        os.remove(mask_as_byte_uri)
+    except OSError:
+        LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
     
 def transpose_datasets(input_uri, output_uri):
     """Transpose the input dataset from rows to columns and columns to rows
