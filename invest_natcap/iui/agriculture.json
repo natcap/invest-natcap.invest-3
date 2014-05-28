@@ -103,11 +103,275 @@
                                                                         "defaultValue" : "../Agriculture/input/rasters.csv",
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true
-                                                                    }
+                                                                    },
+                                                                    {
+                                                                        "id": "calculate_nutrition",
+                                                                        "args_id": "calculate_nutrition",
+                                                                        "type": "checkbox",
+                                                                        "label": "Calculate nutrition",
+                                                                        "defaultValue" : true
+                                                                    },
+                                                                    {
+                                                                        "id": "nutrition_table",
+                                                                        "args_id" : "nutrition_table",
+                                                                        "type": "file",
+                                                                        "label": "Nutrition CSV",
+                                                                        "defaultValue" : "../Agriculture/input/cropNutrient.csv",
+                                                                        "validateAs": {"type": "CSV"},
+                                                                        "required" : true,
+                                                                        "enabledBy" : "calculate_nutrition"
+                                                                    },
+                                                                    {
+                                                                        "id": "calculate_valuation",
+                                                                        "args_id": "calculate_valuation",
+                                                                        "type" : "checkbox",
+                                                                        "label": "Calculate valuation",
+                                                                        "defaultValue" : true
+                                                                    }   
                                                                 ]
                                                             }
                                                         ]
                                             },
+                            {
+                                "id": "nutrition_tab",
+                                "label" : "Nutrition",
+                                "type" : "tab",
+                                "enabledBy" : "calculate_nutrition",
+                                "elements" : [
+                                        {
+                                            "id" : "nutrient_protein",
+                                            "args_id" : "nutrient_protein",
+                                            "type" : "checkbox",
+                                            "label" : "Protein",
+                                            "defaultValue" : true
+                                        },
+                                        {
+                                            "id" : "nutrient_lipids",
+                                            "args_id" : "nutrient_lipids",
+                                            "type" : "checkbox",
+                                            "label" : "Lipids",
+                                            "defaultValue" : true
+                                        },
+                                        {
+                                            "id" : "nutrient_energy",
+                                            "args_id" : "nutrient_energy",
+                                            "type" : "checkbox",
+                                            "label" : "Energy",
+                                            "defaultValue" : true
+                                        },
+                                        {
+                                            "id" : "nutrient_calcium",
+                                            "args_id" : "nutrient_calcium",
+                                            "type" : "checkbox",
+                                            "label" : "Calcium",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_iron",
+                                            "args_id" : "nutrient_iron",
+                                            "type" : "checkbox",
+                                            "label" : "Iron",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_magnesium",
+                                            "args_id" : "nutrient_magnesium",
+                                            "type" : "checkbox",
+                                            "label" : "Magenesium",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_phosphorus",
+                                            "args_id" : "nutrient_phosphorus",
+                                            "type" : "checkbox",
+                                            "label" : "Phosphorus",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_potassium",
+                                            "args_id" : "nutrient_potassium",
+                                            "type" : "checkbox",
+                                            "label" : "Potassium",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_sodium",
+                                            "args_id" : "nutrient_sodium",
+                                            "type" : "checkbox",
+                                            "label" : "Sodium",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_zinc",
+                                            "args_id" : "nutrient_zinc",
+                                            "type" : "checkbox",
+                                            "label" : "Zinc",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_copper",
+                                            "args_id" : "nutrient_copper",
+                                            "type" : "checkbox",
+                                            "label" : "Copper",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_flouride",
+                                            "args_id" : "nutrient_flouride",
+                                            "type" : "checkbox",
+                                            "label" : "Flouride",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_manganese",
+                                            "args_id" : "nutrient_manganese",
+                                            "type" : "checkbox",
+                                            "label" : "Manganese",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_selenium",
+                                            "args_id" : "nutrient_selenium",
+                                            "type" : "checkbox",
+                                            "label" : "Selenium",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_a",
+                                            "args_id" : "nutrient_vit_a",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin A",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_carotene_b",
+                                            "args_id" : "nutrient_carotene_b",
+                                            "type" : "checkbox",
+                                            "label" : "Carotene β",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_carotene_a",
+                                            "args_id" : "nutrient_carotene_a",
+                                            "type" : "checkbox",
+                                            "label" : "Carotene α",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_e",
+                                            "args_id" : "nutrient_vit_e",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin E",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_cryptoxanthin",
+                                            "args_id" : "nutrient_cryptoxanthin",
+                                            "type" : "checkbox",
+                                            "label" : "Cryptoxanthin",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_lycopene",
+                                            "args_id" : "nutrient_lycopene",
+                                            "type" : "checkbox",
+                                            "label" : "Lycopene",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_lutein",
+                                            "args_id" : "nutrient_lutein",
+                                            "type" : "checkbox",
+                                            "label" : "Lutein && Zeaxanthin",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_tocopherol_b",
+                                            "args_id" : "nutrient_tocopherol_b",
+                                            "type" : "checkbox",
+                                            "label" : "Tocopherol β",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_tocopherol_g",
+                                            "args_id" : "nutrient_tocopherol_g",
+                                            "type" : "checkbox",
+                                            "label" : "Tocopherol γ",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_tocopherol_d",
+                                            "args_id" : "nutrient_tocopherol_d",
+                                            "type" : "checkbox",
+                                            "label" : "Tocopherol δ",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_c",
+                                            "args_id" : "nutrient_vit_c",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin C",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b1",
+                                            "args_id" : "nutrient_vit_b1",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B1",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b2",
+                                            "args_id" : "nutrient_vit_b2",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B2",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b3",
+                                            "args_id" : "nutrient_vit_b3",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B3",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b5",
+                                            "args_id" : "nutrient_vit_b5",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B5",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b6",
+                                            "args_id" : "nutrient_vit_b6",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B6",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b9",
+                                            "args_id" : "nutrient_vit_b9",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B9",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_b12",
+                                            "args_id" : "nutrient_vit_b12",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin B12",
+                                            "defaultValue" : false
+                                        },
+                                        {
+                                            "id" : "nutrient_vit_k",
+                                            "args_id" : "nutrient_vit_k",
+                                            "type" : "checkbox",
+                                            "label" : "Vitamin K",
+                                            "defaultValue" : false
+                                        }
+                                    ]
+                                
+                            },
                             {
                                 "id": "yield_tab",
                                 "label": "Emprical Yields",
@@ -1684,3 +1948,4 @@
                     }
                 ]
 }
+

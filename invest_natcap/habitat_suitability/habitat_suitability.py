@@ -4,6 +4,9 @@ import os
 import logging
 import csv
 
+
+import osr
+import ogr
 import gdal
 import numpy
 import scipy
@@ -22,6 +25,8 @@ def execute(args):
         
         workspace_dir - uri to workspace directory for output files
         output_cell_size - (optional) size of output cells
+        habitat_threshold - a value to threshold the habitat score values to 
+            0 and 1
         depth_biophysical_uri - uri to a depth raster 
         salinity_biophysical_uri - uri to salinity raster
         temperature_biophysical_uri - uri to temperature raster
@@ -92,33 +97,28 @@ def execute(args):
         suitability_list = []
         value_list = []
         for row in csv_dict_reader:
-            suitability_list.append(row['Suitability'])
-            value_list.append(row[key])
-        LOGGER.debug(value_list)
-        LOGGER.debug(suitability_list)
+            suitability_list.append(float(row['Suitability']))
+            value_list.append(float(row[key]))
         biophysical_to_interp[biophysical_uri_key] = scipy.interpolate.interp1d(
             value_list, suitability_list, kind='linear',
             bounds_error=False, fill_value=0.0)
     biophysical_to_habitat_quality = {
         'salinity_biophysical_uri': os.path.join(
-            output_dir, 'oyster_salinity_suitability.tif'),
+            intermediate_dir, 'oyster_salinity_suitability.tif'),
         'temperature_biophysical_uri': os.path.join(
-            output_dir, 'oyster_temperature_suitability.tif'),
+            intermediate_dir, 'oyster_temperature_suitability.tif'),
         'depth_biophysical_uri':  os.path.join(
-            output_dir, 'oyster_depth_suitability.tif'),
+            intermediate_dir, 'oyster_depth_suitability.tif'),
     }
     #classify the biophysical maps into habitat quality maps
+    reclass_nodata = -1.0
     for biophysical_uri_key, interpolator in biophysical_to_interp.iteritems():
         biophysical_nodata = raster_utils.get_nodata_from_uri(
             aligned_raster_stack[biophysical_uri_key])
         LOGGER.debug(aligned_raster_stack[biophysical_uri_key])
-        reclass_nodata = -1.0
-        n_rows, n_cols = raster_utils.get_row_col_from_uri(
-            aligned_raster_stack[biophysical_uri_key])
         def reclass_op(values):
             """reclasses a value into an interpolated value"""
             nodata_mask = values == biophysical_nodata
-            LOGGER.debug(values)
             return numpy.where(
                 nodata_mask, reclass_nodata, 
                 interpolator(values))
@@ -127,3 +127,68 @@ def execute(args):
             biophysical_to_habitat_quality[biophysical_uri_key],
             gdal.GDT_Float32, reclass_nodata, out_pixel_size, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
+    
+    #calculate the geometric mean of the suitability rasters
+    oyster_suitability_uri = os.path.join(
+        output_dir, 'oyster_habitat_suitability.tif')
+    
+    def geo_mean(*values):
+        """Geometric mean of input values"""
+        running_product = values[0]
+        running_mask = values[0] == reclass_nodata
+        for index in range(1, len(values)):
+            running_product *= values[index]
+            running_mask = running_mask | (values[index] == reclass_nodata)
+        return numpy.where(
+            running_mask, reclass_nodata, running_product**(1./len(values)))
+    
+    raster_utils.vectorize_datasets(
+        biophysical_to_habitat_quality.values(), geo_mean,
+        oyster_suitability_uri, gdal.GDT_Float32, reclass_nodata,
+        out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+     #calculate the geometric mean of the suitability rasters
+    oyster_suitability_mask_uri = os.path.join(
+        output_dir, 'oyster_habitat_suitability_mask.tif')
+    
+    def threshold(value):
+        """Threshold the values to args['habitat_threshold']"""
+        
+        threshold_value = value >= args['habitat_threshold']
+        return numpy.where(
+            value == reclass_nodata, reclass_nodata, threshold_value)
+            
+    raster_utils.vectorize_datasets(
+        [oyster_suitability_uri], threshold,
+        oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
+        out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+        
+    #polygonalize output mask
+    output_mask_ds = gdal.Open(oyster_suitability_mask_uri)
+    output_mask_band = output_mask_ds.GetRasterBand(1)
+    output_mask_wkt = output_mask_ds.GetProjection()
+    
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_mask_wkt)
+    
+    
+    oyster_suitability_datasource_uri = os.path.join(
+        output_dir, 'oyster_habitat_suitability_mask.shp')
+    
+    if os.path.isfile(oyster_suitability_datasource_uri):
+        os.remove(oyster_suitability_datasource_uri)
+
+    
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    oyster_suitability_datasource = output_driver.CreateDataSource(
+        oyster_suitability_datasource_uri)
+    oyster_suitability_layer = oyster_suitability_datasource.CreateLayer(
+            'oyster', output_sr, ogr.wkbPolygon)
+            
+    field = ogr.FieldDefn('pixel_value', ogr.OFTReal)
+    oyster_suitability_layer.CreateField(field)
+
+    gdal.Polygonize(
+        output_mask_band, output_mask_band, oyster_suitability_layer, 0)
