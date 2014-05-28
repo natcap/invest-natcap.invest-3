@@ -1,9 +1,19 @@
+import os
+import tempfile
+import logging
+
 cimport numpy
 import numpy
 cimport cython
 from libcpp.map cimport map
 
 from osgeo import gdal
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('raster_cython_utils')
+
 
 @cython.boundscheck(False)
 def reclassify_by_dictionary(dataset, rules, output_uri, format,
@@ -129,3 +139,140 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
+
+        
+def _distance_transform_edt(input_mask_uri, output_distance_uri):
+    """Calculate the Euclidean distance transform on input_mask_uri and output
+        the result into an output raster
+
+        input_mask_uri - a gdal raster to calculate distance from the 0 value
+            pixels
+
+        output_distance_uri - will make a float raster w/ same dimensions and
+            projection as input_mask_uri where all non-zero values of
+            input_mask_uri are equal to the euclidean distance to the closest
+            0 pixel.
+
+        returns nothing"""
+
+    input_mask_ds = gdal.Open(input_mask_uri)
+    input_mask_band = input_mask_ds.GetRasterBand(1)
+    cdef int n_cols = input_mask_ds.RasterXSize
+    cdef int n_rows = input_mask_ds.RasterYSize
+
+    cdef int input_nodata = input_mask_band.GetNoDataValue()
+
+    #create a transposed g function
+    file_handle, g_dataset_uri = tempfile.mkstemp()
+    os.close(file_handle)
+    cdef float g_nodata = -1.0
+    
+    input_projection = input_mask_ds.GetProjection()
+    input_geotransform = input_mask_ds.GetGeoTransform()
+    driver = gdal.GetDriverByName('GTiff')
+    #invert the rows and columns since it's a transpose
+    g_dataset = driver.Create(
+        g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Float32,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+    g_dataset.SetProjection(input_projection)
+    g_dataset.SetGeoTransform(input_geotransform)
+    g_band = g_dataset.GetRasterBand(1)
+    g_band.SetNoDataValue(g_nodata)
+    
+    cdef float output_nodata = -1.0
+    output_dataset = driver.Create(
+        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+    output_dataset.SetProjection(input_projection)
+    output_dataset.SetGeoTransform(input_geotransform)
+    output_band = output_dataset.GetRasterBand(1)
+    output_band.SetNoDataValue(output_nodata)
+    
+    cdef int numerical_inf = n_cols + n_rows
+
+    LOGGER.info('Distance Transform Phase 1')
+    #phase one, calculate column G(x,y)
+    
+    cdef numpy.ndarray[numpy.float32_t, ndim=2] g_array_transposed
+    cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
+    
+    for col_index in xrange(n_cols):
+        b_array = input_mask_band.ReadAsArray(
+            xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
+        
+        g_array_transposed = numpy.empty((1, n_rows), dtype=numpy.float32)
+        #named _transposed so we remember column is flipped to row
+        if b_array[0, 0]:
+            g_array_transposed[0, 0] = 0
+        else:
+            g_array_transposed[0, 0] = numerical_inf
+
+        #pass 1 go down
+        for row_index in xrange(1, n_rows):
+            if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
+                g_array_transposed[0, row_index] = 0.0
+            else:
+                g_array_transposed[0, row_index] = (
+                    1 + g_array_transposed[0, row_index - 1])
+
+        #pass 2 come back up
+        for row_index in xrange(n_rows-2, -1, -1):
+            if (g_array_transposed[0, row_index + 1] <
+                g_array_transposed[0, row_index]):
+                g_array_transposed[0, row_index] = (
+                    1 + g_array_transposed[0, row_index + 1])
+        g_band.WriteArray(
+            g_array_transposed, xoff=0, yoff=col_index)
+
+    LOGGER.info('Distance Transform Phase 2')
+    for row_index in xrange(n_rows):
+        dt = numpy.empty((1, n_cols))
+        g_array_transposed = g_band.ReadAsArray(
+            xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
+        
+        def f(x, i, g):
+            return (x-i)**2 + g[i, 0]**2
+
+        def sep(i, u, g):
+            return (u**2 - i**2 + g[u, 0]**2 - g[i, 0]**2) / (2*(u-i))
+
+        q_index = 0
+        s_array = numpy.zeros(n_cols, dtype=numpy.int)
+        t_array = numpy.zeros(n_cols, dtype=numpy.int)
+        for u_index in xrange(1, n_cols):
+            #print s_array
+            #print t_array
+            while (q_index >= 0 and
+                f(t_array[q_index], s_array[q_index], g_array_transposed) >
+                f(t_array[q_index], u_index, g_array_transposed)):
+                q_index -= 1
+            if q_index < 0:
+               q_index = 0
+               s_array[0] = u_index
+            else:
+                w = 1 + sep(s_array[q_index], u_index, g_array_transposed)
+                if w < n_cols:
+                    q_index += 1
+                    s_array[q_index] = u_index
+                    t_array[q_index] = w
+
+        for u_index in xrange(n_cols-1, -1, -1):
+            dt[0, u_index] = f(u_index, s_array[q_index], g_array_transposed)
+            if u_index == t_array[q_index]:
+                q_index -= 1
+        
+        b_array = input_mask_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+        
+        dt[b_array == input_nodata] = output_nodata
+        
+        old_settings = numpy.seterr(invalid='ignore')
+        output_band.WriteArray(
+            numpy.sqrt(dt), xoff=0, yoff=row_index)
+        numpy.seterr(**old_settings)
+        
+    gdal.Dataset.__swig_destroy__(g_dataset)
+    try:
+        os.remove(g_dataset_uri)
+    except OSError:
+        LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
