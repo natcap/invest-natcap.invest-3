@@ -110,6 +110,10 @@ def execute(args):
     report_name = "report.htm"
 
     workspace_dir = args["workspace_dir"]
+
+    if not os.path.exists(workspace_dir):
+        os.makedirs(workspace_dir)
+   
     crop_cover_uri = args["crop_file_name"]
 
     reclass_table_uri = args["reclass_table"]
@@ -140,6 +144,9 @@ def execute(args):
     statistics_field_intensity = "Intensity (%)"
 
     intermediate_uri = os.path.join(workspace_dir, intermediate_dir)
+
+    if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
+        os.makedirs(os.path.join(workspace_dir, intermediate_dir))
     
     reclass_crop_cover_uri = os.path.join(intermediate_uri,
                                           reclass_name)
@@ -459,6 +466,12 @@ def execute(args):
 
     if args["calculate_valuation"]:
         LOGGER.debug("Calculating valuation.")
+        LOGGER.debug("Determining geographic subregion(s).")
+        #clip subregions raster
+        #project subregions raster
+        #count regions
+        #create region masks
+        
 
     #create report
     report = open(report_uri, 'w')
@@ -538,6 +551,15 @@ def execute(args):
                       valuation_table_field_subregion)
 
         report.write(row_html % header_row)
+
+        for crop in crop_counts_keys:
+            LOGGER.debug("Writing crop %i valutation statistics to table.", crop)
+            invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
+            report.write(row_html % (str(crop),
+                                     str(invest_crop),
+                                     raster_table_csv_dict[invest_crop][raster_table_field_short_name],
+                                     ""))
+
         
         report.write("\n</TABLE>")
     
