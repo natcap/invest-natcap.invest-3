@@ -27,6 +27,15 @@
                     "helpText": "Select a folder to be used as your workspace."
                 },
                 {
+                    "id" : "suffix",
+                    "args_id" : "suffix",
+                    "type" : "text",
+                    "defaultValue" : "",
+                    "label": "Suffix",
+                    "required" : false,
+                    "helpText": "A suffix to append to results."
+                },
+                {
                     "id": "landcover",
                     "args_id": "landcover",
                     "type": "file",

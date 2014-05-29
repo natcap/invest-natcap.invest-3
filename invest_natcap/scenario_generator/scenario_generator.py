@@ -447,7 +447,16 @@ def execute(args):
     #get parameters, set outputs
     ###
     workspace = args["workspace_dir"]
+
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
+    
     landcover_uri = args["landcover"]
+
+    if len(args["suffix"]) > 0:
+        suffix = "_" + args["suffix"].strip("_")
+    else:
+        suffix = ""
 
     intermediate_dir = "intermediate"
 
@@ -464,28 +473,28 @@ def execute(args):
 
     ##output file names
     #absolute paths
-    landcover_resample_uri = os.path.join(workspace, "resample.tif")
+    landcover_resample_uri = os.path.join(workspace, "resample" + suffix + ".tif")
 
-    landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
-    override_dataset_uri = os.path.join(workspace,"override.tif")
-    landcover_htm_uri = os.path.join(workspace,"scenario-output-summary.html")
+    landcover_transition_uri = os.path.join(workspace,"transitioned" + suffix + ".tif")
+    override_dataset_uri = os.path.join(workspace,"override" + suffix + ".tif")
+    landcover_htm_uri = os.path.join(workspace,"scenario-output-summary" + suffix + ".html")
 
     raster_utils.create_directories([workspace])
 
     #relative paths, or with patterned name
-    transition_name = os.path.join(intermediate_dir, "transition_%i.tif")
-    suitability_name = os.path.join(intermediate_dir, "%s_%s.tif")
-    normalized_name = os.path.join(intermediate_dir, "%s_%s_norm.tif")
-    combined_name = os.path.join(intermediate_dir, "factors_%s.tif")
-    constraints_name = os.path.join(intermediate_dir, "constraints.tif")
-    filter_name = os.path.join(intermediate_dir, "filter_%i.tif")
-    factors_name = os.path.join(intermediate_dir, "suitability_%s.tif")
-    cover_name = os.path.join(intermediate_dir, "cover_%i.tif")
-    proximity_name = os.path.join(intermediate_dir, "proximity_%s.tif")
-    normalized_proximity_name = os.path.join(intermediate_dir, "proximity_norm_%s.tif")
-    adjusted_suitability_name = os.path.join(intermediate_dir, "adjusted_suitability_%s.tif")
+    transition_name = os.path.join(intermediate_dir, "transition_%i" + suffix + ".tif")
+    suitability_name = os.path.join(intermediate_dir, "%s_%s" + suffix + ".tif")
+    normalized_name = os.path.join(intermediate_dir, "%s_%s_norm" + suffix + ".tif")
+    combined_name = os.path.join(intermediate_dir, "factors_%s" + suffix + ".tif")
+    constraints_name = os.path.join(intermediate_dir, "constraints" + suffix + ".tif")
+    filter_name = os.path.join(intermediate_dir, "filter_%i" + suffix + ".tif")
+    factors_name = os.path.join(intermediate_dir, "suitability_%s" + suffix + ".tif")
+    cover_name = os.path.join(intermediate_dir, "cover_%i" + suffix + ".tif")
+    proximity_name = os.path.join(intermediate_dir, "proximity_%s" + suffix + ".tif")
+    normalized_proximity_name = os.path.join(intermediate_dir, "proximity_norm_%s" + suffix + ".tif")
+    adjusted_suitability_name = os.path.join(intermediate_dir, "adjusted_suitability_%s" + suffix + ".tif")
 
-    scenario_name = "scenario.tif"
+    scenario_name = "scenario" + suffix + ".tif"
 
     ###
     #constants
