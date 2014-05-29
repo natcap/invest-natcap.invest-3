@@ -129,6 +129,16 @@
                                                                         "defaultValue" : true
                                                                     },
                                                                     {
+                                                                        "id": "valuation_raster",
+                                                                        "args_id" : "valuation_raster",
+                                                                        "type": "file",
+                                                                        "label": "Valuation raster",
+                                                                        "defaultValue" : "../CropProduction/input/subregion.tif",
+                                                                        "validateAs": {"type": "GDAL"},
+                                                                        "required" : true,
+                                                                        "enabledBy" : "calculate_valuation"
+                                                                    },                                                                    
+                                                                    {
                                                                         "id": "valuation_table",
                                                                         "args_id" : "valuation_table",
                                                                         "type": "file",

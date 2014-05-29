@@ -157,6 +157,26 @@ def execute(args):
 
     valuation_table_field_subregion = "Subregion"
 
+    subregion_uri = args["valuation_raster"]
+    subregion_clip_name = "subregion_clip.tif"
+    subregion_project_name = "subregion_project.tif"
+
+    valuation_csv_uri = args["valuation_table"]
+    valuation_field_id = "Id"
+    valuation_csv_dict = raster_utils.get_lookup_from_csv(valuation_csv_uri,
+                                                          valuation_field_id)
+    valuation_field_N_cost = "avg_N"
+    valuation_field_P_cost = "avg_P"
+    valuation_field_K_cost = "avg_K"
+    valuation_field_labor_cost = "laborcost"
+    valuation_field_machine_cost = "actual_mach"
+    valuation_field_seed_cost = "actual_seed"
+    valuation_field_crop_cost = "avgPP"
+
+    field_returns = "Return"
+    field_irrigation = "Irrigation"
+    field_fertilizer = "Fertilizer"
+    
     extent_name = "extent.shp"
     extent_4326_name = "extent_4326.shp"
     sr_4326 = osr.SpatialReference()
@@ -460,20 +480,103 @@ def execute(args):
         for crop in invest_crops:
             for nutrient in nutrient_selection:
                 try:
-                    statistics[crop][nutrient] = str(round(statistics[crop][statistics_field_production] * nutrition_table_dict[crop][nutrient], table_precision))
+                    statistics[crop][nutrient] = statistics[crop][statistics_field_production] * nutrition_table_dict[crop][nutrient]
                 except KeyError:
-                    statistics[crop][nutrient] = "NA"         
+                    statistics[crop][nutrient] = ""         
 
     if args["calculate_valuation"]:
         LOGGER.debug("Calculating valuation.")
         LOGGER.debug("Determining geographic subregion(s).")
-        #clip subregions raster
-        #project subregions raster
-        #count regions
-        #create region masks
+        subregion_clip_uri = os.path.join(intermediate_uri, subregion_clip_name)
+        subregion_project_uri = os.path.join(intermediate_uri, subregion_project_name)
         
+        #clip
+        raster_utils.clip_dataset_uri(subregion_uri,
+                                      extent_4326_uri,
+                                      subregion_clip_uri,
+                                      assert_projections=False)
+        #project
+        raster_utils.warp_reproject_dataset_uri(subregion_clip_uri,
+                                                cell_size,
+                                                output_wkt,
+                                                "nearest",
+                                                subregion_project_uri)
+        #count regions
+        subregion_counts = raster_utils.unique_raster_values_count(subregion_project_uri)
+        subregions = subregion_counts.keys()
+        subregions.sort()
+
+        if len(subregions) == 0:
+            LOGGER.info("There is no valuation data for your area.")
+        elif len(subregions) == 1:
+            region = subregions[0]
+            
+            LOGGER.info("Your data falls entirely within region %i.", region)
+            LOGGER.debug("Calculating fertilizer cost.")
+            LOGGER.debug("Calculating irrigation cost.")
+            LOGGER.debug("Calculating labor cost.")
+            LOGGER.debug("Calculatiing machine cost.")
+            LOGGER.debug("Calculating seed cost.")
+
+            valuation_field_N_cost = "avg_N"
+            valuation_field_P_cost = "avg_P"
+            valuation_field_K_cost = "avg_K"
+            valuation_field_labor_cost = "laborcost"
+            valuation_field_machine_cost = "actual_mach"
+            valuation_field_seed_cost = "actual_seed"
+            valuation_field_crop_cost = "avgPP"
+            
+            for crop in invest_crops:
+                region_crop = str((region, crop))
+                
+                if region_crop in valuation_csv_dict:
+                    LOGGER.debug("Agricultural cost data available for crop %i in region %i.", crop, region)
+                    price = valuation_csv_dict[region_crop][valuation_field_crop_cost]
+                    intensity = statistics[crop][statistics_field_intensity]
+                    area = invest_crop_counts[crop] * cell_size
+                    labor = valuation_csv_dict[region_crop][valuation_field_labor_cost]
+                    machine = valuation_csv_dict[region_crop][valuation_field_machine_cost]
+                    seed = valuation_csv_dict[region_crop][valuation_field_seed_cost]
+                    
+                    statistics[crop][valuation_field_crop_cost] = price * intensity * area
+                    statistics[crop][valuation_field_labor_cost] = -1 * labor * intensity * area
+                    statistics[crop][valuation_field_machine_cost] = -1 * machine * intensity * area
+                    statistics[crop][valuation_field_seed_cost] = -1 * seed * intensity * area
+                    statistics[crop][field_returns] = sum([statistics[crop][valuation_field_crop_cost],
+                                                           statistics[crop][valuation_field_labor_cost],
+                                                           statistics[crop][valuation_field_machine_cost],
+                                                           statistics[crop][valuation_field_seed_cost]])
+
+                    statistics[crop][field_irrigation] = ""
+                    statistics[crop][field_fertilizer] = ""
+                    
+                else:
+                    LOGGER.warn("Agricultural cost data NOT available for crop %i in region %i.", crop, region)
+                    statistics[crop][valuation_field_crop_cost] = ""
+                    statistics[crop][valuation_field_labor_cost] = ""
+                    statistics[crop][valuation_field_machine_cost] = ""
+                    statistics[crop][valuation_field_seed_cost] = ""
+                    statistics[crop][field_returns] = ""
+                    statistics[crop][field_irrigation] = ""
+                    statistics[crop][field_fertilizer] = ""
+
+                    
+        else:
+            LOGGER.info("Your data falls within the following regions: %s", ", ".join(subregions))
+            raise ValueError, "Not supported."
+            for region in subregions:
+                LOGGER.debug("Calculating statistics for region %i.", region)
+        
+        #create region masks
 
     #create report
+    for crop in statistics:
+        for stat in statistics[crop].keys():
+            try:
+                statistics[crop][stat] = round(statistics[crop][stat], table_precision)
+            except TypeError:
+                statistics[crop][stat] = "NA"
+    
     report = open(report_uri, 'w')
     report.write("<HTML>")
 
@@ -504,7 +607,7 @@ def execute(args):
                                  str(invest_crop),
                                  raster_table_csv_dict[invest_crop][raster_table_field_short_name],
                                  str(round(crop_counts[crop] * cell_size, table_precision)),
-                                 str(round(statistics[invest_crop][statistics_field_intensity], table_precision)),
+                                 statistics[invest_crop][statistics_field_intensity],
                                  str(round(statistics[invest_crop][statistics_field_production], table_precision))))
 
     report.write("\n</TABLE>")
@@ -543,12 +646,18 @@ def execute(args):
         LOGGER.debug("Generating valuation table.")
         report.write("\n<P><B>Valuation</B>")
         report.write("\n<TABLE BORDER=1>")
-        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 4) + "</TR>"
+        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3) + ("<TD ALIGN=RIGHT>%s</TD>" * 7) + "</TR>"
 
         header_row = (reclass_table_field_key,
                       reclass_table_field_invest,
                       raster_table_field_short_name,
-                      valuation_table_field_subregion)
+                      "Production",
+                      "Irrigation",
+                      "Fertilizer",
+                      "Labor",
+                      "Machines",
+                      "Seeds",
+                      "Returns")
 
         report.write(row_html % header_row)
 
@@ -558,7 +667,13 @@ def execute(args):
             report.write(row_html % (str(crop),
                                      str(invest_crop),
                                      raster_table_csv_dict[invest_crop][raster_table_field_short_name],
-                                     ""))
+                                     statistics[crop][valuation_field_crop_cost],
+                                     statistics[crop][field_irrigation],
+                                     statistics[crop][field_fertilizer],
+                                     statistics[crop][valuation_field_labor_cost],
+                                     statistics[crop][valuation_field_machine_cost],
+                                     statistics[crop][valuation_field_seed_cost],
+                                     statistics[crop][field_returns]))
 
         
         report.write("\n</TABLE>")
