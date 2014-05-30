@@ -85,7 +85,7 @@ def route_flux(
         [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
         [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
-        "intersection", 0, aoi_uri=aoi_uri)
+        "intersection", 0, aoi_uri=aoi_uri, assert_datasets_projected=False)
 
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()

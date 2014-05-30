@@ -977,18 +977,37 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int CACHE_ROWS = 2**12
     if CACHE_ROWS > n_rows:
         CACHE_ROWS = n_rows
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
-        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_edge_offset_cache
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
+
+    #Try to allocate some memory, we do this because we encountered out of
+    #memory errors before
+    while True:
+        try:
+            dem_cache = (numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            dem_sink_offset_cache = numpy.empty(
+                (CACHE_ROWS, n_cols), dtype=numpy.float32)
+            dem_edge_offset_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            cache_tag = (numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+            cache_dirty = (
+                numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+            break
+        except MemoryError as e:
+            LOGGER.warn(
+                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
+                'reducing by half')
+            CACHE_ROWS /= 2
+            if CACHE_ROWS < 3:
+                LOGGER.error(
+                    'The cache size is too small now, '
+                    "don't know what to do.  Failing.")
+                raise e
     #initially nothing is loaded in the cache, use -1 to indicate that as a tag
-    cache_tag[:] = -1
-    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
-        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+    cache_tag[:] = -1   
 
     cdef Row_Col_Weight_Tuple current_cell_tuple
     cdef int cache_row_offset, cache_row_index, cache_row_tag
