@@ -89,23 +89,41 @@ def calculate_transport(
     cdef int n_rows = outflow_direction_dataset.RasterYSize
     
     
-    cdef int CACHE_ROWS = 2**10
-    if CACHE_ROWS > n_rows:
-        CACHE_ROWS = n_rows
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    cdef int CACHE_ROWS = n_rows
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_cache
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_cache
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache
+    while True:
+        try:
+            outflow_direction_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+            outflow_weights_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            source_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            absorption_rate_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            loss_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
+            flux_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            stream_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+            break
+        except MemoryError as e:
+            LOGGER.warn(
+                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
+                'reducing by half')
+            CACHE_ROWS /= 2
+            if CACHE_ROWS < 3:
+                LOGGER.error(
+                    'The cache size is too small now, '
+                    "don't know what to do.  Failing.")
+                raise e
     
     cdef int stream_nodata = 0
     if stream_uri != None:
@@ -974,9 +992,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     
-    cdef int CACHE_ROWS = 2**12
-    if CACHE_ROWS > n_rows:
-        CACHE_ROWS = n_rows
+    cdef int CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_cache
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset_cache
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_edge_offset_cache
