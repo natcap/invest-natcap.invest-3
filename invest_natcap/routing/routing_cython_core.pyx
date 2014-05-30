@@ -547,36 +547,60 @@ def percent_to_sink(
     cdef int n_cols = effect_dataset.RasterXSize
     cdef int n_rows = effect_dataset.RasterYSize
     
-    cdef int CACHE_ROWS = 2**12
-    if CACHE_ROWS > n_rows:
-        CACHE_ROWS = n_rows
+    cdef int CACHE_ROWS = n_rows
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_cache
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache
+    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
+    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
+    
+    while True:
+        try:
+            effect_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            sink_pixels_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+            export_rate_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            outflow_direction_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
+            outflow_weights_cache = (
+                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
+            cache_tag = (
+                numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
+            cache_dirty = (
+                numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
+            break
+        except MemoryError as e:
+            LOGGER.warn(
+                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
+                'reducing by half')
+            CACHE_ROWS /= 2
+            if CACHE_ROWS < 3:
+                LOGGER.error(
+                    'The cache size is too small now, '
+                    "don't know what to do.  Failing.")
+                raise e
+    
+    
     sink_pixels_dataset = gdal.Open(sink_pixels_uri)
     sink_pixels_band = sink_pixels_dataset.GetRasterBand(1)
     cdef int sink_pixels_nodata = raster_utils.get_nodata_from_uri(
         sink_pixels_uri)
     
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     export_rate_dataset = gdal.Open(export_rate_uri)
     export_rate_band = export_rate_dataset.GetRasterBand(1)
     cdef double export_rate_nodata = raster_utils.get_nodata_from_uri(
         export_rate_uri)
     
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
     
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache = (
-        numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
     outflow_weights_dataset = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
     cdef double outflow_weights_nodata = raster_utils.get_nodata_from_uri(
@@ -594,12 +618,8 @@ def percent_to_sink(
     cdef int index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
     cdef double outflow_weight, neighbor_outflow_weight
     
-    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag = (
-        numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
     #initially nothing is loaded in the cache, use -1 to indicate that as a tag
     cache_tag[:] = -1
-    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty = (
-        numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
     cache_dirty[:] = 0
     
     
