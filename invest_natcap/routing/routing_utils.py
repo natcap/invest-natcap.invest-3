@@ -85,7 +85,7 @@ def route_flux(
         [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
         [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
-        "intersection", 0, aoi_uri=aoi_uri)
+        "intersection", 0, aoi_uri=aoi_uri, assert_datasets_projected=False)
 
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
@@ -154,7 +154,7 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     raster_utils.vectorize_datasets(
         [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte, 
         255, raster_utils.get_cell_size_from_uri(flow_accumulation_uri),
-        'intersection', vectorize_op=False)
+        'intersection', vectorize_op=False, assert_datasets_projected=False)
 
 
 def calculate_flow_length(flow_direction_uri, flow_length_uri):
