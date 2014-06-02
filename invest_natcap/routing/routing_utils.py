@@ -154,7 +154,7 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     raster_utils.vectorize_datasets(
         [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte, 
         255, raster_utils.get_cell_size_from_uri(flow_accumulation_uri),
-        'intersection', vectorize_op=False)
+        'intersection', vectorize_op=False, assert_datasets_projected=False)
 
 
 def calculate_flow_length(flow_direction_uri, flow_length_uri):
