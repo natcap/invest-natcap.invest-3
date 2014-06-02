@@ -16,6 +16,7 @@ from osgeo import gdal, ogr
 
 from invest_natcap import raster_utils
 
+import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -196,7 +197,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     return unique_raster_values_count, transitions
 
-def generate_chart_html(cover_dict, cover_names_dict):
+def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
     html = "\n<table BORDER=1>"
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
@@ -249,8 +250,14 @@ def generate_chart_html(cover_dict, cover_names_dict):
         except KeyError:
             finalcover.append(0)        
     #return html
-    html += "<script type='text/javascript' src='"+os.path.dirname(__file__)+"/jschart/jquery/js/jquery-1.6.2.min.js'></script>\n"
-    html += "<script type='text/javascript' src='"+os.path.dirname(__file__)+"/jschart/highcharts/js/highcharts.js'></script>\n"
+    jquery_uri = os.path.dirname(__file__) + "/jschart/jquery/js/jquery-1.6.2.min.js"
+    highcharts_uri = os.path.dirname(__file__) + "/jschart/highcharts/js/highcharts.js"
+
+    shutil.copyfile(jquery_uri, os.path.join(workspace_dir, os.path.basename(jquery_uri)))
+    shutil.copyfile(highcharts_uri, os.path.join(workspace_dir, os.path.basename(highcharts_uri)))
+    
+    html += "<script type='text/javascript' src='" + os.path.basename(jquery_uri) + "'></script>\n"
+    html += "<script type='text/javascript' src='" + os.path.basename(highcharts_uri) + "'></script>\n"
     html += "<style type='text/css'>"
     html += "body {font-family: Arial, Helvetica, sans-serif; font-size: 0.9em;}"
     html += "table#results {margin: 20px auto}"
@@ -1219,7 +1226,7 @@ def execute(args):
     for cover in transition_dict:
         cover_names_dict[cover] =  transition_dict[cover]["Name"] 
 
-    htm.write(generate_chart_html(cover_dict, cover_names_dict))
+    htm.write(generate_chart_html(cover_dict, cover_names_dict, workspace))
 
     htm.write("<h2>Transition Matrix</h2>")
     htm.write("\n<table BORDER=1>")    
