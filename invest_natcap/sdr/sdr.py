@@ -312,9 +312,9 @@ def execute(args):
     LOGGER.info('calculate sdr')
     sdr_factor_uri = os.path.join(intermediate_dir, 'sdr_factor%s.tif' % file_suffix)
     sdr_nodata = -9999.0
-    k = 2
-    ic_0 = 0.5
-    sdr_max = 0.8
+    k = float(args['k_param'])
+    ic_0 = float(args['ic_0_param'])
+    sdr_max = float(args['sdr_max'])
     def sdr_op(ic_factor, stream):
         nodata_mask = (ic_factor == ic_nodata)
         sdr = numpy.where(

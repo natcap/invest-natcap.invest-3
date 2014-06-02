@@ -109,6 +109,36 @@
 		    "required": true,
 		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+		},
+        {        
+		    "id" : "k_param",
+		    "args_id" : "k_param",
+		    "type": "text",
+		    "label": "Borselli k parameter",
+		    "defaultValue": "2",
+		    "required": true,
+		    "validText": "^[0-9]+\\.?[0-9]*$",
+		    "helpText": "Borselli k parameter."
+		},
+        {        
+		    "id" : "ic_0_param",
+		    "args_id" : "ic_0_param",
+		    "type": "text",
+		    "label": "Borselli IC0 parameter",
+		    "defaultValue": "2",
+		    "required": true,
+		    "validText": "^[0-9]+\\.?[0-9]*$",
+		    "helpText": "Borselli IC0 parameter."
+		},
+        {        
+		    "id" : "sdr_max",
+		    "args_id" : "sdr_max",
+		    "type": "text",
+		    "label": "Max SDR value",
+		    "defaultValue": "0.8",
+		    "required": true,
+		    "validText": "^[0-9]+\\.?[0-9]*$",
+		    "helpText": "Maximum SDR value."
 		}
 	    ]
 	}
