@@ -1975,16 +1975,15 @@ def resize_and_resample_dataset_uri(
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
     output_band.SetNoDataValue(original_nodata)
-    output_band.Fill(original_nodata)
-
+    
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
 
     # Perform the projection/resampling
-    gdal.ReprojectImage(original_dataset, output_dataset,
-                        original_sr.ExportToWkt(), original_sr.ExportToWkt(),
-                        resample_dict[resample_method])
+    gdal.ReprojectImage(
+        original_dataset, output_dataset, original_sr.ExportToWkt(), 
+        original_sr.ExportToWkt(), resample_dict[resample_method])
 
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
