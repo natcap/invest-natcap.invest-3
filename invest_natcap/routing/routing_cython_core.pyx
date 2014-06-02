@@ -87,8 +87,7 @@ def calculate_transport(
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
-    
-    
+
     cdef int CACHE_ROWS = n_rows
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache
     cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache
@@ -552,7 +551,6 @@ def percent_to_sink(
     cdef int n_rows = effect_dataset.RasterYSize
     
     cdef int CACHE_ROWS = n_rows
-
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_cache
@@ -1917,15 +1915,13 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         outflow_direction_uri)
     
     cdef int CACHE_ROWS = n_rows
-    
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] stream_cache
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] distance_cache
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
     cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
-    
-    
+
     while True:
         try:
             stream_cache = (
@@ -2244,7 +2240,7 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
                 numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
             cache_dirty = (
                 numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
-                break
+            break
         except MemoryError as e:
             LOGGER.warn(
                 'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
