@@ -70,7 +70,8 @@
                     "type": "checkbox",
                     "label": "Calculate priorities",
                     "enabledBy": "transition",
-                    "defaultValue": false
+                    "defaultValue": false,
+                    "helpText": "This option enables calculation of the land cover priorities using analytical hierarchical processing. A matrix table must be entered below. Optionally, the priorities can manually be entered in the priority column of the land attributes table."
                 },
                 {
                     "id": "priorities_csv_uri",
@@ -79,7 +80,8 @@
                     "type": "file",
                     "required": true,
                     "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
-                    "enabledBy": "calculate_priorities"
+                    "enabledBy": "calculate_priorities",
+                    "helpText": "This table contains a matrix of land cover type pairwise priorities used to calculate land cover priorities."
                 }
             ]
         },
