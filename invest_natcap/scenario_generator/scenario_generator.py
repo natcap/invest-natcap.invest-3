@@ -1163,9 +1163,9 @@ def execute(args):
     htm.write('h2 {background: #DDDDDD; padding: 10px;}')
     htm.write("</style>")
 
-    jquery_uri = os.path.dirname(os.path.abspath(__file__)) + "/jschart/jquery/js/jquery-1.6.2.min.js"
+    jquery_uri = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jquery-1.6.2.min.js")
     htm.write("<script>\n" + open(jquery_uri).read() + "\n</script>")
-    highcharts_uri = os.path.dirname(os.path.abspath(__file__)) + "/jschart/highcharts/js/highcharts.js"
+    highcharts_uri = os.path.join(os.path.dirname(os.path.abspath(__file__)), "highcharts.js")
     htm.write("<script>\n" + open(highcharts_uri).read() + "\n</script>")
 
     htm.write("</head><body>")
