@@ -250,14 +250,6 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
         except KeyError:
             finalcover.append(0)        
     #return html
-    jquery_uri = os.path.dirname(__file__) + "/jschart/jquery/js/jquery-1.6.2.min.js"
-    highcharts_uri = os.path.dirname(__file__) + "/jschart/highcharts/js/highcharts.js"
-
-    shutil.copyfile(jquery_uri, os.path.join(workspace_dir, os.path.basename(jquery_uri)))
-    shutil.copyfile(highcharts_uri, os.path.join(workspace_dir, os.path.basename(highcharts_uri)))
-    
-    html += "<script type='text/javascript' src='" + os.path.basename(jquery_uri) + "'></script>\n"
-    html += "<script type='text/javascript' src='" + os.path.basename(highcharts_uri) + "'></script>\n"
     html += "<style type='text/css'>"
     html += "body {font-family: Arial, Helvetica, sans-serif; font-size: 0.9em;}"
     html += "table#results {margin: 20px auto}"
@@ -1170,6 +1162,12 @@ def execute(args):
     htm.write('body {font-family: Arial, Helvetica, sans-serif; font-size: 1em;}')
     htm.write('h2 {background: #DDDDDD; padding: 10px;}')
     htm.write("</style>")
+
+    jquery_uri = os.path.dirname(os.path.abspath(__file__)) + "/jschart/jquery/js/jquery-1.6.2.min.js"
+    htm.write("<script>\n" + open(jquery_uri).read() + "\n</script>")
+    highcharts_uri = os.path.dirname(os.path.abspath(__file__)) + "/jschart/highcharts/js/highcharts.js"
+    htm.write("<script>\n" + open(highcharts_uri).read() + "\n</script>")
+
     htm.write("</head><body>")
     htm.write("<div style=''>")
     htm.write("<h1>Scenario Output Summary</h1>")
