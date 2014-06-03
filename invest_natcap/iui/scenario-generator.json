@@ -12,12 +12,6 @@
             "type": "list",
             "elements": [
                 {
-                    "id":"alpha_only",
-                    "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
-                    "type": "label",
-                    "helpText": "Alpha tools are considered unstable."
-                },
-                {
                     "id" : "workspace_dir",
                     "args_id" : "workspace_dir",
                     "type": "folder",
