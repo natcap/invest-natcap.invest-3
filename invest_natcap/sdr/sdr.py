@@ -43,8 +43,6 @@ def execute(args):
         args['threshold_flow_accumulation'] - an integer describing the number
             of upstream cells that must flow int a cell before it's considered
             part of a stream.  required if 'stream_uri' is not provided.
-        args['slope_threshold'] - A percentage slope threshold as described in
-            the user's guide.
         
         returns nothing."""
 
