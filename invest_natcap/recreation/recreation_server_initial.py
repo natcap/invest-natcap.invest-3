@@ -733,6 +733,7 @@ def execute(args, config):
         database.commit()
         database.close()
     except Exception as inst:
+        print inst
         if len(inst.message) > 0:
             msg = copy.copy(inst.message)
         else:
