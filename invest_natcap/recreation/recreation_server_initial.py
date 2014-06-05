@@ -13,6 +13,8 @@ import recreation_server_core
 from osgeo import osr
 from osgeo import ogr
 
+import traceback
+
 #logging.basic_config(format = '%(asctime)s %(name)-20s %(levelname)-8s \
 #%(message)s', level = logging.DEBUG, datefmt = '%m/%d/%Y %H:%M:%S ')
 #
@@ -484,6 +486,10 @@ def execute(args, config):
         #check grid cell count relative to parameters
         predictors = 0
         predictors += len(model_simple_predictors)
+
+        print standard_mask
+        print compound_predictors
+        
         if standard_mask[1] and not compound_predictors[0] in user_categorization_dict:
             predictors += compound_predictor_classes[0]
         if standard_mask[2] and not user_categorization_dict.has_key(compound_predictors[1]):
@@ -734,9 +740,12 @@ def execute(args, config):
         database.close()
     except:
         e = sys.exc_info()[1]
+        t = sys.exc_info()[2]
         msg = str(e)
         if len(msg) == 0:
             msg = repr(e)
+
+        msg = msg + ": " + traceback.format_exc(t)
 
         msg = msg.replace(",", "").replace(".", "")
         if msg[-1] != ".":
