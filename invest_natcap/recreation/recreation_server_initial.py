@@ -487,8 +487,8 @@ def execute(args, config):
         predictors = 0
         predictors += len(model_simple_predictors)
 
-        LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace("."."||"))
-        LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace("."."||"))
+        LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace(".","||"))
+        LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace(".","||"))
         
         if standard_mask[1] and not compound_predictors[0] in user_categorization_dict:
             predictors += compound_predictor_classes[0]
