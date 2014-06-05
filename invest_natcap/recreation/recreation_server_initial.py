@@ -487,8 +487,8 @@ def execute(args, config):
         predictors = 0
         predictors += len(model_simple_predictors)
 
-        LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace(".","||"))
-        LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace(".","||"))
+##        LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace(".","||"))
+##        LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace(".","||"))
         
         if standard_mask[1] and not compound_predictors[0] in user_categorization_dict:
             predictors += compound_predictor_classes[0]
@@ -496,8 +496,8 @@ def execute(args, config):
             predictors += compound_predictor_classes[1]
         if standard_mask[3] and not user_categorization_dict.has_key(compound_predictors[2]):
             predictors += compound_predictor_classes[2]
-        if standard_mask[5] and not user_categorization_dict.has_key(compound_predictors[3]):
-            predictors += compound_predictor_classes[3]            
+##        if standard_mask[5] and not user_categorization_dict.has_key(compound_predictors[3]):
+##            predictors += compound_predictor_classes[3]            
         predictors += sum([len(user_categorization_dict[category_key]) for category_key in user_categorization_dict])
         if cells <= predictors:
             LOGGER.debug("There are %i grid cells and %i predictors.", cells, predictors)
