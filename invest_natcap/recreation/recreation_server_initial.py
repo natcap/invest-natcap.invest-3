@@ -732,19 +732,18 @@ def execute(args, config):
         cur.close()
         database.commit()
         database.close()
-    except Exception as inst:
-        print inst
-        if len(inst.message) > 0:
-            msg = copy.copy(inst.message)
-        else:
-            msg = str(type(inst))
-        print "Error message: %s" % repr(msg)
+    except:
+        e = sys.exc_info()[1]
+        msg = str(e)
+        if len(msg) == 0:
+            msg = repr(e)
+
         msg = msg.replace(",", "").replace(".", "")
         if msg[-1] != ".":
             msg = msg + "."
             
         LOGGER.error(msg)
-        raise inst
+        raise e
 
     
 if __name__ == "__main__":    
