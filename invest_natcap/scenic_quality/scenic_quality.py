@@ -327,10 +327,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             if field_name.lower() == 'coeff':
                 coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'OFFSETA':
+            if field_name.lower() == 'offseta':
                 obs_elev = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name.lower() == 'OFFSETB':
+            if field_name.lower() == 'offsetb':
                 tgt_elev = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 
