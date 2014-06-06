@@ -43,6 +43,10 @@ def execute(args):
         args['threshold_flow_accumulation'] - an integer describing the number
             of upstream cells that must flow int a cell before it's considered
             part of a stream.  required if 'stream_uri' is not provided.
+        args['k_param'] - k calibration parameter (see user's guide for values)
+        args['sdr_max'] - the max value the SDR can be
+        args['ic_0_param'] - ic_0 calibration parameter (see user's guide for
+            values)
         
         returns nothing."""
 
