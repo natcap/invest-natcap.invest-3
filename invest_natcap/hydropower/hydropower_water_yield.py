@@ -329,7 +329,7 @@ def execute(args):
 
            returns - water yield value (mm)"""
         return numpy.where(
-                (fractp == out_nodata) & (precip == precip_nodata),
+                (fractp == out_nodata) | (precip == precip_nodata),
                 out_nodata, (1.0 - fractp) * precip)
 
     LOGGER.debug('Performing wyield operation')
