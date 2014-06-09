@@ -211,7 +211,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         
         #named _transposed so we remember column is flipped to row
-        if b_array[0, 0]:
+        if b_array[0, 0] and b_array[0, 0] != input_nodata:
             g_array_transposed[0, 0] = 0
         else:
             g_array_transposed[0, 0] = numerical_inf

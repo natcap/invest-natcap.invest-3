@@ -269,14 +269,14 @@ def execute(args):
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
             raster_utils.rasterize_layer_uri(
-                aoi_raster_uri, aoi_uri, [1],
+                aoi_raster_uri, aoi_uri, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
             raster_utils.rasterize_layer_uri(
-                aoi_raster_uri, land_poly_proj_uri, [0],
+                aoi_raster_uri, land_poly_proj_uri, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             dist_mask_uri = os.path.join(
@@ -285,12 +285,15 @@ def execute(args):
             dist_trans_uri = os.path.join(
                     inter_dir, 'distance_trans%s.tif' % suffix)
 
+            dist_meters_uri = os.path.join(
+                    inter_dir, 'distance_meters%s.tif' % suffix)
+
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
             raster_utils.distance_transform_edt(aoi_raster_uri, dist_trans_uri)
             mask_by_distance(
                     dist_trans_uri, min_distance, max_distance,
-                    out_nodata, dist_mask_uri)
+                    out_nodata, dist_meters_uri, dist_mask_uri)
 
         # Determines whether to check projections in future vectorize_datasets
         # calls
@@ -1471,7 +1474,7 @@ def get_highest_harvested_geom(wind_points_uri):
     return geom
 
 def mask_by_distance(
-        dataset_uri, min_dist, max_dist, out_nodata, out_uri):
+        dataset_uri, min_dist, max_dist, out_nodata, dist_uri, mask_uri):
     """Given a raster whose pixels are distances, bound them by a minimum and
         maximum distance
 
@@ -1481,23 +1484,39 @@ def mask_by_distance(
 
         max_dist - an integer of the maximum distance allowed in meters
 
-        out_uri - the URI output of the masked raster
+        mask_uri - the URI output of the raster masked by distance values
+
+        dist_uri - the URI output of the raster converted from distance
+            transform ranks to distance values in meters
 
         out_nodata - the nodata value of the raster
 
         returns - nothing"""
 
+    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri)
+    dataset_nodata = raster_utils.get_nodata_from_uri(dataset_uri)
+
+    def dist_op(dist_pix):
+        """Vectorize_dataset operation that multiplies distance
+            transform values by a cell size, to get distances
+            in meters"""
+        return np.where(
+            dist_pix == dataset_nodata, out_nodata, dist_pix * cell_size)
+
     def mask_op(dist_pix):
         """Vectorize_dataset operation to bound dist_pix values between
             two integer values"""
         return np.where(
-            (dist_pix >= max_dist) | (dist_pix <= min_dist), out_nodata,
+            ((dist_pix >= max_dist) | (dist_pix <= min_dist)), out_nodata,
             dist_pix)
 
-    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri)
+    raster_utils.vectorize_datasets(
+            [dataset_uri], dist_op, dist_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection',
+            assert_datasets_projected = True, vectorize_op = False)
 
     raster_utils.vectorize_datasets(
-            [dataset_uri], mask_op, out_uri, gdal.GDT_Float32,
+            [dist_uri], mask_op, mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
 
