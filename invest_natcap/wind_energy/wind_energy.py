@@ -1490,7 +1490,7 @@ def mask_by_distance(
     def mask_op(dist_pix):
         """Vectorize_dataset operation to bound dist_pix values between
             two integer values"""
-        return numpy.where(
+        return np.where(
             (dist_pix >= max_dist) | (dist_pix <= min_dist), out_nodata,
             dist_pix)
 
