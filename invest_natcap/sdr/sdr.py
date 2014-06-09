@@ -47,6 +47,11 @@ def execute(args):
         args['sdr_max'] - the max value the SDR can be
         args['ic_0_param'] - ic_0 calibration parameter (see user's guide for
             values)
+        args['drainage_uri'] - An optional GIS raster dataset mask, that
+            indicates areas that drain to the watershed.  Format is that 1's
+            indicate drainage areas and 0's or nodata indicate areas with no
+            additional drainage.  This model is most accurate when the drainage
+            raster aligns with the DEM.
         
         returns nothing."""
 
@@ -153,6 +158,20 @@ def execute(args):
 
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
+        
+    if 'drainage_uri' in args:
+        def add_drainage(stream, drainage):
+            return numpy.where(drainage == 1, 1, stream)
+        
+        stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
+        #add additional drainage to the stream
+        drainage_uri = os.path.join(output_dir, 'drainage%s.tif' % file_suffix)
+        
+        raster_utils.vectorize_datasets(
+            [stream_uri, args['drainage_uri']], add_drainage, drainage_uri,
+            gdal.GDT_Byte, stream_nodata, out_pixel_size, "intersection",
+            dataset_to_align_index=0, vectorize_op=False)
+        stream_uri = drainage_uri
 
     #Calculate LS term
     LOGGER.info('calculate ls term')
