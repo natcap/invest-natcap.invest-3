@@ -187,12 +187,14 @@ for crop in crops:
         try:
             if rasters[crop][column] != "":
                 if raster == True:
-                    print crop
+                    print crop, " has multiple BinMatrix rasters"
                     break
                 else:
                     raser = True
         except KeyError:
             pass
+    if raster == False:
+        print crop, " has no BinMatrix rasters"
 
 ##print column_header
 ##print crops
