@@ -114,7 +114,7 @@
 		    "id" : "drainage_uri",
 		    "args_id" : "drainage_uri",
 		    "type": "file",
-		    "label": "Drainages Raster",
+		    "label": "Drainages Raster (optional)",
 		    "defaultValue": "",
 		    "required": false,
 		    "validateAs": {"type": "GDAL"},
