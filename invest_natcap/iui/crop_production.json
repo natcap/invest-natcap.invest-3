@@ -1795,6 +1795,20 @@
                                 "enabledBy" : "enable_tab_percentile",
                                 "elements": [
                                                 {
+                                                    "id" : "modeled_tab_list",
+                                                    "type" : "list",
+                                                    "elements" : [                                    
+                                                                    {
+                                                                        "id": "dropdown_example",
+                                                                        "type": "dropdown",
+                                                                        "label": "Percentile",
+                                                                        "options":["25", "50", "75", "95"],
+                                                                        "returns": "strings",
+                                                                        "defaultValue": 2
+                                                                    }
+                                                                ]
+                                                },
+                                                {
                                                         "id": "crop_almond_percentile",
                                                         "args_id": "crop_almond_percentile",
                                                         "type": "checkbox",
