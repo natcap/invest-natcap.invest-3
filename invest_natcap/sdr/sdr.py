@@ -159,7 +159,7 @@ def execute(args):
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
         
-    if 'drainage_uri' in args:
+    if 'drainage_uri' in args and args['drainage_uri'] != '':
         def add_drainage(stream, drainage):
             return numpy.where(drainage == 1, 1, stream)
         
