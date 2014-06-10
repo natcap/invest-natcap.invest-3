@@ -333,12 +333,12 @@ def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
     if val_dict is not None:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
         layer.CreateField(val_field)
-    
+   
     for feature in layer:
 
         #Since we now know for sure there will be a name attribute lower case,
         #can just call it directly.
-        subregion_name = feature.items()['name']
+        subregion_name = str(feature.items()['name'])
         feature.SetField('Hrv_Total', "%.2f" % final_cycle[subregion_name])
 
         if val_dict is not None:
