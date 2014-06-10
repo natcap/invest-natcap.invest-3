@@ -28,8 +28,9 @@ for base_name in os.listdir(irrigation_dir_uri):
             asc_file.write("cellsize  8.3333001E-02\n")
             asc_file.write("NODATA_value  -9999.000")
 
-            for row in data:
-                asc_file.write("\n"+" ".join([str(v) for v in row]).replace("nan", "-9999.00"))
+            _, y = data.shape
+            for i in range(y):
+                asc_file.write("\n"+" ".join([str(v) for v in data[:,i]]).replace("nan", "-9999.00"))
 
             asc_file.close()
             
