@@ -22,7 +22,7 @@
                                                                 "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
                                                                 "type": "label",
                                                                 "helpText": "Alpha tools are considered unstable."
-                                                            },                                                
+                                                            },
                                                             {
                                                                 "id" : "main_tab_list",
                                                                 "type" : "list",
@@ -54,7 +54,7 @@
                                                                         "validateAs": {"type": "OGR"},
                                                                         "required": true,
                                                                         "disabledBy" : "use_crop_map"
-                                                                    },                                                                    
+                                                                    },
                                                                     {
                                                                         "id" : "crop_file_name",
                                                                         "args_id" : "crop_file_name",
@@ -74,35 +74,27 @@
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
+                                                                    },
+                                                                    {
+                                                                        "id": "enable_tab_existing",
+                                                                        "args_id" : "enable_tab_existing",
+                                                                        "type" : "checkbox",
+                                                                        "label" : "Existing Crops",
+                                                                        "defaultValue": false
+                                                                    },
+                                                                    {
+                                                                        "id": "enable_tab_percentile",
+                                                                        "args_id" : "enable_tab_percentile",
+                                                                        "type" : "checkbox",
+                                                                        "label" : "Percentile Crops",
+                                                                        "defaultValue": false
                                                                     },                                                                    
                                                                     {
-                                                                        "id" : "irrigation_file_name",
-                                                                        "args_id" : "irrigation_file_name",
-                                                                        "type": "file",
-                                                                        "label": "Irrigation Map",
-                                                                        "defaultValue": "",
-                                                                        "validateAs": {"type": "GDAL"},
-                                                                        "required": false,
-                                                                        "enabledBy" : "use_crop_map"                                                                        
-                                                                    },
-                                                                    {
-                                                                        "id" : "fertilizer_file_name",
-                                                                        "args_id" : "fertilizer_file_name",
-                                                                        "type": "file",
-                                                                        "label": "Fertilizer Map",
-                                                                        "defaultValue": "",
-                                                                        "validateAs": {"type": "GDAL"},
-                                                                        "required": false,
-                                                                        "enabledBy" : "use_crop_map"
-                                                                    },
-                                                                    {
-                                                                        "id" : "raster_table",
-                                                                        "args_id": "raster_table",
-                                                                        "type": "file",
-                                                                        "label" : "Raster table",
-                                                                        "defaultValue" : "../CropProduction/input/rasters.csv",
-                                                                        "validateAs": {"type": "CSV"},
-                                                                        "required": true
+                                                                        "id": "enable_tab_modeled",
+                                                                        "args_id" : "enable_tab_modeled",
+                                                                        "type" : "checkbox",
+                                                                        "label" : "Modeled Crops",
+                                                                        "defaultValue": false
                                                                     },
                                                                     {
                                                                         "id": "calculate_nutrition",
@@ -137,7 +129,7 @@
                                                                         "validateAs": {"type": "GDAL"},
                                                                         "required" : true,
                                                                         "enabledBy" : "calculate_valuation"
-                                                                    },                                                                    
+                                                                    },
                                                                     {
                                                                         "id": "valuation_table",
                                                                         "args_id" : "valuation_table",
@@ -147,7 +139,16 @@
                                                                         "validateAs": {"type": "CSV"},
                                                                         "required" : true,
                                                                         "enabledBy" : "calculate_valuation"
-                                                                    }                                                                    
+                                                                    },
+                                                                    {
+                                                                        "id" : "raster_table",
+                                                                        "args_id": "raster_table",
+                                                                        "type": "file",
+                                                                        "label" : "Crop files index",
+                                                                        "defaultValue" : "../CropProduction/input/file_index.csv",
+                                                                        "validateAs": {"type": "CSV"},
+                                                                        "required": true
+                                                                    }
                                                                 ]
                                                             }
                                                         ]
@@ -390,12 +391,13 @@
                                             "defaultValue" : false
                                         }
                                     ]
-                                
+
                             },
                             {
                                 "id": "existing_tab",
                                 "label": "Existing",
                                 "type": "tab",
+                                "enabledBy" : "enable_tab_existing",
                                 "elements": [
                                                 {
                                                         "id": "crop_abaca_existing",
@@ -1785,11 +1787,12 @@
 		                                        "required":false
 		                                }
                                     ]
-                            },                                
+                            },
                             {
                                 "id": "percentile_tab",
                                 "label": "Percentile",
                                 "type": "tab",
+                                "enabledBy" : "enable_tab_percentile",
                                 "elements": [
                                                 {
                                                         "id": "crop_abaca_percentile",
@@ -3184,7 +3187,32 @@
                                 "id": "modeled_tab",
                                 "label": "Modeled",
                                 "type": "tab",
+                                "enabledBy" : "enable_tab_modeled",
                                 "elements": [
+                                                {
+                                                    "id" : "modeled_tab_list",
+                                                    "type" : "list",
+                                                    "elements" : [
+                                                        {
+                                                            "id" : "irrigation_file_name",
+                                                            "args_id" : "irrigation_file_name",
+                                                            "type": "file",
+                                                            "label": "Irrigation Map",
+                                                            "defaultValue": "",
+                                                            "validateAs": {"type": "GDAL"},
+                                                            "required": true
+                                                        },
+                                                        {
+                                                            "id" : "fertilizer_file_name",
+                                                            "args_id" : "fertilizer_file_name",
+                                                            "type": "file",
+                                                            "label": "Fertilizer Map",
+                                                            "defaultValue": "",
+                                                            "validateAs": {"type": "GDAL"},
+                                                            "required": true
+                                                        }
+                                                    ]
+                                                },
                                                 {
                                                     "id" : "crop_barley_modeled",
                                                     "args_id" : "crop_barley_modeled",
@@ -3272,10 +3300,10 @@
                                                     "label": "Wheat",
                                                     "defaultValue": false,
                                                     "required": false
-                                                }                        
+                                                }
 
                                 ]
-                            }                                
+                            }
                         ]
                     }
                 ]
