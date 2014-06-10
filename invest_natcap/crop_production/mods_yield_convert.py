@@ -36,7 +36,7 @@ for base_name in os.listdir(cbi_mod_yield_dir_uri):
             #create staistics table
             statistics_file = open(statistics_uri, 'w')
             for row in table:
-                statistics_file.write(",".join(row[:1]+row[21:]))
+                statistics_file.write(",".join(row[:1]+row[21:]).strip().strip(",")+"\n")
             statistics_file.close()
 
         else:
