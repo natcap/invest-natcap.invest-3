@@ -16,7 +16,7 @@ income_climate_dir_uri = os.path.join(data_dir_uri, "income_climate")
 yield_mod_dir_uri = os.path.join(data_dir_uri, "yield_mod")
 
 fertilizer_pattern = "([a-z]+)([0-9A-Z]+)([a-z]+)"
-climate_pattern = "([A-Za-z]+[_])([a-z]+)([_])([A-Za-z]+[_][0-9])([_][A-Za-z]+[_][0-9]+[_][A-Za-z]+[_][0-9]+[x][0-9]+[_][a-z]+[_])([A-Za-z]+)"
+climate_pattern = "([A-Za-z]+[_])([a-z]+)([_])([A-Za-z]+[_][0-9])([_][A-Za-z]+[_][0-9]+[_][A-Za-z]+[_][0-9]+[x][0-9]+[_][a-z]+[_])(BinMatrix)"
 production_pattern = "([a-z]+)([_])([a-z]+)"
 cbi_pattern = "([A-Z]+)([_][a-z]+[_])([a-z]+)"
 cbi_mod_yield_pattern = "([A-Z]+[_][a-z]+[_])([a-z]+)"
@@ -45,6 +45,7 @@ for base_name in os.listdir(fertilizer_dir_uri):
         else:
             unknown_files.append(raster_uri)
 
+bin_matrix_columns = set()
 for base_name in os.listdir(climate_dir_uri):
     raster_uri = os.path.join(climate_dir_uri, base_name)
     if os.path.isfile(raster_uri):
@@ -52,12 +53,13 @@ for base_name in os.listdir(climate_dir_uri):
         if m != None:
             crop = m.group(2)
             column = "_".join([m.group(4), m.group(6)])
-            column_header.add(column) 
+            column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
                 
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
+            bin_matrix_columns.add(column)
         else:
             unknown_files.append(raster_uri)
 
@@ -176,6 +178,21 @@ for i, crop in enumerate(crops):
     file_index.write("\n"+",".join(row))
 
 file_index.close()
+
+
+bin_matrix_columns = list(bin_matrix_columns)
+for crop in crops:
+    raster = False
+    for column in bin_matrix_columns:
+        try:
+            if rasters[crop][column] != "":
+                if raster == True:
+                    print crop
+                    break
+                else:
+                    raser = True
+        except KeyError:
+            pass
 
 ##print column_header
 ##print crops
