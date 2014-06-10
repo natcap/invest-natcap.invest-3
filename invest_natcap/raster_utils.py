@@ -2871,14 +2871,15 @@ def distance_transform_edt(
         returns nothing"""
 
     mask_as_byte_uri = temporary_filename()
-    nodata = get_nodata_from_uri(input_mask_uri)
+    nodata_mask = get_nodata_from_uri(input_mask_uri)
     out_pixel_size = get_cell_size_from_uri(input_mask_uri)
+    nodata_out = 255
     def to_byte(x):
-        return numpy.where(x == nodata, 255, x != 0)
+        return numpy.where(x == nodata_mask, nodata_out, x != 0)
     LOGGER.info('converting input mask to byte dataset')
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
-        nodata, out_pixel_size, "union",
+        nodata_out, out_pixel_size, "union",
         dataset_to_align_index=0, assert_datasets_projected=False, 
         process_pool=process_pool, vectorize_op=False)
     
