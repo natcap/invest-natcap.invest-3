@@ -180,21 +180,38 @@ for i, crop in enumerate(crops):
 file_index.close()
 
 
+#generate percentile and modeled tabs
 bin_matrix_columns = list(bin_matrix_columns)
-for crop in crops:
+bin_matrix_crops = []
+for i, crop in enumerate(crops):
     raster = False
     for column in bin_matrix_columns:
         try:
             if rasters[crop][column] != "":
                 if raster == True:
-                    print crop, " has multiple BinMatrix rasters"
+                    print i + 1, " ", crop, " has multiple BinMatrix rasters"
                     break
                 else:
-                    raser = True
+                    raster = True
+                    bin_matrix_crops.append(crop)
         except KeyError:
             pass
     if raster == False:
-        print crop, " has no BinMatrix rasters"
+        print i + 1, " ", crop, " has no BinMatrix rasters"
+
+iui_percentile_crop = """
+{
+        "id": "crop_%s_percentile",
+        "args_id": "crop_%s_percentile",
+        "type": "checkbox",
+        "label":"%s",
+        "defaultValue": false,
+        "required":false
+},"""
+
+for crop in  bin_matrix_crops:
+    print iui_percentile_crop % (crop, crop, crop.title()),
+    
 
 ##print column_header
 ##print crops
