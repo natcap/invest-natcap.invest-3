@@ -1795,69 +1795,13 @@
                                 "enabledBy" : "enable_tab_percentile",
                                 "elements": [
                                                 {
-                                                        "id": "crop_abaca_percentile",
-                                                        "args_id": "crop_abaca_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Abaca",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_agave_percentile",
-                                                        "args_id": "crop_agave_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Agave",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_alfalfa_percentile",
-                                                        "args_id": "crop_alfalfa_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Alfalfa",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
                                                         "id": "crop_almond_percentile",
                                                         "args_id": "crop_almond_percentile",
                                                         "type": "checkbox",
                                                         "label":"Almond",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
-                                                {
-                                                        "id": "crop_aniseetc_percentile",
-                                                        "args_id": "crop_aniseetc_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Aniseetc",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_apple_percentile",
-                                                        "args_id": "crop_apple_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Apple",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_apricot_percentile",
-                                                        "args_id": "crop_apricot_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Apricot",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_areca_percentile",
-                                                        "args_id": "crop_areca_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Areca",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_artichoke_percentile",
                                                         "args_id": "crop_artichoke_percentile",
@@ -1865,7 +1809,7 @@
                                                         "label":"Artichoke",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_asparagus_percentile",
                                                         "args_id": "crop_asparagus_percentile",
@@ -1873,15 +1817,7 @@
                                                         "label":"Asparagus",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
-                                                {
-                                                        "id": "crop_avocado_percentile",
-                                                        "args_id": "crop_avocado_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Avocado",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_bambara_percentile",
                                                         "args_id": "crop_bambara_percentile",
@@ -1889,56 +1825,15 @@
                                                         "label":"Bambara",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
-                                                {
-                                                        "id": "crop_banana_percentile",
-                                                        "args_id": "crop_banana_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Banana",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_barley_percentile",
                                                         "args_id": "crop_barley_percentile",
                                                         "type": "checkbox",
                                                         "label":"Barley",
                                                         "defaultValue": false,
-                                                        "required":false,
-                                                        "disabledBy" : "crop_barley_modeled"
-                                                },
-                                                {
-                                                        "id": "crop_bean_percentile",
-                                                        "args_id": "crop_bean_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Bean",
-                                                        "defaultValue": false,
                                                         "required":false
-                                                },
-                                                {
-                                                        "id": "crop_beetfor_percentile",
-                                                        "args_id": "crop_beetfor_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Beetfor",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_berrynes_percentile",
-                                                        "args_id": "crop_berrynes_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Berry Not Elsewhere Specified",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
-                                                {
-                                                        "id": "crop_blueberry_percentile",
-                                                        "args_id": "crop_blueberry_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Blueberry",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_brazil_percentile",
                                                         "args_id": "crop_brazil_percentile",
@@ -1946,7 +1841,7 @@
                                                         "label":"Brazil",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_broadbean_percentile",
                                                         "args_id": "crop_broadbean_percentile",
@@ -1954,15 +1849,7 @@
                                                         "label":"Broadbean",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
-                                                {
-                                                        "id": "crop_buckwheat_percentile",
-                                                        "args_id": "crop_buckwheat_percentile",
-                                                        "type": "checkbox",
-                                                        "label":"Buckwheat",
-                                                        "defaultValue": false,
-                                                        "required":false
-                                                },
+                                                }, 
                                                 {
                                                         "id": "crop_cabbage_percentile",
                                                         "args_id": "crop_cabbage_percentile",
@@ -1970,1217 +1857,511 @@
                                                         "label":"Cabbage",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
-                                                        "id": "crop_cabbagefor_percentile",
-                                                        "args_id": "crop_cabbagefor_percentile",
+                                                        "id": "crop_cashew_percentile",
+                                                        "args_id": "crop_cashew_percentile",
                                                         "type": "checkbox",
-                                                        "label":"Cabbage Forage",
+                                                        "label":"Cashew",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
-                                                        "id": "crop_canaryseed_percentile",
-                                                        "args_id": "crop_canaryseed_percentile",
+                                                        "id": "crop_cassava_percentile",
+                                                        "args_id": "crop_cassava_percentile",
                                                         "type": "checkbox",
-                                                        "label":"Canaryseed",
+                                                        "label":"Cassava",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
-                                                        "id": "crop_carob_percentile",
-                                                        "args_id": "crop_carob_percentile",
+                                                        "id": "crop_cauliflower_percentile",
+                                                        "args_id": "crop_cauliflower_percentile",
                                                         "type": "checkbox",
-                                                        "label":"Carob",
+                                                        "label":"Cauliflower",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
-                                                        "id": "crop_carrot_percentile",
-                                                        "args_id": "crop_carrot_percentile",
+                                                        "id": "crop_chestnut_percentile",
+                                                        "args_id": "crop_chestnut_percentile",
                                                         "type": "checkbox",
-                                                        "label":"Carrot",
+                                                        "label":"Chestnut",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
+                                                }, 
                                                 {
-                                                        "id": "crop_carrotfor_percentile",
-                                                        "args_id": "crop_carrotfor_percentile",
+                                                        "id": "crop_chickpea_percentile",
+                                                        "args_id": "crop_chickpea_percentile",
                                                         "type": "checkbox",
-                                                        "label":"Carrot Forage",
+                                                        "label":"Chickpea",
                                                         "defaultValue": false,
                                                         "required":false
-                                                },
-		                                {
-		                                        "id": "crop_cashew_percentile",
-		                                        "args_id": "crop_cashew_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cashew",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cashewapple_percentile",
-		                                        "args_id": "crop_cashewapple_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cashewapple",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cassava_percentile",
-		                                        "args_id": "crop_cassava_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cassava",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_castor_percentile",
-		                                        "args_id": "crop_castor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Castor",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cauliflower_percentile",
-		                                        "args_id": "crop_cauliflower_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cauliflower",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cerealnes_percentile",
-		                                        "args_id": "crop_cerealnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cereal Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cherry_percentile",
-		                                        "args_id": "crop_cherry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cherry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_chestnut_percentile",
-		                                        "args_id": "crop_chestnut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Chestnut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_chickpea_percentile",
-		                                        "args_id": "crop_chickpea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Chickpea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_chicory_percentile",
-		                                        "args_id": "crop_chicory_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Chicory",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_chilleetc_percentile",
-		                                        "args_id": "crop_chilleetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Chilleetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cinnamon_percentile",
-		                                        "args_id": "crop_cinnamon_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cinnamon",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_citrusnes_percentile",
-		                                        "args_id": "crop_citrusnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Citrus Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_clove_percentile",
-		                                        "args_id": "crop_clove_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Clove",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_clover_percentile",
-		                                        "args_id": "crop_clover_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Clover",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cocoa_percentile",
-		                                        "args_id": "crop_cocoa_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cocoa",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_coconut_percentile",
-		                                        "args_id": "crop_coconut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Coconut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_coffee_percentile",
-		                                        "args_id": "crop_coffee_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Coffee",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cotton_percentile",
-		                                        "args_id": "crop_cotton_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cotton",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cowpea_percentile",
-		                                        "args_id": "crop_cowpea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cowpea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cranberry_percentile",
-		                                        "args_id": "crop_cranberry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cranberry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_cucumberetc_percentile",
-		                                        "args_id": "crop_cucumberetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Cucumberetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_currant_percentile",
-		                                        "args_id": "crop_currant_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Currant",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_date_percentile",
-		                                        "args_id": "crop_date_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Date",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_eggplant_percentile",
-		                                        "args_id": "crop_eggplant_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Eggplant",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_fibrenes_percentile",
-		                                        "args_id": "crop_fibrenes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Fiber Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_fig_percentile",
-		                                        "args_id": "crop_fig_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Fig",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_flax_percentile",
-		                                        "args_id": "crop_flax_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Flax",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_fonio_percentile",
-		                                        "args_id": "crop_fonio_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Fonio",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_fornes_percentile",
-		                                        "args_id": "crop_fornes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Forage Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_fruitnes_percentile",
-		                                        "args_id": "crop_fruitnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Fruit Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_garlic_percentile",
-		                                        "args_id": "crop_garlic_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Garlic",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_ginger_percentile",
-		                                        "args_id": "crop_ginger_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Ginger",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_gooseberry_percentile",
-		                                        "args_id": "crop_gooseberry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Gooseberry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_grape_percentile",
-		                                        "args_id": "crop_grape_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Grape",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_grapefruitetc_percentile",
-		                                        "args_id": "crop_grapefruitetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Grapefruitetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_grassnes_percentile",
-		                                        "args_id": "crop_grassnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Grass Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_greenbean_percentile",
-		                                        "args_id": "crop_greenbean_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Greenbean",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_greenbroadbean_percentile",
-		                                        "args_id": "crop_greenbroadbean_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Greenbroadbean",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_greencorn_percentile",
-		                                        "args_id": "crop_greencorn_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Greencorn",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_greenonion_percentile",
-		                                        "args_id": "crop_greenonion_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Greenonion",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_greenpea_percentile",
-		                                        "args_id": "crop_greenpea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Greenpea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_groundnut_percentile",
-		                                        "args_id": "crop_groundnut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Groundnut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_hazelnut_percentile",
-		                                        "args_id": "crop_hazelnut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Hazelnut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_hemp_percentile",
-		                                        "args_id": "crop_hemp_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Hemp",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_hempseed_percentile",
-		                                        "args_id": "crop_hempseed_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Hempseed",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_hop_percentile",
-		                                        "args_id": "crop_hop_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Hop",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_jute_percentile",
-		                                        "args_id": "crop_jute_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Jute",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_jutelikefiber_percentile",
-		                                        "args_id": "crop_jutelikefiber_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Jute Like Fiber",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_kapokfiber_percentile",
-		                                        "args_id": "crop_kapokfiber_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Kapok Fiber",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_kapokseed_percentile",
-		                                        "args_id": "crop_kapokseed_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Kapokseed",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_karite_percentile",
-		                                        "args_id": "crop_karite_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Karite",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_kiwi_percentile",
-		                                        "args_id": "crop_kiwi_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Kiwi",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_kolanut_percentile",
-		                                        "args_id": "crop_kolanut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Kolanut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_legumenes_percentile",
-		                                        "args_id": "crop_legumenes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Legume Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_lemonlime_percentile",
-		                                        "args_id": "crop_lemonlime_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Lemonlime",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_lentil_percentile",
-		                                        "args_id": "crop_lentil_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Lentil",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_lettuce_percentile",
-		                                        "args_id": "crop_lettuce_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Lettuce",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_linseed_percentile",
-		                                        "args_id": "crop_linseed_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Linseed",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_lupin_percentile",
-		                                        "args_id": "crop_lupin_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Lupin",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_maize_percentile",
-		                                        "args_id": "crop_maize_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Maize",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_maize_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_maizefor_percentile",
-		                                        "args_id": "crop_maizefor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Maize Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mango_percentile",
-		                                        "args_id": "crop_mango_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mango",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mate_percentile",
-		                                        "args_id": "crop_mate_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mate",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_melonetc_percentile",
-		                                        "args_id": "crop_melonetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Melonetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_melonseed_percentile",
-		                                        "args_id": "crop_melonseed_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Melonseed",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_millet_percentile",
-		                                        "args_id": "crop_millet_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Millet",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mixedgrain_percentile",
-		                                        "args_id": "crop_mixedgrain_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mixed grain",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mixedgrass_percentile",
-		                                        "args_id": "crop_mixedgrass_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mixed grass",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mushroom_percentile",
-		                                        "args_id": "crop_mushroom_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mushroom",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_mustard_percentile",
-		                                        "args_id": "crop_mustard_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Mustard",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_nutmeg_percentile",
-		                                        "args_id": "crop_nutmeg_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Nutmeg",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_nutnes_percentile",
-		                                        "args_id": "crop_nutnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Nut Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_oats_percentile",
-		                                        "args_id": "crop_oats_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Oats",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_oilpalm_percentile",
-		                                        "args_id": "crop_oilpalm_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Oilpalm",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy": "crop_oilpalm_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_oilseedfor_percentile",
-		                                        "args_id": "crop_oilseedfor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Oilseed Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_oilseednes_percentile",
-		                                        "args_id": "crop_oilseednes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Oilseed Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_okra_percentile",
-		                                        "args_id": "crop_okra_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Okra",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_olive_percentile",
-		                                        "args_id": "crop_olive_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Olive",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_onion_percentile",
-		                                        "args_id": "crop_onion_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Onion",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_orange_percentile",
-		                                        "args_id": "crop_orange_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Orange",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_papaya_percentile",
-		                                        "args_id": "crop_papaya_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Papaya",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pea_percentile",
-		                                        "args_id": "crop_pea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_peachetc_percentile",
-		                                        "args_id": "crop_peachetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Peachetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pear_percentile",
-		                                        "args_id": "crop_pear_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pear",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pepper_percentile",
-		                                        "args_id": "crop_pepper_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pepper",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_peppermint_percentile",
-		                                        "args_id": "crop_peppermint_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Peppermint",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_persimmon_percentile",
-		                                        "args_id": "crop_persimmon_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Persimmon",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pigeonpea_percentile",
-		                                        "args_id": "crop_pigeonpea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pigeonpea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pimento_percentile",
-		                                        "args_id": "crop_pimento_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pimento",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pineapple_percentile",
-		                                        "args_id": "crop_pineapple_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pineapple",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pistachio_percentile",
-		                                        "args_id": "crop_pistachio_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pistachio",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_plantain_percentile",
-		                                        "args_id": "crop_plantain_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Plantain",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_plum_percentile",
-		                                        "args_id": "crop_plum_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Plum",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_poppy_percentile",
-		                                        "args_id": "crop_poppy_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Poppy",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_potato_percentile",
-		                                        "args_id": "crop_potato_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Potato",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy": "crop_potato_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_pulsenes_percentile",
-		                                        "args_id": "crop_pulsenes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pulse Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pumpkinetc_percentile",
-		                                        "args_id": "crop_pumpkinetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pumpkinetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_pyrethrum_percentile",
-		                                        "args_id": "crop_pyrethrum_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Pyrethrum",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_quince_percentile",
-		                                        "args_id": "crop_quince_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Quince",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_quinoa_percentile",
-		                                        "args_id": "crop_quinoa_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Quinoa",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_ramie_percentile",
-		                                        "args_id": "crop_ramie_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Ramie",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_rapeseed_percentile",
-		                                        "args_id": "crop_rapeseed_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rapeseed",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_rasberry_percentile",
-		                                        "args_id": "crop_rasberry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rasberry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_rice_percentile",
-		                                        "args_id": "crop_rice_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rice",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy": "crop_rice_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_rootnes_percentile",
-		                                        "args_id": "crop_rootnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Root Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_rubber_percentile",
-		                                        "args_id": "crop_rubber_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rubber",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_rye_percentile",
-		                                        "args_id": "crop_rye_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rye",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_rye_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_ryefor_percentile",
-		                                        "args_id": "crop_ryefor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Rye Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_safflower_percentile",
-		                                        "args_id": "crop_safflower_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Safflower",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sesame_percentile",
-		                                        "args_id": "crop_sesame_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sesame",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sisal_percentile",
-		                                        "args_id": "crop_sisal_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sisal",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sorghum_percentile",
-		                                        "args_id": "crop_sorghum_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sorghum",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sorghumfor_percentile",
-		                                        "args_id": "crop_sorghumfor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sorghum Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sourcherry_percentile",
-		                                        "args_id": "crop_sourcherry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sourcherry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_soybean_percentile",
-		                                        "args_id": "crop_soybean_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Soybean",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_soybean_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_spicenes_percentile",
-		                                        "args_id": "crop_spicenes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Spice Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_spinach_percentile",
-		                                        "args_id": "crop_spinach_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Spinach",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_stonefruitnes_percentile",
-		                                        "args_id": "crop_stonefruitnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Stone Fruit Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_strawberry_percentile",
-		                                        "args_id": "crop_strawberry_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Strawberry",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_stringbean_percentile",
-		                                        "args_id": "crop_stringbean_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Stringbean",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sugarbeet_percentile",
-		                                        "args_id": "crop_sugarbeet_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sugarbeet",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_sugarbeet_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_sugarcane",
-		                                        "args_id": "crop_sugarcane",
-		                                        "type": "checkbox",
-		                                        "label":"Sugarcane",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_sugarcane_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_sugarnes_percentile",
-		                                        "args_id": "crop_sugarnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sugar Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sunflower_percentile",
-		                                        "args_id": "crop_sunflower_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sunflower",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_sunflower_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_swedefor_percentile",
-		                                        "args_id": "crop_swedefor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Swede Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_sweetpotato_percentile",
-		                                        "args_id": "crop_sweetpotato_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Sweetpotato",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tangetc_percentile",
-		                                        "args_id": "crop_tangetc_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tangetc",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_taro_percentile",
-		                                        "args_id": "crop_taro_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Taro",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tea_percentile",
-		                                        "args_id": "crop_tea_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tea",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tobacco_percentile",
-		                                        "args_id": "crop_tobacco_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tobacco",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tomato_percentile",
-		                                        "args_id": "crop_tomato_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tomato",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_triticale_percentile",
-		                                        "args_id": "crop_triticale_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Triticale",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tropicalnes_percentile",
-		                                        "args_id": "crop_tropicalnes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tropical Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_tung_percentile",
-		                                        "args_id": "crop_tung_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Tung",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_turnipfor_percentile",
-		                                        "args_id": "crop_turnipfor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Turnip Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_vanilla_percentile",
-		                                        "args_id": "crop_vanilla_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Vanilla",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_vegetablenes_percentile",
-		                                        "args_id": "crop_vegetablenes_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Vegetable Not Elsewhere Specified",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_vegfor_percentile",
-		                                        "args_id": "crop_vegfor_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Vegetable Forage",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_vetch_percentile",
-		                                        "args_id": "crop_vetch_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Vetch",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_walnut_percentile",
-		                                        "args_id": "crop_walnut_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Walnut",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_watermelon_percentile",
-		                                        "args_id": "crop_watermelon_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Watermelon",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_wheat_percentile",
-		                                        "args_id": "crop_wheat_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Wheat",
-		                                        "defaultValue": false,
-		                                        "required":false,
-		                                        "disabledBy" : "crop_wheat_modeled"
-		                                },
-		                                {
-		                                        "id": "crop_yam_percentile",
-		                                        "args_id": "crop_yam_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Yam",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                },
-		                                {
-		                                        "id": "crop_yautia_percentile",
-		                                        "args_id": "crop_yautia_percentile",
-		                                        "type": "checkbox",
-		                                        "label":"Yautia",
-		                                        "defaultValue": false,
-		                                        "required":false
-		                                }
+                                                }, 
+                                                {
+                                                        "id": "crop_chilleetc_percentile",
+                                                        "args_id": "crop_chilleetc_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Chilleetc",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_cowpea_percentile",
+                                                        "args_id": "crop_cowpea_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Cowpea",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_cucumberetc_percentile",
+                                                        "args_id": "crop_cucumberetc_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Cucumberetc",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_eggplant_percentile",
+                                                        "args_id": "crop_eggplant_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Eggplant",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_garlic_percentile",
+                                                        "args_id": "crop_garlic_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Garlic",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_greenbroadbean_percentile",
+                                                        "args_id": "crop_greenbroadbean_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Greenbroadbean",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_greencorn_percentile",
+                                                        "args_id": "crop_greencorn_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Greencorn",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_greenonion_percentile",
+                                                        "args_id": "crop_greenonion_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Greenonion",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_groundnut_percentile",
+                                                        "args_id": "crop_groundnut_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Groundnut",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_hazelnut_percentile",
+                                                        "args_id": "crop_hazelnut_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Hazelnut",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_hop_percentile",
+                                                        "args_id": "crop_hop_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Hop",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_kolanut_percentile",
+                                                        "args_id": "crop_kolanut_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Kolanut",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_lettuce_percentile",
+                                                        "args_id": "crop_lettuce_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Lettuce",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_lupin_percentile",
+                                                        "args_id": "crop_lupin_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Lupin",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_maize_percentile",
+                                                        "args_id": "crop_maize_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Maize",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_mate_percentile",
+                                                        "args_id": "crop_mate_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Mate",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_melonetc_percentile",
+                                                        "args_id": "crop_melonetc_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Melonetc",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_millet_percentile",
+                                                        "args_id": "crop_millet_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Millet",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_mushroom_percentile",
+                                                        "args_id": "crop_mushroom_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Mushroom",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_nutmeg_percentile",
+                                                        "args_id": "crop_nutmeg_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Nutmeg",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_nutnes_percentile",
+                                                        "args_id": "crop_nutnes_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Nutnes",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_oilpalm_percentile",
+                                                        "args_id": "crop_oilpalm_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Oilpalm",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_okra_percentile",
+                                                        "args_id": "crop_okra_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Okra",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_onion_percentile",
+                                                        "args_id": "crop_onion_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Onion",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pea_percentile",
+                                                        "args_id": "crop_pea_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pea",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pepper_percentile",
+                                                        "args_id": "crop_pepper_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pepper",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_peppermint_percentile",
+                                                        "args_id": "crop_peppermint_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Peppermint",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pigeonpea_percentile",
+                                                        "args_id": "crop_pigeonpea_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pigeonpea",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pimento_percentile",
+                                                        "args_id": "crop_pimento_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pimento",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pistachio_percentile",
+                                                        "args_id": "crop_pistachio_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pistachio",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_potato_percentile",
+                                                        "args_id": "crop_potato_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Potato",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pumpkinetc_percentile",
+                                                        "args_id": "crop_pumpkinetc_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pumpkinetc",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_pyrethrum_percentile",
+                                                        "args_id": "crop_pyrethrum_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Pyrethrum",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_rapeseed_percentile",
+                                                        "args_id": "crop_rapeseed_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Rapeseed",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_rice_percentile",
+                                                        "args_id": "crop_rice_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Rice",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_rootnes_percentile",
+                                                        "args_id": "crop_rootnes_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Rootnes",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_rubber_percentile",
+                                                        "args_id": "crop_rubber_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Rubber",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_rye_percentile",
+                                                        "args_id": "crop_rye_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Rye",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_sorghum_percentile",
+                                                        "args_id": "crop_sorghum_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Sorghum",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_soybean_percentile",
+                                                        "args_id": "crop_soybean_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Soybean",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_spicenes_percentile",
+                                                        "args_id": "crop_spicenes_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Spicenes",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_spinach_percentile",
+                                                        "args_id": "crop_spinach_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Spinach",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_stringbean_percentile",
+                                                        "args_id": "crop_stringbean_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Stringbean",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_sugarbeet_percentile",
+                                                        "args_id": "crop_sugarbeet_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Sugarbeet",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_sugarcane_percentile",
+                                                        "args_id": "crop_sugarcane_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Sugarcane",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_sugarnes_percentile",
+                                                        "args_id": "crop_sugarnes_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Sugarnes",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_sunflower_percentile",
+                                                        "args_id": "crop_sunflower_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Sunflower",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_taro_percentile",
+                                                        "args_id": "crop_taro_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Taro",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_tea_percentile",
+                                                        "args_id": "crop_tea_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Tea",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_tobacco_percentile",
+                                                        "args_id": "crop_tobacco_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Tobacco",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_vanilla_percentile",
+                                                        "args_id": "crop_vanilla_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Vanilla",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_vegetablenes_percentile",
+                                                        "args_id": "crop_vegetablenes_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Vegetablenes",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_vetch_percentile",
+                                                        "args_id": "crop_vetch_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Vetch",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_walnut_percentile",
+                                                        "args_id": "crop_walnut_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Walnut",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_watermelon_percentile",
+                                                        "args_id": "crop_watermelon_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Watermelon",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_wheat_percentile",
+                                                        "args_id": "crop_wheat_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Wheat",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_yam_percentile",
+                                                        "args_id": "crop_yam_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Yam",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }, 
+                                                {
+                                                        "id": "crop_yautia_percentile",
+                                                        "args_id": "crop_yautia_percentile",
+                                                        "type": "checkbox",
+                                                        "label":"Yautia",
+                                                        "defaultValue": false,
+                                                        "required":false
+                                                }
                                     ]
                             },
                             {
