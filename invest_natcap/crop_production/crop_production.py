@@ -109,6 +109,17 @@ def execute(args):
 
     report_name = "report.htm"
 
+    use_existing_crops = args["enable_tab_existing"]
+    use_percentile_crops = args["enable_tab_percentile"]
+    use_modeled_crops = args["enable_tab_modeled"]
+
+    if not any([use_existing_crops,
+                use_percentile_crops,
+                use_modeled_crops]):
+        LOGGER.error("You must select at least one crop yield method.")
+        raise ValueError, "You must select at least one crop yield method."
+        
+
     workspace_dir = args["workspace_dir"]
 
     if not os.path.exists(workspace_dir):
