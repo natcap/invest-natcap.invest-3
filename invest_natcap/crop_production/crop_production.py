@@ -95,6 +95,150 @@ def sum_uri(dataset_uri):
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
 
+def calculate_nutrition(nurition_table, nutrients):
+    nutrition_table_uri = args["nutrition_table"]
+
+    nutrition_table_fields = {"Protein (N x 6.25) g per 100 g" : "protein",
+                              "Total lipid (g per 100 g)" : "lipids",
+                              "Energy (kj) per 100 g" : "kJ",
+                              "Calcium (g per 100g)" : "Ca",
+                              "Iron (g per 100g)" : "Fe",
+                              "Magnesium (g per 100g)" : "Mg",
+                              "Phosphorus (g per 100g)" : "P",
+                              "Potassium (g per 100 g)" : "K",
+                              "Sodium (g per 100g)" : "Na",
+                              "Zinc (g per 100g)" : "Zn",
+                              "Copper (g per 100g)" : "Cu",
+                              "Fluoride  F (g per 100g)" : "F",
+                              "Manganese (g per 100g)" : "Mn",
+                              "Selenium (g per 100g)" : "Se",
+                              "Vitamin A (IU per 100g)" : "vit_A",
+                              "Carotene  beta (g per 100g)": "carotene_B",
+                              "Carotene  alpha (g per 100g)" : "carotene_A",
+                              "Vitamin E (alpha-tocopherol) g per 100g" : "vit_E",
+                              "Cryptoxanthin  beta (g per 100g)" : "C_xanthin_B",
+                              "Lycopene (g per 100g)" : "lycopene",
+                              "Lutein + zeaxanthin (g per 100g)" : "Lutein_Zeaxanthin",
+                              "Tocopherol  beta (g per 100g)" : "Tocopherol_B",
+                              "Tocopherol gamma (g per 100g)" : "Tocopherol_G",
+                              "Tocopherol  Delta (g per 100g)" : "Tocopherol_D",
+                              "Vitamin C (g per 100g)" : "vit_C",
+                              "Thiamin (g per 100g)" : "vit_B1",
+                              "Riboflavin (g per 100g)" : "vit_B2",
+                              "Niacin (g per 100g)" : "vit_B3",
+                              "Pantothenic acid (g per 100 g)" : "vit_B5",
+                              "Vitamin B6 (g per 100g)" : "vit_B6",
+                              "Folate  total (g per 100g)" : "vit_B9",
+                              "Vitamin B-12 (g per 100g)" : "vit_B12",
+                              "Vitamin K (g per 100g)" : "vit_K"}
+
+    nutrition_table_fields_order = ["Protein (N x 6.25) g per 100 g",
+                                    "Total lipid (g per 100 g)",
+                                    "Energy (kj) per 100 g",
+                                    "Calcium (g per 100g)",
+                                    "Iron (g per 100g)",
+                                    "Magnesium (g per 100g)",
+                                    "Phosphorus (g per 100g)",
+                                    "Potassium (g per 100 g)",
+                                    "Sodium (g per 100g)",
+                                    "Zinc (g per 100g)",
+                                    "Copper (g per 100g)",
+                                    "Fluoride  F (g per 100g)",
+                                    "Manganese (g per 100g)",
+                                    "Selenium (g per 100g)",
+                                    "Vitamin A (IU per 100g)",
+                                    "Carotene  beta (g per 100g)",
+                                    "Carotene  alpha (g per 100g)",
+                                    "Vitamin E (alpha-tocopherol) g per 100g",
+                                    "Cryptoxanthin  beta (g per 100g)",
+                                    "Lycopene (g per 100g)",
+                                    "Lutein + zeaxanthin (g per 100g)",
+                                    "Tocopherol  beta (g per 100g)",
+                                    "Tocopherol gamma (g per 100g)",
+                                    "Tocopherol  Delta (g per 100g)",
+                                    "Vitamin C (g per 100g)",
+                                    "Thiamin (g per 100g)",
+                                    "Riboflavin (g per 100g)",
+                                    "Niacin (g per 100g)",
+                                    "Pantothenic acid (g per 100 g)",
+                                    "Vitamin B6 (g per 100g)",
+                                    "Folate  total (g per 100g)",
+                                    "Vitamin B-12 (g per 100g)",
+                                    "Vitamin K (g per 100g)"]
+
+    nutrition_table_mask = [args["nutrient_protein"],
+                            args["nutrient_lipids"],
+                            args["nutrient_energy"],
+                            args["nutrient_calcium"],
+                            args["nutrient_iron"],
+                            args["nutrient_magnesium"],
+                            args["nutrient_potassium"],
+                            args["nutrient_sodium"],
+                            args["nutrient_zinc"],
+                            args["nutrient_copper"],
+                            args["nutrient_flouride"],
+                            args["nutrient_manganese"],
+                            args["nutrient_selenium"],
+                            args["nutrient_vit_a"],
+                            args["nutrient_carotene_b"],
+                            args["nutrient_carotene_a"],
+                            args["nutrient_vit_e"],
+                            args["nutrient_cryptoxanthin"],
+                            args["nutrient_lycopene"],
+                            args["nutrient_lutein"],
+                            args["nutrient_tocopherol_b"],
+                            args["nutrient_tocopherol_g"],
+                            args["nutrient_tocopherol_d"],
+                            args["nutrient_vit_c"],
+                            args["nutrient_vit_b1"],
+                            args["nutrient_vit_b2"],
+                            args["nutrient_vit_b3"],
+                            args["nutrient_vit_b5"],
+                            args["nutrient_vit_b6"],
+                            args["nutrient_vit_b9"],
+                            args["nutrient_vit_b12"],
+                            args["nutrient_vit_k"]]
+
+    nutrition_table_field_id = "Id"
+
+    nutrient_selection = []
+    for nutrient, inclusion in zip(nutrition_table_fields_order, nutrition_table_mask):
+        if inclusion:
+            nutrient_selection.append(nutrient)
+
+    LOGGER.debug("Calculating nutrition.")
+    for nutrient in nutrient_selection:
+        LOGGER.debug("Creating %s raster.", nutrition_table_fields[nutrient])
+
+        reclass_table = {}
+        for crop in invest_crops:
+            try:
+                reclass_table[crop] = nutrition_table_dict[crop][nutrient]
+            except KeyError:
+                LOGGER.warn("No nutrition information for crop %i, setting values to 0.", crop)
+                reclass_table[crop] = 0.0
+
+        reclass_table[0] = 0.0
+
+        nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrition_table_fields[nutrient])
+
+        raster_utils.reclassify_dataset_uri(reclass_crop_cover_uri,
+                                        reclass_table,
+                                        nutrient_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        exception_flag = "values_required",
+                                        assert_dataset_projected = False)
+
+    for crop in invest_crops:
+        for nutrient in nutrient_selection:
+            try:
+                statistics[crop][nutrient] = statistics[crop][statistics_field_production] * nutrition_table_dict[crop][nutrient]
+            except KeyError:
+                statistics[crop][nutrient] = ""
+
+
+
 def execute(args):
     gdal_type_cover = gdal.GDT_Int32
     gdal_type_float = gdal.GDT_Float32
@@ -211,119 +355,10 @@ def execute(args):
     raster_utils.reproject_datasource_uri(extent_uri, wkt, extent_4326_uri)
 
     if args["calculate_nutrition"]:
-        nutrition_table_uri = args["nutrition_table"]
-
-        nutrition_table_fields = {"Protein (N x 6.25) g per 100 g" : "protein",
-                                  "Total lipid (g per 100 g)" : "lipids",
-                                  "Energy (kj) per 100 g" : "kJ",
-                                  "Calcium (g per 100g)" : "Ca",
-                                  "Iron (g per 100g)" : "Fe",
-                                  "Magnesium (g per 100g)" : "Mg",
-                                  "Phosphorus (g per 100g)" : "P",
-                                  "Potassium (g per 100 g)" : "K",
-                                  "Sodium (g per 100g)" : "Na",
-                                  "Zinc (g per 100g)" : "Zn",
-                                  "Copper (g per 100g)" : "Cu",
-                                  "Fluoride  F (g per 100g)" : "F",
-                                  "Manganese (g per 100g)" : "Mn",
-                                  "Selenium (g per 100g)" : "Se",
-                                  "Vitamin A (IU per 100g)" : "vit_A",
-                                  "Carotene  beta (g per 100g)": "carotene_B",
-                                  "Carotene  alpha (g per 100g)" : "carotene_A",
-                                  "Vitamin E (alpha-tocopherol) g per 100g" : "vit_E",
-                                  "Cryptoxanthin  beta (g per 100g)" : "C_xanthin_B",
-                                  "Lycopene (g per 100g)" : "lycopene",
-                                  "Lutein + zeaxanthin (g per 100g)" : "Lutein_Zeaxanthin",
-                                  "Tocopherol  beta (g per 100g)" : "Tocopherol_B",
-                                  "Tocopherol gamma (g per 100g)" : "Tocopherol_G",
-                                  "Tocopherol  Delta (g per 100g)" : "Tocopherol_D",
-                                  "Vitamin C (g per 100g)" : "vit_C",
-                                  "Thiamin (g per 100g)" : "vit_B1",
-                                  "Riboflavin (g per 100g)" : "vit_B2",
-                                  "Niacin (g per 100g)" : "vit_B3",
-                                  "Pantothenic acid (g per 100 g)" : "vit_B5",
-                                  "Vitamin B6 (g per 100g)" : "vit_B6",
-                                  "Folate  total (g per 100g)" : "vit_B9",
-                                  "Vitamin B-12 (g per 100g)" : "vit_B12",
-                                  "Vitamin K (g per 100g)" : "vit_K"}
-
-        nutrition_table_fields_order = ["Protein (N x 6.25) g per 100 g",
-                                        "Total lipid (g per 100 g)",
-                                        "Energy (kj) per 100 g",
-                                        "Calcium (g per 100g)",
-                                        "Iron (g per 100g)",
-                                        "Magnesium (g per 100g)",
-                                        "Phosphorus (g per 100g)",
-                                        "Potassium (g per 100 g)",
-                                        "Sodium (g per 100g)",
-                                        "Zinc (g per 100g)",
-                                        "Copper (g per 100g)",
-                                        "Fluoride  F (g per 100g)",
-                                        "Manganese (g per 100g)",
-                                        "Selenium (g per 100g)",
-                                        "Vitamin A (IU per 100g)",
-                                        "Carotene  beta (g per 100g)",
-                                        "Carotene  alpha (g per 100g)",
-                                        "Vitamin E (alpha-tocopherol) g per 100g",
-                                        "Cryptoxanthin  beta (g per 100g)",
-                                        "Lycopene (g per 100g)",
-                                        "Lutein + zeaxanthin (g per 100g)",
-                                        "Tocopherol  beta (g per 100g)",
-                                        "Tocopherol gamma (g per 100g)",
-                                        "Tocopherol  Delta (g per 100g)",
-                                        "Vitamin C (g per 100g)",
-                                        "Thiamin (g per 100g)",
-                                        "Riboflavin (g per 100g)",
-                                        "Niacin (g per 100g)",
-                                        "Pantothenic acid (g per 100 g)",
-                                        "Vitamin B6 (g per 100g)",
-                                        "Folate  total (g per 100g)",
-                                        "Vitamin B-12 (g per 100g)",
-                                        "Vitamin K (g per 100g)"]
-
-        nutrition_table_mask = [args["nutrient_protein"],
-                                args["nutrient_lipids"],
-                                args["nutrient_energy"],
-                                args["nutrient_calcium"],
-                                args["nutrient_iron"],
-                                args["nutrient_magnesium"],
-                                args["nutrient_potassium"],
-                                args["nutrient_sodium"],
-                                args["nutrient_zinc"],
-                                args["nutrient_copper"],
-                                args["nutrient_flouride"],
-                                args["nutrient_manganese"],
-                                args["nutrient_selenium"],
-                                args["nutrient_vit_a"],
-                                args["nutrient_carotene_b"],
-                                args["nutrient_carotene_a"],
-                                args["nutrient_vit_e"],
-                                args["nutrient_cryptoxanthin"],
-                                args["nutrient_lycopene"],
-                                args["nutrient_lutein"],
-                                args["nutrient_tocopherol_b"],
-                                args["nutrient_tocopherol_g"],
-                                args["nutrient_tocopherol_d"],
-                                args["nutrient_vit_c"],
-                                args["nutrient_vit_b1"],
-                                args["nutrient_vit_b2"],
-                                args["nutrient_vit_b3"],
-                                args["nutrient_vit_b5"],
-                                args["nutrient_vit_b6"],
-                                args["nutrient_vit_b9"],
-                                args["nutrient_vit_b12"],
-                                args["nutrient_vit_k"]]
-
-        nutrition_table_field_id = "Id"
-
-        nutrition_table_dict = raster_utils.get_lookup_from_csv(nutrition_table_uri,
-                                                           nutrition_table_field_id)
-
-        nutrient_selection = []
-        for nutrient, inclusion in zip(nutrition_table_fields_order, nutrition_table_mask):
-            if inclusion:
-                nutrient_selection.append(nutrient)
-
+        nutrition_table_dict = raster_utils.get_lookup_from_csv(args["nutrition_table"],
+                                                                config["nutrition_table"]["id_field"])
+        calculate_nutrition()
+        
     #data validation and setup
     if not os.path.exists(intermediate_uri):
         os.makedirs(intermediate_uri)
@@ -469,39 +504,6 @@ def execute(args):
         statistics[crop] = {}
         statistics[crop][statistics_field_production] = sum_uri(crop_production_uri) * cell_size
         statistics[crop][statistics_field_intensity] = 100 * sum_uri(crop_area_uri) / invest_crop_counts[crop]
-
-
-    if args["calculate_nutrition"]:
-        LOGGER.debug("Calculating nutrition.")
-        for nutrient in nutrient_selection:
-            LOGGER.debug("Creating %s raster.", nutrition_table_fields[nutrient])
-
-            reclass_table = {}
-            for crop in invest_crops:
-                try:
-                    reclass_table[crop] = nutrition_table_dict[crop][nutrient]
-                except KeyError:
-                    LOGGER.warn("No nutrition information for crop %i, setting values to 0.", crop)
-                    reclass_table[crop] = 0.0
-
-            reclass_table[0] = 0.0
-
-            nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrition_table_fields[nutrient])
-
-            raster_utils.reclassify_dataset_uri(reclass_crop_cover_uri,
-                                            reclass_table,
-                                            nutrient_uri,
-                                            gdal_type_float,
-                                            nodata_float,
-                                            exception_flag = "values_required",
-                                            assert_dataset_projected = False)
-
-        for crop in invest_crops:
-            for nutrient in nutrient_selection:
-                try:
-                    statistics[crop][nutrient] = statistics[crop][statistics_field_production] * nutrition_table_dict[crop][nutrient]
-                except KeyError:
-                    statistics[crop][nutrient] = ""
 
     if args["calculate_valuation"]:
         LOGGER.debug("Calculating valuation.")
