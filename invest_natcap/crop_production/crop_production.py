@@ -98,6 +98,7 @@ def sum_uri(dataset_uri):
     return total.__getitem__(total.keys().pop())
 
 def calculate_nutrition(crop_uri,
+                        yield_type,
                         nutrient_table,
                         nutrient_selection,
                         output_dir,
@@ -130,9 +131,13 @@ def calculate_nutrition(crop_uri,
         reclass_table[nodata_crop] = nodata_nutrient
 
         if nutrient in nutrient_aliases:
-            nutrient_uri = os.path.join(output_dir, file_name_pattern % nutrient_aliases[nutrient])
+            nutrient_uri = os.path.join(output_dir,
+                                        file_name_pattern % (yield_type,
+                                                             nutrient_aliases[nutrient]))
         else:
-            nutrient_uri = os.path.join(output_dir, file_name_pattern % nutrient)
+            nutrient_uri = os.path.join(output_dir,
+                                        file_name_pattern % (yield_type,
+                                                             nutrient))
 
         LOGGER.debug("Creating raster: %s", nutrient_uri)
 
@@ -148,14 +153,185 @@ def calculate_nutrition(crop_uri,
 
     return output_uri_list
 
+def crop_production_existing_projected(reclass_crop_cover_uri,
+                                       yield_uri,
+                                       yield_op,
+                                       area_uri,
+                                       area_op,
+                                       extent_4326_uri,
+                                       clip_yield_uri,
+                                       project_yield_uri,
+                                       crop_yield_uri,
+                                       clip_area_uri,
+                                       project_area_uri,
+                                       crop_area_uri,
+                                       crop_production_uri,
+                                       cell_size,
+                                       output_wkt,
+                                       gdal_type_float,
+                                       nodata_float):
+
+    def production_op(crop_yield, crop_area):
+        if nodata_float in [crop_yield, crop_area]:
+            return nodata_float
+        else:
+            return crop_yield * crop_area
+
+
+    ##process yield dataset
+    #clip
+    raster_utils.clip_dataset_uri(yield_uri,
+                                  extent_4326_uri,
+                                  clip_yield_uri,
+                                  assert_projections=False)
+    #project
+    raster_utils.warp_reproject_dataset_uri(clip_yield_uri,
+                                            cell_size,
+                                            output_wkt,
+                                            "nearest",
+                                            project_yield_uri)
+    #mask
+    raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                     project_yield_uri],
+                                    yield_op,
+                                    crop_yield_uri,
+                                    gdal_type_float,
+                                    nodata_float,
+                                    cell_size,
+                                    "dataset",
+                                    dataset_to_bound_index=0)
+
+    ##process area dataset
+    #clip
+    raster_utils.clip_dataset_uri(area_uri,
+                                  extent_4326_uri,
+                                  clip_area_uri,
+                                  assert_projections=False)
+    #project
+    raster_utils.warp_reproject_dataset_uri(clip_area_uri,
+                                            cell_size,
+                                            output_wkt,
+                                            "nearest",
+                                            project_area_uri)
+    #mask
+    raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                     project_area_uri],
+                                    area_op,
+                                    crop_area_uri,
+                                    gdal_type_float,
+                                    nodata_float,
+                                    cell_size,
+                                    "dataset",
+                                    dataset_to_bound_index=0)
+
+    ##calculate production
+    raster_utils.vectorize_datasets([crop_yield_uri,
+                                     crop_area_uri],
+                                    production_op,
+                                    crop_production_uri,
+                                    gdal_type_float,
+                                    nodata_float,
+                                    cell_size,
+                                    "dataset",
+                                    dataset_to_bound_index=0)
+
+def calculate_production_existing(reclass_crop_cover_uri,
+                                  raster_table,
+                                  raster_path,                                  
+                                  raster_table_field_yield,
+                                  raster_table_field_area,
+                                  extent_4326_uri,
+                                  intermediate_uri,
+                                  clip_yield_name,
+                                  projected_yield_name,
+                                  crop_yield_name,
+                                  clip_area_name,
+                                  projected_area_name,
+                                  crop_area_name,
+                                  crop_production_name,
+                                  cell_size,
+                                  output_wkt,
+                                  gdal_type_float,
+                                  nodata_float,
+                                  invest_crops,
+                                  projected=True):
+
+    nodata_yield = -9999
+    def yield_op_closure(crop):
+        def yield_op(cover, crop_yield):
+            if crop_yield == nodata_yield or cover != crop:
+                return nodata_float
+            else:
+                return crop_yield
+
+        return yield_op
+
+    nodata_area = -9999
+    def area_op_closure(crop):
+        def area_op(cover, crop_area):
+            if crop_area == nodata_area or cover != crop:
+                return nodata_float
+            else:
+                return crop_area
+
+        return area_op
+
+
+    output_list = []
+    if projected:
+        for crop in invest_crops:
+            LOGGER.debug("Separating out crop %i.", crop)
+            yield_uri = os.path.join(raster_path, raster_table[crop][raster_table_field_yield])
+            area_uri = os.path.join(raster_path, raster_table[crop][raster_table_field_area])
+
+            clip_yield_uri = os.path.join(intermediate_uri, clip_yield_name % crop)
+            project_yield_uri = os.path.join(intermediate_uri, projected_yield_name % crop)
+            crop_yield_uri = os.path.join(intermediate_uri, crop_yield_name % crop)
+
+            clip_area_uri = os.path.join(intermediate_uri, clip_area_name % crop)
+            project_area_uri = os.path.join(intermediate_uri, projected_area_name % crop)
+            crop_area_uri = os.path.join(intermediate_uri, crop_area_name % crop)
+
+            crop_production_uri = os.path.join(intermediate_uri, crop_production_name % crop)
+
+            crop_production_existing_projected(reclass_crop_cover_uri,
+                                               yield_uri,
+                                               yield_op_closure(crop),
+                                               area_uri,
+                                               area_op_closure(crop),
+                                               extent_4326_uri,
+                                               clip_yield_uri,
+                                               project_yield_uri,
+                                               crop_yield_uri,
+                                               clip_area_uri,
+                                               project_area_uri,
+                                               crop_area_uri,
+                                               crop_production_uri,
+                                               cell_size,
+                                               output_wkt,
+                                               gdal_type_float,
+                                               nodata_float)
+            
+
+            output_list.extend([yield_uri, area_uri,
+                                clip_yield_uri,
+                                project_yield_uri,
+                                crop_yield_uri,
+                                clip_area_uri,
+                                project_area_uri,
+                                crop_area_uri,
+                                crop_production_uri])
+
+
+    else:
+        raise ValueError, "Not implementd."
+
 
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
     LOGGER.debug("Loading configuration file: %s", config_uri)
     config = json.loads(open(config_uri).read())
-
-    print config
-    
+  
     gdal_type_cover = gdal.GDT_Int32
     gdal_type_float = gdal.GDT_Float32
     nodata_int = 0
@@ -214,9 +390,9 @@ def execute(args):
 
     crop_production_name = "%i_prod.tif"
 
-    statistics = {}
-    statistics_field_production = "Production"
-    statistics_field_intensity = "Intensity (%)"
+##    statistics = {}
+##    statistics_field_production = "Production"
+##    statistics_field_intensity = "Intensity (%)"
 
     intermediate_uri = os.path.join(workspace_dir, intermediate_dir)
 
@@ -228,7 +404,7 @@ def execute(args):
 
     report_uri = os.path.join(workspace_dir, report_name)
 
-    nutrient_name = "nutrient_%s.tif"
+    nutrient_name = "%s_nutrient_%s.tif"
 
     valuation_table_field_subregion = "Subregion"
 
@@ -306,115 +482,39 @@ def execute(args):
                                         exception_flag = "values_required",
                                         assert_dataset_projected = False)
 
-    #create yield rasters
+
+
     invest_crop_counts = raster_utils.unique_raster_values_count(reclass_crop_cover_uri)
     invest_crops = invest_crop_counts.keys()
     invest_crops.sort()
     if invest_crops[0] == 0:
         invest_crops.pop(0)
 
-    nodata_yield = -9999
-    def yield_op_closure(crop):
-        def yield_op(cover, crop_yield):
-            if crop_yield == nodata_yield or cover != crop:
-                return nodata_float
-            else:
-                return crop_yield
+    projected=True
+    calculate_production_existing(reclass_crop_cover_uri,
+                                  raster_table_csv_dict,
+                                  raster_path,
+                                  raster_table_field_yield,
+                                  raster_table_field_area,
+                                  extent_4326_uri,
+                                  intermediate_uri,
+                                  clip_yield_name,
+                                  projected_yield_name,
+                                  crop_yield_name,
+                                  clip_area_name,
+                                  projected_area_name,
+                                  crop_area_name,
+                                  crop_production_name,
+                                  cell_size,
+                                  output_wkt,
+                                  gdal_type_float,
+                                  nodata_float,                                  
+                                  invest_crops,
+                                  projected)
 
-        return yield_op
-
-    nodata_area = -9999
-    def area_op_closure(crop):
-        def area_op(cover, crop_area):
-            if crop_area == nodata_area or cover != crop:
-                return nodata_float
-            else:
-                return crop_area
-
-        return area_op
-
-    def production_op(crop_yield, crop_area):
-        if nodata_float in [crop_yield, crop_area]:
-            return nodata_float
-        else:
-            return crop_yield * crop_area
-
-    for crop in invest_crops:
-        LOGGER.debug("Separating out crop %i.", crop)
-        yield_uri = os.path.join(raster_path, raster_table_csv_dict[crop][raster_table_field_yield])
-        area_uri = os.path.join(raster_path, raster_table_csv_dict[crop][raster_table_field_area])
-
-        clip_yield_uri = os.path.join(intermediate_uri, clip_yield_name % crop)
-        project_yield_uri = os.path.join(intermediate_uri, projected_yield_name % crop)
-        crop_yield_uri = os.path.join(intermediate_uri, crop_yield_name % crop)
-
-        clip_area_uri = os.path.join(intermediate_uri, clip_area_name % crop)
-        project_area_uri = os.path.join(intermediate_uri, projected_area_name % crop)
-        crop_area_uri = os.path.join(intermediate_uri, crop_area_name % crop)
-
-        crop_production_uri = os.path.join(intermediate_uri, crop_production_name % crop)
-
-        ##process yield dataset
-        #clip
-        raster_utils.clip_dataset_uri(yield_uri,
-                                      extent_4326_uri,
-                                      clip_yield_uri,
-                                      assert_projections=False)
-        #project
-        raster_utils.warp_reproject_dataset_uri(clip_yield_uri,
-                                                cell_size,
-                                                output_wkt,
-                                                "nearest",
-                                                project_yield_uri)
-        #mask
-        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                         project_yield_uri],
-                                        yield_op_closure(crop),
-                                        crop_yield_uri,
-                                        gdal_type_float,
-                                        nodata_float,
-                                        cell_size,
-                                        "dataset",
-                                        dataset_to_bound_index=0)
-
-        ##process area dataset
-        #clip
-        raster_utils.clip_dataset_uri(area_uri,
-                                      extent_4326_uri,
-                                      clip_area_uri,
-                                      assert_projections=False)
-        #project
-        raster_utils.warp_reproject_dataset_uri(clip_area_uri,
-                                                cell_size,
-                                                output_wkt,
-                                                "nearest",
-                                                project_area_uri)
-        #mask
-        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                         project_area_uri],
-                                        area_op_closure(crop),
-                                        crop_area_uri,
-                                        gdal_type_float,
-                                        nodata_float,
-                                        cell_size,
-                                        "dataset",
-                                        dataset_to_bound_index=0)
-
-        ##calculate production
-        raster_utils.vectorize_datasets([crop_yield_uri,
-                                         crop_area_uri],
-                                        production_op,
-                                        crop_production_uri,
-                                        gdal_type_float,
-                                        nodata_float,
-                                        cell_size,
-                                        "dataset",
-                                        dataset_to_bound_index=0)
-
-
-        statistics[crop] = {}
-        statistics[crop][statistics_field_production] = sum_uri(crop_production_uri) * cell_size
-        statistics[crop][statistics_field_intensity] = 100 * sum_uri(crop_area_uri) / invest_crop_counts[crop]
+##    statistics[crop] = {}
+##    statistics[crop][statistics_field_production] = sum_uri(crop_production_uri) * cell_size
+##    statistics[crop][statistics_field_intensity] = 100 * sum_uri(crop_area_uri) / invest_crop_counts[crop]
 
     if args["calculate_nutrition"]:
         #load nutrition table
@@ -428,8 +528,10 @@ def execute(args):
                 LOGGER.debug("Including nutrient %s in analysis.", nutrient)
                 nutrient_selection[nutrient] = True
                 nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
-                
+
+        yield_type = "existing"                
         calculate_nutrition(reclass_crop_cover_uri,
+                            yield_type,
                             nutrition_table_dict,
                             nutrient_selection,
                             intermediate_uri,
@@ -647,33 +749,33 @@ def execute(args):
                 if region_crop in valuation_csv_dict:
                     LOGGER.debug("Agricultural cost data available for crop %i in region %i.", crop, region)
                     price = valuation_csv_dict[region_crop][valuation_field_crop_cost]
-                    intensity = statistics[crop][statistics_field_intensity]
+##                    intensity = statistics[crop][statistics_field_intensity]
                     area = invest_crop_counts[crop] * cell_size
                     labor = valuation_csv_dict[region_crop][valuation_field_labor_cost]
                     machine = valuation_csv_dict[region_crop][valuation_field_machine_cost]
                     seed = valuation_csv_dict[region_crop][valuation_field_seed_cost]
 
-                    statistics[crop][valuation_field_crop_cost] = price * intensity * area
-                    statistics[crop][valuation_field_labor_cost] = -1 * labor * intensity * area
-                    statistics[crop][valuation_field_machine_cost] = -1 * machine * intensity * area
-                    statistics[crop][valuation_field_seed_cost] = -1 * seed * intensity * area
-                    statistics[crop][field_returns] = sum([statistics[crop][valuation_field_crop_cost],
-                                                           statistics[crop][valuation_field_labor_cost],
-                                                           statistics[crop][valuation_field_machine_cost],
-                                                           statistics[crop][valuation_field_seed_cost]])
-
-                    statistics[crop][field_irrigation] = ""
-                    statistics[crop][field_fertilizer] = ""
+##                    statistics[crop][valuation_field_crop_cost] = price * intensity * area
+##                    statistics[crop][valuation_field_labor_cost] = -1 * labor * intensity * area
+##                    statistics[crop][valuation_field_machine_cost] = -1 * machine * intensity * area
+##                    statistics[crop][valuation_field_seed_cost] = -1 * seed * intensity * area
+##                    statistics[crop][field_returns] = sum([statistics[crop][valuation_field_crop_cost],
+##                                                           statistics[crop][valuation_field_labor_cost],
+##                                                           statistics[crop][valuation_field_machine_cost],
+##                                                           statistics[crop][valuation_field_seed_cost]])
+##
+##                    statistics[crop][field_irrigation] = ""
+##                    statistics[crop][field_fertilizer] = ""
 
                 else:
                     LOGGER.warn("Agricultural cost data NOT available for crop %i in region %i.", crop, region)
-                    statistics[crop][valuation_field_crop_cost] = ""
-                    statistics[crop][valuation_field_labor_cost] = ""
-                    statistics[crop][valuation_field_machine_cost] = ""
-                    statistics[crop][valuation_field_seed_cost] = ""
-                    statistics[crop][field_returns] = ""
-                    statistics[crop][field_irrigation] = ""
-                    statistics[crop][field_fertilizer] = ""
+##                    statistics[crop][valuation_field_crop_cost] = ""
+##                    statistics[crop][valuation_field_labor_cost] = ""
+##                    statistics[crop][valuation_field_machine_cost] = ""
+##                    statistics[crop][valuation_field_seed_cost] = ""
+##                    statistics[crop][field_returns] = ""
+##                    statistics[crop][field_irrigation] = ""
+##                    statistics[crop][field_fertilizer] = ""
 
 
         else:
@@ -684,49 +786,49 @@ def execute(args):
 
         #create region masks
 
-    #create report
-    for crop in statistics:
-        for stat in statistics[crop].keys():
-            try:
-                statistics[crop][stat] = round(statistics[crop][stat], table_precision)
-            except TypeError:
-                statistics[crop][stat] = "NA"
-
-    report = open(report_uri, 'w')
-    report.write("<HTML>")
-
-    #cover summary
-    LOGGER.debug("Generating coverage table.")
-    report.write("<B>Crop Cover</B>")
-    report.write("\n<TABLE BORDER=1>")
-    row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
-    row_html += ("<TD ALIGN=RIGHT>%s</TD>" * 3) + "</TR>"
-    report.write(row_html % (reclass_table_field_key,
-                             reclass_table_field_invest,
-                             raster_table_field_short_name,
-                             "Extent (m^2)",
-                             statistics_field_intensity,
-                             statistics_field_production))
-
-    crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
-    crop_counts_keys = crop_counts.keys()
-    crop_counts_keys.sort()
-
-    if crop_counts_keys[0] == 0:
-        crop_counts_keys.pop(0)
-
-    for crop in crop_counts_keys:
-        LOGGER.debug("Writing crop %i yield statistics to table.", crop)
-        invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
-        report.write(row_html % (str(crop),
-                                 str(invest_crop),
-                                 raster_table_csv_dict[invest_crop][raster_table_field_short_name],
-                                 str(round(crop_counts[crop] * cell_size, table_precision)),
-                                 statistics[invest_crop][statistics_field_intensity],
-                                 str(round(statistics[invest_crop][statistics_field_production], table_precision))))
-
-    report.write("\n</TABLE>")
-
+##    #create report
+##    for crop in statistics:
+##        for stat in statistics[crop].keys():
+##            try:
+##                statistics[crop][stat] = round(statistics[crop][stat], table_precision)
+##            except TypeError:
+##                statistics[crop][stat] = "NA"
+##
+##    report = open(report_uri, 'w')
+##    report.write("<HTML>")
+##
+##    #cover summary
+##    LOGGER.debug("Generating coverage table.")
+##    report.write("<B>Crop Cover</B>")
+##    report.write("\n<TABLE BORDER=1>")
+##    row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3)
+##    row_html += ("<TD ALIGN=RIGHT>%s</TD>" * 3) + "</TR>"
+##    report.write(row_html % (reclass_table_field_key,
+##                             reclass_table_field_invest,
+##                             raster_table_field_short_name,
+##                             "Extent (m^2)",
+##                             statistics_field_intensity,
+##                             statistics_field_production))
+##
+##    crop_counts = raster_utils.unique_raster_values_count(crop_cover_uri)
+##    crop_counts_keys = crop_counts.keys()
+##    crop_counts_keys.sort()
+##
+##    if crop_counts_keys[0] == 0:
+##        crop_counts_keys.pop(0)
+##
+##    for crop in crop_counts_keys:
+##        LOGGER.debug("Writing crop %i yield statistics to table.", crop)
+##        invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
+##        report.write(row_html % (str(crop),
+##                                 str(invest_crop),
+##                                 raster_table_csv_dict[invest_crop][raster_table_field_short_name],
+##                                 str(round(crop_counts[crop] * cell_size, table_precision)),
+##                                 statistics[invest_crop][statistics_field_intensity],
+##                                 str(round(statistics[invest_crop][statistics_field_production], table_precision))))
+##
+##    report.write("\n</TABLE>")
+##
 ##    #nutrition summary
 ##    if args["calculate_nutrition"]:
 ##        LOGGER.info("Generating nutrition table.")
@@ -756,45 +858,45 @@ def execute(args):
 ##            report.write(row_html % tuple(row))
 ##
 ##        report.write("\n</TABLE>")
-
-    if args["calculate_valuation"]:
-        LOGGER.debug("Generating fertilizer table.")
-        report.write("\n<P><B>Fertilizer</B>")
-
-        LOGGER.debug("Generating valuation table.")
-        report.write("\n<P><B>Valuation</B>")
-        report.write("\n<TABLE BORDER=1>")
-        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3) + ("<TD ALIGN=RIGHT>%s</TD>" * 7) + "</TR>"
-
-        header_row = (reclass_table_field_key,
-                      reclass_table_field_invest,
-                      raster_table_field_short_name,
-                      "Production",
-                      "Irrigation",
-                      "Fertilizer",
-                      "Labor",
-                      "Machines",
-                      "Seeds",
-                      "Returns")
-
-        report.write(row_html % header_row)
-
-        for crop in crop_counts_keys:
-            LOGGER.debug("Writing crop %i valutation statistics to table.", crop)
-            invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
-            report.write(row_html % (str(crop),
-                                     str(invest_crop),
-                                     raster_table_csv_dict[invest_crop][raster_table_field_short_name],
-                                     statistics[crop][valuation_field_crop_cost],
-                                     statistics[crop][field_irrigation],
-                                     statistics[crop][field_fertilizer],
-                                     statistics[crop][valuation_field_labor_cost],
-                                     statistics[crop][valuation_field_machine_cost],
-                                     statistics[crop][valuation_field_seed_cost],
-                                     statistics[crop][field_returns]))
-
-
-        report.write("\n</TABLE>")
-
-    report.write("\n</HTML>")
-    report.close()
+##
+##    if args["calculate_valuation"]:
+##        LOGGER.debug("Generating fertilizer table.")
+##        report.write("\n<P><B>Fertilizer</B>")
+##
+##        LOGGER.debug("Generating valuation table.")
+##        report.write("\n<P><B>Valuation</B>")
+##        report.write("\n<TABLE BORDER=1>")
+##        row_html = "\n<TR>" + ("<TD ALIGN=CENTER>%s</TD>" * 3) + ("<TD ALIGN=RIGHT>%s</TD>" * 7) + "</TR>"
+##
+##        header_row = (reclass_table_field_key,
+##                      reclass_table_field_invest,
+##                      raster_table_field_short_name,
+##                      "Production",
+##                      "Irrigation",
+##                      "Fertilizer",
+##                      "Labor",
+##                      "Machines",
+##                      "Seeds",
+##                      "Returns")
+##
+##        report.write(row_html % header_row)
+##
+##        for crop in crop_counts_keys:
+##            LOGGER.debug("Writing crop %i valutation statistics to table.", crop)
+##            invest_crop = reclass_table_csv_dict[crop][reclass_table_field_invest]
+##            report.write(row_html % (str(crop),
+##                                     str(invest_crop),
+##                                     raster_table_csv_dict[invest_crop][raster_table_field_short_name],
+##                                     statistics[crop][valuation_field_crop_cost],
+##                                     statistics[crop][field_irrigation],
+##                                     statistics[crop][field_fertilizer],
+##                                     statistics[crop][valuation_field_labor_cost],
+##                                     statistics[crop][valuation_field_machine_cost],
+##                                     statistics[crop][valuation_field_seed_cost],
+##                                     statistics[crop][field_returns]))
+##
+##
+##        report.write("\n</TABLE>")
+##
+##    report.write("\n</HTML>")
+##    report.close()
