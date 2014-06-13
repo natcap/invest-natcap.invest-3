@@ -63,8 +63,6 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
-
     csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri'], 'rU'))
     biophysical_table = {}
     for row in csv_dict_reader:
@@ -95,72 +93,24 @@ def execute(args):
             LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
 
-            
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    
+    args['output_dir'] = intermediate_dir
+    args['file_suffix'] = file_suffix
+    args['out_pixel_size'] = out_pixel_size
     preprocessed_data = _sdr_preprocess_data(args)
+    aligned_dem_uri = preprocessed_data['aligned_dem_uri']
+    aligned_lulc_uri = preprocessed_data['aligned_lulc_uri']
+    aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
+    aligned_erodibility_uri = preprocessed_data['aligned_erodibility_uri']
+    dem_offset_uri = preprocessed_data['dem_offset_uri']
+    thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
+    flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
+    flow_direction_uri = preprocessed_data['flow_direction_uri']
+    stream_uri = preprocessed_data['stream_uri']
+    ls_uri = preprocessed_data['ls_uri']
     
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
-    
-    #align the datasets
-    aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
-    aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
-    aligned_erosivity_uri = os.path.join(
-        intermediate_dir, 'aligned_erosivity.tif')
-    aligned_erodibility_uri = os.path.join(
-        intermediate_dir, 'aligned_erodibility.tif')
-    
-    input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
-        args['erodibility_uri']]
-    dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
-        aligned_erosivity_uri, aligned_erodibility_uri]
-    raster_utils.align_dataset_list(
-        input_list, dataset_out_uri_list, 
-        ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
-        0, aoi_uri=args['watersheds_uri'])
-    
-    #resolve plateaus 
-    dem_offset_uri = os.path.join(
-        intermediate_dir, 'dem_offset%s.tif' % file_suffix)
-    routing_cython_core.resolve_flat_regions_for_drainage(
-        aligned_dem_uri, dem_offset_uri)
-    
-    #Calculate slope
-    LOGGER.info("Calculating slope")
-    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
-    def threshold_slope(slope):
-        '''Threshold slope between 0.001 and 1.0'''
-        slope_copy = slope.copy()
-        nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.001] = 0.001
-        slope_copy[slope > 1.0] = 1.0
-        slope_copy[nodata_mask] = slope_nodata
-        return slope_copy
-    raster_utils.vectorize_datasets(
-        [original_slope_uri], threshold_slope, thresholded_slope_uri,
-        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-
-    
-    
-    #Calculate flow accumulation
-    LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(
-        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    flow_direction_uri = os.path.join(
-        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
-
-    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(
-        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
-    
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_uri = os.path.join(output_dir, 'stream%s.tif' % file_suffix)
-
-    routing_utils.stream_threshold(flow_accumulation_uri,
-        float(args['threshold_flow_accumulation']), stream_uri)
         
     if 'drainage_uri' in args and args['drainage_uri'] != '':
         def add_drainage(stream, drainage):
@@ -175,13 +125,6 @@ def execute(args):
             gdal.GDT_Byte, stream_nodata, out_pixel_size, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
         stream_uri = drainage_uri
-
-    #Calculate LS term
-    LOGGER.info('calculate ls term')
-    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
-    ls_nodata = -1.0
-    calculate_ls_factor(
-        flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
 
     #Calculate the W factor
     LOGGER.info('calculate per pixel W')
@@ -304,6 +247,9 @@ def execute(args):
     ws_factor_uri = os.path.join(
         intermediate_dir, 'ws_factor%s.tif' % file_suffix)
     ws_nodata = -1.0
+    slope_nodata = raster_utils.get_nodata_from_uri(
+        preprocessed_data['thresholded_slope_uri'])
+    
     def ws_op(w_factor, s_factor):
         return numpy.where(
             (w_factor != w_nodata) & (s_factor != slope_nodata),
@@ -569,6 +515,7 @@ def _sdr_preprocess_data(args):
             precalculate rkls
         args['erodibility_uri'] - erodibility data that will be used to align
             and precalculate rkls
+        args['output_dir'] - output directory for the generated rasters
             
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
@@ -578,4 +525,85 @@ def _sdr_preprocess_data(args):
                 inputs
     """
     
-    pass
+    out_pixel_size = args['out_pixel_size']
+    intermediate_dir = args['output_dir']
+    file_suffix = args['file_suffix']
+    
+    aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
+    aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
+    aligned_erosivity_uri = os.path.join(
+        intermediate_dir, 'aligned_erosivity.tif')
+    aligned_erodibility_uri = os.path.join(
+        intermediate_dir, 'aligned_erodibility.tif')
+    
+    input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
+        args['erodibility_uri']]
+    dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
+        aligned_erosivity_uri, aligned_erodibility_uri]
+    raster_utils.align_dataset_list(
+        input_list, dataset_out_uri_list, 
+        ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
+        0, aoi_uri=args['watersheds_uri'])
+    
+    #resolve plateaus 
+    dem_offset_uri = os.path.join(
+        intermediate_dir, 'dem_offset%s.tif' % file_suffix)
+    routing_cython_core.resolve_flat_regions_for_drainage(
+        aligned_dem_uri, dem_offset_uri)
+    
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
+    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
+    def threshold_slope(slope):
+        '''Threshold slope between 0.001 and 1.0'''
+        slope_copy = slope.copy()
+        nodata_mask = slope == slope_nodata
+        slope_copy[slope < 0.001] = 0.001
+        slope_copy[slope > 1.0] = 1.0
+        slope_copy[nodata_mask] = slope_nodata
+        return slope_copy
+    raster_utils.vectorize_datasets(
+        [original_slope_uri], threshold_slope, thresholded_slope_uri,
+        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    #Calculate flow accumulation
+    LOGGER.info("calculating flow accumulation")
+    flow_accumulation_uri = os.path.join(
+        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+    flow_direction_uri = os.path.join(
+        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+
+    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(
+        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
+
+    routing_utils.stream_threshold(flow_accumulation_uri,
+        float(args['threshold_flow_accumulation']), stream_uri)
+    
+    #Calculate LS term
+    LOGGER.info('calculate ls term')
+    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
+    ls_nodata = -1.0
+    calculate_ls_factor(
+        flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
+    
+    return {
+        'aligned_dem_uri': aligned_dem_uri,
+        'aligned_lulc_uri': aligned_lulc_uri,
+        'aligned_erosivity_uri': aligned_erosivity_uri,
+        'aligned_erodibility_uri': aligned_erodibility_uri,
+        'dem_offset_uri': dem_offset_uri,
+        'thresholded_slope_uri': thresholded_slope_uri,
+        'flow_accumulation_uri': flow_accumulation_uri,
+        'flow_direction_uri': flow_direction_uri,
+        'stream_uri': stream_uri,
+        'ls_uri': ls_uri,
+        }
