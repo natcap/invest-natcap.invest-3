@@ -137,15 +137,15 @@ def execute(args):
         def add_drainage(stream, drainage):
             return numpy.where(drainage == 1, 1, stream)
         
-        stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
+        stream_nodata = raster_utils.get_nodata_from_uri(v_stream_uri)
         #add additional drainage to the stream
         drainage_uri = os.path.join(output_dir, 'drainage%s.tif' % file_suffix)
         
         raster_utils.vectorize_datasets(
-            [stream_uri, args['drainage_uri']], add_drainage, drainage_uri,
+            [v_stream_uri, args['drainage_uri']], add_drainage, drainage_uri,
             gdal.GDT_Byte, stream_nodata, out_pixel_size, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
-        stream_uri = drainage_uri
+        v_stream_uri = drainage_uri
         
     #Calculate LS term
     LOGGER.info('calculate ls term')
