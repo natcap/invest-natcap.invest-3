@@ -95,6 +95,9 @@ def execute(args):
             LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
 
+            
+    preprocessed_data = _sdr_preprocess_data(args)
+    
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
     
     #align the datasets
@@ -215,13 +218,13 @@ def execute(args):
         (lulc_code, table) in biophysical_table.items()])
     cp_nodata = -1.0
     raster_utils.reclassify_dataset_uri(
-        ls_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
+        aligned_lulc_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
         cp_nodata, exception_flag='values_required')
 
     LOGGER.info('calculating rkls')
     rkls_uri = os.path.join(output_dir, 'rkls%s.tif' % file_suffix)
     calculate_rkls(
-        aligned_lulc_uri, aligned_erosivity_uri, aligned_erodibility_uri, 
+        ls_uri, aligned_erosivity_uri, aligned_erodibility_uri, 
         stream_uri, rkls_uri)
 
     LOGGER.info('calculating USLE')
@@ -553,3 +556,26 @@ def calculate_rkls(
         dataset_uri_list, rkls_function, rkls_uri, gdal.GDT_Float32,
         usle_nodata, cell_size, "intersection", dataset_to_align_index=3,
         vectorize_op=False)
+
+        
+def _sdr_preprocess_data(args):
+    """A function to preprocess the static data that goes into the SDR model 
+        that is unlikely to change when running a batch process.
+        
+        args['dem_uri'] - dem layer
+        args['landuse_uri'] - landuse layer that will be used to align the
+            output datasets
+        args['erosivity_uri'] - erosivity data that will be used to align and
+            precalculate rkls
+        args['erodibility_uri'] - erodibility data that will be used to align
+            and precalculate rkls
+            
+        return a dictionary with the keys:
+            'aligned_dem_uri' - input dem aligned with the rest of the inputs
+            'aligned_lulc_uri' - input lulc aligned with the rest of the inputs
+            'aligned_erosivity_uri' - input erosivity aligned with the inputs
+            'aligned_erodibility_uri' - input erodability aligned with the
+                inputs
+    """
+    
+    pass
