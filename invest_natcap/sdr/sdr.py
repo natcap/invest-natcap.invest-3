@@ -215,7 +215,7 @@ def execute(args):
         (lulc_code, table) in biophysical_table.items()])
     cp_nodata = -1.0
     raster_utils.reclassify_dataset_uri(
-        aligned_lulc_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
+        ls_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
         cp_nodata, exception_flag='values_required')
 
     LOGGER.info('calculating rkls')
