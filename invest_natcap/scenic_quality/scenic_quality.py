@@ -311,9 +311,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # Check for feature information (radius, coeff, height)
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
-            field_name = field_def.GetNameRef()
-            if (field_name.upper() == 'RADIUS2') or \
-                (field_name.upper() == 'RADIUS'):
+            field_name = field_def.GetNameRef().lower()
+            if (field_name == 'radius2') or \
+                (field_name == 'radius'):
                 max_dist = abs(int(feature.GetField(field)))
                 assert max_dist is not None, "max distance can't be None"
                 if max_dist < args['max_valuation_radius']:
@@ -324,13 +324,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                     LOGGER.warning( \
                         'The valuation is performed beyond what is visible')
                 max_dist = int(max_dist/cell_size)
-            if field_name.lower() == 'coeff':
+            if field_name == 'coeff':
                 coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'offseta':
+            if field_name == 'offseta':
                 obs_elev = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name.lower() == 'offsetb':
+            if field_name == 'offsetb':
                 tgt_elev = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 
@@ -351,9 +351,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
             255, gdal.GDT_Float64, fill_value=255)
-        scenic_quality_core.viewshed(input_array, cell_size, \
-        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
-        max_dist, refr_coeff)
+        scenic_quality_core.viewshed(
+            input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
+            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         
         # Compute the distance
         #tmp_distance_uri = raster_utils.temporary_filename() 

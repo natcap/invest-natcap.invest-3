@@ -1093,8 +1093,8 @@ def cell_angles(cell_coords, viewpoint):
     angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
     return angles
 
-def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
-    coordinates, obs_elev=1.75, tgt_elev=0.0, \
+def viewshed(input_array, cell_size, array_shape, nodata, output_uri,
+    coordinates, obs_elev=1.75, tgt_elev=0.0,
     max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
@@ -1175,7 +1175,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
+    input_array[coordinates[0], coordinates[1]] - obs_elev + tgt_elev).astype(np.float64)
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
