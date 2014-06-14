@@ -351,9 +351,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
             255, gdal.GDT_Float64, fill_value=255)
-        scenic_quality_core.viewshed(input_array, cell_size, \
-        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
-        max_dist, refr_coeff)
+        scenic_quality_core.viewshed(
+            input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
+            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         
         # Compute the distance
         #tmp_distance_uri = raster_utils.temporary_filename() 

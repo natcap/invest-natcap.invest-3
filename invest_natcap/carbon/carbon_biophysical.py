@@ -8,7 +8,7 @@ import shutil
 from osgeo import gdal
 from osgeo import ogr
 from scipy.stats import norm
-import numpy as np
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.carbon import carbon_utils
@@ -195,17 +195,20 @@ def execute_30(**args):
             LOGGER.info('Computing sequestration for %s scenario', fut_type)
 
             def sub_op(c_cur, c_fut):
-                if nodata_out in [c_cur, c_fut]:
-                    return nodata_out
-                return c_fut - c_cur
-
+                fut_nodata = c_fut == nodata_out
+                cur_nodata = c_cur == nodata_out
+                cur_clean = numpy.where(cur_nodata, 0, c_cur)
+                fut_clean = numpy.where(fut_nodata, 0, c_fut)
+                seq = fut_clean - cur_clean
+                return numpy.where(fut_nodata & cur_nodata, nodata_out, seq)
+                
             pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
             outputs['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
             raster_utils.vectorize_datasets(
                 [outputs['tot_C_cur'], outputs['tot_C_%s' % fut_type]], sub_op,
                 outputs['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
-                process_pool=args['_process_pool'])
+                process_pool=args['_process_pool'], vectorize_op=False)
 
             if do_uncertainty:
                 LOGGER.info('Computing confident cells for %s scenario.', fut_type)
@@ -392,7 +395,7 @@ def _do_monte_carlo_run(pools, lulc_counts):
         if not distribution['variance']:
             lulc_carbon_samples[lulc_id] = distribution['total']
         else:
-            lulc_carbon_samples[lulc_id] = np.random.normal(
+            lulc_carbon_samples[lulc_id] = numpy.random.normal(
                 distribution['total'],
                 math.sqrt(distribution['variance']))
 
