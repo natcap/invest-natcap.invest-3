@@ -33,6 +33,15 @@
                                 "helpText": "Results will be saved to this location." 
                             },
                             {
+                                "id" : "workspace_dir2",
+                                "args_id" : "workspace_dir2",
+                                "type": "folder",
+                                "label": "Second Workspace",
+				"defaultValue": "../ScenicQuality",
+                                "required": true,
+                                "helpText": "This is a copy of the workspace element. For tests purposes only." 
+                            },
+                            {
                                 "id" : "aoi_uri",
                                 "args_id" : "aoi_uri",
                                 "type": "file",
