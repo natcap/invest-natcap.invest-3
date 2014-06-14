@@ -311,9 +311,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # Check for feature information (radius, coeff, height)
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
-            field_name = field_def.GetNameRef().lower()
-            if (field_name == 'radius2') or \
-                (field_name == 'radius'):
+            field_name = field_def.GetNameRef()
+            if (field_name.upper() == 'RADIUS2') or \
+                (field_name.upper() == 'RADIUS'):
                 max_dist = abs(int(feature.GetField(field)))
                 assert max_dist is not None, "max distance can't be None"
                 if max_dist < args['max_valuation_radius']:
@@ -324,13 +324,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                     LOGGER.warning( \
                         'The valuation is performed beyond what is visible')
                 max_dist = int(max_dist/cell_size)
-            if field_name == 'coeff':
+            if field_name.lower() == 'coeff':
                 coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
-            if field_name == 'offseta':
+            if field_name.lower() == 'offseta':
                 obs_elev = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name == 'offsetb':
+            if field_name.lower() == 'offsetb':
                 tgt_elev = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 

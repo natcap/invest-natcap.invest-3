@@ -1174,8 +1174,12 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     distances_sq = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
+    #raise the target
+    input_array[coordinates[0], coordinates[1]] += tgt_elev
     visibility = (input_array[(I, J)] - \
     input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
+    #then lower the target back down since it's a reference
+    input_array[coordinates[0], coordinates[1]] -= tgt_elev
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
