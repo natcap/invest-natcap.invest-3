@@ -1175,7 +1175,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - obs_elev + tgt_elev).astype(np.float64)
+    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
