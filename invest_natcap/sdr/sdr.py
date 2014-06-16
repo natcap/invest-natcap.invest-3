@@ -524,7 +524,7 @@ def _prepare(**args):
             precalculate rkls
         args['erodibility_uri'] - erodibility data that will be used to align
             and precalculate rkls
-        args['output_dir'] - output directory for the generated rasters
+        args['workspace_dir'] - output directory for the generated rasters
             
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
@@ -534,8 +534,8 @@ def _prepare(**args):
                 inputs
     """
     
-    out_pixel_size = args['out_pixel_size']
-    intermediate_dir = args['output_dir']
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     file_suffix = args['file_suffix']
     
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
