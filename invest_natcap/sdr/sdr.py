@@ -52,6 +52,10 @@ def execute(args):
             indicate drainage areas and 0's or nodata indicate areas with no
             additional drainage.  This model is most accurate when the drainage
             raster aligns with the DEM.
+        args['_prepare'] - (optional) The preprocessed set of data created by the
+            sdr._prepare call.  This argument could be used in cases where the
+            call to this function is scripted and can save a significant amount
+            of runtime.
         
         returns nothing."""
 
@@ -98,7 +102,12 @@ def execute(args):
     args['output_dir'] = intermediate_dir
     args['file_suffix'] = file_suffix
     args['out_pixel_size'] = out_pixel_size
-    preprocessed_data = _prepare(args)
+    
+    if '_prepare' in args:
+        preprocessed_data = args['_prepare']
+    else:
+        preprocessed_data = _prepare(**args)
+    
     aligned_dem_uri = preprocessed_data['aligned_dem_uri']
     aligned_lulc_uri = preprocessed_data['aligned_lulc_uri']
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
@@ -504,7 +513,7 @@ def calculate_rkls(
         vectorize_op=False)
 
         
-def _prepare(args):
+def _prepare(**args):
     """A function to preprocess the static data that goes into the SDR model 
         that is unlikely to change when running a batch process.
         
