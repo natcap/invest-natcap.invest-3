@@ -98,7 +98,7 @@ def execute(args):
     args['output_dir'] = intermediate_dir
     args['file_suffix'] = file_suffix
     args['out_pixel_size'] = out_pixel_size
-    preprocessed_data = _sdr_preprocess_data(args)
+    preprocessed_data = _prepare(args)
     aligned_dem_uri = preprocessed_data['aligned_dem_uri']
     aligned_lulc_uri = preprocessed_data['aligned_lulc_uri']
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
@@ -504,7 +504,7 @@ def calculate_rkls(
         vectorize_op=False)
 
         
-def _sdr_preprocess_data(args):
+def _prepare(args):
     """A function to preprocess the static data that goes into the SDR model 
         that is unlikely to change when running a batch process.
         
