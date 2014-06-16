@@ -110,7 +110,7 @@
 		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
 		},
-        {        
+        {
 		    "id" : "drainage_uri",
 		    "args_id" : "drainage_uri",
 		    "type": "file",
@@ -120,7 +120,7 @@
 		    "validateAs": {"type": "GDAL"},
 		    "helpText": "An optional GIS raster dataset mask, that indicates areas that drain to the watershed.  Format is that 1's indicate drainage areas and 0's or nodata indicate areas with no additional drainage.  This model is most accurate when the drainage raster aligns with the DEM."
 		},
-        {        
+        {
 		    "id" : "k_param",
 		    "args_id" : "k_param",
 		    "type": "text",
@@ -130,7 +130,7 @@
 		    "validText": "^[0-9]+\\.?[0-9]*$",
 		    "helpText": "Borselli k parameter."
 		},
-        {        
+        {
 		    "id" : "ic_0_param",
 		    "args_id" : "ic_0_param",
 		    "type": "text",
@@ -140,7 +140,7 @@
 		    "validText": "^[0-9]+\\.?[0-9]*$",
 		    "helpText": "Borselli IC0 parameter."
 		},
-        {        
+        {
 		    "id" : "sdr_max",
 		    "args_id" : "sdr_max",
 		    "type": "text",
