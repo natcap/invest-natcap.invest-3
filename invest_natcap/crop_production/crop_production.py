@@ -327,6 +327,9 @@ def calculate_production_existing(reclass_crop_cover_uri,
         raise ValueError, "Not implementd."
 
 
+def calculate_valuation():
+    pass
+
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
     LOGGER.debug("Loading configuration file: %s", config_uri)
