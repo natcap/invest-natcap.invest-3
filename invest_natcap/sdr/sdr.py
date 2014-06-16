@@ -116,8 +116,14 @@ def execute(args):
     thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
-    stream_uri = preprocessed_data['stream_uri']
     ls_uri = preprocessed_data['ls_uri']
+    
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
+
+    routing_utils.stream_threshold(flow_accumulation_uri,
+        float(args['threshold_flow_accumulation']), stream_uri)
     
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
         
@@ -525,7 +531,6 @@ def _prepare(**args):
         args['erodibility_uri'] - erodibility data that will be used to align
             and precalculate rkls
         args['workspace_dir'] - output directory for the generated rasters
-        args['suffix'] - (optional) value to append to output files
         
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
@@ -536,11 +541,10 @@ def _prepare(**args):
     """
     
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    if 'suffix' in args:
-        file_suffix = args['suffix']
-    else:
-        file_suffix = ''
+    intermediate_dir = os.path.join(args['workspace_dir'], 'prepared_data')
+    
+    if not os.path.exists(intermediate_dir):
+        os.makedirs(intermediate_dir)
     
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
@@ -560,14 +564,14 @@ def _prepare(**args):
     
     #resolve plateaus 
     dem_offset_uri = os.path.join(
-        intermediate_dir, 'dem_offset%s.tif' % file_suffix)
+        intermediate_dir, 'dem_offset.tif')
     routing_cython_core.resolve_flat_regions_for_drainage(
         aligned_dem_uri, dem_offset_uri)
     
     #Calculate slope
     LOGGER.info("Calculating slope")
-    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
+    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
@@ -586,24 +590,17 @@ def _prepare(**args):
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
-        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+        intermediate_dir, 'flow_accumulation.tif')
     flow_direction_uri = os.path.join(
-        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+        intermediate_dir, 'flow_direction.tif')
 
     routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
     routing_utils.flow_accumulation(
         flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
-    
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
 
-    routing_utils.stream_threshold(flow_accumulation_uri,
-        float(args['threshold_flow_accumulation']), stream_uri)
-    
     #Calculate LS term
     LOGGER.info('calculate ls term')
-    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
+    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
     ls_nodata = -1.0
     calculate_ls_factor(
         flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
@@ -617,6 +614,5 @@ def _prepare(**args):
         'thresholded_slope_uri': thresholded_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri,
-        'stream_uri': stream_uri,
         'ls_uri': ls_uri,
         }
