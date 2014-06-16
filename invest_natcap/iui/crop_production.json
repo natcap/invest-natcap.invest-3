@@ -56,6 +56,17 @@
                                                                         "disabledBy" : "use_crop_map"
                                                                     },
                                                                     {
+                                                                        "id" : "cell_size",
+                                                                        "args_id" : "cell_size",
+                                                                        "type": "text",
+                                                                        "label": "Cell size",
+                                                                        "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                                                        "dataType": "float",
+                                                                        "required": true,
+                                                                        "disabledBy" : "use_crop_map",
+                                                                        "helpText": ""
+                                                                    },
+                                                                    {
                                                                         "id" : "crop_file_name",
                                                                         "args_id" : "crop_file_name",
                                                                         "type": "file",
@@ -79,67 +90,196 @@
                                                                         "id": "enable_tab_existing",
                                                                         "args_id" : "enable_tab_existing",
                                                                         "type" : "checkbox",
-                                                                        "label" : "Existing Crops",
+                                                                        "label" : "Existing yields",
                                                                         "defaultValue": false
                                                                     },
                                                                     {
                                                                         "id": "enable_tab_percentile",
                                                                         "args_id" : "enable_tab_percentile",
                                                                         "type" : "checkbox",
-                                                                        "label" : "Percentile Crops",
+                                                                        "label" : "Percentile yields",
                                                                         "defaultValue": false
                                                                     },                                                                    
                                                                     {
                                                                         "id": "enable_tab_modeled",
                                                                         "args_id" : "enable_tab_modeled",
                                                                         "type" : "checkbox",
-                                                                        "label" : "Modeled Crops",
+                                                                        "label" : "Modeled yields",
                                                                         "defaultValue": false
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "id": "calculate_nutrition",
+                                                                "args_id": "calculate_nutrition",
+                                                                "type": "container",
+                                                                "label": "Calculate nutrition",
+                                                                "collapsible" : true,
+                                                                "helpText" : "Nutrition help text.",
+                                                                "elements" : [
+                                                                    {
+                                                                        "id" : "nutrition_list",
+                                                                        "type" : "list",
+                                                                        "elements" : [
+                                                                            {
+                                                                                "id": "nutrition_table",
+                                                                                "args_id" : "nutrition_table",
+                                                                                "type": "file",
+                                                                                "label": "Nutrition CSV",
+                                                                                "defaultValue" : "../CropProduction/input/cropNutrient.csv",
+                                                                                "validateAs": {"type": "CSV"},
+                                                                                "required" : true,
+                                                                                "enabledBy" : "calculate_nutrition"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "id": "calculate_valuation",
+                                                                "args_id": "calculate_valuation",
+                                                                "type" : "container",
+                                                                "collapsible" : true,
+                                                                "label": "Calculate valuation",
+                                                                "defaultValue" : true,
+                                                                "helpText" : "Valuation help text.",
+                                                                "elements" : [
+                                                                    {
+                                                                        "id" : "valuation_list",
+                                                                        "type" : "list",
+                                                                        "elements" : [
+                                                                            {
+                                                                                "id": "region_raster",
+                                                                                "args_id" : "valuation_raster",
+                                                                                "type": "file",
+                                                                                "label": "Region raster",
+                                                                                "defaultValue" : "../CropProduction/input/subregion.tif",
+                                                                                "validateAs": {"type": "GDAL"},
+                                                                                "required" : true,
+                                                                                "enabledBy" : "calculate_valuation"
+                                                                            },
+                                                                            {
+                                                                                "id": "valuation_table",
+                                                                                "args_id" : "valuation_table",
+                                                                                "type": "file",
+                                                                                "label": "Valuation CSV",
+                                                                                "defaultValue" : "../CropProduction/input/Agcost_data_Data.csv",
+                                                                                "validateAs": {"type": "CSV"},
+                                                                                "required" : true,
+                                                                                "enabledBy" : "calculate_valuation"
+                                                                            },
+                                                                            {
+                                                                                "id" : "field_machine",
+                                                                                "args_id" : "field_machine",
+                                                                                "type" : "dropdown",
+                                                                                "label" : "Machine field",
+                                                                                "options" : ["low_mach",
+                                                                                             "actual_mach",
+                                                                                             "high_mach"],
+                                                                                "returns" : "strings",
+                                                                                "defaultValue" : 1,
+                                                                                "disabledBy" : "machine_uri"
+                                                                            },
+                                                                            {
+                                                                                "id" : "field_seed",
+                                                                                "args_id" : "field_seed",
+                                                                                "type" : "dropdown",
+                                                                                "label" : "Seed field",
+                                                                                "options" : ["low_seed",
+                                                                                             "actual_seed",
+                                                                                             "high_seed"],
+                                                                                "returns" : "strings",
+                                                                                "defaultValue" : 1,
+                                                                                "disabledBy" : "seed_uri"
+                                                                            }
+                                                                        ]
                                                                     },
                                                                     {
-                                                                        "id": "calculate_nutrition",
-                                                                        "args_id": "calculate_nutrition",
-                                                                        "type": "checkbox",
-                                                                        "label": "Calculate nutrition",
-                                                                        "defaultValue" : true
-                                                                    },
-                                                                    {
-                                                                        "id": "nutrition_table",
-                                                                        "args_id" : "nutrition_table",
-                                                                        "type": "file",
-                                                                        "label": "Nutrition CSV",
-                                                                        "defaultValue" : "../CropProduction/input/cropNutrient.csv",
-                                                                        "validateAs": {"type": "CSV"},
-                                                                        "required" : true,
-                                                                        "enabledBy" : "calculate_nutrition"
-                                                                    },
-                                                                    {
-                                                                        "id": "calculate_valuation",
-                                                                        "args_id": "calculate_valuation",
-                                                                        "type" : "checkbox",
-                                                                        "label": "Calculate valuation",
-                                                                        "defaultValue" : true
-                                                                    },
-                                                                    {
-                                                                        "id": "valuation_raster",
-                                                                        "args_id" : "valuation_raster",
-                                                                        "type": "file",
-                                                                        "label": "Valuation raster",
-                                                                        "defaultValue" : "../CropProduction/input/subregion.tif",
-                                                                        "validateAs": {"type": "GDAL"},
-                                                                        "required" : true,
-                                                                        "enabledBy" : "calculate_valuation"
-                                                                    },
-                                                                    {
-                                                                        "id": "valuation_table",
-                                                                        "args_id" : "valuation_table",
-                                                                        "type": "file",
-                                                                        "label": "Valuation CSV",
-                                                                        "defaultValue" : "../CropProduction/input/Agcost_data_Data.csv",
-                                                                        "validateAs": {"type": "CSV"},
-                                                                        "required" : true,
-                                                                        "enabledBy" : "calculate_valuation"
-                                                                    },
+                                                                        "id" : "valuation_override",
+                                                                        "args_id" : "valuation_override",
+                                                                        "label" : "Override valuation CSV",
+                                                                        "type" : "container",
+                                                                        "collapsible" : true,
+                                                                        "helpText" : "",
+                                                                        "elements" : [
+                                                                            {
+                                                                                "id" : "valuation_override_list",
+                                                                                "type" : "list",
+                                                                                "elements" : [
+                                                                                    {
+                                                                                        "id" : "nitrogen_uri",
+                                                                                        "args_id": "nitrogen_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Nitrogen raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "phosphorus_uri",
+                                                                                        "args_id": "phosphorus_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Phosphorus raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "potasssium_uri",
+                                                                                        "args_id": "potassium_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Potassium raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "irrigation_uri",
+                                                                                        "args_id": "irrigation_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Irrigation raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "labor_uri",
+                                                                                        "args_id": "labor_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Labor raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "machine_uri",
+                                                                                        "args_id": "machine_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Machine raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "seed_uri",
+                                                                                        "args_id": "seed_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Seed raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    }                                                                                    
+                                                                ]
+                                                            },
+                                                            {
+                                                                "id" : "main_tab_list_2",
+                                                                "type" : "list",
+                                                                "elements" :
+                                                                [                                                            
                                                                     {
                                                                         "id" : "raster_table",
                                                                         "args_id": "raster_table",
@@ -395,7 +535,7 @@
                             },
                             {
                                 "id": "existing_tab",
-                                "label": "Existing",
+                                "label": "Existing yields",
                                 "type": "tab",
                                 "enabledBy" : "enable_tab_existing",
                                 "elements": [
@@ -1790,7 +1930,7 @@
                             },
                             {
                                 "id": "percentile_tab",
-                                "label": "Percentile",
+                                "label": "Percentile yields",
                                 "type": "tab",
                                 "enabledBy" : "enable_tab_percentile",
                                 "elements": [
@@ -2380,7 +2520,7 @@
                             },
                             {
                                 "id": "modeled_tab",
-                                "label": "Modeled",
+                                "label": "Modeled yields",
                                 "type": "tab",
                                 "enabledBy" : "enable_tab_modeled",
                                 "elements": [
