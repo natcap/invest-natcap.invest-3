@@ -99,10 +99,7 @@ def execute(args):
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
     
-    args['output_dir'] = intermediate_dir
-    args['file_suffix'] = file_suffix
-    args['out_pixel_size'] = out_pixel_size
-    
+    #check if we've already prepared the DEM
     if '_prepare' in args:
         preprocessed_data = args['_prepare']
     else:
