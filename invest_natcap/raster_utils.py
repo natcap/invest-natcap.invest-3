@@ -826,7 +826,9 @@ def aggregate_raster_values_uri(
                     continue
 
                 #Only consider values which lie in the polygon for attribute_id
-                masked_values = clipped_array[mask_array == attribute_id]
+                masked_values = clipped_array[
+                    (mask_array == attribute_id) &
+                    (~numpy.isnan(clipped_array))]
                 #Remove the nodata and ignore values for later processing
                 masked_values_nodata_removed = (
                     masked_values[~numpy.in1d(masked_values, [raster_nodata] +
