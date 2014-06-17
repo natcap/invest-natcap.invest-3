@@ -258,9 +258,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
-        LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
-
-    
         fig = matplotlib.pyplot.figure(plot_index, figsize=fig_size)
         plot_index += 1
         matplotlib.pyplot.suptitle(str(aoi_name))
@@ -533,11 +530,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
 
     #Set a temp filename for the AOI raster.
     aoi_rast_uri = raster_utils.temporary_filename()
-    #aoi_rast_uri = '/home/kathryn/Documents/Carla_Data/aoi_temp_raster.tif'
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
-    LOGGER.debug("arb_uri: %s" % arb_raster_uri)
     pixel_size = raster_utils.get_cell_size_from_uri(arb_raster_uri)  
 
     #Use the first overlap raster as the base for the AOI
@@ -572,12 +567,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
                                             h + ']_S[' + s + '].tif')
 
-        LOGGER.debug("Entering new funct.")
         rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
         rast_labels = ['E', 'C', 'H', 'H_S']
         over_pix_sums = aggregate_multi_rasters_uri(aoi_rast_uri, rast_uri_list, rast_labels, [0])
-        LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
-        LOGGER.debug("Exiting new funct.")
         
         for burn_value in over_pix_sums:
             
