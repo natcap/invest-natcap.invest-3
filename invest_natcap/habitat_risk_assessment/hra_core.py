@@ -248,11 +248,17 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     #Create plots for each combination of AOI, Hab
     plot_index = 0
 
+    #Know that 8,6 is the default size. Want to know how much to increase the
+    #image length by to fit the plots proportionally.
+    size_scalar = int(math.ceil(num_habs/4))
+    fig_size = (8, (6*size_scalar))
+
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
         LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
 
-        fig = matplotlib.pyplot.figure(plot_index)
+    
+        fig = matplotlib.pyplot.figure(plot_index, figsize=(8,24))
         plot_index += 1
         matplotlib.pyplot.suptitle(aoi_name)
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
@@ -523,8 +529,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     #Set a temp filename for the AOI raster.
-    #aoi_rast_uri = raster_utils.temporary_filename()
-    aoi_rast_uri = '/home/kathryn/Documents/Carla_Data/aoi_temp_raster.tif'
+    aoi_rast_uri = raster_utils.temporary_filename()
+    #aoi_rast_uri = '/home/kathryn/Documents/Carla_Data/aoi_temp_raster.tif'
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
