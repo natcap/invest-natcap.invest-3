@@ -260,7 +260,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     
         fig = matplotlib.pyplot.figure(plot_index, figsize=(8,24))
         plot_index += 1
-        matplotlib.pyplot.suptitle(aoi_name)
+        matplotlib.pyplot.suptitle(str(aoi_name))
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
         fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
@@ -307,7 +307,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.annotate(element[1], xy=(element[2], 
                     element[3]), xytext= jigger(element[2], element[3]))
 
-        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + str(aoi_name) + '].png')
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
@@ -340,7 +340,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         #Create the points which are summed AOI's across all Habitats.    
         matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
                     markerfacecolor='black', markersize=8)
-        matplotlib.pyplot.annotate(aoi_name,
+        matplotlib.pyplot.annotate(str(aoi_name),
                     xy=(p_dict['E'], p_dict['C']), 
                     xytext=(p_dict['E'], p_dict['C']+0.07))
                         
@@ -399,7 +399,7 @@ def make_aoi_tables(out_dir, aoi_pairs):
     #table for each AOi used on the subregions shapefile.
     for aoi_name, aoi_list in aoi_pairs.items():
         
-        file.write("<H2>" + aoi_name + "</H2>")
+        file.write("<H2>" + str(aoi_name) + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
         #Headers row
