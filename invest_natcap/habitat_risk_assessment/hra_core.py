@@ -250,7 +250,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     #Know that 8,6 is the default size. Want to know how much to increase the
     #image length by to fit the plots proportionally.
-    size_scalar = int(math.ceil(num_habs/4))
+    size_scalar = int(math.ceil(num_habs/4)) + 1
     fig_size = (8, (6*size_scalar))
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
@@ -258,7 +258,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
 
     
-        fig = matplotlib.pyplot.figure(plot_index, figsize=(8,24))
+        fig = matplotlib.pyplot.figure(plot_index, figsize=fig_size)
         plot_index += 1
         matplotlib.pyplot.suptitle(str(aoi_name))
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
