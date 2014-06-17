@@ -52,6 +52,10 @@ def execute(args):
             indicate drainage areas and 0's or nodata indicate areas with no
             additional drainage.  This model is most accurate when the drainage
             raster aligns with the DEM.
+        args['_prepare'] - (optional) The preprocessed set of data created by the
+            sdr._prepare call.  This argument could be used in cases where the
+            call to this function is scripted and can save a significant amount
+            of runtime.
         
         returns nothing."""
 
@@ -95,10 +99,12 @@ def execute(args):
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
     
-    args['output_dir'] = intermediate_dir
-    args['file_suffix'] = file_suffix
-    args['out_pixel_size'] = out_pixel_size
-    preprocessed_data = _sdr_preprocess_data(args)
+    #check if we've already prepared the DEM
+    if '_prepare' in args:
+        preprocessed_data = args['_prepare']
+    else:
+        preprocessed_data = _prepare(**args)
+    
     aligned_dem_uri = preprocessed_data['aligned_dem_uri']
     aligned_lulc_uri = preprocessed_data['aligned_lulc_uri']
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
@@ -107,8 +113,14 @@ def execute(args):
     thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
-    stream_uri = preprocessed_data['stream_uri']
     ls_uri = preprocessed_data['ls_uri']
+    
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
+
+    routing_utils.stream_threshold(flow_accumulation_uri,
+        float(args['threshold_flow_accumulation']), stream_uri)
     
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
         
@@ -504,7 +516,7 @@ def calculate_rkls(
         vectorize_op=False)
 
         
-def _sdr_preprocess_data(args):
+def _prepare(**args):
     """A function to preprocess the static data that goes into the SDR model 
         that is unlikely to change when running a batch process.
         
@@ -515,8 +527,8 @@ def _sdr_preprocess_data(args):
             precalculate rkls
         args['erodibility_uri'] - erodibility data that will be used to align
             and precalculate rkls
-        args['output_dir'] - output directory for the generated rasters
-            
+        args['workspace_dir'] - output directory for the generated rasters
+        
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
             'aligned_lulc_uri' - input lulc aligned with the rest of the inputs
@@ -525,9 +537,11 @@ def _sdr_preprocess_data(args):
                 inputs
     """
     
-    out_pixel_size = args['out_pixel_size']
-    intermediate_dir = args['output_dir']
-    file_suffix = args['file_suffix']
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'prepared_data')
+    
+    if not os.path.exists(intermediate_dir):
+        os.makedirs(intermediate_dir)
     
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
@@ -547,14 +561,14 @@ def _sdr_preprocess_data(args):
     
     #resolve plateaus 
     dem_offset_uri = os.path.join(
-        intermediate_dir, 'dem_offset%s.tif' % file_suffix)
+        intermediate_dir, 'dem_offset.tif')
     routing_cython_core.resolve_flat_regions_for_drainage(
         aligned_dem_uri, dem_offset_uri)
     
     #Calculate slope
     LOGGER.info("Calculating slope")
-    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
+    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
@@ -573,24 +587,17 @@ def _sdr_preprocess_data(args):
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
-        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+        intermediate_dir, 'flow_accumulation.tif')
     flow_direction_uri = os.path.join(
-        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+        intermediate_dir, 'flow_direction.tif')
 
     routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
     routing_utils.flow_accumulation(
         flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
-    
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
 
-    routing_utils.stream_threshold(flow_accumulation_uri,
-        float(args['threshold_flow_accumulation']), stream_uri)
-    
     #Calculate LS term
     LOGGER.info('calculate ls term')
-    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % file_suffix)
+    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
     ls_nodata = -1.0
     calculate_ls_factor(
         flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
@@ -604,6 +611,5 @@ def _sdr_preprocess_data(args):
         'thresholded_slope_uri': thresholded_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri,
-        'stream_uri': stream_uri,
         'ls_uri': ls_uri,
         }
