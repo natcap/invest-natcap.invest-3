@@ -250,7 +250,10 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     #Know that 8,6 is the default size. Want to know how much to increase the
     #image length by to fit the plots proportionally.
-    size_scalar = int(math.ceil(num_habs/4)) + 1
+    size_scalar = int(math.ceil(num_habs/4))
+    #Stretches things weird if there are only 4. Just going to stretch if there 
+    #are > 4 habs.
+    size_scalar = size_scalar + 1 if size_scalar > 1 else size_scalar
     fig_size = (8, (6*size_scalar))
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
