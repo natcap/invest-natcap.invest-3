@@ -216,6 +216,11 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
 
     '''
+    #Seem to have an issue with the figure having residual data points.
+    #Clearing here.
+    matplotlib.pyplot.close('all')
+    matplotlib.rcParams.update({'font.size': 9})
+
     def plot_background_circle(max_value):
         circle_stuff = [(6, '#000000'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
                         (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
@@ -257,6 +262,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     fig_size = (8, (6*size_scalar))
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
+
 
         fig = matplotlib.pyplot.figure(plot_index, figsize=fig_size)
         plot_index += 1
@@ -311,6 +317,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
+    #Want megaplot to have slightly bigger fon
+    matplotlib.rcParams.update({'font.size': 11})
+    
     #Create one ecosystem megaplot that plots the points as summed E,C from
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
@@ -342,7 +351,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
                     markerfacecolor='black', markersize=8)
         matplotlib.pyplot.annotate(str(aoi_name),
                     xy=(p_dict['E'], p_dict['C']), 
-                    xytext=(p_dict['E'], p_dict['C']+0.07))
+                    xytext=jigger(p_dict['E'], p_dict['C']+0.07))
                         
     matplotlib.pyplot.xlim([0, max_tot_risk])
     matplotlib.pyplot.ylim([0, max_tot_risk])
