@@ -248,13 +248,19 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     #Create plots for each combination of AOI, Hab
     plot_index = 0
 
+    #Know that 8,6 is the default size. Want to know how much to increase the
+    #image length by to fit the plots proportionally.
+    size_scalar = int(math.ceil(num_habs/4))
+    #Stretches things weird if there are only 4. Just going to stretch if there 
+    #are > 4 habs.
+    size_scalar = size_scalar + 1 if size_scalar > 1 else size_scalar
+    fig_size = (8, (6*size_scalar))
+
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
-        LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
-
-        fig = matplotlib.pyplot.figure(plot_index)
+        fig = matplotlib.pyplot.figure(plot_index, figsize=fig_size)
         plot_index += 1
-        matplotlib.pyplot.suptitle(aoi_name)
+        matplotlib.pyplot.suptitle(str(aoi_name))
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
         fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
@@ -301,7 +307,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.annotate(element[1], xy=(element[2], 
                     element[3]), xytext= jigger(element[2], element[3]))
 
-        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + str(aoi_name) + '].png')
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
@@ -334,7 +340,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         #Create the points which are summed AOI's across all Habitats.    
         matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
                     markerfacecolor='black', markersize=8)
-        matplotlib.pyplot.annotate(aoi_name,
+        matplotlib.pyplot.annotate(str(aoi_name),
                     xy=(p_dict['E'], p_dict['C']), 
                     xytext=(p_dict['E'], p_dict['C']+0.07))
                         
@@ -393,7 +399,7 @@ def make_aoi_tables(out_dir, aoi_pairs):
     #table for each AOi used on the subregions shapefile.
     for aoi_name, aoi_list in aoi_pairs.items():
         
-        file.write("<H2>" + aoi_name + "</H2>")
+        file.write("<H2>" + str(aoi_name) + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
         #Headers row
@@ -523,12 +529,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     #Set a temp filename for the AOI raster.
-    #aoi_rast_uri = raster_utils.temporary_filename()
-    aoi_rast_uri = '/home/kathryn/Documents/Carla_Data/aoi_temp_raster.tif'
+    aoi_rast_uri = raster_utils.temporary_filename()
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
-    LOGGER.debug("arb_uri: %s" % arb_raster_uri)
     pixel_size = raster_utils.get_cell_size_from_uri(arb_raster_uri)  
 
     #Use the first overlap raster as the base for the AOI
@@ -563,12 +567,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
                                             h + ']_S[' + s + '].tif')
 
-        LOGGER.debug("Entering new funct.")
         rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
         rast_labels = ['E', 'C', 'H', 'H_S']
         over_pix_sums = aggregate_multi_rasters_uri(aoi_rast_uri, rast_uri_list, rast_labels, [0])
-        LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
-        LOGGER.debug("Exiting new funct.")
         
         for burn_value in over_pix_sums:
             
