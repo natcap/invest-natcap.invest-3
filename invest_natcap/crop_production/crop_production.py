@@ -506,6 +506,20 @@ def preprocess_fertilizer(crop_uri,
                                     dataset_to_align_index=0,
                                     vectorize_op=False)
 
+class ReclassLookup:
+    def __init__ (self, d, field, nodata=-1):
+        self.d = d
+        self.nodata = nodata
+
+    def __getitem__(self, k):
+        try:
+            return float(self.d[k][field])
+        except KeyError, ValueError:
+            return nodata
+
+    def __repr__(self):
+        return repr(self.d)
+
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
     LOGGER.debug("Loading configuration file: %s", config_uri)
@@ -590,6 +604,7 @@ def execute(args):
     subregion_uri = args["valuation_raster"]
     subregion_clip_name = "subregion_clip.tif"
     subregion_project_name = "subregion_project.tif"
+    subregion_align_name = "subregion_align.tif"
 
     field_returns = "Return"
     field_irrigation = "Irrigation"
@@ -657,8 +672,7 @@ def execute(args):
     if invest_crops[0] == 0:
         invest_crops.pop(0)
 
-    yield_type = "existing"       
-
+    yield_type = "existing"
 
     #valuation UI elements
     if args["calculate_valuation"]:
@@ -695,6 +709,36 @@ def execute(args):
         valuation_field_id = "Id"
         valuation_csv_dict = raster_utils.get_lookup_from_csv(valuation_csv_uri,
                                                               valuation_field_id)
+
+
+        LOGGER.debug("Determining geographic subregion(s).")
+        subregion_clip_uri = os.path.join(intermediate_uri, subregion_clip_name)
+        subregion_project_uri = os.path.join(intermediate_uri, subregion_project_name)
+        subregion_align_uri = os.path.join(intermediate_uri, subregion_align_name)
+        
+
+        #clip
+        raster_utils.clip_dataset_uri(subregion_uri,
+                                      extent_4326_uri,
+                                      subregion_clip_uri,
+                                      assert_projections=False)
+        #project
+        raster_utils.warp_reproject_dataset_uri(subregion_clip_uri,
+                                                cell_size,
+                                                output_wkt,
+                                                "nearest",
+                                                subregion_project_uri)
+
+        #align
+        raster_utils.align_dataset_list([reclass_crop_cover_uri,
+                                         subregion_project_uri],
+                                        [raster_utils.temporary_filename(),
+                                         subregion_align_uri],
+                                        ["nearest", "nearest"],
+                                        cell_size,
+                                        "dataset",
+                                        0,
+                                        dataset_to_bound_index=0)
 
         if args["valuation_override"] and args["nitrogen_uri"]!= "":
             nitrogen_uri = args["nitrogen_uri"]            
@@ -743,32 +787,80 @@ def execute(args):
                               raster_path,
                               extent_4326_uri,
                               potassium_uri)
-
-        return
             
 ##        if args["valuation_override"] and args["irrigation_uri"] != "":
 ##            irrigation_uri = args["irrigation_uri"]
 ##        else:
 ##            LOGGER.debug("Creating irrigation raster.")
 ##            irrigation_uri = os.path.join(intermediate_uri, irrigation_name)
+
+        def lookup_reclass_closure(lookup, field, nodata=-1):
+            def lookup_reclass_op(crop, region):
+                try:
+                    return float(lookup["(%i, %i)" % (region, crop)][field])
+                except KeyError, ValueError:
+                    return nodata
+
+            return lookup_reclass_op
             
         if args["valuation_override"] and args["labor_uri"] != "":
             labor_uri = args["labor_uri"]
         else:
             LOGGER.debug("Creating labor raster.")
             labor_uri = os.path.join(intermediate_uri, labor_name)
+
+            raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                             subregion_align_uri],
+                                            lookup_reclass_closure(valuation_csv_dict,
+                                                                   valuation_field_labor_cost,
+                                                                   nodata_float),
+                                            labor_uri,
+                                            gdal_type_float,
+                                            nodata_float,
+                                            cell_size,
+                                            "dataset",
+                                            dataset_to_bound_index=0,
+                                            dataset_to_align_index=0)
             
         if args["valuation_override"] and args["machine_uri"] != "":
             machine_uri = args["machine_uri"]
         else:
             LOGGER.debug("Creating %s machine raster.", valuation_field_machine_cost)
             machine_uri = os.path.join(intermediate_uri, machine_name)
+
+            raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                             subregion_align_uri],
+                                            lookup_reclass_closure(valuation_csv_dict,
+                                                                   valuation_field_machine_cost,
+                                                                   nodata_float),
+                                            machine_uri,
+                                            gdal_type_float,
+                                            nodata_float,
+                                            cell_size,
+                                            "dataset",
+                                            dataset_to_bound_index=0,
+                                            dataset_to_align_index=0)
             
         if args["valuation_override"] and args["seed_uri"] != "":
             seed_uri = args["seed_uri"]
         else:
             LOGGER.debug("Creating %s seed raster.", valuation_field_machine_cost)
-            seed_uri = os.path.join(intermediate_uri, machine_name)
+            seed_uri = os.path.join(intermediate_uri, seed_name)
+
+            raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                             subregion_align_uri],
+                                            lookup_reclass_closure(valuation_csv_dict,
+                                                                   valuation_field_seed_cost,
+                                                                   nodata_float),
+                                            seed_uri,
+                                            gdal_type_float,
+                                            nodata_float,
+                                            cell_size,
+                                            "dataset",
+                                            dataset_to_bound_index=0,
+                                            dataset_to_align_index=0)
+
+    return
 
     projected=True
     calculate_production_existing(reclass_crop_cover_uri,
@@ -821,22 +913,6 @@ def execute(args):
 
     if args["calculate_valuation"]:
         LOGGER.debug("Calculating valuation.")
-        LOGGER.debug("Determining geographic subregion(s).")
-        subregion_clip_uri = os.path.join(intermediate_uri, subregion_clip_name)
-        subregion_project_uri = os.path.join(intermediate_uri, subregion_project_name)
-
-        #clip
-        raster_utils.clip_dataset_uri(subregion_uri,
-                                      extent_4326_uri,
-                                      subregion_clip_uri,
-                                      assert_projections=False)
-        #project
-        raster_utils.warp_reproject_dataset_uri(subregion_clip_uri,
-                                                cell_size,
-                                                output_wkt,
-                                                "nearest",
-                                                subregion_project_uri)
-
 
         gdal_type=gdal.GDT_Float32
         nodata = -1
