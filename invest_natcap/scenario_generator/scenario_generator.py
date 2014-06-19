@@ -794,7 +794,7 @@ def execute(args):
     for cover_id in transition_dict:
         if (transition_dict[cover_id][args["patch_field"]] > 0) and (cover_id in suitability_dict):
             LOGGER.info("Filtering patches from %i.", cover_id)
-            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / cell_size))
+            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / (cell_size ** 2)))
 
             output_uri = os.path.join(workspace, filter_name % cover_id)
             filter_fragments(suitability_dict[cover_id], size, output_uri)
