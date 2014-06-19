@@ -9,6 +9,12 @@ from invest_natcap import raster_utils
 
 import json
 
+import operator
+
+import numpy
+
+import sys
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -327,8 +333,178 @@ def calculate_production_existing(reclass_crop_cover_uri,
         raise ValueError, "Not implementd."
 
 
-def calculate_valuation():
-    pass
+def calculate_valuation(crop_uri,
+                        intensity_uri,
+                        subregion_uri,
+                        nitrogen_uri,
+                        phosphorus_uri,
+                        potassium_uri,
+                        irrigation_uri,
+                        labor_uri,
+                        machine_uri,
+                        seed_uri,
+                        valuation_dict,
+                        field_nitrogen,
+                        field_phophorus,
+                        field_potassium,
+                        field_irrigation,
+                        field_labor,
+                        field_machine,
+                        field_seed,
+                        nitrogen_cost_uri,
+                        phosphorus_cost_uri,
+                        potassium_cost_uri,
+                        irrigation_cost_uri,
+                        labor_cost_uri,
+                        machine_cost_uri,
+                        seed_cost_uri,
+                        gdal_type=gdal.GDT_Float32,
+                        nodata = -1,
+                        cell_size = None):
+
+    if cell_size == None:
+        cell_size = raster_utils.get_cell_from_uri(crop_uri)
+    
+    def valuation_closure_op(field_key):
+        def valuation_op(crop, subregion, quantity):
+            if nodata in [crop, subregion, quantity]:
+                return nodata
+            else:
+                try:
+                    return valuation_dict[(subregion, crop)][field_key] * quantity
+                except KeyError:
+                    return nodata
+
+    def mul_op(*values):
+        if nodata in values:
+            return nodata
+        else:
+            return reduce(operator.mul, values)
+
+
+    valuation_list = [("nitrogen", nitrogen_uri, field_nitrogen, nitrogen_cost_uri),
+                      ("phosphorus", phosphorus_uri, field_phosphorus, phosphorus_cost_uri),
+                      ("potassium", potassium_uri, field_potassium, potassium_cost_uri),
+                      ("irrigation", irrigation_uri, field_irrigation, irrigation_cost_uri),
+                      ("labor", labor_uri, field_labor, labor_cost_uri),
+                      ("machine", machine_uri, field_machine, machine_cost_uri),
+                      ("seed", seed_uri, field_seed, seed_cost_uri)]
+
+    for component_label, componet_uri, component_field, cost_uri in valuation_list:
+
+        
+        if component_field != None:
+            LOGGER.debug("Calculating %s cost using valuation table field %s.",
+                         component_label,
+                         component_field)        
+            raster_utils.vectorize_datasets([crop_uri, subregion_uri, component_uri],
+                                        valuation_closure_op(component_field),
+                                        cost_uri,
+                                        gdal_type,
+                                        nodata,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0)
+        else:
+            LOGGER.debug("Calculating %s cost using cost raster.", component_label)
+            raster_utils.vectorize_datasets([intensity_uri, component_uri],
+                                            mul_op,
+                                            cost_uri,
+                                            gdal_type,
+                                            nodata,
+                                            cell_size,
+                                            "dataset",
+                                            dataset_to_bound_index=0)
+
+
+def preprocess_fertilizer(crop_uri,
+                          crop_list,
+                          cell_size,
+                          output_wkt,
+                          raster_table,
+                          raster_field,
+                          raster_path,
+                          extent_uri,
+                          dataset_uri,
+                          gdal_type = gdal.GDT_Float32,
+                          unknown_crop = 0,
+                          place_holder = -2,
+                          nodata = -1.0):
+
+    def extract_closure(labeled_raster_uri, uri_dict):
+        nodata = raster_utils.get_nodata_from_uri(labeled_raster_uri)
+        labels = list(raster_utils.unique_raster_values_count(labeled_raster_uri).keys())
+        labels.sort()
+
+        raster_list = [labeled_raster_uri] + [uri_dict[l] for l in labels]
+        raster_index = dict(zip(labels, range(len(labels))))
+        
+        def extract_op(*values):
+            array = numpy.ones(values[0].shape) * nodata
+            for v in labels:
+                array = numpy.where(values[0] == v, values[raster_index[int(v)]+1], array)
+            array = numpy.where(array == place_holder, nodata, array)                    
+
+            return array
+
+        return raster_list, extract_op
+
+    nodata_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(crop_uri,
+                                          nodata_uri,
+                                          "GTiff",
+                                          nodata,
+                                          gdal.GDT_Int32,
+                                          fill_value=place_holder)
+
+    fertilizer_dict = {unknown_crop : nodata_uri}
+    for crop in crop_list:
+        try:
+            LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
+            dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
+            
+            clip_uri = raster_utils.temporary_filename()
+
+            raster_utils.clip_dataset_uri(dataset_in_uri,
+                                          extent_uri,
+                                          clip_uri,
+                                          assert_projections=False)
+            
+            LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
+            clip_prj_uri = raster_utils.temporary_filename()
+
+
+            raster_utils.warp_reproject_dataset_uri(clip_uri,
+                                                    cell_size,
+                                                    output_wkt,
+                                                    "nearest",
+                                                    clip_prj_uri)
+
+            fertilizer_dict[crop] = clip_prj_uri
+
+        except:
+            e = sys.exc_info()[1]
+
+            if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
+                LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
+                fertilizer_dict[crop] = nodata_uri
+                
+            else:
+                raise e
+        
+    LOGGER.info("Creating nitrogen raster.")
+    raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
+
+    raster_utils.vectorize_datasets(raster_list,
+                                    extract_op,
+                                    dataset_uri,
+                                    gdal_type,
+                                    nodata,
+                                    cell_size,
+                                    "dataset",
+                                    dataset_to_bound_index=0,
+                                    dataset_to_align_index=0,
+                                    vectorize_op=False)
 
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
@@ -337,8 +513,8 @@ def execute(args):
   
     gdal_type_cover = gdal.GDT_Int32
     gdal_type_float = gdal.GDT_Float32
-    nodata_int = 0
-    nodata_float = 0.0
+    nodata_int = -1
+    nodata_float = -1.0
 
     table_precision = 2
 
@@ -415,18 +591,6 @@ def execute(args):
     subregion_clip_name = "subregion_clip.tif"
     subregion_project_name = "subregion_project.tif"
 
-    valuation_csv_uri = args["valuation_table"]
-    valuation_field_id = "Id"
-    valuation_csv_dict = raster_utils.get_lookup_from_csv(valuation_csv_uri,
-                                                          valuation_field_id)
-    valuation_field_N_cost = "avg_N"
-    valuation_field_P_cost = "avg_P"
-    valuation_field_K_cost = "avg_K"
-    valuation_field_labor_cost = "laborcost"
-    valuation_field_machine_cost = "actual_mach"
-    valuation_field_seed_cost = "actual_seed"
-    valuation_field_crop_cost = "avgPP"
-
     field_returns = "Return"
     field_irrigation = "Irrigation"
     field_fertilizer = "Fertilizer"
@@ -448,7 +612,9 @@ def execute(args):
     datasource_from_dataset_bounding_box_uri(crop_cover_uri, extent_uri)
 
     raster_utils.reproject_datasource_uri(extent_uri, wkt, extent_4326_uri)
-       
+         
+    nodata_name = os.path.join(intermediate_uri, "nodata_%i.tif")
+
     #data validation and setup
     if not os.path.exists(intermediate_uri):
         os.makedirs(intermediate_uri)
@@ -485,13 +651,124 @@ def execute(args):
                                         exception_flag = "values_required",
                                         assert_dataset_projected = False)
 
-
-
     invest_crop_counts = raster_utils.unique_raster_values_count(reclass_crop_cover_uri)
     invest_crops = invest_crop_counts.keys()
     invest_crops.sort()
     if invest_crops[0] == 0:
         invest_crops.pop(0)
+
+    yield_type = "existing"       
+
+
+    #valuation UI elements
+    if args["calculate_valuation"]:
+        nitrogen_name = "nitrogen.tif"
+        phosphorus_name = "phosphorus.tif"
+        potassium_name = "potassium.tif"
+        irrigation_name = "irrigation.tif"
+        labor_name = "labor.tif"
+        machine_name = "machine.tif"
+        seed_name = "seed.tif"
+
+        valuation_field_N_cost = "avg_N"
+        valuation_field_P_cost = "avg_P"
+        valuation_field_K_cost = "avg_K"
+        valuation_field_labor_cost = "laborcost"
+
+        intermediate_nitrogen_clip_name = "crop_%i_N_clip.tif"
+        intermediate_nitrogen_clip_prj_name = "crop_%i_N_clip_prj.tif"
+
+        try:
+            valuation_field_machine_cost = args["field_machine"]
+        except KeyError:
+            pass
+
+        try:
+            valuation_field_seed_cost = "actual_seed"
+        except KeyError:
+            pass
+        
+        valuation_field_crop_cost = "avgPP"
+
+
+        valuation_csv_uri = args["valuation_table"]
+        valuation_field_id = "Id"
+        valuation_csv_dict = raster_utils.get_lookup_from_csv(valuation_csv_uri,
+                                                              valuation_field_id)
+
+        if args["valuation_override"] and args["nitrogen_uri"]!= "":
+            nitrogen_uri = args["nitrogen_uri"]            
+        else:
+            LOGGER.debug("Creating nitrogen fertilizer raster.")
+            nitrogen_uri = os.path.join(intermediate_uri, nitrogen_name)
+
+            preprocess_fertilizer(reclass_crop_cover_uri,
+                              invest_crops,
+                              cell_size,
+                              output_wkt,
+                              raster_table_csv_dict,
+                              raster_table_field_N,
+                              raster_path,
+                              extent_4326_uri,
+                              nitrogen_uri)
+            
+        if args["valuation_override"] and args["phosphorus_uri"] != "":
+            phosphorus_uri = args["phosphorus_uri"]
+        else:
+            LOGGER.debug("Creating phosphorus raster.")
+            phosphorus_uri = os.path.join(intermediate_uri, phosphorus_name)
+
+            preprocess_fertilizer(reclass_crop_cover_uri,
+                              invest_crops,
+                              cell_size,
+                              output_wkt,
+                              raster_table_csv_dict,
+                              raster_table_field_P2O5,
+                              raster_path,
+                              extent_4326_uri,
+                              phosphorus_uri)
+            
+        if args["valuation_override"] and args["potassium_uri"] != "":
+            potassium_uri = args["potassium_uri"]
+        else:
+            LOGGER.debug("Creating potassium raster.")
+            potassium_uri = os.path.join(intermediate_uri, potassium_name)
+
+            preprocess_fertilizer(reclass_crop_cover_uri,
+                              invest_crops,
+                              cell_size,
+                              output_wkt,
+                              raster_table_csv_dict,
+                              raster_table_field_K2O,
+                              raster_path,
+                              extent_4326_uri,
+                              potassium_uri)
+
+        return
+            
+##        if args["valuation_override"] and args["irrigation_uri"] != "":
+##            irrigation_uri = args["irrigation_uri"]
+##        else:
+##            LOGGER.debug("Creating irrigation raster.")
+##            irrigation_uri = os.path.join(intermediate_uri, irrigation_name)
+            
+        if args["valuation_override"] and args["labor_uri"] != "":
+            labor_uri = args["labor_uri"]
+        else:
+            LOGGER.debug("Creating labor raster.")
+            labor_uri = os.path.join(intermediate_uri, labor_name)
+            
+        if args["valuation_override"] and args["machine_uri"] != "":
+            machine_uri = args["machine_uri"]
+        else:
+            LOGGER.debug("Creating %s machine raster.", valuation_field_machine_cost)
+            machine_uri = os.path.join(intermediate_uri, machine_name)
+            
+        if args["valuation_override"] and args["seed_uri"] != "":
+            seed_uri = args["seed_uri"]
+        else:
+            LOGGER.debug("Creating %s seed raster.", valuation_field_machine_cost)
+            seed_uri = os.path.join(intermediate_uri, machine_name)
 
     projected=True
     calculate_production_existing(reclass_crop_cover_uri,
@@ -531,8 +808,7 @@ def execute(args):
                 LOGGER.debug("Including nutrient %s in analysis.", nutrient)
                 nutrient_selection[nutrient] = True
                 nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
-
-        yield_type = "existing"                
+         
         calculate_nutrition(reclass_crop_cover_uri,
                             yield_type,
                             nutrition_table_dict,
@@ -560,203 +836,40 @@ def execute(args):
                                                 output_wkt,
                                                 "nearest",
                                                 subregion_project_uri)
-        #count regions
-        subregion_counts = raster_utils.unique_raster_values_count(subregion_project_uri)
-        subregions = subregion_counts.keys()
-        subregions.sort()
-
-        if len(subregions) == 0:
-            LOGGER.info("There is no valuation data for your area.")
-        elif len(subregions) == 1:
-            def fertilizer_cost_closure(crop, cost):
-                def fertilizer_op(cover, fertilizer):
-                    if (cover == nodata_int) or (cover != crop):
-                        return nodata_float
-                    else:
-                        return cost * fertilizer
-
-                return fertilizer_op
-
-            region = subregions[0]
-
-            LOGGER.info("Your data falls entirely within region %i.", region)
-            LOGGER.debug("Calculating fertilizer.")
-            LOGGER.debug("Clipping fertilizer raster.")
-            for crop in invest_crops:
-
-                fertilizer_uri = raster_table_csv_dict[crop][raster_table_field_K2O]
-                if fertilizer_uri != "":
-                    fertilizer_uri = os.path.join(raster_path, fertilizer_uri)
-                    LOGGER.debug("Cropping fertilizer K2O for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-                    cropped_uri = os.path.join(intermediate_uri,
-                                               fertilizer_name % (crop,
-                                                                  raster_table_field_K2O))
-
-                    raster_utils.clip_dataset_uri(fertilizer_uri,
-                                                  extent_4326_uri,
-                                                  cropped_uri,
-                                                  assert_projections=False)
-
-                    LOGGER.debug("Projecting clipped fertilizer K20 for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-                    projected_uri = os.path.join(intermediate_uri,
-                                                 fertilizer_prj_name % (crop,
-                                                                        raster_table_field_K2O))
-                    raster_utils.warp_reproject_dataset_uri(cropped_uri,
-                                                            cell_size,
-                                                            output_wkt,
-                                                            "nearest",
-                                                            projected_uri)
-                    try:
-                        cost = valuation_csv_dict[str((region, crop))][valuation_field_K_cost]
-                        LOGGER.debug("Calculating cost raster for fertilizer %s for %s.",
-                                     raster_table_field_K2O,
-                                     raster_table_csv_dict[crop][raster_table_field_short_name])
-                        fertilizer_cost_uri = os.path.join(intermediate_uri, fertilizer_cost_name % (crop,
-                                                                                                     raster_table_field_K2O))
-                        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                                          projected_uri],
-                                                         fertilizer_cost_closure(crop, cost),
-                                                         fertilizer_cost_uri,
-                                                         gdal_type_float,
-                                                         nodata_float,
-                                                         cell_size,
-                                                         "dataset",
-                                                         dataset_to_bound_index=0)
-                    except KeyError:
-                        LOGGER.warning("Cost data for fertilizer %s NOT available in region %i.")
-
-                else:
-                    LOGGER.warning("Fertilizer K2O unavaiable for %s.",
-                                   raster_table_csv_dict[crop][raster_table_field_short_name])
-
-                fertilizer_uri = raster_table_csv_dict[crop][raster_table_field_N]
-                if fertilizer_uri != "":
-                    fertilizer_uri = os.path.join(raster_path, fertilizer_uri)
-                    LOGGER.debug("Cropping fertilizer N for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-
-                    cropped_uri = os.path.join(intermediate_uri,
-                                               fertilizer_name % (crop,
-                                                                  raster_table_field_N))
-
-                    raster_utils.clip_dataset_uri(fertilizer_uri,
-                                                  extent_4326_uri,
-                                                  cropped_uri,
-                                                  assert_projections=False)
-
-                    LOGGER.debug("Projecting clipped fertilizer N for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-                    projected_uri = os.path.join(intermediate_uri,
-                                                 fertilizer_prj_name % (crop,
-                                                                        raster_table_field_N))
-                    raster_utils.warp_reproject_dataset_uri(cropped_uri,
-                                                            cell_size,
-                                                            output_wkt,
-                                                            "nearest",
-                                                            projected_uri)
-                    try:
-                        cost = valuation_csv_dict[str((region, crop))][valuation_field_N_cost]
-                        LOGGER.debug("Calculating cost raster for fertilizer %s for %s.",
-                                     raster_table_field_N,
-                                     raster_table_csv_dict[crop][raster_table_field_short_name])
-                        fertilizer_cost_uri = os.path.join(intermediate_uri, fertilizer_cost_name % (crop,
-                                                                                                     raster_table_field_N))
-                        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                                          projected_uri],
-                                                         fertilizer_cost_closure(crop, cost),
-                                                         fertilizer_cost_uri,
-                                                         gdal_type_float,
-                                                         nodata_float,
-                                                         cell_size,
-                                                         "dataset",
-                                                         dataset_to_bound_index=0)
-                        
-                    except KeyError:
-                        LOGGER.warning("Cost data for fertilizer %s NOT available in region %i.")
-
-                else:
-                    os.path.join(raster_path, fertilizer_uri)
-                    LOGGER.debug("Fertilizer N unavailable for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-
-                fertilizer_uri = raster_table_csv_dict[crop][raster_table_field_P2O5]
-                if fertilizer_uri != "":
-                    fertilizer_uri = os.path.join(raster_path, fertilizer_uri)
-                    LOGGER.debug("Cropping fertilizer P2O5 for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-
-                    cropped_uri = os.path.join(intermediate_uri,
-                                               fertilizer_name % (crop,
-                                                                  raster_table_field_P2O5))
-
-                    raster_utils.clip_dataset_uri(fertilizer_uri,
-                                                  extent_4326_uri,
-                                                  cropped_uri,
-                                                  assert_projections=False)
-
-                    LOGGER.debug("Projecting clipped fertilizer P2O5 for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-                    projected_uri = os.path.join(intermediate_uri,
-                                                 fertilizer_prj_name % (crop,
-                                                                        raster_table_field_P2O5))
-                    raster_utils.warp_reproject_dataset_uri(cropped_uri,
-                                                            cell_size,
-                                                            output_wkt,
-                                                            "nearest",
-                                                            projected_uri)
-                    try:
-                        cost = valuation_csv_dict[str((region, crop))][valuation_field_P_cost]
-                        LOGGER.debug("Calculating cost raster for fertilizer %s for %s.",
-                                     raster_table_field_P2O5,
-                                     raster_table_csv_dict[crop][raster_table_field_short_name])
-                        fertilizer_cost_uri = os.path.join(intermediate_uri, fertilizer_cost_name % (crop,
-                                                                                                     raster_table_field_P2O5))
-                        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                                          projected_uri],
-                                                         fertilizer_cost_closure(crop, cost),
-                                                         fertilizer_cost_uri,
-                                                         gdal_type_float,
-                                                         nodata_float,
-                                                         cell_size,
-                                                         "dataset",
-                                                         dataset_to_bound_index=0)
-
-                    except KeyError:
-                        LOGGER.warning("Cost data for fertilizer %s NOT available in region %i.")
-
-                else:
-                    LOGGER.debug("Fertilizer P2O5 unavailable for %s.",
-                                 raster_table_csv_dict[crop][raster_table_field_short_name])
-
-            LOGGER.debug("Calculating fertilizer cost.")
 
 
-            LOGGER.debug("Calculating irrigation cost.")
-            LOGGER.debug("Calculating labor cost.")
-            LOGGER.debug("Calculatiing machine cost.")
-            LOGGER.debug("Calculating seed cost.")
-
-            valuation_field_N_cost = "avg_N"
-            valuation_field_P_cost = "avg_P"
-            valuation_field_K_cost = "avg_K"
-            valuation_field_labor_cost = "laborcost"
-            valuation_field_machine_cost = "actual_mach"
-            valuation_field_seed_cost = "actual_seed"
-            valuation_field_crop_cost = "avgPP"
-
-            for crop in invest_crops:
-                region_crop = str((region, crop))
-
-                if region_crop in valuation_csv_dict:
-                    LOGGER.debug("Agricultural cost data available for crop %i in region %i.", crop, region)
-                    price = valuation_csv_dict[region_crop][valuation_field_crop_cost]
-##                    intensity = statistics[crop][statistics_field_intensity]
-                    area = invest_crop_counts[crop] * cell_size
-                    labor = valuation_csv_dict[region_crop][valuation_field_labor_cost]
-                    machine = valuation_csv_dict[region_crop][valuation_field_machine_cost]
-                    seed = valuation_csv_dict[region_crop][valuation_field_seed_cost]
+        gdal_type=gdal.GDT_Float32
+        nodata = -1
+        cell_size = None
+        calculate_valuation(crop_uri,
+                            intensity_uri,
+                            subregion_project_uri,
+                            nitrogen_uri,
+                            phosphorus_uri,
+                            potassium_uri,
+                            irrigation_uri,
+                            labor_uri,
+                            machine_uri,
+                            seed_uri,
+                            valuation_dict,
+                            field_nitrogen,
+                            field_phophorus,
+                            field_potassium,
+                            field_irrigation,
+                            field_labor,
+                            field_machine,
+                            field_seed,
+                            nitrogen_cost_uri,
+                            phosphorus_cost_uri,
+                            potassium_cost_uri,
+                            irrigation_cost_uri,
+                            labor_cost_uri,
+                            machine_cost_uri,
+                            seed_cost_uri,
+                            gdal_type,
+                            nodata,
+                            cell_size)
+        
 
 ##                    statistics[crop][valuation_field_crop_cost] = price * intensity * area
 ##                    statistics[crop][valuation_field_labor_cost] = -1 * labor * intensity * area
@@ -769,9 +882,9 @@ def execute(args):
 ##
 ##                    statistics[crop][field_irrigation] = ""
 ##                    statistics[crop][field_fertilizer] = ""
-
-                else:
-                    LOGGER.warn("Agricultural cost data NOT available for crop %i in region %i.", crop, region)
+##
+##                else:
+##                    LOGGER.warn("Agricultural cost data NOT available for crop %i in region %i.", crop, region)
 ##                    statistics[crop][valuation_field_crop_cost] = ""
 ##                    statistics[crop][valuation_field_labor_cost] = ""
 ##                    statistics[crop][valuation_field_machine_cost] = ""
@@ -779,16 +892,16 @@ def execute(args):
 ##                    statistics[crop][field_returns] = ""
 ##                    statistics[crop][field_irrigation] = ""
 ##                    statistics[crop][field_fertilizer] = ""
-
-
-        else:
-            LOGGER.info("Your data falls within the following regions: %s", ", ".join(subregions))
-            raise ValueError, "Not supported."
-            for region in subregions:
-                LOGGER.debug("Calculating statistics for region %i.", region)
-
-        #create region masks
-
+##
+##
+##        else:
+##            LOGGER.info("Your data falls within the following regions: %s", ", ".join(subregions))
+##            raise ValueError, "Not supported."
+##            for region in subregions:
+##                LOGGER.debug("Calculating statistics for region %i.", region)
+##
+##        #create region masks
+##
 ##    #create report
 ##    for crop in statistics:
 ##        for stat in statistics[crop].keys():
