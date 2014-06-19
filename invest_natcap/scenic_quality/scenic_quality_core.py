@@ -1051,15 +1051,19 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     # and the axis-aligned bounding box that extends around viewpoint out to
     # max_dist
     i_min = max(viewpoint[0] - max_dist, 0)
-    i_max = min(viewpoint[0] + max_dist, array_shape[0])
+    i_max = min(viewpoint[0] + max_dist + 1, array_shape[0])
     j_min = max(viewpoint[1] - max_dist, 0)
-    j_max = min(viewpoint[1] + max_dist, array_shape[1])
+    j_max = min(viewpoint[1] + max_dist + 1, array_shape[1])
+    print('i_min', i_min, 'i_max', i_max, 'j_min', j_min, 'j_max', j_max)
     # list all perimeter cell center angles
     row_count = i_max - i_min 
     col_count = j_max - j_min
+    print('row/col count:', row_count, col_count)
     # Create top row, except cell (0,0)
     rows = np.zeros(col_count - 1)
     cols = np.array(range(col_count-1, 0, -1))
+    print('rows', rows)
+    print('cols', cols)
     # Create left side, avoiding repeat from top row
     rows = np.concatenate((rows, np.array(range(row_count -1))))
     cols = np.concatenate((cols, np.zeros(row_count - 1)))
@@ -1073,8 +1077,8 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     rows += i_min
     cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-    rows = np.roll(rows, viewpoint[0] - i_min)
-    cols = np.roll(cols, viewpoint[0] - i_min)
+    rows = np.roll(rows, viewpoint[0] - i_min).astype(int)
+    cols = np.roll(cols, viewpoint[0] - i_min).astype(int)
     return (rows, cols)
 
 def cell_angles(cell_coords, viewpoint):
@@ -1140,7 +1144,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
                 every point on the raster
             -max_dist: maximum visibility radius. By default infinity (-1), 
             -cell_size: cell size in meters (integer)
-            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
+            -refraction_coeff: refraction coefficient (0.0-1.0)
             -alg_version: name of the algorithm to be used. Either 'cython'
             (default) or 'python'.
 
