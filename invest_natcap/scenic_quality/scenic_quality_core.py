@@ -1054,16 +1054,16 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     i_max = min(viewpoint[0] + max_dist + 1, array_shape[0])
     j_min = max(viewpoint[1] - max_dist, 0)
     j_max = min(viewpoint[1] + max_dist + 1, array_shape[1])
-    print('i_min', i_min, 'i_max', i_max, 'j_min', j_min, 'j_max', j_max)
+    #print('i_min', i_min, 'i_max', i_max, 'j_min', j_min, 'j_max', j_max)
     # list all perimeter cell center angles
     row_count = i_max - i_min 
     col_count = j_max - j_min
-    print('row/col count:', row_count, col_count)
+    #print('row/col count:', row_count, col_count)
     # Create top row, except cell (0,0)
     rows = np.zeros(col_count - 1)
     cols = np.array(range(col_count-1, 0, -1))
-    print('rows', rows)
-    print('cols', cols)
+    #print('rows', rows)
+    #print('cols', cols)
     # Create left side, avoiding repeat from top row
     rows = np.concatenate((rows, np.array(range(row_count -1))))
     cols = np.concatenate((cols, np.zeros(row_count - 1)))
@@ -1188,9 +1188,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
     correction = distances_sq*cell_size**2 * (refraction_coeff - 1) / D_earth 
-    #print("refraction coeff", refraction_coeff)
-    #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
-    #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
+    print("refraction coeff", refraction_coeff)
+    print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
+    np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
     visibility += correction
     offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
