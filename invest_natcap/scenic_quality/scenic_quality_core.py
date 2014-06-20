@@ -57,7 +57,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
     discarded_cells = 0
-    print('rows, cols', array_shape)
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             if (cell_count > 1000) and \
@@ -920,12 +919,9 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
     pixel = active_pixels['closest']
     max_visibility = -1000000.
-    print('Nwe visibility test:')
     while pixel is not None:
-        print('pixel', pixel['visibility'], 'max', max_visibility)
         # Pixel is visible
         if pixel['offset'] > max_visibility:
-            print('visible')
             visibility = 1
             if pixel['visibility'] > max_visibility:
                 max_visibility = pixel['visibility']
@@ -1177,11 +1173,6 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     list_extreme_cell_angles(viewshed_shape, v, max_dist)
     #scenic_quality_cython_core.list_extreme_cell_angles( \
     #    viewshed_shape, v, max_dist)
-    coverage = np.zeros(viewshed_shape)
-    for i in range(I.size):
-	    coverage[(I[i], J[i])] = i
-    print('coverage')
-    print(coverage)
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
     J += col_min
