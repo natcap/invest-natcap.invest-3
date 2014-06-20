@@ -57,6 +57,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
     discarded_cells = 0
+    print('rows, cols', array_shape)
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             if (cell_count > 1000) and \
@@ -919,17 +920,18 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
     pixel = active_pixels['closest']
     max_visibility = -1000000.
+    print('Nwe visibility test:')
     while pixel is not None:
-        #print('pixel', pixel['visibility'], 'max', max_visibility)
+        print('pixel', pixel['visibility'], 'max', max_visibility)
         # Pixel is visible
         if pixel['offset'] > max_visibility:
-            #print('visible')
+            print('visible')
             visibility = 1
             if pixel['visibility'] > max_visibility:
                 max_visibility = pixel['visibility']
         # Pixel is not visible
         else:
-            #print('not visible')
+            print('not visible')
             visibility = 0
         # Update the visibility map for this pixel
         index = pixel['index']
@@ -1172,8 +1174,14 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Viewer's coordiantes relative to the viewshed 
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
-    max_dist)
+    list_extreme_cell_angles(viewshed_shape, v, max_dist)
+    #scenic_quality_cython_core.list_extreme_cell_angles( \
+    #    viewshed_shape, v, max_dist)
+    coverage = np.zeros(viewshed_shape)
+    for i in range(I.size):
+	    coverage[(I[i], J[i])] = i
+    print('coverage')
+    print(coverage)
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
     J += col_min
@@ -1181,16 +1189,16 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - tgt_elev).astype(np.float64)
+    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
     offset_visibility = visibility + tgt_elev
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
     correction = distances_sq*cell_size**2 * (refraction_coeff - 1) / D_earth 
-    print("refraction coeff", refraction_coeff)
-    print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
-    np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
+    #print("refraction coeff", refraction_coeff)
+    #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
+    #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
     visibility += correction
     offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
@@ -1224,16 +1232,16 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     remove_event_id = 0
     remove_event_count = remove_events.size
     # 5- Sort event lists
-    arg_min = np.argsort(add_events)
+    arg_add = np.argsort(add_events)
     arg_center = np.argsort(center_events)
-    arg_max = np.argsort(remove_events)
+    arg_remove = np.argsort(remove_events)
 
-    #print('arg_min')
-    #print(arg_min)
+    #print('arg_add')
+    #print(arg_add)
     #print('arg_center')
     #print(arg_center)
-    #print('arg_max')
-    #print(arg_max)
+    #print('arg_remove')
+    #print(arg_remove)
 
     # Updating active cells
     active_cells = set()
@@ -1270,14 +1278,14 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
-            (add_events[arg_min[add_event_id]] < angles[a+1]):
+            (add_events[arg_add[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
             # Make sure to remove them from the cell_addition events to
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
-            #if center_events[arg_min[add_event_id]] > 0.:
-            add_cell_events.append(arg_min[add_event_id])
-            arg_min[add_event_id] = 0
+            #if center_events[arg_add[add_event_id]] > 0.:
+            add_cell_events.append(arg_add[add_event_id])
+            arg_add[add_event_id] = 0
             add_event_id += 1
         #print('add cell events', [add_events[e] for e in add_cell_events])
         #print('add cell events', [e for e in add_cell_events])
@@ -1292,9 +1300,9 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
-            (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            remove_cell_events.append(arg_max[remove_event_id])
-            arg_max[remove_event_id] = 0
+            (remove_events[arg_remove[remove_event_id]] <= angles[a+1]):
+            remove_cell_events.append(arg_remove[remove_event_id])
+            arg_remove[remove_event_id] = 0
             remove_event_id += 1
     #   2.2- remove cells
         for c in remove_cell_events:
