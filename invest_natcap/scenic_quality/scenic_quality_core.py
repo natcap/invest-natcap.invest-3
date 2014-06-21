@@ -919,7 +919,9 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
     pixel = active_pixels['closest']
     max_visibility = -1000000.
+    #print('new visibility test')
     while pixel is not None:
+        #print('max_visibility', max_visibility)
         # Pixel is visible
         if pixel['offset'] > max_visibility:
             visibility = 1
@@ -927,7 +929,6 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
                 max_visibility = pixel['visibility']
         # Pixel is not visible
         else:
-            print('not visible')
             visibility = 0
         # Update the visibility map for this pixel
         index = pixel['index']
@@ -1250,20 +1251,22 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         arg_center[center_event_id] = 0
         center_event_id += 1
     # Initialize active line with pixels whose centers are at angle 0
+    #print('angle 0.0')
     for c in cell_center_events:
         d = distances[c]
         v = visibility[c]
         o = offset_visibility[c]
         active_line = add_active_pixel(active_line, c, d, v, o)
         active_cells.add(d)
-        # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, visibility_map)
+    # The sweep line is current, now compute pixel visibility
+    update_visible_pixels(active_line, I, J, visibility_map)
     
     #print('cell center events', [center_events[e] for e in cell_center_events])
     #print('cell center events', [e for e in cell_center_events])
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
+        #print('angle', a)
         #print('visibility map 1s:', np.sum(visibility_map))
         #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:

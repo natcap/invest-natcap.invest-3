@@ -57,7 +57,7 @@ class TestScenicQualitylity(unittest.TestCase):
         viewpoint = (DEM_size/2, DEM_size/2)
         obs_elev = 1.0
         tgt_elev = 0.0
-        max_dist = 3
+        max_dist = 2
         cell_size = 1.0
         refraction_coeff = 1.0
         alg_version = 'python'
