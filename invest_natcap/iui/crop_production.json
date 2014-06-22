@@ -91,7 +91,7 @@
                                                                         "args_id" : "enable_tab_existing",
                                                                         "type" : "checkbox",
                                                                         "label" : "Existing yields",
-                                                                        "defaultValue": false
+                                                                        "defaultValue": true
                                                                     },
                                                                     {
                                                                         "id": "enable_tab_percentile",
