@@ -328,860 +328,313 @@
                                 "type" : "tab",
                                 "enabledBy" : "calculate_nutrition",
                                 "elements" : [
-                                        {
-                                            "id" : "nutrient_protein",
-                                            "args_id" : "nutrient_protein",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Protein",
-                                            "defaultValue" : true,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
+						{
+					            "id" : "hideableFileEntry_list",
+						    "args_id" : "hideableFileEntry_list",
                                                     "type" : "list",
                                                     "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_protein",
-                                                            "args_id" : "nutrition_raster_protein",
-                                                            "type": "file",
-                                                            "label": "Protein override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_protein"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "id" : "nutrient_lipids",
-                                            "args_id" : "nutrient_lipids",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Lipids",
-                                            "defaultValue" : true,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_lipids",
-                                                            "args_id" : "nutrition_raster_lipids",
-                                                            "type": "file",
-                                                            "label": "Lipids override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_lipids"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "id" : "nutrient_energy",
-                                            "args_id" : "nutrient_energy",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Energy",
-                                            "defaultValue" : true,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_energy",
-                                                            "args_id" : "nutrition_raster_energy",
-                                                            "type": "file",
-                                                            "label": "Energy override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_energy"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "id" : "nutrient_calcium",
-                                            "args_id" : "nutrient_calcium",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Calcium",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_calcium",
-                                                            "args_id" : "nutrition_raster_calcium",
-                                                            "type": "file",
-                                                            "label": "Calcium override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_calcium"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_iron",
-                                            "args_id" : "nutrient_iron",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Iron",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_iron",
-                                                            "args_id" : "nutrition_raster_iron",
-                                                            "type": "file",
-                                                            "label": "Iron override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_iron"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                      
-                                        {
-                                            "id" : "nutrient_magnesium",
-                                            "args_id" : "nutrient_magnesium",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Magenesium",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_magnesium",
-                                                            "args_id" : "nutrition_raster_magnesium",
-                                                            "type": "file",
-                                                            "label": "Magnesium override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_magnesium"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_phosphorus",
-                                            "args_id" : "nutrient_phosphorus",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Phosphorus",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_phophorus",
-                                                            "args_id" : "nutrition_raster_phosphorus",
-                                                            "type": "file",
-                                                            "label": "Phosphorus override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_phosphorus"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_potassium",
-                                            "args_id" : "nutrient_potassium",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Potassium",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_potassium",
-                                                            "args_id" : "nutrition_raster_potassium",
-                                                            "type": "file",
-                                                            "label": "Potassium override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_potassium"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_sodium",
-                                            "args_id" : "nutrient_sodium",
-                                            "type" : "container", "collapsible" : true,
-                                            "label" : "Sodium",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_sodium",
-                                                            "args_id" : "nutrition_raster_sodium",
-                                                            "type": "file",
-                                                            "label": "Sodium override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_sodium"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "id" : "nutrient_zinc",
-                                            "args_id" : "nutrient_zinc",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Zinc",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_zinc",
-                                                            "args_id" : "nutrition_raster_zinc",
-                                                            "type": "file",
-                                                            "label": "Zinc override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_zinc"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_copper",
-                                            "args_id" : "nutrient_copper",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Copper",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_copper",
-                                                            "args_id" : "nutrition_raster_copper",
-                                                            "type": "file",
-                                                            "label": "Copper override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_copper"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_flouride",
-                                            "args_id" : "nutrient_flouride",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Flouride",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_flouride",
-                                                            "args_id" : "nutrition_raster_flouride",
-                                                            "type": "file",
-                                                            "label": "Flouride override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_flouride"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_manganese",
-                                            "args_id" : "nutrient_manganese",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Manganese",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_manganese",
-                                                            "args_id" : "nutrition_raster_manganese",
-                                                            "type": "file",
-                                                            "label": "Manganese override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_manganese"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_selenium",
-                                            "args_id" : "nutrient_selenium",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Selenium",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_selenium",
-                                                            "args_id" : "nutrition_raster_selenium",
-                                                            "type": "file",
-                                                            "label": "Selenium override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_selenium"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_a",
-                                            "args_id" : "nutrient_vit_a",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin A",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_a",
-                                                            "args_id" : "nutrition_raster_vit_a",
-                                                            "type": "file",
-                                                            "label": "Vitamin A override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_a"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_carotene_b",
-                                            "args_id" : "nutrient_carotene_b",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Carotene β",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_carotene_b",
-                                                            "args_id" : "nutrition_raster_carotene_b",
-                                                            "type": "file",
-                                                            "label": "Carotene β override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_carotene_b"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_carotene_a",
-                                            "args_id" : "nutrient_carotene_a",
-                                            "type" : "container", "collapsible" : true,
-                                            "label" : "Carotene α",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_carotene_a",
-                                                            "args_id" : "nutrition_raster_carotene_a",
-                                                            "type": "file",
-                                                            "label": "Carotene α override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_carotene_a"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_e",
-                                            "args_id" : "nutrient_vit_e",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin E",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_e",
-                                                            "args_id" : "nutrition_raster_vit_e",
-                                                            "type": "file",
-                                                            "label": "Vitamin E override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_e"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_cryptoxanthin",
-                                            "args_id" : "nutrient_cryptoxanthin",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Cryptoxanthin",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_cryptoxanthin",
-                                                            "args_id" : "nutrition_raster_cryptoxanthin",
-                                                            "type": "file",
-                                                            "label": "Cryptoxanthin override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_cryptoxanthin"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_lycopene",
-                                            "args_id" : "nutrient_lycopene",
-                                            "type" : "container", "collapsible" : true,
-                                            "label" : "Lycopene",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_lycopene",
-                                                            "args_id" : "nutrition_raster_lycopene",
-                                                            "type": "file",
-                                                            "label": "Lycopene override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_lycopene"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_lutein",
-                                            "args_id" : "nutrient_lutein",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Lutein && Zeaxanthin",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_lutein",
-                                                            "args_id" : "nutrition_raster_lutein",
-                                                            "type": "file",
-                                                            "label": "Lutein override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_lutein"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_tocopherol_b",
-                                            "args_id" : "nutrient_tocopherol_b",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Tocopherol β",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_tocopherol_b",
-                                                            "args_id" : "nutrition_raster_tocopherol_b",
-                                                            "type": "file",
-                                                            "label": "Tocopherol β override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_tocopherol_b"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_tocopherol_g",
-                                            "args_id" : "nutrient_tocopherol_g",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Tocopherol γ",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_tocopherol_g",
-                                                            "args_id" : "nutrition_raster_tocopherol_g",
-                                                            "type": "file",
-                                                            "label": "Tocopherol γ override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_tocopherol_g"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_tocopherol_d",
-                                            "args_id" : "nutrient_tocopherol_d",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Tocopherol δ",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_tocopherol_d",
-                                                            "args_id" : "nutrition_raster_tocopherol_d",
-                                                            "type": "file",
-                                                            "label": "Tocopherol δ override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_tocopherol_d"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_c",
-                                            "args_id" : "nutrient_vit_c",
-                                            "type" : "container", "collapsible" : true,
-                                            "label" : "Vitamin C",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_c",
-                                                            "args_id" : "nutrition_raster_vit_c",
-                                                            "type": "file",
-                                                            "label": "Vitamin C override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_c"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b1",
-                                            "args_id" : "nutrient_vit_b1",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B1",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b1",
-                                                            "args_id" : "nutrition_raster_vit_b1",
-                                                            "type": "file",
-                                                            "label": "Vitamin B1 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b1"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b2",
-                                            "args_id" : "nutrient_vit_b2",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B2",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b2",
-                                                            "args_id" : "nutrition_raster_vit_b2",
-                                                            "type": "file",
-                                                            "label": "Vitamin B2 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b2"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b3",
-                                            "args_id" : "nutrient_vit_b3",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B3",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b3",
-                                                            "args_id" : "nutrition_raster_vit_b3",
-                                                            "type": "file",
-                                                            "label": "Vitamin B3 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b3"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b5",
-                                            "args_id" : "nutrient_vit_b5",
-                                            "type" : "container", "collapsible" : true,
-                                            "label" : "Vitamin B5",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b5",
-                                                            "args_id" : "nutrition_raster_vit_b5",
-                                                            "type": "file",
-                                                            "label": "Vitamin B5 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b5"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b6",
-                                            "args_id" : "nutrient_vit_b6",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B6",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b6",
-                                                            "args_id" : "nutrition_raster_vit_b6",
-                                                            "type": "file",
-                                                            "label": "Vitamin B6 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b6"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b9",
-                                            "args_id" : "nutrient_vit_b9",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B9",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b9",
-                                                            "args_id" : "nutrition_raster_vit_b9",
-                                                            "type": "file",
-                                                            "label": "Vitamin B9 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b9"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },                                        
-                                        {
-                                            "id" : "nutrient_vit_b12",
-                                            "args_id" : "nutrient_vit_b12",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin B12",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_b12",
-                                                            "args_id" : "nutrition_raster_vit_b12",
-                                                            "type": "file",
-                                                            "label": "Vitamin B12 override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_b12"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_k",
-                                            "args_id" : "nutrient_vit_k",
-                                            "type" : "container",
-                                            "collapsible" : true,
-                                            "label" : "Vitamin K",
-                                            "defaultValue" : false,
-                                            "elements" : [
-                                                {
-                                                    "id" : "list",
-                                                    "type" : "list",
-                                                    "elements" : [
-                                                        {
-                                                            "id" : "nutrition_raster_vit_k",
-                                                            "args_id" : "nutrition_raster_vit_k",
-                                                            "type": "file",
-                                                            "label": "Vitamin K override raster",
-                                                            "defaultValue": "",
-                                                            "validateAs": {"type": "OGR"},
-                                                            "required": false,
-                                                            "enabledBy" : "nutrient_vit_k"                                                            
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }                                    
-                                ]
+
+								        {
+								            "id" : "nutrient_protein",
+								            "args_id" : "nutrient_protein",
+								            "type" : "hideableFileEntry",
+								            "label" : "Protein",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lipids",
+								            "args_id" : "nutrient_lipids",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lipids",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_energy",
+								            "args_id" : "nutrient_energy",
+								            "type" : "hideableFileEntry",
+								            "label" : "Energy",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_calcium",
+								            "args_id" : "nutrient_calcium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Calcium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_iron",
+								            "args_id" : "nutrient_iron",
+								            "type" : "hideableFileEntry",
+								            "label" : "Iron",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_magnesium",
+								            "args_id" : "nutrient_magnesium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Magenesium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_phosphorus",
+								            "args_id" : "nutrient_phosphorus",
+								            "type" : "hideableFileEntry",
+								            "label" : "Phosphorus",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_potassium",
+								            "args_id" : "nutrient_potassium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Potassium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_sodium",
+								            "args_id" : "nutrient_sodium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Sodium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_zinc",
+								            "args_id" : "nutrient_zinc",
+								            "type" : "hideableFileEntry",
+								            "label" : "Zinc",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_copper",
+								            "args_id" : "nutrient_copper",
+								            "type" : "hideableFileEntry",
+								            "label" : "Copper",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_flouride",
+								            "args_id" : "nutrient_flouride",
+								            "type" : "hideableFileEntry",
+								            "label" : "Flouride",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_manganese",
+								            "args_id" : "nutrient_manganese",
+								            "type" : "hideableFileEntry",
+								            "label" : "Manganese",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_selenium",
+								            "args_id" : "nutrient_selenium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Selenium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_a",
+								            "args_id" : "nutrient_vit_a",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin A",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_carotene_b",
+								            "args_id" : "nutrient_carotene_b",
+								            "type" : "hideableFileEntry",
+								            "label" : "Carotene β",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_carotene_a",
+								            "args_id" : "nutrient_carotene_a",
+								            "type" : "hideableFileEntry",
+								            "label" : "Carotene α",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_e",
+								            "args_id" : "nutrient_vit_e",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin E",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_cryptoxanthin",
+								            "args_id" : "nutrient_cryptoxanthin",
+								            "type" : "hideableFileEntry",
+								            "label" : "Cryptoxanthin",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lycopene",
+								            "args_id" : "nutrient_lycopene",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lycopene",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lutein",
+								            "args_id" : "nutrient_lutein",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lutein && Zeaxanthin",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_b",
+								            "args_id" : "nutrient_tocopherol_b",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol β",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_g",
+								            "args_id" : "nutrient_tocopherol_g",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol γ",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_d",
+								            "args_id" : "nutrient_tocopherol_d",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol δ",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_c",
+								            "args_id" : "nutrient_vit_c",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin C",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b1",
+								            "args_id" : "nutrient_vit_b1",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B1",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b2",
+								            "args_id" : "nutrient_vit_b2",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B2",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b3",
+								            "args_id" : "nutrient_vit_b3",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B3",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b5",
+								            "args_id" : "nutrient_vit_b5",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B5",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b6",
+								            "args_id" : "nutrient_vit_b6",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B6",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b9",
+								            "args_id" : "nutrient_vit_b9",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B9",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b12",
+								            "args_id" : "nutrient_vit_b12",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B12",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_k",
+								            "args_id" : "nutrient_vit_k",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin K",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        }
+
+                                        			]
+                                        		}
+                                		]
 
                             },
                             {
