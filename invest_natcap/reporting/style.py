@@ -1,7 +1,7 @@
 """A raster styling/visualizing module"""
 import os
 import numpy as np
-#commenting out so we dont have a PIL dependancy 
+#commenting out so we dont have a PIL dependency
 #from PIL import Image
 import logging
 from osgeo import gdal
