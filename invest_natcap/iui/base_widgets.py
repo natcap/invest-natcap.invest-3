@@ -1965,6 +1965,7 @@ class OperationDialog(QtGui.QDialog):
             message = self.exec_controller.get_message()
             if message != None:
                 self.write(message)
+            time.sleep(.1)
         else:
             self.finished()
 

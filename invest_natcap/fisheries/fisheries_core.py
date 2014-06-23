@@ -169,15 +169,16 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
     with open(uri, 'wb') as c_file:
         c_writer = csv.writer(c_file)
    
+        num_cycles = len(hrv_dict.keys())
+        
         #Header for final results table
-        c_writer.writerow(['Final Harvest by Subregion after ' + str(equil_pt) + ' Cycles'])
+        c_writer.writerow(['Final Harvest by Subregion after ' + str(num_cycles) + ' Cycles'])
         c_writer.writerow([])
         sum_headers_row = ['Subregion', 'Harvest']
         if val_var is not None:
             sum_headers_row.append('Value')
         c_writer.writerow(sum_headers_row)
         
-        num_cycles = len(hrv_dict.keys())
         final_cycle = hrv_dict[num_cycles-1]
         for area in final_cycle:
             if area != 'Cycle_Total':
@@ -385,7 +386,9 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
             }
             '''
     hrv_dict = {}
-    equil_pt = len(cycle_dict)-1
+    #Want to set this to negative so that it won't get used as "has equilibrated"
+    #if it's not true.
+    equil_pt = -1 
     mov_tot = 0
 
     #Want to be sure that we're looking at the harvests in order so that all
