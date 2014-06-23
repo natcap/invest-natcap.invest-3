@@ -2897,7 +2897,7 @@ class ExecRoot(Root):
             This function is called when the user closes the window by any of
             Qt's recognized methods (often including closing the window via the
             little x in the corner of the window and/or pressing the Esc key).
-        
+
             returns nothing"""
 
         dialog = WarningDialog()
@@ -2911,15 +2911,15 @@ class ExecRoot(Root):
         # An exit code of 0 means cancel.
         # If the user pressed OK, the program should quit
         if exit_code != 0:
-            sys.exit(0)
+            self.main_window.close()
 
     def closeEvent(self, event=None):
-        """Terminates the application. This function is a Qt-defined callback 
+        """Terminates the application. This function is a Qt-defined callback
             for when the window is closed.
-            
+
             returns nothing"""
 
-        sys.exit(0)
+        self.closeWindow()
 
     def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.

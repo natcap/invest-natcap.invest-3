@@ -91,7 +91,7 @@
                                                                         "args_id" : "enable_tab_existing",
                                                                         "type" : "checkbox",
                                                                         "label" : "Existing yields",
-                                                                        "defaultValue": false
+                                                                        "defaultValue": true
                                                                     },
                                                                     {
                                                                         "id": "enable_tab_percentile",
@@ -193,86 +193,8 @@
                                                                                 "disabledBy" : "seed_uri"
                                                                             }
                                                                         ]
-                                                                    },
-                                                                    {
-                                                                        "id" : "valuation_override",
-                                                                        "args_id" : "valuation_override",
-                                                                        "label" : "Override valuation CSV",
-                                                                        "type" : "container",
-                                                                        "collapsible" : true,
-                                                                        "helpText" : "",
-                                                                        "elements" : [
-                                                                            {
-                                                                                "id" : "valuation_override_list",
-                                                                                "type" : "list",
-                                                                                "elements" : [
-                                                                                    {
-                                                                                        "id" : "nitrogen_uri",
-                                                                                        "args_id": "nitrogen_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Nitrogen raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "phosphorus_uri",
-                                                                                        "args_id": "phosphorus_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Phosphorus raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "potasssium_uri",
-                                                                                        "args_id": "potassium_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Potassium raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "irrigation_uri",
-                                                                                        "args_id": "irrigation_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Irrigation raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "labor_uri",
-                                                                                        "args_id": "labor_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Labor raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "machine_uri",
-                                                                                        "args_id": "machine_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Machine raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    },
-                                                                                    {
-                                                                                        "id" : "seed_uri",
-                                                                                        "args_id": "seed_uri",
-                                                                                        "type": "file",
-                                                                                        "label" : "Seed raster",
-                                                                                        "defaultValue" : "",
-                                                                                        "validateAs": {"type": "GDAL"},
-                                                                                        "required": false
-                                                                                    }
-                                                                                ]
-                                                                            }
-                                                                        ]
-                                                                    }                                                                                    
+                                                                    }
+                            
                                                                 ]
                                                             },
                                                             {
@@ -293,244 +215,426 @@
                                                             }
                                                         ]
                                             },
+            			    {
+                				"id" : "valuation_tab",
+				                "label" : "Valuation",
+				                "type" : "tab",
+				                "enabledBy" : "calculate_valuation",
+				                "elements" : [
+                                                                    {
+                                                                        "id" : "valuation_override_quantities",
+                                                                        "args_id" : "valuation_override_quantities",
+                                                                        "label" : "Override quantities",
+                                                                        "type" : "container",
+                                                                        "collapsible" : true,
+                                                                        "helpText" : "",
+                                                                        "elements" : [
+                                                                            {
+                                                                                "id" : "valuation_override_quantities_list",
+                                                                                "type" : "list",
+                                                                                "elements" : [
+                                                                                    {
+                                                                                        "id" : "nitrogen_uri",
+                                                                                        "args_id": "nitrogen_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Nitrogen quantity raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "phosphorus_uri",
+                                                                                        "args_id": "phosphorus_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Phosphorus quantity raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "potasssium_uri",
+                                                                                        "args_id": "potassium_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Potassium quantity raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    },
+                                                                                    {
+                                                                                        "id" : "irrigation_uri",
+                                                                                        "args_id": "irrigation_uri",
+                                                                                        "type": "file",
+                                                                                        "label" : "Irrigation quantity raster",
+                                                                                        "defaultValue" : "",
+                                                                                        "validateAs": {"type": "GDAL"},
+                                                                                        "required": false
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                   },
+                                                {
+                                                    "id" : "valuation_override_prices",
+                                                    "args_id" : "valuation_override_prices",
+                                                    "label" : "Override prices",
+                                                    "type" : "container",
+                                                    "collapsible" : true,
+                                                    "helpText" : "",
+                                                    "elements" : [
+                                                                    {
+                                                                        "id" : "valuation_override_prices_list",
+                                                                        "type" : "list",
+                                                                        "elements" : [
+                                                                                        
+                                                            
+                                                                                        {
+                                                                                            "id" : "labor_uri",
+                                                                                            "args_id": "labor_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Labor price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        },
+                                                                                        {
+                                                                                            "id" : "machine_uri",
+                                                                                            "args_id": "machine_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Machine price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        },
+                                                                                        {
+                                                                                            "id" : "seed_uri",
+                                                                                            "args_id": "seed_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Seed price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                }
+                                             ]
+                            },
+				                	        	
+
                             {
                                 "id": "nutrition_tab",
                                 "label" : "Nutrition",
                                 "type" : "tab",
                                 "enabledBy" : "calculate_nutrition",
                                 "elements" : [
-                                        {
-                                            "id" : "nutrient_protein",
-                                            "args_id" : "nutrient_protein",
-                                            "type" : "checkbox",
-                                            "label" : "Protein",
-                                            "defaultValue" : true
-                                        },
-                                        {
-                                            "id" : "nutrient_lipids",
-                                            "args_id" : "nutrient_lipids",
-                                            "type" : "checkbox",
-                                            "label" : "Lipids",
-                                            "defaultValue" : true
-                                        },
-                                        {
-                                            "id" : "nutrient_energy",
-                                            "args_id" : "nutrient_energy",
-                                            "type" : "checkbox",
-                                            "label" : "Energy",
-                                            "defaultValue" : true
-                                        },
-                                        {
-                                            "id" : "nutrient_calcium",
-                                            "args_id" : "nutrient_calcium",
-                                            "type" : "checkbox",
-                                            "label" : "Calcium",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_iron",
-                                            "args_id" : "nutrient_iron",
-                                            "type" : "checkbox",
-                                            "label" : "Iron",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_magnesium",
-                                            "args_id" : "nutrient_magnesium",
-                                            "type" : "checkbox",
-                                            "label" : "Magenesium",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_phosphorus",
-                                            "args_id" : "nutrient_phosphorus",
-                                            "type" : "checkbox",
-                                            "label" : "Phosphorus",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_potassium",
-                                            "args_id" : "nutrient_potassium",
-                                            "type" : "checkbox",
-                                            "label" : "Potassium",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_sodium",
-                                            "args_id" : "nutrient_sodium",
-                                            "type" : "checkbox",
-                                            "label" : "Sodium",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_zinc",
-                                            "args_id" : "nutrient_zinc",
-                                            "type" : "checkbox",
-                                            "label" : "Zinc",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_copper",
-                                            "args_id" : "nutrient_copper",
-                                            "type" : "checkbox",
-                                            "label" : "Copper",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_flouride",
-                                            "args_id" : "nutrient_flouride",
-                                            "type" : "checkbox",
-                                            "label" : "Flouride",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_manganese",
-                                            "args_id" : "nutrient_manganese",
-                                            "type" : "checkbox",
-                                            "label" : "Manganese",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_selenium",
-                                            "args_id" : "nutrient_selenium",
-                                            "type" : "checkbox",
-                                            "label" : "Selenium",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_a",
-                                            "args_id" : "nutrient_vit_a",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin A",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_carotene_b",
-                                            "args_id" : "nutrient_carotene_b",
-                                            "type" : "checkbox",
-                                            "label" : "Carotene β",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_carotene_a",
-                                            "args_id" : "nutrient_carotene_a",
-                                            "type" : "checkbox",
-                                            "label" : "Carotene α",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_e",
-                                            "args_id" : "nutrient_vit_e",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin E",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_cryptoxanthin",
-                                            "args_id" : "nutrient_cryptoxanthin",
-                                            "type" : "checkbox",
-                                            "label" : "Cryptoxanthin",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_lycopene",
-                                            "args_id" : "nutrient_lycopene",
-                                            "type" : "checkbox",
-                                            "label" : "Lycopene",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_lutein",
-                                            "args_id" : "nutrient_lutein",
-                                            "type" : "checkbox",
-                                            "label" : "Lutein && Zeaxanthin",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_tocopherol_b",
-                                            "args_id" : "nutrient_tocopherol_b",
-                                            "type" : "checkbox",
-                                            "label" : "Tocopherol β",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_tocopherol_g",
-                                            "args_id" : "nutrient_tocopherol_g",
-                                            "type" : "checkbox",
-                                            "label" : "Tocopherol γ",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_tocopherol_d",
-                                            "args_id" : "nutrient_tocopherol_d",
-                                            "type" : "checkbox",
-                                            "label" : "Tocopherol δ",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_c",
-                                            "args_id" : "nutrient_vit_c",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin C",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b1",
-                                            "args_id" : "nutrient_vit_b1",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B1",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b2",
-                                            "args_id" : "nutrient_vit_b2",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B2",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b3",
-                                            "args_id" : "nutrient_vit_b3",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B3",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b5",
-                                            "args_id" : "nutrient_vit_b5",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B5",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b6",
-                                            "args_id" : "nutrient_vit_b6",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B6",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b9",
-                                            "args_id" : "nutrient_vit_b9",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B9",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_b12",
-                                            "args_id" : "nutrient_vit_b12",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin B12",
-                                            "defaultValue" : false
-                                        },
-                                        {
-                                            "id" : "nutrient_vit_k",
-                                            "args_id" : "nutrient_vit_k",
-                                            "type" : "checkbox",
-                                            "label" : "Vitamin K",
-                                            "defaultValue" : false
-                                        }
-                                    ]
+						{
+					            "id" : "hideableFileEntry_list",
+						    "args_id" : "hideableFileEntry_list",
+                                                    "type" : "list",
+                                                    "elements" : [
+
+								        {
+								            "id" : "nutrient_protein",
+								            "args_id" : "nutrient_protein",
+								            "type" : "hideableFileEntry",
+								            "label" : "Protein",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lipids",
+								            "args_id" : "nutrient_lipids",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lipids",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_energy",
+								            "args_id" : "nutrient_energy",
+								            "type" : "hideableFileEntry",
+								            "label" : "Energy",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_calcium",
+								            "args_id" : "nutrient_calcium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Calcium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_iron",
+								            "args_id" : "nutrient_iron",
+								            "type" : "hideableFileEntry",
+								            "label" : "Iron",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_magnesium",
+								            "args_id" : "nutrient_magnesium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Magenesium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_phosphorus",
+								            "args_id" : "nutrient_phosphorus",
+								            "type" : "hideableFileEntry",
+								            "label" : "Phosphorus",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_potassium",
+								            "args_id" : "nutrient_potassium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Potassium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_sodium",
+								            "args_id" : "nutrient_sodium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Sodium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_zinc",
+								            "args_id" : "nutrient_zinc",
+								            "type" : "hideableFileEntry",
+								            "label" : "Zinc",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_copper",
+								            "args_id" : "nutrient_copper",
+								            "type" : "hideableFileEntry",
+								            "label" : "Copper",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_flouride",
+								            "args_id" : "nutrient_flouride",
+								            "type" : "hideableFileEntry",
+								            "label" : "Flouride",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_manganese",
+								            "args_id" : "nutrient_manganese",
+								            "type" : "hideableFileEntry",
+								            "label" : "Manganese",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_selenium",
+								            "args_id" : "nutrient_selenium",
+								            "type" : "hideableFileEntry",
+								            "label" : "Selenium",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_a",
+								            "args_id" : "nutrient_vit_a",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin A",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_carotene_b",
+								            "args_id" : "nutrient_carotene_b",
+								            "type" : "hideableFileEntry",
+								            "label" : "Carotene β",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_carotene_a",
+								            "args_id" : "nutrient_carotene_a",
+								            "type" : "hideableFileEntry",
+								            "label" : "Carotene α",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_e",
+								            "args_id" : "nutrient_vit_e",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin E",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_cryptoxanthin",
+								            "args_id" : "nutrient_cryptoxanthin",
+								            "type" : "hideableFileEntry",
+								            "label" : "Cryptoxanthin",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lycopene",
+								            "args_id" : "nutrient_lycopene",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lycopene",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_lutein",
+								            "args_id" : "nutrient_lutein",
+								            "type" : "hideableFileEntry",
+								            "label" : "Lutein && Zeaxanthin",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_b",
+								            "args_id" : "nutrient_tocopherol_b",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol β",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_g",
+								            "args_id" : "nutrient_tocopherol_g",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol γ",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_tocopherol_d",
+								            "args_id" : "nutrient_tocopherol_d",
+								            "type" : "hideableFileEntry",
+								            "label" : "Tocopherol δ",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_c",
+								            "args_id" : "nutrient_vit_c",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin C",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b1",
+								            "args_id" : "nutrient_vit_b1",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B1",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b2",
+								            "args_id" : "nutrient_vit_b2",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B2",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b3",
+								            "args_id" : "nutrient_vit_b3",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B3",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b5",
+								            "args_id" : "nutrient_vit_b5",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B5",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b6",
+								            "args_id" : "nutrient_vit_b6",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B6",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b9",
+								            "args_id" : "nutrient_vit_b9",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B9",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_b12",
+								            "args_id" : "nutrient_vit_b12",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin B12",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        },
+								        {
+								            "id" : "nutrient_vit_k",
+								            "args_id" : "nutrient_vit_k",
+								            "type" : "hideableFileEntry",
+								            "label" : "Vitamin K",
+								            "defaultValue" : "",
+									    "validateAs" : {"type" : "GDAL"},
+									    "required" : false
+								        }
+
+                                        			]
+                                        		}
+                                		]
 
                             },
                             {

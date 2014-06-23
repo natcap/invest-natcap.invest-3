@@ -1,7 +1,8 @@
 """A raster styling/visualizing module"""
 import os
 import numpy as np
-from PIL import Image
+#commenting out so we dont have a PIL dependency
+#from PIL import Image
 import logging
 from osgeo import gdal
 from osgeo import ogr
@@ -81,11 +82,13 @@ def tif_to_png(tiff_uri, png_uri):
        returns - nothing
     """
 
+    raise NotImplementedError
     # If the output URI already exists, remove it
     if os.path.isfile(png_uri):
         os.remove(png_uri)
 
-    img = Image.open(tiff_uri)
+    #commenting this out so we don't have a dependancy on PIL
+    #img = Image.open(tiff_uri)
     img.save(png_uri, 'PNG')
 
 def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
@@ -100,11 +103,13 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
 
         returns - nothing"""
 
+    raise NotImplementedError
     # If the output URI already exists, remove it
     if os.path.isfile(thumbnail_out_uri):
         os.remove(thumbnail_out_uri)
 
-    img = Image.open(image_in_uri)
+    #commenting this out so we don't have a dependancy on PIL
+    #img = Image.open(image_in_uri)
     img.thumbnail(size)
     img.save(thumbnail_out_uri, 'PNG')
 
