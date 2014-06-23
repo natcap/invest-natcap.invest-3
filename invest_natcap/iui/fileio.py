@@ -498,8 +498,10 @@ def save_model_run(arguments, module, out_file):
 
     def _format_string(string):
         if isinstance(string, str):
+            string = string.replace('\\', '\\\\')
             string = "'%s'" % string.replace('\n', '\\n')
         elif isinstance(string, unicode):
+            string = string.replace('\\', '\\\\')
             string = "u'%s'" % string.replace('\n', '\\n')
         return string
 
