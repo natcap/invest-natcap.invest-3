@@ -662,7 +662,7 @@ def aggregate_raster_values_uri(
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
-    clipped_raster_uri = temporary_filename()
+    clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "union",
@@ -673,7 +673,7 @@ def aggregate_raster_values_uri(
 
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
-    mask_uri = temporary_filename()
+    mask_uri = temporary_filename(suffix='.tif')
     new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
@@ -990,7 +990,7 @@ def calculate_slope(
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
-    dem_small_uri = temporary_filename()
+    dem_small_uri = temporary_filename(suffix='.tif')
     #cast the dem to a floating point one if it's not already
     dem_float_nodata = float(dem_nodata)
 
@@ -2129,7 +2129,7 @@ def align_dataset_list(
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
 
-        mask_uri = temporary_filename()
+        mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         first_dataset = None
@@ -2268,7 +2268,7 @@ def vectorize_datasets(
 
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
-    dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
+    dataset_out_uri_list = [temporary_filename(suffix='.tif') for _ in dataset_uri_list]
 
     #Handle the cases where optional arguments are passed in
     if resample_method_list == None:
@@ -2297,7 +2297,7 @@ def vectorize_datasets(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        mask_uri = temporary_filename()
+        mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         mask_band = mask_dataset.GetRasterBand(1)
@@ -2872,7 +2872,7 @@ def distance_transform_edt(
 
         returns nothing"""
 
-    mask_as_byte_uri = temporary_filename()
+    mask_as_byte_uri = temporary_filename(suffix='.tif')
     nodata_mask = get_nodata_from_uri(input_mask_uri)
     out_pixel_size = get_cell_size_from_uri(input_mask_uri)
     nodata_out = 255

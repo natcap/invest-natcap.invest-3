@@ -74,10 +74,11 @@ def route_flux(
             route out of the stream
 
         returns nothing"""
-    dem_uri = raster_utils.temporary_filename()
-    flow_direction_uri = raster_utils.temporary_filename()
-    source_uri = raster_utils.temporary_filename()
-    absorption_rate_uri = raster_utils.temporary_filename()
+        
+    dem_uri = raster_utils.temporary_filename(suffix='.tif')
+    flow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
+    source_uri = raster_utils.temporary_filename(suffix='.tif')
+    absorption_rate_uri = raster_utils.temporary_filename(suffix='.tif')
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_flow_direction)
     LOGGER.info('starting route_flux by aligning datasets')
     
@@ -87,8 +88,8 @@ def route_flux(
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri, assert_datasets_projected=False)
 
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename(suffix='.tif')
+    outflow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
 
     LOGGER.info("finding sinks")
     sink_cell_set = routing_cython_core.find_sinks(dem_uri)
@@ -117,9 +118,9 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
         aoi_uri - (optional) uri to a datasource to mask out the dem"""
 
     LOGGER.debug("starting flow_accumulation")
-    constant_flux_source_uri = raster_utils.temporary_filename()
-    zero_absorption_source_uri = raster_utils.temporary_filename()
-    loss_uri = raster_utils.temporary_filename()
+    constant_flux_source_uri = raster_utils.temporary_filename(suffix='.tif')
+    zero_absorption_source_uri = raster_utils.temporary_filename(suffix='.tif')
+    loss_uri = raster_utils.temporary_filename(suffix='.tif')
 
     LOGGER.debug("creating constant rasters")
     raster_utils.make_constant_raster_from_base_uri(
@@ -213,11 +214,11 @@ def pixel_amount_exported(
 
     #Align all the input rasters since the cython core requires them to line up
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
-    dem_uri = raster_utils.temporary_filename()
-    stream_uri = raster_utils.temporary_filename()
-    retention_rate_uri = raster_utils.temporary_filename()
-    source_uri = raster_utils.temporary_filename()
-    flow_direction_uri = raster_utils.temporary_filename()
+    dem_uri = raster_utils.temporary_filename(suffix='.tif')
+    stream_uri = raster_utils.temporary_filename(suffix='.tif')
+    retention_rate_uri = raster_utils.temporary_filename(suffix='.tif')
+    source_uri = raster_utils.temporary_filename(suffix='.tif')
+    flow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
     raster_utils.align_dataset_list(
         [in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri],
         [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri, source_uri],
@@ -225,7 +226,7 @@ def pixel_amount_exported(
         "intersection", 0, aoi_uri=aoi_uri)
 
     #Calculate export rate
-    export_rate_uri = raster_utils.temporary_filename()
+    export_rate_uri = raster_utils.temporary_filename(suffix='.tif')
     nodata_retention = raster_utils.get_nodata_from_uri(retention_rate_uri)
     def retention_to_export(retention):
         """calculates 1.0-input unles it's nodata"""
@@ -238,8 +239,8 @@ def pixel_amount_exported(
         dataset_to_align_index=0)
 
     #Calculate flow direction and weights
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename(suffix='.tif')
+    outflow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
     routing_cython_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
@@ -247,7 +248,7 @@ def pixel_amount_exported(
     if percent_to_stream_uri is not None:
         effect_uri = percent_to_stream_uri
     else:
-        effect_uri = raster_utils.temporary_filename()
+        effect_uri = raster_utils.temporary_filename(suffix='.tif')
         
     routing_cython_core.percent_to_sink(
         stream_uri, export_rate_uri, outflow_direction_uri,
@@ -283,7 +284,7 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
 
         returns nothing"""
 
-    flow_accumulation_uri = raster_utils.temporary_filename()
+    flow_accumulation_uri = raster_utils.temporary_filename(suffix='.tif')
     flow_accumulation(dem_uri, flow_accumulation_uri, stream_uri)
     stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
 
