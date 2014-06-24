@@ -83,16 +83,14 @@ def execute(args):
             'The input directory where the threat rasters '
             'should be located cannot be found.')
 
-    biophysical_args['threat_dict'] = make_dictionary_from_csv(
-        args['threats_uri'],'THREAT')
+    threat_dict = make_dictionary_from_csv(args['threats_uri'],'THREAT')
 
-    biophysical_args['sensitivity_dict'] = make_dictionary_from_csv(
-        args['sensitivity_uri'],'LULC')
+    sensitivity_dict = make_dictionary_from_csv(
+        args['sensitivity_uri'], 'LULC')
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if not threat_names_match(biophysical_args['threat_dict'],
-            biophysical_args['sensitivity_dict'], 'L_'):
+    if not threat_names_match(threat_dict, sensitivity_dict, 'L_'):
         raise Exception(
             'The threat names in the threat table do '
             'not match the columns in the sensitivity table')
@@ -133,7 +131,7 @@ def execute(args):
 
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in workspace/input/
-        for threat in biophysical_args['threat_dict']:
+        for threat in threat_dict:
             try:
                 if ext == '_b':
                     density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
@@ -162,8 +160,6 @@ def execute(args):
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
     cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
-    threat_dict = biophysical_args['threat_dict']
-    sensitivity_dict = biophysical_args['sensitivity_dict']
     half_saturation = biophysical_args['half_saturation']
 
     out_nodata = -1.0
