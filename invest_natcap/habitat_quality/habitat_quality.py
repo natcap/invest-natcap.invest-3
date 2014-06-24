@@ -97,12 +97,6 @@ def execute(args):
 
     half_saturation = float(args['half_saturation_constant'])
 
-    # if the access shapefile was provided add it to the dictionary
-    try:
-        biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
-    except KeyError:
-        pass
-
     # Determine which land cover scenarios we should run, and append the
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
