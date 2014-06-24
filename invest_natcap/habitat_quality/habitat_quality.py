@@ -139,7 +139,6 @@ def execute(args):
                     'in the CSV table correspond to threat rasters in the input '
                     'folder.' % os.path.join(input_dir, threat + ext))
 
-    biophysical_args['landuse_uri_dict'] = landuse_uri_dict
     biophysical_args['density_uri_dict'] = density_uri_dict
 
     # checking to make sure the land covers have the same projections and are
@@ -152,7 +151,7 @@ def execute(args):
 
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-    cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
+    cur_landuse_uri = landuse_uri_dict['_c']
 
     out_nodata = -1.0
 
@@ -187,10 +186,10 @@ def execute(args):
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
-    LOGGER.debug('landuse_uri_dict : %s', biophysical_args['landuse_uri_dict'])
+    LOGGER.debug('landuse_uri_dict : %s', landuse_uri_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds_uri in biophysical_args['landuse_uri_dict'].iteritems():
+    for lulc_key, lulc_ds_uri in landuse_uri_dict.iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
 
         # initialize a list that will store all the density/threat rasters
@@ -366,7 +365,7 @@ def execute(args):
     #Compute Rarity if user supplied baseline raster
     try:
         # will throw a KeyError exception if no base raster is provided
-        lulc_base_uri = biophysical_args['landuse_uri_dict']['_b']
+        lulc_base_uri = landuse_uri_dict['_b']
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
@@ -379,7 +378,7 @@ def execute(args):
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
-                lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
+                lulc_x = landuse_uri_dict[lulc_cover]
 
                 # get the area of a cur/fut pixel
                 lulc_area = raster_utils.get_cell_size_from_uri(lulc_x) ** 2
