@@ -49,10 +49,6 @@ def execute(args):
 
     workspace = args['workspace_dir']
 
-    # create dictionary to hold values that will be passed to the core
-    # functionality
-    biophysical_args = {}
-
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
         suffix = args['suffix']
