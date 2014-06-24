@@ -52,7 +52,6 @@ def execute(args):
     # create dictionary to hold values that will be passed to the core
     # functionality
     biophysical_args = {}
-    biophysical_args['workspace_dir'] = workspace
 
     # if the user has not provided a results suffix, assume it to be an empty
     # string.
@@ -161,8 +160,8 @@ def execute(args):
 
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
-    output_dir = os.path.join(biophysical_args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(biophysical_args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
     cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
     threat_dict = biophysical_args['threat_dict']
     sensitivity_dict = biophysical_args['sensitivity_dict']
