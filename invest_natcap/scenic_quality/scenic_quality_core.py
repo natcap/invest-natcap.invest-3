@@ -1197,15 +1197,13 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= np.sqrt(distances_sq)
     offset_visibility /= np.sqrt(distances_sq)
 
-    sweep_through_angles(angles, add_events, center_events, remove_events,\
-    I, J, distances_sq, visibility, offset_visibility, visibility_map)
-    #if alg_version is 'python':
-    #    sweep_through_angles(angles, add_events, center_events, remove_events,\
-    #    I, J, distances_sq, visibility, offset_visibility, visibility_map)
-    #else:
-    #    scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
-    #    center_events, remove_events, I, J, distances_sq, visibility, \
-    #    visibility_map)
+    if alg_version is 'python':
+        sweep_through_angles(angles, add_events, center_events, remove_events,\
+        I, J, distances_sq, visibility, offset_visibility, visibility_map)
+    else:
+        scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
+        center_events, remove_events, I, J, distances_sq, visibility, \
+        offset_visibility, visibility_map)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
