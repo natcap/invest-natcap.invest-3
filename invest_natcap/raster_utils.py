@@ -1794,13 +1794,13 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     return memory_array
 
 
-def temporary_filename():
+def temporary_filename(suffix=''):
     """Returns a temporary filename using mkstemp. The file is deleted
         on exit using the atexit register.
 
         returns a unique temporary filename"""
 
-    file_handle, path = tempfile.mkstemp()
+    file_handle, path = tempfile.mkstemp(suffix=suffix)
     os.close(file_handle)
 
     def remove_file(path):
