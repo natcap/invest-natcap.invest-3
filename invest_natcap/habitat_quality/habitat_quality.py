@@ -95,8 +95,7 @@ def execute(args):
             'The threat names in the threat table do '
             'not match the columns in the sensitivity table')
 
-    biophysical_args['half_saturation'] = float(
-        args['half_saturation_constant'])
+    half_saturation = float(args['half_saturation_constant'])
 
     # if the access shapefile was provided add it to the dictionary
     try:
@@ -160,7 +159,6 @@ def execute(args):
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
     cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
-    half_saturation = biophysical_args['half_saturation']
 
     out_nodata = -1.0
 
