@@ -149,7 +149,9 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     flow_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
     def classify_stream(flow_accumulation):
         #mask and convert to 0/1
-        stream_mask = (flow_accumulation >= flow_threshold).astype(numpy.byte)
+        #flow_thrshold might come in as a string all across the invest models
+        #this just casts it so it doesn't break someone's model
+        stream_mask = (flow_accumulation >= float(flow_threshold)).astype(numpy.byte)
         return numpy.where(flow_accumulation != flow_nodata, stream_mask, 255)
         
     raster_utils.vectorize_datasets(
@@ -285,7 +287,14 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
         returns nothing"""
 
     flow_accumulation_uri = raster_utils.temporary_filename(suffix='.tif')
-    flow_accumulation(dem_uri, flow_accumulation_uri, stream_uri)
+    flow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
+    dem_offset_uri = raster_utils.temporary_filename(suffix='.tif')
+
+    routing_cython_core.resolve_flat_regions_for_drainage(
+        dem_uri, dem_offset_uri)
+    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
+    flow_accumulation(
+        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
     stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
 
 
