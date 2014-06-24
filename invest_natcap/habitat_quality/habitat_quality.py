@@ -5,10 +5,8 @@ import logging
 import csv
 
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 import numpy as np
-import scipy.ndimage as ndimage
 
 from invest_natcap import raster_utils
 
@@ -131,14 +129,15 @@ def execute(args):
                             os.path.join(input_dir, threat + ext))
             except:
                 raise Exception('Error: Failed to open raster for the '
-                    'following threat : %s . Please make sure the threat names '
-                    'in the CSV table correspond to threat rasters in the input '
-                    'folder.' % os.path.join(input_dir, threat + ext))
+                    'following threat : %s . Please make sure the threat '
+                    'names in the CSV table correspond to threat rasters '
+                    'in the input folder.'
+                    % os.path.join(input_dir, threat + ext))
 
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
     if not check_projections(landuse_uri_dict, 1.0):
-        raise Exception('Land cover projections are not the same or are' +\
+        raise Exception('Land cover projections are not the same or are '
                         'not projected in meters')
 
     LOGGER.debug('Starting habitat_quality biophysical calculations')
@@ -158,10 +157,11 @@ def execute(args):
     # else set to value
     try:
         LOGGER.debug('Handling Access Shape')
-        access_dataset_uri = os.path.join(inter_dir, 'access_layer%s.tif' % suffix)
+        access_dataset_uri = os.path.join(
+            inter_dir, 'access_layer%s.tif' % suffix)
         raster_utils.new_raster_from_base_uri(
-            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata, gdal.GDT_Float32,
-            fill_value=1.0)
+            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata,
+            gdal.GDT_Float32, fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
 
@@ -214,7 +214,8 @@ def execute(args):
 
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
-            cell_size = raster_utils.get_cell_size_from_uri(args['landuse_cur_uri'])
+            cell_size = raster_utils.get_cell_size_from_uri(
+                args['landuse_cur_uri'])
 
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
@@ -243,10 +244,7 @@ def execute(args):
 
             map_raster_to_dict_values(
                     lulc_ds_uri, sens_uri, sensitivity_dict,
-                    'L_' + threat, out_nodata, 'values_required',
-                    error_message='A lulc type in the land cover with ' + \
-                    'postfix, ' + lulc_key + ', was not found in the ' + \
-                    'sensitivity table. The erroring value was : ')
+                    'L_' + threat, out_nodata, 'values_required')
 
             # get the normalized weight for each threat
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -343,7 +341,8 @@ def execute(args):
                     (habitat_float * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
-        quality_uri = os.path.join(out_dir, 'quality_out' + lulc_key + suffix + '.tif')
+        quality_uri = os.path.join(
+            out_dir, 'quality_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting vectorize on quality_op')
 
@@ -423,7 +422,8 @@ def execute(args):
                 for code in lulc_code_count_x.iterkeys():
                     try:
                         numerator = float(lulc_code_count_x[code] * lulc_area)
-                        denominator = float(lulc_code_count_b[code] * base_area)
+                        denominator = float(
+                            lulc_code_count_b[code] * base_area)
                         ratio = 1.0 - (numerator / denominator)
                         code_index[code] = ratio
                     except KeyError:
@@ -492,8 +492,8 @@ def resolve_ambiguous_raster_path(uri, raise_error=True):
     # should fail gracefully
     if dataset is None and raise_error:
         raise Exception('There was an Error locating a threat raster in the '
-        'input folder. One of the threat names in the CSV table does not match '
-        'to a threat raster in the input folder. Please check that the names '
+        'input folder. One of the threat names in the CSV table does not match'
+        ' to a threat raster in the input folder. Please check that the names '
         'correspond. The threat raster that could not be found is : %s', uri)
 
     if dataset is None:
@@ -597,8 +597,8 @@ def raster_pixel_count(dataset_uri):
 
         dataset_uri - a GDAL raster dataset
 
-        returns -  a dictionary whose keys are the unique pixel values and whose
-                   values are the number of occurrences
+        returns -  a dictionary whose keys are the unique pixel values and
+                   whose values are the number of occurrences
     """
     LOGGER.debug('Entering raster_pixel_count')
     dataset = gdal.Open(dataset_uri)
@@ -621,8 +621,7 @@ def raster_pixel_count(dataset_uri):
 
 
 def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
-        out_nodata, raise_error, error_message='An Error occured mapping' + \
-        'a dictionary to a raster'):
+        out_nodata, raise_error):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
        corresponding to those keys is what is written to the new raster. If a
@@ -630,8 +629,8 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
        raise an Exception if 'raise_error' is True, otherwise return a
        'out_nodata'
 
-       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to the
-                     keys in 'attr_dict'
+       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to
+                     the keys in 'attr_dict'
        out_uri - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
                    in making into a raster
@@ -641,8 +640,6 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
        raise_error - a string that decides how to handle the case where the
            value from 'key_raster' is not found in 'attr_dict'. If 'raise_error'
            is 'values_required', raise Exception, if 'none', return 'out_nodata'
-       error_message - a string that is printed out with the raised Exception if
-           'raise_error' is set to True
 
        returns - a GDAL raster, or raises an Exception and fail if:
            1) raise_error is True and
