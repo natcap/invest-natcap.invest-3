@@ -585,7 +585,8 @@ def save_model_run(arguments, module, out_file):
     _empty_lines(1)
 
     # print the line to call the module.
-    _write('%s.execute(args)' % module)
+    _write("if __name__ == '__main__':")
+    _write('    %s.execute(args)' % module)
 
     model_script.flush()
     model_script.close()
