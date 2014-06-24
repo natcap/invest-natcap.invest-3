@@ -600,7 +600,8 @@ def execute(args):
                                                          bounding_box,
                                                          args["resolution"],
                                                          landcover_resample_uri,
-                                                         gdal.GRA_NearestNeighbour)
+                                                         "nearest")
+            LOGGER.debug("Changing landcover uri to resampled uri.")
             landcover_uri = landcover_resample_uri
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
