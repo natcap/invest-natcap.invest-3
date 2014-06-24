@@ -139,8 +139,6 @@ def execute(args):
                     'in the CSV table correspond to threat rasters in the input '
                     'folder.' % os.path.join(input_dir, threat + ext))
 
-    biophysical_args['density_uri_dict'] = density_uri_dict
-
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
     if not check_projections(landuse_uri_dict, 1.0):
@@ -210,7 +208,7 @@ def execute(args):
             LOGGER.debug('Threat Data : %s', threat_data)
 
             # get the density raster for the specific threat
-            threat_dataset_uri = biophysical_args['density_uri_dict']['density' + lulc_key][threat]
+            threat_dataset_uri = density_uri_dict['density' + lulc_key][threat]
             LOGGER.debug('threat_dataset_uri %s' % threat_dataset_uri)
             if threat_dataset_uri == None:
                 LOGGER.info(
