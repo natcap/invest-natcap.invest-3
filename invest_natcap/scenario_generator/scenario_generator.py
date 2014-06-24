@@ -65,27 +65,30 @@ def calculate_priority(table_uri):
     cover_id_list = [int(cover_id) for cover_id in cover_id_list]
     return dict(zip(cover_id_list, calculate_weights(matrix, 4)))
 
-def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
-    if cell_size == None:
-        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
+    raster_utils.distance_transform_edt(dataset_in_uri, dataset_out_uri)
 
-    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
-
-    memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
-
-    nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
-
-##    if max_distance != None:
-##        memory_array[memory_array > max_distance] = nodata
-
-    raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
-
-    dataset_out = gdal.Open(dataset_out_uri, 1)
-    band = dataset_out.GetRasterBand(1)
-    band.WriteArray(memory_array)
-
-    band = None
-    dataset_out = None
+##def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
+##    if cell_size == None:
+##        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+##
+##    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
+##
+##    memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
+##
+##    nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
+##
+####    if max_distance != None:
+####        memory_array[memory_array > max_distance] = nodata
+##
+##    raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
+##
+##    dataset_out = gdal.Open(dataset_out_uri, 1)
+##    band = dataset_out.GetRasterBand(1)
+##    band.WriteArray(memory_array)
+##
+##    band = None
+##    dataset_out = None
 
 
 shapeTypes= {0: "Null Shape", 1: "Point", 3: "PolyLine", 5: "Polygon",
