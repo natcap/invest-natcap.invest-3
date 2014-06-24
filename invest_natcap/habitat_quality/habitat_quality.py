@@ -53,14 +53,13 @@ def execute(args):
     # functionality
     biophysical_args = {}
 
-    # if the user has not provided a results suffix, assume it to be an empty
-    # string.
+    # Append a _ to the suffix if it's not empty and doens't already have one
     try:
-        suffix = '_' + args['suffix']
-    except:
+        suffix = args['suffix']
+        if suffix != "" and not suffix.startswith('_'):
+            suffix = '_' + suffix
+    except KeyError:
         suffix = ''
-
-    biophysical_args['suffix'] = suffix
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
@@ -166,12 +165,11 @@ def execute(args):
     threat_dict = biophysical_args['threat_dict']
     sensitivity_dict = biophysical_args['sensitivity_dict']
     half_saturation = biophysical_args['half_saturation']
-    suffix = biophysical_args['suffix'] + '.tif'
 
     out_nodata = -1.0
 
     #Create raster of habitat based on habitat field
-    habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
+    habitat_uri = os.path.join(intermediate_dir, 'habitat%s.tif' % suffix)
 
     map_raster_to_dict_values(
         cur_landuse_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
@@ -181,7 +179,7 @@ def execute(args):
     # else set to value
     try:
         LOGGER.debug('Handling Access Shape')
-        access_dataset_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
+        access_dataset_uri = os.path.join(intermediate_dir, 'access_layer%s.tif' % suffix)
         raster_utils.new_raster_from_base_uri(
             cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata, gdal.GDT_Float32,
             fill_value=1.0)
@@ -253,7 +251,7 @@ def execute(args):
             LOGGER.debug('Sigma for gaussian : %s', sigma)
 
             filtered_threat_uri = \
-               os.path.join(intermediate_dir, threat + '_filtered' + suffix)
+               os.path.join(intermediate_dir, threat + '_filtered%s.tif' % suffix)
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -262,7 +260,7 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
-                intermediate_dir, 'sens_' + threat + lulc_key + suffix )
+                intermediate_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
 
             map_raster_to_dict_values(
                     lulc_ds_uri, sens_uri, sensitivity_dict,
@@ -327,7 +325,7 @@ def execute(args):
         degradation_rasters.append(access_dataset_uri)
 
         deg_sum_uri = os.path.join(
-            output_dir, 'deg_sum_out' + lulc_key + suffix)
+            output_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting vectorize on total_degradation')
 
@@ -366,7 +364,7 @@ def execute(args):
                     (habitat_float * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
-        quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
+        quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting vectorize on quality_op')
 
@@ -420,7 +418,7 @@ def execute(args):
                 LOGGER.debug('Create new cover for %s', lulc_cover)
 
                 new_cover_uri = os.path.join(
-                    intermediate_dir, 'new_cover' + lulc_cover + suffix)
+                    intermediate_dir, 'new_cover' + lulc_cover + suffix + '.tif')
 
                 LOGGER.debug('Starting vectorize on trim_op')
 
@@ -453,7 +451,7 @@ def execute(args):
                         code_index[code] = 0.0
 
                 rarity_uri = os.path.join(
-                    output_dir, 'rarity' + lulc_cover + suffix)
+                    output_dir, 'rarity' + lulc_cover + suffix + '.tif')
 
                 LOGGER.debug('Starting vectorize on map_ratio')
 
