@@ -920,16 +920,15 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     pixel = active_pixels['closest']
     max_visibility = -1000000.
     while pixel is not None:
-        #print('pixel', pixel['visibility'], 'max', max_visibility)
         # Pixel is visible
-        if pixel['visibility'] > max_visibility:
-            #print('visible')
+        if pixel['offset'] > max_visibility:
             visibility = 1
-            max_visibility = pixel['visibility']
         # Pixel is not visible
         else:
-            #print('not visible')
             visibility = 0
+        # Update max_visibility for this pixel
+        if pixel['visibility'] > max_visibility:
+	    max_visibility = pixel['visibility']
         # Update the visibility map for this pixel
         index = pixel['index']
         i = I[index]
@@ -995,7 +994,7 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
-def add_active_pixel(sweep_line, index, distance, visibility):
+def add_active_pixel(sweep_line, index, distance, visibility, offset):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
     #print('adding ' + str(distance) + ' to python list')
@@ -1004,7 +1003,8 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
     new_pixel = \
-    {'next':None, 'index':index, 'distance':distance, 'visibility':visibility}
+    {'next':None, 'index':index, 'distance':distance, \
+        'visibility':visibility, 'offset':offset}
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
         previous = None
@@ -1049,7 +1049,7 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     # and the axis-aligned bounding box that extends around viewpoint out to
     # max_dist
     i_min = max(viewpoint[0] - max_dist, 0)
-    i_max = min(viewpoint[0] + max_dist, array_shape[0])
+    i_max = min(viewpoint[0] + max_dist + 1, array_shape[0])
     j_min = max(viewpoint[1] - max_dist, 0)
     j_max = min(viewpoint[1] + max_dist, array_shape[1])
     # list all perimeter cell center angles
@@ -1207,7 +1207,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     return visibility_map
 
 def sweep_through_angles(angles, add_events, center_events, remove_events, \
-    I, J, distances, visibility, visibility_map):
+    I, J, distances, visibility, offset_visibility, visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     angle_count = len(angles)
     # 4- build event lists
@@ -1248,7 +1248,8 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     for c in cell_center_events:
         d = distances[c]
         v = visibility[c]
-        active_line = add_active_pixel(active_line, c, d, v)
+        o = offset_visibility[c]
+        active_line = add_active_pixel(active_line, c, d, v, o)
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
@@ -1279,7 +1280,8 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             for c in add_cell_events:
                 d = distances[c]
                 v = visibility[c]
-                active_line = add_active_pixel(active_line, c, d, v)
+                o = offset_visibility[c]
+                active_line = add_active_pixel(active_line, c, d, v, , oo)
                 active_cells.add(d)
         # Collect remove_cell events:
         remove_cell_events = []
