@@ -397,7 +397,7 @@ cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance
     return pixel
 
 
-def add_active_pixel(sweep_line, index, distance, visibility):
+def add_active_pixel(sweep_line, index, distance, visibility, offset):
     """Python wrapper for the cython find_active_pixel_cython function"""
     #print('adding ' + str(distance) + ' to cython list')
     #print_sweep_line(sweep_line)
@@ -407,7 +407,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     active_pixels = \
-    add_active_pixel_cython(active_pixels, index, distance, visibility)
+    add_active_pixel_cython(active_pixels, index, distance, visibility, offset)
     sweep_line = active_pixels_to_dict(active_pixels)
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "add_active_pixels: deleted pixel count " + \
@@ -610,9 +610,9 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] center_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] remove_events, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] I, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] J, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] distances, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] I, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] J, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.int8_t, ndim = 2, mode="c"] visibility_map):
