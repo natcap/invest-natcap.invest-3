@@ -1181,7 +1181,8 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000. # Diameter of the earth in meters
-    correction = float(distances_sq*cell_size**2) * (refraction_coeff - 1.) / D_earth 
+    correction = (distances_sq*cell_size**2).astype(float) * \
+        (refraction_coeff - 1.) / D_earth
     #print("refraction coeff", refraction_coeff)
     #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
     #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
