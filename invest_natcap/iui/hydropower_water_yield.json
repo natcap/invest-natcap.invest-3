@@ -19,8 +19,8 @@
                     "defaultValue": "../Hydropower",
                     "required": true,
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
-                },          
-		{        
+                },
+		{
                     "id" : "precipitation",
                     "args_id" : "precipitation_uri",
                     "type": "file",
@@ -30,7 +30,7 @@
                     "validateAs": {"type": "GDAL"},
                     "helpText":"A GDAL raster dataset with a non-zero value for average annual precipitation for each cell. The precipitation values should be in millimeters (mm). "
                 },
-                {        
+                {
                     "id" : "potential_evapotranspiration",
                     "args_id" : "eto_uri",
                     "type": "file",
@@ -40,7 +40,7 @@
                     "validateAs": {"type": "GDAL"},
                     "helpText":"A GDAL raster dataset with an annual average reference evapotranspiration value for each cell. The reference evapotranspiration values should be in millimeters (mm)."
                 },
-                {        
+                {
                     "id" : "depth_to_root_rest_layer",
                     "args_id" : "depth_to_root_rest_layer_uri",
                     "type": "file",
@@ -50,7 +50,7 @@
                     "validateAs": {"type": "GDAL"},
                     "helpText":"A GDAL raster dataset with an average root restricting layer depth value for each cell. The root restricting layer depth value should be in millimeters (mm)."
                 },
-                {        
+                {
                     "id" : "plant_available_water_fraction",
                     "args_id" : "pawc_uri",
                     "type": "file",
@@ -60,7 +60,7 @@
                     "validateAs": {"type": "GDAL"},
                     "helpText":"A GDAL raster dataset with a plant available water content value for each cell. The plant available water content fraction should be a value between 0 and 1."
                 },
-                {        
+                {
                     "id" : "land_use",
                     "args_id" : "lulc_uri",
                     "type": "file",
@@ -69,7 +69,7 @@
                     "required": true,
                     "validateAs": {"type": "GDAL"},
                     "helpText": "This must be a raster dataset that GDAL can open. Each cell should represent a LULC code as an Integer."
-                },    
+                },
                 {
                     "id" : "watersheds",
                     "args_id": "watersheds_uri",
@@ -77,8 +77,8 @@
                     "label": "Watersheds",
                     "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
                     "required": true,
-                    "validateAs": {"type": "OGR", 
-                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"},
                                                "type": "polygons",
 					       "projection": {"exists": true}
                                              }],
@@ -93,8 +93,8 @@
                     "label": "Sub-Watersheds (optional)",
                     "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
                     "required": false,
-                    "validateAs": {"type": "OGR", 
-                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"},
                                                "type": "polygons",
 					       "projection": {"exists": true}
                                              }],
@@ -118,7 +118,7 @@
                                                      {"field": "LULC_veg",
                                                       "validateAs":{"type": "number",
                                                                   "allowedValues": {"pattern":"^[01]"}
-                                                                  }}, 
+                                                                  }},
                                                      {"field": "Kc",
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
@@ -129,7 +129,7 @@
                                                                      }}]},
                    "helpText":"A CSV table of land use/land cover (LULC) classes, containing data on biophysical coefficients used in this model. The following columns are required: 'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."
                  },
-                 {        
+                 {
                     "id" : "seasonality_constant",
                     "args_id" : "seasonality_constant",
                     "type": "text",
@@ -139,18 +139,16 @@
                     "validText": "^[0-9]+\\.?[0-9]+$",
                     "helpText":"Floating point value on the order of 1 to 10 corresponding to the seasonal distribution of precipitation."
                  },
-                 {        
+                 {
                     "id" : "results_suffix",
                     "args_id" : "results_suffix",
                     "type": "text",
-                    "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "required": false,
                     "helpText":"A String that will be added to the end of the output uris."
-                }     
-                
+                }
+
             ]
         },
         {
@@ -183,7 +181,7 @@
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
                                                                       }}]},
                         "helpText":"A CSV table of LULC classes, showing consumptive water use for each landuse / landcover type. The table requires two column fields: 'lucode' and 'demand'. The demand values should be the estimated average consumptive water use for each landuse / landcover type. Water use should be given in cubic meters per year for a pixel in the land use/land cover map. NOTE: the accounting for pixel area is important since larger areas will consume more water for the same land cover type."
-                     },   
+                     },
                      {
                         "id" : "hydropower_calibration_table",
                         "args_id": "hydro_calibration_table_uri",
@@ -214,7 +212,7 @@
             "label" : "Valuation",
             "collapsible" : true,
             "defaultValue" : false,
-            "enabledBy": "water_scarcity_container", 
+            "enabledBy": "water_scarcity_container",
             "elements" : [
                 {
                     "id" : "valuation_list",
@@ -236,28 +234,28 @@
                                                         {"field": "time_span",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"^[0-9]+$"}
-                                                                      }},                                                    
+                                                                      }},
                                                         {"field": "discount",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
-                                                                      }},                                                    
+                                                                      }},
                                                         {"field": "efficiency",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
-                                                                      }},                                                    
+                                                                      }},
                                                         {"field": "fraction",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
-                                                                      }},                                                    
+                                                                      }},
                                                         {"field": "cost",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
-                                                                      }},                                                    
+                                                                      }},
                                                         {"field": "height",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
                                                                       }},
-                                                        
+
                                                         {"field": "kw_price",
                                                         "validateAs":{"type": "number",
                                                                       "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
