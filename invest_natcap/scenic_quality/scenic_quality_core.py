@@ -1051,7 +1051,7 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     i_min = max(viewpoint[0] - max_dist, 0)
     i_max = min(viewpoint[0] + max_dist + 1, array_shape[0])
     j_min = max(viewpoint[1] - max_dist, 0)
-    j_max = min(viewpoint[1] + max_dist, array_shape[1])
+    j_max = min(viewpoint[1] + max_dist + 1, array_shape[1])
     # list all perimeter cell center angles
     row_count = i_max - i_min 
     col_count = j_max - j_min
@@ -1110,7 +1110,7 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
             -tgt_elev: offset for target elevation above the ground. Applied to
                 every point on the raster
             -max_dist: maximum visibility radius. By default infinity (-1), 
-            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
+            -refraction_coeff: refraction coefficient (0.0-1.0)
             -alg_version: name of the algorithm to be used. Either 'cython'
             (default) or 'python'.
 
@@ -1192,14 +1192,14 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= np.sqrt(distances_sq)
     offset_visibility /= np.sqrt(distances_sq)
 
-    alg_version = 'python'
+    #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances_sq, visibility, offset_visibility, visibility_map)
     else:
         scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
-        center_events, remove_events, I, J, distances_sq, visibility, \
-        visibility_map)
+        center_events, remove_events, I, J, distances_sq, \
+        offset_visibility, visibility, visibility_map)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
@@ -1281,7 +1281,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
                 d = distances[c]
                 v = visibility[c]
                 o = offset_visibility[c]
-                active_line = add_active_pixel(active_line, c, d, v, , oo)
+                active_line = add_active_pixel(active_line, c, d, v, o)
                 active_cells.add(d)
         # Collect remove_cell events:
         remove_cell_events = []
