@@ -49,34 +49,30 @@ def initialize_pixel_queue(base, direction, flooded):
         else:
             return False
     
-    #Case where the pixel is next to a nodata.
-    def has_nodata_neighbor(row, col):
-        ''' |0|1|2|
-            |7| |3|
-            |6|5|4|        
-        '''
-
-        for direction_index in range(8):
-            try:
-                neighbor_row = row + ROW_OFFSET[direction_index] 
-                neighbor_col = col + COL_OFFSET[direction_index]
-                print("Currently looking at row: %s, col: %s" % (neighbor_row, neighbor_col))
-                if base[neighbor_row, neighbor_col] == nodata:
-               
-                    #Want to set the direction of that pixel to be the direction
-                    #FROM which it was flooded
-                    direction[col, row] = direction_index
-                    return True
-            #Along the edges, there won't be a full cadre of directions, but we
-            #do want to check the rest. 
-            except IndexError:
-                continue
     heap = []
 
     for row in range(num_rows):
         for col in range(num_cols):
-        
-            if is_border(row, col) or has_nodata_neighbor(row, col):
+
+            has_nodata_neighbor = False
+            for direction_index in range(8):
+                try:
+                    neighbor_row = row + ROW_OFFSET[direction_index] 
+                    neighbor_col = col + COL_OFFSET[direction_index]
+                    #print("Currently looking at row: %s, col: %s" % (neighbor_row, neighbor_col))
+                    if base[neighbor_row, neighbor_col] == nodata:
+
+                        #Want to set the direction of that pixel to be the direction
+                        #FROM which it was flooded
+                        direction[col, row] = direction_index
+                        has_nodata_neighbor = True
+                        break
+                #Along the edges, there won't be a full cadre of directions, but we
+                #do want to check the rest. 
+                except IndexError:
+                    continue
+
+            if is_border(row, col) or has_nodata_neighbor:
                 #array[x,y] will give the value of the pixel at that coordinate
                 heapq.heappush(heap, (base[row, col], (row, col)))
                 flooded[row, col] = 2   
@@ -387,7 +383,7 @@ def hybrid_pit_removal(coords, base, direction, flooded, de_pit, step_size):
 def main():
     '''All the initializations. We assume that these would come from the params
     being passed into the function call.'''
-    base_uri = '/home/kathryn/Documents/Pit_Filling/smaller_clipped_dem.tif'
+    base_uri = 'smaller_clipped_dem.tif'
     raster = gdal.Open(base_uri)
     band = raster.GetRasterBand(1)
     
@@ -418,8 +414,9 @@ def main():
         if is_local_min(curr_coords, base_array, flooded_array):
             
             #DO THE THINGS! WITH THE STUFF!
-            hybrid_pit_removal(curr_coords, base_array, direction_array, 
-                    flooded_array, de_pit_array, step_size)
+            hybrid_pit_removal(
+                curr_coords, base_array, direction_array,
+                flooded_array, de_pit_array, step_size)
         
         #We're not looking at a pit for the current cell
         else:
@@ -428,17 +425,15 @@ def main():
             if flooded_array[row, col] == 1:
                 for direction_index in range(8):
                     try:
-                        neighbor_row = row + ROW_OFFSET[direction_index] 
+                        neighbor_row = row + ROW_OFFSET[direction_index]
                         neighbor_col = col + COL_OFFSET[direction_index]
 
                         #If our neighbor is flooded with a confirmed path to outlet,
                         #and their terrain le less than ours
-                        if flooded_array[neighbor_row, neighbor_col] == 2 and \
-                                base_array[neighbor_row, neighbor_col] < curr_elev:
-
+                        if (flooded_array[neighbor_row, neighbor_col] == 2 and
+                            base_array[neighbor_row, neighbor_col] < curr_elev):
                             flooded_array[row, col] = 2
                             break
-
                     except IndexError:
                         continue
 
@@ -447,7 +442,7 @@ def main():
         #check whether they should be counted as having a path to outlet or not.
         for direction_index in range(8):
             try:
-                neighbor_row = row + ROW_OFFSET[direction_index] 
+                neighbor_row = row + ROW_OFFSET[direction_index]
                 neighbor_col = col + COL_OFFSET[direction_index]
 
                 #Want only those neighbors who are "dry" (flooded == 0)
@@ -455,8 +450,8 @@ def main():
                     
                     #If neighbor is higher than us, and we're on a confirmed
                     #path to the outlet.
-                    if base_array[neighbor_row, neighbor_col] >= base_array[row, col] and \
-                            flooded_array[row, col] == 2:
+                    if (base_array[neighbor_row, neighbor_col] >= base_array[row, col] and
+                        flooded_array[row, col] == 2):
                         flooded_array[neighbor_row, neighbor_col] = 2
                     #If we know that we're lower than neighbor (since we're first in the PQ),
                     #but don't know if confirmed to outlet.
@@ -464,15 +459,16 @@ def main():
                         flooded_array[neighbor_row, neighbor_col] = 1
 
                     #Add neighbor to PQ
-                    heapq.heappush(pixel_queue, (base_array[neighbor_row, neighbor_col], 
-                                                    (neighbor_row, neighbor_col)))
+                    heapq.heappush(
+                        pixel_queue, (base_array[neighbor_row, neighbor_col], 
+                                      (neighbor_row, neighbor_col)))
                     
                     #Set flow direction for the neighbor as being from original cell.
                     #In terms of direction, want to get the index that will be
                     #opposite of the side of the square that we're currently in.
                     #Adding + mod 8 takes us to the number opposite the current
                     #direction in the square.
-                    index_rel_to_neighbor = (direction_index + 4 ) % 8
+                    index_rel_to_neighbor = (direction_index + 4) % 8
                     direction_array[neighbor_row, neighbor_col] = index_rel_to_neighbor
             
             except IndexError:
@@ -481,14 +477,24 @@ def main():
     print('Writing de-pitted array back to raster.')
 
     #Write back to a raster
-    de_pit_uri = '/home/kathryn/Documents/Pit_Filling/attempt_to_de_pit.tif'
+    de_pit_uri = 'attempt_to_de_pit.tif'
     
-    new_dataset = raster_utils.new_raster_from_base(raster, de_pit_uri,
-                        'GTiff', nodata, gdal.GDT_Float32)
+    new_dataset = raster_utils.new_raster_from_base(
+        raster, de_pit_uri, 'GTiff', nodata, gdal.GDT_Float32)
     
     n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
     n_band.Fill(n_nodata)
     
     n_band.WriteArray(de_pit_array)
 
-main()
+
+
+import cProfile
+import pstats
+cProfile.runctx('main()', globals(), locals(), 'fillstats')
+p = pstats.Stats('fillstats')
+p.sort_stats('time').print_stats(20)
+p.sort_stats('cumulative').print_stats(20)
+end = time.time()
+
+#main()
