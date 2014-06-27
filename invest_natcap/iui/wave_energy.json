@@ -20,8 +20,8 @@
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
-                },          
-				{        
+                },
+				{
                     "id" : "wave_base_data",
                     "args_id" : "wave_base_data_uri",
                     "type": "folder",
@@ -30,7 +30,7 @@
                     "required": true,
                     "validateAs": {"type": "folder", "mustExist": true},
                     "helpText": "Select the folder that has the packaged Wave Energy Data."
-                },    
+                },
 		        {
 		            "id": "analysis_area",
 		            "args_id": "analysis_area_uri",
@@ -53,9 +53,9 @@
                     "label": "Area of Interest (AOI)",
                     "defaultValue": "../WaveEnergy/input/AOI_WCVI.shp",
                     "required": false,
-                    "validateAs": {"type": "OGR", 
-                    			   "layers": [{"name": {"inheritFrom": "file"}, 
-                    			               "type": "polygons", 
+                    "validateAs": {"type": "OGR",
+                    			   "layers": [{"name": {"inheritFrom": "file"},
+                    			               "type": "polygons",
                     			               "projection" : {"units": "meters", "exists":true},
                     			               "datum" : "WGS_1984"}]
                     			   },
@@ -106,14 +106,12 @@
                     "id" : "results_suffix",
                     "args_id" : "suffix",
                     "type": "text",
-                    "dataType": "string",
-                    "validText": "[a-zA-Z0-9_]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
                     "helpText":"A String that will be added to the end of the output file paths."
-                }                         
+                }
               ]
             },
             {
@@ -129,7 +127,7 @@
                         "id" : "valuation_list",
                         "type" : "list",
                         "elements" : [
-                            {        
+                            {
                                 "id" : "land_grid_points",
                                 "args_id" : "land_gridPts_uri",
                                 "type": "file",
@@ -152,8 +150,8 @@
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
                                                     ]},
                                 "helpText": "A Comma Separated Value table that has the landing points and grid points locations for computing cable distances."
-                                                
-                            },    
+
+                            },
                             {
                                 "id": "machine_econ_table",
                                 "args_id": "machine_econ_uri",
@@ -165,14 +163,14 @@
                                                 "fieldsExist": ["NAME", "VALUE", "NOTE"],
                                                 "restrictions": [{"field": "NAME",
                                                                 "validateAs": {"type": "string",
-                                                                               "allowedValues": {"pattern":"capmax|cc|cml|cul|col|omc|p|r|smlpm", 
+                                                                               "allowedValues": {"pattern":"capmax|cc|cml|cul|col|omc|p|r|smlpm",
                                                                                                  "flag": "ignoreCase"}}},
                                                                 {"field": "VALUE",
                                                                 "validateAs": {"type": "number",
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
                                                     ]},
                                 "helpText": "A Comma Separated Value table that has the economic parameters for the wave energy machine."
-                                                
+
                             },
                             {
                                 "id" : "number_of_machines",

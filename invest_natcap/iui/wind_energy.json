@@ -82,8 +82,6 @@
                     "id" : "results_suffix",
                     "args_id" : "suffix",
                     "type": "text",
-                    "dataType": "string",
-                    "validText": "[a-zA-Z0-9_]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
