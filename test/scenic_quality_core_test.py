@@ -29,13 +29,9 @@ LOGGER = logging.getLogger('scenic_quality_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestScenicQualitylity(unittest.TestCase):
+class TestScenicQuality(unittest.TestCase):
     """Main testing class for the scenic quality tests"""
     
-    def make_input_data(self):
-        args = {}
-        return args
-
     def setUp(self):
         pass
 
@@ -50,15 +46,16 @@ class TestScenicQualitylity(unittest.TestCase):
         elevation[viewpoint[0], viewpoint[1]] = 2
         #print(elevation)
 
-    def test_visibility(self):
-        DEM_size = 9
+    def test_visibility_basic_array(self):
+        DEM_size = 30
         elevation = np.zeros((DEM_size, DEM_size))
         nodata = -1
         viewpoint = (DEM_size/2, DEM_size/2)
+        elevation[viewpoint[0]+1, viewpoint[1]+1] = 2.
         obs_elev = 1.0
         tgt_elev = 0.0
-        max_dist = 2
-        cell_size = 1.0
+        max_dist = 10 
+        cell_size = 5.0
         refraction_coeff = 1.0
         alg_version = 'python'
         visibility = sqc.compute_viewshed(elevation, nodata, viewpoint, \
@@ -66,6 +63,17 @@ class TestScenicQualitylity(unittest.TestCase):
             alg_version)
         visibility[DEM_size/2, DEM_size/2] = 2
         print(visibility)
+
+    def test_visibility_flat_surface(self):
+        base_dem_uri = "../../AQ_Rob/Block_Island fast alg/SQ/bi_100meters/hdr.adf"
+        print('current directory:', os.getcwd())
+        pass
+
+    def test_visibility_simple_obstacles(self):
+        pass
+
+    def test_visibility_multiple_points(self):
+        pass
 
     def tare_down(self):
         """ Clean up code."""

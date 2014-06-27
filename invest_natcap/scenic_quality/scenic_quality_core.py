@@ -1071,8 +1071,8 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     rows += i_min
     cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-    rows = np.roll(rows, viewpoint[0] - i_min)
-    cols = np.roll(cols, viewpoint[0] - i_min)
+    rows = np.roll(rows, viewpoint[0] - i_min).astype(int)
+    cols = np.roll(cols, viewpoint[0] - i_min).astype(int)
     return (rows, cols)
 
 def cell_angles(cell_coords, viewpoint):
