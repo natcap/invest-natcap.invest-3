@@ -329,9 +329,14 @@ def new_raster_from_base(
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
+    
+    base_band = base.GetRasterBand(1)
+    block_size = base_band.GetBlockSize()
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+        'BLOCKYSIZE=%d' % block_size[1]])
+    base_band = None
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -1290,9 +1295,9 @@ def warp_reproject_dataset_uri(
     # Create the output dataset to receive the projected output, with the proper
     # resampled arrangement.
     output_dataset = gdal_driver.Create(
-            output_uri, int((lrx - ulx)/pixel_spacing),
-            int((uly - lry)/pixel_spacing), 1, output_type,
-            options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        output_uri, int((lrx - ulx)/pixel_spacing),
+        int((uly - lry)/pixel_spacing), 1, output_type,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1969,9 +1974,12 @@ def resize_and_resample_dataset_uri(
 
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
+    block_size = original_band.GetBlockSize()
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=[
+            'COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
