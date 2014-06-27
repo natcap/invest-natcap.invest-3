@@ -2188,7 +2188,8 @@ def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True, process_pool=None, vectorize_op=True):
+    assert_datasets_projected=True, process_pool=None, vectorize_op=True,
+    datasets_are_pre_aligned=False):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2248,6 +2249,13 @@ def vectorize_datasets(
             dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
             array broadcasting, set this parameter to False, else it may
             inefficiently invoke the function on individual elements.
+        datasets_are_pre_aligned - (optional) If this value is set to False
+            this operation will first align and interpolate the input datasets
+            based on the rules provided in bounding_box_mode,
+            resample_method_list, dataset_to_align_index, and 
+            dataset_to_bound_index, if set to True the input dataset list must
+            be aligned, probably by raster_utils.align_dataset_list
+            
             """
 
     if type(dataset_uri_list) != list:
@@ -2268,23 +2276,30 @@ def vectorize_datasets(
 
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
-    dataset_out_uri_list = [temporary_filename(suffix='.tif') for _ in dataset_uri_list]
+    if not datasets_are_pre_aligned:
+        #Handle the cases where optional arguments are passed in
+        if resample_method_list == None:
+            resample_method_list = ["nearest"] * len(dataset_uri_list)
+        if dataset_to_align_index == None:
+            dataset_to_align_index = -1
+        dataset_out_uri_list = [
+            temporary_filename(suffix='.tif') for _ in dataset_uri_list]
+        #Align and resample the datasets, then load datasets into a list
+        align_dataset_list(
+            dataset_uri_list, dataset_out_uri_list, resample_method_list,
+            pixel_size_out, bounding_box_mode, dataset_to_align_index,
+            dataset_to_bound_index=dataset_to_bound_index,
+            aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
+            process_pool=process_pool)
+        aligned_datasets = [
+            gdal.Open(filename, gdal.GA_Update) for filename in
+            dataset_out_uri_list]
+    else:
+        #otherwise the input datasets are already aligned
+        aligned_datasets = [
+            gdal.Open(filename, gdal.GA_Update) for filename in
+            dataset_uri_list]
 
-    #Handle the cases where optional arguments are passed in
-    if resample_method_list == None:
-        resample_method_list = ["nearest"] * len(dataset_uri_list)
-    if dataset_to_align_index == None:
-        dataset_to_align_index = -1
-
-    #Align and resample the datasets, then load datasets into a list
-    align_dataset_list(
-        dataset_uri_list, dataset_out_uri_list, resample_method_list,
-        pixel_size_out, bounding_box_mode, dataset_to_align_index,
-        dataset_to_bound_index=dataset_to_bound_index,
-        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
-        process_pool=process_pool)
-    aligned_datasets = [
-        gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
     #The output dataset will be the same size as any one of the aligned datasets
@@ -2309,7 +2324,9 @@ def vectorize_datasets(
         aoi_layer = None
         aoi_datasource = None
 
-    dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
+    dataset_rows = [
+        numpy.zeros((1, n_cols), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
+        in aligned_bands]
 
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
@@ -2346,11 +2363,13 @@ def vectorize_datasets(
     for dataset in aligned_datasets:
         gdal.Dataset.__swig_destroy__(dataset)
     aligned_datasets = None
-    for temp_dataset_uri in dataset_out_uri_list:
-        try:
-            os.remove(temp_dataset_uri)
-        except OSError:
-            LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
+    if not datasets_are_pre_aligned:
+        #if they weren't pre-aligned then we have temporary files to remove
+        for temp_dataset_uri in dataset_out_uri_list:
+            try:
+                os.remove(temp_dataset_uri)
+            except OSError:
+                LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
 
 
