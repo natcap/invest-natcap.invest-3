@@ -65,8 +65,18 @@ class TestScenicQuality(unittest.TestCase):
         print(visibility)
 
     def test_visibility_flat_surface(self):
+        structure_uri = "../../AQ_Rob/Block_Island fast alg/SQ/1 pt/e911_132.shp"
+        shapefile = ogr.Open(structure_uri)
+        assert shapefile is not None
         base_dem_uri = "../../AQ_Rob/Block_Island fast alg/SQ/bi_100meters/hdr.adf"
-        print('current directory:', os.getcwd())
+        flat_dem_uri = "flat_dem.tif"
+        raster_utils.new_raster_from_base_uri( \
+            base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
+            fill_value = 0., n_rows = 100, n_cols = 100)
+	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+        
         pass
 
     def test_visibility_simple_obstacles(self):
