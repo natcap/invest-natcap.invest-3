@@ -459,38 +459,41 @@ def preprocess_fertilizer(crop_uri,
 
     fertilizer_dict = {unknown_crop : nodata_uri}
     for crop in crop_list:
-        try:
-            LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
-            dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
-            
-            clip_uri = raster_utils.temporary_filename()
-
-            raster_utils.clip_dataset_uri(dataset_in_uri,
-                                          extent_uri,
-                                          clip_uri,
-                                          assert_projections=False)
-            
-            LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
-            clip_prj_uri = raster_utils.temporary_filename()
-
-
-            raster_utils.warp_reproject_dataset_uri(clip_uri,
-                                                    cell_size,
-                                                    output_wkt,
-                                                    "nearest",
-                                                    clip_prj_uri)
-
-            fertilizer_dict[crop] = clip_prj_uri
-
-        except:
-            e = sys.exc_info()[1]
-
-            if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
-                LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
-                fertilizer_dict[crop] = nodata_uri
+        if raster_table[crop][raster_field] == "":
+            fertilizer_dict[crop] = nodata_uri
+        else:
+            try:
+                LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
+                dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
                 
-            else:
-                raise e
+                clip_uri = raster_utils.temporary_filename()
+
+                raster_utils.clip_dataset_uri(dataset_in_uri,
+                                              extent_uri,
+                                              clip_uri,
+                                              assert_projections=False)
+                
+                LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
+                clip_prj_uri = raster_utils.temporary_filename()
+
+
+                raster_utils.warp_reproject_dataset_uri(clip_uri,
+                                                        cell_size,
+                                                        output_wkt,
+                                                        "nearest",
+                                                        clip_prj_uri)
+
+                fertilizer_dict[crop] = clip_prj_uri
+
+            except:
+                e = sys.exc_info()[1]
+
+                if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
+                    LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
+                    fertilizer_dict[crop] = nodata_uri
+                    
+                else:
+                    raise e
         
     LOGGER.info("Creating nitrogen raster.")
     raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
@@ -602,6 +605,8 @@ def execute(args):
 
     raster_table_field_yield = "yield"
     raster_table_field_area = "harea"
+
+    raster_table_field_climate = "Climate"
 
     crop_yield_name = "%i_yield_masked.tif"
     clip_yield_name = "%i_yield_clip.tif"
@@ -1053,6 +1058,49 @@ def execute(args):
 ##                                invest_crops,
 ##                                nutrient_aliases)
 
+
+    if args["enable_tab_existing"]:
+
+        yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
+        
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_yield,
+                          raster_path,
+                          extent_4326_uri,
+                          yield_uri)
+
+        area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_area,
+                          raster_path,
+                          extent_4326_uri,
+                          area_uri)
+
+    if args["enable_tab_existing"]:
+        climate_uri = os.path.join(intermediate_uri, "climate.tif")
+
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_climate,
+                          raster_path,
+                          extent_4326_uri,
+                          climate_uri)
+        
+        yield_uri = os.path.join(intermediate_uri, "yield_percentile.tif")
+
+        
+                                
 
     return
 
