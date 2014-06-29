@@ -688,7 +688,7 @@ def execute(args):
         LOGGER.info('Grid Points Provided')
         LOGGER.info('Reading in the grid points')
 
-        grid_file = open(args['grid_points_uri'])
+        grid_file = open(args['grid_points_uri'], 'rU')
         reader = csv.DictReader(grid_file)
 
         grid_dict = {}
@@ -1346,7 +1346,7 @@ def read_csv_wind_parameters(csv_uri, parameter_list):
         returns - a Dictionary where the the 'parameter_list' Strings are the
             keys that have values pulled from 'csv_uri'
     """
-    csv_file = open(csv_uri)
+    csv_file = open(csv_uri, 'rU')
     csv_reader = csv.reader(csv_file)
     output_dict = {}
 

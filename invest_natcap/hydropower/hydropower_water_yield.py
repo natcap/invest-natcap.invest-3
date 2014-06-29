@@ -111,7 +111,7 @@ def execute(args):
 
     # Open/read in the csv file into a dictionary and add to arguments
     bio_dict = {}
-    biophysical_table_file = open(args['biophysical_table_uri'])
+    biophysical_table_file = open(args['biophysical_table_uri'], 'rU')
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         bio_dict[int(row['lucode'])] = {
@@ -498,7 +498,7 @@ def execute(args):
 
     # Open/read in the demand csv file into a dictionary
     demand_dict = {}
-    demand_table_file = open(args['demand_table_uri'])
+    demand_table_file = open(args['demand_table_uri'], 'rU')
     reader = csv.DictReader(demand_table_file)
     for row in reader:
         demand_dict[int(row['lucode'])] = float(row['demand'])
@@ -508,7 +508,7 @@ def execute(args):
 
     # Open/read in the calibration csv file into a dictionary
     calib_dict = {}
-    hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
+    hydro_cal_table_file = open(args['hydro_calibration_table_uri'], 'rU')
     reader = csv.DictReader(hydro_cal_table_file)
     for row in reader:
         calib_dict[int(row['ws_id'])] = float(row['calib'])
@@ -582,7 +582,7 @@ def execute(args):
 
     # Open/read in valuation parameters from CSV file
     valuation_params = {}
-    valuation_table_file = open(args['valuation_table_uri'])
+    valuation_table_file = open(args['valuation_table_uri'], 'rU')
     reader = csv.DictReader(valuation_table_file)
     for row in reader:
         for key, val in row.iteritems():

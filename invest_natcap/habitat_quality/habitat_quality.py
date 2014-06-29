@@ -5,10 +5,8 @@ import logging
 import csv
 
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 import numpy as np
-import scipy.ndimage as ndimage
 
 from invest_natcap import raster_utils
 
@@ -49,19 +47,13 @@ def execute(args):
 
     workspace = args['workspace_dir']
 
-    # create dictionary to hold values that will be passed to the core
-    # functionality
-    biophysical_args = {}
-    biophysical_args['workspace_dir'] = workspace
-
-    # if the user has not provided a results suffix, assume it to be an empty
-    # string.
+    # Append a _ to the suffix if it's not empty and doesn't already have one
     try:
-        suffix = '_' + args['suffix']
-    except:
+        suffix = args['suffix']
+        if suffix != "" and not suffix.startswith('_'):
+            suffix = '_' + suffix
+    except KeyError:
         suffix = ''
-
-    biophysical_args['suffix'] = suffix
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
@@ -83,30 +75,22 @@ def execute(args):
     if input_dir is None:
         raise Exception(
             'The input directory where the threat rasters '
-            'should be located cannot be found.')
+            'should be located cannot be found. Please make sure the input '
+            'directory is located within the workspace specified.')
 
-    biophysical_args['threat_dict'] = make_dictionary_from_csv(
-        args['threats_uri'],'THREAT')
-
-    biophysical_args['sensitivity_dict'] = make_dictionary_from_csv(
-        args['sensitivity_uri'],'LULC')
+    threat_dict = make_dictionary_from_csv(args['threats_uri'],'THREAT')
+    sensitivity_dict = make_dictionary_from_csv(
+        args['sensitivity_uri'], 'LULC')
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if not threat_names_match(biophysical_args['threat_dict'],
-            biophysical_args['sensitivity_dict'], 'L_'):
+    if not threat_names_match(threat_dict, sensitivity_dict, 'L_'):
         raise Exception(
             'The threat names in the threat table do '
             'not match the columns in the sensitivity table')
 
-    biophysical_args['half_saturation'] = float(
-        args['half_saturation_constant'])
-
-    # if the access shapefile was provided add it to the dictionary
-    try:
-        biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
-    except KeyError:
-        pass
+    # get the half saturation constant
+    half_saturation = float(args['half_saturation_constant'])
 
     # Determine which land cover scenarios we should run, and append the
     # appropriate suffix to the landuser_scenarios list as necessary for the
@@ -135,7 +119,7 @@ def execute(args):
 
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in workspace/input/
-        for threat in biophysical_args['threat_dict']:
+        for threat in threat_dict:
             try:
                 if ext == '_b':
                     density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
@@ -146,33 +130,25 @@ def execute(args):
                             os.path.join(input_dir, threat + ext))
             except:
                 raise Exception('Error: Failed to open raster for the '
-                    'following threat : %s . Please make sure the threat names '
-                    'in the CSV table correspond to threat rasters in the input '
-                    'folder.' % os.path.join(input_dir, threat + ext))
-
-    biophysical_args['landuse_uri_dict'] = landuse_uri_dict
-    biophysical_args['density_uri_dict'] = density_uri_dict
+                    'following threat : %s . Please make sure the threat '
+                    'names in the CSV table correspond to threat rasters '
+                    'in the input folder.'
+                    % os.path.join(input_dir, threat + ext))
 
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
     if not check_projections(landuse_uri_dict, 1.0):
-        raise Exception('Land cover projections are not the same or are' +\
+        raise Exception('Land cover projections are not the same or are '
                         'not projected in meters')
 
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
-    output_dir = os.path.join(biophysical_args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(biophysical_args['workspace_dir'], 'intermediate')
-    cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
-    threat_dict = biophysical_args['threat_dict']
-    sensitivity_dict = biophysical_args['sensitivity_dict']
-    half_saturation = biophysical_args['half_saturation']
-    suffix = biophysical_args['suffix'] + '.tif'
+    cur_landuse_uri = landuse_uri_dict['_c']
 
     out_nodata = -1.0
 
     #Create raster of habitat based on habitat field
-    habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
+    habitat_uri = os.path.join(inter_dir, 'habitat%s.tif' % suffix)
 
     map_raster_to_dict_values(
         cur_landuse_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
@@ -182,10 +158,11 @@ def execute(args):
     # else set to value
     try:
         LOGGER.debug('Handling Access Shape')
-        access_dataset_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
+        access_dataset_uri = os.path.join(
+            inter_dir, 'access_layer%s.tif' % suffix)
         raster_utils.new_raster_from_base_uri(
-            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata, gdal.GDT_Float32,
-            fill_value=1.0)
+            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata,
+            gdal.GDT_Float32, fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
 
@@ -202,10 +179,10 @@ def execute(args):
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
-    LOGGER.debug('landuse_uri_dict : %s', biophysical_args['landuse_uri_dict'])
+    LOGGER.debug('landuse_uri_dict : %s', landuse_uri_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds_uri in biophysical_args['landuse_uri_dict'].iteritems():
+    for lulc_key, lulc_ds_uri in landuse_uri_dict.iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
 
         # initialize a list that will store all the density/threat rasters
@@ -213,8 +190,8 @@ def execute(args):
         degradation_rasters = []
 
         # a list to keep track of the normalized weight for each threat
-        #weight_list = []
         weight_list = np.array([])
+
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
         exit_landcover = False
@@ -226,7 +203,7 @@ def execute(args):
             LOGGER.debug('Threat Data : %s', threat_data)
 
             # get the density raster for the specific threat
-            threat_dataset_uri = biophysical_args['density_uri_dict']['density' + lulc_key][threat]
+            threat_dataset_uri = density_uri_dict['density' + lulc_key][threat]
             LOGGER.debug('threat_dataset_uri %s' % threat_dataset_uri)
             if threat_dataset_uri == None:
                 LOGGER.info(
@@ -236,9 +213,10 @@ def execute(args):
                 exit_landcover = True
                 break
 
-            # get the mean cell size, using absolute value because we could
-            # get a negative for height or width
-            cell_size = raster_utils.get_cell_size_from_uri(args['landuse_cur_uri'])
+            # get the cell size from LULC to use for intermediate / output
+            # rasters
+            cell_size = raster_utils.get_cell_size_from_uri(
+                args['landuse_cur_uri'])
 
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
@@ -254,7 +232,7 @@ def execute(args):
             LOGGER.debug('Sigma for gaussian : %s', sigma)
 
             filtered_threat_uri = \
-               os.path.join(intermediate_dir, threat + '_filtered' + suffix)
+               os.path.join(inter_dir, threat + '_filtered%s.tif' % suffix)
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -263,14 +241,11 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
-                intermediate_dir, 'sens_' + threat + lulc_key + suffix )
+                inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
 
             map_raster_to_dict_values(
                     lulc_ds_uri, sens_uri, sensitivity_dict,
-                    'L_' + threat, out_nodata, 'values_required',
-                    error_message='A lulc type in the land cover with ' + \
-                    'postfix, ' + lulc_key + ', was not found in the ' + \
-                    'sensitivity table. The erroring value was : ')
+                    'L_' + threat, out_nodata, 'values_required')
 
             # get the normalized weight for each threat
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -283,7 +258,6 @@ def execute(args):
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
-            #weight_list.append(weight_avg)
             weight_list = np.append(weight_list, weight_avg)
 
         # check to see if we got here because a threat raster was missing
@@ -307,6 +281,9 @@ def execute(args):
 
                 returns - the total degradation score for the pixel"""
 
+            # we can not be certain how many threats the user will enter,
+            # so we handle each filtered threat and sensitivity raster
+            # in pairs
             sum_degradation = np.zeros(raster[0].shape)
             for index in range(len(raster) / 2):
                 step = index * 2
@@ -328,7 +305,7 @@ def execute(args):
         degradation_rasters.append(access_dataset_uri)
 
         deg_sum_uri = os.path.join(
-            output_dir, 'deg_sum_out' + lulc_key + suffix)
+            out_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting vectorize on total_degradation')
 
@@ -345,7 +322,7 @@ def execute(args):
         scaling_param = 2.5
 
         # a term used below to compute habitat quality
-        ksq = float(half_saturation**scaling_param)
+        ksq = half_saturation**scaling_param
 
         def quality_op(degradation, habitat):
             """Vectorized function that computes habitat quality given
@@ -359,15 +336,14 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
-            habitat_float = habitat.astype(np.float32)
-
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata,
-                    (habitat_float * (1.0 - ((degradation**scaling_param) /
+                    (habitat * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
-        quality_uri = os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
+        quality_uri = os.path.join(
+            out_dir, 'quality_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting vectorize on quality_op')
 
@@ -381,20 +357,20 @@ def execute(args):
     #Compute Rarity if user supplied baseline raster
     try:
         # will throw a KeyError exception if no base raster is provided
-        lulc_base_uri = biophysical_args['landuse_uri_dict']['_b']
+        lulc_base_uri = landuse_uri_dict['_b']
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
         base_area = raster_utils.get_cell_size_from_uri(lulc_base_uri) ** 2
         base_nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
-        rarity_nodata = float(np.finfo(np.float32).min)
+        rarity_nodata = -64329.0
 
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
 
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
-                lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
+                lulc_x = landuse_uri_dict[lulc_cover]
 
                 # get the area of a cur/fut pixel
                 lulc_area = raster_utils.get_cell_size_from_uri(lulc_x) ** 2
@@ -421,7 +397,7 @@ def execute(args):
                 LOGGER.debug('Create new cover for %s', lulc_cover)
 
                 new_cover_uri = os.path.join(
-                    intermediate_dir, 'new_cover' + lulc_cover + suffix)
+                    inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
 
                 LOGGER.debug('Starting vectorize on trim_op')
 
@@ -447,14 +423,15 @@ def execute(args):
                 for code in lulc_code_count_x.iterkeys():
                     try:
                         numerator = float(lulc_code_count_x[code] * lulc_area)
-                        denominator = float(lulc_code_count_b[code] * base_area)
+                        denominator = float(
+                            lulc_code_count_b[code] * base_area)
                         ratio = 1.0 - (numerator / denominator)
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
 
                 rarity_uri = os.path.join(
-                    output_dir, 'rarity' + lulc_cover + suffix)
+                    out_dir, 'rarity' + lulc_cover + suffix + '.tif')
 
                 LOGGER.debug('Starting vectorize on map_ratio')
 
@@ -516,8 +493,8 @@ def resolve_ambiguous_raster_path(uri, raise_error=True):
     # should fail gracefully
     if dataset is None and raise_error:
         raise Exception('There was an Error locating a threat raster in the '
-        'input folder. One of the threat names in the CSV table does not match '
-        'to a threat raster in the input folder. Please check that the names '
+        'input folder. One of the threat names in the CSV table does not match'
+        ' to a threat raster in the input folder. Please check that the names '
         'correspond. The threat raster that could not be found is : %s', uri)
 
     if dataset is None:
@@ -621,8 +598,8 @@ def raster_pixel_count(dataset_uri):
 
         dataset_uri - a GDAL raster dataset
 
-        returns -  a dictionary whose keys are the unique pixel values and whose
-                   values are the number of occurrences
+        returns -  a dictionary whose keys are the unique pixel values and
+                   whose values are the number of occurrences
     """
     LOGGER.debug('Entering raster_pixel_count')
     dataset = gdal.Open(dataset_uri)
@@ -645,8 +622,7 @@ def raster_pixel_count(dataset_uri):
 
 
 def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
-        out_nodata, raise_error, error_message='An Error occured mapping' + \
-        'a dictionary to a raster'):
+        out_nodata, raise_error):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
        corresponding to those keys is what is written to the new raster. If a
@@ -654,8 +630,8 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
        raise an Exception if 'raise_error' is True, otherwise return a
        'out_nodata'
 
-       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to the
-                     keys in 'attr_dict'
+       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to
+                     the keys in 'attr_dict'
        out_uri - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
                    in making into a raster
@@ -665,8 +641,6 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
        raise_error - a string that decides how to handle the case where the
            value from 'key_raster' is not found in 'attr_dict'. If 'raise_error'
            is 'values_required', raise Exception, if 'none', return 'out_nodata'
-       error_message - a string that is printed out with the raised Exception if
-           'raise_error' is set to True
 
        returns - a GDAL raster, or raises an Exception and fail if:
            1) raise_error is True and

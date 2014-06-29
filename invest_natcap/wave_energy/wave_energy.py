@@ -92,7 +92,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_file = open(args['machine_perf_uri'])
+    machine_perf_file = open(args['machine_perf_uri'], 'rU')
     reader = csv.reader(machine_perf_file)
     # Get the column header which is the first row in the file
     # and specifies the range of wave periods
@@ -114,7 +114,7 @@ def execute(args):
     # Create a dictionary whose keys are the 'NAMES' from the machine parameter
     # table and whose values are from the corresponding 'VALUES' field.
     machine_param_dict = {}
-    machine_param_file = open(args['machine_param_uri'])
+    machine_param_file = open(args['machine_param_uri'], 'rU')
     reader = csv.DictReader(machine_param_file)
     for row in reader:
         row_name = row['NAME'].strip().lower()
@@ -471,7 +471,7 @@ def execute(args):
 
     # Read machine economic parameters into a dictionary
     machine_econ = {}
-    machine_econ_file = open(args['machine_econ_uri'])
+    machine_econ_file = open(args['machine_econ_uri'], 'rU')
     reader = csv.DictReader(machine_econ_file)
     LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
     # Read in the field names from the column headers
@@ -486,7 +486,7 @@ def execute(args):
 
     # Read landing and power grid connection points into a dictionary
     land_grid_pts = {}
-    land_grid_pts_file = open(args['land_gridPts_uri'])
+    land_grid_pts_file = open(args['land_gridPts_uri'], 'rU')
     reader = csv.DictReader(land_grid_pts_file)
     for row in reader:
         LOGGER.debug('Land Grid Row: %s', row)

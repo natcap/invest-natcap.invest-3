@@ -92,11 +92,8 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
     #Sets up the intermediate and output directory structure for the workspace
-    for directory in [output_dir, intermediate_dir]:
-        if not os.path.exists(directory):
-            LOGGER.info('creating directory %s', directory)
-            os.makedirs(directory)
-
+    raster_utils.create_directories([output_dir, intermediate_dir])
+        
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
     
     #check if we've already prepared the DEM

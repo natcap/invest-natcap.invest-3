@@ -329,9 +329,14 @@ def new_raster_from_base(
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
+    
+    base_band = base.GetRasterBand(1)
+    block_size = base_band.GetBlockSize()
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+        'BLOCKYSIZE=%d' % block_size[1]])
+    base_band = None
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -662,7 +667,7 @@ def aggregate_raster_values_uri(
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
-    clipped_raster_uri = temporary_filename()
+    clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "union",
@@ -673,7 +678,7 @@ def aggregate_raster_values_uri(
 
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
-    mask_uri = temporary_filename()
+    mask_uri = temporary_filename(suffix='.tif')
     new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
@@ -990,7 +995,7 @@ def calculate_slope(
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
-    dem_small_uri = temporary_filename()
+    dem_small_uri = temporary_filename(suffix='.tif')
     #cast the dem to a floating point one if it's not already
     dem_float_nodata = float(dem_nodata)
 
@@ -1290,9 +1295,9 @@ def warp_reproject_dataset_uri(
     # Create the output dataset to receive the projected output, with the proper
     # resampled arrangement.
     output_dataset = gdal_driver.Create(
-            output_uri, int((lrx - ulx)/pixel_spacing),
-            int((uly - lry)/pixel_spacing), 1, output_type,
-            options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        output_uri, int((lrx - ulx)/pixel_spacing),
+        int((uly - lry)/pixel_spacing), 1, output_type,
+        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1794,13 +1799,13 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     return memory_array
 
 
-def temporary_filename():
+def temporary_filename(suffix=''):
     """Returns a temporary filename using mkstemp. The file is deleted
         on exit using the atexit register.
 
         returns a unique temporary filename"""
 
-    file_handle, path = tempfile.mkstemp()
+    file_handle, path = tempfile.mkstemp(suffix=suffix)
     os.close(file_handle)
 
     def remove_file(path):
@@ -1969,9 +1974,12 @@ def resize_and_resample_dataset_uri(
 
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
+    block_size = original_band.GetBlockSize()
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=[
+            'COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
@@ -2129,7 +2137,7 @@ def align_dataset_list(
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
 
-        mask_uri = temporary_filename()
+        mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         first_dataset = None
@@ -2188,7 +2196,8 @@ def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True, process_pool=None, vectorize_op=True):
+    assert_datasets_projected=True, process_pool=None, vectorize_op=True,
+    datasets_are_pre_aligned=False):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2248,6 +2257,13 @@ def vectorize_datasets(
             dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
             array broadcasting, set this parameter to False, else it may
             inefficiently invoke the function on individual elements.
+        datasets_are_pre_aligned - (optional) If this value is set to False
+            this operation will first align and interpolate the input datasets
+            based on the rules provided in bounding_box_mode,
+            resample_method_list, dataset_to_align_index, and 
+            dataset_to_bound_index, if set to True the input dataset list must
+            be aligned, probably by raster_utils.align_dataset_list
+            
             """
 
     if type(dataset_uri_list) != list:
@@ -2268,23 +2284,30 @@ def vectorize_datasets(
 
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
-    dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
+    if not datasets_are_pre_aligned:
+        #Handle the cases where optional arguments are passed in
+        if resample_method_list == None:
+            resample_method_list = ["nearest"] * len(dataset_uri_list)
+        if dataset_to_align_index == None:
+            dataset_to_align_index = -1
+        dataset_out_uri_list = [
+            temporary_filename(suffix='.tif') for _ in dataset_uri_list]
+        #Align and resample the datasets, then load datasets into a list
+        align_dataset_list(
+            dataset_uri_list, dataset_out_uri_list, resample_method_list,
+            pixel_size_out, bounding_box_mode, dataset_to_align_index,
+            dataset_to_bound_index=dataset_to_bound_index,
+            aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
+            process_pool=process_pool)
+        aligned_datasets = [
+            gdal.Open(filename, gdal.GA_Update) for filename in
+            dataset_out_uri_list]
+    else:
+        #otherwise the input datasets are already aligned
+        aligned_datasets = [
+            gdal.Open(filename, gdal.GA_Update) for filename in
+            dataset_uri_list]
 
-    #Handle the cases where optional arguments are passed in
-    if resample_method_list == None:
-        resample_method_list = ["nearest"] * len(dataset_uri_list)
-    if dataset_to_align_index == None:
-        dataset_to_align_index = -1
-
-    #Align and resample the datasets, then load datasets into a list
-    align_dataset_list(
-        dataset_uri_list, dataset_out_uri_list, resample_method_list,
-        pixel_size_out, bounding_box_mode, dataset_to_align_index,
-        dataset_to_bound_index=dataset_to_bound_index,
-        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
-        process_pool=process_pool)
-    aligned_datasets = [
-        gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
     #The output dataset will be the same size as any one of the aligned datasets
@@ -2297,7 +2320,7 @@ def vectorize_datasets(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        mask_uri = temporary_filename()
+        mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         mask_band = mask_dataset.GetRasterBand(1)
@@ -2309,7 +2332,9 @@ def vectorize_datasets(
         aoi_layer = None
         aoi_datasource = None
 
-    dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
+    dataset_rows = [
+        numpy.zeros((1, n_cols), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
+        in aligned_bands]
 
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
@@ -2346,11 +2371,13 @@ def vectorize_datasets(
     for dataset in aligned_datasets:
         gdal.Dataset.__swig_destroy__(dataset)
     aligned_datasets = None
-    for temp_dataset_uri in dataset_out_uri_list:
-        try:
-            os.remove(temp_dataset_uri)
-        except OSError:
-            LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
+    if not datasets_are_pre_aligned:
+        #if they weren't pre-aligned then we have temporary files to remove
+        for temp_dataset_uri in dataset_out_uri_list:
+            try:
+                os.remove(temp_dataset_uri)
+            except OSError:
+                LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
 
 
@@ -2872,7 +2899,7 @@ def distance_transform_edt(
 
         returns nothing"""
 
-    mask_as_byte_uri = temporary_filename()
+    mask_as_byte_uri = temporary_filename(suffix='.tif')
     nodata_mask = get_nodata_from_uri(input_mask_uri)
     out_pixel_size = get_cell_size_from_uri(input_mask_uri)
     nodata_out = 255
