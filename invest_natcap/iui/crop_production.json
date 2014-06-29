@@ -92,22 +92,41 @@
                                                                         "type" : "checkbox",
                                                                         "label" : "Existing yields",
                                                                         "defaultValue": true
-                                                                    },
-                                                                    {
-                                                                        "id": "enable_tab_percentile",
-                                                                        "args_id" : "enable_tab_percentile",
-                                                                        "type" : "checkbox",
-                                                                        "label" : "Percentile yields",
-                                                                        "defaultValue": false
-                                                                    },                                                                    
-                                                                    {
-                                                                        "id": "enable_tab_modeled",
-                                                                        "args_id" : "enable_tab_modeled",
-                                                                        "type" : "checkbox",
-                                                                        "label" : "Modeled yields",
-                                                                        "defaultValue": false
                                                                     }
                                                                 ]
+                                                            },
+                                                            {
+                                                                "id": "enable_tab_percentile",
+                                                                "args_id" : "enable_tab_percentile",
+                                                                "type" : "container",
+                                                                "label" : "Percentile yields",
+                                                                "defaultValue": false,
+                                                                "collapsible": true,
+                                                                "elements" : [
+                                                                    {
+                                                                        "id" : "percentile_list",
+                                                                        "type" : "list",
+                                                                        "elements" : [
+                                                                            {
+                                                                                "id": "income_raster",
+                                                                                "args_id" : "income_raster",
+                                                                                "type": "file",
+                                                                                "label": "Income raster",
+                                                                                "defaultValue" : "../CropProduction/input/OECDIncomeData.tif",
+                                                                                "validateAs": {"type": "GDAL"},
+                                                                                "required" : true,
+                                                                                "enabledBy" : "calculate_nutrition"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },                                                                    
+                                                            {
+                                                                "id": "enable_tab_modeled",
+                                                                "args_id" : "enable_tab_modeled",
+                                                                "type" : "checkbox",
+                                                                "label" : "Modeled yields",
+                                                                "defaultValue": false
                                                             },
                                                             {
                                                                 "id": "calculate_nutrition",
