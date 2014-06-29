@@ -18,7 +18,7 @@ import sys
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('agriculture')
+LOGGER = logging.getLogger('crop_production')
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
@@ -539,6 +539,17 @@ def mul_closure(nodata_list, nodata):
 
     return mul_op
 
+class NoKeyErrorDict:
+    def __init__(self, d, key_error_value):
+        self.d = d
+        self.key_error_value = key_error_value
+
+    def __getitem__(self, k):
+        try:
+            return self.d[k]
+        except KeyError:
+            return key_error_value
+
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
     LOGGER.debug("Loading configuration file: %s", config_uri)
@@ -612,7 +623,7 @@ def execute(args):
 
     report_uri = os.path.join(workspace_dir, report_name)
 
-    nutrient_name = "%s_nutrient_%s.tif"
+    nutrient_100g_name = "nutrient_100g_%s.tif"
 
     valuation_table_field_subregion = "Subregion"
 
@@ -629,6 +640,8 @@ def execute(args):
     fertilizer_name = "%i_%s.tif"
     fertilizer_prj_name = "%i_%s_prj.tif"
     fertilizer_cost_name = "%i_%s_cost.tif"
+
+    nutrient_name = "nutrient_%s.tif"
 
     extent_name = "extent.shp"
     extent_4326_name = "extent_4326.shp"
@@ -982,6 +995,15 @@ def execute(args):
 
 
         if args["calculate_nutrition"]:
+            def reclass_no_keyerror_closure(d, keyerror_value):
+                def reclass_no_keyerror_op(k):
+                    try:
+                        return d[k]
+                    except KeyError:
+                        return keyerror_value
+
+                return reclass_no_keyerror_op
+                    
             #load nutrition table
             nutrition_table_dict = raster_utils.get_lookup_from_csv(args["nutrition_table"],
                                                                     config["nutrition_table"]["id_field"])
@@ -993,9 +1015,28 @@ def execute(args):
                 if args_id in args:
                     LOGGER.info("Including nutrient %s in analysis.", nutrient)
                     if args[args_id] == "":
+                        nutrient_100g_uri = os.path.join(intermediate_uri, nutrient_100g_name % nutrient)
+                        
                         LOGGER.debug("Nutrient %s will be determined by nutrition CSV.", nutrient)
                         nutrient_selection[nutrient] = True
                         nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
+
+                        reclass_table = dict([(k,
+                                               nutrition_table_dict[k][nutrient]) for k in nutrition_table_dict.keys()])
+                        reclass_table[0] = 0.0
+
+                        nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrient_aliases[nutrient])
+
+                        raster_utils.vectorize_datasets([reclass_crop_cover_uri],
+                                                        reclass_no_keyerror_closure(reclass_table, nodata_float),
+                                                        nutrient_uri,
+                                                        gdal_type_float,
+                                                        nodata_float,
+                                                        cell_size,
+                                                        "dataset",
+                                                        dataset_to_bound_index=0,
+                                                        dataset_to_align_index=0)
+                        
                     else:
                         uri = args[args_id]
                         LOGGER.info("Overriding nutrient %s table values with raster %s.", nutrient, uri)
