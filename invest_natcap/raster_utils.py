@@ -334,7 +334,7 @@ def new_raster_from_base(
     block_size = base_band.GetBlockSize()
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+        options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
         'BLOCKYSIZE=%d' % block_size[1]])
     base_band = None
     new_raster.SetProjection(projection)
@@ -378,7 +378,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
         outputURI.encode('utf-8'), cols, rows, bands, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -529,7 +529,7 @@ def create_raster_from_vector_extents(
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -1297,7 +1297,7 @@ def warp_reproject_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
         int((uly - lry)/pixel_spacing), 1, output_type,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1978,7 +1978,7 @@ def resize_and_resample_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
         options=[
-            'COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
@@ -2111,8 +2111,7 @@ def align_dataset_list(
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
     result_list = []
-    #pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
-
+    
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
         if process_pool:
@@ -2127,9 +2126,7 @@ def align_dataset_list(
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
-    #pool.close()
-    #pool.join()
-
+    
     #If there's an AOI, mask it out
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
@@ -2310,11 +2307,6 @@ def vectorize_datasets(
 
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
-    #The output dataset will be the same size as any one of the aligned datasets
-    output_dataset = new_raster_from_base(
-        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
-    output_band = output_dataset.GetRasterBand(1)
-
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
@@ -2340,7 +2332,15 @@ def vectorize_datasets(
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-
+    
+    #The output dataset will be the same size as any one of the aligned datasets
+    output_dataset = new_raster_from_base(
+        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
+    output_band = output_dataset.GetRasterBand(1)
+    block_size = output_band.GetBlockSize()
+    n_col_blocks = n_cols / block_size[0]
+    n_row_blocks = n_rows / block_size[1]
+    
     for row_index in range(n_rows):
         for dataset_index in range(len(aligned_bands)):
             aligned_bands[dataset_index].ReadAsArray(
