@@ -47,7 +47,7 @@ def execute(args):
 
     workspace = args['workspace_dir']
 
-    # Append a _ to the suffix if it's not empty and doens't already have one
+    # Append a _ to the suffix if it's not empty and doesn't already have one
     try:
         suffix = args['suffix']
         if suffix != "" and not suffix.startswith('_'):
@@ -75,10 +75,10 @@ def execute(args):
     if input_dir is None:
         raise Exception(
             'The input directory where the threat rasters '
-            'should be located cannot be found.')
+            'should be located cannot be found. Please make sure the input '
+            'directory is located within the workspace specified.')
 
     threat_dict = make_dictionary_from_csv(args['threats_uri'],'THREAT')
-
     sensitivity_dict = make_dictionary_from_csv(
         args['sensitivity_uri'], 'LULC')
 
@@ -89,6 +89,7 @@ def execute(args):
             'The threat names in the threat table do '
             'not match the columns in the sensitivity table')
 
+    # get the half saturation constant
     half_saturation = float(args['half_saturation_constant'])
 
     # Determine which land cover scenarios we should run, and append the
@@ -189,8 +190,8 @@ def execute(args):
         degradation_rasters = []
 
         # a list to keep track of the normalized weight for each threat
-        #weight_list = []
         weight_list = np.array([])
+
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
         exit_landcover = False
@@ -212,8 +213,8 @@ def execute(args):
                 exit_landcover = True
                 break
 
-            # get the mean cell size, using absolute value because we could
-            # get a negative for height or width
+            # get the cell size from LULC to use for intermediate / output
+            # rasters
             cell_size = raster_utils.get_cell_size_from_uri(
                 args['landuse_cur_uri'])
 
@@ -257,7 +258,6 @@ def execute(args):
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
-            #weight_list.append(weight_avg)
             weight_list = np.append(weight_list, weight_avg)
 
         # check to see if we got here because a threat raster was missing
@@ -281,6 +281,9 @@ def execute(args):
 
                 returns - the total degradation score for the pixel"""
 
+            # we can not be certain how many threats the user will enter,
+            # so we handle each filtered threat and sensitivity raster
+            # in pairs
             sum_degradation = np.zeros(raster[0].shape)
             for index in range(len(raster) / 2):
                 step = index * 2
@@ -319,7 +322,7 @@ def execute(args):
         scaling_param = 2.5
 
         # a term used below to compute habitat quality
-        ksq = float(half_saturation**scaling_param)
+        ksq = half_saturation**scaling_param
 
         def quality_op(degradation, habitat):
             """Vectorized function that computes habitat quality given
@@ -333,12 +336,10 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
-            habitat_float = habitat.astype(np.float32)
-
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata,
-                    (habitat_float * (1.0 - ((degradation**scaling_param) /
+                    (habitat * (1.0 - ((degradation**scaling_param) /
                         (degradation**scaling_param + ksq)))))
 
         quality_uri = os.path.join(
@@ -362,7 +363,7 @@ def execute(args):
         # pixel sizes are different between base and cur/fut rasters
         base_area = raster_utils.get_cell_size_from_uri(lulc_base_uri) ** 2
         base_nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
-        rarity_nodata = float(np.finfo(np.float32).min)
+        rarity_nodata = -64329.0
 
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
 
