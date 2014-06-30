@@ -4,7 +4,7 @@ import os
 
 from osgeo import ogr
 
-import coastal_vulnerability_core
+import coastal_protection_core
 
 def execute(args):
     """This function invokes the coastal protection model given uri inputs 
