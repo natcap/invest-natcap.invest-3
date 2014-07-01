@@ -1990,10 +1990,14 @@ def resize_and_resample_dataset_uri(
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
 
+    def callback(dfComplete, pszMessage, pProgressArg):
+        LOGGER.info("ReprojectImage %.1f%% complete" % (dfComplete * 100))
+    
     # Perform the projection/resampling
     gdal.ReprojectImage(
         original_dataset, output_dataset, original_sr.ExportToWkt(), 
-        original_sr.ExportToWkt(), resample_dict[resample_method])
+        original_sr.ExportToWkt(), resample_dict[resample_method], 0, 0,
+        callback)
 
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
@@ -2324,34 +2328,39 @@ def vectorize_datasets(
         aoi_layer = None
         aoi_datasource = None
 
+    output_dataset = new_raster_from_base(
+        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
+    output_band = output_dataset.GetRasterBand(1)
+    block_size = output_band.GetBlockSize()
     dataset_rows = [
-        numpy.zeros((1, n_cols), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
+        numpy.zeros((block_size[1], block_size[0]), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
         in aligned_bands]
 
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-    
+
     #The output dataset will be the same size as any one of the aligned datasets
-    output_dataset = new_raster_from_base(
-        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
-    output_band = output_dataset.GetRasterBand(1)
-    block_size = output_band.GetBlockSize()
-    n_col_blocks = n_cols / block_size[0]
-    n_row_blocks = n_rows / block_size[1]
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = n_cols / cols_per_block
+    n_row_blocks = n_rows / rows_per_block
     
-    for row_index in range(n_rows):
-        for dataset_index in range(len(aligned_bands)):
-            aligned_bands[dataset_index].ReadAsArray(
-                0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        out_row = dataset_pixel_op(*dataset_rows)
+    for col_block_index in xrange(n_col_blocks):
+        for row_block_index in xrange(n_row_blocks):
+    #for row_index in range(n_rows):
+            for dataset_index in xrange(len(aligned_bands)):
+                aligned_bands[dataset_index].ReadAsArray(
+                    col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=dataset_rows[dataset_index])
+                #aligned_bands[dataset_index].ReadAsArray(
+                #    0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
+            out_row = dataset_pixel_op(*dataset_rows)
 
         #Mask out the row if there is a mask
         if aoi_uri != None:
-            mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
+            mask_band.ReadAsArray(col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=mask_array)
             out_row[mask_array == 0] = nodata_out
-        output_band.WriteArray(out_row, xoff=0, yoff=row_index)
+        output_band.WriteArray(out_row, xoff=col_block_index * cols_per_block, yoff=row_block_index * rows_per_block)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
@@ -2918,4 +2927,4 @@ def distance_transform_edt(
     try:
         os.remove(mask_as_byte_uri)
     except OSError:
-        LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
+        LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)

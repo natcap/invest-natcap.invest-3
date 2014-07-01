@@ -8,6 +8,8 @@ from invest_natcap import raster_utils
 
 
 if __name__ == '__main__':
+    gdal.SetCacheMax(2**27)
+
     lulc_uri = "C:\\Users\\rich\\Desktop\\am.tif"
     biomass_uri = "C:\\Users\\rich\\Desktop\\am_biov2ct1.tif"
     
