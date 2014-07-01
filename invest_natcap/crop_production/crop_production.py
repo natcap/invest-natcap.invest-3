@@ -18,7 +18,7 @@ import sys
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('agriculture')
+LOGGER = logging.getLogger('crop_production')
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
@@ -417,7 +417,7 @@ def calculate_valuation(crop_uri,
                                             dataset_to_bound_index=0)
 
 
-def mosaic_by_attribute_uri(crop_uri,
+def preprocess_fertilizer(crop_uri,
                           crop_list,
                           cell_size,
                           output_wkt,
@@ -459,38 +459,41 @@ def mosaic_by_attribute_uri(crop_uri,
 
     fertilizer_dict = {unknown_crop : nodata_uri}
     for crop in crop_list:
-        try:
-            LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
-            dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
-            
-            clip_uri = raster_utils.temporary_filename()
-
-            raster_utils.clip_dataset_uri(dataset_in_uri,
-                                          extent_uri,
-                                          clip_uri,
-                                          assert_projections=False)
-            
-            LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
-            clip_prj_uri = raster_utils.temporary_filename()
-
-
-            raster_utils.warp_reproject_dataset_uri(clip_uri,
-                                                    cell_size,
-                                                    output_wkt,
-                                                    "nearest",
-                                                    clip_prj_uri)
-
-            fertilizer_dict[crop] = clip_prj_uri
-
-        except:
-            e = sys.exc_info()[1]
-
-            if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
-                LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
-                fertilizer_dict[crop] = nodata_uri
+        if raster_table[crop][raster_field] == "":
+            fertilizer_dict[crop] = nodata_uri
+        else:
+            try:
+                LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
+                dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
                 
-            else:
-                raise e
+                clip_uri = raster_utils.temporary_filename()
+
+                raster_utils.clip_dataset_uri(dataset_in_uri,
+                                              extent_uri,
+                                              clip_uri,
+                                              assert_projections=False)
+                
+                LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
+                clip_prj_uri = raster_utils.temporary_filename()
+
+
+                raster_utils.warp_reproject_dataset_uri(clip_uri,
+                                                        cell_size,
+                                                        output_wkt,
+                                                        "nearest",
+                                                        clip_prj_uri)
+
+                fertilizer_dict[crop] = clip_prj_uri
+
+            except:
+                e = sys.exc_info()[1]
+
+                if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
+                    LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
+                    fertilizer_dict[crop] = nodata_uri
+                    
+                else:
+                    raise e
         
     LOGGER.info("Creating nitrogen raster.")
     raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
@@ -538,6 +541,17 @@ def mul_closure(nodata_list, nodata):
             return reduce(operator.mul, values)
 
     return mul_op
+
+class NoKeyErrorDict:
+    def __init__(self, d, key_error_value):
+        self.d = d
+        self.key_error_value = key_error_value
+
+    def __getitem__(self, k):
+        try:
+            return self.d[k]
+        except KeyError:
+            return key_error_value
 
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
@@ -592,6 +606,8 @@ def execute(args):
     raster_table_field_yield = "yield"
     raster_table_field_area = "harea"
 
+    raster_table_field_climate = "Climate"
+
     crop_yield_name = "%i_yield_masked.tif"
     clip_yield_name = "%i_yield_clip.tif"
     projected_yield_name = "%i_yield_prj.tif"
@@ -612,7 +628,7 @@ def execute(args):
 
     report_uri = os.path.join(workspace_dir, report_name)
 
-    nutrient_name = "%s_nutrient_%s.tif"
+    nutrient_100g_name = "nutrient_100g_%s.tif"
 
     valuation_table_field_subregion = "Subregion"
 
@@ -629,6 +645,8 @@ def execute(args):
     fertilizer_name = "%i_%s.tif"
     fertilizer_prj_name = "%i_%s_prj.tif"
     fertilizer_cost_name = "%i_%s_cost.tif"
+
+    nutrient_name = "nutrient_%s.tif"
 
     extent_name = "extent.shp"
     extent_4326_name = "extent_4326.shp"
@@ -776,7 +794,7 @@ def execute(args):
             LOGGER.debug("Creating nitrogen fertilizer raster.")
             nitrogen_uri = os.path.join(intermediate_uri, nitrogen_name)
 
-            mosaic_by_attribute_uri(reclass_crop_cover_uri,
+            preprocess_fertilizer(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -821,7 +839,7 @@ def execute(args):
             LOGGER.debug("Creating phosphorus raster.")
             phosphorus_uri = os.path.join(intermediate_uri, phosphorus_name)
 
-            mosaic_by_attribute_uri(reclass_crop_cover_uri,
+            preprocess_fertilizer(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -866,7 +884,7 @@ def execute(args):
             LOGGER.debug("Creating potassium raster.")
             potassium_uri = os.path.join(intermediate_uri, potassium_name)
 
-            mosaic_by_attribute_uri(reclass_crop_cover_uri,
+            preprocess_fertilizer(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -982,6 +1000,15 @@ def execute(args):
 
 
         if args["calculate_nutrition"]:
+            def reclass_no_keyerror_closure(d, keyerror_value):
+                def reclass_no_keyerror_op(k):
+                    try:
+                        return d[k]
+                    except KeyError:
+                        return keyerror_value
+
+                return reclass_no_keyerror_op
+                    
             #load nutrition table
             nutrition_table_dict = raster_utils.get_lookup_from_csv(args["nutrition_table"],
                                                                     config["nutrition_table"]["id_field"])
@@ -993,9 +1020,28 @@ def execute(args):
                 if args_id in args:
                     LOGGER.info("Including nutrient %s in analysis.", nutrient)
                     if args[args_id] == "":
+                        nutrient_100g_uri = os.path.join(intermediate_uri, nutrient_100g_name % nutrient)
+                        
                         LOGGER.debug("Nutrient %s will be determined by nutrition CSV.", nutrient)
                         nutrient_selection[nutrient] = True
                         nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
+
+                        reclass_table = dict([(k,
+                                               nutrition_table_dict[k][nutrient]) for k in nutrition_table_dict.keys()])
+                        reclass_table[0] = 0.0
+
+                        nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrient_aliases[nutrient])
+
+                        raster_utils.vectorize_datasets([reclass_crop_cover_uri],
+                                                        reclass_no_keyerror_closure(reclass_table, nodata_float),
+                                                        nutrient_uri,
+                                                        gdal_type_float,
+                                                        nodata_float,
+                                                        cell_size,
+                                                        "dataset",
+                                                        dataset_to_bound_index=0,
+                                                        dataset_to_align_index=0)
+                        
                     else:
                         uri = args[args_id]
                         LOGGER.info("Overriding nutrient %s table values with raster %s.", nutrient, uri)
@@ -1013,11 +1059,79 @@ def execute(args):
 ##                                nutrient_aliases)
 
 
-    #calculate existing yields
     if args["enable_tab_existing"]:
-        pass    
 
-return
+        yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
+        
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_yield,
+                          raster_path,
+                          extent_4326_uri,
+                          yield_uri)
+
+        area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_area,
+                          raster_path,
+                          extent_4326_uri,
+                          area_uri)
+
+    if args["enable_tab_existing"]:
+        climate_uri = os.path.join(intermediate_uri, "climate.tif")
+
+        preprocess_fertilizer(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_climate,
+                          raster_path,
+                          extent_4326_uri,
+                          climate_uri)
+        
+        yield_uri = os.path.join(intermediate_uri, "yield_percentile.tif")
+
+        
+                                
+
+    return
+
+    projected=True
+
+    #calculate existing yields
+    yield_list = []
+    if args["enable_tab_existing"]:
+
+        calculate_production_existing(reclass_crop_cover_uri,
+                                      raster_table_csv_dict,
+                                      raster_path,
+                                      raster_table_field_yield,
+                                      raster_table_field_area,
+                                      extent_4326_uri,
+                                      intermediate_uri,
+                                      clip_yield_name,
+                                      projected_yield_name,
+                                      crop_yield_name,
+                                      clip_area_name,
+                                      projected_area_name,
+                                      crop_area_name,
+                                      crop_production_name,
+                                      cell_size,
+                                      output_wkt,
+                                      gdal_type_float,
+                                      nodata_float,                                  
+                                      invest_crops,
+                                      projected)
+
+        yield_list.append(())
 
     #generate report tables
     for label, uri in yield_list:
