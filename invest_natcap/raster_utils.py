@@ -2352,22 +2352,24 @@ def vectorize_datasets(
     
     for col_block_index in xrange(n_col_blocks):
         for row_block_index in xrange(n_row_blocks):
-        
+        col_offset = col_block_index * cols_per_block
+        row_offset = row_block_index * rows_per_block
         #for row_index in range(n_rows):
             for dataset_index in xrange(len(aligned_bands)):
                 aligned_bands[dataset_index].ReadAsArray(
-                    col_block_index * cols_per_block,
-                    row_block_index * rows_per_block, cols_per_block,
-                    rows_per_block, buf_obj=dataset_blocks[dataset_index])
+                    col_offset, row_offset, cols_per_block, rows_per_block,
+                    buf_obj=dataset_blocks[dataset_index])
                 #aligned_bands[dataset_index].ReadAsArray(
                 #    0, row_index, n_cols, 1, buf_obj=dataset_blocks[dataset_index])
             out_block = dataset_pixel_op(*dataset_blocks)
 
             #Mask out the row if there is a mask
             if aoi_uri != None:
-                mask_band.ReadAsArray(col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=mask_array)
-                out_row[mask_array == 0] = nodata_out
-            output_band.WriteArray(out_block, xoff=col_block_index * cols_per_block, yoff=row_block_index * rows_per_block)
+                mask_band.ReadAsArray(
+                    col_offset, row_offset,, cols_per_block, rows_per_block,
+                    buf_obj=mask_array)
+                out_block[mask_array == 0] = nodata_out
+            output_band.WriteArray(out_block, xoff=col_offset, yoff=row_offset)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
