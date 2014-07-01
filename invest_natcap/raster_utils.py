@@ -2332,35 +2332,42 @@ def vectorize_datasets(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
     output_band = output_dataset.GetRasterBand(1)
     block_size = output_band.GetBlockSize()
-    dataset_rows = [
-        numpy.zeros((block_size[1], block_size[0]), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
-        in aligned_bands]
-
+    
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+    
+    dataset_blocks = [
+        numpy.zeros((rows_per_block, cols_per_block), 
+        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+    
+    LOGGER.info("%d %d" % (n_col_blocks, n_row_blocks))
+    
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
 
     #The output dataset will be the same size as any one of the aligned datasets
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = n_cols / cols_per_block
-    n_row_blocks = n_rows / rows_per_block
     
     for col_block_index in xrange(n_col_blocks):
         for row_block_index in xrange(n_row_blocks):
-    #for row_index in range(n_rows):
+        
+        #for row_index in range(n_rows):
             for dataset_index in xrange(len(aligned_bands)):
                 aligned_bands[dataset_index].ReadAsArray(
-                    col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=dataset_rows[dataset_index])
+                    col_block_index * cols_per_block,
+                    row_block_index * rows_per_block, cols_per_block,
+                    rows_per_block, buf_obj=dataset_blocks[dataset_index])
                 #aligned_bands[dataset_index].ReadAsArray(
-                #    0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-            out_row = dataset_pixel_op(*dataset_rows)
+                #    0, row_index, n_cols, 1, buf_obj=dataset_blocks[dataset_index])
+            out_block = dataset_pixel_op(*dataset_blocks)
 
-        #Mask out the row if there is a mask
-        if aoi_uri != None:
-            mask_band.ReadAsArray(col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=mask_array)
-            out_row[mask_array == 0] = nodata_out
-        output_band.WriteArray(out_row, xoff=col_block_index * cols_per_block, yoff=row_block_index * rows_per_block)
+            #Mask out the row if there is a mask
+            if aoi_uri != None:
+                mask_band.ReadAsArray(col_block_index * cols_per_block, row_block_index * rows_per_block, cols_per_block, rows_per_block, buf_obj=mask_array)
+                out_row[mask_array == 0] = nodata_out
+            output_band.WriteArray(out_block, xoff=col_block_index * cols_per_block, yoff=row_block_index * rows_per_block)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats

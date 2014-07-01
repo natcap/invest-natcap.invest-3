@@ -31,7 +31,7 @@ if __name__ == '__main__':
         return numpy.where((lulc != lulc_nodata) & (biomass != biomass_nodata),
             mask, mask_nodata)
             
-    cProfile.runctx("raster_utils.vectorize_datasets([lulc_uri, biomass_uri], mask_biomass, mask_uri, gdal.GDT_Byte, mask_nodata, cell_size, 'intersection', dataset_to_align_index=0, dataset_to_bound_index=None, aoi_uri=None, assert_datasets_projected=True, process_pool=None, vectorize_op=False, datasets_are_pre_aligned=False)", globals(), locals(), 'stats')
+    cProfile.runctx("raster_utils.vectorize_datasets([lulc_uri, biomass_uri], mask_biomass, mask_uri, gdal.GDT_Byte, mask_nodata, cell_size, 'intersection', dataset_to_align_index=0, dataset_to_bound_index=None, aoi_uri=None, assert_datasets_projected=True, process_pool=None, vectorize_op=False, datasets_are_pre_aligned=True)", globals(), locals(), 'stats')
             
     '''raster_utils.vectorize_datasets(
         [lulc_uri, biomass_uri], mask_biomass, mask_uri, gdal.GDT_Byte,
