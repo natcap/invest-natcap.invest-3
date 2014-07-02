@@ -417,7 +417,7 @@ def calculate_valuation(crop_uri,
                                             dataset_to_bound_index=0)
 
 
-def preprocess_fertilizer(crop_uri,
+def mosaic_by_attribute_uri(crop_uri,
                           crop_list,
                           cell_size,
                           output_wkt,
@@ -794,7 +794,7 @@ def execute(args):
             LOGGER.debug("Creating nitrogen fertilizer raster.")
             nitrogen_uri = os.path.join(intermediate_uri, nitrogen_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -839,7 +839,7 @@ def execute(args):
             LOGGER.debug("Creating phosphorus raster.")
             phosphorus_uri = os.path.join(intermediate_uri, phosphorus_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -884,7 +884,7 @@ def execute(args):
             LOGGER.debug("Creating potassium raster.")
             potassium_uri = os.path.join(intermediate_uri, potassium_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -1063,7 +1063,7 @@ def execute(args):
 
         yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
         
-        preprocess_fertilizer(reclass_crop_cover_uri,
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
                           invest_crops,
                           cell_size,
                           output_wkt,
@@ -1074,7 +1074,7 @@ def execute(args):
                           yield_uri)
 
         area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
-        preprocess_fertilizer(reclass_crop_cover_uri,
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
                           invest_crops,
                           cell_size,
                           output_wkt,
@@ -1087,7 +1087,7 @@ def execute(args):
     if args["enable_tab_existing"]:
         climate_uri = os.path.join(intermediate_uri, "climate.tif")
 
-        preprocess_fertilizer(reclass_crop_cover_uri,
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
                           invest_crops,
                           cell_size,
                           output_wkt,
