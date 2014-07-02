@@ -130,7 +130,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     I_ptr = <long *>malloc((cell_count) * sizeof(long))
     J_ptr = <long *>malloc((cell_count) * sizeof(long))
 
-    # Loop through the rows
+    # Loop through the ows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
@@ -553,7 +553,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
 cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
-    np.ndarray[np.int8_t, ndim = 2] visibility_map):
+    np.ndarray[np.float64_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -595,7 +595,6 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
             visibility = 1
         else:
             visibility = 0
-        # Need to update max_visibility
         if p.visibility > max_visibility:
             max_visibility = p.visibility
 
@@ -632,7 +631,7 @@ def sweep_through_angles( \
     np.ndarray[np.int32_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
-    np.ndarray[np.int8_t, ndim = 2, mode="c"] visibility_map):
+    np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2

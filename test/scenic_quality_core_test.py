@@ -101,7 +101,7 @@ class TestScenicQuality(unittest.TestCase):
 	raster = gdal.Open(base_dem_uri)
         band = raster.GetRasterBand(1)
         base_array = band.ReadAsArray()
-        (rows, cols) = array.shape
+        (rows, cols) = base_array.shape
         band = None
         raster = None
         cell_size = raster_utils.get_cell_size_from_uri(base_dem_uri)
@@ -152,10 +152,10 @@ class TestScenicQuality(unittest.TestCase):
             'obs_elev', obs_elev, 'tgt_elev', tgt_elev)
 
         raster_utils.new_raster_from_base_uri( \
-            base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
+            base_dem_uri, flat_dem_uri, 'GTiff', 2., gdal.GDT_Float32, \
             fill_value = base_dem_nodata, n_rows = rows, n_cols = cols)
 
-	raster = gdal.Open(base_dem_uri, gdal.GA_Update)
+	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 
