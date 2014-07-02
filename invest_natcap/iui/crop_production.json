@@ -2063,7 +2063,7 @@
                                                     "elements" : [                                    
                                                                     {
                                                                         "id": "percentile_field",
-                                                                        "args_id": "percentile_field"
+                                                                        "args_id": "percentile_field",
                                                                         "type": "dropdown",
                                                                         "label": "Percentile",
                                                                         "options":["25", "50", "75", "95"],
