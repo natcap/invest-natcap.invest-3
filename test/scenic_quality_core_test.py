@@ -100,9 +100,8 @@ class TestScenicQuality(unittest.TestCase):
         base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
 	raster = gdal.Open(base_dem_uri)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        base_array = band.ReadAsArray()
         (rows, cols) = array.shape
-        array = None
         band = None
         raster = None
         cell_size = raster_utils.get_cell_size_from_uri(base_dem_uri)
@@ -156,14 +155,14 @@ class TestScenicQuality(unittest.TestCase):
             base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
             fill_value = base_dem_nodata, n_rows = rows, n_cols = cols)
 
-	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
+	raster = gdal.Open(base_dem_uri, gdal.GA_Update)
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 
         alg_version = 'python'
-        print('array_shape', array.shape)
+        print('array_shape', base_array.shape)
         print('viewpoint', viewpoint)
-        visibility = sqc.compute_viewshed(array, base_dem_nodata, \
+        visibility = sqc.compute_viewshed(base_array, base_dem_nodata, \
             viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
             refraction_coeff, alg_version)
         visibility[viewpoint[0], viewpoint[1]] = 2
@@ -171,6 +170,7 @@ class TestScenicQuality(unittest.TestCase):
         #    input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
         #    (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         band.WriteArray(visibility)
+	print('file saved in', os.path.join(os.getcwd(), flat_dem_uri))
 
     def test_visibility_multiple_points(self):
         pass
