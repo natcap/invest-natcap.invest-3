@@ -65,22 +65,112 @@ class TestScenicQuality(unittest.TestCase):
         print(visibility)
 
     def test_visibility_flat_surface(self):
-        structure_uri = "../../AQ_Rob/Block_Island fast alg/SQ/1 pt/e911_132.shp"
-        shapefile = ogr.Open(structure_uri)
-        assert shapefile is not None
-        base_dem_uri = "../../AQ_Rob/Block_Island fast alg/SQ/bi_100meters/hdr.adf"
+        DEM_size = 30
+        base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
+        base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
         flat_dem_uri = "flat_dem.tif"
         raster_utils.new_raster_from_base_uri( \
             base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
-            fill_value = 0., n_rows = 100, n_cols = 100)
+            fill_value = base_dem_nodata, n_rows = DEM_size, n_cols = DEM_size)
 	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
-        
-        pass
+        elevation = band.ReadAsArray()
+        viewpoint = (DEM_size/2, DEM_size/2)
+        elevation[viewpoint[0]+1, viewpoint[1]+1] = 2.
+        obs_elev = 1.0
+        tgt_elev = 0.0
+        max_dist = 10 
+        cell_size = 5.0
+        refraction_coeff = 1.0
+        alg_version = 'python'
+        visibility = sqc.compute_viewshed(elevation, base_dem_nodata, \
+            viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
+            refraction_coeff, alg_version)
+        visibility[DEM_size/2, DEM_size/2] = 2
+        print(visibility)
 
     def test_visibility_simple_obstacles(self):
-        pass
+        obs_elev = 1.0
+        tgt_elev = 0.0
+        max_dist = -1.0
+        coefficient = 1.0
+        height = 0.0
+        refraction_coeff = 0.13
+        base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
+        base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
+	raster = gdal.Open(base_dem_uri)
+        band = raster.GetRasterBand(1)
+        base_array = band.ReadAsArray()
+        (rows, cols) = array.shape
+        band = None
+        raster = None
+        cell_size = raster_utils.get_cell_size_from_uri(base_dem_uri)
+        GT = raster_utils.get_geotransform_uri(base_dem_uri)
+        iGT = gdal.InvGeoTransform(GT)[1]
+        flat_dem_uri = "flat_dem.tif"
+
+        structure_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/1_pt/e911_132.shp"
+        shapefile = ogr.Open(structure_uri)
+        assert shapefile is not None
+        layer = shapefile.GetLayer(0)
+        assert layer is not None
+        feature = layer.GetFeature(0)
+        field_count = feature.GetFieldCount()
+        # Check for feature information (radius, coeff, height)
+        for field in range(field_count):
+            field_def = feature.GetFieldDefnRef(field)
+            field_name = field_def.GetNameRef()
+            if (field_name.upper() == 'RADIUS2') or \
+                (field_name.upper() == 'RADIUS'):
+                max_dist = abs(int(feature.GetField(field)))
+                assert max_dist is not None, "max distance can't be None"
+                max_dist = int(max_dist/cell_size)
+            if field_name.lower() == 'coeff':
+                coefficient = float(feature.GetField(field))
+                assert coefficient is not None, "feature coeff can't be None"
+            if field_name.lower() == 'offseta':
+                obs_elev = float(feature.GetField(field))
+                assert obs_elev is not None, "OFFSETA can't be None"
+            if field_name.lower() == 'offsetb':
+                tgt_elev = float(feature.GetField(field))
+                assert tgt_elev is not None, "OFFSETB can't be None"
+                
+        geometry = feature.GetGeometryRef()
+        assert geometry is not None
+        message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+        ' point is "POINT"'
+        assert geometry.GetGeometryName() == 'POINT', message
+        x = geometry.GetX()
+        y = geometry.GetY()
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+
+        viewpoint = (i, j)
+
+        print('x', x, 'y', y, 'i', i, 'j', j)
+        print('RADIUS', max_dist, 'coefficient', coefficient, \
+            'obs_elev', obs_elev, 'tgt_elev', tgt_elev)
+
+        raster_utils.new_raster_from_base_uri( \
+            base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
+            fill_value = base_dem_nodata, n_rows = rows, n_cols = cols)
+
+	raster = gdal.Open(base_dem_uri, gdal.GA_Update)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+
+        alg_version = 'python'
+        print('array_shape', base_array.shape)
+        print('viewpoint', viewpoint)
+        visibility = sqc.compute_viewshed(base_array, base_dem_nodata, \
+            viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
+            refraction_coeff, alg_version)
+        visibility[viewpoint[0], viewpoint[1]] = 2
+        #scenic_quality_core.viewshed(
+        #    input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
+        #    (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+        band.WriteArray(visibility)
+	print('file saved in', os.path.join(os.getcwd(), flat_dem_uri))
 
     def test_visibility_multiple_points(self):
         pass

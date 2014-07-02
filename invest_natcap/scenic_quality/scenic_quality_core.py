@@ -1042,6 +1042,13 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
         Returns a tuple (rows, cols) of the cell rows and columns following
         the convention of numpy.where() where the first cell is immediately
         right to the viewpoint, and the others are enumerated clockwise."""
+    message = 'viewpoint ' + str(viewpoint) + \
+        ' outside of the raster boundaries ' + str(array_shape) + '.'
+    assert viewpoint[0] >= 0, message 
+    assert viewpoint[0] < array_shape[0], message
+    assert viewpoint[1] >= 0, message
+    assert viewpoint[1] < array_shape[1], message
+
     # Adjust max_dist to a very large value if negative
     if max_dist < 0:
         max_dist = 1000000000
