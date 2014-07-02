@@ -889,7 +889,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
     return (True, 'All is well')
 
-def update_visible_pixels(active_pixels, I, J, visibility_map):
+def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -906,6 +906,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
                 referenced by the key 'closest'.
                 -I: the array of pixel rows indexable by pixel['index']
                 -J: the array of pixel columns indexable by pixel['index']
+                -d: distance in meters
                 -visibility_map: a python array the same size as the DEM
                 with 1s for visible pixels and 0s otherwise. Viewpoint is
                 always visible.
@@ -935,6 +936,8 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         j = J[index]
         if visibility_map[i, j] == 0:
             visibility_map[i, j] = visibility
+        # TODO: Remove this! Debug only!
+        visibility_map[i, j] = pixel['visibility']
         pixel = pixel['next']
 
 def find_active_pixel(sweep_line, distance):
@@ -1181,10 +1184,12 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     I += row_min
     J += col_min
     distances_sq = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
+    distances = np.sqrt(distances_sq)
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
-    visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
+    visibility = (input_array[(I, J)]) # - \
+    print('visibility shape', visibility.shape)
+    #input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
     offset_visibility = visibility + tgt_elev
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
@@ -1198,16 +1203,16 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility += correction
     offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
-    visibility /= np.sqrt(distances_sq)
-    offset_visibility /= np.sqrt(distances_sq)
+    visibility /= distances
+    offset_visibility /= distances
 
-    #alg_version = 'python'
+    alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles(angles, add_events, center_events, remove_events,\
-        I, J, distances_sq, visibility, offset_visibility, visibility_map)
+        I, J, distances, visibility, offset_visibility, visibility_map)
     else:
         scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
-        center_events, remove_events, I, J, distances_sq, \
+        center_events, remove_events, I, J, distances, \
         offset_visibility, visibility, visibility_map)
 
     # Set the viewpoint visible as a convention
@@ -1261,7 +1266,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         active_line = add_active_pixel(active_line, c, d, v, o)
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, visibility_map)
+        update_visible_pixels(active_line, I, J, d, visibility_map)
     
     #print('cell center events', [center_events[e] for e in cell_center_events])
     #print('cell center events', [e for e in cell_center_events])
@@ -1308,7 +1313,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         #print('remove cell events', [remove_events[e] for e in remove_cell_events])
         #print('remove cell events', [e for e in remove_cell_events])
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, visibility_map)
+        update_visible_pixels(active_line, I, J, d, visibility_map)
 
 
 def execute(args):

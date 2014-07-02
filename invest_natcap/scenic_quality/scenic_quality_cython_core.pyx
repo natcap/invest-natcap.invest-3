@@ -628,7 +628,7 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] remove_events, \
     np.ndarray[np.int32_t, ndim = 1, mode="c"] I, \
     np.ndarray[np.int32_t, ndim = 1, mode="c"] J, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] distances, \
+    np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
