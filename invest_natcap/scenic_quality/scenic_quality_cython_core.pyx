@@ -530,7 +530,7 @@ cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, \
     return closest
 
 
-def update_visible_pixels(active_pixels, I, J, visibility_map):
+def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     """Python wrapper for the cython function update_visible_pixels"""
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
@@ -541,7 +541,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     active_pixels_length = max(0, len(active_pixels) -1)
     cdef ActivePixel *closest = dict_to_active_pixels(active_pixels)
 
-    update_visible_pixels_cython(closest, I, J, visibility_map)
+    update_visible_pixels_cython(closest, I, J, d, visibility_map)
 
     pixels_deleted = delete_active_pixels(closest)
 
@@ -553,6 +553,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
 cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
+    np.float64_t d, \
     np.ndarray[np.float64_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
@@ -602,6 +603,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
             visibility_map[I[index], J[index]] = visibility
+        visibility_map[I[index], J[index]] = p.visibility
         pixel = p.next
 
 #    while pixel is not NULL:
@@ -629,8 +631,8 @@ def sweep_through_angles( \
     np.ndarray[np.int32_t, ndim = 1, mode="c"] I, \
     np.ndarray[np.int32_t, ndim = 1, mode="c"] J, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
-    np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
-    np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
+    np.ndarray[np.float32_t, ndim = 1, mode="c"] offset_visibility, \
+    np.ndarray[np.float32_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
@@ -673,7 +675,7 @@ def sweep_through_angles( \
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython(active_pixels, I, J, visibility_map)
+        update_visible_pixels_cython(active_pixels, I, J, d, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
@@ -699,7 +701,7 @@ def sweep_through_angles( \
             active_pixels = remove_active_pixel_cython(active_pixels, d)
             remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython(active_pixels, I, J, visibility_map)
+        update_visible_pixels_cython(active_pixels, I, J, d, visibility_map)
 
     # clean up
     free(cell_events)

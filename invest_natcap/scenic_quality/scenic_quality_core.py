@@ -1200,17 +1200,27 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     #print("refraction coeff", refraction_coeff)
     #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
     #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
-    visibility += correction
-    offset_visibility += correction
+    #visibility += correction
+    #offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
-    visibility /= distances
-    offset_visibility /= distances
+    #visibility /= distances
+    #offset_visibility /= distances
 
-    alg_version = 'python'
+    #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances, visibility, offset_visibility, visibility_map)
     else:
+        #print('angles', type(angles[0]))
+        #print('add_events', type(add_events[0]))
+        #print('center_events', type(center_events[0]))
+        #print('remove_events', type(remove_events[0]))
+        #print('I', type(I[0]))
+        #print('J', type(J[0]))
+        #print('distances', type(distances[0]))
+        #print('offset_visibility', type(offset_visibility[0]))
+        #print('visibility', type(visibility[0]))
+        #print('visibility_map', type(visibility_map[0, 0]))
         scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
         center_events, remove_events, I, J, distances, \
         offset_visibility, visibility, visibility_map)
