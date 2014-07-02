@@ -2324,7 +2324,7 @@ def vectorize_datasets(
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
-        mask_array = numpy.zeros((1, n_cols))
+        mask_array = numpy.zeros((1, n_cols), dtype=numpy.int8)
         aoi_layer = None
         aoi_datasource = None
 
@@ -2347,8 +2347,10 @@ def vectorize_datasets(
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-
-    #The output dataset will be the same size as any one of the aligned datasets
+    
+    dataset_blocks = [
+        numpy.zeros((rows_per_block, cols_per_block),
+        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
     
     for col_block_index in xrange(n_col_blocks):
         for row_block_index in xrange(n_row_blocks):
