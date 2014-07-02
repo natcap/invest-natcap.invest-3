@@ -90,18 +90,26 @@ class TestScenicQuality(unittest.TestCase):
         print(visibility)
 
     def test_visibility_simple_obstacles(self):
-        DEM_size = 30
-        base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
-        base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
-        GT = raster_utils.get_geotransform_uri(base_dem_uri)
-        iGT = gdal.InvGeoTransform(GT)[1]
-        flat_dem_uri = "flat_dem.tif"
-
         obs_elev = 1.0
         tgt_elev = 0.0
         max_dist = -1.0
         coefficient = 1.0
         height = 0.0
+        refraction_coeff = 0.13
+        base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
+        base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
+	raster = gdal.Open(base_dem_uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+        (rows, cols) = array.shape
+        array = None
+        band = None
+        raster = None
+        cell_size = raster_utils.get_cell_size_from_uri(base_dem_uri)
+        GT = raster_utils.get_geotransform_uri(base_dem_uri)
+        iGT = gdal.InvGeoTransform(GT)[1]
+        flat_dem_uri = "flat_dem.tif"
+
         structure_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/1_pt/e911_132.shp"
         shapefile = ogr.Open(structure_uri)
         assert shapefile is not None
@@ -117,7 +125,7 @@ class TestScenicQuality(unittest.TestCase):
                 (field_name.upper() == 'RADIUS'):
                 max_dist = abs(int(feature.GetField(field)))
                 assert max_dist is not None, "max distance can't be None"
-                max_dist = int(max_dist)
+                max_dist = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
                 coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
@@ -138,21 +146,31 @@ class TestScenicQuality(unittest.TestCase):
         j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
 
+        viewpoint = (i, j)
+
         print('x', x, 'y', y, 'i', i, 'j', j)
         print('RADIUS', max_dist, 'coefficient', coefficient, \
             'obs_elev', obs_elev, 'tgt_elev', tgt_elev)
 
         raster_utils.new_raster_from_base_uri( \
             base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
-            fill_value = base_dem_nodata, n_rows = DEM_size, n_cols = DEM_size)
+            fill_value = base_dem_nodata, n_rows = rows, n_cols = cols)
 
 	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 
+        alg_version = 'python'
+        print('array_shape', array.shape)
+        print('viewpoint', viewpoint)
+        visibility = sqc.compute_viewshed(array, base_dem_nodata, \
+            viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
+            refraction_coeff, alg_version)
+        visibility[viewpoint[0], viewpoint[1]] = 2
         #scenic_quality_core.viewshed(
         #    input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
         #    (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+        band.WriteArray(visibility)
 
     def test_visibility_multiple_points(self):
         pass
