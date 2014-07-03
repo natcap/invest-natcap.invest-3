@@ -1055,6 +1055,7 @@ def clip_dataset_uri(
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
+    LOGGER.info("clipping dataset %s" % (source_dataset_uri))
     vectorize_datasets(
         [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
@@ -2321,12 +2322,12 @@ def vectorize_datasets(
             aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
             process_pool=process_pool)
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_Update) for filename in
+            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_out_uri_list]
     else:
         #otherwise the input datasets are already aligned
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_Update) for filename in
+            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_uri_list]
 
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
