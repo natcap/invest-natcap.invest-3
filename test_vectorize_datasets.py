@@ -38,10 +38,10 @@ if __name__ == '__main__':
         assert_datasets_projected=True, process_pool=None, vectorize_op=False,
         datasets_are_pre_aligned=False)'''
     
-    #forest_edge_distance_uri = "C:\\Users\\rich\\Desktop\\forest_edge.tif"
-    #cProfile.runctx("raster_utils.distance_transform_edt(mask_uri, forest_edge_distance_uri)", globals(), locals(), 'stats')
+    forest_edge_distance_uri = "C:\\Users\\rich\\Desktop\\forest_edge.tif"
+    cProfile.runctx("raster_utils.distance_transform_edt(mask_uri, forest_edge_distance_uri)", globals(), locals(), 'stats')
 
-    subregion_project_uri = "C:\\Users\\rich\\Desktop\\subregion_project.tif"
+    '''subregion_project_uri = "C:\\Users\\rich\\Desktop\\subregion_project.tif"
     reclass_crop_cover_uri = "C:\\Users\\rich\\Desktop\\crop_reclass.tif"
     
     out_list = [
@@ -55,7 +55,7 @@ if __name__ == '__main__':
         out_list,
         ["nearest", "nearest"], cell_size, "dataset", 0,
         dataset_to_bound_index=0)
-        
-    #p = pstats.Stats('stats')
-    #p.sort_stats('time').print_stats(20)
-    #p.sort_stats('cumulative').print_stats(20)
+       ''' 
+    p = pstats.Stats('stats')
+    p.sort_stats('time').print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
