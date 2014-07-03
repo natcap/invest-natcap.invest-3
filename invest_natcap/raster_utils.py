@@ -2362,8 +2362,6 @@ def vectorize_datasets(
         aoi_layer = None
         aoi_datasource = None
     
-    LOGGER.info("%d %d" % (n_col_blocks, n_row_blocks))
-    
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
@@ -2396,12 +2394,16 @@ def vectorize_datasets(
 
             #Mask out the row if there is a mask
             if aoi_uri != None:
-                mask_band.ReadAsArray(
-                    col_offset, row_offset, cols_per_block, rows_per_block,
-                    buf_obj=mask_array)
+                if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                    mask_band.ReadAsArray(
+                        col_offset, row_offset, local_col_index, local_row_index,
+                        buf_obj=mask_array)
+                else:
+                    mask_band.ReadAsArray(
+                        col_offset, row_offset, cols_per_block, rows_per_block,
+                        buf_obj=mask_array)
                 out_block[mask_array == 0] = nodata_out
-
-            
+        
             if local_col_index < cols_per_block or local_row_index < rows_per_block:
                 LOGGER.info("at the edge, %d %d vs %d %d" % (cols_per_block, rows_per_block, local_col_index, local_row_index))
                 output_band.WriteArray(
