@@ -3,6 +3,7 @@ import logging
 import os
 
 from osgeo import gdal, ogr, osr
+#gdal.UseExceptions()
 
 from invest_natcap import raster_utils
 
@@ -1188,7 +1189,7 @@ def execute(args):
                           extent_4326_uri,
                           area_uri)
 
-    if args["enable_tab_existing"]:
+    if args["enable_tab_percentile"]:
         climate_uri = os.path.join(intermediate_uri, "climate.tif")
 
         mosaic_by_attribute_uri(reclass_crop_cover_uri,
@@ -1297,6 +1298,8 @@ def execute(args):
                                         dataset_to_bound_index=0,
                                         dataset_to_align_index=0)                                        
                                                       
+
+
 
     return
 
