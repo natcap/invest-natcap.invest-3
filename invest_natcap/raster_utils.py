@@ -2374,13 +2374,22 @@ def vectorize_datasets(
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
     
     for col_block_index in xrange(n_col_blocks):
+        col_offset = col_block_index * cols_per_block
+        local_col_index = (n_cols - col_offset)
+        
         for row_block_index in xrange(n_row_blocks):
-            col_offset = col_block_index * cols_per_block
             row_offset = row_block_index * rows_per_block
+            local_row_index = (n_rows - row_offset)
+            
             for dataset_index in xrange(len(aligned_bands)):
-                aligned_bands[dataset_index].ReadAsArray(
-                    col_offset, row_offset, cols_per_block, rows_per_block,
-                    buf_obj=dataset_blocks[dataset_index])
+                if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                    aligned_bands[dataset_index].ReadAsArray(
+                        col_offset, row_offset, local_col_index, local_row_index,
+                        buf_obj=dataset_blocks[dataset_index])
+                else:
+                    aligned_bands[dataset_index].ReadAsArray(
+                        col_offset, row_offset, cols_per_block, rows_per_block,
+                        buf_obj=dataset_blocks[dataset_index])
                 #aligned_bands[dataset_index].ReadAsArray(
                 #    0, row_index, n_cols, 1, buf_obj=dataset_blocks[dataset_index])
             out_block = dataset_pixel_op(*dataset_blocks)
@@ -2391,7 +2400,16 @@ def vectorize_datasets(
                     col_offset, row_offset, cols_per_block, rows_per_block,
                     buf_obj=mask_array)
                 out_block[mask_array == 0] = nodata_out
-            output_band.WriteArray(out_block, xoff=col_offset, yoff=row_offset)
+
+            
+            if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                LOGGER.info("%d %d" % (local_col_index, local_row_index))
+                output_band.WriteArray(
+                    out_block[0:local_row_index, 0:local_col_index],
+                    xoff=col_offset, yoff=row_offset)
+            else:
+                output_band.WriteArray(
+                    out_block, xoff=col_offset, yoff=row_offset)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
