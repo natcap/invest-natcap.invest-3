@@ -2335,20 +2335,6 @@ def vectorize_datasets(
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
-    #If there's an AOI, mask it out
-    if aoi_uri != None:
-        mask_uri = temporary_filename(suffix='.tif')
-        mask_dataset = new_raster_from_base(
-            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
-        mask_band = mask_dataset.GetRasterBand(1)
-        mask_band.Fill(0)
-        aoi_datasource = ogr.Open(aoi_uri)
-        aoi_layer = aoi_datasource.GetLayer()
-        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
-        mask_array = numpy.zeros((1, n_cols), dtype=numpy.int8)
-        aoi_layer = None
-        aoi_datasource = None
-
     output_dataset = new_raster_from_base(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
     output_band = output_dataset.GetRasterBand(1)
@@ -2361,6 +2347,20 @@ def vectorize_datasets(
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block), 
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+    
+    #If there's an AOI, mask it out
+    if aoi_uri != None:
+        mask_uri = temporary_filename(suffix='.tif')
+        mask_dataset = new_raster_from_base(
+            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        mask_band = mask_dataset.GetRasterBand(1)
+        mask_band.Fill(0)
+        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_layer = aoi_datasource.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+        mask_array = numpy.zeros((rows_per_block, cols_per_block), dtype=numpy.int8)
+        aoi_layer = None
+        aoi_datasource = None
     
     LOGGER.info("%d %d" % (n_col_blocks, n_row_blocks))
     
@@ -2403,7 +2403,7 @@ def vectorize_datasets(
 
             
             if local_col_index < cols_per_block or local_row_index < rows_per_block:
-                LOGGER.info("%d %d" % (local_col_index, local_row_index))
+                LOGGER.info("at the edge, %d %d vs %d %d" % (cols_per_block, rows_per_block, local_col_index, local_row_index))
                 output_band.WriteArray(
                     out_block[0:local_row_index, 0:local_col_index],
                     xoff=col_offset, yoff=row_offset)
