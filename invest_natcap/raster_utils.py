@@ -15,6 +15,7 @@ import multiprocessing
 import multiprocessing.pool
 import tables
 import heapq
+import time
 
 from osgeo import gdal
 from osgeo import osr
@@ -1990,15 +1991,30 @@ def resize_and_resample_dataset_uri(
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
 
-    def callback(dfComplete, pszMessage, pProgressArg):
-        LOGGER.info("ReprojectImage %.1f%% complete" % (dfComplete * 100))
+    #create a time object so we only update if a long time has passed
+    class Time():
+        def __init__(self):
+            self.last_time = time.time()
+    
+    #need to make this a closure so we get the current time and we can affect
+    #state
+    def make_callback(time_obj):
+        def callback(dfComplete, pszMessage, pProgressArg):
+            current_time = time.time()
+            if ((current_time - time_obj.last_time > 2.0) or 
+                (dfComplete in [0.0, 1.0])):
+                LOGGER.info("ReprojectImage %.1f%% complete %s" % 
+                    (dfComplete * 100, pProgressArg[0]))
+                time_obj.last_time = current_time
+        return callback
     
     # Perform the projection/resampling
     gdal.ReprojectImage(
         original_dataset, output_dataset, original_sr.ExportToWkt(), 
         original_sr.ExportToWkt(), resample_dict[resample_method], 0, 0,
-        callback)
+        make_callback(Time()), [output_uri])
 
+    output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
     calculate_raster_stats_uri(output_uri)
