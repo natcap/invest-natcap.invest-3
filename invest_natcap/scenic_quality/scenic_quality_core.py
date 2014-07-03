@@ -1200,8 +1200,8 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     #print("refraction coeff", refraction_coeff)
     #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
     #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
-    #visibility += correction
-    #offset_visibility += correction
+    visibility += correction
+    offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
     #visibility /= distances
     #offset_visibility /= distances
