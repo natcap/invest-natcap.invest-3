@@ -2929,7 +2929,8 @@ def distance_transform_edt(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
         nodata_out, out_pixel_size, "union",
         dataset_to_align_index=0, assert_datasets_projected=False, 
-        process_pool=process_pool, vectorize_op=False)
+        process_pool=process_pool, vectorize_op=False,
+        datasets_are_pre_aligned=True)
     
     #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
