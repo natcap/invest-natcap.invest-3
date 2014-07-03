@@ -2300,8 +2300,8 @@ def vectorize_datasets(
             "%s is used as an output file, but it is also an input file "
             "in the input list %s" % (dataset_out_uri, str(dataset_uri_list)))
 
-    if len(dataset_uri_list) == 1:
-        #if there's only one raster, no need to align items
+    if len(dataset_uri_list) == 1 and aoi_uri == None:
+        #if there's only one raster and no aoi to clip, no need to align items
         datasets_are_pre_aligned = True
             
     #Create a temporary list of filenames whose files delete on the python
