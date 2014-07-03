@@ -139,7 +139,7 @@
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "1.0",
-                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9]{18})?",
                                     "dataType": "float",
                                     "required": true,
                                     "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
@@ -150,7 +150,7 @@
                                     "type": "text",
                                     "label": "'b' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "0.0",
-                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9]{18})?",
                                     "dataType": "float",
                                     "required": true,
                                     "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
@@ -161,7 +161,7 @@
                                     "type": "text",
                                     "label": "'c' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
-                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9]{18})?",
                                     "dataType": "float",
                                     "required": true,
                                     "helpText": "Third coefficient for the polynomial's quadratic term."
@@ -172,7 +172,7 @@
                                     "type": "text",
                                     "label": "'d' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "[0-9]+(\\.[0-9]{18})?",
                                     "dataType": "float",
                                     "required": true,
                                     "helpText": "Fourth coefficient for the polynomial's cubic exponent."
@@ -183,7 +183,7 @@
                                     "type": "text",
                                     "label": "Maximum valuation radius (m)",
                                     "defaultValue": "8000.0",
-                                    "validText": "-?[0-9]+(\\.[0-9][0-9])?",
+                                    "validText": "-?[0-9]+(\\.[0-9]{18})?",
                                     "dataType": "float",
                                     "required": true,
                                     "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."

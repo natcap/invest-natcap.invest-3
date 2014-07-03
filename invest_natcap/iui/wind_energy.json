@@ -287,14 +287,14 @@
                             "args_id": "rate_change",
                             "type": "text",
                             "width": 70,
-                            "label": "Annual Rate of Change in Price of Wind Energy (%)",
+                            "label": "Annual Rate of Change in Price of Wind Energy (proportion)",
                             "required": true,
                             "dataType": "float",
                             "defaultValue": "0",
                             "validText" : "[-+]?[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "[-+]?[0-9]*\\.?[0-9]+$"}},
-                            "helpText": "The rate of change as a percent for the price of wind energy per year.",
+                            "helpText": "The rate of change as a proportion for the price of wind energy per year.",
                             "disabledBy" : "price_table",
                             "required" : true
                         }

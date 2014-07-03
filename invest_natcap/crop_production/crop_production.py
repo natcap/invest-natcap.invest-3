@@ -3,7 +3,6 @@ import logging
 import os
 
 from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
 
 from invest_natcap import raster_utils
 
@@ -18,7 +17,7 @@ import sys
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('agriculture')
+LOGGER = logging.getLogger('crop_production')
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
@@ -417,7 +416,7 @@ def calculate_valuation(crop_uri,
                                             dataset_to_bound_index=0)
 
 
-def preprocess_fertilizer(crop_uri,
+def mosaic_by_attribute_uri(crop_uri,
                           crop_list,
                           cell_size,
                           output_wkt,
@@ -459,38 +458,41 @@ def preprocess_fertilizer(crop_uri,
 
     fertilizer_dict = {unknown_crop : nodata_uri}
     for crop in crop_list:
-        try:
-            LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
-            dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
-            
-            clip_uri = raster_utils.temporary_filename()
-
-            raster_utils.clip_dataset_uri(dataset_in_uri,
-                                          extent_uri,
-                                          clip_uri,
-                                          assert_projections=False)
-            
-            LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
-            clip_prj_uri = raster_utils.temporary_filename()
-
-
-            raster_utils.warp_reproject_dataset_uri(clip_uri,
-                                                    cell_size,
-                                                    output_wkt,
-                                                    "nearest",
-                                                    clip_prj_uri)
-
-            fertilizer_dict[crop] = clip_prj_uri
-
-        except:
-            e = sys.exc_info()[1]
-
-            if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
-                LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
-                fertilizer_dict[crop] = nodata_uri
+        if raster_table[crop][raster_field] == "":
+            fertilizer_dict[crop] = nodata_uri
+        else:
+            try:
+                LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
+                dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
                 
-            else:
-                raise e
+                clip_uri = raster_utils.temporary_filename()
+
+                raster_utils.clip_dataset_uri(dataset_in_uri,
+                                              extent_uri,
+                                              clip_uri,
+                                              assert_projections=False)
+                
+                LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
+                clip_prj_uri = raster_utils.temporary_filename()
+
+
+                raster_utils.warp_reproject_dataset_uri(clip_uri,
+                                                        cell_size,
+                                                        output_wkt,
+                                                        "nearest",
+                                                        clip_prj_uri)
+
+                fertilizer_dict[crop] = clip_prj_uri
+
+            except:
+                e = sys.exc_info()[1]
+
+                if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
+                    LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
+                    fertilizer_dict[crop] = nodata_uri
+                    
+                else:
+                    raise e
         
     LOGGER.info("Creating nitrogen raster.")
     raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
@@ -539,6 +541,122 @@ def mul_closure(nodata_list, nodata):
 
     return mul_op
 
+class NoKeyErrorDict:
+    def __init__(self, d, key_error_value):
+        self.d = d
+        self.key_error_value = key_error_value
+
+    def __getitem__(self, k):
+        try:
+            return self.d[k]
+        except KeyError:
+            return key_error_value
+
+def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
+    """Creates a shapefile with the bounding box from a raster.
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
+    LOGGER.debug("Creating extent from: %s", dataset_uri)
+    LOGGER.debug("Storing extent in: %s", datasource_uri)
+    geotransform = raster_utils.get_geotransform_uri(dataset_uri)
+    bounding_box = raster_utils.get_bounding_box(dataset_uri)
+    upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+
+    if os.path.exists(datasource_uri):
+        driver.DeleteDataSource(datasource_uri)
+
+    datasource = driver.CreateDataSource(datasource_uri)
+    if datasource is None:
+        msg = "Could not create %s." % datasource_uri
+        LOGGER.error(msg)
+        raise IOError, msg
+
+    dataset = gdal.Open(dataset_uri)
+
+    field_name = "Id"
+    field_value = 1
+
+    #add projection
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(dataset.GetProjectionRef())
+
+    #create layer with field definitions
+    layer = datasource.CreateLayer("raster", geom_type = ogr.wkbPolygon, srs = srs)
+    field_defn = ogr.FieldDefn(field_name,ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    feature_defn = layer.GetLayerDefn()
+
+    #create polygon
+    polygon = ogr.Geometry(ogr.wkbPolygon)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+
+    ring.AddPoint(upper_left_x, upper_left_y)
+    ring.AddPoint(lower_right_x, upper_left_y)
+    ring.AddPoint(lower_right_x, lower_right_y)
+    ring.AddPoint(upper_left_x, lower_right_y)
+    ring.AddPoint(upper_left_x, upper_left_y)
+
+    ring.CloseRings()
+    polygon.AddGeometry(ring)
+
+    # create a new feature
+    feature = ogr.Feature(feature_defn)
+    feature.SetGeometry(polygon)
+    feature.SetField(field_name, field_value)
+
+    layer.CreateFeature(feature)
+
+    #clean up and write to disk
+    polygon = None
+    feature = None
+
+    datasource = None
+
+def clip_project_align_dataset_uri(unclipped_uri, reference_uri, clipped_uri, align_method="nearest"):
+    extent_uri = os.path.join(raster_utils.temporary_folder(), "tmp.shp")
+    projected_extent_uri = os.path.join(raster_utils.temporary_folder(), "tmp.shp")
+    clip_uri = raster_utils.temporary_filename()
+    projected_clip_uri = raster_utils.temporary_filename()
+    reference_align_uri = raster_utils.temporary_filename()
+
+    input_wkt = gdal.Open(unclipped_uri).GetProjection()
+    output_wkt = gdal.Open(reference_uri).GetProjection()
+    cell_size = raster_utils.get_cell_size_from_uri(reference_uri)
+
+    datasource_from_dataset_bounding_box_uri(reference_uri, extent_uri)
+    raster_utils.reproject_datasource_uri(extent_uri, input_wkt, projected_extent_uri)    
+    
+    #clip
+    raster_utils.clip_dataset_uri(unclipped_uri,
+                                  projected_extent_uri,
+                                  clip_uri,
+                                  assert_projections=False)
+    #project
+    raster_utils.warp_reproject_dataset_uri(clip_uri,
+                                            cell_size,
+                                            output_wkt,
+                                            align_method,
+                                            projected_clip_uri)
+
+    #align
+    raster_utils.align_dataset_list([reference_uri,
+                                     projected_clip_uri],
+                                    [reference_align_uri,
+                                     clipped_uri],
+                                    [align_method, align_method],
+                                    cell_size,
+                                    "dataset",
+                                    0,
+                                    dataset_to_bound_index=0)
+        
 def execute(args):
     config_uri = os.path.join(os.path.dirname(__file__), "config.json")
     LOGGER.debug("Loading configuration file: %s", config_uri)
@@ -592,6 +710,8 @@ def execute(args):
     raster_table_field_yield = "yield"
     raster_table_field_area = "harea"
 
+    raster_table_field_climate = "Climate"
+
     crop_yield_name = "%i_yield_masked.tif"
     clip_yield_name = "%i_yield_clip.tif"
     projected_yield_name = "%i_yield_prj.tif"
@@ -612,7 +732,7 @@ def execute(args):
 
     report_uri = os.path.join(workspace_dir, report_name)
 
-    nutrient_name = "%s_nutrient_%s.tif"
+    nutrient_100g_name = "nutrient_100g_%s.tif"
 
     valuation_table_field_subregion = "Subregion"
 
@@ -629,6 +749,8 @@ def execute(args):
     fertilizer_name = "%i_%s.tif"
     fertilizer_prj_name = "%i_%s_prj.tif"
     fertilizer_cost_name = "%i_%s_cost.tif"
+
+    nutrient_name = "nutrient_%s.tif"
 
     extent_name = "extent.shp"
     extent_4326_name = "extent_4326.shp"
@@ -776,7 +898,7 @@ def execute(args):
             LOGGER.debug("Creating nitrogen fertilizer raster.")
             nitrogen_uri = os.path.join(intermediate_uri, nitrogen_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -821,7 +943,7 @@ def execute(args):
             LOGGER.debug("Creating phosphorus raster.")
             phosphorus_uri = os.path.join(intermediate_uri, phosphorus_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -866,7 +988,7 @@ def execute(args):
             LOGGER.debug("Creating potassium raster.")
             potassium_uri = os.path.join(intermediate_uri, potassium_name)
 
-            preprocess_fertilizer(reclass_crop_cover_uri,
+            mosaic_by_attribute_uri(reclass_crop_cover_uri,
                               invest_crops,
                               cell_size,
                               output_wkt,
@@ -982,6 +1104,15 @@ def execute(args):
 
 
         if args["calculate_nutrition"]:
+            def reclass_no_keyerror_closure(d, keyerror_value):
+                def reclass_no_keyerror_op(k):
+                    try:
+                        return d[k]
+                    except KeyError:
+                        return keyerror_value
+
+                return reclass_no_keyerror_op
+                    
             #load nutrition table
             nutrition_table_dict = raster_utils.get_lookup_from_csv(args["nutrition_table"],
                                                                     config["nutrition_table"]["id_field"])
@@ -993,9 +1124,28 @@ def execute(args):
                 if args_id in args:
                     LOGGER.info("Including nutrient %s in analysis.", nutrient)
                     if args[args_id] == "":
+                        nutrient_100g_uri = os.path.join(intermediate_uri, nutrient_100g_name % nutrient)
+                        
                         LOGGER.debug("Nutrient %s will be determined by nutrition CSV.", nutrient)
                         nutrient_selection[nutrient] = True
                         nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
+
+                        reclass_table = dict([(k,
+                                               nutrition_table_dict[k][nutrient]) for k in nutrition_table_dict.keys()])
+                        reclass_table[0] = 0.0
+
+                        nutrient_uri = os.path.join(intermediate_uri, nutrient_name % nutrient_aliases[nutrient])
+
+                        raster_utils.vectorize_datasets([reclass_crop_cover_uri],
+                                                        reclass_no_keyerror_closure(reclass_table, nodata_float),
+                                                        nutrient_uri,
+                                                        gdal_type_float,
+                                                        nodata_float,
+                                                        cell_size,
+                                                        "dataset",
+                                                        dataset_to_bound_index=0,
+                                                        dataset_to_align_index=0)
+                        
                     else:
                         uri = args[args_id]
                         LOGGER.info("Overriding nutrient %s table values with raster %s.", nutrient, uri)
@@ -1012,6 +1162,141 @@ def execute(args):
 ##                                invest_crops,
 ##                                nutrient_aliases)
 
+
+    if args["enable_tab_existing"]:
+
+        yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
+        
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_yield,
+                          raster_path,
+                          extent_4326_uri,
+                          yield_uri)
+
+        area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_area,
+                          raster_path,
+                          extent_4326_uri,
+                          area_uri)
+
+    if args["enable_tab_existing"]:
+        climate_uri = os.path.join(intermediate_uri, "climate.tif")
+
+        mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                          invest_crops,
+                          cell_size,
+                          output_wkt,
+                          raster_table_csv_dict,
+                          raster_table_field_climate,
+                          raster_path,
+                          extent_4326_uri,
+                          climate_uri)
+        
+        
+
+
+        LOGGER.debug("Creating income raster.")
+        income_uri = os.path.join(intermediate_uri, "income.tif")
+
+        clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
+
+        percentile = int(args["percentile_field"])
+        LOGGER.debug("Creating yield using %i percent.", percentile)
+        yield_uri = os.path.join(intermediate_uri, "yield_percentile.tif")
+
+        def percentile_yield_closer(reclass_crop_cover_uri,
+                                    climate_uri,
+                                    income_uri,
+                                    file_index_uri,
+                                    raster_path,
+                                    file_index_field_key,
+                                    file_index_field_percentile,
+                                    percentile_field_key,
+                                    percentile,
+                                    default_value = 0,
+                                    nodata = -1,
+                                    ignore_crop=None):
+
+            file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
+            crop_types = list(raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys())
+
+            if ignore_crop != None:
+                try:
+                    crop_types = set(crop_types)
+                    crop_types.remove(ignore_crop)
+                except KeyError:
+                    LOGGER.warning("Ignore crop %i not present.", ignore_crop)
+                crop_types = list(crop_types)
+                
+            yield_dict = {}
+            for crop in crop_types:
+                csv_uri = file_index[crop][file_index_field_percentile]
+                if csv_uri != "":
+                    csv_uri = os.path.join(raster_path, csv_uri)
+                    LOGGER.debug("Processing: %s", csv_uri)
+                    yield_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
+                                                                        percentile_field_key)
+                else:
+                    yield_dict[crop] = NoKeyErrorDict({}, nodata)
+
+            incomes = ["Nodata", "HiIncome%i", "MedIncome%i", "LowIncome%i", "AllIncome%i"]
+
+            nodata_list = [raster_utils.get_nodata_from_uri(raster) for raster in [reclass_crop_cover_uri,
+                                                                                    climate_uri,
+                                                                                    income_uri]]
+            def percentile_yield_op(crop, climate, income):
+                #print crop, climate, income
+                if any([apply(operator.eq, pair) for pair in zip([crop, climate, income], nodata_list)]):
+                    return nodata
+                elif ignore_crop != None and crop == ignore_crop:
+                    return default_value
+                elif income == 0 or climate == 0:
+                    return nodata
+                else:
+                    try:
+                        return float(yield_dict[int(crop)][int(climate)][incomes[int(income)] % percentile])
+                    except ValueError:
+                        try:
+                            return float(yield_dict[crop][climate][incomes[4] % percentile])
+                        except ValueError:
+                            return default_value
+
+            return percentile_yield_op
+
+        percentile_yield_op = percentile_yield_closer(reclass_crop_cover_uri,
+                                                      climate_uri,
+                                                      income_uri,
+                                                      raster_table_uri,
+                                                      raster_path,
+                                                      raster_table_field_key,
+                                                      "CBI_yield",
+                                                      "ClimateBin",
+                                                      percentile,
+                                                      default_value = 0,
+                                                      nodata = -1,
+                                                      ignore_crop = 0)
+
+        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                         climate_uri,
+                                         income_uri],
+                                        percentile_yield_op,
+                                        yield_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0,
+                                        dataset_to_align_index=0)                                        
+                                                      
 
     return
 

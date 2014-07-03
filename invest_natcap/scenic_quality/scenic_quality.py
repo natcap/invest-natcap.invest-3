@@ -190,7 +190,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
+        2., gdal.GDT_Float32, fill_value = 2.)
 
     # Call the non-uri version of viewshed.
     #compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,

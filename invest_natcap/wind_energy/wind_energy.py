@@ -917,8 +917,7 @@ def execute(args):
         for index in xrange(len(year_keys)):
             price_list.append(price_dict[year_keys[index]])
     else:
-        # Convert rate of change from percent to decimal value
-        change_rate = float(args["rate_change"]) / 100.0
+        change_rate = float(args["rate_change"])
         wind_price = float(args["wind_price"])
         # Build up a list of price values where the indices of the list
         # are the time steps for the lifespan of the farm and values
