@@ -2386,13 +2386,22 @@ def vectorize_datasets(
         numpy.zeros((rows_per_block, cols_per_block),
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
     
-    for col_block_index in xrange(n_col_blocks):
-        col_offset = col_block_index * cols_per_block
-        local_col_index = (n_cols - col_offset)
-        
-        for row_block_index in xrange(n_row_blocks):
-            row_offset = row_block_index * rows_per_block
-            local_row_index = (n_rows - row_offset)
+    last_time = time.time()
+    
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        local_row_index = (n_rows - row_offset)
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            local_col_index = (n_cols - col_offset)
+            
+            current_time = time.time()
+            if current_time - last_time > 2.0:
+                LOGGER.info(
+                    'on block index %d %d out of %d %d' % (row_block_index,
+                    col_block_index, n_row_blocks, n_col_blocks))
+                last_time = current_time
             
             for dataset_index in xrange(len(aligned_bands)):
                 if local_col_index < cols_per_block or local_row_index < rows_per_block:
@@ -2990,7 +2999,7 @@ def distance_transform_edt(
         dataset_to_align_index=0, assert_datasets_projected=False, 
         process_pool=process_pool, vectorize_op=False,
         datasets_are_pre_aligned=True,
-        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % n_rows])
+        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
     
     #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
