@@ -36,26 +36,10 @@ if __name__ == '__main__':
         dataset_to_bound_index=None, aoi_uri=None,
         assert_datasets_projected=True, process_pool=None, vectorize_op=False,
         datasets_are_pre_aligned=True)
-    sys.exit(1)
     
     forest_edge_distance_uri = "C:\\Users\\rich\\Desktop\\forest_edge.tif"
     cProfile.runctx("raster_utils.distance_transform_edt(mask_uri, forest_edge_distance_uri)", globals(), locals(), 'stats')
 
-    '''subregion_project_uri = "C:\\Users\\rich\\Desktop\\subregion_project.tif"
-    reclass_crop_cover_uri = "C:\\Users\\rich\\Desktop\\crop_reclass.tif"
-    
-    out_list = [
-        "C:\\Users\\rich\\Desktop\\subregion_project_align.tif",
-        "C:\\Users\\rich\\Desktop\\crop_reclass_align.tif",]
-    
-    out_pixel_size = raster_utils.get_cell_size_from_uri(subregion_project_uri)
-    
-    raster_utils.align_dataset_list(
-        [reclass_crop_cover_uri, subregion_project_uri],
-        out_list,
-        ["nearest", "nearest"], cell_size, "dataset", 0,
-        dataset_to_bound_index=0)
-       ''' 
     p = pstats.Stats('stats')
     p.sort_stats('time').print_stats(20)
     p.sort_stats('cumulative').print_stats(20)
