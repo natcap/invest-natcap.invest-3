@@ -924,9 +924,11 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
         # Pixel is visible
         if pixel['offset'] > max_visibility:
             visibility = 1
+            visibility = pixel['offset'] - max_visibility
         # Pixel is not visible
         else:
             visibility = 0
+            visibility = pixel['offset'] - max_visibility
         # Update max_visibility for this pixel
         if pixel['visibility'] > max_visibility:
 	    max_visibility = pixel['visibility']
@@ -937,7 +939,7 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
         if visibility_map[i, j] == 0:
             visibility_map[i, j] = visibility
         # TODO: Remove this! Debug only!
-        visibility_map[i, j] = pixel['visibility']
+        #visibility_map[i, j] = pixel['visibility']
         pixel = pixel['next']
 
 def find_active_pixel(sweep_line, distance):
@@ -1187,9 +1189,8 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     distances = np.sqrt(distances_sq)
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
-    visibility = (input_array[(I, J)]) # - \
-    print('visibility shape', visibility.shape)
-    #input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
+    visibility = (input_array[(I, J)] - \
+    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
     offset_visibility = visibility + tgt_elev
     # 2- Factor the effect of refraction in the elevation.
     # From the equation on the ArcGIS website:
@@ -1203,27 +1204,30 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility += correction
     offset_visibility += correction
     # 3- Divide the height by the distance to get a visibility score
-    #visibility /= distances
-    #offset_visibility /= distances
+    visibility /= distances * cell_size
+    offset_visibility /= distances * cell_size
 
-    #alg_version = 'python'
+    alg_version = 'python'
     if alg_version is 'python':
-        sweep_through_angles(angles, add_events, center_events, remove_events,\
-        I, J, distances, visibility, offset_visibility, visibility_map)
+        sweep_through_angles( \
+            angles, add_events, center_events, remove_events,\
+            I, J, distances, offset_visibility, visibility, \
+            visibility_map)
     else:
-        #print('angles', type(angles[0]))
-        #print('add_events', type(add_events[0]))
-        #print('center_events', type(center_events[0]))
-        #print('remove_events', type(remove_events[0]))
-        #print('I', type(I[0]))
-        #print('J', type(J[0]))
-        #print('distances', type(distances[0]))
-        #print('offset_visibility', type(offset_visibility[0]))
-        #print('visibility', type(visibility[0]))
-        #print('visibility_map', type(visibility_map[0, 0]))
-        scenic_quality_cython_core.sweep_through_angles(angles, add_events,\
-        center_events, remove_events, I, J, distances, \
-        offset_visibility, visibility, visibility_map)
+        print('angles', type(angles[0]))
+        print('add_events', type(add_events[0]))
+        print('center_events', type(center_events[0]))
+        print('remove_events', type(remove_events[0]))
+        print('I', type(I[0]))
+        print('J', type(J[0]))
+        print('distances', type(distances[0]))
+        print('offset_visibility', type(offset_visibility[0]))
+        print('visibility', type(visibility[0]))
+        print('visibility_map', type(visibility_map[0, 0]))
+        scenic_quality_cython_core.sweep_through_angles( \
+            angles, add_events, center_events, remove_events, \
+            I, J, distances, offset_visibility, visibility, \
+            visibility_map)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
@@ -1231,7 +1235,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     return visibility_map
 
 def sweep_through_angles(angles, add_events, center_events, remove_events, \
-    I, J, distances, visibility, offset_visibility, visibility_map):
+    I, J, distances, offset_visibility, visibility, visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     angle_count = len(angles)
     # 4- build event lists
