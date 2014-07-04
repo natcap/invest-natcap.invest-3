@@ -3,7 +3,6 @@ import logging
 import os
 
 from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
 
 from invest_natcap import raster_utils
 

@@ -15,6 +15,7 @@ import multiprocessing
 import multiprocessing.pool
 import tables
 import heapq
+import time
 
 from osgeo import gdal
 from osgeo import osr
@@ -43,6 +44,8 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float64: numpy.float64
     }
 
+gdal.SetCacheMax(2**27) #128MB of cache
+    
 class NoDaemonProcess(multiprocessing.Process):
     """A class to make non-deamonic pools in case we want to have pools of
         pools"""
@@ -149,7 +152,7 @@ def get_row_col_from_uri(dataset_uri):
 
         dataset_uri - a uri to a gdal dataset
 
-        returns nodata value for dataset band 1"""
+        returns (n_row, n_col) tuplie from dataset_uri"""
 
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
@@ -298,7 +301,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None):
+    n_rows=None, n_cols=None, dataset_options=[]):
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
@@ -319,6 +322,8 @@ def new_raster_from_base(
             if not, the number of rows of the outgoing dataset are equal to
             the base.
         n_cols - (optional) similar to n_rows, but for the columns.
+        dataset_options - (optional) a list of dataset options that gets
+            passed to the gdal creation driver, overrides defaults
 
         returns a new GDAL raster dataset."""
 
@@ -332,10 +337,15 @@ def new_raster_from_base(
     
     base_band = base.GetRasterBand(1)
     block_size = base_band.GetBlockSize()
+    
+    if dataset_options == []:
+        dataset_options = [
+            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]]
+    LOGGER.info('dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
-        'BLOCKYSIZE=%d' % block_size[1]])
+        options=dataset_options)
     base_band = None
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
@@ -378,7 +388,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
         outputURI.encode('utf-8'), cols, rows, bands, datatype,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -529,7 +539,7 @@ def create_raster_from_vector_extents(
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -1054,6 +1064,7 @@ def clip_dataset_uri(
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
+    LOGGER.info("clipping dataset %s" % (source_dataset_uri))
     vectorize_datasets(
         [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
@@ -1297,7 +1308,7 @@ def warp_reproject_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
         int((uly - lry)/pixel_spacing), 1, output_type,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1978,7 +1989,7 @@ def resize_and_resample_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
         options=[
-            'COMPRESS=LZW', 'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
@@ -1990,11 +2001,30 @@ def resize_and_resample_dataset_uri(
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
 
+    #create a time object so we only update if a long time has passed
+    class Time():
+        def __init__(self):
+            self.last_time = time.time()
+    
+    #need to make this a closure so we get the current time and we can affect
+    #state
+    def make_callback(time_obj):
+        def callback(dfComplete, pszMessage, pProgressArg):
+            current_time = time.time()
+            if ((current_time - time_obj.last_time > 2.0) or 
+                (dfComplete in [0.0, 1.0])):
+                LOGGER.info("ReprojectImage %.1f%% complete %s" % 
+                    (dfComplete * 100, pProgressArg[0]))
+                time_obj.last_time = current_time
+        return callback
+    
     # Perform the projection/resampling
     gdal.ReprojectImage(
         original_dataset, output_dataset, original_sr.ExportToWkt(), 
-        original_sr.ExportToWkt(), resample_dict[resample_method])
+        original_sr.ExportToWkt(), resample_dict[resample_method], 0, 0,
+        make_callback(Time()), [output_uri])
 
+    output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
     calculate_raster_stats_uri(output_uri)
@@ -2111,8 +2141,7 @@ def align_dataset_list(
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
     result_list = []
-    #pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
-
+    
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
         if process_pool:
@@ -2127,9 +2156,7 @@ def align_dataset_list(
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
-    #pool.close()
-    #pool.join()
-
+    
     #If there's an AOI, mask it out
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
@@ -2197,7 +2224,7 @@ def vectorize_datasets(
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
     assert_datasets_projected=True, process_pool=None, vectorize_op=True,
-    datasets_are_pre_aligned=False):
+    datasets_are_pre_aligned=False, dataset_options=[]):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2263,6 +2290,9 @@ def vectorize_datasets(
             resample_method_list, dataset_to_align_index, and 
             dataset_to_bound_index, if set to True the input dataset list must
             be aligned, probably by raster_utils.align_dataset_list
+        dataset_options - (optional) this is an argument list that will be
+            passed to the GTiff driver.  Useful for blocksizes, compression,
+            etc.
             
             """
 
@@ -2282,6 +2312,10 @@ def vectorize_datasets(
             "%s is used as an output file, but it is also an input file "
             "in the input list %s" % (dataset_out_uri, str(dataset_uri_list)))
 
+    if len(dataset_uri_list) == 1 and aoi_uri == None:
+        #if there's only one raster and no aoi to clip, no need to align items
+        datasets_are_pre_aligned = True
+            
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     if not datasets_are_pre_aligned:
@@ -2300,58 +2334,108 @@ def vectorize_datasets(
             aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
             process_pool=process_pool)
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_Update) for filename in
+            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_out_uri_list]
     else:
         #otherwise the input datasets are already aligned
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_Update) for filename in
+            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_uri_list]
 
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
-    #The output dataset will be the same size as any one of the aligned datasets
-    output_dataset = new_raster_from_base(
-        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
-    output_band = output_dataset.GetRasterBand(1)
-
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
+    output_dataset = new_raster_from_base(
+        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out,
+        dataset_options=dataset_options)
+    output_band = output_dataset.GetRasterBand(1)
+    block_size = output_band.GetBlockSize()
+    
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+    
+    dataset_blocks = [
+        numpy.zeros((rows_per_block, cols_per_block), 
+        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+    
     #If there's an AOI, mask it out
     if aoi_uri != None:
         mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
-            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
+            dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
-        mask_array = numpy.zeros((1, n_cols))
+        mask_array = numpy.zeros((rows_per_block, cols_per_block), dtype=numpy.int8)
         aoi_layer = None
         aoi_datasource = None
-
-    dataset_rows = [
-        numpy.zeros((1, n_cols), dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band
-        in aligned_bands]
-
+    
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
+    
+    LOGGER.info("rows_per_block, cols_per_block, %d, %d" % (rows_per_block, cols_per_block))
+    dataset_blocks = [
+        numpy.zeros((rows_per_block, cols_per_block),
+        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+    
+    last_time = time.time()
+    
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        local_row_index = (n_rows - row_offset)
 
-    for row_index in range(n_rows):
-        for dataset_index in range(len(aligned_bands)):
-            aligned_bands[dataset_index].ReadAsArray(
-                0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        out_row = dataset_pixel_op(*dataset_rows)
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            local_col_index = (n_cols - col_offset)
+            
+            current_time = time.time()
+            if current_time - last_time > 2.0:
+                LOGGER.info(
+                    'on block index %d %d out of %d %d' % (row_block_index,
+                    col_block_index, n_row_blocks, n_col_blocks))
+                last_time = current_time
+            
+            for dataset_index in xrange(len(aligned_bands)):
+                if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                    aligned_bands[dataset_index].ReadAsArray(
+                        col_offset, row_offset, local_col_index, local_row_index,
+                        buf_obj=dataset_blocks[dataset_index])
+                else:
+                    aligned_bands[dataset_index].ReadAsArray(
+                        col_offset, row_offset, cols_per_block, rows_per_block,
+                        buf_obj=dataset_blocks[dataset_index])
+                #aligned_bands[dataset_index].ReadAsArray(
+                #    0, row_index, n_cols, 1, buf_obj=dataset_blocks[dataset_index])
+            out_block = dataset_pixel_op(*dataset_blocks)
 
-        #Mask out the row if there is a mask
-        if aoi_uri != None:
-            mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
-            out_row[mask_array == 0] = nodata_out
-        output_band.WriteArray(out_row, xoff=0, yoff=row_index)
+            #Mask out the row if there is a mask
+            if aoi_uri != None:
+                if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                    mask_band.ReadAsArray(
+                        col_offset, row_offset, local_col_index, local_row_index,
+                        buf_obj=mask_array)
+                else:
+                    mask_band.ReadAsArray(
+                        col_offset, row_offset, cols_per_block, rows_per_block,
+                        buf_obj=mask_array)
+                out_block[mask_array == 0] = nodata_out
+        
+            if local_col_index < cols_per_block or local_row_index < rows_per_block:
+                LOGGER.info("at the edge, %d %d vs %d %d" % (cols_per_block, rows_per_block, local_col_index, local_row_index))
+                output_band.WriteArray(
+                    out_block[0:local_row_index, 0:local_col_index],
+                    xoff=col_offset, yoff=row_offset)
+            else:
+                output_band.WriteArray(
+                    out_block, xoff=col_offset, yoff=row_offset)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
@@ -2906,11 +2990,16 @@ def distance_transform_edt(
     def to_byte(x):
         return numpy.where(x == nodata_mask, nodata_out, x != 0)
     LOGGER.info('converting input mask to byte dataset')
+    
+    n_rows, n_cols = get_row_col_from_uri(input_mask_uri)
+    
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
         nodata_out, out_pixel_size, "union",
         dataset_to_align_index=0, assert_datasets_projected=False, 
-        process_pool=process_pool, vectorize_op=False)
+        process_pool=process_pool, vectorize_op=False,
+        datasets_are_pre_aligned=True,
+        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
     
     #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
@@ -2918,4 +3007,4 @@ def distance_transform_edt(
     try:
         os.remove(mask_as_byte_uri)
     except OSError:
-        LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
+        LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)

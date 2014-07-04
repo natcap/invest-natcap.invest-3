@@ -181,7 +181,9 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     #invert the rows and columns since it's a transpose
     g_dataset = driver.Create(
         g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Int32,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % n_rows,
+        'BLOCKYSIZE=%d' % 1])
+        
     g_dataset.SetProjection(input_projection)
     g_dataset.SetGeoTransform(input_geotransform)
     g_band = g_dataset.GetRasterBand(1)
@@ -189,8 +191,9 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     cdef float output_nodata = -1.0
     output_dataset = driver.Create(
-        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=['COMPRESS=LZW', 'BIGTIFF=YES'])
+        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, 
+        gdal.GDT_Float32, options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % n_cols,
+        'BLOCKYSIZE=%d' % 1])
     output_dataset.SetProjection(input_projection)
     output_dataset.SetGeoTransform(input_geotransform)
     output_band = output_dataset.GetRasterBand(1)
