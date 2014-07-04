@@ -44,6 +44,8 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float64: numpy.float64
     }
 
+gdal.SetCacheMax(2**27) #128MB of cache
+    
 class NoDaemonProcess(multiprocessing.Process):
     """A class to make non-deamonic pools in case we want to have pools of
         pools"""
@@ -150,7 +152,7 @@ def get_row_col_from_uri(dataset_uri):
 
         dataset_uri - a uri to a gdal dataset
 
-        returns nodata value for dataset band 1"""
+        returns (n_row, n_col) tuplie from dataset_uri"""
 
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
@@ -299,7 +301,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None):
+    n_rows=None, n_cols=None, dataset_options=[]):
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
@@ -320,6 +322,8 @@ def new_raster_from_base(
             if not, the number of rows of the outgoing dataset are equal to
             the base.
         n_cols - (optional) similar to n_rows, but for the columns.
+        dataset_options - (optional) a list of dataset options that gets
+            passed to the gdal creation driver, overrides defaults
 
         returns a new GDAL raster dataset."""
 
@@ -333,10 +337,15 @@ def new_raster_from_base(
     
     base_band = base.GetRasterBand(1)
     block_size = base_band.GetBlockSize()
+    
+    if dataset_options == []:
+        dataset_options = [
+            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]]
+    LOGGER.info('dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
-        'BLOCKYSIZE=%d' % block_size[1]])
+        options=dataset_options)
     base_band = None
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
@@ -2215,7 +2224,7 @@ def vectorize_datasets(
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
     assert_datasets_projected=True, process_pool=None, vectorize_op=True,
-    datasets_are_pre_aligned=False):
+    datasets_are_pre_aligned=False, dataset_options=[]):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2281,6 +2290,9 @@ def vectorize_datasets(
             resample_method_list, dataset_to_align_index, and 
             dataset_to_bound_index, if set to True the input dataset list must
             be aligned, probably by raster_utils.align_dataset_list
+        dataset_options - (optional) this is an argument list that will be
+            passed to the GTiff driver.  Useful for blocksizes, compression,
+            etc.
             
             """
 
@@ -2336,7 +2348,8 @@ def vectorize_datasets(
     n_cols = aligned_datasets[0].RasterXSize
 
     output_dataset = new_raster_from_base(
-        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
+        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out,
+        dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
     block_size = output_band.GetBlockSize()
     
@@ -2352,7 +2365,8 @@ def vectorize_datasets(
     if aoi_uri != None:
         mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
-            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
+            dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
@@ -2367,6 +2381,7 @@ def vectorize_datasets(
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
     
+    LOGGER.info("rows_per_block, cols_per_block, %d, %d" % (rows_per_block, cols_per_block))
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block),
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
@@ -2966,12 +2981,16 @@ def distance_transform_edt(
     def to_byte(x):
         return numpy.where(x == nodata_mask, nodata_out, x != 0)
     LOGGER.info('converting input mask to byte dataset')
+    
+    n_rows, n_cols = get_row_col_from_uri(input_mask_uri)
+    
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
         nodata_out, out_pixel_size, "union",
         dataset_to_align_index=0, assert_datasets_projected=False, 
         process_pool=process_pool, vectorize_op=False,
-        datasets_are_pre_aligned=True)
+        datasets_are_pre_aligned=True,
+        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % n_rows])
     
     #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
