@@ -140,11 +140,11 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
 
-cdef int _f(int x, int i, int gi):
+cdef long _f(long x, long i, long gi):
     return (x-i)*(x-i)+ gi*gi
 
 @cython.cdivision(True)
-cdef int _sep(int i, int u, int gu, int gi):
+cdef long _sep(long i, long u, long gu, long gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
@@ -208,7 +208,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         numpy.empty((n_rows, 1), dtype=numpy.int32))
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
-    cdef int col_index, row_index, q_index, u_index, w
+    cdef int col_index, row_index, q_index, u_index
+    cdef long int w
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
@@ -236,11 +237,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         g_band.WriteArray(
             g_array, xoff=col_index, yoff=0)
 
+    g_band.FlushCache()
     LOGGER.info('Distance Transform Phase 2')
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(
-        n_cols, dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] t_array = numpy.zeros(
-        n_cols, dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.int64_t, ndim=1] s_array = numpy.zeros(
+        n_cols, dtype=numpy.int64)
+    cdef numpy.ndarray[numpy.int64_t, ndim=1] t_array = numpy.zeros(
+        n_cols, dtype=numpy.int64)
     cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty(
         (1, n_cols), dtype=numpy.float32)
     
