@@ -2429,7 +2429,6 @@ def vectorize_datasets(
                 out_block[mask_array == 0] = nodata_out
         
             if local_col_index < cols_per_block or local_row_index < rows_per_block:
-                LOGGER.info("at the edge, %d %d vs %d %d" % (cols_per_block, rows_per_block, local_col_index, local_row_index))
                 output_band.WriteArray(
                     out_block[0:local_row_index, 0:local_col_index],
                     xoff=col_offset, yoff=row_offset)

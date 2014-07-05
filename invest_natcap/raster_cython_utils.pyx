@@ -148,7 +148,7 @@ cdef int _sep(int i, int u, int gu, int gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 def _distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
@@ -175,12 +175,14 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     os.close(file_handle)
     cdef int g_nodata = -1
     
+    g_dataset_uri = "C:\\Users\\rich\\Desktop\\g_dataset.tif"
+    
     input_projection = input_mask_ds.GetProjection()
     input_geotransform = input_mask_ds.GetGeoTransform()
     driver = gdal.GetDriverByName('GTiff')
     #invert the rows and columns since it's a transpose
     g_dataset = driver.Create(
-        g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Int32,
+        g_dataset_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Int32,
         options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
         
     g_dataset.SetProjection(input_projection)
@@ -203,7 +205,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     #phase one, calculate column G(x,y)
     
     cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array_transposed = (
-        numpy.empty((1, n_rows), dtype=numpy.int32))
+        numpy.empty((n_rows, 1), dtype=numpy.int32))
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
     cdef int col_index, row_index, q_index, u_index, w
@@ -220,19 +222,19 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         #pass 1 go down
         for row_index in xrange(1, n_rows):
             if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
-                g_array_transposed[0, row_index] = 0
+                g_array_transposed[row_index, 0] = 0
             else:
-                g_array_transposed[0, row_index] = (
-                    1 + g_array_transposed[0, row_index - 1])
+                g_array_transposed[row_index, 0] = (
+                    1 + g_array_transposed[row_index - 1, 0])
 
         #pass 2 come back up
         for row_index in xrange(n_rows-2, -1, -1):
-            if (g_array_transposed[0, row_index + 1] <
-                g_array_transposed[0, row_index]):
-                g_array_transposed[0, row_index] = (
-                    1 + g_array_transposed[0, row_index + 1])
+            if (g_array_transposed[row_index + 1, 0] <
+                g_array_transposed[row_index, 0]):
+                g_array_transposed[row_index, 0] = (
+                    1 + g_array_transposed[row_index + 1, 0])
         g_band.WriteArray(
-            g_array_transposed, xoff=0, yoff=col_index)
+            g_array_transposed, xoff=col_index, yoff=0)
 
     LOGGER.info('Distance Transform Phase 2')
     cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(
@@ -244,7 +246,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     for row_index in xrange(n_rows):
         g_array_transposed = g_band.ReadAsArray(
-            xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         
         q_index = 0
         s_array[0] = 0
@@ -252,16 +254,16 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         for u_index in xrange(1, n_cols):
             while (q_index >= 0 and
                 _f(t_array[q_index], s_array[q_index], 
-                    g_array_transposed[s_array[q_index], 0]) >
-                _f(t_array[q_index], u_index, g_array_transposed[u_index, 0])):
+                    g_array_transposed[0, s_array[q_index]]) >
+                _f(t_array[q_index], u_index, g_array_transposed[0, u_index])):
                 q_index -= 1
             if q_index < 0:
                q_index = 0
                s_array[0] = u_index
             else:
                 w = 1 + _sep(
-                    s_array[q_index], u_index, g_array_transposed[u_index, 0],
-                    g_array_transposed[s_array[q_index], 0])
+                    s_array[q_index], u_index, g_array_transposed[0, u_index],
+                    g_array_transposed[0, s_array[q_index]])
                 if w < n_cols:
                     q_index += 1
                     s_array[q_index] = u_index
@@ -270,7 +272,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         for u_index in xrange(n_cols-1, -1, -1):
             dt[0, u_index] = _f(
                 u_index, s_array[q_index],
-                g_array_transposed[s_array[q_index], 0])
+                g_array_transposed[0, s_array[q_index]])
             if u_index == t_array[q_index]:
                 q_index -= 1
         
@@ -280,9 +282,10 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         dt = numpy.sqrt(dt)
         dt[b_array == input_nodata] = output_nodata
         output_band.WriteArray(dt, xoff=0, yoff=row_index)
-        
+
     gdal.Dataset.__swig_destroy__(g_dataset)
     try:
-        os.remove(g_dataset_uri)
+        pass
+        #os.remove(g_dataset_uri)
     except OSError:
         LOGGER.warn("couldn't remove file %s" % g_dataset_uri)

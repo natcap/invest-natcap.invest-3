@@ -11,19 +11,22 @@ from invest_natcap import raster_utils
 if __name__ == '__main__':
     
     lulc_uri = "C:\\Users\\rich\\Desktop\\am.tif"
-    biomass_uri = "C:\\Users\\rich\\Desktop\\am_biov2ct1.tif"
+    #lulc_uri = "C:\\Users\\rich\\Documents\\Base_Data\\Freshwater\\landuse_90"
+    '''biomass_uri = "C:\\Users\\rich\\Desktop\\am_biov2ct1.tif"'''
+    '''biomass_uri = "C:\\Users\\rich\\Desktop\\am_biov2ct1.tif"'''
     
     lulc_nodata = raster_utils.get_nodata_from_uri(
         lulc_uri)
-    biomass_nodata = raster_utils.get_nodata_from_uri(
-        biomass_uri)
+    '''biomass_nodata = raster_utils.get_nodata_from_uri(
+        biomass_uri)'''
     forest_lulc_codes = [1, 2, 3, 4, 5]
+    #forest_lulc_codes = [22, 23, 24, 25, 26]
     
     mask_uri = "C:\\Users\\rich\\Desktop\\mask.tif"
     mask_nodata = 2
     cell_size = raster_utils.get_cell_size_from_uri(lulc_uri)
     
-    def mask_biomass(lulc, biomass):
+    def mask_biomass(lulc):
         mask = numpy.zeros(lulc.shape, dtype=numpy.int8)
         for lulc_code in forest_lulc_codes:
             mask[lulc == lulc_code] = 1
@@ -31,7 +34,7 @@ if __name__ == '__main__':
         return mask
         
     raster_utils.vectorize_datasets(
-        [lulc_uri, biomass_uri], mask_biomass, mask_uri, gdal.GDT_Byte,
+        [lulc_uri,], mask_biomass, mask_uri, gdal.GDT_Byte,
         mask_nodata, cell_size, 'intersection', dataset_to_align_index=0,
         dataset_to_bound_index=None, aoi_uri=None,
         assert_datasets_projected=True, process_pool=None, vectorize_op=False,
