@@ -26,15 +26,16 @@ if __name__ == '__main__':
     mask_nodata = 2
     cell_size = raster_utils.get_cell_size_from_uri(lulc_uri)
     
-    def mask_biomass(lulc):
-        mask = numpy.zeros(lulc.shape, dtype=numpy.int8)
+    def mask_forest(lulc):
+        mask = numpy.empty(lulc.shape, dtype=numpy.int8)
+        mask[:] = 1
         for lulc_code in forest_lulc_codes:
-            mask[lulc == lulc_code] = 1
+            mask[lulc == lulc_code] = 0
         mask[lulc == lulc_nodata] = mask_nodata
         return mask
         
     raster_utils.vectorize_datasets(
-        [lulc_uri,], mask_biomass, mask_uri, gdal.GDT_Byte,
+        [lulc_uri,], mask_forest, mask_uri, gdal.GDT_Byte,
         mask_nodata, cell_size, 'intersection', dataset_to_align_index=0,
         dataset_to_bound_index=None, aoi_uri=None,
         assert_datasets_projected=True, process_pool=None, vectorize_op=False,
