@@ -175,8 +175,6 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     os.close(file_handle)
     cdef int g_nodata = -1
     
-    g_dataset_uri = "C:\\Users\\rich\\Desktop\\g_dataset.tif"
-    
     input_projection = input_mask_ds.GetProjection()
     input_geotransform = input_mask_ds.GetGeoTransform()
     driver = gdal.GetDriverByName('GTiff')
@@ -281,13 +279,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         b_array = input_mask_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         
-        #dt = numpy.sqrt(dt)
-        #dt[b_array == input_nodata] = output_nodata
+        dt = numpy.sqrt(dt)
+        dt[b_array == input_nodata] = output_nodata
         output_band.WriteArray(dt, xoff=0, yoff=row_index)
 
     gdal.Dataset.__swig_destroy__(g_dataset)
     try:
-        pass
-        #os.remove(g_dataset_uri)
+        os.remove(g_dataset_uri)
     except OSError:
         LOGGER.warn("couldn't remove file %s" % g_dataset_uri)
