@@ -140,11 +140,11 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
 
-cdef long _f(long x, long i, long gi):
+cdef long long _f(long long x, long long i, long long gi):
     return (x-i)*(x-i)+ gi*gi
 
 @cython.cdivision(True)
-cdef long _sep(long i, long u, long gu, long gi):
+cdef long long _sep(long long i, long long u, long long gu, long long gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
@@ -193,7 +193,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef float output_nodata = -1.0
     output_dataset = driver.Create(
         output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, 
-        gdal.GDT_Float32, options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
+        gdal.GDT_Float64, options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
     output_dataset.SetProjection(input_projection)
     output_dataset.SetGeoTransform(input_geotransform)
     output_band = output_dataset.GetRasterBand(1)
@@ -209,7 +209,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
     cdef int col_index, row_index, q_index, u_index
-    cdef long int w
+    cdef long long w
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
@@ -243,8 +243,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         n_cols, dtype=numpy.int64)
     cdef numpy.ndarray[numpy.int64_t, ndim=1] t_array = numpy.zeros(
         n_cols, dtype=numpy.int64)
-    cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty(
-        (1, n_cols), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.float64_t, ndim=2] dt = numpy.empty(
+        (1, n_cols), dtype=numpy.float64)
     
     for row_index in xrange(n_rows):
         g_array = g_band.ReadAsArray(
@@ -281,8 +281,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         b_array = input_mask_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         
-        dt = numpy.sqrt(dt)
-        dt[b_array == input_nodata] = output_nodata
+        #dt = numpy.sqrt(dt)
+        #dt[b_array == input_nodata] = output_nodata
         output_band.WriteArray(dt, xoff=0, yoff=row_index)
 
     gdal.Dataset.__swig_destroy__(g_dataset)

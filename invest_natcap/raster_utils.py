@@ -2397,10 +2397,10 @@ def vectorize_datasets(
             local_col_index = (n_cols - col_offset)
             
             current_time = time.time()
-            if current_time - last_time > 2.0:
+            if current_time - last_time > 4.0:
                 LOGGER.info(
-                    'on block index %d %d out of %d %d' % (row_block_index,
-                    col_block_index, n_row_blocks, n_col_blocks))
+                    'raster stack calculation approx. %.2f%% complete' % 
+                    ((row_block_index * n_col_blocks + col_block_index)/float(n_row_blocks * n_col_blocks) * 100.0))
                 last_time = current_time
             
             for dataset_index in xrange(len(aligned_bands)):
