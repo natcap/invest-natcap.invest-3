@@ -1258,27 +1258,19 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     #print(arg_max)
 
     # Updating active cells
-    active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
     #LOGGER.debug('Creating python event stream')
     #print('visibility map 1s:', np.sum(visibility_map))
-    # Collect cell_center events
-    cell_center_events = []
     # Create cell_center_events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
-        # Add cell ID to cell_center_events in increasing cell center angle
-        cell_center_events.append(arg_center[center_event_id])
-        arg_center[center_event_id] = 0
-        center_event_id += 1
-    # Initialize active line with pixels whose centers are at angle 0
-    for c in cell_center_events:
+        c = arg_center[center_event_id]
         d = distances[c]
         v = visibility[c]
         o = offset_visibility[c]
         active_line = add_active_pixel(active_line, c, d, v, o)
-        active_cells.add(d)
+        center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, d, visibility_map)
     
@@ -1310,7 +1302,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
                 v = visibility[c]
                 o = offset_visibility[c]
                 active_line = add_active_pixel(active_line, c, d, v, o)
-                active_cells.add(d)
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
@@ -1323,7 +1314,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             d = distances[c]
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
-            active_cells.remove(d)
         #print('remove cell events', [remove_events[e] for e in remove_cell_events])
         #print('remove cell events', [e for e in remove_cell_events])
         # The sweep line is current, now compute pixel visibility
