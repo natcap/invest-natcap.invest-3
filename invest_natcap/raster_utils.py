@@ -2011,7 +2011,7 @@ def resize_and_resample_dataset_uri(
     def make_callback(time_obj):
         def callback(dfComplete, pszMessage, pProgressArg):
             current_time = time.time()
-            if ((current_time - time_obj.last_time > 2.0) or 
+            if ((current_time - time_obj.last_time > 5.0) or 
                 (dfComplete in [0.0, 1.0])):
                 LOGGER.info("ReprojectImage %.1f%% complete %s" % 
                     (dfComplete * 100, pProgressArg[0]))
@@ -2397,7 +2397,7 @@ def vectorize_datasets(
             local_col_index = (n_cols - col_offset)
             
             current_time = time.time()
-            if current_time - last_time > 4.0:
+            if current_time - last_time > 5.0:
                 LOGGER.info(
                     'raster stack calculation approx. %.2f%% complete' % 
                     ((row_block_index * n_col_blocks + col_block_index)/float(n_row_blocks * n_col_blocks) * 100.0))
