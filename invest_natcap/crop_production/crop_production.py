@@ -15,6 +15,10 @@ import numpy
 
 import sys
 
+import random
+
+import math
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -551,7 +555,7 @@ class NoKeyErrorDict:
         try:
             return self.d[k]
         except KeyError:
-            return key_error_value
+            return self.key_error_value
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
@@ -1165,6 +1169,7 @@ def execute(args):
 
 
     if args["enable_tab_existing"]:
+        LOGGER.info("Calculating existing yield.")
 
         yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
         
@@ -1190,6 +1195,7 @@ def execute(args):
                           area_uri)
 
     if args["enable_tab_percentile"]:
+        LOGGER.info("Calulating percentile yield.")
         climate_uri = os.path.join(intermediate_uri, "climate.tif")
 
         mosaic_by_attribute_uri(reclass_crop_cover_uri,
@@ -1300,6 +1306,127 @@ def execute(args):
                                                       
 
 
+    if args["enable_tab_modeled"]:
+##        LOGGER.debug("Testing file.")
+##
+##        uri = "/home/mlacayo/workspace/CropProduction/input/yield_mod/wheat_m3yieldmodeldata_VL_MBM.csv"
+##        test = raster_utils.get_lookup_from_csv(uri,
+##                                                "climate bin")
+##
+##        return
+        LOGGER.info("Calculating modeled yield.")
+
+
+        file_field_yield_mod = "Yield_mod"
+        
+        modeled_field_key = "climate bin"
+        modeled_field_y_max = "yield ceiling"
+        modeled_field_b_NP = "b_nut"
+        modeled_field_b_K = "b_K2O"
+        modeled_field_C_N = "c_N"
+        modeled_field_C_P = "c_P2O5"
+        modeled_field_C_K = "c_K2O"
+        #modeled_field_N_GC = "N_apprate"
+        #modeled_field_P_GC = "P_apprate"
+        #modeled_field_K_GC = "K_apprate"
+
+        def modeled_closure(crop_uri,
+                            file_index_uri,
+                            file_index_field_key,
+                            nodata = -1,
+                            ignore_crop = 0):
+
+            LOGGER.debug("Building modeled_op.")
+
+            file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
+            crop_types = list(raster_utils.unique_raster_values_count(crop_uri).keys())
+
+            crop_nodata = raster_utils.get_nodata_from_uri(crop_uri)
+
+            if ignore_crop != None:
+                try:
+                    crop_types = set(crop_types)
+                    crop_types.remove(ignore_crop)
+                except KeyError:
+                    LOGGER.warning("Ignore crop %i not present.", ignore_crop)
+                crop_types = list(crop_types)
+
+            modeled_dict = {}
+            required_keys_set = set([modeled_field_key,
+                                     modeled_field_y_max,
+                                     modeled_field_b_NP,
+                                     modeled_field_b_K,
+                                     modeled_field_C_N,
+                                     modeled_field_C_P,
+                                     modeled_field_C_K])
+
+            LOGGER.debug("Parsing climate bin model CSVs.")
+            for crop in crop_types:
+                csv_uri = file_index[crop][file_field_yield_mod]
+                if csv_uri != "":
+                    csv_uri = os.path.join(raster_path, csv_uri)
+                    LOGGER.debug("Processing: %s", csv_uri)
+
+                    modeled_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
+                                                                          modeled_field_key)
+
+                    provided_keys_set = set(modeled_dict[crop][random.choice(modeled_dict[crop].keys())])
+                    missing_keys_set = required_keys_set.difference(provided_keys_set)
+
+                    if missing_keys_set != set([]):
+                        msg = "%s does not contain the following required keys: %s." % (csv_uri, str(missing_keys_set))
+                        LOGGER.error(msg)
+                        raise KeyError, msg
+                            
+                else:
+                    modeled_dict[crop] = None
+
+            LOGGER.debug("Defining modeled_op.")
+
+            
+            def modeled_op(crop, climate, N, P, K):
+                if crop == ignore_crop or (crop_nodata in [crop, climate, N, P, K]) or modeled_dict[int(crop)] == None:
+                    return nodata
+                else:
+                    y_max = modeled_dict[int(crop)][int(climate)][modeled_field_y_max]
+                    b_NP = modeled_dict[int(crop)][int(climate)][modeled_field_b_NP]
+                    b_K = modeled_dict[int(crop)][int(climate)][modeled_field_b_K]
+                    C_N = modeled_dict[int(crop)][int(climate)][modeled_field_C_N]
+                    C_P = modeled_dict[int(crop)][int(climate)][modeled_field_C_P]
+                    C_K = modeled_dict[int(crop)][int(climate)][modeled_field_C_K]
+                    
+                    try:
+                        N_yield = y_max * (1 - (b_NP * math.exp(-1 * C_N * N)))
+                        P_yield = y_max * (1 - (b_NP * math.exp(-1 * C_P * P)))
+                        K_yield = y_max * (1 - (b_NP * math.exp(-1 * C_K * K)))
+                    except TypeError:
+                        return 0
+
+                    return min([N_yield, P_yield, K_yield])
+
+            LOGGER.debug("Completed building modeled_op.")
+
+            return modeled_op
+
+        yield_uri = os.path.join(intermediate_uri, "yield_modeled.tif")
+
+        modeled_op = modeled_closure(reclass_crop_cover_uri,
+                                     raster_table_uri,
+                                     raster_table_field_key)
+        
+        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                         climate_uri,
+                                         nitrogen_uri,
+                                         phosphorus_uri,
+                                         potassium_uri],
+                                        modeled_op,
+                                        yield_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0,
+                                        dataset_to_align_index=0)
 
     return
 
