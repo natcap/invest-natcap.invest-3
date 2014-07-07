@@ -140,11 +140,11 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
 
-cdef int _f(int x, int i, int gi):
+cdef long long _f(long long x, long long i, long long gi):
     return (x-i)*(x-i)+ gi*gi
 
 @cython.cdivision(True)
-cdef int _sep(int i, int u, int gu, int gi):
+cdef long long _sep(long long i, long long u, long long gu, long long gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
@@ -180,9 +180,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     driver = gdal.GetDriverByName('GTiff')
     #invert the rows and columns since it's a transpose
     g_dataset = driver.Create(
-        g_dataset_uri.encode('utf-8'), n_rows, n_cols, 1, gdal.GDT_Int32,)
-        #options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % 1,
-        #'BLOCKYSIZE=%d' % 1])
+        g_dataset_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Int32,
+        options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
         
     g_dataset.SetProjection(input_projection)
     g_dataset.SetGeoTransform(input_geotransform)
@@ -191,9 +190,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     cdef float output_nodata = -1.0
     output_dataset = driver.Create(
-        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Float32,)
-        #options=['BIGTIFF=YES', 'BLOCKXSIZE=%d' % 1,
-        #'BLOCKYSIZE=%d' % 1])
+        output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, 
+        gdal.GDT_Float64, options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
     output_dataset.SetProjection(input_projection)
     output_dataset.SetGeoTransform(input_geotransform)
     output_band = output_dataset.GetRasterBand(1)
@@ -204,49 +202,51 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     LOGGER.info('Distance Transform Phase 1')
     #phase one, calculate column G(x,y)
     
-    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array_transposed = (
-        numpy.empty((1, n_rows), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array = (
+        numpy.empty((n_rows, 1), dtype=numpy.int32))
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
-    cdef int col_index, row_index, q_index, u_index, w
+    cdef int col_index, row_index, q_index, u_index
+    cdef long long w
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         
         #named _transposed so we remember column is flipped to row
         if b_array[0, 0] and b_array[0, 0] != input_nodata:
-            g_array_transposed[0, 0] = 0
+            g_array[0, 0] = 0
         else:
-            g_array_transposed[0, 0] = numerical_inf
+            g_array[0, 0] = numerical_inf
 
         #pass 1 go down
         for row_index in xrange(1, n_rows):
             if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
-                g_array_transposed[0, row_index] = 0
+                g_array[row_index, 0] = 0
             else:
-                g_array_transposed[0, row_index] = (
-                    1 + g_array_transposed[0, row_index - 1])
+                g_array[row_index, 0] = (
+                    1 + g_array[row_index - 1, 0])
 
         #pass 2 come back up
         for row_index in xrange(n_rows-2, -1, -1):
-            if (g_array_transposed[0, row_index + 1] <
-                g_array_transposed[0, row_index]):
-                g_array_transposed[0, row_index] = (
-                    1 + g_array_transposed[0, row_index + 1])
+            if (g_array[row_index + 1, 0] <
+                g_array[row_index, 0]):
+                g_array[row_index, 0] = (
+                    1 + g_array[row_index + 1, 0])
         g_band.WriteArray(
-            g_array_transposed, xoff=0, yoff=col_index)
+            g_array, xoff=col_index, yoff=0)
 
+    g_band.FlushCache()
     LOGGER.info('Distance Transform Phase 2')
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] s_array = numpy.zeros(
-        n_cols, dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.int32_t, ndim=1] t_array = numpy.zeros(
-        n_cols, dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.float32_t, ndim=2] dt = numpy.empty(
-        (1, n_cols), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.int64_t, ndim=1] s_array = numpy.zeros(
+        n_cols, dtype=numpy.int64)
+    cdef numpy.ndarray[numpy.int64_t, ndim=1] t_array = numpy.zeros(
+        n_cols, dtype=numpy.int64)
+    cdef numpy.ndarray[numpy.float64_t, ndim=2] dt = numpy.empty(
+        (1, n_cols), dtype=numpy.float64)
     
     for row_index in xrange(n_rows):
-        g_array_transposed = g_band.ReadAsArray(
-            xoff=row_index, yoff=0, win_xsize=1, win_ysize=n_cols)
+        g_array = g_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         
         q_index = 0
         s_array[0] = 0
@@ -254,16 +254,16 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         for u_index in xrange(1, n_cols):
             while (q_index >= 0 and
                 _f(t_array[q_index], s_array[q_index], 
-                    g_array_transposed[s_array[q_index], 0]) >
-                _f(t_array[q_index], u_index, g_array_transposed[u_index, 0])):
+                    g_array[0, s_array[q_index]]) >
+                _f(t_array[q_index], u_index, g_array[0, u_index])):
                 q_index -= 1
             if q_index < 0:
                q_index = 0
                s_array[0] = u_index
             else:
                 w = 1 + _sep(
-                    s_array[q_index], u_index, g_array_transposed[u_index, 0],
-                    g_array_transposed[s_array[q_index], 0])
+                    s_array[q_index], u_index, g_array[0, u_index],
+                    g_array[0, s_array[q_index]])
                 if w < n_cols:
                     q_index += 1
                     s_array[q_index] = u_index
@@ -272,7 +272,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         for u_index in xrange(n_cols-1, -1, -1):
             dt[0, u_index] = _f(
                 u_index, s_array[q_index],
-                g_array_transposed[s_array[q_index], 0])
+                g_array[0, s_array[q_index]])
             if u_index == t_array[q_index]:
                 q_index -= 1
         
@@ -282,7 +282,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         dt = numpy.sqrt(dt)
         dt[b_array == input_nodata] = output_nodata
         output_band.WriteArray(dt, xoff=0, yoff=row_index)
-        
+
     gdal.Dataset.__swig_destroy__(g_dataset)
     try:
         os.remove(g_dataset_uri)
