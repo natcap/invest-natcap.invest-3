@@ -103,9 +103,10 @@ def execute(args):
 
     #Clip the dem and cast to a float
     clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
+        
     raster_utils.vectorize_datasets(
-        [args['dem_uri']], lambda x: x.astype(numpy.float64), clipped_dem_uri,
-        gdal.GDT_Float64, dem_nodata, out_pixel_size, "intersection",
+        [args['dem_uri']], lambda x: x.astype(numpy.float32), clipped_dem_uri,
+        gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 
@@ -174,7 +175,7 @@ def execute(args):
         dict([(lulc_code, 1.0 - float(table['sedret_eff'])) \
                   for (lulc_code, table) in biophysical_table.items()])
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float64,
+        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building retention fraction raster from lulc')
@@ -186,14 +187,14 @@ def execute(args):
     no_stream_retention_rate_uri = raster_utils.temporary_filename()
     nodata_retention = -1.0
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float64,
+        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     def zero_out_retention_fn(retention, v_stream):
         return numpy.where(v_stream == 1, 0.0, retention)
     raster_utils.vectorize_datasets(
         [no_stream_retention_rate_uri, v_stream_uri], zero_out_retention_fn,
-        retention_rate_uri, gdal.GDT_Float64, nodata_retention, out_pixel_size,
+        retention_rate_uri, gdal.GDT_Float32, nodata_retention, out_pixel_size,
         "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'], vectorize_op=False)
 
@@ -201,7 +202,7 @@ def execute(args):
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     cp_uri = os.path.join(intermediate_dir, 'cp%s.tif' % file_suffix)
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float64,
+        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating rkls')
@@ -220,7 +221,7 @@ def execute(args):
             nodata_usle, rkls * cp_factor * (1 - v_stream))
     raster_utils.vectorize_datasets(
         [rkls_uri, cp_uri, v_stream_uri], mult_rkls_cp, usle_uri,
-        gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
+        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=2, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 
@@ -233,7 +234,7 @@ def execute(args):
             nodata_usle, rkls - usle)
     raster_utils.vectorize_datasets(
         [rkls_uri, usle_uri], sub_rkls_usle, on_pixel_retention_uri,
-        gdal.GDT_Float64, nodata_usle, out_pixel_size, "intersection",
+        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'],
         vectorize_op=False)
 

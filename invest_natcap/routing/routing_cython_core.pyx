@@ -212,10 +212,14 @@ def calculate_transport(
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
     cdef int n_steps = 0
+    last_time = time.time()
     while cells_to_process.size() > 0:
         n_steps += 1
         if n_steps % 1000000 == 0:
-            LOGGER.info('Reporting every 1000000 steps cells_to_process.size() = %d' % (cells_to_process.size()))
+            current_time = time.time()
+            if current_time - last_time > 5.0:
+                LOGGER.info('Steps cells_to_process.size() = %d' % (cells_to_process.size()))
+                last_time = current_time
     
         current_index = cells_to_process.top()
         cells_to_process.pop()
@@ -1696,6 +1700,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int dirty_cache = 0
     cdef queue[int] unresolved_cells_defer
     cdef int previous_unresolved_size = unresolved_cells.size()
+    last_time = time.time()
     while unresolved_cells.size() > 0:
         flat_index = unresolved_cells.front()
         unresolved_cells.pop()
@@ -1743,8 +1748,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 unresolved_cells_defer.push(flat_index)
                 
         if unresolved_cells.size() == 0:
-            LOGGER.info('previous_unresolved_size %d' % previous_unresolved_size)
-            LOGGER.info('unresolved_cells_defer.size() = %d' % unresolved_cells_defer.size())
+            current_time = time.time()
+            if current_time - last_time > 5.0:
+                LOGGER.info('previous_unresolved_size=%d unresolved_cells_defer.size=%d' % (previous_unresolved_size, unresolved_cells_defer.size()))
+                last_time = current_time
             if unresolved_cells_defer.size() < previous_unresolved_size:
                 previous_unresolved_size = unresolved_cells_defer.size()
                 while unresolved_cells_defer.size() > 0:
@@ -1777,8 +1784,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         flow_band.WriteArray(flow_array, 0, y_offset)
         dirty_cache = 0
 
-
-        
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
