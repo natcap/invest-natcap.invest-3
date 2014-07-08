@@ -2012,8 +2012,7 @@ def resize_and_resample_dataset_uri(
     def make_callback(time_obj):
         def callback(dfComplete, pszMessage, pProgressArg):
             current_time = time.time()
-            if ((current_time - time_obj.last_time > 5.0) or 
-                (dfComplete in [0.0, 1.0])):
+            if (current_time - time_obj.last_time) > 5.0 or dfComplete == 1.0:
                 LOGGER.info("ReprojectImage %.1f%% complete %s" % 
                     (dfComplete * 100, pProgressArg[0]))
                 time_obj.last_time = current_time
