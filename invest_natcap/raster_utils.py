@@ -16,6 +16,7 @@ import multiprocessing.pool
 import tables
 import heapq
 import time
+import smtplib
 
 from osgeo import gdal
 from osgeo import osr
@@ -2011,7 +2012,7 @@ def resize_and_resample_dataset_uri(
     def make_callback(time_obj):
         def callback(dfComplete, pszMessage, pProgressArg):
             current_time = time.time()
-            if ((current_time - time_obj.last_time > 2.0) or 
+            if ((current_time - time_obj.last_time > 5.0) or 
                 (dfComplete in [0.0, 1.0])):
                 LOGGER.info("ReprojectImage %.1f%% complete %s" % 
                     (dfComplete * 100, pProgressArg[0]))
@@ -2397,10 +2398,10 @@ def vectorize_datasets(
             local_col_index = (n_cols - col_offset)
             
             current_time = time.time()
-            if current_time - last_time > 2.0:
+            if current_time - last_time > 5.0:
                 LOGGER.info(
-                    'on block index %d %d out of %d %d' % (row_block_index,
-                    col_block_index, n_row_blocks, n_col_blocks))
+                    'raster stack calculation approx. %.2f%% complete' % 
+                    ((row_block_index * n_col_blocks + col_block_index)/float(n_row_blocks * n_col_blocks) * 100.0))
                 last_time = current_time
             
             for dataset_index in xrange(len(aligned_bands)):
@@ -2429,7 +2430,6 @@ def vectorize_datasets(
                 out_block[mask_array == 0] = nodata_out
         
             if local_col_index < cols_per_block or local_row_index < rows_per_block:
-                LOGGER.info("at the edge, %d %d vs %d %d" % (cols_per_block, rows_per_block, local_col_index, local_row_index))
                 output_band.WriteArray(
                     out_block[0:local_row_index, 0:local_col_index],
                     xoff=col_offset, yoff=row_offset)
@@ -3008,3 +3008,26 @@ def distance_transform_edt(
         os.remove(mask_as_byte_uri)
     except OSError:
         LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)
+
+        
+def email_report(message, email_address):
+    """A simple wrapper around an SMTP call.  Can be used to send text messages
+        if the email address is constructed as the following: 
+        
+        Alltel [10-digit phone number]@message.alltel.com
+        AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
+        Boost Mobile [10-digit phone number]@myboostmobile.com
+        Nextel (now Sprint Nextel) [10-digit telephone number]@messaging.nextel.com
+        Sprint PCS (now Sprint Nextel) [10-digit phone number]@messaging.sprintpcs.com
+        T-Mobile [10-digit phone number]@tmomail.net
+        US Cellular [10-digit phone number]email.uscc.net (SMS)
+        Verizon [10-digit phone number]@vtext.com
+        Virgin Mobile USA [10-digit phone number]@vmobl.com
+        
+        returns nothing"""
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login('natcapsoftwareteam@gmail.com','assman64')
+    server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
+    server.quit()
