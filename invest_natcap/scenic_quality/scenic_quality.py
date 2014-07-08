@@ -346,7 +346,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        #tmp_visibility_uri = raster_utils.temporary_filename()
+        # Create a visibility map
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
@@ -355,8 +355,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
             (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         
-        # Compute the distance
-        #tmp_distance_uri = raster_utils.temporary_filename() 
+        # Compute a distance map
         tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_distance_uri, 'GTiff', \
@@ -364,15 +363,17 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        # Apply the valuation function
-        #tmp_viewshed_uri = raster_utils.temporary_filename()
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
+        # Compute a valuation map
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
             valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
             "union")
 
+        # Clean up the visibility and the distance maps
+        os.remove(tmp_visibility_uri)
+        os.remove(tmp_distance_uri)
 
         # Multiply the viewshed by its coefficient
         scaled_viewshed_uri = raster_utils.temporary_filename() 
@@ -382,6 +383,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
         viewshed_uri_list.append(scaled_viewshed_uri)
     
+        # Clean up the viewshed map
+        #os.remove(tmp_visibility_uri)
+
     layer = None
     shapefile = None
     # Accumulate result to combined raster
