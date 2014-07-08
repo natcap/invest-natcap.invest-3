@@ -3026,8 +3026,11 @@ def email_report(message, email_address):
         
         returns nothing"""
 
-    server = smtplib.SMTP('smtp.gmail.com:587')
-    server.starttls()
-    server.login('natcapsoftwareteam@gmail.com','assman64')
-    server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
-    server.quit()
+    try:
+        server = smtplib.SMTP('smtp.gmail.com:587')
+        server.starttls()
+        server.login('natcapsoftwareteam@gmail.com','assman64')
+        server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
+        server.quit()
+    except smtplib.socket.gaierror:
+        LOGGER.warn("Can't connect to email server, no report will be sent.")
