@@ -16,6 +16,7 @@ import multiprocessing.pool
 import tables
 import heapq
 import time
+import smtplib
 
 from osgeo import gdal
 from osgeo import osr
@@ -3007,3 +3008,26 @@ def distance_transform_edt(
         os.remove(mask_as_byte_uri)
     except OSError:
         LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)
+
+        
+def email_report(message, email_address):
+    """A simple wrapper around an SMTP call.  Can be used to send text messages
+        if the email address is constructed as the following: 
+        
+        Alltel [10-digit phone number]@message.alltel.com
+        AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
+        Boost Mobile [10-digit phone number]@myboostmobile.com
+        Nextel (now Sprint Nextel) [10-digit telephone number]@messaging.nextel.com
+        Sprint PCS (now Sprint Nextel) [10-digit phone number]@messaging.sprintpcs.com
+        T-Mobile [10-digit phone number]@tmomail.net
+        US Cellular [10-digit phone number]email.uscc.net (SMS)
+        Verizon [10-digit phone number]@vtext.com
+        Virgin Mobile USA [10-digit phone number]@vmobl.com
+        
+        returns nothing"""
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login('natcapsoftwareteam@gmail.com','assman64')
+    server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
+    server.quit()
