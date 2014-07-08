@@ -222,7 +222,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
-            if v == 1:
+            if v > 0:
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
@@ -231,7 +231,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            if v==1:
+            if v > 0:
                 if x < 1000:
                     return a + b*1000 + c*1000**2 + d*1000**3 - \
                         (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
@@ -245,7 +245,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
-            if v==1:
+            if v > 0:
                 if x < 1000:
                     return a + b*math.log(1000) - (b/1000)*(1000-x)
                 elif x <= max_valuation_radius:
