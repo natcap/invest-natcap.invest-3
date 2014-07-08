@@ -1207,7 +1207,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    alg_version = 'python'
+    #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             angles, add_events, center_events, remove_events,\
@@ -1279,8 +1279,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        #print('visibility map 1s:', np.sum(visibility_map))
-        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
@@ -1293,8 +1291,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             add_cell_events.append(arg_min[add_event_id])
             arg_min[add_event_id] = 0
             add_event_id += 1
-        #print('add cell events', [add_events[e] for e in add_cell_events])
-        #print('add cell events', [e for e in add_cell_events])
     #   2.1- add cells
         if len(add_cell_events) > 0:
             for c in add_cell_events:
@@ -1314,8 +1310,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             d = distances[c]
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
-        #print('remove cell events', [remove_events[e] for e in remove_cell_events])
-        #print('remove cell events', [e for e in remove_cell_events])
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, d, visibility_map)
 
