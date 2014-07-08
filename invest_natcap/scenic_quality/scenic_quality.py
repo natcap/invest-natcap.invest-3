@@ -198,6 +198,8 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
     refr_coeff, args)
 
+    os.remove(I_uri)
+    os.remove(J_uri)
 
 #def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
