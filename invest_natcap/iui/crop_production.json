@@ -2659,7 +2659,7 @@
                                                             "label": "Irrigation Map",
                                                             "defaultValue": "",
                                                             "validateAs": {"type": "GDAL"},
-                                                            "required": true
+                                                            "required": false
                                                         },
                                                         {
                                                             "id" : "fertilizer_file_name",
@@ -2668,7 +2668,7 @@
                                                             "label": "Fertilizer Map",
                                                             "defaultValue": "",
                                                             "validateAs": {"type": "GDAL"},
-                                                            "required": true
+                                                            "required": false
                                                         }
                                                     ]
                                                 },
