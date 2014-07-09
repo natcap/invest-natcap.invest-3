@@ -341,7 +341,7 @@ def new_raster_from_base(
     
     if dataset_options == []:
         dataset_options = [
-            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]]
     LOGGER.info('dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
@@ -389,7 +389,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
         outputURI.encode('utf-8'), cols, rows, bands, datatype,
-        options=['BIGTIFF=YES'])
+        options=['BIGTIFF=IF_SAFER'])
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -540,7 +540,7 @@ def create_raster_from_vector_extents(
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
-        options=['BIGTIFF=YES'])
+        options=['BIGTIFF=IF_SAFER'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the upper left corner and given pixel
@@ -1309,7 +1309,7 @@ def warp_reproject_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, int((lrx - ulx)/pixel_spacing),
         int((uly - lry)/pixel_spacing), 1, output_type,
-        options=['BIGTIFF=YES'])
+        options=['BIGTIFF=IF_SAFER'])
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
@@ -1990,7 +1990,7 @@ def resize_and_resample_dataset_uri(
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
         options=[
-            'BIGTIFF=YES', 'BLOCKXSIZE=%d' % block_size[0],
+            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]])
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
