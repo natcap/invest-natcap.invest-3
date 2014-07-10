@@ -3059,4 +3059,28 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
             
         returns nothing"""
         
-        pass
+    weight_ds = gdal.Open(weight_uri)
+    weight_band = weight_ds.GetRasterBand(1)
+    weight_array = weight_band.ReadAsArray()
+    new_raster_from_base_uri(
+        weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
+    
+    n_rows, n_cols = weight_array.shape
+    
+    output_ds = gdal.Open(output_uri, gdal.GA_Update)
+    output_band = output_ds.GetRasterBand(1)
+    output_array = output_band.ReadAsArray()
+    
+    last_time = time.time()
+    for row_index in xrange(n_rows):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info('convolve 2d %f.2%% complete' % ((col_index * n_rows + row_index) / float(n_rows * n_cols)))
+            last_time = current_time
+        for col_index in xrange(n_cols):
+            output_array[row_index, col_index] = 1.0
+    
+    LOGGER.info('convolve 2d 100%% complete')
+    output_band = output_ds.GetRasterBand(1)
+    output_band.WriteArray(output_array)        
+    

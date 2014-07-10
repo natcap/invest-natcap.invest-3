@@ -144,8 +144,6 @@ if platform.system() == 'Windows':
             'skip_archive': True,
             'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
                 'msvcp90.dll', 'geos_c.dll'],
-            'excludes': ['Tkconstants', 'Tkinter', 'tcl', '_gtkagg', '_tkagg',
-                '_qt4agg'],
             }
          }
 
