@@ -58,7 +58,7 @@
 				    "helpText": "This input provides the model with a geographic shape of the coastal area of interest and instructs it as to the boundaries of the land and seascape."
 				},
 				{
-				    "label": "Do you want a us to cut a cross-shore transect in GIS?",
+				    "label": "Do you want us to generate cross-shore transects?",
 				    "id": "cross_shore",
 				    "args_id": "cross_shore",
 				    "type": "dropdown",
