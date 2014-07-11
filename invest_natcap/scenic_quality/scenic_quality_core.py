@@ -1135,6 +1135,8 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
+    print('--- array to be stored', output_array.shape)
+    print('--- raster capacity', output_raster.GetRasterBand(1).ReadAsArray().shape)
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
 def compute_viewshed(input_array, nodata, coordinates, obs_elev, \

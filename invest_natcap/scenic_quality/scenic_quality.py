@@ -600,13 +600,20 @@ def execute(args):
                                        1)
         
         pop = gdal.Open(pop_vs_uri)
+        messge = "Can't open " + pop_vs_uri
+        assert pop is not None, message
         pop_band = pop.GetRasterBand(1)
+        messge = "Can't extract band from " + pop_vs_uri
+        assert pop_band is not None, message
         vs = gdal.Open(viewshed_uri)
         vs_band = vs.GetRasterBand(1)
+        message = 'population and viewshed file sizes are incompatible'
+        assert vs_band.XSize >= pop_band.XSize, message
+        assert vs_band.YSize >= pop_band.YSize, message
 
         affected_pop = 0
         unaffected_pop = 0
-        for row_index in range(vs_band.YSize):
+        for row_index in range(pop_band.YSize):
             pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
             vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
