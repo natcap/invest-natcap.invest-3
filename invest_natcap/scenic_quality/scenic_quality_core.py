@@ -1135,6 +1135,8 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
+    print('--- array to be stored', output_array.shape)
+    print('--- raster capacity', output_raster.GetRasterBand(1).ReadAsArray().shape)
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
 def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
@@ -1207,23 +1209,13 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    alg_version = 'python'
+    #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             angles, add_events, center_events, remove_events,\
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
     else:
-        print('angles', type(angles[0]))
-        print('add_events', type(add_events[0]))
-        print('center_events', type(center_events[0]))
-        print('remove_events', type(remove_events[0]))
-        print('I', type(I[0]))
-        print('J', type(J[0]))
-        print('distances', type(distances[0]))
-        print('offset_visibility', type(offset_visibility[0]))
-        print('visibility', type(visibility[0]))
-        print('visibility_map', type(visibility_map[0, 0]))
         scenic_quality_cython_core.sweep_through_angles( \
             angles, add_events, center_events, remove_events, \
             I, J, distances, offset_visibility, visibility, \
@@ -1258,27 +1250,19 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     #print(arg_max)
 
     # Updating active cells
-    active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
     #LOGGER.debug('Creating python event stream')
     #print('visibility map 1s:', np.sum(visibility_map))
-    # Collect cell_center events
-    cell_center_events = []
     # Create cell_center_events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
-        # Add cell ID to cell_center_events in increasing cell center angle
-        cell_center_events.append(arg_center[center_event_id])
-        arg_center[center_event_id] = 0
-        center_event_id += 1
-    # Initialize active line with pixels whose centers are at angle 0
-    for c in cell_center_events:
+        c = arg_center[center_event_id]
         d = distances[c]
         v = visibility[c]
         o = offset_visibility[c]
         active_line = add_active_pixel(active_line, c, d, v, o)
-        active_cells.add(d)
+        center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, d, visibility_map)
     
@@ -1287,8 +1271,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        #print('visibility map 1s:', np.sum(visibility_map))
-        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
@@ -1301,8 +1283,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             add_cell_events.append(arg_min[add_event_id])
             arg_min[add_event_id] = 0
             add_event_id += 1
-        #print('add cell events', [add_events[e] for e in add_cell_events])
-        #print('add cell events', [e for e in add_cell_events])
     #   2.1- add cells
         if len(add_cell_events) > 0:
             for c in add_cell_events:
@@ -1310,7 +1290,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
                 v = visibility[c]
                 o = offset_visibility[c]
                 active_line = add_active_pixel(active_line, c, d, v, o)
-                active_cells.add(d)
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
@@ -1323,9 +1302,6 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             d = distances[c]
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
-            active_cells.remove(d)
-        #print('remove cell events', [remove_events[e] for e in remove_cell_events])
-        #print('remove cell events', [e for e in remove_cell_events])
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, d, visibility_map)
 

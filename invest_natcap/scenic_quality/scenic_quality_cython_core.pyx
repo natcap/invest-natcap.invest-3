@@ -681,27 +681,36 @@ def sweep_through_angles( \
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
-        # 2.1- add cells
+        # Collect all cell events:
+        add_cell_events = []
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
             # Make sure to remove them from the cell_addition events to
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
-            if center_events[arg_min[add_event_id]] > 0.:
-                c = arg_min[add_event_id]
+            #if center_events[arg_min[add_event_id]] > 0.:
+            add_cell_events.append(arg_min[add_event_id])
+            arg_min[add_event_id] = 0
+            add_event_id += 1
+        # 2.1- add cells
+        if len(add_cell_events) > 0:
+            for c in add_cell_events:
                 d = distances[c]
                 v = visibility[c]
                 o = offset_visibility[c]
                 active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
-            add_event_id += 1
-        # 2.2- remove cells
+        # Collect remove_cell events:
+        remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            d = distances[arg_max[remove_event_id]]
-            active_pixels = remove_active_pixel_cython(active_pixels, d)
+            remove_cell_events.append(arg_max[remove_event_id])
+            arg_max[remove_event_id] = 0
             remove_event_id += 1
+        # 2.2- remove cells
+        for c in remove_cell_events:
+            d = distances[c]
+            active_pixels = remove_active_pixel_cython(active_pixels, d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, d, visibility_map)
 

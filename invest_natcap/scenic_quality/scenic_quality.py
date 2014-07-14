@@ -198,6 +198,8 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
     refr_coeff, args)
 
+    os.remove(I_uri)
+    os.remove(J_uri)
 
 #def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
@@ -222,7 +224,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
-            if v == 1:
+            if v > 0:
                 return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
             else:
                 return -1.
@@ -231,7 +233,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            if v==1:
+            if v > 0:
                 if x < 1000:
                     return a + b*1000 + c*1000**2 + d*1000**3 - \
                         (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
@@ -245,7 +247,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
-            if v==1:
+            if v > 0:
                 if x < 1000:
                     return a + b*math.log(1000) - (b/1000)*(1000-x)
                 elif x <= max_valuation_radius:
@@ -262,6 +264,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             return x*c
         return compute
 
+    # Used to summ raster values
+    def sum_rasters(*x):
+        return np.sum(x, axis = 0)
 
     # Setup valuation function
     a = args["a_coefficient"]
@@ -289,11 +294,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Base path uri
     base_uri = os.path.split(visibility_uri)[0]
 
-    # Temporary files that will be used 
-    distance_uri = raster_utils.temporary_filename()
-    viewshed_uri = raster_utils.temporary_filename()
-
-
     # The model extracts each viewpoint from the shapefile
     point_list = []
     shapefile = ogr.Open(in_structure_uri)
@@ -302,10 +302,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
-    viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
-        print("feature " + str(f))
+        print("Processing viewpoint " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         # Check for feature information (radius, coeff, height)
@@ -346,7 +345,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         array_shape = (rows, cols)
     
-        #tmp_visibility_uri = raster_utils.temporary_filename()
+        # Create a visibility map
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
@@ -355,8 +354,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
             (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         
-        # Compute the distance
-        #tmp_distance_uri = raster_utils.temporary_filename() 
+        # Compute a distance map
         tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri(visibility_uri, \
         tmp_distance_uri, 'GTiff', \
@@ -364,35 +362,42 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         distance_fn = compute_distance(i,j, cell_size)
         raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
         distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        # Apply the valuation function
-        #tmp_viewshed_uri = raster_utils.temporary_filename()
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
 
+        # Visibility + distance => viewshed map
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
             valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
             "union")
 
+        # Clean up the distance map
+        os.remove(tmp_distance_uri)
 
-        # Multiply the viewshed by its coefficient
-        scaled_viewshed_uri = raster_utils.temporary_filename() 
-        #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        # Coefficient * viewshed => scaled_viewshed
         apply_coefficient = multiply(coefficient)
+        scaled_viewshed_uri = os.path.join(base_uri, 'scaled_viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
-        viewshed_uri_list.append(scaled_viewshed_uri)
     
+        # Clean up the viewshed map
+        os.remove(tmp_viewshed_uri)
+
+        # Combined_visibility += scaled_viewshed
+        if f:
+            shutil.copy(visibility_uri, tmp_visibility_uri)
+            raster_utils.vectorize_datasets( \
+                [scaled_viewshed_uri, tmp_visibility_uri], sum_rasters, \
+                visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", \
+                vectorize_op=False)
+        else:
+            shutil.copy(scaled_viewshed_uri, visibility_uri)
+
+        # Clean up scaled_viewshed and visibility
+        os.remove(tmp_visibility_uri)
+        os.remove(scaled_viewshed_uri)
+
     layer = None
     shapefile = None
-    # Accumulate result to combined raster
-    def sum_rasters(*x):
-        return np.sum(x, axis = 0)
-    LOGGER.debug('Summing up everything using vectorize_datasets...')
-    LOGGER.debug('visibility_uri' + visibility_uri)
-    LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
-    raster_utils.vectorize_datasets( \
-        viewshed_uri_list, sum_rasters, \
-        visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", vectorize_op=False)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -595,13 +600,20 @@ def execute(args):
                                        1)
         
         pop = gdal.Open(pop_vs_uri)
+        messge = "Can't open " + pop_vs_uri
+        assert pop is not None, message
         pop_band = pop.GetRasterBand(1)
+        messge = "Can't extract band from " + pop_vs_uri
+        assert pop_band is not None, message
         vs = gdal.Open(viewshed_uri)
         vs_band = vs.GetRasterBand(1)
+        message = 'population and viewshed file sizes are incompatible'
+        assert vs_band.XSize >= pop_band.XSize, message
+        assert vs_band.YSize >= pop_band.YSize, message
 
         affected_pop = 0
         unaffected_pop = 0
-        for row_index in range(vs_band.YSize):
+        for row_index in range(pop_band.YSize):
             pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
             vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
