@@ -97,7 +97,6 @@ def execute_30(**args):
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur', 'fut', or 'redd'
 
             LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
-
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
             def map_carbon_pool(lulc):
