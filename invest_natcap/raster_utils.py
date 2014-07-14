@@ -3076,7 +3076,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         for col_index in xrange(n_cols):
             output_array[row_index, col_index] = 1.0
     
-    LOGGER.info('convolve 2d 100%% complete')
+    LOGGER.info('convolve 2d 100% complete')
     output_band = output_ds.GetRasterBand(1)
     output_band.WriteArray(output_array)        
     
