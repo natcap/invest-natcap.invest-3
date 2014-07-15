@@ -3076,6 +3076,8 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         dist = math.sqrt(
             (row_index - kernel_size - 1) ** 2 +
             (col_index - kernel_size - 1) ** 2)
+        if dist > max_distance:
+            return 0.0
         if kernel_type == 'linear':
             return 1 - dist/max_distance
         elif kernel_type == 'exponential':
@@ -3089,40 +3091,39 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
     for row_index in xrange(n_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info('convolve 2d %f.2%% complete' % ((col_index * n_rows + row_index) / float(n_rows * n_cols)))
+            LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols)))
             last_time = current_time
         for col_index in xrange(n_cols):
             
             #snip the window of the kernel over the window of the weight
-            if col_index >= kernel_size / 2:
-                weight_left_index = col_index - kernel_size / 2
+            if col_index >= max_distance:
+                weight_left_index = col_index - max_distance
                 kernel_left_index = 0
             else:
                 weight_left_index = 0
-                kernel_left_index = kernel_size / 2 - col_index
+                kernel_left_index = max_distance - col_index
             
-            if col_index <= n_cols - kernel_size / 2:
-                weight_right_index = col_index + kernel_size / 2 + 1
+            if col_index < n_cols - max_distance - 1:
+                weight_right_index = col_index + max_distance + 1
                 kernel_right_index = kernel_size
             else:
-                weight_right_index = n_cols - kernel_size / 2
-                kernel_right_index = kernel_size / 2 - (n_cols - kernel_size / 2)
+                weight_right_index = n_cols
+                kernel_right_index = max_distance + (n_cols - col_index)
                 
             #snip the window of the kernel over the window of the weight
-            if row_index >= kernel_size / 2:
-                weight_top_index = row_index - kernel_size / 2
+            if row_index >= max_distance:
+                weight_top_index = row_index - max_distance
                 kernel_top_index = 0
             else:
                 weight_top_index = 0
-                kernel_top_index = kernel_size / 2 - row_index
+                kernel_top_index = max_distance - row_index
             
-            if row_index <= n_rows - kernel_size / 2:
+            if row_index < n_rows - kernel_size / 2:
                 weight_bottom_index = row_index + kernel_size / 2 + 1
                 kernel_bottom_index = kernel_size
             else:
-                weight_bottom_index = n_rows - kernel_size / 2
-                kernel_bottom_index = kernel_size / 2 - (n_rows - kernel_size / 2)
-            
+                weight_bottom_index = n_rows
+                kernel_bottom_index = max_distance + (n_rows - row_index)
             
             try:
                 output_array[row_index, col_index] = numpy.sum(
