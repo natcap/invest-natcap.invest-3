@@ -3091,7 +3091,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
     for row_index in xrange(n_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols)))
+            LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols) * 100.0))
             last_time = current_time
         for col_index in xrange(n_cols):
             
