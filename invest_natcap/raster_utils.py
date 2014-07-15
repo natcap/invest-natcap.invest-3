@@ -3042,14 +3042,14 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         define d(xy, ij) as the Euclidan distance between coordinates xy and ij
         then, decay_xy_ij is
             
-            1 - d(xy, ij)/max_distance d(xy, ij) for 'linear'
-            exp(-(2.99/max_distance)*d(xy,ij) for 'exponential'
+            1 - d(xy, ij)/max_distance for 'linear'
+            exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
 
             if d(xy, ij) < max_distance, else 0.0
             
         weight_uri - this is the source raster
         kernel_type - 'linear' or 'exponential'
-        max_distance - defined in equation above
+        max_distance - defined in equation above (units are pixel size)
         output_uri - the raster output of same size and projection of
             weight_uri
             
@@ -3067,6 +3067,24 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
     output_band = output_ds.GetRasterBand(1)
     output_array = output_band.ReadAsArray()
     
+    #build a kernel
+    kernel_size = max_distance * 2 + 1
+    kernel = numpy.empty((kernel_size, kernel_size))
+    
+    def distance(row_index, col_index):
+        """closure for an euclidan distance calc"""
+        dist = math.sqrt(
+            (row_index - kernel_size - 1) ** 2 +
+            (col_index - kernel_size - 1) ** 2)
+        if kernel_type == 'linear':
+            return 1 - dist/max_distance
+        elif kernel_type == 'exponential':
+            return  math.exp(-(2.99/max_distance) * dist)
+    
+    for row_index in xrange(kernel_size):
+        for col_index in xrange(kernel_size):
+            kernel[row_index, col_index] = distance(row_index, col_index)
+    
     last_time = time.time()
     for row_index in xrange(n_rows):
         current_time = time.time()
@@ -3074,7 +3092,58 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
             LOGGER.info('convolve 2d %f.2%% complete' % ((col_index * n_rows + row_index) / float(n_rows * n_cols)))
             last_time = current_time
         for col_index in xrange(n_cols):
-            output_array[row_index, col_index] = 1.0
+            
+            #snip the window of the kernel over the window of the weight
+            if col_index >= kernel_size / 2:
+                weight_left_index = col_index - kernel_size / 2
+                kernel_left_index = 0
+            else:
+                weight_left_index = 0
+                kernel_left_index = kernel_size / 2 - col_index
+            
+            if col_index <= n_cols - kernel_size / 2:
+                weight_right_index = col_index + kernel_size / 2 + 1
+                kernel_right_index = kernel_size
+            else:
+                weight_right_index = n_cols - kernel_size / 2
+                kernel_right_index = kernel_size / 2 - (n_cols - kernel_size / 2)
+                
+            #snip the window of the kernel over the window of the weight
+            if row_index >= kernel_size / 2:
+                weight_top_index = row_index - kernel_size / 2
+                kernel_top_index = 0
+            else:
+                weight_top_index = 0
+                kernel_top_index = kernel_size / 2 - row_index
+            
+            if row_index <= n_rows - kernel_size / 2:
+                weight_bottom_index = row_index + kernel_size / 2 + 1
+                kernel_bottom_index = kernel_size
+            else:
+                weight_bottom_index = n_rows - kernel_size / 2
+                kernel_bottom_index = kernel_size / 2 - (n_rows - kernel_size / 2)
+            
+            
+            try:
+                output_array[row_index, col_index] = numpy.sum(
+                    kernel[kernel_top_index:kernel_bottom_index,
+                        kernel_left_index:kernel_right_index] * 
+                    weight_array[weight_top_index:weight_bottom_index,
+                        weight_left_index:weight_right_index])
+            except ValueError as e:
+                print row_index
+                print col_index
+                print kernel_top_index
+                print kernel_bottom_index
+                print kernel_left_index
+                print kernel_right_index
+                print weight_top_index
+                print weight_bottom_index
+                print weight_left_index
+                print weight_right_index
+                print weight_array.shape
+                print kernel.shape
+                raise e
     
     LOGGER.info('convolve 2d 100% complete')
     output_band = output_ds.GetRasterBand(1)
