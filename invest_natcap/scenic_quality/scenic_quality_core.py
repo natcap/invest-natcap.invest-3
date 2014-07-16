@@ -1207,7 +1207,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    #alg_version = 'python'
+    alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             angles, add_events, center_events, remove_events,\
@@ -1215,6 +1215,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             visibility_map)
     else:
         scenic_quality_cython_core.sweep_through_angles( \
+            coordinates[0], coordinates[1], \
             perimeter_cells[0], perimeter_cells[1], angles, \
             add_events, center_events, remove_events, \
             I, J, distances, offset_visibility, visibility, \

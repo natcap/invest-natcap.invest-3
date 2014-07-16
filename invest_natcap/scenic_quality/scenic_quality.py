@@ -443,6 +443,17 @@ def execute(args):
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
+    aq_args = {}
+    for key in args:
+        print("key", key)
+        if key[:2] == 'f_':
+            aq_args[key[2:]] = float(args[key])
+        if key[:2] == 'i_':
+            aq_args[key[2:]] = int(args[key])
+        else:
+            aq_args[key] = args[key].copy()
+    print("args", args)
+    return
     aq_args=args.copy()
 
     #validate input

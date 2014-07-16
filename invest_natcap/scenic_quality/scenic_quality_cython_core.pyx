@@ -627,6 +627,8 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
 
 #@cython.boundscheck(False)
 def sweep_through_angles( \
+    double viewpoint_i, \
+    double viewpoint_j, \
     np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_I, \
     np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_J, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] angles, \

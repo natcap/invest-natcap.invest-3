@@ -43,8 +43,8 @@
                                 "helpText": "This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
                             },
                             {
-                                "id" : "cell_size",
-                                "args_id" : "cell_size",
+                                "id" : "f_cell_size",
+                                "args_id" : "f_cell_size",
                                 "type": "text",
                                 "label": "Cell Size (meters)",
                                 "defaultValue": "500",
@@ -75,8 +75,8 @@
                                 "helpText": "An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
                             },                                
                             {
-                                "id" : "refraction",
-                                "args_id" : "refraction",
+                                "id" : "f_refraction",
+                                "args_id" : "f_refraction",
                                 "type": "text",
                                 "label": "Refractivity Coefficient",
                                 "defaultValue": "0.13",
@@ -134,8 +134,8 @@
                                     "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x&lt;1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
                                 },
                                 {
-                                    "id" : "a_coefficient",
-                                    "args_id" : "a_coefficient",
+                                    "id" : "f_a_coefficient",
+                                    "args_id" : "f_a_coefficient",
                                     "type": "text",
                                     "label": "'a' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "1.0",
@@ -145,8 +145,8 @@
                                     "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
-                                    "id" : "b_coefficient",
-                                    "args_id" : "b_coefficient",
+                                    "id" : "f_b_coefficient",
+                                    "args_id" : "f_b_coefficient",
                                     "type": "text",
                                     "label": "'b' coefficient (polynomial/logarithmic)",
                                     "defaultValue": "0.0",
@@ -156,8 +156,8 @@
                                     "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
                                 },                              
                                 {
-                                    "id" : "c_coefficient",
-                                    "args_id" : "c_coefficient",
+                                    "id" : "f_c_coefficient",
+                                    "args_id" : "f_c_coefficient",
                                     "type": "text",
                                     "label": "'c' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
@@ -167,8 +167,8 @@
                                     "helpText": "Third coefficient for the polynomial's quadratic term."
                                 },
                                 {
-                                    "id" : "d_coefficient",
-                                    "args_id" : "d_coefficient",
+                                    "id" : "f_d_coefficient",
+                                    "args_id" : "f_d_coefficient",
                                     "type": "text",
                                     "label": "'d' coefficient (polynomial only)",
                                     "defaultValue": "0.0",
@@ -178,8 +178,8 @@
                                     "helpText": "Fourth coefficient for the polynomial's cubic exponent."
                                 },
                                 {
-                                    "id" : "max_valuation_radius",
-                                    "args_id" : "max_valuation_radius",
+                                    "id" : "f_max_valuation_radius",
+                                    "args_id" : "f_max_valuation_radius",
                                     "type": "text",
                                     "label": "Maximum valuation radius (m)",
                                     "defaultValue": "8000.0",
