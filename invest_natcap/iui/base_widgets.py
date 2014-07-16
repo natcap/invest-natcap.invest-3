@@ -2545,6 +2545,7 @@ class MainWindow(QtGui.QMainWindow):
         self.dev_menu = QtGui.QMenu('&Development')
         self.save_to_python = self.dev_menu.addAction('Save to &python script...')
         self.save_to_json = self.dev_menu.addAction('Save to archivable &JSON...')
+        self.save_args_to_json = self.dev_menu.addAction('Save args dict to file...')
         self.menuBar().addMenu(self.dev_menu)
 
         self.exit_action.triggered.connect(self.ui.closeWindow)
@@ -2553,6 +2554,7 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_lastrun.triggered.connect(self.ui.remove_lastrun)
         self.save_to_python.triggered.connect(self.ui.save_to_python)
         self.save_to_json.triggered.connect(self.ui.save_to_json)
+        self.save_args_to_json.triggered.connect(self.ui.save_args_dict_to_file)
 
     def exec_(self):
         self.show()
@@ -2681,6 +2683,21 @@ class ExecRoot(Root):
                 emb_ptr = embedded_ui.find_element_ptr(element_id)
                 if emb_ptr != None:
                     return emb_ptr
+
+    def save_args_dict_to_file(self):
+        model = self.attributes['targetScript']
+        model_name = model.split('.')[-1]
+
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+            '%s_parameters.json' % model_name, filter = QString('InVEST Parameter file' +
+            ' (*.json);;All files (*.* *)'))
+        filename = str(filename)
+        if filename != '':
+            save_handler = fileio.JSONHandler(filename)
+            save_handler.write_to_disk(self.assembleOutputDict())
+            print 'parameters written to %s' % filename
+            basename = os.path.basename(filename)
+            self.messageArea.append('Parameters saved to %s' % basename)
 
     def save_parameters_to_file(self):
         model = self.attributes['targetScript']
