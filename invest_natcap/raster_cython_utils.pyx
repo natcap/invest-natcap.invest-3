@@ -371,7 +371,7 @@ def new_raster_from_base(
     return new_raster
 
     
-def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
+def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     """Does a direct convolution on a predefined kernel 
     
         
@@ -401,6 +401,11 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
     
+    cdef int n_rows, n_cols, row_index, col_index
+    cdef int weight_left_index, weight_right_index
+    cdef int kernel_left_index, kernel_right_index
+    cdef int max_distance = max_distance_in
+    
     n_rows, n_cols = weight_array.shape
     
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
@@ -416,12 +421,12 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         dist = numpy.sqrt(
             (row_index - kernel_size - 1) ** 2 +
             (col_index - kernel_size - 1) ** 2)
-        if dist > max_distance:
+        if dist > max_distance_in:
             return 0.0
         if kernel_type == 'linear':
-            return 1 - dist/max_distance
+            return 1 - dist/max_distance_in
         elif kernel_type == 'exponential':
-            return  numpy.exp(-(2.99/max_distance) * dist)
+            return  numpy.exp(-(2.99/max_distance_in) * dist)
     
     for row_index in xrange(kernel_size):
         for col_index in xrange(kernel_size):
