@@ -293,13 +293,8 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
         Returns nothing.
         """
-    base_raster = gdal.Open(base_uri)
-    new_raster = new_raster_from_base(base_raster, *args, **kwargs)
-    gdal.Dataset.__swig_destroy__(new_raster)
-    gdal.Dataset.__swig_destroy__(base_raster)
-    new_raster = None
-    base_raster = None
-
+    raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
+    
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
     n_rows=None, n_cols=None, dataset_options=[]):
@@ -327,40 +322,11 @@ def new_raster_from_base(
             passed to the gdal creation driver, overrides defaults
 
         returns a new GDAL raster dataset."""
-
-    if n_rows is None:
-        n_rows = base.RasterYSize
-    if n_cols is None:
-        n_cols = base.RasterXSize
-    projection = base.GetProjection()
-    geotransform = base.GetGeoTransform()
-    driver = gdal.GetDriverByName(gdal_format)
     
-    base_band = base.GetRasterBand(1)
-    block_size = base_band.GetBlockSize()
+    return raster_cython_utils.new_raster_from_base(
+        base, output_uri, gdal_format, nodata, datatype, fill_value,
+        n_rows, n_cols, dataset_options)
     
-    if dataset_options == []:
-        dataset_options = [
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]]
-    LOGGER.info('dataset_options=%s' % str(dataset_options))
-    new_raster = driver.Create(
-        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=dataset_options)
-    base_band = None
-    new_raster.SetProjection(projection)
-    new_raster.SetGeoTransform(geotransform)
-    band = new_raster.GetRasterBand(1)
-
-    band.SetNoDataValue(nodata)
-    if fill_value != None:
-        band.Fill(fill_value)
-    else:
-        band.Fill(nodata)
-    band = None
-
-    return new_raster
-
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
@@ -3054,99 +3020,5 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
             weight_uri
             
         returns nothing"""
-        
-    weight_ds = gdal.Open(weight_uri)
-    weight_band = weight_ds.GetRasterBand(1)
-    weight_array = weight_band.ReadAsArray()
-    new_raster_from_base_uri(
-        weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
-    
-    n_rows, n_cols = weight_array.shape
-    
-    output_ds = gdal.Open(output_uri, gdal.GA_Update)
-    output_band = output_ds.GetRasterBand(1)
-    output_array = output_band.ReadAsArray()
-    
-    #build a kernel
-    kernel_size = max_distance * 2 + 1
-    kernel = numpy.empty((kernel_size, kernel_size))
-    
-    def distance(row_index, col_index):
-        """closure for an euclidan distance calc"""
-        dist = math.sqrt(
-            (row_index - kernel_size - 1) ** 2 +
-            (col_index - kernel_size - 1) ** 2)
-        if dist > max_distance:
-            return 0.0
-        if kernel_type == 'linear':
-            return 1 - dist/max_distance
-        elif kernel_type == 'exponential':
-            return  math.exp(-(2.99/max_distance) * dist)
-    
-    for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            kernel[row_index, col_index] = distance(row_index, col_index)
-    
-    last_time = time.time()
-    for row_index in xrange(n_rows):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols) * 100.0))
-            last_time = current_time
-        for col_index in xrange(n_cols):
-            
-            #snip the window of the kernel over the window of the weight
-            if col_index >= max_distance:
-                weight_left_index = col_index - max_distance
-                kernel_left_index = 0
-            else:
-                weight_left_index = 0
-                kernel_left_index = max_distance - col_index
-            
-            if col_index < n_cols - max_distance - 1:
-                weight_right_index = col_index + max_distance + 1
-                kernel_right_index = kernel_size
-            else:
-                weight_right_index = n_cols
-                kernel_right_index = max_distance + (n_cols - col_index)
-                
-            #snip the window of the kernel over the window of the weight
-            if row_index >= max_distance:
-                weight_top_index = row_index - max_distance
-                kernel_top_index = 0
-            else:
-                weight_top_index = 0
-                kernel_top_index = max_distance - row_index
-            
-            if row_index < n_rows - kernel_size / 2:
-                weight_bottom_index = row_index + kernel_size / 2 + 1
-                kernel_bottom_index = kernel_size
-            else:
-                weight_bottom_index = n_rows
-                kernel_bottom_index = max_distance + (n_rows - row_index)
-            
-            try:
-                output_array[row_index, col_index] = numpy.sum(
-                    kernel[kernel_top_index:kernel_bottom_index,
-                        kernel_left_index:kernel_right_index] * 
-                    weight_array[weight_top_index:weight_bottom_index,
-                        weight_left_index:weight_right_index])
-            except ValueError as e:
-                print row_index
-                print col_index
-                print kernel_top_index
-                print kernel_bottom_index
-                print kernel_left_index
-                print kernel_right_index
-                print weight_top_index
-                print weight_bottom_index
-                print weight_left_index
-                print weight_right_index
-                print weight_array.shape
-                print kernel.shape
-                raise e
-    
-    LOGGER.info('convolve 2d 100% complete')
-    output_band = output_ds.GetRasterBand(1)
-    output_band.WriteArray(output_array)        
-    
+    raster_cython_utils.convolve_2d(
+        weight_uri, kernel_type, max_distance, output_uri)
