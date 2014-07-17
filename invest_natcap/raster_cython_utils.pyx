@@ -8,6 +8,11 @@ import numpy
 cimport cython
 from libcpp.map cimport map
 
+from libc.math cimport sqrt
+from libc.math cimport exp
+
+
+
 from osgeo import gdal
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -370,6 +375,19 @@ def new_raster_from_base(
 
     return new_raster
 
+
+cdef float distance(int row_index, int col_index, int kernel_size, int kernel_type, float max_distance):
+    """closure for an euclidan distance calc"""
+    cdef float dist = sqrt(
+        (row_index - kernel_size - 1) ** 2 +
+        (col_index - kernel_size - 1) ** 2)
+    if dist > max_distance:
+        return 0.0
+    if kernel_type == 0: #'linear'
+        return 1 - dist/max_distance
+    elif kernel_type == 1: #'exponential'
+        return  exp(-(2.99/max_distance) * dist)
+
     
 def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     """Does a direct convolution on a predefined kernel 
@@ -397,7 +415,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         
     weight_ds = gdal.Open(weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
-    weight_array = weight_band.ReadAsArray()
+    cdef numpy.ndarray[numpy.float_t, ndim=2] weight_array = weight_band.ReadAsArray().astype(numpy.float)
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
     
@@ -406,33 +424,26 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     cdef int kernel_left_index, kernel_right_index
     cdef int max_distance = max_distance_in
     
-    n_rows, n_cols = weight_array.shape
+    n_rows, n_cols = weight_band.YSize, weight_band.XSize
     
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
     output_band = output_ds.GetRasterBand(1)
-    output_array = output_band.ReadAsArray()
+    cdef numpy.ndarray[numpy.float_t, ndim=2] output_array = output_band.ReadAsArray().astype(numpy.float)
     
     #build a kernel
-    kernel_size = max_distance * 2 + 1
-    kernel = numpy.empty((kernel_size, kernel_size))
-    
-    def distance(row_index, col_index):
-        """closure for an euclidan distance calc"""
-        dist = numpy.sqrt(
-            (row_index - kernel_size - 1) ** 2 +
-            (col_index - kernel_size - 1) ** 2)
-        if dist > max_distance_in:
-            return 0.0
-        if kernel_type == 'linear':
-            return 1 - dist/max_distance_in
-        elif kernel_type == 'exponential':
-            return  numpy.exp(-(2.99/max_distance_in) * dist)
-    
+    cdef int kernel_size = max_distance * 2 + 1
+    cdef numpy.ndarray[numpy.float_t, ndim=2] kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
+    cdef int kernel_type_id
+    if kernel_type == 'linear':
+        kernel_type_id = 0
+    if kernel_type == 'exponential':
+        kernel_type_id = 1
     for row_index in xrange(kernel_size):
         for col_index in xrange(kernel_size):
-            kernel[row_index, col_index] = distance(row_index, col_index)
-    
-    last_time = time.time()
+            kernel[row_index, col_index] = distance(
+                row_index, col_index, kernel_size, kernel_type_id, max_distance)
+    cdef double last_time = time.time()
+    cdef double current_time
     for row_index in xrange(n_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
@@ -470,26 +481,12 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
                 weight_bottom_index = n_rows
                 kernel_bottom_index = max_distance + (n_rows - row_index)
             
-            try:
-                output_array[row_index, col_index] = numpy.sum(
-                    kernel[kernel_top_index:kernel_bottom_index,
-                        kernel_left_index:kernel_right_index] * 
-                    weight_array[weight_top_index:weight_bottom_index,
-                        weight_left_index:weight_right_index])
-            except ValueError as e:
-                print row_index
-                print col_index
-                print kernel_top_index
-                print kernel_bottom_index
-                print kernel_left_index
-                print kernel_right_index
-                print weight_top_index
-                print weight_bottom_index
-                print weight_left_index
-                print weight_right_index
-                print weight_array.shape
-                print kernel.shape
-                raise e
+            output_array[row_index, col_index] = numpy.sum(
+                kernel[kernel_top_index:kernel_bottom_index,
+                    kernel_left_index:kernel_right_index] * 
+                weight_array[weight_top_index:weight_bottom_index,
+                    weight_left_index:weight_right_index])
+        
     
     LOGGER.info('convolve 2d 100% complete')
     output_band = output_ds.GetRasterBand(1)
