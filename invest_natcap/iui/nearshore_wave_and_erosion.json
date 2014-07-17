@@ -1,14 +1,14 @@
 {
     "id": "window",
     "label": "Coastal Protection",
-    "targetScript": "invest_natcap.coastal_protection.coastal_protection",
-    "modelName": "coastal_protection",
-    "localDocURI": "../documentation/coastal_protection_model.html",
+    "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
+    "modelName": "nearshore_wave_and_erosion",
+    "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
     "height": 950,
     "width": 900,
     "elements": [
                 {
-                "id": "scenic_quality_tab_group",
+                "id": "main_tab_group",
                 "type": "tabbedGroup",
                 "elements": 
                 [
