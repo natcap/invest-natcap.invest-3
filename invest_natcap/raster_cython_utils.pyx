@@ -388,7 +388,7 @@ cdef float distance(int row_index, int col_index, int kernel_size, int kernel_ty
     elif kernel_type == 1: #'exponential'
         return  exp(-(2.99/max_distance) * dist)
 
-    
+@cython.boundscheck(False)
 def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     """Does a direct convolution on a predefined kernel 
     
@@ -419,9 +419,9 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
     
-    cdef int n_rows, n_cols, row_index, col_index
-    cdef int weight_left_index, weight_right_index
-    cdef int kernel_left_index, kernel_right_index
+    cdef int n_rows, n_cols, row_index, col_index, row_offset, col_offset
+    cdef int weight_left_index, weight_right_index, weight_top_index, weight_bottom_index
+    cdef int kernel_left_index, kernel_right_index, kernel_bottom_index, kernel_top_index
     cdef int max_distance = max_distance_in
     
     n_rows, n_cols = weight_band.YSize, weight_band.XSize
@@ -443,7 +443,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
             kernel[row_index, col_index] = distance(
                 row_index, col_index, kernel_size, kernel_type_id, max_distance)
     cdef double last_time = time.time()
-    cdef double current_time
+    cdef double current_time, kernel_sum
     for row_index in xrange(n_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
@@ -481,11 +481,12 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
                 weight_bottom_index = n_rows
                 kernel_bottom_index = max_distance + (n_rows - row_index)
             
-            output_array[row_index, col_index] = numpy.sum(
-                kernel[kernel_top_index:kernel_bottom_index,
-                    kernel_left_index:kernel_right_index] * 
-                weight_array[weight_top_index:weight_bottom_index,
-                    weight_left_index:weight_right_index])
+            kernel_sum = 0.0
+            for row_offset in xrange(kernel_bottom_index - kernel_top_index):
+                for col_offset in xrange(kernel_right_index - kernel_left_index):
+                        kernel_sum += (kernel[kernel_top_index+row_offset, kernel_left_index+col_offset] * 
+                            weight_array[weight_top_index+row_offset, weight_left_index+col_offset])
+            output_array[row_index, col_index] = kernel_sum
         
     
     LOGGER.info('convolve 2d 100% complete')
