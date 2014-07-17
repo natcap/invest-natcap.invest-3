@@ -415,7 +415,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         
     weight_ds = gdal.Open(weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.float_t, ndim=2] weight_array = weight_band.ReadAsArray().astype(numpy.float)
+    cdef numpy.ndarray[numpy.float_t, ndim=2] weight_array
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
     
@@ -428,7 +428,8 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
     output_band = output_ds.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.float_t, ndim=2] output_array = output_band.ReadAsArray().astype(numpy.float)
+    cdef numpy.ndarray[numpy.float_t, ndim=2] output_array = numpy.empty(
+        (1, n_cols), dtype=numpy.float)
     
     #build a kernel
     cdef int kernel_size = max_distance * 2 + 1
@@ -449,8 +450,27 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         if current_time - last_time > 5.0:
             LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols) * 100.0))
             last_time = current_time
-        for col_index in xrange(n_cols):
             
+        #snip the window of the kernel over the window of the weight
+        if row_index >= max_distance:
+            weight_top_index = row_index - max_distance
+            kernel_top_index = 0
+        else:
+            weight_top_index = 0
+            kernel_top_index = max_distance - row_index
+        
+        if row_index < n_rows - kernel_size / 2:
+            weight_bottom_index = row_index + kernel_size / 2 + 1
+            kernel_bottom_index = kernel_size
+        else:
+            weight_bottom_index = n_rows
+            kernel_bottom_index = max_distance + (n_rows - row_index)
+    
+        weight_array = weight_band.ReadAsArray(
+            xoff=0, yoff=weight_top_index, win_xsize=n_cols,
+            win_ysize=weight_bottom_index-weight_top_index).astype(numpy.float)
+        
+        for col_index in xrange(n_cols):
             #snip the window of the kernel over the window of the weight
             if col_index >= max_distance:
                 weight_left_index = col_index - max_distance
@@ -465,31 +485,16 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
             else:
                 weight_right_index = n_cols
                 kernel_right_index = max_distance + (n_cols - col_index)
-                
-            #snip the window of the kernel over the window of the weight
-            if row_index >= max_distance:
-                weight_top_index = row_index - max_distance
-                kernel_top_index = 0
-            else:
-                weight_top_index = 0
-                kernel_top_index = max_distance - row_index
-            
-            if row_index < n_rows - kernel_size / 2:
-                weight_bottom_index = row_index + kernel_size / 2 + 1
-                kernel_bottom_index = kernel_size
-            else:
-                weight_bottom_index = n_rows
-                kernel_bottom_index = max_distance + (n_rows - row_index)
             
             kernel_sum = 0.0
             for row_offset in xrange(kernel_bottom_index - kernel_top_index):
                 for col_offset in xrange(kernel_right_index - kernel_left_index):
                         kernel_sum += (kernel[kernel_top_index+row_offset, kernel_left_index+col_offset] * 
-                            weight_array[weight_top_index+row_offset, weight_left_index+col_offset])
-            output_array[row_index, col_index] = kernel_sum
+                            weight_array[row_offset, weight_left_index+col_offset])
+            output_array[0, col_index] = kernel_sum
         
+        output_band.WriteArray(output_array, 0, row_index)
     
     LOGGER.info('convolve 2d 100% complete')
     output_band = output_ds.GetRasterBand(1)
-    output_band.WriteArray(output_array)        
     
