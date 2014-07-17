@@ -69,7 +69,8 @@ class TestScenicQuality(unittest.TestCase):
 
     def test_cython_vs_python_on_block_island(self):
         print('CWD', os.getcwd())
-        file_name = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
+        #file_name = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
+        file_name = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
         with open(file_name) as data_file:
             args = json.load(data_file)
         #print(args)

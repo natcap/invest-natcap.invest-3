@@ -432,7 +432,10 @@ def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
 
 def get_count_feature_set_uri(fs_uri):
     shapefile = ogr.Open(fs_uri)
+    message = "Problem encoutered with " + fs_uri
+    assert shapefile is not None, message
     layer = shapefile.GetLayer()
+    assert layer is not None, message
     count = layer.GetFeatureCount()
     shapefile = None
 
@@ -443,17 +446,6 @@ def execute(args):
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
-    aq_args = {}
-    for key in args:
-        print("key", key)
-        if key[:2] == 'f_':
-            aq_args[key[2:]] = float(args[key])
-        if key[:2] == 'i_':
-            aq_args[key[2:]] = int(args[key])
-        else:
-            aq_args[key] = args[key].copy()
-    print("args", args)
-    return
     aq_args=args.copy()
 
     #validate input
