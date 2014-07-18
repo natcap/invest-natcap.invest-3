@@ -624,8 +624,13 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
 #            visibility_map[I[index], J[index]] = visibility
 #        pixel = p.next
 
+
 #@cython.boundscheck(False)
 def sweep_through_angles( \
+    double viewpoint_i, \
+    double viewpoint_j, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_I, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_J, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] angles, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] center_events, \
@@ -644,6 +649,31 @@ def sweep_through_angles( \
     cdef int c = 0
     cdef double d = 0
     cdef double v = 0
+    # Variables for fast update of the active line
+    # The active line is a segment between the points O and E:
+    #  -O is the origin, i.e. the cell on which the viewpoint is
+    #  -E is the end point, a cell on the viewshed's bounding box
+    # The active line's long axis is the axis (either 0 for I or 1 for J) where 
+    # the active line is the longest: 
+    #    long_axis = argmax(abs([E[0]-O[0], E[1]-O[1]]))
+    # Conversely, the line's short axis is the axis where the active line is
+    # the shortest: 
+    #    short_axis = argmin(abs([E[0]-O[0], E[1]-O[1]]))
+    cdef double s = 0 # Active line's short axis (set to I)
+    cdef double l = 1 # Active line's long axis (set to J)
+    cdef double Os = 0 # Origin's coordinate along short axis O[s]
+    cdef double Ol = 0 # Origin's coordinate along long axis O[l]
+    cdef double Es = 0 # End point's coordinate along short axis E[s]
+    cdef double El = 0 # End point's coordinate along long axis E[l]
+    cdef double Sl = 1 # Sign of the direction from O to E along the long axis
+    cdef double Ss = 1 # Sign of the direction from O to E along the short axis
+    cdef double Dl = 0 # Distance from a point P to E along the long axis
+    cdef double Ds = 0 # Distance from a point P to E along the short axis
+    # Active line container: an array that can contain twice the pixels in
+    # a straight unobstructed line of sight aligned with the I or J axis.
+    cdef ActivePixel *active_pixel_array = \
+        <ActivePixel*>malloc(max_line_length*sizeof(ActivePixel))
+    assert active_pixel_array is not NULL
     # 4- build event lists
     cdef int add_event_id = 0
     cdef int add_event_count = add_events.size

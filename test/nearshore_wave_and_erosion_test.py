@@ -15,18 +15,18 @@ from nose.plugins.skip import SkipTest
 
 import invest_test_core
 from invest_natcap import raster_utils
-from invest_natcap.coastal_protection \
-    import coastal_protection
-from invest_natcap.coastal_protection \
-    import coastal_protection_core
+from invest_natcap.nearshore_wave_and_erosion \
+    import nearshore_wave_and_erosion
+from invest_natcap.nearshore_wave_and_erosion \
+    import nearshore_wave_and_erosion_core
 
 
-LOGGER = logging.getLogger('coastal_protection_test')
+LOGGER = logging.getLogger('nearshore_wave_and_eroasion_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestCoastalProtection(unittest.TestCase):
-    """Main testing class for the coastal protection tests"""
+class TestNearshoreWaveAndErosion(unittest.TestCase):
+    """Main testing class for the nearshore wave and erosion model tests"""
     
     def setUp(self):
         """ Set up function

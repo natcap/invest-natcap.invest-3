@@ -1,14 +1,14 @@
 {
     "id": "window",
-    "label": "Coastal Protection",
-    "targetScript": "invest_natcap.coastal_protection.coastal_protection",
-    "modelName": "coastal_protection",
-    "localDocURI": "../documentation/coastal_protection_model.html",
+    "label": "Nearshore Wave and Erosion",
+    "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
+    "modelName": "nearshore_wave_and_erosion",
+    "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
     "height": 950,
     "width": 900,
     "elements": [
                 {
-                "id": "scenic_quality_tab_group",
+                "id": "main_tab_group",
                 "type": "tabbedGroup",
                 "elements": 
                 [
@@ -43,6 +43,17 @@
 				    "required": false,
 				    "returns": {"ifEmpty": "pass"},
 				    "helpText":"A String that will be added to the end of the output file paths."
+				},
+				{
+				    "label": "What modules do you want to run?",
+				    "id": "modules_to_run",
+				    "args_id": "modules_to_run",
+				    "type": "dropdown",
+				    "defaultValue": "Profile generator and nearshore wave and erosion",
+				    "options": ["Profile generator only", "Profile generator and nearshore wave and erosion"],
+				    "required": true,
+				    "returns": "strings",
+				    "helpText": "Select the modules you want to be executed: profile generator is quick and allows you to quickly get shore profile information. The action of the waves on the shore takes a lot more time to execute."
 				},
 				{
 				    "label": "Land polygon",
@@ -117,7 +128,7 @@
 				    "helpText": "If you have answered \"(2) No, but I will upload a cross-shore profile\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will not cut a cross-shore profile for you from a GIS layer, but will create a backshore profile, smooth, or manipulate a cross-shore profile of your choice. This file must a contain a minimum of 2 (X, Z) coordinates. It must be tab delimited with two columns. The first column must be the cross-shore distance X-axis, where X=0 is at the shoreline (positive X pointing seaward, negative X pointing landward). The spatial resolution of the X-axis (spacing between two X-coordinates) must be equal to 1 (dx=1). The second column must indicate the cross-shore elevations along the X-axis. Depths values must be negative (referenced to Mean Lower Low Water) and terrestrial elevations positive."
 				},
 				{
-				    "label": "Smoothing Percentage (Value of \"0\" means no smoothing)",
+				    "label": "Smoothing Percentage (\"0\" means no smoothing)",
 				    "id": "smoothing_percentage",
 				    "args_id": "smoothing_percentage",
 				    "type": "text",

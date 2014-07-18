@@ -12,6 +12,7 @@ import time
 import csv
 import glob
 import shutil
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -47,26 +48,36 @@ class TestScenicQuality(unittest.TestCase):
         #print(elevation)
 
     def test_visibility_basic_array(self):
-        DEM_size = 30
+        DEM_size = 31
         elevation = np.zeros((DEM_size, DEM_size))
         nodata = -1
         viewpoint = (DEM_size/2, DEM_size/2)
         elevation[viewpoint[0]+1, viewpoint[1]+1] = 2.
         obs_elev = 1.0
         tgt_elev = 0.0
-        max_dist = 10 
+        max_dist = 5 
         cell_size = 5.0
-        refraction_coeff = 1.0
-        alg_version = 'python'
+        refraction_coeff = 0.13
+        alg_version = 'cython' #'python'
         visibility = sqc.compute_viewshed(elevation, nodata, viewpoint, \
             obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, \
             alg_version)
+        visibility[visibility > 0] = 1
+        visibility[visibility < 0] = 0
         visibility[DEM_size/2, DEM_size/2] = 2
-        print(visibility)
+        print(visibility.astype(int))
 
-    def test_visibility_flat_surface(self):
-        DEM_size = 30
-        base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
+    def test_cython_vs_python_on_block_island(self):
+        print('CWD', os.getcwd())
+        #file_name = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
+        file_name = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
+        with open(file_name) as data_file:
+            args = json.load(data_file)
+        #print(args)
+        sq.execute(args)
+        return
+        # Path from test/
+        #base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
         base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
         flat_dem_uri = "flat_dem.tif"
         raster_utils.new_raster_from_base_uri( \
@@ -87,9 +98,10 @@ class TestScenicQuality(unittest.TestCase):
             viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
             refraction_coeff, alg_version)
         visibility[DEM_size/2, DEM_size/2] = 2
-        print(visibility)
+        print(visibility.astype(int))
 
     def test_visibility_simple_obstacles(self):
+        return
         obs_elev = 1.0
         tgt_elev = 0.0
         max_dist = -1.0

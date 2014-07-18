@@ -432,7 +432,10 @@ def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
 
 def get_count_feature_set_uri(fs_uri):
     shapefile = ogr.Open(fs_uri)
+    message = "Problem encoutered with " + fs_uri
+    assert shapefile is not None, message
     layer = shapefile.GetLayer()
+    assert layer is not None, message
     count = layer.GetFeatureCount()
     shapefile = None
 
