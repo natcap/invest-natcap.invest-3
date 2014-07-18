@@ -307,6 +307,8 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
         Returns nothing.
         """
     base_raster = gdal.Open(base_uri)
+    if base_raster is None:
+        raise IOError("%s not found when opening GDAL raster")
     new_raster = new_raster_from_base(base_raster, *args, **kwargs)
     gdal.Dataset.__swig_destroy__(new_raster)
     gdal.Dataset.__swig_destroy__(base_raster)
