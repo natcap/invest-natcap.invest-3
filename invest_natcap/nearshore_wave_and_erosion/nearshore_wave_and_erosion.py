@@ -1,10 +1,10 @@
-"""InVEST Coastal Protection model non-core."""
+"""InVEST Nearshore Wave and Erosion model non-core."""
 
 import os
 
 from osgeo import ogr
 
-import coastal_protection_core
+import nearshore_wave_and_erosion_core
 
 def execute(args):
     """This function invokes the coastal protection model given uri inputs 
@@ -21,7 +21,7 @@ def execute(args):
     if not os.path.isdir(workspace_dir):
         os.makedirs(workspace_dir)
 
-    coastal_protection_core.execute(args)
+    nearshore_wave_and_erosion_core.execute(args)
 
 
 #This part is for command line invocation and allows json objects to be passed

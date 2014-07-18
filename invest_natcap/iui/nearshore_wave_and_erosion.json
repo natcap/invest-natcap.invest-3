@@ -1,6 +1,6 @@
 {
     "id": "window",
-    "label": "Coastal Protection",
+    "label": "Nearshore Wave and Erosion",
     "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
     "modelName": "nearshore_wave_and_erosion",
     "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
