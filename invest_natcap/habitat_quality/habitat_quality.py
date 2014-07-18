@@ -224,12 +224,7 @@ def execute(args):
             # convert max distance from meters to the number of pixels that
             # represents on the raster
             dr_pixel = dr_max / cell_size
-
-            # compute sigma to be used in a gaussian filter.  Sigma is
-            # derived from using equation 12.2 in users manual and the
-            # gaussian equation. 2.99573 is from users guide and old code
-            sigma = math.sqrt(dr_pixel / (2.99573 * 2.0))
-            LOGGER.debug('Sigma for gaussian : %s', sigma)
+            LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_uri = \
                os.path.join(inter_dir, threat + '_filtered%s.tif' % suffix)
@@ -238,9 +233,9 @@ def execute(args):
             # distance
             #raster_utils.gaussian_filter_dataset_uri(
             #        threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
-            max_distance = dr_max / cell_size #max distance in cell size
+            
             raster_utils.convolve_2d(
-                threat_dataset_uri, 'exponential', max_distance, filtered_threat_uri)
+                threat_dataset_uri, 'exponential', dr_pixel, filtered_threat_uri)
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
