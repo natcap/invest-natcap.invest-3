@@ -4,7 +4,9 @@ import os
 
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 
+from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core
 
 # TODO: Get rid of this function!!!! (in CV too)
@@ -95,6 +97,64 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
 
     return output_datasource
 
+# TODO: write a unit test for this function
+def projections_match(projection_list, silent_mode = True):
+    """Check that two gdal datasets are projected identically. 
+       Functionality adapted from Doug's 
+       biodiversity_biophysical.check_projections 
+
+        Inputs:
+            - projection_list: list of wkt projections to compare
+            - silent_mode: id True (default), don't output anything, otherwise
+              output if and why some projections are not the same.
+
+        Output: 
+            - False the datasets are not projected identically.
+    """
+    assert len(projection_list) > 1
+
+    srs_1 = osr.SpatialReference()
+    srs_2 = osr.SpatialReference()
+
+    srs_1.ImportFromWkt(projection_list[0])
+
+    for projection in projection_list:
+        srs_2.ImportFromWkt(projection)
+
+        if srs_1.IsProjected() != srs_2.IsProjected():
+            if not silent_mode:
+                message = \
+                'Different projection: One of the Rasters is Not Projected'
+                LOGGER.debug(message)
+            return False
+        if srs_1.GetLinearUnits() != srs_2.GetLinearUnits():
+            #LOGGER.debug('Different proj.: Proj units do not match %s:%s', \
+            #         srs_1.GetLinearUnits(), srs_2.GetLinearUnits())
+            return False
+    
+        if srs_1.GetAttrValue("PROJECTION") != srs_2.GetAttrValue("PROJECTION"):
+            #LOGGER.debug('Projections are not the same')
+            return False
+        # At this point, everything looks identical. look further into the
+        # projection parameters:
+        for parameter in ['false_easting', 'false_northing', \
+            'standard_parallel_1', 'standard_parallel_2', \
+            'latitude_of_center', 'longitude_of_center']:
+            if srs_1.GetProjParm(parameter) != srs_2.GetProjParm(parameter):
+                return False
+    return True
+
+def shapefile_wkt(shapefile):
+    """ Return the projection of a shapefile in the OpenGIS WKT format.
+    
+        Input: 
+            - raster: raster file
+        
+        Output:
+            - a projection encoded as a WKT-compliant string."""
+    layer = shapefile.GetLayer()
+    sr = layer.GetSpatialRef()
+    return sr.ExportToWkt()
 
 # TODO: write a unit test for this function
 def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
@@ -268,8 +328,16 @@ def execute(args):
     if not os.path.isdir(intermediate_dir):
         os.makedirs(intermediate_dir)
 
+    # Initializations
+    args['cell_size'] = \
+        raster_utils.get_cell_size_from_uri(args['bathymetry_uri'])
+
     # Preprocess the landmass
-    
+    print('Pre-processing landmass...')
+    args['landmass_raster_uri'] = \
+        preprocess_polygon_datasource(args['landmass_uri'], \
+            args['aoi_uri'], args['cell_size'], \
+            os.path.join(intermediate_dir, 'landmass.tif'))
 
     nearshore_wave_and_erosion_core.execute(args)
 
