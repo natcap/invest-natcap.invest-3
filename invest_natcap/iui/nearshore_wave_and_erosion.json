@@ -179,17 +179,6 @@
 				    "required": true,
 				    "returns": "strings",
 				    "helpText": "This drop down box allows users to specify whether they want the model to compute fetch distances. If \"(1) Yes\" is selected, fetch radials will be extended from the Land Point (input 3) and cut based on the Land Polygon (input 4). The results will be averaged over 16 directions."
-				},
-				{
-				    "label": "What modules do you want to run?",
-				    "id": "components_to_run",
-				    "args_id": "components_to_run",
-				    "type": "dropdown",
-				    "defaultValue": "profile generator only",
-				    "options": ["profile generator only", "profile generator and near shore wave"],
-				    "required": true,
-				    "returns": "strings",
-				    "helpText": "This drop down box allows users to specify whether they want to run thew profile generator only or the near shore wave erosion model as well."
 				}
                             ]
                         }
@@ -197,7 +186,7 @@
                     },
                     {
                         "id": "wave_erosion_tab",
-                        "label": "Nearshore Waves and Erosion",
+                        "label": "Nearshore Wave and Erosion",
                         "type": "tab",
                         "enabled": true,
                         "elements":
