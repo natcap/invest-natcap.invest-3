@@ -1,6 +1,7 @@
 """InVEST Nearshore Wave and Erosion model non-core."""
 
 import os
+import shutil
 
 from osgeo import gdal
 from osgeo import ogr
@@ -144,6 +145,16 @@ def projections_match(projection_list, silent_mode = True):
                 return False
     return True
 
+def raster_wkt(raster):
+    """ Return the projection of a raster in the OpenGIS WKT format.
+    
+        Input: 
+            - raster: raster file
+        
+        Output:
+            - a projection encoded as a WKT-compliant string."""
+    return raster.GetProjection()
+
 def shapefile_wkt(shapefile):
     """ Return the projection of a shapefile in the OpenGIS WKT format.
     
@@ -155,6 +166,46 @@ def shapefile_wkt(shapefile):
     layer = shapefile.GetLayer()
     sr = layer.GetSpatialRef()
     return sr.ExportToWkt()
+
+def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
+    out_dataset_uri):
+    """Adjust in_dataset_uri to match aoi_dataset_uri's extents, cell size and
+    projection.
+    
+        Inputs:
+            - in_dataset_uri: the uri of the dataset to adjust
+            - aoi_dataset_uri: uri to the aoi we want to use to adjust 
+                in_dataset_uri
+            - out_dataset_uri: uri to the adjusted dataset
+
+        Returns:
+            - out_dataset_uri"""
+    # Split the path apart from the filename
+    out_head, out_tail = os.path.split(out_dataset_uri)
+    _, tail = os.path.split(in_dataset_uri)
+    # Split the file basename from the file extension
+    out_base, _ = os.path.splitext(out_tail)
+    base, _ = os.path.splitext(tail)
+    # Preliminary variable initialization
+    aoi_wkt = shapefile_wkt(ogr.Open(aoi_datasource_uri))
+    input_wkt = raster_wkt(gdal.Open(in_dataset_uri))
+    message = "Cannot extract a Well Known Transformation (wkt) from " + \
+        str(in_dataset_uri) + ". Please check the file has a valid WKT."
+    assert input_wkt, message
+    # Reproject AOI to input dataset projection
+    reprojected_aoi_uri = os.path.join(out_head, base + '_reprojected_aoi.shp')
+    raster_utils.reproject_datasource_uri(aoi_datasource_uri, input_wkt, \
+    reprojected_aoi_uri)
+    # Clip dataset with reprojected AOI
+    clipped_dataset_uri = os.path.join(out_head, out_base + '_unprojected.tif')
+    raster_utils.clip_dataset_uri(in_dataset_uri, reprojected_aoi_uri, \
+    clipped_dataset_uri, False)
+    # Reproject clipped dataset to AOI's projection
+    #raster_utils.reproject_dataset_uri(clipped_dataset_uri, cell_size, \
+    raster_utils.warp_reproject_dataset_uri(clipped_dataset_uri, \
+    cell_size, aoi_wkt, 'bilinear', out_dataset_uri)
+    # Done, return the dataset uri
+    return out_dataset_uri    
 
 # TODO: write a unit test for this function
 def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
@@ -269,6 +320,24 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
             options = options)
     return output_uri 
     
+def preprocess_dataset(dataset_uri, aoi_uri, cell_size, output_uri):
+    """Function that preprocesses an input dataset (clip,
+    reproject, resample) so that it is ready to be used in the model
+        
+        Inputs:
+            -dataset_uri: uri to the input dataset to be pre-processed
+            -aoi_uri: uri to an aoi polygon datasource that is used for
+                clipping and reprojection.
+            -cell_size: output dataset cell size in meters (integer)
+            -output_uri: uri to the pre-processed output dataset.
+        
+        Returns output_uri
+    """
+    # Adjust the dataset to the aoi and save the result
+    adjust_raster_to_aoi(dataset_uri, aoi_uri, cell_size, output_uri)
+    
+    return output_uri
+
 def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     output_uri, field_name = None, all_touched = False, nodata = 0., \
     empty_raster_allowed = False):
@@ -338,6 +407,13 @@ def execute(args):
         preprocess_polygon_datasource(args['landmass_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(intermediate_dir, 'landmass.tif'))
+
+    # Preprocess bathymetry
+    print('Pre-processing bathymetry...')
+    args['bathymetry_raster_uri'] = \
+        preprocess_dataset(args['bathymetry_uri'], \
+            args['aoi_uri'], args['cell_size'], \
+            os.path.join(intermediate_dir, 'bathymetry.tif'))
 
     nearshore_wave_and_erosion_core.execute(args)
 
