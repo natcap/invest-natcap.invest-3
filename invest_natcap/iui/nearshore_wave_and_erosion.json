@@ -80,7 +80,7 @@
 				    "helpText": "This drop down box allows you to select whether you 1) wish to have the GIS create a cross-shore transect, 2) will upload a cross-shore profile of your own or 3) prefer to have the model create a theoretical profile. The answer provided to this question will determine whether subsequent inputs are required or optional."
 				},
 				{
-				    "label": "IF \"yes\": Bathymetric Grid (DEM) (optional)",
+				    "label": "IF \"yes\": Bathymetric Grid (DEM)",
 				    "id": "bathymetry_layer",
 				    "args_id": "bathymetry_uri",
 				    "type": "file",
@@ -90,6 +90,22 @@
 				    "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
 				    "validateAs":{"type":"GDAL"},
 				    "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model requires a DEM in order to cut a cross-shore profile. This bathymetric grid layer should have a vertical elevation referenced to Mean Lower Low water."
+				},
+				{
+				    "label": "IF \"yes\": Area of interest",
+				    "id": "area_of_interest",
+				    "args_id": "aoi_uri",
+				    "type": "file",
+				    "required": true,
+				    "defaultValue":
+				    "../CoastalProtection/Input/AOI_BarkClay.shp",
+				    "validateAs":{"type":"OGR",
+				                  "layers": [{"name": {"inheritFrom":"file"},
+				                      "type":"polygons",
+				                      "projection" : {"units": "meters", "exists": true}
+				                  }]
+				    },
+				    "helpText": "Single feature polygon shapefile. All outputs will be in the AOI's projection."
 				},
 				{
 				    "label": "IF \"yes\": Habitat Data Directory (optional)",
@@ -103,7 +119,7 @@
 				    "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will optionally allow for the location of natural habitats that intersect on the cross-shore transect. To do so, you must store all Natural Habitat input layers that you want to consider in a directory. Each natural habitat layer should consist of the location of those habitats, and all data in this folder must be polygon shapefiles and projected in meters. Further, each of these layers should end with an underscore followed by a unique number, for example \"_1\" or \"_2\"."
 				},
 				{
-				    "label": "IF \"yes\": Length of your profile (kilometers)",
+				    "label": "IF \"yes\": Maximum length of your profile (km)",
 				    "id": "max_profile_length",
 				    "args_id": "max_profile_length",
 				    "type": "text",
@@ -123,7 +139,7 @@
 				    "required": false,
 				    "returns" : {"ifEmpty":"pass"},
 				    "defaultValue":
-				    "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
+				    "",
 				    "validateAs":{"type":"GDAL"},
 				    "helpText": "If you have answered \"(2) No, but I will upload a cross-shore profile\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will not cut a cross-shore profile for you from a GIS layer, but will create a backshore profile, smooth, or manipulate a cross-shore profile of your choice. This file must a contain a minimum of 2 (X, Z) coordinates. It must be tab delimited with two columns. The first column must be the cross-shore distance X-axis, where X=0 is at the shoreline (positive X pointing seaward, negative X pointing landward). The spatial resolution of the X-axis (spacing between two X-coordinates) must be equal to 1 (dx=1). The second column must indicate the cross-shore elevations along the X-axis. Depths values must be negative (referenced to Mean Lower Low Water) and terrestrial elevations positive."
 				},
@@ -154,7 +170,7 @@
 				    "helpText": "If you would like the model to gather wind and wave statistics that might represent oceanic conditions at your site, select the WW3 file that we prepared for you. The model will use this data to read the maximum, top 10% and top 25% wind speed as well as wave height and associated wave period values from the model grid closest to your site."
 				},
 				{
-				    "label": "Do you wish to calculate fetch for Land Point? (optional)",
+				    "label": "Do you wish to calculate fetch for Land Point?",
 				    "id": "calculate_fetch",
 				    "args_id": "calculate_fetch",
 				    "type": "dropdown",
