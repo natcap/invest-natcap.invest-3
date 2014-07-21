@@ -156,6 +156,17 @@
 				    "helpText": "Enter a percentage value for how much you wish to smooth the profile created or fed through the model. A value of \"0\" means no smoothing."
 				},
 				{
+				    "label": "Model Spatial Resolution (m) (dx)",
+				    "id": "model_resolution",
+				    "args_id": "model_resolution",
+				    "type": "text",
+				    "required": true,
+				    "dataType": "int",
+				    "validText": "[0-9]*",
+				    "defaultValue": "1",
+				    "helpText": "A coarse spatial resolution can sometimes lead to model instability and inaccuracy in model outptuts. Please choose a proper resolution at which you want to run the model. This value can be greater or smaller than one. However, keep in mind that a smaller resolution yields longer computing time."
+				},
+				{
 				    "label": "Wave Watch III Model Data (optional)",
 				    "id": "climatic_forcing_uri",
 				    "args_id": "climatic_forcing_uri",
@@ -295,15 +306,15 @@
                                     "helpText": "In order to estimate the amount of beach erosion or bed scour in inter- and/or supra-tidal areas, enter the maximum water level reached during your input storm. Please make sure that the storm surge level you input is consistent with the wind speed or wave height that you entered. For guidance, please consult the Wind Speed figure in the user's guide for storm surge levels typically observed during hurricanes. This surge elevation is applied to the MSL. If you want to investigate, for example, a storm hitting your area at high tide you must add the high tide elevation to this surge value and enter the sum for this input."
                                 },
 				{
-				    "label": "Model Spatial Resolution (m) (dx)",
-				    "id": "model_resolution",
-				    "args_id": "model_resolution",
-				    "type": "text",
+				    "label": "Compute storm surge?",
+				    "id": "compute_storm_surge",
+				    "args_id": "compute_storm_surge",
+				    "type": "dropdown",
+				    "defaultValue": "no",
+				    "options": ["yes", "no"],
 				    "required": true,
-				    "dataType": "int",
-				    "validText": "[0-9]*",
-				    "defaultValue": "1",
-				    "helpText": "A coarse spatial resolution can sometimes lead to model instability and inaccuracy in model outptuts. Please choose a proper resolution at which you want to run the model. This value can be greater or smaller than one. However, keep in mind that a smaller resolution yields longer computing time."
+				    "returns": "strings",
+				    "helpText": "Choose whether you want the model to compute the storm surge."
 				}
 				]
 			},
