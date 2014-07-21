@@ -2,6 +2,7 @@
 
 import os
 
+from osgeo import gdal
 from osgeo import ogr
 
 import nearshore_wave_and_erosion_core
@@ -160,6 +161,53 @@ def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
         data_uri + ' and ' + aoi_uri + ' mis-aligned?'
         assert out_feature_count > 0, message
     return output_uri
+
+# TODO: write a unit test for this function
+def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
+    field=None, all_touched=False, nodata = 0., datatype = gdal.GDT_Float32):
+    """Burn default or user-defined data from a shapefile on a raster.
+
+        Inputs:
+            - shapefile: the dataset to be discretized
+            - aoi_uri: URI to an AOI shapefile
+            - cell_size: coarseness of the discretization (in meters)
+            - output_uri: uri where the raster will be saved
+            - field: optional field name (string) where to extract the data 
+                from.
+            - all_touched: optional boolean that indicates if we use GDAL's
+              ALL_TOUCHED parameter when rasterizing.
+
+        Output: A shapefile where:
+            If field is specified, the field data is used as burn value.
+            If field is not specified, then:
+                - shapes on the first layer are encoded as 1s
+                - the rest is encoded as 0"""
+    shapefile = ogr.Open(shapefile_uri)
+    message = "Can't open shapefile " + shapefile_uri
+    assert shapefile, message
+    if aoi_uri == shapefile_uri:
+        aoi = shapefile
+    else:
+        aoi = ogr.Open(aoi_uri)
+    # Create the raster that will contain the new data
+    raster = \
+        raster_utils.create_raster_from_vector_extents(cell_size, 
+        cell_size, datatype, raster_utils.gdal_cast(nodata, datatype), \
+        output_uri, aoi)
+    layer = shapefile.GetLayer(0)
+    # Add the all_touched option
+    options = ['ALL_TOUCHED='+str(all_touched).upper()]
+    if field:
+        # Burn the data in 'field' to a raster
+        layer_id, _ = \
+        get_layer_and_index_from_field_name(field, shapefile)
+        layer = shapefile.GetLayer(layer_id)
+        options = ['ATTRIBUTE='+field] + options
+        gdal.RasterizeLayer(raster, [1], layer, options = options)
+    else:
+        gdal.RasterizeLayer(raster, [1], layer, burn_values = [1], \
+            options = options)
+    return output_uri 
     
 def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     output_uri, field_name = None, all_touched = False, nodata = 0., \
