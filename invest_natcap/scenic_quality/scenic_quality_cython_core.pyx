@@ -207,6 +207,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
+    long active # Indicate if the pixel is active
     long index # long is python's default int type
     double distance # double is python's float type
     double visibility
@@ -681,6 +682,7 @@ def sweep_through_angles( \
     cdef double slope = (Es-Os)/(El-Ol)
     cdef double Dl = 0 # Distance from a point P to E along the long axis
     cdef double Ds = 0 # Distance from a point P to E along the short axis
+    cdef int ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
     cdef ActivePixel *active_pixel_array = \
@@ -717,8 +719,9 @@ def sweep_through_angles( \
         v = visibility[c]
         o = offset_visibility[c]
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
-        Dl = coord[l][c]-Ol
-        Ds = coord[s][c]-Os
+        Pl = coord[l][c]
+        Ps = coord[s][c]
+        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
