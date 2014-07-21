@@ -1452,46 +1452,6 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
     return output_datasource
 
     
-def build_contour_raster(dem_dataset, contour_value, out_uri):
-    """Builds a raster contour given a DEM and contour value.  The new
-        raster has pixels on if the contour would pass through that pixel.
-
-        dem_dataset - gdal height dem
-        contour_value - the contour height
-        out_uri - a uri to the output file
-
-        returns the new contour dataset"""
-
-    contour_dataset = new_raster_from_base(
-        dem_dataset, out_uri, 'GTiff', 255, gdal.GDT_Byte)
-
-    _, _, dem_array = extract_band_and_nodata(dem_dataset, get_array = True)
-
-    #Mask the values in the array to either be less than the contour value or
-    #greater than the contour value.  The result will be a 0 or 1 pixel
-    dem_array = (dem_array - contour_value) < 0
-
-    #difference filter to subtract neighboring values from the center
-    difference_kernel = numpy.array([[-1, -1, -1],
-                                  [-1, 8, -1],
-                                  [-1, -1, -1]])
-    contour_array = scipy.signal.convolve(
-        dem_array, difference_kernel, mode='same')
-
-    #We care about positive pixels with neighboring negative pixels, that's
-    #our definition of a contour
-    contour_array = (contour_array > 0) * (contour_array < 8)
-
-    #Write out the result
-    contour_band = contour_dataset.GetRasterBand(1)
-    contour_band.WriteArray(contour_array)
-    
-    #Make sure the dataset is closed and cleaned up
-    contour_band = None
-    gdal.Dataset.__swig_destroy__(contour_dataset)
-    contour_dataset = None
-
-    
 def unique_raster_values_uri(dataset_uri):
     """Returns a list of the unique integer values on the given dataset
 
