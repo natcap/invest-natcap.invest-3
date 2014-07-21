@@ -293,13 +293,8 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
         Returns nothing.
         """
-    base_raster = gdal.Open(base_uri)
-    new_raster = new_raster_from_base(base_raster, *args, **kwargs)
-    gdal.Dataset.__swig_destroy__(new_raster)
-    gdal.Dataset.__swig_destroy__(base_raster)
-    new_raster = None
-    base_raster = None
-
+    raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
+    
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
     n_rows=None, n_cols=None, dataset_options=[]):
@@ -327,40 +322,11 @@ def new_raster_from_base(
             passed to the gdal creation driver, overrides defaults
 
         returns a new GDAL raster dataset."""
-
-    if n_rows is None:
-        n_rows = base.RasterYSize
-    if n_cols is None:
-        n_cols = base.RasterXSize
-    projection = base.GetProjection()
-    geotransform = base.GetGeoTransform()
-    driver = gdal.GetDriverByName(gdal_format)
     
-    base_band = base.GetRasterBand(1)
-    block_size = base_band.GetBlockSize()
+    return raster_cython_utils.new_raster_from_base(
+        base, output_uri, gdal_format, nodata, datatype, fill_value,
+        n_rows, n_cols, dataset_options)
     
-    if dataset_options == []:
-        dataset_options = [
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]]
-    LOGGER.info('dataset_options=%s' % str(dataset_options))
-    new_raster = driver.Create(
-        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
-        options=dataset_options)
-    base_band = None
-    new_raster.SetProjection(projection)
-    new_raster.SetGeoTransform(geotransform)
-    band = new_raster.GetRasterBand(1)
-
-    band.SetNoDataValue(nodata)
-    if fill_value != None:
-        band.Fill(fill_value)
-    else:
-        band.Fill(nodata)
-    band = None
-
-    return new_raster
-
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
@@ -3042,41 +3008,17 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         define d(xy, ij) as the Euclidan distance between coordinates xy and ij
         then, decay_xy_ij is
             
-            1 - d(xy, ij)/max_distance d(xy, ij) for 'linear'
-            exp(-(2.99/max_distance)*d(xy,ij) for 'exponential'
+            1 - d(xy, ij)/max_distance for 'linear'
+            exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
 
             if d(xy, ij) < max_distance, else 0.0
             
         weight_uri - this is the source raster
         kernel_type - 'linear' or 'exponential'
-        max_distance - defined in equation above
+        max_distance - defined in equation above (units are pixel size)
         output_uri - the raster output of same size and projection of
             weight_uri
             
         returns nothing"""
-        
-    weight_ds = gdal.Open(weight_uri)
-    weight_band = weight_ds.GetRasterBand(1)
-    weight_array = weight_band.ReadAsArray()
-    new_raster_from_base_uri(
-        weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
-    
-    n_rows, n_cols = weight_array.shape
-    
-    output_ds = gdal.Open(output_uri, gdal.GA_Update)
-    output_band = output_ds.GetRasterBand(1)
-    output_array = output_band.ReadAsArray()
-    
-    last_time = time.time()
-    for row_index in xrange(n_rows):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info('convolve 2d %f.2%% complete' % ((col_index * n_rows + row_index) / float(n_rows * n_cols)))
-            last_time = current_time
-        for col_index in xrange(n_cols):
-            output_array[row_index, col_index] = 1.0
-    
-    LOGGER.info('convolve 2d 100%% complete')
-    output_band = output_ds.GetRasterBand(1)
-    output_band.WriteArray(output_array)        
-    
+    raster_cython_utils.convolve_2d(
+        weight_uri, kernel_type, max_distance, output_uri)
