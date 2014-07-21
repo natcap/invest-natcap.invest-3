@@ -393,9 +393,10 @@ def execute(args):
     if not os.path.isdir(workspace_dir):
         os.makedirs(workspace_dir)
     # Add the intermediate directory as well
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    if not os.path.isdir(intermediate_dir):
-        os.makedirs(intermediate_dir)
+    args['intermediate_dir'] = \
+        os.path.join(args['workspace_dir'], 'intermediate')
+    if not os.path.isdir(args['intermediate_dir']):
+        os.makedirs(args['intermediate_dir'])
 
     # Initializations
     args['cell_size'] = \
@@ -406,14 +407,19 @@ def execute(args):
     args['landmass_raster_uri'] = \
         preprocess_polygon_datasource(args['landmass_uri'], \
             args['aoi_uri'], args['cell_size'], \
-            os.path.join(intermediate_dir, 'landmass.tif'))
+            os.path.join(args['intermediate_dir'], 'landmass.tif'))
+
+    # Preprocessing the AIO
+    args['aoi_raster_uri'] = \
+        preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
+        args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
 
     # Preprocess bathymetry
     print('Pre-processing bathymetry...')
     args['bathymetry_raster_uri'] = \
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], \
-            os.path.join(intermediate_dir, 'bathymetry.tif'))
+            os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
 
     nearshore_wave_and_erosion_core.execute(args)
 
