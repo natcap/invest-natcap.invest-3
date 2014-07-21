@@ -766,25 +766,39 @@ def sweep_through_angles( \
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
             #if center_events[arg_min[add_event_id]] > 0.:
-            add_cell_events.append(arg_min[add_event_id])
+            #add_cell_events.append(arg_min[add_event_id])
+            i = arg_min[add_event_id]
+            d = distances[i]
+            v = visibility[i]
+            o = offset_visibility[i]
+            active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+            Pl = coord[l][i]
+            Ps = coord[s][i]
+            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            active_pixel = active_pixel_array[ID]
+            active_pixel.is_active = True
+            active_pixel.index = i
+            active_pixel.distance = d
+            active_pixel.visibility = v
+            active_pixel.offset = o
             arg_min[add_event_id] = 0
             add_event_id += 1
         # 2.1- add cells
-        if len(add_cell_events) > 0:
-            for c in add_cell_events:
-                d = distances[c]
-                v = visibility[c]
-                o = offset_visibility[c]
-                active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
-                Pl = coord[l][i]
-                Ps = coord[s][i]
-                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-                active_pixel = active_pixel_array[ID]
-                active_pixel.is_active = True
-                active_pixel.index = i
-                active_pixel.distance = d
-                active_pixel.visibility = v
-                active_pixel.offset = o
+#        if len(add_cell_events) > 0:
+#            for i in add_cell_events:
+#                d = distances[i]
+#                v = visibility[i]
+#                o = offset_visibility[i]
+#                active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+#                Pl = coord[l][i]
+#                Ps = coord[s][i]
+#                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+#                active_pixel = active_pixel_array[ID]
+#                active_pixel.is_active = True
+#                active_pixel.index = i
+#                active_pixel.distance = d
+#                active_pixel.visibility = v
+#                active_pixel.offset = o
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
@@ -793,9 +807,13 @@ def sweep_through_angles( \
             arg_max[remove_event_id] = 0
             remove_event_id += 1
         # 2.2- remove cells
-        for c in remove_cell_events:
-            d = distances[c]
+        for i in remove_cell_events:
+            d = distances[i]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
+            Pl = coord[l][i]
+            Ps = coord[s][i]
+            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            active_pixel_array[ID].is_active = False
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
