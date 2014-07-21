@@ -132,7 +132,6 @@ class TestScenicQuality(unittest.TestCase):
         assert computed_raster is not None, message
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
-        print('-----', np.sum(np.absolute(reference_array - computed_array)))
         message = "Computed viewshed " + computed_uri + \
             " doesn't correspond to " + reference_uri
         assert \

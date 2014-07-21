@@ -207,7 +207,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
-    long active # Indicate if the pixel is active
+    long is_active # Indicate if the pixel is active
     long index # long is python's default int type
     double distance # double is python's float type
     double visibility
@@ -688,6 +688,10 @@ def sweep_through_angles( \
     cdef ActivePixel *active_pixel_array = \
         <ActivePixel*>malloc(max_line_length*sizeof(ActivePixel))
     assert active_pixel_array is not NULL
+    cdef ActivePixel active_pixel
+    # Deactivate every pixel in the active line
+    for index in range(max_line_length):
+        deref(active_pixel_array).is_active = False
     # 4- build event lists
     cdef int add_event_id = 0
     cdef int add_event_count = add_events.size
@@ -714,21 +718,45 @@ def sweep_through_angles( \
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
-        c = arg_center[center_event_id]
-        d = distances[c]
-        v = visibility[c]
-        o = offset_visibility[c]
-        active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
-        Pl = coord[l][c]
-        Ps = coord[s][c]
-        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+        i = arg_center[center_event_id]
+        d = distances[i]
+        v = visibility[i]
+        o = offset_visibility[i]
+        active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
         center_event_id += 1
+        Pl = coord[l][i]
+        Ps = coord[s][i]
+        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+        active_pixel = active_pixel_array[ID]
+        active_pixel.is_active = True
+        active_pixel.index = i
+        active_pixel.distance = d
+        active_pixel.visibility = v
+        active_pixel.offset = o
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
+        # New angle: recompute constants for fast pixel update algorithm
+        if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
+            l = 0 # Long component is I (lines)
+            s = 1 # Short component is J (columns)
+        else:
+            l = 1 # Long component is J (columns)
+            s = 0 # Short component is I (lines)
+          
+        Os = viewpoint[s]
+        Ol = viewpoint[l]
+        Es = perimeter[s][a]
+        El = perimeter[l][a]
+
+        Sl = -1 if Ol>El else 1
+        Ss = -1 if Os>Es else 1
+
+        slope = (Es-Os)/(El-Ol)
+
         # Collect all cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
@@ -748,6 +776,15 @@ def sweep_through_angles( \
                 v = visibility[c]
                 o = offset_visibility[c]
                 active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
+                Pl = coord[l][i]
+                Ps = coord[s][i]
+                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+                active_pixel = active_pixel_array[ID]
+                active_pixel.is_active = True
+                active_pixel.index = i
+                active_pixel.distance = d
+                active_pixel.visibility = v
+                active_pixel.offset = o
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
