@@ -1262,30 +1262,6 @@ def get_raster_properties(dataset):
     return dataset_dict
 
 
-def gdal_cast(value, gdal_type):
-    """Cast value to the given gdal type.
-
-        value - some raw python value
-        gdal_type - one of: gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16,
-            gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CFloat64,
-            gdal.GDT_CFloat32, gdal.GDT_Float64, gdal.GDT_Float32, gdal.GDT_Byte
-
-        return gdal_type(value) (basterdized cast notation)"""
-
-    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16,
-                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32,
-                      gdal.GDT_Byte]
-    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32,
-                        gdal.GDT_Float64, gdal.GDT_Float32]
-
-    if gdal_type in gdal_int_types:
-        value = numpy.int(value)
-    if gdal_type in gdal_float_types:
-        value = numpy.float(value)
-
-    return value
-
-    
 def warp_reproject_dataset_uri(
         original_dataset_uri, pixel_spacing, output_wkt, resampling_method,
         output_uri):
