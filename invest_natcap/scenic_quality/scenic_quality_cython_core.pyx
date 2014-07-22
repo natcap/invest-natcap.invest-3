@@ -207,6 +207,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
+    long active # Indicate if the pixel is active
     long index # long is python's default int type
     double distance # double is python's float type
     double visibility
@@ -625,18 +626,29 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
 #        pixel = p.next
 
 
+cdef active_pixel_index(double Ol, double Os, \
+                        double Pl, double Ps, \
+                        double El, double Es, \
+                        double Sl, double Ss,
+                        double slope):
+    cdef double Dl = Pl-Ol # Distance along the long component
+    cdef double Ds = Ps-Os # Distance along the short component
+    
+    if not Ds and Dl: # P == O => index is 0 by convention
+        return 0
+    else:
+        return int(Sl*(2*Dl+(Ds-Ss*int(slope*(Sl*Dl-.5)+.5))))
+
+
 #@cython.boundscheck(False)
 def sweep_through_angles( \
-    double viewpoint_i, \
-    double viewpoint_j, \
-    np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_I, \
-    np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeter_J, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] viewpoint, \
+    np.ndarray[np.int64_t, ndim = 2, mode="c"] perimeter, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] angles, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] center_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] remove_events, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] I, \
-    np.ndarray[np.int32_t, ndim = 1, mode="c"] J, \
+    np.ndarray[np.int32_t, ndim = 2, mode="c"] coord, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
@@ -661,14 +673,16 @@ def sweep_through_angles( \
     #    short_axis = argmin(abs([E[0]-O[0], E[1]-O[1]]))
     cdef double s = 0 # Active line's short axis (set to I)
     cdef double l = 1 # Active line's long axis (set to J)
-    cdef double Os = 0 # Origin's coordinate along short axis O[s]
-    cdef double Ol = 0 # Origin's coordinate along long axis O[l]
-    cdef double Es = 0 # End point's coordinate along short axis E[s]
-    cdef double El = 0 # End point's coordinate along long axis E[l]
-    cdef double Sl = 1 # Sign of the direction from O to E along the long axis
-    cdef double Ss = 1 # Sign of the direction from O to E along the short axis
+    cdef double Os = viewpoint[s] # Origin's coordinate along short axis O[s]
+    cdef double Ol = viewpoint[l] # Origin's coordinate along long axis O[l]
+    cdef double Es = perimeter[s][0] # End point's coord. along short axis E[s]
+    cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
+    cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
+    cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
+    cdef double slope = (Es-Os)/(El-Ol)
     cdef double Dl = 0 # Distance from a point P to E along the long axis
     cdef double Ds = 0 # Distance from a point P to E along the short axis
+    cdef int ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
     cdef ActivePixel *active_pixel_array = \
@@ -705,9 +719,13 @@ def sweep_through_angles( \
         v = visibility[c]
         o = offset_visibility[c]
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v, o)
+        Pl = coord[l][c]
+        Ps = coord[s][c]
+        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython(active_pixels, I, J, d, visibility_map)
+        update_visible_pixels_cython( \
+            active_pixels, coord[0], coord[1], d, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
@@ -742,7 +760,8 @@ def sweep_through_angles( \
             d = distances[c]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython(active_pixels, I, J, d, visibility_map)
+        update_visible_pixels_cython( \
+            active_pixels, coord[0], coord[1], d, visibility_map)
 
     # clean up
     free(cell_events)

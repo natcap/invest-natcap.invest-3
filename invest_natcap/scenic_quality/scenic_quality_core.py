@@ -1215,10 +1215,10 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             visibility_map)
     else:
         scenic_quality_cython_core.sweep_through_angles( \
-            coordinates[0], coordinates[1], \
-            perimeter_cells[0], perimeter_cells[1], angles, \
+            np.array(coordinates).astype(int), \
+            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
             add_events, center_events, remove_events, \
-            I, J, distances, offset_visibility, visibility, \
+            np.array([I, J]), distances, offset_visibility, visibility, \
             visibility_map)
 
     # Set the viewpoint visible as a convention

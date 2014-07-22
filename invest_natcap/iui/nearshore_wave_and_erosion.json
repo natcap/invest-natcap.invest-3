@@ -30,7 +30,7 @@
 				    "required": true,
 				    "validateAs": {"type": "folder"},
 				    "args_id": "workspace_dir",
-				    "defaultValue": "../timber",
+				    "defaultValue": "../nearshore_wave_and_erosion",
 				    "helpText": "Select a folder to be used as your workspace. If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the outputs produced by this model. <b>If outputs already exist in this folder, they will be overwritten</b>."
 				},
 				{
@@ -50,7 +50,7 @@
 				    "args_id": "modules_to_run",
 				    "type": "dropdown",
 				    "defaultValue": "Profile generator and nearshore wave and erosion",
-				    "options": ["Profile generator only", "Profile generator and nearshore wave and erosion"],
+				    "options": ["Profile generator only", "Profile generator + nearshore wave & erosion"],
 				    "required": true,
 				    "returns": "strings",
 				    "helpText": "Select the modules you want to be executed: profile generator is quick and allows you to quickly get shore profile information. The action of the waves on the shore takes a lot more time to execute."
@@ -80,7 +80,7 @@
 				    "helpText": "This drop down box allows you to select whether you 1) wish to have the GIS create a cross-shore transect, 2) will upload a cross-shore profile of your own or 3) prefer to have the model create a theoretical profile. The answer provided to this question will determine whether subsequent inputs are required or optional."
 				},
 				{
-				    "label": "IF \"yes\": Bathymetric Grid (DEM) (optional)",
+				    "label": "IF \"yes\": Bathymetric Grid (DEM)",
 				    "id": "bathymetry_layer",
 				    "args_id": "bathymetry_uri",
 				    "type": "file",
@@ -90,6 +90,22 @@
 				    "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
 				    "validateAs":{"type":"GDAL"},
 				    "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model requires a DEM in order to cut a cross-shore profile. This bathymetric grid layer should have a vertical elevation referenced to Mean Lower Low water."
+				},
+				{
+				    "label": "IF \"yes\": Area of interest",
+				    "id": "area_of_interest",
+				    "args_id": "aoi_uri",
+				    "type": "file",
+				    "required": true,
+				    "defaultValue":
+				    "../CoastalProtection/Input/AOI_BarkClay.shp",
+				    "validateAs":{"type":"OGR",
+				                  "layers": [{"name": {"inheritFrom":"file"},
+				                      "type":"polygons",
+				                      "projection" : {"units": "meters", "exists": true}
+				                  }]
+				    },
+				    "helpText": "Single feature polygon shapefile. All outputs will be in the AOI's projection."
 				},
 				{
 				    "label": "IF \"yes\": Habitat Data Directory (optional)",
@@ -103,7 +119,7 @@
 				    "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will optionally allow for the location of natural habitats that intersect on the cross-shore transect. To do so, you must store all Natural Habitat input layers that you want to consider in a directory. Each natural habitat layer should consist of the location of those habitats, and all data in this folder must be polygon shapefiles and projected in meters. Further, each of these layers should end with an underscore followed by a unique number, for example \"_1\" or \"_2\"."
 				},
 				{
-				    "label": "IF \"yes\": Length of your profile (kilometers)",
+				    "label": "IF \"yes\": Maximum length of your profile (km)",
 				    "id": "max_profile_length",
 				    "args_id": "max_profile_length",
 				    "type": "text",
@@ -123,7 +139,7 @@
 				    "required": false,
 				    "returns" : {"ifEmpty":"pass"},
 				    "defaultValue":
-				    "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
+				    "",
 				    "validateAs":{"type":"GDAL"},
 				    "helpText": "If you have answered \"(2) No, but I will upload a cross-shore profile\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will not cut a cross-shore profile for you from a GIS layer, but will create a backshore profile, smooth, or manipulate a cross-shore profile of your choice. This file must a contain a minimum of 2 (X, Z) coordinates. It must be tab delimited with two columns. The first column must be the cross-shore distance X-axis, where X=0 is at the shoreline (positive X pointing seaward, negative X pointing landward). The spatial resolution of the X-axis (spacing between two X-coordinates) must be equal to 1 (dx=1). The second column must indicate the cross-shore elevations along the X-axis. Depths values must be negative (referenced to Mean Lower Low Water) and terrestrial elevations positive."
 				},
@@ -140,6 +156,17 @@
 				    "helpText": "Enter a percentage value for how much you wish to smooth the profile created or fed through the model. A value of \"0\" means no smoothing."
 				},
 				{
+				    "label": "Model Spatial Resolution (m) (dx)",
+				    "id": "model_resolution",
+				    "args_id": "model_resolution",
+				    "type": "text",
+				    "required": true,
+				    "dataType": "int",
+				    "validText": "[0-9]*",
+				    "defaultValue": "1",
+				    "helpText": "A coarse spatial resolution can sometimes lead to model instability and inaccuracy in model outptuts. Please choose a proper resolution at which you want to run the model. This value can be greater or smaller than one. However, keep in mind that a smaller resolution yields longer computing time."
+				},
+				{
 				    "label": "Wave Watch III Model Data (optional)",
 				    "id": "climatic_forcing_uri",
 				    "args_id": "climatic_forcing_uri",
@@ -154,7 +181,7 @@
 				    "helpText": "If you would like the model to gather wind and wave statistics that might represent oceanic conditions at your site, select the WW3 file that we prepared for you. The model will use this data to read the maximum, top 10% and top 25% wind speed as well as wave height and associated wave period values from the model grid closest to your site."
 				},
 				{
-				    "label": "Do you wish to calculate fetch for Land Point? (optional)",
+				    "label": "Do you wish to calculate fetch for Land Point?",
 				    "id": "calculate_fetch",
 				    "args_id": "calculate_fetch",
 				    "type": "dropdown",
@@ -163,17 +190,6 @@
 				    "required": true,
 				    "returns": "strings",
 				    "helpText": "This drop down box allows users to specify whether they want the model to compute fetch distances. If \"(1) Yes\" is selected, fetch radials will be extended from the Land Point (input 3) and cut based on the Land Polygon (input 4). The results will be averaged over 16 directions."
-				},
-				{
-				    "label": "What modules do you want to run?",
-				    "id": "components_to_run",
-				    "args_id": "components_to_run",
-				    "type": "dropdown",
-				    "defaultValue": "profile generator only",
-				    "options": ["profile generator only", "profile generator and near shore wave"],
-				    "required": true,
-				    "returns": "strings",
-				    "helpText": "This drop down box allows users to specify whether they want to run thew profile generator only or the near shore wave erosion model as well."
 				}
                             ]
                         }
@@ -181,7 +197,7 @@
                     },
                     {
                         "id": "wave_erosion_tab",
-                        "label": "Nearshore Waves and Erosion",
+                        "label": "Nearshore Wave and Erosion",
                         "type": "tab",
                         "enabled": true,
                         "elements":
@@ -290,15 +306,15 @@
                                     "helpText": "In order to estimate the amount of beach erosion or bed scour in inter- and/or supra-tidal areas, enter the maximum water level reached during your input storm. Please make sure that the storm surge level you input is consistent with the wind speed or wave height that you entered. For guidance, please consult the Wind Speed figure in the user's guide for storm surge levels typically observed during hurricanes. This surge elevation is applied to the MSL. If you want to investigate, for example, a storm hitting your area at high tide you must add the high tide elevation to this surge value and enter the sum for this input."
                                 },
 				{
-				    "label": "Model Spatial Resolution (m) (dx)",
-				    "id": "model_resolution",
-				    "args_id": "model_resolution",
-				    "type": "text",
+				    "label": "Compute storm surge?",
+				    "id": "compute_storm_surge",
+				    "args_id": "compute_storm_surge",
+				    "type": "dropdown",
+				    "defaultValue": "no",
+				    "options": ["yes", "no"],
 				    "required": true,
-				    "dataType": "int",
-				    "validText": "[0-9]*",
-				    "defaultValue": "1",
-				    "helpText": "A coarse spatial resolution can sometimes lead to model instability and inaccuracy in model outptuts. Please choose a proper resolution at which you want to run the model. This value can be greater or smaller than one. However, keep in mind that a smaller resolution yields longer computing time."
+				    "returns": "strings",
+				    "helpText": "Choose whether you want the model to compute the storm surge."
 				}
 				]
 			},

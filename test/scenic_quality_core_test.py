@@ -67,38 +67,77 @@ class TestScenicQuality(unittest.TestCase):
         visibility[DEM_size/2, DEM_size/2] = 2
         print(visibility.astype(int))
 
-    def test_cython_vs_python_on_block_island(self):
-        print('CWD', os.getcwd())
-        #file_name = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
-        file_name = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
-        with open(file_name) as data_file:
-            args = json.load(data_file)
-        #print(args)
+    def test_cython_vs_python_on_default_1_pt_data(self):
+        args_uri = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
         sq.execute(args)
-        return
-        # Path from test/
-        #base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
-        base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
-        flat_dem_uri = "flat_dem.tif"
-        raster_utils.new_raster_from_base_uri( \
-            base_dem_uri, flat_dem_uri, 'GTiff', 0., gdal.GDT_Float32, \
-            fill_value = base_dem_nodata, n_rows = DEM_size, n_cols = DEM_size)
-	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
-        band = raster.GetRasterBand(1)
-        elevation = band.ReadAsArray()
-        viewpoint = (DEM_size/2, DEM_size/2)
-        elevation[viewpoint[0]+1, viewpoint[1]+1] = 2.
-        obs_elev = 1.0
-        tgt_elev = 0.0
-        max_dist = 10 
-        cell_size = 5.0
-        refraction_coeff = 1.0
-        alg_version = 'python'
-        visibility = sqc.compute_viewshed(elevation, base_dem_nodata, \
-            viewpoint, obs_elev, tgt_elev, max_dist, cell_size, \
-            refraction_coeff, alg_version)
-        visibility[DEM_size/2, DEM_size/2] = 2
-        print(visibility.astype(int))
+        reference_uri = "../../ScenicQuality/tests/default-1-pt/python/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/default-1-pt/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        message = "Computed viewshed " + computed_uri + \
+            " doesn't correspond to " + reference_uri
+        assert \
+            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+	return
+
+    def test_cython_vs_python_on_default_data_data(self):
+        args_uri = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
+        sq.execute(args)
+        reference_uri = "../../ScenicQuality/tests/default-data/python/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/default-data/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        message = "Computed viewshed " + computed_uri + \
+            " doesn't correspond to " + reference_uri
+        assert \
+            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+	return
+
+    def test_cython_vs_python_on_block_island(self):
+        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
+            for entry in args:
+                print('entry', entry, args[entry], type(args[entry]))
+        sq.execute(args)
+        reference_uri = "../../ScenicQuality/tests/block-island/python/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/block-island/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        print('-----', np.sum(np.absolute(reference_array - computed_array)))
+        message = "Computed viewshed " + computed_uri + \
+            " doesn't correspond to " + reference_uri
+        assert \
+            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+	return
 
     def test_visibility_simple_obstacles(self):
         return
