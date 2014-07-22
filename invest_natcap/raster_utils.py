@@ -3018,9 +3018,9 @@ def distance_transform_edt(
             value pixels
 
         output_distance_uri - will make a float raster w/ same dimensions and
-            projection as input_mask_uri where all non-zero values of
+            projection as input_mask_uri where all zero values of
             input_mask_uri are equal to the euclidean distance to the closest
-            0 pixel.
+            non-zero pixel.
 
         returns nothing"""
 
