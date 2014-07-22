@@ -552,6 +552,29 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     assert active_pixels_length == pixels_deleted, message
 
 
+cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
+    np.ndarray[np.float64_t, ndim = 2] visibility_map):
+    return
+    #pixel = closest
+    
+    while pixel is not NULL:
+        p = deref(pixel)
+        # Pixel is visible
+        if p.offset > max_visibility:
+            visibility = 1.
+            visibility = p.offset - max_visibility
+        else:
+            visibility = 0.
+            visibility = p.offset - max_visibility
+        if p.visibility > max_visibility:
+            max_visibility = p.visibility
+
+        # Update the visibility map for this pixel
+        index = p.index
+        if visibility_map[I[index], J[index]] == 0:
+            visibility_map[I[index], J[index]] = visibility
+        pixel = p.next
+
 cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
     np.float64_t d, \
@@ -606,24 +629,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
             visibility_map[I[index], J[index]] = visibility
-        #visibility_map[I[index], J[index]] = p.visibility
         pixel = p.next
-
-#    while pixel is not NULL:
-#        p = deref(pixel)
-#        # Pixel is visible
-#        if p.offset > max_visibility:
-#            visibility = 1
-#            if p.visibility > max_visibility:
-#                max_visibility = p.visibility
-#        else:
-#            visibility = 0
-#
-#        # Update the visibility map for this pixel
-#        index = p.index
-#        if visibility_map[I[index], J[index]] == 0:
-#            visibility_map[I[index], J[index]] = visibility
-#        pixel = p.next
 
 
 cdef active_pixel_index(double Ol, double Os, \
@@ -736,7 +742,8 @@ def sweep_through_angles( \
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
-        
+        update_visible_pixels_fast(active_pixel_array, visibility_map)        
+
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
         # New angle: recompute constants for fast pixel update algorithm
@@ -757,66 +764,46 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        # Collect all cell events:
-        add_cell_events = []
+        # 2.1- add cells
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
             # Make sure to remove them from the cell_addition events to
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
-            #if center_events[arg_min[add_event_id]] > 0.:
-            #add_cell_events.append(arg_min[add_event_id])
             i = arg_min[add_event_id]
-            d = distances[i]
-            v = visibility[i]
-            o = offset_visibility[i]
-            active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
-            Pl = coord[l][i]
-            Ps = coord[s][i]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-            active_pixel = active_pixel_array[ID]
-            active_pixel.is_active = True
-            active_pixel.index = i
-            active_pixel.distance = d
-            active_pixel.visibility = v
-            active_pixel.offset = o
+            if center_events[i] > 0.:
+                d = distances[i]
+                v = visibility[i]
+                o = offset_visibility[i]
+                active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+                Pl = coord[l][i]
+                Ps = coord[s][i]
+                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+                active_pixel = active_pixel_array[ID]
+                active_pixel.is_active = True
+                active_pixel.index = i
+                active_pixel.distance = d
+                active_pixel.visibility = v
+                active_pixel.offset = o
             arg_min[add_event_id] = 0
             add_event_id += 1
-        # 2.1- add cells
-#        if len(add_cell_events) > 0:
-#            for i in add_cell_events:
-#                d = distances[i]
-#                v = visibility[i]
-#                o = offset_visibility[i]
-#                active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
-#                Pl = coord[l][i]
-#                Ps = coord[s][i]
-#                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-#                active_pixel = active_pixel_array[ID]
-#                active_pixel.is_active = True
-#                active_pixel.index = i
-#                active_pixel.distance = d
-#                active_pixel.visibility = v
-#                active_pixel.offset = o
-        # Collect remove_cell events:
-        remove_cell_events = []
+        # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            remove_cell_events.append(arg_max[remove_event_id])
-            arg_max[remove_event_id] = 0
-            remove_event_id += 1
-        # 2.2- remove cells
-        for i in remove_cell_events:
+            i = arg_max[remove_event_id]
             d = distances[i]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
             Pl = coord[l][i]
             Ps = coord[s][i]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             active_pixel_array[ID].is_active = False
+            arg_max[remove_event_id] = 0
+            remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
+        update_visible_pixels_fast(active_pixel_array, visibility_map)        
 
     # clean up
     free(cell_events)

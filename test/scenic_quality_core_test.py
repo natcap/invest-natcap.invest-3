@@ -84,10 +84,11 @@ class TestScenicQuality(unittest.TestCase):
         assert computed_raster is not None, message
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
+        difference = np.sum(np.absolute(reference_array - computed_array))
         message = "Computed viewshed " + computed_uri + \
-            " doesn't correspond to " + reference_uri
-        assert \
-            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+            " doesn't correspond to " + reference_uri + '. diff = ' + \
+            str(difference)
+        assert difference == 0.0, message
 	return
 
     def test_cython_vs_python_on_default_data_data(self):
@@ -107,10 +108,11 @@ class TestScenicQuality(unittest.TestCase):
         assert computed_raster is not None, message
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
+        difference = np.sum(np.absolute(reference_array - computed_array))
         message = "Computed viewshed " + computed_uri + \
-            " doesn't correspond to " + reference_uri
-        assert \
-            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+            " doesn't correspond to " + reference_uri + '. diff = ' + \
+            str(difference)
+        assert difference == 0.0, message
 	return
 
     def test_cython_vs_python_on_block_island(self):
@@ -133,10 +135,11 @@ class TestScenicQuality(unittest.TestCase):
         assert computed_raster is not None, message
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
+        difference = np.sum(np.absolute(reference_array - computed_array))
         message = "Computed viewshed " + computed_uri + \
-            " doesn't correspond to " + reference_uri
-        assert \
-            np.sum(np.absolute(reference_array - computed_array)) == 0.0, message
+            " doesn't correspond to " + reference_uri + '. diff = ' + \
+            str(difference)
+        assert difference == 0.0, message
 	return
 
     def test_visibility_simple_obstacles(self):
