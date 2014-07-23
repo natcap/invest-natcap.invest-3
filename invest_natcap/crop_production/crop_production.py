@@ -24,6 +24,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('crop_production')
 
+logging.getLogger("root").setLevel(logging.WARNING)
+logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
 
@@ -499,7 +503,7 @@ def mosaic_by_attribute_uri(crop_uri,
                 else:
                     raise e
         
-    LOGGER.info("Creating nitrogen raster.")
+    LOGGER.info("Mosaicing raster.")
     raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
 
     raster_utils.vectorize_datasets(raster_list,
@@ -521,7 +525,7 @@ class ReclassLookup:
     def __getitem__(self, k):
         try:
             return float(self.d[k][field])
-        except KeyError, ValueError:
+        except (KeyError, ValueError):
             return nodata
 
     def __repr__(self):
@@ -529,9 +533,10 @@ class ReclassLookup:
 
 def lookup_reclass_closure(lookup, field, nodata=-1):
     def lookup_reclass_op(crop, region):
+        #LOGGER.debug([region, crop, field])
         try:
             return float(lookup["(%i, %i)" % (region, crop)][field])
-        except KeyError, ValueError:
+        except (KeyError, ValueError):
             return nodata
 
     return lookup_reclass_op
