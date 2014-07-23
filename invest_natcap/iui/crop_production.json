@@ -71,7 +71,7 @@
                                                                         "args_id" : "crop_file_name",
                                                                         "type": "file",
                                                                         "label": "Crop Map",
-                                                                        "defaultValue": "../CropProduction/input/crop_map_projected.tif",
+                                                                        "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/w001001.adf",
                                                                         "validateAs": {"type": "GDAL"},
                                                                         "required": true,
                                                                         "enabledBy" : "use_crop_map"
