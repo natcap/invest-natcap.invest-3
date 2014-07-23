@@ -2007,11 +2007,19 @@ def resize_and_resample_dataset_uri(
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
     block_size = original_band.GetBlockSize()
+    LOGGER.info('%s band size: %s' % (original_dataset_uri, original_band.GetBlockSize()))
+    
+    gtiff_creation_options=[
+        'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0], 
+        'BLOCKYSIZE=%d' % block_size[1]]
+    #If the original band is tiled, then its x blocksize will be different than
+    #the number of columns
+    if block_size[0] != original_band.XSize:
+        gtiff_creation_options.append('TILED=YES')
+        
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=[
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]])
+        options=gtiff_creation_options)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
@@ -2186,10 +2194,13 @@ def align_dataset_list(
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
+        first_band = first_dataset.GetRasterBand(1)
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
 
         mask_uri = temporary_filename(suffix='.tif')
+        LOGGER.debug("base raster: %s" % (dataset_out_uri_list[0]))
+        LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         first_dataset = None
@@ -2472,6 +2483,7 @@ def vectorize_datasets(
     #so many temporary files I ran out of disk space.
     if aoi_uri != None:
         mask_band = None
+        gdal.Dataset.__swig_destroy__(mask_dataset)
         mask_dataset = None
         os.remove(mask_uri)
     aligned_bands = None

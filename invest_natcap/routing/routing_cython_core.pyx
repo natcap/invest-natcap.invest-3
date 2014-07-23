@@ -827,7 +827,7 @@ cdef void _build_flat_set(
     
     dem_ds = gdal.Open(dem_uri)
     band = dem_ds.GetRasterBand(1)
-
+    LOGGER.debug("blocksize: %s" % (str(band.GetBlockSize())))
     LOGGER.info('create dem array in _build_flat_set')
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
@@ -888,6 +888,9 @@ def fill_pits(dem_uri, dem_out_uri):
     dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
     cdef int n_rows = dem_ds.RasterYSize
     cdef int n_cols = dem_ds.RasterXSize
+        
+    dem_band = dem_ds.GetRasterBand(1)
+    LOGGER.info('in fill pits input dem blocksize %s, dem_uri = %s' % (str(dem_band.GetBlockSize()), dem_uri))
         
     #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)

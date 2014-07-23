@@ -214,6 +214,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef int numerical_inf = n_cols + n_rows
 
     LOGGER.info('Distance Transform Phase 1')
+    
+    g_blocksize = g_band.GetBlockSize()
+    output_blocksize = output_band.GetBlockSize()
+    
+    LOGGER.info("g_blocksize: %s, output_blocksize: %s" % (str(g_blocksize), str(output_blocksize)))
+    
     #phase one, calculate column G(x,y)
     
     cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array = (
