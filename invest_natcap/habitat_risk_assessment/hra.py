@@ -448,11 +448,27 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         base_array[base_array == -1.] = 0.
 
         #Swaps 0's and 1's for use with the distance transform function.
-        swp_array = (base_array + 1) % 2
+        #swp_array = (base_array + 1) % 2
+
+        temp_swp_uri = os.path.join(dir, name + "_temp_swp_array.tif")
+        #temp_swp_uri = raster_utils.temporary_filename()
+        new_dataset = raster_utils.new_raster_from_base(raster, temp_swp_uri,
+                            'GTiff', -1., gdal.GDT_Float32)
+        
+        t_band, t_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        t_band.Fill(0)
+        
+        t_band.WriteArray(base_array)
+        t_band.FlushCache()
+
+        temp_dist_uri = os.path.join(dir, "_temp_dist_array.tif")
+        #temp_dist_uri = raster_utils.temporary_filename()
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(swp_array, 
-                                                    sampling=grid_size)
+        raster_utils.distance_transform_edt(temp_swp_uri, temp_dist_uri)
+        dist_raster = gdal.Open(temp_dist_uri)
+        dist_band = dist_raster.GetRasterBand(1)
+        dist_array = dist_band.ReadAsArray()
 
         #Need to have a special case for 0's, to avoid divide by 0 errors
         if buff == 0:
