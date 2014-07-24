@@ -814,9 +814,9 @@ cdef int _is_sink(
 
     
 cdef void _build_flat_set(
-    band, float nodata_value, int n_rows, int n_cols,
+    char *dem_uri, float nodata_value, int n_rows, int n_cols,
     int *row_offsets, int *col_offsets, c_set[int] *flat_set):
-
+    
     cdef double dem_value, neighbor_dem_value
     #get the ceiling of the integer division
     cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
@@ -825,14 +825,24 @@ cdef void _build_flat_set(
     cdef int ul_row_index = 0, ul_col_index = 0
     cdef int lr_col_index = n_cols, lr_row_index = 3
     
+    dem_ds = gdal.Open(dem_uri)
+    band = dem_ds.GetRasterBand(1)
 
+    LOGGER.info('create dem array in _build_flat_set')
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
         win_ysize=3)
     cdef int y_offset, local_y_offset
     
+    last_time = time.time()
     #not flat on the edges of the raster, could be a sink
     for row_index in range(1, n_rows-1):
+        current_time = time.time()
+        
+        if current_time - last_time < 5.0:
+            LOGGER.info('identify flat calls %.2f%% complete' % (100.0 * float(row_index)/n_rows))
+            last_time = current_time
+        
         #Grab three rows at a time and be careful of the top and bottom edge
         y_offset = row_index - 1
             
@@ -974,6 +984,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
         dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
+    dem_band = None
+    gdal.Dataset.__swig_destroy__(dem_ds)
+    dem_ds = None
+    dem_out_band.FlushCache()
+    dem_out_band = None
+    dem_out_ds.FlushCache()
+    gdal.Dataset.__swig_destroy__(dem_out_ds)
+    dem_out_ds = None
     LOGGER.info('identify flat cells')
     
     #search for flat cells
@@ -982,8 +1000,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef c_set[int] flat_set_for_looping
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    _build_flat_set(dem_out_band, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
+    _build_flat_set(dem_out_uri, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
+    
+    dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
+    dem_out_band = dem_out_ds.GetRasterBand(1)
+    
     cdef int flat_index
     #make a copy of the flat index so we can break it down for iteration but
     #keep the old one for rapid testing of flat cells

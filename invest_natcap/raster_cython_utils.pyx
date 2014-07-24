@@ -145,6 +145,14 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
         
         slope_array[:] = numpy.where(dzdx != slope_nodata, numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100, slope_nodata)
         slope_band.WriteArray(slope_array, 0, row_index)
+        
+    dem_band = None
+    slope_band = None
+    gdal.Dataset.__swig_destroy__(dem_dataset)
+    gdal.Dataset.__swig_destroy__(slope_dataset)
+    dem_dataset = None
+    slope_dataset = None
+    
 
 cdef long long _f(long long x, long long i, long long gi):
     return (x-i)*(x-i)+ gi*gi
@@ -289,7 +297,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         dt[b_array == input_nodata] = output_nodata
         output_band.WriteArray(dt, xoff=0, yoff=row_index)
 
+    input_mask_band = None
+    gdal.Dataset.__swig_destroy__(input_mask_ds)
+    input_mask_ds = None
+    g_band = None
     gdal.Dataset.__swig_destroy__(g_dataset)
+    g_dataset = None
     try:
         os.remove(g_dataset_uri)
     except OSError:
@@ -390,6 +403,7 @@ cdef float distance(int row_index, int col_index, int kernel_size, int kernel_ty
     elif kernel_type == 1: #'exponential'
         return  exp(-(2.99/max_distance) * dist)
 
+        
 @cython.boundscheck(False)
 def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     """Does a direct convolution on a predefined kernel 
@@ -499,4 +513,12 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
     
     LOGGER.info('convolve 2d 100% complete')
     output_band = output_ds.GetRasterBand(1)
+    
+    weight_band = None
+    gdal.Dataset.__swig_destroy__(weight_ds)
+    weight_ds = None
+    
+    output_band = None
+    gdal.Dataset.__swig_destroy__(output_ds)
+    output_ds = None
     
