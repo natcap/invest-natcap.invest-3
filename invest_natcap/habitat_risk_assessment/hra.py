@@ -442,8 +442,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1], 
                                                 option_list=['ALL_TOUCHED=TRUE'])
 
-        zeros_nodata_uri = os.path.join(dir, name + "_zeros_ds.tif")
-        
+        #zeros_nodata_uri = os.path.join(dir, name + "_zeros_ds.tif")
+        zeros_nodata_uri = raster_utils.temporary_filename()
+
         def replace_nodata_zeros(pixels):
             
             return np.where(pixels == nodata, 0, pixels)
@@ -452,8 +453,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
                         zeros_nodata_uri, gdal.GDT_Float32, -1., grid_size,
                         "intersection", vectorize_op=False)
 
-        temp_dist_uri = os.path.join(dir, name + '_dist_trans.tif')
-        
+        #temp_dist_uri = os.path.join(dir, name + '_dist_trans.tif')
+        temp_dist_uri = raster_utils.temporary_filename()
+
         #The array with each value being the distance from its own cell to land
         raster_utils.distance_transform_edt(zeros_nodata_uri, temp_dist_uri)
         dist_raster = gdal.Open(temp_dist_uri)
