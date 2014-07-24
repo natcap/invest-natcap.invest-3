@@ -460,6 +460,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         dist_band = dist_raster.GetRasterBand(1)
         dist_array = dist_band.ReadAsArray()
 
+        dist_array = dist_array * grid_size
+
         #dist_array = np.where(dist_array == 0, 1, dist_array)
 
         #Need to have a special case for 0's, to avoid divide by 0 errors
