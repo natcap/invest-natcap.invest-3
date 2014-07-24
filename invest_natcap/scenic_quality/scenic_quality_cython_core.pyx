@@ -76,8 +76,8 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         -0.5, -0.5, -0.5, 0.5, \
         0.5, -0.5, -0.5, 0.5]
         # constants for fast axess of extreme_cell_points
-        size_t SECTOR_SIZE = 4 # values per sector
-        size_t POINT_SIZE = 2 # values per point
+        size_t SECTOR_SIZE = 4 # 4 values in a row
+        size_t POINT_SIZE = 2 # 2 coordinates per point per point
         size_t min_point_id # first corner base index
         size_t max_point_id # last corner base index
         # row of the first corner met by the sweep line
@@ -109,6 +109,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         int col # column counter
         int sector # current sector
 
+    # Count sixe of arrays before allocating
     # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
@@ -123,14 +124,15 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             if (row == viewpoint_row) and (col == viewpoint_col):
                 continue
             cell_count += 1
-
+    # Allocate the arrays
     min_a_ptr = <double *>malloc((cell_count) * sizeof(double))
     a_ptr = <double *>malloc((cell_count) * sizeof(double))
     max_a_ptr = <double *>malloc((cell_count) * sizeof(double))
     I_ptr = <long *>malloc((cell_count) * sizeof(long))
     J_ptr = <long *>malloc((cell_count) * sizeof(long))
 
-    # Loop through the ows
+    # Fill out the arrays
+    # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
@@ -158,8 +160,8 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
             # compute extreme corners
-            min_point_id = sector * SECTOR_SIZE
-            max_point_id = min_point_id + POINT_SIZE
+            min_point_id = sector * SECTOR_SIZE # Beginning of a row
+            max_point_id = min_point_id + POINT_SIZE # Skip a point
             # offset from current cell center to first corner
             min_corner_offset_row = extreme_cell_points[min_point_id]
             min_corner_offset_col = extreme_cell_points[min_point_id + 1]
@@ -632,7 +634,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         pixel = p.next
 
 
-cdef active_pixel_index(double Ol, double Os, \
+cdef int active_pixel_index(double Ol, double Os, \
                         double Pl, double Ps, \
                         double El, double Es, \
                         double Sl, double Ss,
@@ -640,7 +642,7 @@ cdef active_pixel_index(double Ol, double Os, \
     cdef double Dl = Pl-Ol # Distance along the long component
     cdef double Ds = Ps-Os # Distance along the short component
     
-    if not Ds and Dl: # P == O => index is 0 by convention
+    if not Ds and not Dl: # P == O => index is 0 by convention
         return 0
     else:
         return int(Sl*(2*Dl+(Ds-Ss*int(slope*(Sl*Dl-.5)+.5))))
@@ -697,7 +699,7 @@ def sweep_through_angles( \
     cdef ActivePixel active_pixel
     # Deactivate every pixel in the active line
     for index in range(max_line_length):
-        deref(active_pixel_array).is_active = False
+        active_pixel_array[index].is_active = False
     # 4- build event lists
     cdef int add_event_id = 0
     cdef int add_event_count = add_events.size
@@ -733,19 +735,27 @@ def sweep_through_angles( \
         Pl = coord[l][i]
         Ps = coord[s][i]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-        active_pixel = active_pixel_array[ID]
-        active_pixel.is_active = True
-        active_pixel.index = i
-        active_pixel.distance = d
-        active_pixel.visibility = v
-        active_pixel.offset = o
+        print('Initializing pixel at ', ID)
+        active_pixel_array[ID].is_active = True
+        active_pixel_array[ID].index = i
+        active_pixel_array[ID].distance = d
+        active_pixel_array[ID].visibility = v
+        active_pixel_array[ID].offset = o
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
         update_visible_pixels_fast(active_pixel_array, visibility_map)        
+        #for p in range(max_line_length):
+        #    active_pixel = active_pixel_array[p]
+        #    print('ID', p, 'is_active', active_pixel.is_active, \
+        #        'distance', active_pixel.distance)
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
+        print('Angle', a)
+        #for p in range(max_line_length):
+        #    print('ID', p, 'is_active', active_pixel_array[p].is_active, \
+        #        'distance', active_pixel_array[p].distance)
         # New angle: recompute constants for fast pixel update algorithm
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -764,6 +774,52 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        # 2.2- remove cells
+        while (remove_event_id < remove_event_count) and \
+            (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
+            i = arg_max[remove_event_id]
+            d = distances[i]
+            active_pixels = remove_active_pixel_cython(active_pixels, d)
+            Pl = coord[l][i]
+            Ps = coord[s][i]
+            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            print('Removing pixel ' + str(ID) + ': ' + \
+                str(remove_events[arg_max[remove_event_id]]) + '<=' + \
+                str(angles[a+1]))
+            # Expecting valid pixel: is_active and distance == distances[i]
+            # Move other pixel over otherwise
+            #if not active_pixel_array[ID].is_active or \
+            #    active_pixel_array[ID].distance != distances[i]:
+            #    for p in range(max_line_length):
+            #        print('sanity check', p, 'is_active', active_pixel_array[p].is_active, \
+            #            'distance', active_pixel_array[p].distance)
+            #    print('pixel', ID)
+            #    print('is_active', active_pixel_array[ID].is_active)
+            #    print('expected dist', distances[i], 'actual', \
+            #        active_pixel_array[ID].distance, 'diff', \
+            #        active_pixel_array[ID].distance-distances[i])
+            #    print('old ID', ID)
+            #    if (ID/2)*2 == ID: # even index: other pixel is the next one
+            #        active_pixel_array[ID] = active_pixel_array[ID+1]
+            #        active_pixel_array[ID+1].is_active = False
+            #        print('new ID', ID + 1)
+            #    else: # odd index: other pixel is the one just before
+            #        active_pixel_array[ID] = active_pixel_array[ID-1]
+            #        active_pixel_array[ID-1].is_active = False
+            #        print('new ID', ID - 1)
+            #    active_pixel_array[ID].is_active = False
+            #    for p in range(max_line_length):
+            #        print('after swap: ID', p, 'is_active', active_pixel_array[p].is_active, \
+            #            'distance', active_pixel_array[p].distance)
+            # Making sure that after the switch, we get the right pixel
+            #message = 'active ' + str(active_pixel_array[ID].is_active) + \
+            #    ', expected distance ' + str(distances[i]) + \
+            #    ', actual distance ' + str(active_pixel_array[ID].distance)
+            #assert active_pixel_array[ID].is_active and \
+            #    active_pixel_array[ID].distance == distances[i], message
+            #active_pixel_array[ID].is_active = False
+            arg_max[remove_event_id] = 0
+            remove_event_id += 1
         # 2.1- add cells
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
@@ -780,26 +836,38 @@ def sweep_through_angles( \
                 Pl = coord[l][i]
                 Ps = coord[s][i]
                 ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-                active_pixel = active_pixel_array[ID]
-                active_pixel.is_active = True
-                active_pixel.index = i
-                active_pixel.distance = d
-                active_pixel.visibility = v
-                active_pixel.offset = o
+                print('Adding pixel to ' + str(ID))
+                # Active pixels could collide. If so, compute offset
+                #if active_pixel_array[ID].is_active:
+                #    print('Pixel ' + str(ID) + ' is already active', \
+                #        active_pixel_array[ID].is_active)
+                #    if (ID/2)*2 == ID: # even index: other pixel is the next one
+                #        print('changing ID to ' + str(ID+1))
+                #        if active_pixel_array[ID].is_active:
+                #            for p in range(max_line_length):
+                #                print('Sanity check: ID', p, 'is_active', \
+                #                    active_pixel_array[p].is_active, \
+                #                    'distance', active_pixel_array[p].distance)
+                #        message = 'Other pixel is also active'
+                #        assert not active_pixel_array[ID+1].is_active, message
+                #        active_pixel_array[ID] = active_pixel_array[ID+1]
+                #    else: # odd index: other pixel is the one just before
+                #        print('changing ID to ' + str(ID-1))
+                #        if active_pixel_array[ID].is_active:
+                #            for p in range(max_line_length):
+                #                print('Sanity check: ID', p, 'is_active', \
+                #                    active_pixel_array[p].is_active, \
+                #                    'distance', active_pixel_array[p].distance)
+                #        message = 'Other pixel is also active'
+                #        assert not active_pixel_array[ID-1].is_active, message
+                #        active_pixel_array[ID] = active_pixel_array[ID-1]
+                #active_pixel_array[ID].is_active = True
+                #active_pixel_array[ID].index = i
+                #active_pixel_array[ID].distance = d
+                #active_pixel_array[ID].visibility = v
+                #active_pixel_array[ID].offset = o
             arg_min[add_event_id] = 0
             add_event_id += 1
-        # 2.2- remove cells
-        while (remove_event_id < remove_event_count) and \
-            (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            i = arg_max[remove_event_id]
-            d = distances[i]
-            active_pixels = remove_active_pixel_cython(active_pixels, d)
-            Pl = coord[l][i]
-            Ps = coord[s][i]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-            active_pixel_array[ID].is_active = False
-            arg_max[remove_event_id] = 0
-            remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
             active_pixels, coord[0], coord[1], d, visibility_map)
