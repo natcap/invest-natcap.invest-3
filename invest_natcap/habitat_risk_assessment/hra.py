@@ -435,24 +435,36 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         band.SetNoDataValue(nodata)
         band.Fill(nodata)
         band.FlushCache()
+        band = None
+        raster = None
+        datasource = None
 
-        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
-                                                options=['ALL_TOUCHED=TRUE'])
-       
-        #Now, want to take that raster, and make it into a buffered version of
-        #itself.
-        base_array = band.ReadAsArray()
-       
-        #Right now, our nodata is -1, and data is 1. Need to make it so nodata is
-        #0 to be swapped on the next line.
-        base_array[base_array == -1.] = 0.
+        raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1], 
+                                                option_list=['ALL_TOUCHED=TRUE'])
 
-        #Swaps 0's and 1's for use with the distance transform function.
-        swp_array = (base_array + 1) % 2
+        #zeros_nodata_uri = os.path.join(dir, name + "_zeros_ds.tif")
+        zeros_nodata_uri = raster_utils.temporary_filename()
+
+        def replace_nodata_zeros(pixels):
+            
+            return np.where(pixels == nodata, 0, pixels)
+            
+        raster_utils.vectorize_datasets([out_uri], replace_nodata_zeros,
+                        zeros_nodata_uri, gdal.GDT_Float32, -1., grid_size,
+                        "intersection", vectorize_op=False)
+
+        #temp_dist_uri = os.path.join(dir, name + '_dist_trans.tif')
+        temp_dist_uri = raster_utils.temporary_filename()
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(swp_array, 
-                                                    sampling=grid_size)
+        raster_utils.distance_transform_edt(zeros_nodata_uri, temp_dist_uri)
+        dist_raster = gdal.Open(temp_dist_uri)
+        dist_band = dist_raster.GetRasterBand(1)
+        dist_array = dist_band.ReadAsArray()
+
+        dist_array = dist_array * grid_size
+
+        #dist_array = np.where(dist_array == 0, 1, dist_array)
 
         #Need to have a special case for 0's, to avoid divide by 0 errors
         if buff == 0:
@@ -469,13 +481,16 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         #just be assumed to be buffered
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         
-        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
-                            'GTiff', -1., gdal.GDT_Float32)
+        raster_utils.new_raster_from_base_uri(out_uri, new_buff_uri,
+                                            'GTiff', -1., gdal.GDT_Float32)
+
+        buff_ds = gdal.Open(new_buff_uri, gdal.GA_Update)
+        buff_band = buff_ds.GetRasterBand(1)
         
-        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
-        n_band.Fill(n_nodata)
+        buff_band.WriteArray(decay_array)
         
-        n_band.WriteArray(decay_array)
+        buff_band = None
+        buff_ds = None
 
         #Now, write the buffered version of the stressor to the stressors
         #dictionary

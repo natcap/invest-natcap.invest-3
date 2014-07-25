@@ -48,7 +48,7 @@ def generate_table(table_dict, attributes=None):
             returns - a string representing an html table
     """
 
-    LOGGER.debug('Generating HTML Table String')
+    LOGGER.info('Generating HTML Table String')
 
     # Initialize the string that will store the html representation of the table
     table_string = ''
@@ -115,6 +115,7 @@ def generate_table(table_dict, attributes=None):
 
     # Get a list of tuples representing if the key 'td_class'
     # is found in 'table_cols' and if so set the value
+    LOGGER.debug('Construct table data classes')
     tdata_tuples = construct_td_classes(table_cols)
 
     def attr_to_string(attr_dict):
@@ -166,6 +167,7 @@ def generate_table(table_dict, attributes=None):
     # Add the start tag for the table body
     table_string += '<tbody>'
 
+    LOGGER.debug('Construct html string for table body')
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
         table_string += '<tr>'
@@ -221,6 +223,7 @@ def add_totals_row(col_headers, total_list, total_name, checkbox_total,
         return - a string representing the html contents of a row which should
             later be used in a 'tfoot' element"""
 
+    LOGGER.debug('Generating a String for a Totals row')
     # Check to determine whether a checkbox total row is being added or a
     # regular totals row
     if checkbox_total:
@@ -316,18 +319,15 @@ def add_checkbox_column(col_list, row_list):
         returns - a tuple of the updated column and rows list of dictionaries
             in that order"""
 
+    LOGGER.debug('Adding a checkbox column to the column structure')
     # Insert a new column dictionary in the list in the second spot
     col_list.insert(1, {'name':'Select', 'total':False,
                         'attr':{'class':'checkbox'}, 'td_class':'checkbox'})
-
-    #LOGGER.debug('Columns with Checkboxes: %s', col_list)
 
     # For each dictionary in the row list add a 'Select' key which
     # refers to the new column and set the value as a checkbox
     for val in row_list:
         val['Select'] = '<input type=checkbox name=cb value=1>'
-
-    #LOGGER.debug('Rows with Checkboxes: %s', row_list)
 
     # Return a tuple of the updated / modified column and row list of
     # dictionaries
@@ -352,7 +352,7 @@ def get_row_data(row_list, col_headers):
             example : [col_name_1, col_name_2, col_name_3...]
 
         return - a 2D list with each inner list representing a row"""
-
+    LOGGER.debug('Compile and return row data as a 2D list')
     # Initialize a list to hold output rows represented as lists
     row_data = []
 
