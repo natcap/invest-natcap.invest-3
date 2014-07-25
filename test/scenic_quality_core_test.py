@@ -226,8 +226,8 @@ class TestScenicQuality(unittest.TestCase):
 
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of extreme cell angles"""
-        max_dist = 10
-        array_shape = (30, 30)
+        max_dist = 4
+        array_shape = (max_dist*2+1, max_dist*2+1)
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
         max_dist_sq = max_dist **2 # Used to skip cells that are too far
 
@@ -253,8 +253,24 @@ class TestScenicQuality(unittest.TestCase):
         extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
-        sqc.list_extreme_cell_angles(array_shape, \
-        viewpoint, max_dist)
+            sqc.list_extreme_cell_angles(array_shape, \
+            viewpoint, max_dist)
+        _min = extreme_angles_fast[0]
+        _ctr = extreme_angles_fast[1]
+        _max = extreme_angles_fast[2]
+        I = extreme_angles_fast[3]
+        J = extreme_angles_fast[4]
+        matrix = np.zeros([np.max(I)+1, np.max(J)+1])
+        np.set_printoptions(precision = 4)
+        matrix[(I, J)] = _max
+        #print('max')
+        #print(matrix)
+        #matrix[(I, J)] = _ctr
+        #print('center')
+        #print(matrix)
+        #matrix[(I, J)] = _min
+        #print('min')
+        #print(matrix)
         # Compare the two
         error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
             np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
@@ -516,14 +532,13 @@ class TestScenicQuality(unittest.TestCase):
     def test_cell_angles(self):
         """Test the angles computed by angles_from_perimeter_cells agains the
         function cell_angles"""
-        return
         array_shape = (400, 400)
         viewpoint = (350, 200)
         # Get the perimeter cells
         perimeter_cells = \
-        aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
+        sqc.get_perimeter_cells(array_shape, viewpoint)
         # Compute angles associated to the perimeter cells
-        angles_fast = aesthetic_quality_core.cell_angles(perimeter_cells, viewpoint)
+        angles_fast = sqc.cell_angles(perimeter_cells, viewpoint)
         # Compute the same angles individually
         angles_naive = []
         for cell in zip(perimeter_cells[0], perimeter_cells[1]):
@@ -550,7 +565,6 @@ class TestScenicQuality(unittest.TestCase):
 
     def test_cell_angle(self):
         """Simple test that ensures cell_angle is doing what it is supposed to"""
-        return
         viewpoint_pos = (3, 3)
         cell_pos = [(0,0),(0,3),(2,2),(2,4),(3,0),(3,4),(4,2),(4,3),(4,4)]
         # Pre-computed angles

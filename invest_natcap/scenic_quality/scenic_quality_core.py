@@ -14,106 +14,6 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('scenic_quality_core')
 
-def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
-    """List the minimum and maximum angles spanned by each cell of a
-        rectangular raster if scanned by a sweep line centered on
-        viewpoint_coords.
-    
-        Inputs:
-            -array_shape: a shape tuple (rows, cols) as is created from
-                calling numpy.ndarray.shape()
-            -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
-            where the sweep line originates
-            -max_dist: maximum viewing distance
-            
-        returns a tuple (min, center, max, I, J) with min, center and max 
-        Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
-        angles and coords as two Nx1 numpy arrays of row and column of the 
-        coordinate of each point.
-    """
-    viewpoint = np.array(viewpoint_coords)
-
-    pi = math.pi
-    two_pi = 2. * pi
-    rad_to_deg = 180.0 / pi
-    deg_to_rad = 1.0 / rad_to_deg
-
-    # Each row correspond to an angular sector:
-    # row 0: angle ==0
-    # row 1: 0 < angle < PI/2
-    # row 2: angle == PI/2
-    # row 3: PI/2 < angle < PI
-    # row 4: angle == PI
-    # row 5: PI < angle < 3PI/2
-    # row 6: angle == 3PI/2
-    # row 7: 3PI/2 < angle < 2PI
-    extreme_cell_points = [ \
-    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, -0.5]}, \
-    {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
-    {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
-    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
-    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
-    {'min_angle':[-0.5, -0.5], 'max_angle':[0.5, 0.5]}, \
-    {'min_angle':[-0.5, -0.5], 'max_angle':[-0.5, 0.5]}, \
-    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
-
-    min_angles = []
-    angles = []
-    max_angles = []
-    I = []
-    J = []
-    max_dist_sq = max_dist**2 if max_dist > 0 else 1000000000
-    cell_count = array_shape[0]*array_shape[1]
-    current_cell_id = 0
-    discarded_cells = 0
-    for row in range(array_shape[0]):
-        for col in range(array_shape[1]):
-            if (cell_count > 1000) and \
-                (current_cell_id % (cell_count/1000)) == 0:
-                progress = round(float(current_cell_id) / cell_count * 100.,1)
-                print(str(progress) + '%')
-            # Skip if cell is too far
-            cell = np.array([row, col])
-            viewpoint_to_cell = cell - viewpoint
-            if np.sum(viewpoint_to_cell**2) > max_dist_sq:
-                discarded_cells += 1
-                continue
-            # Skip if cell falls on the viewpoint
-            if (row == viewpoint[0]) and (col == viewpoint[1]):
-                discarded_cells += 1
-                continue
-            I.append(row)
-            J.append(col)
-            # Compute the angle of the cell center
-            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
-            angles.append((angle + two_pi) % two_pi)
-            # find index in extreme_cell_points that corresponds to the current
-            # angle to compute the offset from cell center
-            sector = int(4. * angles[-1] / two_pi) * 2
-            if np.amin(np.absolute(viewpoint_to_cell)) > 0:
-                sector += 1
-            min_corner_offset = \
-                np.array(extreme_cell_points[sector]['min_angle'])
-            max_corner_offset = \
-                np.array(extreme_cell_points[sector]['max_angle'])
-            # Use the offset to compute extreme angles
-            min_corner = viewpoint_to_cell + min_corner_offset
-            min_angle = np.arctan2(-min_corner[0], min_corner[1])
-            min_angles.append((min_angle + two_pi) % two_pi) 
-
-            max_corner = viewpoint_to_cell + max_corner_offset
-            max_angle = np.arctan2(-max_corner[0], max_corner[1])
-            max_angles.append((max_angle + two_pi) % two_pi)
-            current_cell_id += 1
-    # Create a tuple of ndarray angles before returning
-    min_angles = np.array(min_angles)
-    angles = np.array(angles)
-    max_angles = np.array(max_angles)
-    I = np.array(I)
-    J = np.array(J)
-    #print('done storing result. Returning.')
-    return (min_angles, angles, max_angles, I, J)
-
 # Linked cells used for the active pixels
 linked_cell_factory = collections.namedtuple('linked_cell', \
     ['previous', 'next', 'distance', 'visibility'])
@@ -134,6 +34,7 @@ def print_node(node):
     """Printing a node by displaying its 'distance' and 'next' fields"""
     print(str(None) if node is None else (node['distance'] + '-' + \
     (str(None) if node['next'] is None else node['next']['distance'])))
+
 
 def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
@@ -187,6 +88,7 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
         # TODO: Remove this! Debug only!
         #visibility_map[i, j] = pixel['visibility']
         pixel = pixel['next']
+
 
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
@@ -279,6 +181,107 @@ def add_active_pixel(sweep_line, index, distance, visibility, offset):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
+
+def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
+    """List the minimum and maximum angles spanned by each cell of a
+        rectangular raster if scanned by a sweep line centered on
+        viewpoint_coords.
+    
+        Inputs:
+            -array_shape: a shape tuple (rows, cols) as is created from
+                calling numpy.ndarray.shape()
+            -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
+            where the sweep line originates
+            -max_dist: maximum viewing distance
+            
+        returns a tuple (min, center, max, I, J) with min, center and max 
+        Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
+        angles and coords as two Nx1 numpy arrays of row and column of the 
+        coordinate of each point.
+    """
+    viewpoint = np.array(viewpoint_coords)
+
+    pi = math.pi
+    two_pi = 2. * pi
+    rad_to_deg = 180.0 / pi
+    deg_to_rad = 1.0 / rad_to_deg
+
+    # Each row correspond to an angular sector (angle, min & max corners):
+    # row 0: angle == 0         (min: lower left,  max: upper left)
+    # row 1: 0 < angle < PI/2   (min: lower right, max: upper left)
+    # row 2: angle == PI/2      (min: lower right, max: lower left)
+    # row 3: PI/2 < angle < PI  (min: upper right, max: lower left)
+    # row 4: angle == PI        (min: upper right, max: lower right)
+    # row 5: PI < angle < 3PI/2 (min: upper left,  max: lower right)
+    # row 6: angle == 3PI/2     (min: upper left,  max: upper right)
+    # row 7: 3PI/2 < angle < 2PI(min: lower left,  max: upper right)
+    extreme_cell_points = [ \
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, -0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[-0.5, 0.5]}, \
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
+
+    min_angles = []
+    angles = []
+    max_angles = []
+    I = []
+    J = []
+    max_dist_sq = max_dist**2 if max_dist > 0 else 1000000000
+    cell_count = array_shape[0]*array_shape[1]
+    current_cell_id = 0
+    discarded_cells = 0
+    for row in range(array_shape[0]):
+        for col in range(array_shape[1]):
+            if (cell_count > 1000) and \
+                (current_cell_id % (cell_count/1000)) == 0:
+                progress = round(float(current_cell_id) / cell_count * 100.,1)
+                print(str(progress) + '%')
+            # Skip if cell is too far
+            cell = np.array([row, col])
+            viewpoint_to_cell = cell - viewpoint
+            if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                discarded_cells += 1
+                continue
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint[0]) and (col == viewpoint[1]):
+                discarded_cells += 1
+                continue
+            I.append(row)
+            J.append(col)
+            # Compute the angle of the cell center
+            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angles.append((angle + two_pi) % two_pi)
+            # find index in extreme_cell_points that corresponds to the current
+            # angle to compute the offset from cell center
+            sector = int(4. * angles[-1] / two_pi) * 2
+            if np.amin(np.absolute(viewpoint_to_cell)) > 0:
+                sector += 1
+            min_corner_offset = \
+                np.array(extreme_cell_points[sector]['min_angle'])
+            max_corner_offset = \
+                np.array(extreme_cell_points[sector]['max_angle'])
+            # Use the offset to compute extreme angles
+            min_corner = viewpoint_to_cell + min_corner_offset
+            min_angle = np.arctan2(-min_corner[0], min_corner[1])
+            min_angles.append((min_angle + two_pi) % two_pi) 
+
+            max_corner = viewpoint_to_cell + max_corner_offset
+            max_angle = np.arctan2(-max_corner[0], max_corner[1])
+            max_angles.append((max_angle + two_pi) % two_pi)
+            current_cell_id += 1
+    # Create a tuple of ndarray angles before returning
+    min_angles = np.array(min_angles)
+    angles = np.array(angles)
+    max_angles = np.array(max_angles)
+    I = np.array(I)
+    J = np.array(J)
+    return (min_angles, angles, max_angles, I, J)
+
+
 def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     """Compute cells along the perimeter of an array.
 
@@ -333,6 +336,7 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     cols = np.roll(cols, viewpoint[0] - i_min).astype(int)
     return (rows, cols)
 
+
 def cell_angles(cell_coords, viewpoint):
     """Compute angles between cells and viewpoint where 0 angle is right of
     viewpoint.
@@ -350,6 +354,7 @@ def cell_angles(cell_coords, viewpoint):
     p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
     angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
     return angles
+
 
 def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     coordinates, obs_elev=1.75, tgt_elev=0.0, \
@@ -382,6 +387,7 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)
+
 
 def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     tgt_elev, max_dist, cell_size, refraction_coeff, alg_version):
@@ -471,6 +477,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility_map[coordinates] = 1
 
     return visibility_map
+
 
 def sweep_through_angles(angles, add_events, center_events, remove_events, \
     I, J, distances, offset_visibility, visibility, visibility_map):
