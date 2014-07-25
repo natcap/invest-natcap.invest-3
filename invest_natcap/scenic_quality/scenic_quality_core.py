@@ -38,6 +38,15 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     rad_to_deg = 180.0 / pi
     deg_to_rad = 1.0 / rad_to_deg
 
+    # Each row correspond to an angular sector:
+    # row 0: angle ==0
+    # row 1: 0 < angle < PI/2
+    # row 2: angle == PI/2
+    # row 3: PI/2 < angle < PI
+    # row 4: angle == PI
+    # row 5: PI < angle < 3PI/2
+    # row 6: angle == 3PI/2
+    # row 7: 3PI/2 < angle < 2PI
     extreme_cell_points = [ \
     {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, -0.5]}, \
     {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
