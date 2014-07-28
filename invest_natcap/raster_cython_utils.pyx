@@ -162,7 +162,7 @@ cdef long long _sep(long long i, long long u, long long gu, long long gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
         
         
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 def _distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
@@ -193,9 +193,10 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     input_geotransform = input_mask_ds.GetGeoTransform()
     driver = gdal.GetDriverByName('GTiff')
     #invert the rows and columns since it's a transpose
+    cdef int block_size = 16
     g_dataset = driver.Create(
         g_dataset_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Int32,
-        options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
+        options=['TILED=YES', 'BLOCKXSIZE=%d' % block_size, 'BLOCKYSIZE=%d' % block_size])
         
     g_dataset.SetProjection(input_projection)
     g_dataset.SetGeoTransform(input_geotransform)
@@ -205,20 +206,23 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef float output_nodata = -1.0
     output_dataset = driver.Create(
         output_distance_uri.encode('utf-8'), n_cols, n_rows, 1, 
-        gdal.GDT_Float64, options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
+        gdal.GDT_Float64, options=['TILED=YES', 'BLOCKXSIZE=%d' % block_size,
+        'BLOCKYSIZE=%d' % block_size])
     output_dataset.SetProjection(input_projection)
     output_dataset.SetGeoTransform(input_geotransform)
     output_band = output_dataset.GetRasterBand(1)
     output_band.SetNoDataValue(output_nodata)
     
+    #the euclidan distance will be less than this
     cdef int numerical_inf = n_cols + n_rows
 
     LOGGER.info('Distance Transform Phase 1')
     
-    g_blocksize = g_band.GetBlockSize()
     output_blocksize = output_band.GetBlockSize()
-    
-    LOGGER.info("g_blocksize: %s, output_blocksize: %s" % (str(g_blocksize), str(output_blocksize)))
+    if output_blocksize[0] != block_size or output_blocksize[1] != block_size:
+        raise Exception(
+            "Output blocksize should be %d,%d, instead it's %d,%d" % (
+                block_size, block_size, output_blocksize[0], output_blocksize[1]))
     
     #phase one, calculate column G(x,y)
     
@@ -228,11 +232,12 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     cdef int col_index, row_index, q_index, u_index
     cdef long long w
+
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
         
-        #named _transposed so we remember column is flipped to row
+        #initalize the first element to either be infinate distance, or zero if it's a blob
         if b_array[0, 0] and b_array[0, 0] != input_nodata:
             g_array[0, 0] = 0
         else:
@@ -491,7 +496,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         weight_array = weight_band.ReadAsArray(
             xoff=0, yoff=weight_top_index, win_xsize=n_cols,
             win_ysize=weight_bottom_index-weight_top_index).astype(numpy.float)
-        
+
         for col_index in xrange(n_cols):
             #snip the window of the kernel over the window of the weight
             if col_index >= max_distance:
