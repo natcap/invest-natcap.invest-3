@@ -2016,7 +2016,8 @@ def resize_and_resample_dataset_uri(
     #the number of columns
     if block_size[0] != original_band.XSize:
         gtiff_creation_options.append('TILED=YES')
-        
+    
+    create_directories([os.path.dirname(output_uri)])
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
         options=gtiff_creation_options)

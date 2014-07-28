@@ -813,9 +813,14 @@ cdef int _is_sink(
     return 0
 
     
-cdef void _build_flat_set(
+def _build_flat_set(
     char *dem_uri, float nodata_value, int n_rows, int n_cols,
-    int *row_offsets, int *col_offsets, c_set[int] *flat_set):
+    c_set[int] &flat_set):
+    
+    LOGGER.debug('in _build_flat_set')
+    
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     
     cdef double dem_value, neighbor_dem_value
     #get the ceiling of the integer division
@@ -829,9 +834,12 @@ cdef void _build_flat_set(
     band = dem_ds.GetRasterBand(1)
     LOGGER.debug("blocksize: %s" % (str(band.GetBlockSize())))
     LOGGER.info('create dem array in _build_flat_set')
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = band.ReadAsArray(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = numpy.empty(
+        (3,n_cols), dtype=numpy.float32)
+    
+    band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
-        win_ysize=3)
+        win_ysize=3, buf_obj=dem_array)
     cdef int y_offset, local_y_offset
     
     last_time = time.time()
@@ -839,7 +847,7 @@ cdef void _build_flat_set(
     for row_index in range(1, n_rows-1):
         current_time = time.time()
         
-        if current_time - last_time < 5.0:
+        if current_time - last_time > 5.0:
             LOGGER.info('identify flat calls %.2f%% complete' % (100.0 * float(row_index)/n_rows))
             last_time = current_time
         
@@ -866,7 +874,7 @@ cdef void _build_flat_set(
                     break
             else:
                 #This is a flat element
-                deref(flat_set).insert(row_index * n_cols + col_index)
+                flat_set.insert(row_index * n_cols + col_index)
     
     cdef int w_row_index, w_col_index
 
@@ -1003,7 +1011,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef c_set[int] flat_set_for_looping
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    _build_flat_set(dem_out_uri, nodata_value, n_rows, n_cols, row_offsets, col_offsets, &flat_set)
+    _build_flat_set(dem_out_uri, nodata_value, n_rows, n_cols, flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
     
     dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
