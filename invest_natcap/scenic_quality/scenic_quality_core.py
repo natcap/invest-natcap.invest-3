@@ -422,6 +422,8 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # cell_angles + append the last element (2 PI) automatically
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
+    print('angles')
+    print(angles)
     # 3- compute information on raster cells
     row_max = np.amax(perimeter_cells[0])
     row_min = np.amin(perimeter_cells[0])
@@ -432,8 +434,14 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Viewer's coordiantes relative to the viewshed 
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
-    max_dist)
+        scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
+        v, max_dist)
+    arg_min = np.argsort(add_events)
+    arg_max = np.argsort(remove_events)
+    print('add_events')
+    print(add_events[arg_min])
+    print('remove_events')
+    print(remove_events[arg_max])
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
     J += col_min
@@ -478,6 +486,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
 
     return visibility_map
 
+
+def active_pixel_index(O, P, E):
+    return scenic_quality_cython_core._active_pixel_index(O, P, E)
 
 def sweep_through_angles(angles, add_events, center_events, remove_events, \
     I, J, distances, offset_visibility, visibility, visibility_map):

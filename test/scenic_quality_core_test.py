@@ -592,6 +592,34 @@ class TestScenicQuality(unittest.TestCase):
         elevation[viewpoint[0], viewpoint[1]] = 2
         #print(elevation)
 
+    def cell_row(self, cell_id, col_count):
+        """Compute the row index from a cell ID"""
+        return float(cell_id / col_count)
+
+    def cell_col(self, cell_id, row_count):
+        """Compute the col index from a cell ID"""
+        return float(cell_id % row_count)
+
+    def test_indexing_algorithm(self):
+        row_count = 5
+        col_count = 5
+        test_parameters = [ \
+            ([0., 0.], [0., 4], [0, 1, 2, 3, 4]) \
+            ]
+        expected_results = [ \
+            [0, 2, 4, 6, 8] \
+            ]
+
+        for t in range(len(test_parameters)):
+            test = test_parameters[t]
+            
+            for i in range(len(test[2])):
+                p = test[2][i]
+                P0 = self.cell_row(p, row_count)
+                P1 = self.cell_col(p, col_count)
+                assert sqc.active_pixel_index(test[0], test[1], [P0, P1]) == \
+                    expected_results[t][i]
+
     def test_visibility_basic_array(self):
         return
         DEM_size = 31
@@ -601,7 +629,7 @@ class TestScenicQuality(unittest.TestCase):
         elevation[viewpoint[0]+1, viewpoint[1]+1] = 2.
         obs_elev = 1.0
         tgt_elev = 0.0
-        max_dist = 5 
+        max_dist = 4 
         cell_size = 5.0
         refraction_coeff = 0.13
         alg_version = 'cython' #'python'
