@@ -652,8 +652,11 @@ def _active_pixel_index(O, P, E):
     Ss = -1 if (Os>Es) else 1
 
     slope = 0 if El==Ol else (Es-Os) / (El-Ol)
+    #if El!=Ol:
+    #    print('Os', Os, 'Ol', Ol, 'Es', Es, 'El', El, 'Ps', P[s], 'Pl', P[l])
+    #    print('Es-Os', Es-Os, ' / El-Ol', El-Ol, 'slope', slope)
 
-    return active_pixel_index(Ol, Os, El, Es, P[l], P[s], Sl, Ss, slope)
+    return active_pixel_index(Ol, Os, P[l], P[s], El, Es, Sl, Ss, slope)
 
 cdef int active_pixel_index(double Ol, double Os, \
                         double Pl, double Ps, \
@@ -666,14 +669,12 @@ cdef int active_pixel_index(double Ol, double Os, \
     if not Ds and not Dl: # P == O => index is 0 by convention
         return 0
     else:
-        #print('')
-        #print('Origin', (Ol, Os), 'End', (El, Es), 'P', (Pl, Ps))
         #print('Signs', (Sl, Ss), 'Distances', (Dl, Ds), 'slope', slope)
-        #print('Origin', (0, 0), 'End', (El-Ol, Es-Os), 'P', (Pl-Ol, Ps-Os))
         #print('base index', Sl*2*Dl, 'offset', Sl*(Ds-Ss*int(slope*(Sl*Dl-.5)+.5)))
         #print('pixel elev.', Ds, 'boundary elev.', slope*(Sl*Dl-.5), \
-        #    'rounded', int(-slope*(Sl*Dl-.5)+.5), \
+        #    'rounded', int(slope*(Sl*Dl-.5)+.5), \
         #    'diff', Ds-Ss*int(slope*(Sl*Dl-.5)+.5))
+        #print('')
         return int(Sl*(2*Dl+(Ds-Ss*int(slope*(Sl*Dl-.5)+.5))))
 
 
