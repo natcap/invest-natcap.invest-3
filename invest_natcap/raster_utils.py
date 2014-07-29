@@ -2382,7 +2382,7 @@ def vectorize_datasets(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out,
         dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
-    block_size = output_band.GetBlockSize()
+    block_size = aligned_bands[0].GetBlockSize()
     
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
@@ -2412,7 +2412,7 @@ def vectorize_datasets(
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
     
-    LOGGER.info("rows_per_block, cols_per_block, %d, %d" % (
+    LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d" % (
         rows_per_block, cols_per_block))
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block),
