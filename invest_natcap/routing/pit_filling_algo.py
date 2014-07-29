@@ -49,30 +49,34 @@ def initialize_pixel_queue(base, direction, flooded):
         else:
             return False
     
+    #Case where the pixel is next to a nodata.
+    def has_nodata_neighbor(row, col):
+        ''' |0|1|2|
+            |7| |3|
+            |6|5|4|        
+        '''
+
+        for direction_index in range(8):
+            try:
+                neighbor_row = row + ROW_OFFSET[direction_index] 
+                neighbor_col = col + COL_OFFSET[direction_index]
+                
+                if base[neighbor_row, neighbor_col] == nodata:
+               
+                    #Want to set the direction of that pixel to be the direction
+                    #FROM which it was flooded
+                    direction[row, col] = direction_index
+                    return True
+            #Along the edges, there won't be a full cadre of directions, but we
+            #do want to check the rest. 
+            except IndexError:
+                continue
     heap = []
 
     for row in range(num_rows):
         for col in range(num_cols):
-
-            has_nodata_neighbor = False
-            for direction_index in range(8):
-                try:
-                    neighbor_row = row + ROW_OFFSET[direction_index] 
-                    neighbor_col = col + COL_OFFSET[direction_index]
-                    #print("Currently looking at row: %s, col: %s" % (neighbor_row, neighbor_col))
-                    if base[neighbor_row, neighbor_col] == nodata:
-
-                        #Want to set the direction of that pixel to be the direction
-                        #FROM which it was flooded
-                        direction[col, row] = direction_index
-                        has_nodata_neighbor = True
-                        break
-                #Along the edges, there won't be a full cadre of directions, but we
-                #do want to check the rest. 
-                except IndexError:
-                    continue
-
-            if is_border(row, col) or has_nodata_neighbor:
+        
+            if is_border(row, col) or has_nodata_neighbor(row, col):
                 #array[x,y] will give the value of the pixel at that coordinate
                 heapq.heappush(heap, (base[row, col], (row, col)))
                 flooded[row, col] = 2   
@@ -86,7 +90,14 @@ def initialize_pixel_queue(base, direction, flooded):
 def is_local_min(coords, base, flooded):
     
     row, col = coords
-    
+   
+    if row in range(1401, 1408) and col in range(1989, 1995):
+        #LOGGER.debug("That cell's [%s, %s] flooding is: %s" % (row, col, flooded[row, col]))
+        for direction_index in range(8):
+            neighbor_row = row + ROW_OFFSET[direction_index] 
+            neighbor_col = col + COL_OFFSET[direction_index]
+            #LOGGER.debug("Flooding of %s, %s is %s" % (neighbor_row, neighbor_col, flooded[neighbor_row, neighbor_col]))
+
     #If the cell is in the PQ, it has either been flooded with a 2 or a 1.
     if flooded[row, col] == 2:
         return False
@@ -98,7 +109,7 @@ def is_local_min(coords, base, flooded):
                 neighbor_row = row + ROW_OFFSET[direction_index] 
                 neighbor_col = col + COL_OFFSET[direction_index]
                
-                #1. If we're less than a neighbor
+                #1. If we're higher than our neighbor
                 #2. if we are the same height as our neighbors, but they're
                 #unflooded.
                 if base[neighbor_row, neighbor_col] < base[row, col] or \
@@ -119,7 +130,7 @@ def trace_flow(row, col, direction):
     #Want to follow flow direction to an adjacent cell
     flow_direction = direction[row, col]
     
-    LOGGER.debug("R: %s, C: %s, Dir: %s" % (row, col, flow_direction))
+    #LOGGER.debug("R: %s, C: %s, Dir: %s" % (row, col, flow_direction))
     if flow_direction == -1:
         raise NegativeFlowDirection
 
@@ -134,7 +145,11 @@ def find_crest_elev(coords, base, direction, flooded):
     reached_outlet = False
 
     curr_row, curr_col = coords
+    counter = 0
 
+    #Initialize current crest to the pit coords.
+    curr_crest = base[curr_row, curr_col] 
+    
     while not reached_outlet:
 
         try:
@@ -144,21 +159,25 @@ def find_crest_elev(coords, base, direction, flooded):
             reached_outlet = True
             break
         
-        curr_crest = base[curr_row, curr_col] 
         adj_elev = base[adj_row, adj_col]
+
+        #LOGGER.debug("Cycle %s, Curr: %s, Adj: %s, Adj_F: %s" % (counter, curr_crest, adj_elev, flooded[adj_row, adj_col]))
 
         #If our neighbor is nodata, we've reached an outlet
         if adj_elev == nodata:
             reached_outlet = True
         #Or if the neighbor is lower, but has a path to the outlet, we've
         #reached an outlet
-        elif curr_crest > adj_elev and flooded[adj_row, adj_col] == 2:
+        elif adj_elev <= curr_crest and flooded[adj_row, adj_col] == 2:
             reached_outlet = True
+       
+        #If we encounter a higher crest, update the current high.
+        elif adj_elev > curr_crest:
+            curr_crest = adj_elev
         
         #Otherwise, move to the neighbor, and follow flow direction again.
-        else:
-            curr_row, curr_col = adj_row, adj_col
-            curr_crest = adj_elev
+        curr_row, curr_col = adj_row, adj_col
+        counter += 1
 
     return curr_crest
 
@@ -174,9 +193,8 @@ def get_depression_extent(coords, base, crest_elev):
     origin_elev = base[x, y]
     heapq.heappush(depress_queue, (origin_elev, (x, y)))
 
-    depress_extent = []
     #We know the origin pit is part of the depression. So add it.
-    depress_extent.append((x, y))
+    depress_extent = [(x, y)]
 
     while depress_queue:
         
@@ -187,9 +205,9 @@ def get_depression_extent(coords, base, crest_elev):
             try:
                 neighbor_row = curr_row + ROW_OFFSET[direction_index] 
                 neighbor_col = curr_col + COL_OFFSET[direction_index]
-                #LOGGER.debug("Depression, Neighbor: %s, %s" % (neighbor_row, neighbor_col)) 
                 neighbor_elev = base[neighbor_row, neighbor_col]
-
+                #LOGGER.debug("Depression, Neighbor: %s, %s, Height: %s" % (neighbor_row, neighbor_col, neighbor_elev)) 
+                
                 #If a neighbor cell is greater than the present cell, but lower
                 #than crest elevation, want to add it to the queue.
                 if curr_elev <= neighbor_elev < crest_elev and \
@@ -222,15 +240,17 @@ def create_cut_function(pit_coords, base, direction, flooded, step):
             LOGGER.debug("This is actually raising an exception!")
             reached_outlet = True
             break
+        
+        #LOGGER.debug("TF, N_Elev: %s" % base[adj_row, adj_col])
 
-        if base[adj_row, adj_col] == nodata or \
-            (base[adj_row, adj_col] < pit_elev and flooded[adj_row, adj_col] == 2):
+        if base[adj_row, adj_col] == nodata or flooded[adj_row, adj_col] == 2: 
+            #(base[adj_row, adj_col] < pit_elev and flooded[adj_row, adj_col] == 2):
             reached_outlet = True
         
         else:
             curr_step = pit_elev
             #While the step we're looking at is less than the neighbor elevation.
-            while curr_step < base[adj_row, adj_col]:
+            while curr_step <= base[adj_row, adj_col]:
                 
                 old_cut = cut_volume[curr_step] if curr_step in cut_volume else 0
 
@@ -246,7 +266,7 @@ def create_cut_function(pit_coords, base, direction, flooded, step):
     return cut_volume
 
 def create_fill_function(pit_coords, base, depress_coords, crest_elev, step):
-    
+
     fill_volume = {}
 
     pit_row, pit_col = pit_coords
@@ -258,7 +278,7 @@ def create_fill_function(pit_coords, base, depress_coords, crest_elev, step):
         #Initialize to teh pit elevation, since we'll work up from there.
         curr_step = base[pit_row, pit_col]
         
-        while curr_step < crest_elev:
+        while curr_step <= crest_elev:
             if curr_step > curr_elev:
                 
                 old_fill = fill_volume[curr_step] if curr_step in fill_volume else 0
@@ -284,12 +304,13 @@ def get_ideal_fill_level(pit_elev, crest_elev, cut_volume, fill_volume, step_siz
 
     #If the steps should go up to the crest, want to make sure that it's added
     #to the steps we'll be checking.
-    step_range = range(pit_elev, crest_elev, step_size)
-    step_range = step_range + [crest_elev] if crest_elev % step_size == 0 else step_range
-    LOGGER.debug("Step range: %s" % step_range)
+    #LOGGER.debug("Step range: %s" % step_range)
     LOGGER.debug("Pit Elev: %s, Crest_Elev: %s" % (pit_elev, crest_elev))
+   
+    #Want to start at the pit elevation.
+    level = pit_elev
 
-    for level in step_range:
+    while level <= crest_elev:
        
         #This allows us to not have to instantiate all levels for the dictionaries,
         #since we know we would just be setting them to 0.
@@ -303,21 +324,23 @@ def get_ideal_fill_level(pit_elev, crest_elev, cut_volume, fill_volume, step_siz
             best_min_cost = abs(fill_cost - cut_cost)
             best_cost_step = level
 
+        level += step_size
+
     return best_cost_step
 
-def fill_to_elev(pit_coords, depress_coords, de_pit, elev):
+def fill_to_elev(pit_coords, depress_coords, base, elev):
     
     #Fill the pit
     pit_row, pit_col = pit_coords
-    de_pit[pit_row, pit_col] = elev
+    base[pit_row, pit_col] = elev
 
     #Fill the rest of the depression
     for dep_row, dep_col in depress_coords:
-       
-        if de_pit[dep_row, dep_col] < elev:
-            de_pit[dep_row, dep_col] = elev
+        LOGGER.debug("In pit (%s,%s), filling (%s,%s) to elev %s." % (pit_row, pit_col, dep_row, dep_col, elev))   
+        if base[dep_row, dep_col] < elev:
+            base[dep_row, dep_col] = elev
 
-def cut_to_elev(pit_coords, base, direction, flooded, de_pit, elev):
+def cut_to_elev(pit_coords, direction, flooded, base, elev):
     
     reached_outlet = False
     curr_row, curr_col = pit_coords
@@ -332,22 +355,19 @@ def cut_to_elev(pit_coords, base, direction, flooded, de_pit, elev):
             break
         
         if base[adj_row, adj_col] == nodata or \
-            (base[adj_row, adj_col] < elev and flooded[adj_row, adj_col] == 2):
+            (base[adj_row, adj_col] <= elev and flooded[adj_row, adj_col] == 2):
             reached_outlet = True
         else:
             #TODO: Make sure that we really need an if statement here. What happens if
             #we don't have it?
-            if base[adj_row, adj_col] > elev:
-                de_pit[adj_row, adj_col] = elev
-
-            #TODO: Check if this is really necessary.
-            #Shouldn't this already be true?
+            #if base[adj_row, adj_col] > elev:
+            base[adj_row, adj_col] = elev
             flooded[adj_row, adj_col] = 2
 
         #Move to the next cell in flow direction.
         curr_row, curr_col = adj_row, adj_col
 
-def hybrid_pit_removal(coords, base, direction, flooded, de_pit, step_size):
+def hybrid_pit_removal(coords, base, direction, flooded, step_size):
 
     row, col = coords
     pit_elev = base[row, col]
@@ -362,28 +382,27 @@ def hybrid_pit_removal(coords, base, direction, flooded, de_pit, step_size):
     #Returns dictionary which maps elevation steps to their corresponding cut
     #amount.
     #TODO: step size should be passed in as an argument
-    LOGGER.debug("Pit at : %s, Depress_Extent: %s" % (coords, depress_coords))
-    LOGGER.debug("pre-error Direction is: %s" % direction[12,162])
+    #LOGGER.debug("Pit at : %s, Depress_Extent: %s" % (coords, depress_coords))
     cut_volume = create_cut_function(coords, base, direction, flooded, step_size)
 
     fill_volume = create_fill_function(coords, base, depress_coords, crest_elev, step_size)
-    LOGGER.debug("Row %s, Col: %s" % (row, col))
-    LOGGER.debug("Elev is: %s" % pit_elev)
-    LOGGER.debug("Flooded: %s" % flooded[row, col])
+    #LOGGER.debug("Row %s, Col: %s" % (row, col))
+    #LOGGER.debug("Elev is: %s" % pit_elev)
+    #LOGGER.debug("Flooded: %s" % flooded[row, col])
     ideal_level = get_ideal_fill_level(pit_elev, crest_elev, cut_volume, fill_volume, step_size)
     
     #Now, fix it.
-    fill_to_elev(coords, depress_coords, de_pit, ideal_level)
-    cut_to_elev(coords, base, direction, flooded, de_pit, ideal_level)
+    fill_to_elev(coords, depress_coords, base, ideal_level)
+    cut_to_elev(coords, direction, flooded, base, ideal_level)
 
     #TODO: Do we actually need to set the pit to flooded here, or would it have
-    #happened organically within cut/fill?
+    #nhappened organically within cut/fill?
     flooded[row, col] = 2
 
 def main():
     '''All the initializations. We assume that these would come from the params
     being passed into the function call.'''
-    base_uri = 'smaller_clipped_dem.tif'
+    base_uri = '/home/kathryn/Documents/Pit_Filling/filldem1/w001001.adf'
     raster = gdal.Open(base_uri)
     band = raster.GetRasterBand(1)
     
@@ -391,16 +410,32 @@ def main():
     base_array = band.ReadAsArray()
     direction_array = np.empty_like(base_array)
     flooded_array = np.zeros_like(base_array)
-    de_pit_array = np.copy(base_array)
+    #de_pit_array = np.copy(base_array)
     
+    '''#TEMP FOR DEBUGGING
+    raster_mask = np.copy(base_array)
+    for row in range(125, 130):
+        for col in range(532, 537):
+            raster_mask[row, col] = -4444
+
+    mask_uri = '/home/kathryn/Documents/Pit_Filling/testing_mask.tif'
+
+    new_dataset = raster_utils.new_raster_from_base(raster, mask_uri,
+                        'GTiff', nodata, gdal.GDT_Float32)
+    
+    n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+    n_band.Fill(n_nodata)
+    
+    n_band.WriteArray(raster_mask)
+    '''
     #Initialization of the priority queue
     pixel_queue = initialize_pixel_queue(base_array, direction_array, flooded_array)
 
     #Var that will come from the user.
-    step_size = 100
+    step_size = .1
 
-    print('Initialization done.')
-
+    LOGGER.debug("Initialization done.")
+        
     #Running through currently queued items and doing the stuff.
     while pixel_queue:
         
@@ -413,27 +448,33 @@ def main():
         #now want to take the hybrid approach to filling.
         if is_local_min(curr_coords, base_array, flooded_array):
             
+            #LOGGER.debug("Pixel %s, %s is a local min. Elev: %s, Dir: %s, Flood: %s" % (row, col, base_array[row, col], direction_array[row, col], flooded_array[row, col]))
             #DO THE THINGS! WITH THE STUFF!
-            hybrid_pit_removal(
-                curr_coords, base_array, direction_array,
-                flooded_array, de_pit_array, step_size)
+            hybrid_pit_removal(curr_coords, base_array, direction_array, 
+                    flooded_array, step_size)
         
         #We're not looking at a pit for the current cell
         else:
+
+            #LOGGER.debug("Pixel %s, %s is not a local min. Elev: %s, Dir: %s, Flood: %s" % (row, col, base_array[row, col], direction_array[row, col], flooded_array[row, col]))
             #Correcting places where pits were removed, but they remain 
-            #classified as flooded = 1.
+            #classified as flooded = 1. Sometimes happens when proper elevation
+            #areas are "blocked in" by a pit. Need to correct so that they would
+            #be flooded with 2 after the pit was removed.
             if flooded_array[row, col] == 1:
                 for direction_index in range(8):
                     try:
-                        neighbor_row = row + ROW_OFFSET[direction_index]
+                        neighbor_row = row + ROW_OFFSET[direction_index] 
                         neighbor_col = col + COL_OFFSET[direction_index]
 
                         #If our neighbor is flooded with a confirmed path to outlet,
-                        #and their terrain le less than ours
-                        if (flooded_array[neighbor_row, neighbor_col] == 2 and
-                            base_array[neighbor_row, neighbor_col] < curr_elev):
+                        #and their terrain is less than or equal to ours.
+                        if flooded_array[neighbor_row, neighbor_col] == 2 and \
+                                base_array[neighbor_row, neighbor_col] <= curr_elev:
+
                             flooded_array[row, col] = 2
                             break
+
                     except IndexError:
                         continue
 
@@ -442,7 +483,7 @@ def main():
         #check whether they should be counted as having a path to outlet or not.
         for direction_index in range(8):
             try:
-                neighbor_row = row + ROW_OFFSET[direction_index]
+                neighbor_row = row + ROW_OFFSET[direction_index] 
                 neighbor_col = col + COL_OFFSET[direction_index]
 
                 #Want only those neighbors who are "dry" (flooded == 0)
@@ -450,51 +491,45 @@ def main():
                     
                     #If neighbor is higher than us, and we're on a confirmed
                     #path to the outlet.
-                    if (base_array[neighbor_row, neighbor_col] >= base_array[row, col] and
-                        flooded_array[row, col] == 2):
+                    if base_array[neighbor_row, neighbor_col] >= base_array[row, col] and \
+                            flooded_array[row, col] == 2:
                         flooded_array[neighbor_row, neighbor_col] = 2
                     #If we know that we're lower than neighbor (since we're first in the PQ),
                     #but don't know if confirmed to outlet.
                     else:
+                        #LOGGER.debug("Firing because %s, %s is %s and %s,%s is only %s." % (row, col, base_array[row, col], neighbor_row, neighbor_col, base_array[neighbor_row, neighbor_col]))
                         flooded_array[neighbor_row, neighbor_col] = 1
 
                     #Add neighbor to PQ
-                    heapq.heappush(
-                        pixel_queue, (base_array[neighbor_row, neighbor_col], 
-                                      (neighbor_row, neighbor_col)))
+                    heapq.heappush(pixel_queue, (base_array[neighbor_row, neighbor_col], 
+                                                    (neighbor_row, neighbor_col)))
                     
                     #Set flow direction for the neighbor as being from original cell.
                     #In terms of direction, want to get the index that will be
                     #opposite of the side of the square that we're currently in.
                     #Adding + mod 8 takes us to the number opposite the current
                     #direction in the square.
-                    index_rel_to_neighbor = (direction_index + 4) % 8
+                    index_rel_to_neighbor = (direction_index + 4 ) % 8
                     direction_array[neighbor_row, neighbor_col] = index_rel_to_neighbor
-            
+           
+                    #if neighbor_row in [1403, 1403, 1405] and neighbor_col in range(1988, 1995):
+                    #    LOGGER.debug("Orig_R: %s, Orig_Col: %s, N_R: %s, N_C: %s, Dir_Rel: %s, Dir_O:%s" % (row, col, neighbor_row, neighbor_col, direction_array[neighbor_row, neighbor_col], direction_array[row, col]))
+                    #    LOGGER.debug("Values- Orig:%s, Neighbor: %s" % (base_array[row, col], base_array[neighbor_row, neighbor_col]))
+
             except IndexError:
                 continue
 
-    print('Writing de-pitted array back to raster.')
+    LOGGER.debug('Writing de-pitted array back to raster.')
 
     #Write back to a raster
-    de_pit_uri = 'attempt_to_de_pit.tif'
+    de_pit_uri = '/home/kathryn/Documents/Pit_Filling/Perrine_Data/attempt_to_de_pit.tif'
     
-    new_dataset = raster_utils.new_raster_from_base(
-        raster, de_pit_uri, 'GTiff', nodata, gdal.GDT_Float32)
+    new_dataset = raster_utils.new_raster_from_base(raster, de_pit_uri,
+                        'GTiff', nodata, gdal.GDT_Float32)
     
     n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
     n_band.Fill(n_nodata)
     
-    n_band.WriteArray(de_pit_array)
+    n_band.WriteArray(base_array)
 
-
-
-import cProfile
-import pstats
-cProfile.runctx('main()', globals(), locals(), 'fillstats')
-p = pstats.Stats('fillstats')
-p.sort_stats('time').print_stats(20)
-p.sort_stats('cumulative').print_stats(20)
-end = time.time()
-
-#main()
+main()

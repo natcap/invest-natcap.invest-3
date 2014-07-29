@@ -19,7 +19,8 @@ import table_generator
 import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
-REPORTING_DATA = os.path.join(invest_natcap.local_dir(__file__), 'reporting_data/')
+REPORTING_DATA = os.path.join(
+    invest_natcap.local_dir(__file__), 'reporting_data/')
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
@@ -47,25 +48,27 @@ def generate_report(reporting_args):
             The 3 main element types are 'table', 'head', 'svg', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
-                    Currently 'table', 'head', 'svg', and 'text' are defined (required)
+                    Currently 'table', 'head', 'svg', and 'text' are defined
+                    (required)
 
                 'section' - a string that depicts whether the element belongs
                     in the body or head of the html page.
                     Values: 'body' | 'head' (required)
 
-            Table element dictionary has at least the following additional arguments:
-                'attributes' - a dictionary of html table attributes. The attribute
-                    name is the key which gets set to the value of the key.
-                    (optional)
+            Table element dictionary has at least the following additional
+            arguments:
+                'attributes' - a dictionary of html table attributes. The
+                    attribute name is the key which gets set to the value
+                    of the key. (optional)
                     Example: {'class': 'sorttable', 'id': 'parcel_table'}
 
                 'sortable' - a boolean value for whether the tables columns
                     should be sortable (required)
 
                 'checkbox' - a boolean value for whether there should be a
-                    checkbox column. If True a 'selected total' row will be added
-                    to the bottom of the table that will show the total of the
-                    columns selected (optional)
+                    checkbox column. If True a 'selected total' row will be
+                    added to the bottom of the table that will show the
+                    total of the columns selected (optional)
 
                 'data_type' - one of the following string values:
                     'shapefile'|'csv'|'dictionary'. Depicts the type of data
@@ -84,8 +87,8 @@ def generate_report(reporting_args):
                      ...]
 
                 'key' - a string that defines which column or field should be
-                    used as the keys for extracting data from a shapefile or csv
-                    table 'key_field'.
+                    used as the keys for extracting data from a shapefile or
+                    csv table 'key_field'.
                     (required for 'data_type' = 'shapefile' | 'csv')
 
                 'columns'- a list of dictionaries that defines the column
@@ -108,14 +111,16 @@ def generate_report(reporting_args):
                     total row at the bottom of the table that sums the column
                     values (optional)
 
-            Head element dictionary has at least the following additional arguments:
+            Head element dictionary has at least the following additional
+            arguments:
                 'format' - a string representing the type of head element being
                     added. Currently 'script' (javascript) and 'style' (css
                     style) accepted (required)
 
-                'data_src'- a URI to the location of the external file for either
-                    the 'script' or the 'style' OR a String representing the
-                    html script or style (DO NOT include the tags) (required)
+                'data_src'- a URI to the location of the external file for
+                    either the 'script' or the 'style' OR a String representing
+                    the html script or style (DO NOT include the tags)
+                    (required)
 
                 'input_type' -  a String, 'File' or 'Text' that refers to how
                     'data_src' is being passed in (URI vs String) (required).
@@ -124,25 +129,27 @@ def generate_report(reporting_args):
                     optional tag attributes (optional). Ex:
                     'attributes': {'id': 'muni_data'}
 
-            Text element dictionary has at least the following additional arguments:
+            Text element dictionary has at least the following additional
+            arguments:
                 'text'- a string to add as a paragraph element in the html page
                     (required)
 
-            SVG element dictionary has at least the following additional arguments:
+            SVG element dictionary has at least the following additional
+            arguments:
                 'svg_out_uri' - a URI path to save SVG to disk
                 'source_uri' - a URI path to an OGR shapefile (required)
                 'field_id' - a String for an attribute in 'source_uri' to
                     display as a label (required)
                 'key_id' - a String for an attribute in 'source_uri' for the
                     unique field for the shapefile (required)
-                'proj_type' - a String for how the image projection should be interpreted
-                    (optional)
+                'proj_type' - a String for how the image projection should be
+                    interpreted (optional)
                 'css'_uri' - a URI path to a css file (optional)
                 'size' - a Tuple for width, height in pixels (optional)
 
         returns - nothing"""
-
-    # Get the title for the hmlt page and place it in a string with html
+    LOGGER.info('Creating HTML Report')
+    # Get the title for the html page and place it in a string with html
     # title tags
     html_title = '<title>%s</title>' % reporting_args['title']
 
@@ -199,8 +206,6 @@ def generate_report(reporting_args):
         # will return a string. Append this to html dictionary to be written
         # in write_html
         html_obj[section].append(report[fun_type](element))
-
-    #LOGGER.debug('HTML OBJECT : %s', html_obj)
 
     # Write the html page to 'out_uri'
     write_html(html_obj, reporting_args['out_uri'])
@@ -281,9 +286,9 @@ def build_table(param_args):
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
 
-            param_args['columns'] - a list of dictionaries that defines the column
-                    structure for the table (required). The order of the
-                    columns from left to right is depicted by the index
+            param_args['columns'] - a list of dictionaries that defines the
+                    column structure for the table (required). The order of
+                    the columns from left to right is depicted by the index
                     of the column dictionary in the list. Each dictionary
                     in the list has the following keys and values:
                         'name' - a string for the column name (required)
@@ -298,11 +303,12 @@ def build_table(param_args):
                             attribute assigned to 'td_class' value (optional)
 
             param_args['total'] - a boolean value where if True a constant
-                total row will be placed at the bottom of the table that sums the
-                columns (required)
+                total row will be placed at the bottom of the table that sums
+                the columns (required)
 
         returns - a string that represents an html table
     """
+    LOGGER.debug('Building Table Structure')
     # Initialize an intermediate dictionary which will hold the physical data
     # elements of the table
     data_dict = {}
@@ -319,10 +325,12 @@ def build_table(param_args):
     # shapefile / csv file or a list of dictionaries
     input_data = param_args['data']
 
-    # Depending on the type of input being passed in, pre-process it accordingly
+    # Depending on the type of input being passed in, pre-process it
+    # accordingly
     if data_type == 'shapefile':
         key = param_args['key']
-        data_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
+        data_dict = raster_utils.extract_datasource_table_by_key(
+            input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
@@ -371,7 +379,6 @@ def build_table(param_args):
     if 'checkbox' in param_args and param_args['checkbox']:
         table_dict['checkbox'] = True
 
-    #LOGGER.debug('Final Table Dictionary: %s', table_dict)
     LOGGER.debug('Calling table_generator')
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
@@ -410,19 +417,19 @@ def add_text_element(param_args):
     return param_args['text']
 
 def add_head_element(param_args):
-    """Generates a string that represents a valid element in the head section of
-        an html file. Currently handles 'style' and 'script' elements, where both
-        the script and style are locally embedded
+    """Generates a string that represents a valid element in the head section
+        of an html file. Currently handles 'style' and 'script' elements,
+        where both the script and style are locally embedded
 
         param_args - a dictionary that holds the following arguments:
 
             param_args['format'] - a string representing the type of element to
                 be added. Currently : 'script', 'style' (required)
 
-            param_args['data_src'] - a string URI path for the external source of the
-                element OR a String representing the html (DO NOT include html
-                tags, tags are automatically generated). If a URI the file is
-                read in as a String. (required)
+            param_args['data_src'] - a string URI path for the external source
+                of the element OR a String representing the html
+                (DO NOT include html tags, tags are automatically generated).
+                If a URI the file is read in as a String. (required)
 
             param_args['input_type'] - 'Text' or 'File'. Determines how the
                 input from 'data_src' is handled (required)
@@ -433,6 +440,8 @@ def add_head_element(param_args):
 
         returns - a string representation of the html head element"""
 
+    LOGGER.info('Preparing to generate head element as String')
+
     # Get the type of element to add
     form = param_args['format']
     # Get a handle on the data whether it be a String or URI
@@ -440,8 +449,8 @@ def add_head_element(param_args):
     # Get the input type of the data, 'File' or 'Text'
     input_type = param_args['input_type']
     if input_type == 'File':
-        # Read in file and save as string. Using latin1 to decode, seems to work
-        # on the current javascript / css files
+        # Read in file and save as string. Using latin1 to decode, seems to
+        # work on the current javascript / css files
         head_file = codecs.open(src, 'rb', 'latin1')
         file_str = head_file.read()
     else:
@@ -486,8 +495,8 @@ def add_svg_element(param_args):
                 display as a label (required)
             'key_id' - a String for an attribute in 'source_uri' for the
                 unique field for the shapefile (required)
-            'proj_type' - a String for how the image projection should be interpreted
-                    (optional)
+            'proj_type' - a String for how the image projection should be
+                interpreted (optional)
             'css'_uri' - a URI path to a css file (optional)
             'size' - a Tuple for width, height in pixels (optional)
 
@@ -504,8 +513,8 @@ def add_svg_element(param_args):
     file_str = ("<svg width='100' height='100'><circle cx='50' cy=50' r='40'"
                 " stroke='green' stroke-width='4' fill='yellow'/></svg>")
     #file_str = svg_file.read()
-    # At the moment I think we are only interested in what lives within the svg tags
-    # from the SVG file. Search for this section.
+    # At the moment I think we are only interested in what lives within the
+    # svg tags from the SVG file. Search for this section.
     svg_match = re.search(r'<svg.*/svg>', file_str)
     if svg_match != None:
         svg_str = svg_match.group()

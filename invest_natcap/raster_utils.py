@@ -584,10 +584,10 @@ def vectorize_points(
        """
 
     #Define the initial bounding box
-    gt = raster.GetGeoTransform()
+    gt = dataset.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
-    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
-                    gt[3] + gt[5] * raster.RasterYSize]
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
+                    gt[3] + gt[5] * dataset.RasterYSize]
 
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
