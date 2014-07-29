@@ -172,7 +172,6 @@ def get_row_col_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
-    dataset = None
     
     #Make sure the dataset is closed and cleaned up
     band = None
