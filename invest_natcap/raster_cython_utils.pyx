@@ -226,98 +226,13 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     #phase one, calculate column G(x,y)
     
-    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array = numpy.empty(
-        (block_size, block_size), dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.int32_t, ndim=2] previous_g_array
-    cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array = numpy.empty(
-        (block_size, block_size), dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array = (
+        numpy.empty((n_rows, 1), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
     cdef int col_index, row_index, q_index, u_index
     cdef long long w
 
-
-    #makes sure we round up
-    cdef int n_col_blocks = int(numpy.ceil(n_cols / float(block_size)))
-    cdef int n_row_blocks = int(numpy.ceil(n_rows / float(block_size)))
-    cdef int col_offset, row_offset, local_row_index, local_col_index
-    cdef int row_block_index, col_block_index
-    cdef double last_time = time.time()
-    cdef double current_time
-    #pass 1 go down
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * block_size
-        local_row_index = (n_rows - row_offset)
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * block_size
-            local_col_index = (n_cols - col_offset)
-
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
-                    'distance transform phase 1 down approx. %.2f%% complete' % 
-                    ((row_block_index * n_col_blocks + col_block_index) /
-                     float(n_row_blocks * n_col_blocks) * 100.0))
-                last_time = current_time
-
-                if (local_col_index < block_size or 
-                    local_row_index < block_size):
-                    input_mask_band.ReadAsArray(
-                        col_offset, row_offset, local_col_index,
-                        local_row_index, buf_obj=b_array)
-                else:
-                    input_mask_band.ReadAsArray(
-                        col_offset, row_offset, block_size, block_size,
-                        buf_obj=b_array)
-            if row_block_index == 0:
-                g_array[0, :] = numpy.where(
-                    b_array[0, :] & b_array[0, :] != input_nodata, 0.0,
-                    numerical_inf)
-            else:
-                g_array[0, :] = numpy.where(
-                    b_array[0, :] & b_array[0, :] != input_nodata, 0.0,
-                    1 + previous_g_array[-1, :])
-            for row_index in xrange(1, block_size):
-                g_array[row_index, :] = numpy.where(
-                    b_array[row_index, :] & b_array[row_index, :] != input_nodata,
-                    0.0, 1 + g_array[row_index - 1, :])
-            previous_g_array = g_array
-            g_band.WriteArray(g_array, xoff=col_offset, yoff=row_offset)
-
-    #pass 1 go up
-    for row_block_index in xrange(n_row_blocks - 1, -1, 1):
-        row_offset = row_block_index * block_size
-        local_row_index = (n_rows - row_offset)
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * block_size
-            local_col_index = (n_cols - col_offset)
-
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
-                    'distance transform phase 1 up approx. %.2f%% complete' % 
-                    ((row_block_index * n_col_blocks + col_block_index) /
-                     float(n_row_blocks * n_col_blocks) * 100.0))
-                last_time = current_time
-
-                if (local_col_index < block_size or local_row_index < block_size):
-                    g_band.ReadAsArray(
-                        col_offset, row_offset, local_col_index,
-                        local_row_index, buf_obj=g_array)
-                else:
-                    g_band.ReadAsArray(
-                        col_offset, row_offset, block_size, block_size,
-                        buf_obj=g_array)
-            
-            for row_index in xrange(block_size - 2, -1, -1):
-                g_array[row_index, :] = numpy.where(
-                    g_array[row_index + 1, :] < g_array[row_index, :],
-                        1 + g_array[row_index + 1, :],
-                        g_array[row_index, :])
-            g_band.WriteArray(g_array, xoff=col_offset, yoff=row_offset)
-
-#####################
     for col_index in xrange(n_cols):
         b_array = input_mask_band.ReadAsArray(
             xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
