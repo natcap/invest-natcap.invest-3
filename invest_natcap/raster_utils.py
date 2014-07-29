@@ -2382,7 +2382,14 @@ def vectorize_datasets(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out,
         dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
-    block_size = aligned_bands[0].GetBlockSize()
+    block_size = output_band.GetBlockSize()
+
+    #makes sense to get the largest block size possible to reduce the number
+    #of expensive readasarray calls
+    for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
+        if (current_block_size[0] * current_block_size[1] > 
+            block_size[0] * block_size[1]):
+            block_size = current_block_size
     
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))

@@ -226,28 +226,34 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     #phase one, calculate column G(x,y)
     
-    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array = (
-        numpy.empty((n_rows, 1), dtype=numpy.int32))
+    cdef numpy.ndarray[numpy.int32_t, ndim=2] g_array
     cdef numpy.ndarray[numpy.uint8_t, ndim=2] b_array
     
     cdef int col_index, row_index, q_index, u_index
     cdef long long w
     cdef int n_col_blocks = int(numpy.ceil(n_cols/float(block_size)))
-    cdef int col_block_index, local_col_index, win_ysize
-
+    cdef int col_block_index, local_col_index, win_xsize
+    cdef double current_time, last_time
+    last_time = time.time()
     for col_block_index in xrange(n_col_blocks):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                'Distance transform phase #1 %.2f%% complete' %
+                (col_block_index/float(n_col_blocks)*100.0))
+            last_time = current_time
         local_col_index = col_block_index * block_size
         if n_cols - local_col_index < block_size:
-            win_ysize = n_cols - local_col_index
+            win_xsize = n_cols - local_col_index
         else:
-            win_ysize = block_size
+            win_xsize = block_size
         b_array = input_mask_band.ReadAsArray(
-            xoff=col_index, yoff=0, win_xsize=n_col_blocks,
-            win_ysize=win_ysize)
-        g_array = numpy.empty((n_rows, win_ysize), dtype=numpy.int32)
+            xoff=local_col_index, yoff=0, win_xsize=win_xsize,
+            win_ysize=n_rows)
+        g_array = numpy.empty((n_rows, win_xsize), dtype=numpy.int32)
 
         #initalize the first element to either be infinate distance, or zero if it's a blob
-        for col_index in xrange(win_ysize):
+        for col_index in xrange(win_xsize):
             if b_array[0, col_index] and b_array[0, col_index] != input_nodata:
                 g_array[0, col_index] = 0
             else:
@@ -272,51 +278,72 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
 
     g_band.FlushCache()
     LOGGER.info('Distance Transform Phase 2')
-    cdef numpy.ndarray[numpy.int64_t, ndim=1] s_array = numpy.zeros(
-        n_cols, dtype=numpy.int64)
-    cdef numpy.ndarray[numpy.int64_t, ndim=1] t_array = numpy.zeros(
-        n_cols, dtype=numpy.int64)
-    cdef numpy.ndarray[numpy.float64_t, ndim=2] dt = numpy.empty(
-        (1, n_cols), dtype=numpy.float64)
+    cdef numpy.ndarray[numpy.int64_t, ndim=2] s_array
+    cdef numpy.ndarray[numpy.int64_t, ndim=2] t_array
+    cdef numpy.ndarray[numpy.float64_t, ndim=2] dt
     
-    for row_index in xrange(n_rows):
-        g_array = g_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
-        
-        q_index = 0
-        s_array[0] = 0
-        t_array[0] = 0
-        for u_index in xrange(1, n_cols):
-            while (q_index >= 0 and
-                _f(t_array[q_index], s_array[q_index], 
-                    g_array[0, s_array[q_index]]) >
-                _f(t_array[q_index], u_index, g_array[0, u_index])):
-                q_index -= 1
-            if q_index < 0:
-               q_index = 0
-               s_array[0] = u_index
-            else:
-                w = 1 + _sep(
-                    s_array[q_index], u_index, g_array[0, u_index],
-                    g_array[0, s_array[q_index]])
-                if w < n_cols:
-                    q_index += 1
-                    s_array[q_index] = u_index
-                    t_array[q_index] = w
 
-        for u_index in xrange(n_cols-1, -1, -1):
-            dt[0, u_index] = _f(
-                u_index, s_array[q_index],
-                g_array[0, s_array[q_index]])
-            if u_index == t_array[q_index]:
-                q_index -= 1
+    cdef int n_row_blocks = int(numpy.ceil(n_rows/float(block_size)))
+    cdef int row_block_index, local_row_index, win_ysize
+
+    for row_block_index in xrange(n_row_blocks):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                'Distance transform phase 2 %.2f%% complete' %
+                (row_block_index/float(n_row_blocks)*100.0))
+            last_time = current_time
+
+        local_row_index = row_block_index * block_size
+        if n_rows - local_row_index < block_size:
+            win_ysize = n_rows - local_row_index
+        else:
+            win_ysize = block_size
+
+        g_array = g_band.ReadAsArray(
+            xoff=0, yoff=local_row_index, win_xsize=n_cols,
+            win_ysize=win_ysize)
+
+        s_array = numpy.zeros((win_ysize, n_cols), dtype=numpy.int64)
+        t_array = numpy.zeros((win_ysize, n_cols), dtype=numpy.int64)
+        dt = numpy.empty((win_ysize, n_cols), dtype=numpy.float64)
+
+        for row_index in xrange(win_ysize):
+            q_index = 0
+            s_array[row_index, 0] = 0
+            t_array[row_index, 0] = 0
+            for u_index in xrange(1, n_cols):
+                while (q_index >= 0 and
+                    _f(t_array[row_index, q_index], s_array[row_index, q_index],
+                        g_array[row_index, s_array[row_index, q_index]]) >
+                    _f(t_array[row_index, q_index], u_index, g_array[row_index, u_index])):
+                    q_index -= 1
+                if q_index < 0:
+                   q_index = 0
+                   s_array[row_index, 0] = u_index
+                else:
+                    w = 1 + _sep(
+                        s_array[row_index, q_index], u_index, g_array[row_index, u_index],
+                        g_array[row_index, s_array[row_index, q_index]])
+                    if w < n_cols:
+                        q_index += 1
+                        s_array[row_index, q_index] = u_index
+                        t_array[row_index, q_index] = w
+
+            for u_index in xrange(n_cols-1, -1, -1):
+                dt[row_index, u_index] = _f(
+                    u_index, s_array[row_index, q_index],
+                    g_array[row_index, s_array[row_index, q_index]])
+                if u_index == t_array[row_index, q_index]:
+                    q_index -= 1
         
         b_array = input_mask_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
+            xoff=0, yoff=local_row_index, win_xsize=n_cols,
+            win_ysize=win_ysize)
         
         dt = numpy.sqrt(dt)
         dt[b_array == input_nodata] = output_nodata
-        output_band.WriteArray(dt, xoff=0, yoff=row_index)
+        output_band.WriteArray(dt, xoff=0, yoff=local_row_index)
 
     input_mask_band = None
     gdal.Dataset.__swig_destroy__(input_mask_ds)
