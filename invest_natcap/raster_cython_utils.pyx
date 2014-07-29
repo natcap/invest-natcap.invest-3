@@ -232,33 +232,43 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     
     cdef int col_index, row_index, q_index, u_index
     cdef long long w
+    cdef int n_col_blocks = int(numpy.ceil(n_cols/float(block_size)))
+    cdef int col_block_index, local_col_index, win_ysize
 
-    for col_index in xrange(n_cols):
-        b_array = input_mask_band.ReadAsArray(
-            xoff=col_index, yoff=0, win_xsize=1, win_ysize=n_rows)
-        
-        #initalize the first element to either be infinate distance, or zero if it's a blob
-        if b_array[0, 0] and b_array[0, 0] != input_nodata:
-            g_array[0, 0] = 0
+    for col_block_index in xrange(n_col_blocks):
+        local_col_index = col_block_index * block_size
+        if n_cols - local_col_index < block_size:
+            win_ysize = n_cols - local_col_index
         else:
-            g_array[0, 0] = numerical_inf
+            win_ysize = block_size
+        b_array = input_mask_band.ReadAsArray(
+            xoff=col_index, yoff=0, win_xsize=n_col_blocks,
+            win_ysize=win_ysize)
+        g_array = numpy.empty((n_rows, win_ysize), dtype=numpy.int32)
 
-        #pass 1 go down
-        for row_index in xrange(1, n_rows):
-            if b_array[row_index, 0] and b_array[row_index, 0] != input_nodata:
-                g_array[row_index, 0] = 0
+        #initalize the first element to either be infinate distance, or zero if it's a blob
+        for col_index in xrange(win_ysize):
+            if b_array[0, col_index] and b_array[0, col_index] != input_nodata:
+                g_array[0, col_index] = 0
             else:
-                g_array[row_index, 0] = (
-                    1 + g_array[row_index - 1, 0])
+                g_array[0, col_index] = numerical_inf
 
-        #pass 2 come back up
-        for row_index in xrange(n_rows-2, -1, -1):
-            if (g_array[row_index + 1, 0] <
-                g_array[row_index, 0]):
-                g_array[row_index, 0] = (
-                    1 + g_array[row_index + 1, 0])
+            #pass 1 go down
+            for row_index in xrange(1, n_rows):
+                if b_array[row_index, col_index] and b_array[row_index, col_index] != input_nodata:
+                    g_array[row_index, col_index] = 0
+                else:
+                    g_array[row_index, col_index] = (
+                        1 + g_array[row_index - 1, col_index])
+
+            #pass 2 come back up
+            for row_index in xrange(n_rows-2, -1, -1):
+                if (g_array[row_index + 1, col_index] <
+                    g_array[row_index, col_index]):
+                    g_array[row_index, col_index] = (
+                        1 + g_array[row_index + 1, col_index])
         g_band.WriteArray(
-            g_array, xoff=col_index, yoff=0)
+            g_array, xoff=local_col_index, yoff=0)
 
     g_band.FlushCache()
     LOGGER.info('Distance Transform Phase 2')
