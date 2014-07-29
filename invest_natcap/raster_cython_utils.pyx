@@ -181,6 +181,8 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     input_mask_band = input_mask_ds.GetRasterBand(1)
     cdef int n_cols = input_mask_ds.RasterXSize
     cdef int n_rows = input_mask_ds.RasterYSize
+    cdef int block_size = input_mask_band.GetBlockSize()[0]
+    LOGGER.info("input mask block_size %d" % (block_size))
 
     cdef int input_nodata = input_mask_band.GetNoDataValue()
 
@@ -193,7 +195,6 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
     input_geotransform = input_mask_ds.GetGeoTransform()
     driver = gdal.GetDriverByName('GTiff')
     #invert the rows and columns since it's a transpose
-    cdef int block_size = 16
     g_dataset = driver.Create(
         g_dataset_uri.encode('utf-8'), n_cols, n_rows, 1, gdal.GDT_Int32,
         options=['TILED=YES', 'BLOCKXSIZE=%d' % block_size, 'BLOCKYSIZE=%d' % block_size])
@@ -239,7 +240,7 @@ def _distance_transform_edt(input_mask_uri, output_distance_uri):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
-                'Distance transform phase #1 %.2f%% complete' %
+                'Distance transform phase 1 %.2f%% complete' %
                 (col_block_index/float(n_col_blocks)*100.0))
             last_time = current_time
         local_col_index = col_block_index * block_size
