@@ -12,6 +12,7 @@ import datetime
 import shutil
 import codecs
 import errno
+import tempfile
 
 import invest_natcap
 import invest_natcap.iui
@@ -298,6 +299,11 @@ class Executor(threading.Thread):
         if function == None:
             function = lambda x: self.write(x + '\n')
 
+        run_details = [
+            ('Current temp dir', tempfile.gettempdir()),
+            ('tempfile.tempdir', tempfile.tempdir),
+        ]
+
         system_details = [
             ('OS', platform.platform()),
             ('Processor architecture', platform.machine()),
@@ -329,6 +335,7 @@ class Executor(threading.Thread):
 
         function('Build details')
         detail_lists = [
+            ('Interpreter', run_details),
             ('System', system_details),
             ('Python', python_details),
             ('Packages',packages),
@@ -505,13 +512,15 @@ class Executor(threading.Thread):
                 if exception.errno != errno.EEXIST:
                     raise
             for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
-
                 if tmp_variable in os.environ:
                     LOGGER.info('Updating os.environ["%s"]=%s to %s' % (tmp_variable, os.environ[tmp_variable], args['workspace_dir']))
                 else:
                     LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
 
                 os.environ[tmp_variable] = temporary_path
+
+            LOGGER.info('Setting tempfile.tempdir to %s', temporary_path)
+            tempfile.tempdir = temporary_path
 
             model_start_time = time.time()
             LOGGER.info('Starting %s', model_name)
