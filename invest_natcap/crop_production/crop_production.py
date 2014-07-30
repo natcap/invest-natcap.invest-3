@@ -24,6 +24,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('crop_production')
 
+logging.getLogger("root").setLevel(logging.WARNING)
+logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
 
@@ -499,7 +503,7 @@ def mosaic_by_attribute_uri(crop_uri,
                 else:
                     raise e
         
-    LOGGER.info("Creating nitrogen raster.")
+    LOGGER.info("Mosaicing raster.")
     raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
 
     raster_utils.vectorize_datasets(raster_list,
@@ -521,7 +525,7 @@ class ReclassLookup:
     def __getitem__(self, k):
         try:
             return float(self.d[k][field])
-        except KeyError, ValueError:
+        except (KeyError, ValueError):
             return nodata
 
     def __repr__(self):
@@ -529,9 +533,10 @@ class ReclassLookup:
 
 def lookup_reclass_closure(lookup, field, nodata=-1):
     def lookup_reclass_op(crop, region):
+        #LOGGER.debug([region, crop, field])
         try:
             return float(lookup["(%i, %i)" % (region, crop)][field])
-        except KeyError, ValueError:
+        except (KeyError, ValueError):
             return nodata
 
     return lookup_reclass_op
@@ -680,15 +685,15 @@ def execute(args):
 
     report_name = "report.htm"
 
-    use_existing_crops = args["enable_tab_existing"]
-    use_percentile_crops = args["enable_tab_percentile"]
-    use_modeled_crops = args["enable_tab_modeled"]
-
-    if not any([use_existing_crops,
-                use_percentile_crops,
-                use_modeled_crops]):
-        LOGGER.error("You must select at least one crop yield method.")
-        raise ValueError, "You must select at least one crop yield method."
+##    use_existing_crops = args["enable_tab_existing"]
+##    use_percentile_crops = args["enable_tab_percentile"]
+##    use_modeled_crops = args["enable_tab_modeled"]
+##
+##    if not any([use_existing_crops,
+##                use_percentile_crops,
+##                use_modeled_crops]):
+##        LOGGER.error("You must select at least one crop yield method.")
+##        raise ValueError, "You must select at least one crop yield method."
         
 
     workspace_dir = args["workspace_dir"]
@@ -726,6 +731,8 @@ def execute(args):
     projected_area_name = "%i_area_prj.tif"
 
     crop_production_name = "%i_prod.tif"
+
+    yield_percentile_name = "yield_percentile_%i.tif"
 
     intermediate_uri = os.path.join(workspace_dir, intermediate_dir)
 
@@ -1168,116 +1175,114 @@ def execute(args):
 ##                                nutrient_aliases)
 
 
-    if args["enable_tab_existing"]:
-        LOGGER.info("Calculating existing yield.")
+    LOGGER.info("Calculating existing yield.")
 
-        yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
-        
-        mosaic_by_attribute_uri(reclass_crop_cover_uri,
-                          invest_crops,
-                          cell_size,
-                          output_wkt,
-                          raster_table_csv_dict,
-                          raster_table_field_yield,
-                          raster_path,
-                          extent_4326_uri,
-                          yield_uri)
+    yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
+    
+    mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                      invest_crops,
+                      cell_size,
+                      output_wkt,
+                      raster_table_csv_dict,
+                      raster_table_field_yield,
+                      raster_path,
+                      extent_4326_uri,
+                      yield_uri)
 
-        area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
-        mosaic_by_attribute_uri(reclass_crop_cover_uri,
-                          invest_crops,
-                          cell_size,
-                          output_wkt,
-                          raster_table_csv_dict,
-                          raster_table_field_area,
-                          raster_path,
-                          extent_4326_uri,
-                          area_uri)
+    area_uri = os.path.join(intermediate_uri, "harea_existing.tif")
+    mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                      invest_crops,
+                      cell_size,
+                      output_wkt,
+                      raster_table_csv_dict,
+                      raster_table_field_area,
+                      raster_path,
+                      extent_4326_uri,
+                      area_uri)
 
-    if args["enable_tab_percentile"]:
-        LOGGER.info("Calulating percentile yield.")
-        climate_uri = os.path.join(intermediate_uri, "climate.tif")
+    LOGGER.info("Calulating percentile yield.")
+    climate_uri = os.path.join(intermediate_uri, "climate.tif")
 
-        mosaic_by_attribute_uri(reclass_crop_cover_uri,
-                          invest_crops,
-                          cell_size,
-                          output_wkt,
-                          raster_table_csv_dict,
-                          raster_table_field_climate,
-                          raster_path,
-                          extent_4326_uri,
-                          climate_uri)
-        
-        
+    mosaic_by_attribute_uri(reclass_crop_cover_uri,
+                      invest_crops,
+                      cell_size,
+                      output_wkt,
+                      raster_table_csv_dict,
+                      raster_table_field_climate,
+                      raster_path,
+                      extent_4326_uri,
+                      climate_uri)
+    
+    
 
 
-        LOGGER.debug("Creating income raster.")
-        income_uri = os.path.join(intermediate_uri, "income.tif")
+    LOGGER.debug("Creating income raster.")
+    income_uri = os.path.join(intermediate_uri, "income.tif")
 
-        clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
+    clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
 
-        percentile = int(args["percentile_field"])
-        LOGGER.debug("Creating yield using %i percent.", percentile)
-        yield_uri = os.path.join(intermediate_uri, "yield_percentile.tif")
+    def percentile_yield_closer(reclass_crop_cover_uri,
+                                climate_uri,
+                                income_uri,
+                                file_index_uri,
+                                raster_path,
+                                file_index_field_key,
+                                file_index_field_percentile,
+                                percentile_field_key,
+                                percentile,
+                                default_value = 0,
+                                nodata = -1,
+                                ignore_crop=None):
 
-        def percentile_yield_closer(reclass_crop_cover_uri,
-                                    climate_uri,
-                                    income_uri,
-                                    file_index_uri,
-                                    raster_path,
-                                    file_index_field_key,
-                                    file_index_field_percentile,
-                                    percentile_field_key,
-                                    percentile,
-                                    default_value = 0,
-                                    nodata = -1,
-                                    ignore_crop=None):
+        file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
+        crop_types = list(raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys())
 
-            file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
-            crop_types = list(raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys())
+        if ignore_crop != None:
+            try:
+                crop_types = set(crop_types)
+                crop_types.remove(ignore_crop)
+            except KeyError:
+                LOGGER.warning("Ignore crop %i not present.", ignore_crop)
+            crop_types = list(crop_types)
+            
+        yield_dict = {}
+        for crop in crop_types:
+            csv_uri = file_index[crop][file_index_field_percentile]
+            if csv_uri != "":
+                csv_uri = os.path.join(raster_path, csv_uri)
+                LOGGER.debug("Processing: %s", csv_uri)
+                yield_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
+                                                                    percentile_field_key)
+            else:
+                yield_dict[crop] = NoKeyErrorDict({}, nodata)
 
-            if ignore_crop != None:
+        incomes = ["Nodata", "HiIncome%i", "MedIncome%i", "LowIncome%i", "AllIncome%i"]
+
+        nodata_list = [raster_utils.get_nodata_from_uri(raster) for raster in [reclass_crop_cover_uri,
+                                                                                climate_uri,
+                                                                                income_uri]]
+        def percentile_yield_op(crop, climate, income):
+            #print crop, climate, income
+            if any([apply(operator.eq, pair) for pair in zip([crop, climate, income], nodata_list)]):
+                return nodata
+            elif ignore_crop != None and crop == ignore_crop:
+                return default_value
+            elif income == 0 or climate == 0:
+                return nodata
+            else:
                 try:
-                    crop_types = set(crop_types)
-                    crop_types.remove(ignore_crop)
-                except KeyError:
-                    LOGGER.warning("Ignore crop %i not present.", ignore_crop)
-                crop_types = list(crop_types)
-                
-            yield_dict = {}
-            for crop in crop_types:
-                csv_uri = file_index[crop][file_index_field_percentile]
-                if csv_uri != "":
-                    csv_uri = os.path.join(raster_path, csv_uri)
-                    LOGGER.debug("Processing: %s", csv_uri)
-                    yield_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
-                                                                        percentile_field_key)
-                else:
-                    yield_dict[crop] = NoKeyErrorDict({}, nodata)
-
-            incomes = ["Nodata", "HiIncome%i", "MedIncome%i", "LowIncome%i", "AllIncome%i"]
-
-            nodata_list = [raster_utils.get_nodata_from_uri(raster) for raster in [reclass_crop_cover_uri,
-                                                                                    climate_uri,
-                                                                                    income_uri]]
-            def percentile_yield_op(crop, climate, income):
-                #print crop, climate, income
-                if any([apply(operator.eq, pair) for pair in zip([crop, climate, income], nodata_list)]):
-                    return nodata
-                elif ignore_crop != None and crop == ignore_crop:
-                    return default_value
-                elif income == 0 or climate == 0:
-                    return nodata
-                else:
+                    return float(yield_dict[int(crop)][int(climate)][incomes[int(income)] % percentile])
+                except ValueError:
                     try:
-                        return float(yield_dict[int(crop)][int(climate)][incomes[int(income)] % percentile])
+                        return float(yield_dict[crop][climate][incomes[4] % percentile])
                     except ValueError:
-                        try:
-                            return float(yield_dict[crop][climate][incomes[4] % percentile])
-                        except ValueError:
-                            return default_value
+                        return default_value
 
-            return percentile_yield_op
+        return percentile_yield_op
+
+    for percentile in [25, 50, 75, 95]:
+        LOGGER.debug("Creating yield using %i percent.", percentile)
+        yield_uri = os.path.join(intermediate_uri, yield_percentile_name % percentile)
 
         percentile_yield_op = percentile_yield_closer(reclass_crop_cover_uri,
                                                       climate_uri,
@@ -1306,127 +1311,127 @@ def execute(args):
                                                       
 
 
-    if args["enable_tab_modeled"]:
-##        LOGGER.debug("Testing file.")
+##    if args["enable_tab_modeled"]:
+####        LOGGER.debug("Testing file.")
+####
+####        uri = "/home/mlacayo/workspace/CropProduction/input/yield_mod/wheat_m3yieldmodeldata_VL_MBM.csv"
+####        test = raster_utils.get_lookup_from_csv(uri,
+####                                                "climate bin")
+####
+####        return
+##        LOGGER.info("Calculating modeled yield.")
 ##
-##        uri = "/home/mlacayo/workspace/CropProduction/input/yield_mod/wheat_m3yieldmodeldata_VL_MBM.csv"
-##        test = raster_utils.get_lookup_from_csv(uri,
-##                                                "climate bin")
 ##
-##        return
-        LOGGER.info("Calculating modeled yield.")
-
-
-        file_field_yield_mod = "Yield_mod"
-        
-        modeled_field_key = "climate bin"
-        modeled_field_y_max = "yield ceiling"
-        modeled_field_b_NP = "b_nut"
-        modeled_field_b_K = "b_K2O"
-        modeled_field_C_N = "c_N"
-        modeled_field_C_P = "c_P2O5"
-        modeled_field_C_K = "c_K2O"
-        #modeled_field_N_GC = "N_apprate"
-        #modeled_field_P_GC = "P_apprate"
-        #modeled_field_K_GC = "K_apprate"
-
-        def modeled_closure(crop_uri,
-                            file_index_uri,
-                            file_index_field_key,
-                            nodata = -1,
-                            ignore_crop = 0):
-
-            LOGGER.debug("Building modeled_op.")
-
-            file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
-            crop_types = list(raster_utils.unique_raster_values_count(crop_uri).keys())
-
-            crop_nodata = raster_utils.get_nodata_from_uri(crop_uri)
-
-            if ignore_crop != None:
-                try:
-                    crop_types = set(crop_types)
-                    crop_types.remove(ignore_crop)
-                except KeyError:
-                    LOGGER.warning("Ignore crop %i not present.", ignore_crop)
-                crop_types = list(crop_types)
-
-            modeled_dict = {}
-            required_keys_set = set([modeled_field_key,
-                                     modeled_field_y_max,
-                                     modeled_field_b_NP,
-                                     modeled_field_b_K,
-                                     modeled_field_C_N,
-                                     modeled_field_C_P,
-                                     modeled_field_C_K])
-
-            LOGGER.debug("Parsing climate bin model CSVs.")
-            for crop in crop_types:
-                csv_uri = file_index[crop][file_field_yield_mod]
-                if csv_uri != "":
-                    csv_uri = os.path.join(raster_path, csv_uri)
-                    LOGGER.debug("Processing: %s", csv_uri)
-
-                    modeled_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
-                                                                          modeled_field_key)
-
-                    provided_keys_set = set(modeled_dict[crop][random.choice(modeled_dict[crop].keys())])
-                    missing_keys_set = required_keys_set.difference(provided_keys_set)
-
-                    if missing_keys_set != set([]):
-                        msg = "%s does not contain the following required keys: %s." % (csv_uri, str(missing_keys_set))
-                        LOGGER.error(msg)
-                        raise KeyError, msg
-                            
-                else:
-                    modeled_dict[crop] = None
-
-            LOGGER.debug("Defining modeled_op.")
-
-            
-            def modeled_op(crop, climate, N, P, K):
-                if crop == ignore_crop or (crop_nodata in [crop, climate, N, P, K]) or modeled_dict[int(crop)] == None:
-                    return nodata
-                else:
-                    y_max = modeled_dict[int(crop)][int(climate)][modeled_field_y_max]
-                    b_NP = modeled_dict[int(crop)][int(climate)][modeled_field_b_NP]
-                    b_K = modeled_dict[int(crop)][int(climate)][modeled_field_b_K]
-                    C_N = modeled_dict[int(crop)][int(climate)][modeled_field_C_N]
-                    C_P = modeled_dict[int(crop)][int(climate)][modeled_field_C_P]
-                    C_K = modeled_dict[int(crop)][int(climate)][modeled_field_C_K]
-                    
-                    try:
-                        N_yield = y_max * (1 - (b_NP * math.exp(-1 * C_N * N)))
-                        P_yield = y_max * (1 - (b_NP * math.exp(-1 * C_P * P)))
-                        K_yield = y_max * (1 - (b_NP * math.exp(-1 * C_K * K)))
-                    except TypeError:
-                        return 0
-
-                    return min([N_yield, P_yield, K_yield])
-
-            LOGGER.debug("Completed building modeled_op.")
-
-            return modeled_op
-
-        yield_uri = os.path.join(intermediate_uri, "yield_modeled.tif")
-
-        modeled_op = modeled_closure(reclass_crop_cover_uri,
-                                     raster_table_uri,
-                                     raster_table_field_key)
-        
-        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                         climate_uri,
-                                         nitrogen_uri,
-                                         phosphorus_uri,
-                                         potassium_uri],
-                                        modeled_op,
-                                        yield_uri,
-                                        gdal_type_float,
-                                        nodata_float,
-                                        cell_size,
-                                        "dataset",
-                                        dataset_to_bound_index=0,
-                                        dataset_to_align_index=0)
+##        file_field_yield_mod = "Yield_mod"
+##        
+##        modeled_field_key = "climate bin"
+##        modeled_field_y_max = "yield ceiling"
+##        modeled_field_b_NP = "b_nut"
+##        modeled_field_b_K = "b_K2O"
+##        modeled_field_C_N = "c_N"
+##        modeled_field_C_P = "c_P2O5"
+##        modeled_field_C_K = "c_K2O"
+##        #modeled_field_N_GC = "N_apprate"
+##        #modeled_field_P_GC = "P_apprate"
+##        #modeled_field_K_GC = "K_apprate"
+##
+##        def modeled_closure(crop_uri,
+##                            file_index_uri,
+##                            file_index_field_key,
+##                            nodata = -1,
+##                            ignore_crop = 0):
+##
+##            LOGGER.debug("Building modeled_op.")
+##
+##            file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
+##            crop_types = list(raster_utils.unique_raster_values_count(crop_uri).keys())
+##
+##            crop_nodata = raster_utils.get_nodata_from_uri(crop_uri)
+##
+##            if ignore_crop != None:
+##                try:
+##                    crop_types = set(crop_types)
+##                    crop_types.remove(ignore_crop)
+##                except KeyError:
+##                    LOGGER.warning("Ignore crop %i not present.", ignore_crop)
+##                crop_types = list(crop_types)
+##
+##            modeled_dict = {}
+##            required_keys_set = set([modeled_field_key,
+##                                     modeled_field_y_max,
+##                                     modeled_field_b_NP,
+##                                     modeled_field_b_K,
+##                                     modeled_field_C_N,
+##                                     modeled_field_C_P,
+##                                     modeled_field_C_K])
+##
+##            LOGGER.debug("Parsing climate bin model CSVs.")
+##            for crop in crop_types:
+##                csv_uri = file_index[crop][file_field_yield_mod]
+##                if csv_uri != "":
+##                    csv_uri = os.path.join(raster_path, csv_uri)
+##                    LOGGER.debug("Processing: %s", csv_uri)
+##
+##                    modeled_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
+##                                                                          modeled_field_key)
+##
+##                    provided_keys_set = set(modeled_dict[crop][random.choice(modeled_dict[crop].keys())])
+##                    missing_keys_set = required_keys_set.difference(provided_keys_set)
+##
+##                    if missing_keys_set != set([]):
+##                        msg = "%s does not contain the following required keys: %s." % (csv_uri, str(missing_keys_set))
+##                        LOGGER.error(msg)
+##                        raise KeyError, msg
+##                            
+##                else:
+##                    modeled_dict[crop] = None
+##
+##            LOGGER.debug("Defining modeled_op.")
+##
+##            
+##            def modeled_op(crop, climate, N, P, K):
+##                if crop == ignore_crop or (crop_nodata in [crop, climate, N, P, K]) or modeled_dict[int(crop)] == None:
+##                    return nodata
+##                else:
+##                    y_max = modeled_dict[int(crop)][int(climate)][modeled_field_y_max]
+##                    b_NP = modeled_dict[int(crop)][int(climate)][modeled_field_b_NP]
+##                    b_K = modeled_dict[int(crop)][int(climate)][modeled_field_b_K]
+##                    C_N = modeled_dict[int(crop)][int(climate)][modeled_field_C_N]
+##                    C_P = modeled_dict[int(crop)][int(climate)][modeled_field_C_P]
+##                    C_K = modeled_dict[int(crop)][int(climate)][modeled_field_C_K]
+##                    
+##                    try:
+##                        N_yield = y_max * (1 - (b_NP * math.exp(-1 * C_N * N)))
+##                        P_yield = y_max * (1 - (b_NP * math.exp(-1 * C_P * P)))
+##                        K_yield = y_max * (1 - (b_NP * math.exp(-1 * C_K * K)))
+##                    except TypeError:
+##                        return 0
+##
+##                    return min([N_yield, P_yield, K_yield])
+##
+##            LOGGER.debug("Completed building modeled_op.")
+##
+##            return modeled_op
+##
+##        yield_uri = os.path.join(intermediate_uri, "yield_modeled.tif")
+##
+##        modeled_op = modeled_closure(reclass_crop_cover_uri,
+##                                     raster_table_uri,
+##                                     raster_table_field_key)
+##        
+##        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+##                                         climate_uri,
+##                                         nitrogen_uri,
+##                                         phosphorus_uri,
+##                                         potassium_uri],
+##                                        modeled_op,
+##                                        yield_uri,
+##                                        gdal_type_float,
+##                                        nodata_float,
+##                                        cell_size,
+##                                        "dataset",
+##                                        dataset_to_bound_index=0,
+##                                        dataset_to_align_index=0)
 
     return
 

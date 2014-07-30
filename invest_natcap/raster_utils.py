@@ -172,7 +172,6 @@ def get_row_col_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
-    dataset = None
     
     #Make sure the dataset is closed and cleaned up
     band = None
@@ -585,10 +584,10 @@ def vectorize_points(
        """
 
     #Define the initial bounding box
-    gt = raster.GetGeoTransform()
+    gt = dataset.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
-    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
-                    gt[3] + gt[5] * raster.RasterYSize]
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
+                    gt[3] + gt[5] * dataset.RasterYSize]
 
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
@@ -2007,11 +2006,20 @@ def resize_and_resample_dataset_uri(
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
     block_size = original_band.GetBlockSize()
+    LOGGER.info('%s band size: %s' % (original_dataset_uri, original_band.GetBlockSize()))
+    
+    gtiff_creation_options=[
+        'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0], 
+        'BLOCKYSIZE=%d' % block_size[1]]
+    #If the original band is tiled, then its x blocksize will be different than
+    #the number of columns
+    if block_size[0] != original_band.XSize:
+        gtiff_creation_options.append('TILED=YES')
+    
+    create_directories([os.path.dirname(output_uri)])
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=[
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]])
+        options=gtiff_creation_options)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
@@ -2186,10 +2194,13 @@ def align_dataset_list(
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
+        first_band = first_dataset.GetRasterBand(1)
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
 
         mask_uri = temporary_filename(suffix='.tif')
+        LOGGER.debug("base raster: %s" % (dataset_out_uri_list[0]))
+        LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         first_dataset = None
@@ -2372,6 +2383,13 @@ def vectorize_datasets(
         dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
     block_size = output_band.GetBlockSize()
+
+    #makes sense to get the largest block size possible to reduce the number
+    #of expensive readasarray calls
+    for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
+        if (current_block_size[0] * current_block_size[1] > 
+            block_size[0] * block_size[1]):
+            block_size = current_block_size
     
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
@@ -2401,7 +2419,7 @@ def vectorize_datasets(
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
     
-    LOGGER.info("rows_per_block, cols_per_block, %d, %d" % (
+    LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d" % (
         rows_per_block, cols_per_block))
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block),
@@ -2472,6 +2490,7 @@ def vectorize_datasets(
     #so many temporary files I ran out of disk space.
     if aoi_uri != None:
         mask_band = None
+        gdal.Dataset.__swig_destroy__(mask_dataset)
         mask_dataset = None
         os.remove(mask_uri)
     aligned_bands = None
@@ -3033,16 +3052,15 @@ def distance_transform_edt(
     LOGGER.info('converting input mask to byte dataset')
     
     n_rows, n_cols = get_row_col_from_uri(input_mask_uri)
-    
+    blocksize = 64
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
         nodata_out, out_pixel_size, "union",
         dataset_to_align_index=0, assert_datasets_projected=False, 
         process_pool=process_pool, vectorize_op=False,
         datasets_are_pre_aligned=True,
-        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % 16, 'BLOCKYSIZE=%d' % 16])
+        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize])
     
-    #just a call through to the cython version
     raster_cython_utils._distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
