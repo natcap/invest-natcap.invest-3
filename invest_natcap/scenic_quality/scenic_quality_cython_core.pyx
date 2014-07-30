@@ -670,12 +670,13 @@ cdef int active_pixel_index(double Ol, double Os, \
         return 0
     else:
         #print('Signs', (Sl, Ss), 'Distances', (Dl, Ds), 'slope', slope)
-        #print('base index', Sl*2*Dl, 'offset', Sl*(Ds-Ss*int(slope*(Sl*Dl-.5)+.5)))
-        #print('pixel elev.', Ds, 'boundary elev.', slope*(Sl*Dl-.5), \
-        #    'rounded', int(slope*(Sl*Dl-.5)+.5), \
-        #    'diff', Ds-Ss*int(slope*(Sl*Dl-.5)+.5))
+        #print('base index', Sl*2*Dl, 'offset', (Ss*Ds-Ss*int(slope*(Dl-Sl*.5)+.5)))
+        #print('pixel elev.', Ds*Ss, 'distance', Dl-Sl*.5, 'slope', slope, \
+        #    'boundary elev.', slope*(Dl-Sl*.5), \
+        #    'rounded', int(Ss*slope*(Dl-Sl*.5)+.5), \
+        #    'diff', Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))
         #print('')
-        return int(Sl*(2*Dl+(Ds-Ss*int(slope*(Sl*Dl-.5)+.5))))
+        return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
 
 
 #@cython.boundscheck(False)
