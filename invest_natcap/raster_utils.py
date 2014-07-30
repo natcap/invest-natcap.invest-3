@@ -584,10 +584,10 @@ def vectorize_points(
        """
 
     #Define the initial bounding box
-    gt = dataset.GetGeoTransform()
+    gt = raster.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
-    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
-                    gt[3] + gt[5] * dataset.RasterYSize]
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
+                    gt[3] + gt[5] * raster.RasterYSize]
 
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
@@ -2018,8 +2018,8 @@ def resize_and_resample_dataset_uri(
     
     create_directories([os.path.dirname(output_uri)])
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
-        options=gtiff_creation_options)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType)#,
+        #options=gtiff_creation_options)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
