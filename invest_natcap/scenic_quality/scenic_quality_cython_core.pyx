@@ -634,6 +634,30 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         pixel = p.next
 
 
+def _active_pixel_index(O, P, E):
+    # Compute the long and short components
+    if abs(E[0]-O[0]) > abs(E[1]-O[1]):
+        l = 0 # Long component is along the 'i' axis (rows)
+        s = 1 # Short component is along the 'j' axis (cols)
+    else:
+        l = 1 # Long component is along the 'j' axis (cols)
+        s = 0 # Short component is along the 'i' axis (rows)
+
+    Os = O[s]
+    Ol = O[l]
+    Es = E[s]
+    El = E[l]
+
+    Sl = -1 if (Ol>El) else 1
+    Ss = -1 if (Os>Es) else 1
+
+    slope = 0 if El==Ol else (Es-Os) / (El-Ol)
+    #if El!=Ol:
+    #    print('Os', Os, 'Ol', Ol, 'Es', Es, 'El', El, 'Ps', P[s], 'Pl', P[l])
+    #    print('Es-Os', Es-Os, ' / El-Ol', El-Ol, 'slope', slope)
+
+    return active_pixel_index(Ol, Os, P[l], P[s], El, Es, Sl, Ss, slope)
+
 cdef int active_pixel_index(double Ol, double Os, \
                         double Pl, double Ps, \
                         double El, double Es, \
@@ -645,7 +669,14 @@ cdef int active_pixel_index(double Ol, double Os, \
     if not Ds and not Dl: # P == O => index is 0 by convention
         return 0
     else:
-        return int(Sl*(2*Dl+(Ds-Ss*int(slope*(Sl*Dl-.5)+.5))))
+        #print('Signs', (Sl, Ss), 'Distances', (Dl, Ds), 'slope', slope)
+        #print('base index', Sl*2*Dl, 'offset', (Ss*Ds-Ss*int(slope*(Dl-Sl*.5)+.5)))
+        #print('pixel elev.', Ds*Ss, 'distance', Dl-Sl*.5, 'slope', slope, \
+        #    'boundary elev.', slope*(Dl-Sl*.5), \
+        #    'rounded', int(Ss*slope*(Dl-Sl*.5)+.5), \
+        #    'diff', Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))
+        #print('')
+        return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
 
 
 #@cython.boundscheck(False)
@@ -752,7 +783,7 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('Angle', a)
+        print('Angle', a, angles[a+1])
         #for p in range(max_line_length):
         #    print('ID', p, 'is_active', active_pixel_array[p].is_active, \
         #        'distance', active_pixel_array[p].distance)
@@ -783,9 +814,9 @@ def sweep_through_angles( \
             Pl = coord[l][i]
             Ps = coord[s][i]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-            print('Removing pixel ' + str(ID) + ': ' + \
-                str(remove_events[arg_max[remove_event_id]]) + '<=' + \
-                str(angles[a+1]))
+            row = coord[0][i] - viewpoint[0]
+            col = coord[1][i] - viewpoint[1]
+            print('Removing pixel', (-row, col), ' from', ID, remove_events[i])
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
             #if not active_pixel_array[ID].is_active or \
@@ -833,10 +864,20 @@ def sweep_through_angles( \
                 v = visibility[i]
                 o = offset_visibility[i]
                 active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+                Es = perimeter[s][a+1]
+                El = perimeter[l][a+1]
+
+                Sl = -1 if Ol>El else 1
+                Ss = -1 if Os>Es else 1
+
+                slope = (Es-Os)/(El-Ol)
+
                 Pl = coord[l][i]
                 Ps = coord[s][i]
                 ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-                print('Adding pixel to ' + str(ID))
+                row = coord[0][i] - viewpoint[0]
+                col = coord[1][i] - viewpoint[1]
+                print('Adding pixel', (-row, col), 'to', ID, add_events[i])
                 # Active pixels could collide. If so, compute offset
                 #if active_pixel_array[ID].is_active:
                 #    print('Pixel ' + str(ID) + ' is already active', \
