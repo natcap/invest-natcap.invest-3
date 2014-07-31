@@ -669,13 +669,14 @@ cdef int active_pixel_index(double Ol, double Os, \
     if not Ds and not Dl: # P == O => index is 0 by convention
         return 0
     else:
+        #print('')
+        #print('O', (Ol, Os), 'P', (Pl, Ps), 'E', (El, Es))
         #print('Signs', (Sl, Ss), 'Distances', (Dl, Ds), 'slope', slope)
-        #print('base index', Sl*2*Dl, 'offset', (Ss*Ds-Ss*int(slope*(Dl-Sl*.5)+.5)))
+        #print('base index', Sl*2*Dl, 'offset', (Ss*Ds-Ss*int(Ss*slope*(Dl-Sl*.5)+.5)))
         #print('pixel elev.', Ds*Ss, 'distance', Dl-Sl*.5, 'slope', slope, \
         #    'boundary elev.', slope*(Dl-Sl*.5), \
         #    'rounded', int(Ss*slope*(Dl-Sl*.5)+.5), \
         #    'diff', Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))
-        #print('')
         return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
 
 
@@ -710,17 +711,18 @@ def sweep_through_angles( \
     # Conversely, the line's short axis is the axis where the active line is
     # the shortest: 
     #    short_axis = argmin(abs([E[0]-O[0], E[1]-O[1]]))
-    cdef double s = 0 # Active line's short axis (set to I)
-    cdef double l = 1 # Active line's long axis (set to J)
-    cdef double Os = viewpoint[s] # Origin's coordinate along short axis O[s]
+    cdef double sign[2] # used to account for the inverted row coordinates
+    sign[0] = -1. # row coordinates (i) are negated (inverted)
+    sign[1] = 1. # col coordinates (j) are kept as is
+    cdef int s = 0 # Active line's short axis (set to I)
+    cdef int l = 1 # Active line's long axis (set to J)
+    cdef double Os = -viewpoint[s] # Origin's coordinate along short axis O[s]
     cdef double Ol = viewpoint[l] # Origin's coordinate along long axis O[l]
-    cdef double Es = perimeter[s][0] # End point's coord. along short axis E[s]
+    cdef double Es = -perimeter[s][0] # End point's coord. along short axis E[s]
     cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
     cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
     cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
     cdef double slope = (Es-Os)/(El-Ol)
-    cdef double Dl = 0 # Distance from a point P to E along the long axis
-    cdef double Ds = 0 # Distance from a point P to E along the short axis
     cdef int ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
@@ -763,10 +765,10 @@ def sweep_through_angles( \
         o = offset_visibility[i]
         active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
         center_event_id += 1
-        Pl = coord[l][i]
-        Ps = coord[s][i]
+        Pl = coord[l][i] * sign[l]
+        Ps = coord[s][i] * sign[s]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-        print('Initializing pixel at ', ID)
+        print('Initialized pixel at ', ID)
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
         active_pixel_array[ID].distance = d
@@ -782,8 +784,9 @@ def sweep_through_angles( \
         #        'distance', active_pixel.distance)
 
     # 2- loop through line sweep angles:
-    for a in range(angle_count-1):
-        print('Angle', a, angles[a+1])
+    for a in range(angle_count-2):
+        print('')
+        print('----- Angle', a, angles[a+1], '-----')
         #for p in range(max_line_length):
         #    print('ID', p, 'is_active', active_pixel_array[p].is_active, \
         #        'distance', active_pixel_array[p].distance)
@@ -795,15 +798,20 @@ def sweep_through_angles( \
             l = 1 # Long component is J (columns)
             s = 0 # Short component is I (lines)
           
-        Os = viewpoint[s]
-        Ol = viewpoint[l]
-        Es = perimeter[s][a]
-        El = perimeter[l][a]
+        Os = viewpoint[s] * sign[s]
+        Ol = viewpoint[l] * sign[l]
+        Es = perimeter[s][a] * sign[s]
+        El = perimeter[l][a] * sign[l]
 
         Sl = -1 if Ol>El else 1
         Ss = -1 if Os>Es else 1
 
         slope = (Es-Os)/(El-Ol)
+
+        #if slope>1.:
+        #    print('(l, s)', (l, s))
+        #    print('(Es, Os)', (Es, Os), '(El, Ol)', (El, Ol))
+        #    print('slope', slope)
 
         # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
@@ -811,12 +819,12 @@ def sweep_through_angles( \
             i = arg_max[remove_event_id]
             d = distances[i]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
-            Pl = coord[l][i]
-            Ps = coord[s][i]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            Pl = coord[l][i]*sign[l]
+            Ps = coord[s][i]*sign[s]
             row = coord[0][i] - viewpoint[0]
             col = coord[1][i] - viewpoint[1]
-            print('Removing pixel', (-row, col), ' from', ID, remove_events[i])
+            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            print('Removed pixel', (-row, col), ' from', ID, remove_events[i])
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
             #if not active_pixel_array[ID].is_active or \
@@ -859,54 +867,63 @@ def sweep_through_angles( \
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
             i = arg_min[add_event_id]
-            if center_events[i] > 0.:
-                d = distances[i]
-                v = visibility[i]
-                o = offset_visibility[i]
-                active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
-                Es = perimeter[s][a+1]
-                El = perimeter[l][a+1]
+            d = distances[i]
+            v = visibility[i]
+            o = offset_visibility[i]
+            active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
 
-                Sl = -1 if Ol>El else 1
-                Ss = -1 if Os>Es else 1
+            if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
+                l = 0 # Long component is I (lines)
+                s = 1 # Short component is J (columns)
+            else:
+                l = 1 # Long component is J (columns)
+                s = 0 # Short component is I (lines)
+          
+            Os = viewpoint[s] * sign[s]
+            Ol = viewpoint[l] * sign[l]
+            Es = perimeter[s][a+1] * sign[s]
+            El = perimeter[l][a+1] * sign[l]
 
-                slope = (Es-Os)/(El-Ol)
+            Sl = -1 if Ol>El else 1
+            Ss = -1 if Os>Es else 1
 
-                Pl = coord[l][i]
-                Ps = coord[s][i]
-                ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-                row = coord[0][i] - viewpoint[0]
-                col = coord[1][i] - viewpoint[1]
-                print('Adding pixel', (-row, col), 'to', ID, add_events[i])
-                # Active pixels could collide. If so, compute offset
-                #if active_pixel_array[ID].is_active:
-                #    print('Pixel ' + str(ID) + ' is already active', \
-                #        active_pixel_array[ID].is_active)
-                #    if (ID/2)*2 == ID: # even index: other pixel is the next one
-                #        print('changing ID to ' + str(ID+1))
-                #        if active_pixel_array[ID].is_active:
-                #            for p in range(max_line_length):
-                #                print('Sanity check: ID', p, 'is_active', \
-                #                    active_pixel_array[p].is_active, \
-                #                    'distance', active_pixel_array[p].distance)
-                #        message = 'Other pixel is also active'
-                #        assert not active_pixel_array[ID+1].is_active, message
-                #        active_pixel_array[ID] = active_pixel_array[ID+1]
-                #    else: # odd index: other pixel is the one just before
-                #        print('changing ID to ' + str(ID-1))
-                #        if active_pixel_array[ID].is_active:
-                #            for p in range(max_line_length):
-                #                print('Sanity check: ID', p, 'is_active', \
-                #                    active_pixel_array[p].is_active, \
-                #                    'distance', active_pixel_array[p].distance)
-                #        message = 'Other pixel is also active'
-                #        assert not active_pixel_array[ID-1].is_active, message
-                #        active_pixel_array[ID] = active_pixel_array[ID-1]
-                #active_pixel_array[ID].is_active = True
-                #active_pixel_array[ID].index = i
-                #active_pixel_array[ID].distance = d
-                #active_pixel_array[ID].visibility = v
-                #active_pixel_array[ID].offset = o
+            slope = (Es-Os)/(El-Ol)
+
+            Pl = coord[l][i] * sign[l]
+            Ps = coord[s][i] * sign[s]
+            row = coord[0][i] - viewpoint[0]
+            col = coord[1][i] - viewpoint[1]
+            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            print('Added pixel', (-row, col), 'to', ID, add_events[i])
+            # Active pixels could collide. If so, compute offset
+            #if active_pixel_array[ID].is_active:
+            #    print('Pixel ' + str(ID) + ' is already active', \
+            #        active_pixel_array[ID].is_active)
+            #    if (ID/2)*2 == ID: # even index: other pixel is the next one
+            #        print('changing ID to ' + str(ID+1))
+            #        if active_pixel_array[ID].is_active:
+            #            for p in range(max_line_length):
+            #                print('Sanity check: ID', p, 'is_active', \
+            #                    active_pixel_array[p].is_active, \
+            #                    'distance', active_pixel_array[p].distance)
+            #        message = 'Other pixel is also active'
+            #        assert not active_pixel_array[ID+1].is_active, message
+            #        active_pixel_array[ID] = active_pixel_array[ID+1]
+            #    else: # odd index: other pixel is the one just before
+            #        print('changing ID to ' + str(ID-1))
+            #        if active_pixel_array[ID].is_active:
+            #            for p in range(max_line_length):
+            #                print('Sanity check: ID', p, 'is_active', \
+            #                    active_pixel_array[p].is_active, \
+            #                    'distance', active_pixel_array[p].distance)
+            #        message = 'Other pixel is also active'
+            #        assert not active_pixel_array[ID-1].is_active, message
+            #        active_pixel_array[ID] = active_pixel_array[ID-1]
+            #active_pixel_array[ID].is_active = True
+            #active_pixel_array[ID].index = i
+            #active_pixel_array[ID].distance = d
+            #active_pixel_array[ID].visibility = v
+            #active_pixel_array[ID].offset = o
             arg_min[add_event_id] = 0
             add_event_id += 1
         # The sweep line is current, now compute pixel visibility

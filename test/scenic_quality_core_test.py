@@ -601,6 +601,7 @@ class TestScenicQuality(unittest.TestCase):
         return float(cell_id % row_count)
 
     def test_indexing_algorithm(self):
+        #return
         row_count = 5
         col_count = 5
         test_parameters = [ \
@@ -686,6 +687,9 @@ class TestScenicQuality(unittest.TestCase):
             [0, 2, 4, 6, 8]
             ]
 
+        test_parameters = [test_parameters[5]]
+        expected_results = [expected_results[5]]
+
         for t in range(len(test_parameters)):
             test = test_parameters[t]
             
@@ -703,7 +707,6 @@ class TestScenicQuality(unittest.TestCase):
                 assert computed == expected_results[t][i]
 
     def test_visibility_basic_array(self):
-        return
         DEM_size = 31
         elevation = np.zeros((DEM_size, DEM_size))
         nodata = -1
