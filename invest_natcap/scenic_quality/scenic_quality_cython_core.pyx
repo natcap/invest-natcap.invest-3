@@ -635,6 +635,9 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
 
 
 def _active_pixel_index(O, P, E):
+    O = [float(O[0]), float(O[1])]
+    P = [float(P[0]), float(P[1])]
+    E = [float(E[0]), float(E[1])]
     # Compute the long and short components
     if abs(E[0]-O[0]) > abs(E[1]-O[1]):
         l = 0 # Long component is along the 'i' axis (rows)
@@ -768,7 +771,7 @@ def sweep_through_angles( \
         Pl = coord[l][i] * sign[l]
         Ps = coord[s][i] * sign[s]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-        print('Initialized pixel at ', ID)
+        #print('Initialized pixel at ', ID)
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
         active_pixel_array[ID].distance = d
@@ -785,8 +788,8 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
-        print('')
-        print('----- Angle', a, angles[a+1], '-----')
+        #print('')
+        #print('----- Angle', a, angles[a+1], '-----')
         #for p in range(max_line_length):
         #    print('ID', p, 'is_active', active_pixel_array[p].is_active, \
         #        'distance', active_pixel_array[p].distance)
@@ -824,7 +827,7 @@ def sweep_through_angles( \
             row = coord[0][i] - viewpoint[0]
             col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-            print('Removed pixel', (-row, col), ' from', ID, remove_events[i])
+            #print('Removed pixel', (-row, col), ' from', ID, remove_events[i])
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
             #if not active_pixel_array[ID].is_active or \
@@ -894,7 +897,7 @@ def sweep_through_angles( \
             row = coord[0][i] - viewpoint[0]
             col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
-            print('Added pixel', (-row, col), 'to', ID, add_events[i])
+            #print('Added pixel', (-row, col), 'to', ID, add_events[i])
             # Active pixels could collide. If so, compute offset
             #if active_pixel_array[ID].is_active:
             #    print('Pixel ' + str(ID) + ' is already active', \
