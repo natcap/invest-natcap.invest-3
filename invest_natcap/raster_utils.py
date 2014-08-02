@@ -2201,9 +2201,10 @@ def align_dataset_list(
         mask_uri = temporary_filename(suffix='.tif')
         LOGGER.debug("base raster: %s" % (dataset_out_uri_list[0]))
         LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
-        mask_dataset = new_raster_from_base(
-            first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        new_raster_from_base_uri(first_dataset, mask_uri, 'GTiff', 255,
+            gdal.GDT_Byte)
         first_dataset = None
+        mask_dataset = gdal.Open(mask_uri)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
