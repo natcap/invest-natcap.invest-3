@@ -811,11 +811,6 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        #if slope>1.:
-        #    print('(l, s)', (l, s))
-        #    print('(Es, Os)', (Es, Os), '(El, Ol)', (El, Ol))
-        #    print('slope', slope)
-
         # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -830,11 +825,12 @@ def sweep_through_angles( \
             #print('Removed pixel', (-row, col), ' from', ID, remove_events[i])
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
-            #if not active_pixel_array[ID].is_active or \
-            #    active_pixel_array[ID].distance != distances[i]:
-            #    for p in range(max_line_length):
-            #        print('sanity check', p, 'is_active', active_pixel_array[p].is_active, \
-            #            'distance', active_pixel_array[p].distance)
+            if not active_pixel_array[ID].is_active or \
+                active_pixel_array[ID].distance != distances[i]:
+                for p in range(max_line_length):
+                    print('expected distance', distances[i])
+                    print('actual', p, 'is_active', active_pixel_array[p].is_active, \
+                        'distance', active_pixel_array[p].distance)
             #    print('pixel', ID)
             #    print('is_active', active_pixel_array[ID].is_active)
             #    print('expected dist', distances[i], 'actual', \
@@ -854,12 +850,13 @@ def sweep_through_angles( \
             #        print('after swap: ID', p, 'is_active', active_pixel_array[p].is_active, \
             #            'distance', active_pixel_array[p].distance)
             # Making sure that after the switch, we get the right pixel
-            #message = 'active ' + str(active_pixel_array[ID].is_active) + \
-            #    ', expected distance ' + str(distances[i]) + \
-            #    ', actual distance ' + str(active_pixel_array[ID].distance)
-            #assert active_pixel_array[ID].is_active and \
-            #    active_pixel_array[ID].distance == distances[i], message
-            #active_pixel_array[ID].is_active = False
+            message = 'Is active ' + str(active_pixel_array[ID].is_active) + \
+                ', expected distance ' + str(distances[i]) + \
+                ', actual distance ' + str(active_pixel_array[ID].distance)
+            assert active_pixel_array[ID].is_active and \
+                active_pixel_array[ID].distance == distances[i], message
+            active_pixel_array[ID].is_active = False
+
             arg_max[remove_event_id] = 0
             remove_event_id += 1
         # 2.1- add cells
@@ -899,9 +896,9 @@ def sweep_through_angles( \
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Added pixel', (-row, col), 'to', ID, add_events[i])
             # Active pixels could collide. If so, compute offset
-            #if active_pixel_array[ID].is_active:
-            #    print('Pixel ' + str(ID) + ' is already active', \
-            #        active_pixel_array[ID].is_active)
+            if active_pixel_array[ID].is_active:
+                print('Pixel ' + str(ID) + ' is already active', \
+                    active_pixel_array[ID].is_active)
             #    if (ID/2)*2 == ID: # even index: other pixel is the next one
             #        print('changing ID to ' + str(ID+1))
             #        if active_pixel_array[ID].is_active:
@@ -922,11 +919,16 @@ def sweep_through_angles( \
             #        message = 'Other pixel is also active'
             #        assert not active_pixel_array[ID-1].is_active, message
             #        active_pixel_array[ID] = active_pixel_array[ID-1]
-            #active_pixel_array[ID].is_active = True
-            #active_pixel_array[ID].index = i
-            #active_pixel_array[ID].distance = d
-            #active_pixel_array[ID].visibility = v
-            #active_pixel_array[ID].offset = o
+            # Make sure that all is good:
+            message = "Can't add to already active pixel " + str((Pl, Ps)) + \
+                ' (' + str(ID) + ')'
+            assert not active_pixel_array[ID].is_active, message
+            active_pixel_array[ID].is_active = True
+            active_pixel_array[ID].index = i
+            active_pixel_array[ID].distance = d
+            active_pixel_array[ID].visibility = v
+            active_pixel_array[ID].offset = o
+
             arg_min[add_event_id] = 0
             add_event_id += 1
         # The sweep line is current, now compute pixel visibility

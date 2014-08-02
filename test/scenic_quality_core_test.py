@@ -601,7 +601,9 @@ class TestScenicQuality(unittest.TestCase):
         return float(cell_id % row_count)
 
     def test_indexing_algorithm(self):
-        #return
+        """This test checks each possible direction for a small example.
+        This test is valuable because the coordinates are more manageable
+        and the algorithm tests every pixel on the quadrants."""
         row_count = 5
         col_count = 5
         test_parameters = [ \
@@ -687,8 +689,6 @@ class TestScenicQuality(unittest.TestCase):
             [0, 2, 4, 6, 8]
             ]
 
-        #test_parameters = [test_parameters[1]]
-        #expected_results = [expected_results[1]]
 
         for t in range(len(test_parameters)):
             test = test_parameters[t]
@@ -707,6 +707,9 @@ class TestScenicQuality(unittest.TestCase):
                 assert computed == expected_results[t][i]
 
     def test_line_state(self):
+        """Test the state of the sweep line on a 9x9 hand-made grid by testing
+        every pixel reached by the sweep line. Nice thing about this test:
+        the coordinates come from the same grid, with O at (0, 0)"""
         origin_and_end = [ \
             [[0, 0], [0, 4]], \
             [[0, 0], [1, 4]], \
@@ -810,9 +813,6 @@ class TestScenicQuality(unittest.TestCase):
             [[0, 0], [0, 1], [ 0, 2], [-1, 2], [-1, 3]], \
         ]
 
-        #origin_and_end = origin_and_end[1:2]
-        #cell_indices = cell_indices[1:2]
-        #cell_points = cell_points[1:2]
 
         for (O,E), ID, P in zip(origin_and_end, cell_indices, cell_points):
             for i, p in zip(ID, P):
