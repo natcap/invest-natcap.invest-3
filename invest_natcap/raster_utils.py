@@ -3058,7 +3058,7 @@ def distance_transform_edt(
         return numpy.where(x == nodata_mask, nodata_out, x != 0)
     LOGGER.info('converting input mask to byte dataset')
 
-    n_rows, n_cols = get_row_col_from_uri(input_mask_uri)
+    #64 seems like a reasonable blocksize
     blocksize = 64
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
