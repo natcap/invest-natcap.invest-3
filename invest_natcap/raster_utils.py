@@ -1863,9 +1863,7 @@ def temporary_folder():
         function will be registered in atexit."""
         try:
             shutil.rmtree(path)
-        except OSError as exception:
-            #LOGGER.debug('Tried to remove temp folder %s, but got %s',
-            #    path, exception)
+        except OSError:
             #This is okay, it means someone else deleted the folder
             pass
 
@@ -1914,13 +1912,13 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         if not dataset_projections[index][0].IsSame(
             dataset_projections[index+1][0]):
             LOGGER.warn(
-                "These two datasets are not in the same projection."
+                "These two datasets might not be in the same projection."
                 " The different projections are:\n\n'filename: %s'\n%s\n\n"
-                "and:\n\n'filename:%s'\n%s\n\n" %
-                (dataset_projections[index][1],
-                    dataset_projections[index][0].ExportToPrettyWkt(),
-                    dataset_projections[index+1][1],
-                    dataset_projections[index+1][0].ExportToPrettyWkt()))
+                "and:\n\n'filename:%s'\n%s\n\n",
+                dataset_projections[index][1],
+                dataset_projections[index][0].ExportToPrettyWkt(),
+                dataset_projections[index+1][1],
+                dataset_projections[index+1][0].ExportToPrettyWkt()))
 
     for dataset in dataset_list:
         #Make sure the dataset is closed and cleaned up
@@ -2013,7 +2011,8 @@ def resize_and_resample_dataset_uri(
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
     block_size = original_band.GetBlockSize()
-    LOGGER.info('%s band size: %s' % (original_dataset_uri, original_band.GetBlockSize()))
+    LOGGER.info(
+        '%s band size: %s', original_dataset_uri, original_band.GetBlockSize())
 
     gtiff_creation_options=[
         'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
