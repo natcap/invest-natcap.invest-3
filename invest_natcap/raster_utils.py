@@ -2220,9 +2220,12 @@ def align_dataset_list(
         mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
         LOGGER.info('masking out each output dataset')
-        out_dataset_list = map(lambda x: gdal.Open(x, gdal.GA_Update), dataset_out_uri_list)
-        out_band_list = map(lambda x: x.GetRasterBand(1), out_dataset_list)
-        nodata_out_list = map(lambda x: get_nodata_from_uri(x), dataset_out_uri_list)
+        out_dataset_list = [
+            gdal.Open(uri, gdal.GA_Update) for uri in dataset_out_uri_list]
+        out_band_list = [
+            dataset.GetRasterBand(1) for dataset in out_dataset_list]
+        nodata_out_list = [
+            get_nodata_from_uri(uri) for uri in dataset_out_uri_list]
 
         for row_index in range(n_rows):
             mask_row = (mask_band.ReadAsArray(
