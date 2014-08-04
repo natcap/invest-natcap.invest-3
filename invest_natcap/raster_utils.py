@@ -2528,25 +2528,12 @@ def get_lookup_from_table(table_uri, key_field):
     table_object = fileio.TableHandler(table_uri)
     raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
 
-    def smart_cast(value):
-        """Attempts to cast value to a float, int, or leave it as string"""
-        #If it's not a string, don't try to cast it because i got a bug
-        #where all my floats were happily cast to ints
-        if type(value) != str:
-            return value
-        for cast_function in [int, float]:
-            try:
-                return cast_function(value)
-            except ValueError:
-                pass
-        return value
-
     lookup_dict = {}
     for key, sub_dict in raw_table_dictionary.iteritems():
-        key_value = smart_cast(key)
+        key_value = _smart_cast(key)
         #Map an entire row to its lookup values
         lookup_dict[key_value] = (
-            dict([(sub_key, smart_cast(value))
+            dict([(sub_key, _smart_cast(value))
                 for sub_key, value in sub_dict.iteritems()]))
     return lookup_dict
 
@@ -2562,18 +2549,6 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
 
-    def smart_cast(value):
-        """Attempts to cast value to a float, int, or leave it as string"""
-        if type(value) != str:
-            return value
-
-        for cast_function in [int, float]:
-            try:
-                return cast_function(value)
-            except ValueError:
-                pass
-        return value
-
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
         header_row = csv_reader.next()
@@ -2584,10 +2559,10 @@ def get_lookup_from_csv(csv_table_uri, key_field):
 
         lookup_dict = {}
         for line in csv_reader:
-            key_value = smart_cast(line[key_index])
+            key_value = _smart_cast(line[key_index])
             #Map an entire row to its lookup values
             lookup_dict[key_value] = (
-                dict([(index_to_field[index], smart_cast(value))
+                dict([(index_to_field[index], _smart_cast(value))
                       for index, value in zip(range(len(line)), line)]))
         return lookup_dict
 
@@ -3124,3 +3099,16 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         returns nothing"""
     raster_cython_utils.convolve_2d(
         weight_uri, kernel_type, max_distance, output_uri)
+
+def _smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        #If it's not a string, don't try to cast it because i got a bug
+        #where all my floats were happily cast to ints
+        if type(value) != str:
+            return value
+        for cast_function in [int, float]:
+            try:
+                return cast_function(value)
+            except ValueError:
+                pass
+        return value
