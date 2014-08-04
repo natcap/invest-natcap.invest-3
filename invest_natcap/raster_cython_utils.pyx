@@ -163,7 +163,7 @@ cdef long long _sep(long long i, long long u, long long gu, long long gi):
         
         
 #@cython.boundscheck(False)
-def _distance_transform_edt(input_mask_uri, output_distance_uri):
+def distance_transform_edt(input_mask_uri, output_distance_uri):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
 

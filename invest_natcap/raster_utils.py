@@ -3068,7 +3068,7 @@ def distance_transform_edt(
         datasets_are_pre_aligned=True,
         dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize])
 
-    raster_cython_utils._distance_transform_edt(
+    raster_cython_utils.distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
         os.remove(mask_as_byte_uri)
