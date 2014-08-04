@@ -2228,6 +2228,7 @@ def align_dataset_list(
                     mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
+        LOGGER.info('Cleaning up mask dataset')
         #Remove the mask aoi if necessary
         mask_band = None
         gdal.Dataset.__swig_destroy__(mask_dataset)
