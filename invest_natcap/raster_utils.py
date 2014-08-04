@@ -2424,6 +2424,7 @@ def vectorize_datasets(
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
+        LOGGER.warn("this call is vectorizing which is deprecated and slow")
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
 
     LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d" % (
