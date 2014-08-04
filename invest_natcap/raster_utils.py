@@ -44,7 +44,7 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float32: numpy.float32,
     gdal.GDT_Float64: numpy.float64
     }
-    
+
 class NoDaemonProcess(multiprocessing.Process):
     """A class to make non-deamonic pools in case we want to have pools of
         pools"""
@@ -131,16 +131,16 @@ def get_nodata_from_uri(dataset_uri):
     nodata = band.GetNoDataValue()
     if nodata is None:
         LOGGER.warn("Warning the nodata value in %s is not set" % (dataset_uri))
-    
+
     #cast to an unsigned
     if band.DataType == gdal.GDT_Byte:
         nodata = nodata % 256
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return nodata
 
 def get_datatype_from_uri(dataset_uri):
@@ -153,12 +153,12 @@ def get_datatype_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     datatype = band.DataType
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return datatype
 
 def get_row_col_from_uri(dataset_uri):
@@ -172,12 +172,12 @@ def get_row_col_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return (n_rows, n_cols)
 
 
@@ -195,12 +195,12 @@ def calculate_raster_stats_uri(dataset_uri):
     for band_number in range(dataset.RasterCount):
         band = dataset.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
-        
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
 
 def get_statistics_from_uri(dataset_uri):
     """Retrieves the min, max, mean, stdev from a GDAL Dataset
@@ -212,12 +212,12 @@ def get_statistics_from_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     statistics = band.GetStatistics(0, 1)
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return statistics
 
 
@@ -251,7 +251,7 @@ def get_cell_size_from_uri(dataset_uri):
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-            
+
     return size_meters
 
 
@@ -268,11 +268,11 @@ def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
            meters)"""
     dataset = gdal.Open(dataset_uri)
     result = pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return result
 
 def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
@@ -332,9 +332,9 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
         Returns nothing.
         """
-    
+
     raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
-    
+
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
     n_rows=None, n_cols=None, dataset_options=[]):
@@ -362,11 +362,11 @@ def new_raster_from_base(
             passed to the gdal creation driver, overrides defaults
 
         returns a new GDAL raster dataset."""
-    
+
     return raster_cython_utils.new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value,
         n_rows, n_cols, dataset_options)
-    
+
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
@@ -487,8 +487,8 @@ def create_raster_from_vector_extents_uri(
     create_raster_from_vector_extents(
         pixel_size, pixel_size, gdal_format, nodata_out_value, output_uri,
         datasource)
-        
-    
+
+
 def create_raster_from_vector_extents(
     xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
@@ -639,7 +639,7 @@ def vectorize_points(
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), interpolation, nodata)
     band.WriteArray(raster_out_array, 0, 0)
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
@@ -935,12 +935,12 @@ def aggregate_raster_values_uri(
     mask_band = None
     gdal.Dataset.__swig_destroy__(mask_dataset)
     mask_dataset = None
-    
+
     #Make sure the dataset is closed and cleaned up
     clipped_band = None
     gdal.Dataset.__swig_destroy__(clipped_raster)
     clipped_raster = None
-    
+
     for filename in [mask_uri, clipped_raster_uri]:
         try:
             os.remove(filename)
@@ -1120,11 +1120,11 @@ def calculate_value_not_in_dataset_uri(dataset_uri):
         returns a number not contained in the dataset"""
     dataset = gdal.Open(dataset_uri)
     value = calculate_value_not_in_dataset(dataset)
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return value
 
 
@@ -1177,11 +1177,11 @@ def create_rat_uri(dataset_uri, attr_dict, column_name):
     """URI wrapper for create_rat"""
     dataset = gdal.Open(dataset_uri, gdal.GA_Update)
     create_rat(dataset, attr_dict, column_name)
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
 
 
 def create_rat(dataset, attr_dict, column_name):
@@ -1231,11 +1231,11 @@ def get_raster_properties_uri(dataset_uri):
     """
     dataset = gdal.Open(dataset_uri)
     value = get_raster_properties(dataset)
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return value
 
 
@@ -1340,11 +1340,11 @@ def warp_reproject_dataset_uri(
             resample_dict[resampling_method])
 
     output_dataset.FlushCache()
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
-    
+
     calculate_raster_stats_uri(output_uri)
 
 
@@ -1366,7 +1366,7 @@ def reproject_datasource_uri(original_dataset_uri, output_wkt, output_uri):
     original_dataset = ogr.Open(original_dataset_uri)
     _ = reproject_datasource(original_dataset, output_wkt, output_uri)
 
-    
+
 def reproject_datasource(original_datasource, output_wkt, output_uri):
     """Changes the projection of an ogr datasource by creating a new
         shapefile based on the output_wkt passed in.  The new shapefile
@@ -1450,7 +1450,7 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
 
     return output_datasource
 
-    
+
 def unique_raster_values_uri(dataset_uri):
     """Returns a list of the unique integer values on the given dataset
 
@@ -1460,11 +1460,11 @@ def unique_raster_values_uri(dataset_uri):
 
     dataset = gdal.Open(dataset_uri)
     value = unique_raster_values(dataset)
-        
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-        
+
     return value
 
 
@@ -1500,11 +1500,11 @@ def get_rat_as_dictionary_uri(dataset_uri):
 
     dataset = gdal.Open(dataset_uri)
     value = get_rat_as_dictionary(dataset)
-    
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return value
 
 
@@ -1548,7 +1548,7 @@ def get_rat_as_dictionary(dataset):
 
     return rat_dictionary
 
-    
+
 def gaussian_filter_dataset_uri(
     dataset_uri, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
     """A callthrough to gaussian filter dataset"""
@@ -1557,7 +1557,7 @@ def gaussian_filter_dataset_uri(
     gaussian_filter_dataset(
         dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir,
         constant_factor=constant_factor)
-        
+
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
@@ -1650,7 +1650,7 @@ def gaussian_filter_dataset(
     out_dataset.FlushCache()
     return out_dataset
 
-    
+
 def reclassify_dataset_uri(
     dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
     exception_flag='none', assert_dataset_projected=True):
@@ -1816,7 +1816,7 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return memory_array
 
 
@@ -1921,7 +1921,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
     dataset_list = None
     return True
 
-    
+
 def get_bounding_box(dataset_uri):
     """Returns a bounding box where coordinates are in projected units.
 
@@ -1944,10 +1944,10 @@ def get_bounding_box(dataset_uri):
     #Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     return bounding_box
 
-    
+
 def get_datasource_bounding_box(datasource_uri):
     """Returns a bounding box where coordinates are in projected units.
 
@@ -2007,15 +2007,15 @@ def resize_and_resample_dataset_uri(
     gdal_driver = gdal.GetDriverByName('GTiff')
     block_size = original_band.GetBlockSize()
     LOGGER.info('%s band size: %s' % (original_dataset_uri, original_band.GetBlockSize()))
-    
+
     gtiff_creation_options=[
-        'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0], 
+        'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
         'BLOCKYSIZE=%d' % block_size[1]]
     #If the original band is tiled, then its x blocksize will be different than
     #the number of columns
     if block_size[0] != original_band.XSize:
         gtiff_creation_options.append('TILED=YES')
-    
+
     create_directories([os.path.dirname(output_uri)])
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)#,
@@ -2025,7 +2025,7 @@ def resize_and_resample_dataset_uri(
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
     output_band.SetNoDataValue(original_nodata)
-    
+
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
@@ -2034,21 +2034,21 @@ def resize_and_resample_dataset_uri(
     class Time():
         def __init__(self):
             self.last_time = time.time()
-    
+
     #need to make this a closure so we get the current time and we can affect
     #state
     def make_callback(time_obj):
         def callback(dfComplete, pszMessage, pProgressArg):
             current_time = time.time()
             if (current_time - time_obj.last_time) > 5.0 or dfComplete == 1.0:
-                LOGGER.info("ReprojectImage %.1f%% complete %s" % 
+                LOGGER.info("ReprojectImage %.1f%% complete %s" %
                     (dfComplete * 100, pProgressArg[0]))
                 time_obj.last_time = current_time
         return callback
-    
+
     # Perform the projection/resampling
     gdal.ReprojectImage(
-        original_dataset, output_dataset, original_sr.ExportToWkt(), 
+        original_dataset, output_dataset, original_sr.ExportToWkt(),
         original_sr.ExportToWkt(), resample_dict[resample_method], 0, 0,
         make_callback(Time()), [output_uri])
 
@@ -2056,7 +2056,7 @@ def resize_and_resample_dataset_uri(
     original_band = None
     gdal.Dataset.__swig_destroy__(original_dataset)
     original_dataset = None
-        
+
     output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
@@ -2174,7 +2174,7 @@ def align_dataset_list(
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
     result_list = []
-    
+
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
         if process_pool:
@@ -2189,7 +2189,7 @@ def align_dataset_list(
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
-    
+
     #If there's an AOI, mask it out
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
@@ -2216,7 +2216,7 @@ def align_dataset_list(
         out_dataset_list = map(lambda x: gdal.Open(x, gdal.GA_Update), dataset_out_uri_list)
         out_band_list = map(lambda x: x.GetRasterBand(1), out_dataset_list)
         nodata_out_list = map(lambda x: get_nodata_from_uri(x), dataset_out_uri_list)
-        
+
         for row_index in range(n_rows):
             mask_row = (mask_band.ReadAsArray(
                 0, row_index, n_cols, 1) == 0)
@@ -2234,7 +2234,7 @@ def align_dataset_list(
         #Make sure the dataset is closed and cleaned up
         os.remove(mask_uri)
 
-        
+
 def assert_file_existance(dataset_uri_list):
     """Verify that the uris passed in the argument exist on the filesystem
         if not, raise an exeception indicating which files do not exist
@@ -2323,7 +2323,7 @@ def vectorize_datasets(
         datasets_are_pre_aligned - (optional) If this value is set to False
             this operation will first align and interpolate the input datasets
             based on the rules provided in bounding_box_mode,
-            resample_method_list, dataset_to_align_index, and 
+            resample_method_list, dataset_to_align_index, and
             dataset_to_bound_index, if set to True the input dataset list must
             be aligned, probably by raster_utils.align_dataset_list
         dataset_options - (optional) this is an argument list that will be
@@ -2387,18 +2387,18 @@ def vectorize_datasets(
     #makes sense to get the largest block size possible to reduce the number
     #of expensive readasarray calls
     for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
-        if (current_block_size[0] * current_block_size[1] > 
+        if (current_block_size[0] * current_block_size[1] >
             block_size[0] * block_size[1]):
             block_size = current_block_size
-    
+
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-    
+
     dataset_blocks = [
-        numpy.zeros((rows_per_block, cols_per_block), 
+        numpy.zeros((rows_per_block, cols_per_block),
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
-    
+
     #If there's an AOI, mask it out
     if aoi_uri != None:
         mask_uri = temporary_filename(suffix='.tif')
@@ -2413,20 +2413,20 @@ def vectorize_datasets(
         mask_array = numpy.zeros((rows_per_block, cols_per_block), dtype=numpy.int8)
         aoi_layer = None
         aoi_datasource = None
-    
+
     #We only want to do this if requested, otherwise we might have a more
     #efficient call if we don't vectorize.
     if vectorize_op:
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
-    
+
     LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d" % (
         rows_per_block, cols_per_block))
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block),
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
-    
+
     last_time = time.time()
-    
+
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
         local_row_index = (n_rows - row_offset)
@@ -2434,17 +2434,17 @@ def vectorize_datasets(
         for col_block_index in xrange(n_col_blocks):
             col_offset = col_block_index * cols_per_block
             local_col_index = (n_cols - col_offset)
-            
+
             current_time = time.time()
             if current_time - last_time > 5.0:
                 LOGGER.info(
-                    'raster stack calculation approx. %.2f%% complete' % 
+                    'raster stack calculation approx. %.2f%% complete' %
                     ((row_block_index * n_col_blocks + col_block_index) /
                      float(n_row_blocks * n_col_blocks) * 100.0))
                 last_time = current_time
-            
+
             for dataset_index in xrange(len(aligned_bands)):
-                if (local_col_index < cols_per_block or 
+                if (local_col_index < cols_per_block or
                     local_row_index < rows_per_block):
                     aligned_bands[dataset_index].ReadAsArray(
                         col_offset, row_offset, local_col_index,
@@ -2467,7 +2467,7 @@ def vectorize_datasets(
                         col_offset, row_offset, cols_per_block, rows_per_block,
                         buf_obj=mask_array)
                 out_block[mask_array == 0] = nodata_out
-        
+
             if (local_col_index < cols_per_block or
                 local_row_index < rows_per_block):
                 output_band.WriteArray(
@@ -2484,7 +2484,7 @@ def vectorize_datasets(
     output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
-    
+
     #Clean up the files made by temporary file because we had an issue once
     #where I was running the water yield model over 2000 times and it made
     #so many temporary files I ran out of disk space.
@@ -2625,7 +2625,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
     datasource = None
     return attribute_dictionary
 
-    
+
 def get_geotransform_uri(dataset_uri):
     """Get the geotransform from a gdal dataset
 
@@ -2638,7 +2638,7 @@ def get_geotransform_uri(dataset_uri):
     gdal.Dataset.__swig_destroy__(dataset)
     return geotransform
 
-    
+
 def get_spatial_ref_uri(datasource_uri):
     """Get the spatial reference of an OGR datasource
 
@@ -2651,7 +2651,7 @@ def get_spatial_ref_uri(datasource_uri):
     spat_ref = layer.GetSpatialRef()
     return spat_ref
 
-    
+
 def copy_datasource_uri(shape_uri, copy_uri):
     """Create a copy of an ogr shapefile
 
@@ -2667,7 +2667,7 @@ def copy_datasource_uri(shape_uri, copy_uri):
     drv = ogr.GetDriverByName('ESRI Shapefile')
     drv.CopyDataSource(shape, copy_uri)
 
-    
+
 def vectorize_points_uri(
         shapefile_uri, field, output_uri, interpolation='nearest'):
     """A wrapper function for raster_utils.vectorize_points, that allows for uri
@@ -2801,7 +2801,7 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     output_layer.SyncToDisk()
 
-    
+
 def get_dataset_projection_wkt_uri(dataset_uri):
     """Get the projection of a GDAL dataset as well known text (WKT)
 
@@ -2925,7 +2925,7 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
     band = None
     gdal.Dataset.__swig_destroy__(ds)
     ds = None
-    
+
     return carray
 
 
@@ -2953,11 +2953,11 @@ def make_constant_raster_from_base_uri(
     base_dataset = gdal.Open(out_uri, gdal.GA_Update)
     base_band = base_dataset.GetRasterBand(1)
     base_band.Fill(constant_value)
-    
+
     base_band = None
     gdal.Dataset.__swig_destroy__(base_dataset)
     base_dataset = None
-    
+
 
 def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
     """Calculates a list of sets of polygons that don't overlap.  Determining
@@ -3050,17 +3050,17 @@ def distance_transform_edt(
     def to_byte(x):
         return numpy.where(x == nodata_mask, nodata_out, x != 0)
     LOGGER.info('converting input mask to byte dataset')
-    
+
     n_rows, n_cols = get_row_col_from_uri(input_mask_uri)
     blocksize = 64
     vectorize_datasets(
         [input_mask_uri], to_byte, mask_as_byte_uri, gdal.GDT_Byte,
         nodata_out, out_pixel_size, "union",
-        dataset_to_align_index=0, assert_datasets_projected=False, 
+        dataset_to_align_index=0, assert_datasets_projected=False,
         process_pool=process_pool, vectorize_op=False,
         datasets_are_pre_aligned=True,
         dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize])
-    
+
     raster_cython_utils._distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
@@ -3068,11 +3068,11 @@ def distance_transform_edt(
     except OSError:
         LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)
 
-        
+
 def email_report(message, email_address):
     """A simple wrapper around an SMTP call.  Can be used to send text messages
-        if the email address is constructed as the following: 
-        
+        if the email address is constructed as the following:
+
         Alltel [10-digit phone number]@message.alltel.com
         AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
         Boost Mobile [10-digit phone number]@myboostmobile.com
@@ -3082,7 +3082,7 @@ def email_report(message, email_address):
         US Cellular [10-digit phone number]email.uscc.net (SMS)
         Verizon [10-digit phone number]@vtext.com
         Virgin Mobile USA [10-digit phone number]@vmobl.com
-        
+
         returns nothing"""
 
     try:
@@ -3094,29 +3094,29 @@ def email_report(message, email_address):
     except smtplib.socket.gaierror:
         LOGGER.warn("Can't connect to email server, no report will be sent.")
 
-        
+
 def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
-    """Does a direct convolution on a predefined kernel 
-    
-        
+    """Does a direct convolution on a predefined kernel
+
+
         each output pixel at ij gets the value:
             sum_xy(weight_uri_xy * decay_xy_ij)
-            
-            
+
+
         define d(xy, ij) as the Euclidan distance between coordinates xy and ij
         then, decay_xy_ij is
-            
+
             1 - d(xy, ij)/max_distance for 'linear'
             exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
 
             if d(xy, ij) < max_distance, else 0.0
-            
+
         weight_uri - this is the source raster
         kernel_type - 'linear' or 'exponential'
         max_distance - defined in equation above (units are pixel size)
         output_uri - the raster output of same size and projection of
             weight_uri
-            
+
         returns nothing"""
     raster_cython_utils.convolve_2d(
         weight_uri, kernel_type, max_distance, output_uri)
