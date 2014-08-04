@@ -2529,15 +2529,14 @@ def get_lookup_from_table(table_uri, key_field):
     raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
 
     def smart_cast(value):
-        """Attempts to cat value to a float, int, or leave it as string"""
+        """Attempts to cast value to a float, int, or leave it as string"""
         #If it's not a string, don't try to cast it because i got a bug
         #where all my floats were happily cast to ints
         if type(value) != str:
             return value
-        cast_functions = [int, float]
-        for fn in cast_functions:
+        for cast_function in [int, float]:
             try:
-                return fn(value)
+                return cast_function(value)
             except ValueError:
                 pass
         return value
@@ -2568,10 +2567,9 @@ def get_lookup_from_csv(csv_table_uri, key_field):
         if type(value) != str:
             return value
 
-        cast_functions = [int, float]
-        for fn in cast_functions:
+        for cast_function in [int, float]:
             try:
-                return fn(value)
+                return cast_function(value)
             except ValueError:
                 pass
         return value
