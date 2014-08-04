@@ -2427,8 +2427,8 @@ def vectorize_datasets(
         LOGGER.warn("this call is vectorizing which is deprecated and slow")
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
 
-    LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d" % (
-        rows_per_block, cols_per_block))
+    LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d",
+        rows_per_block, cols_per_block)
     dataset_blocks = [
         numpy.zeros((rows_per_block, cols_per_block),
         dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
@@ -2446,7 +2446,7 @@ def vectorize_datasets(
             current_time = time.time()
             if current_time - last_time > 5.0:
                 LOGGER.info(
-                    'raster stack calculation approx. %.2f%% complete' %
+                    'raster stack calculation approx. %.2f%% complete',
                     ((row_block_index * n_col_blocks + col_block_index) /
                      float(n_row_blocks * n_col_blocks) * 100.0))
                 last_time = current_time
@@ -2511,7 +2511,7 @@ def vectorize_datasets(
             try:
                 os.remove(temp_dataset_uri)
             except OSError:
-                LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
+                LOGGER.warn("couldn't delete file %s", temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
 
 
