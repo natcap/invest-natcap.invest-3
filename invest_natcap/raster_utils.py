@@ -1663,8 +1663,8 @@ def gaussian_filter_dataset(
 
 
 def reclassify_dataset_uri(
-    dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
-    exception_flag='none', assert_dataset_projected=True):
+        dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
+        exception_flag='none', assert_dataset_projected=True):
     """A function to reclassify values in dataset
         to any output type.  If there are values in the dataset that are not in
         value map, they will be mapped to out_nodata.
@@ -1718,8 +1718,8 @@ def reclassify_dataset_uri(
 
 
 def reclassify_dataset(
-    dataset, value_map, raster_out_uri, out_datatype, out_nodata,
-    exception_flag='none'):
+        dataset, value_map, raster_out_uri, out_datatype, out_nodata,
+        exception_flag='none'):
 
     """An efficient function to reclassify values in a positive int dataset type
         to any output type.  If there are values in the dataset that are not in
@@ -1820,7 +1820,7 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
         dtype = array_type
 
     memory_array = numpy.memmap(
-        memory_file, dtype = dtype, mode = 'w+', shape = (n_rows, n_cols))
+        memory_file, dtype=dtype, mode='w+', shape=(n_rows, n_cols))
 
     band.ReadAsArray(buf_obj=memory_array)
 
@@ -1911,7 +1911,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
     for index in range(len(dataset_projections)-1):
         if not dataset_projections[index][0].IsSame(
-            dataset_projections[index+1][0]):
+                dataset_projections[index+1][0]):
             LOGGER.warn(
                 "These two datasets might not be in the same projection."
                 " The different projections are:\n\n'filename: %s'\n%s\n\n"
@@ -1974,8 +1974,8 @@ def get_datasource_bounding_box(datasource_uri):
 
 
 def resize_and_resample_dataset_uri(
-    original_dataset_uri, bounding_box, out_pixel_size, output_uri,
-    resample_method):
+        original_dataset_uri, bounding_box, out_pixel_size, output_uri,
+        resample_method):
     """A function to  a datsaet to larger or smaller pixel sizes
 
         original_dataset_uri - a GDAL dataset
@@ -2002,8 +2002,9 @@ def resize_and_resample_dataset_uri(
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
 
-    output_geo_transform = [bounding_box[0], out_pixel_size, 0.0,
-        bounding_box[1], 0.0, -out_pixel_size]
+    output_geo_transform = [
+        bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0,
+        -out_pixel_size]
     new_x_size = abs(
         int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
     new_y_size = abs(
@@ -2015,9 +2016,10 @@ def resize_and_resample_dataset_uri(
     LOGGER.info(
         '%s band size: %s', original_dataset_uri, original_band.GetBlockSize())
 
-    gtiff_creation_options=[
+    gtiff_creation_options = [
         'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
         'BLOCKYSIZE=%d' % block_size[1]]
+    
     #If the original band is tiled, then its x blocksize will be different than
     #the number of columns
     if block_size[0] != original_band.XSize:
@@ -2043,7 +2045,7 @@ def resize_and_resample_dataset_uri(
         """The argument names come from the GDAL API for callbacks."""
         try:
             current_time = time.time()
-            if ((current_time - reproject_callback.last_time) > 5.0 or 
+            if ((current_time - reproject_callback.last_time) > 5.0 or
                     df_complete == 1.0):
                 LOGGER.info(
                     "ReprojectImage %.1f%% complete %s, psz_message %s",
@@ -2070,9 +2072,10 @@ def resize_and_resample_dataset_uri(
 
 
 def align_dataset_list(
-    dataset_uri_list, dataset_out_uri_list, resample_method_list,
-    out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index=None,
-    aoi_uri=None, assert_datasets_projected=True, process_pool=None):
+        dataset_uri_list, dataset_out_uri_list, resample_method_list,
+        out_pixel_size, mode, dataset_to_align_index,
+        dataset_to_bound_index=None, aoi_uri=None,
+        assert_datasets_projected=True, process_pool=None):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
