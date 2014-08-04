@@ -2876,38 +2876,37 @@ def rasterize_layer_uri(
     gdal.RasterizeLayer(
         dataset, [1], layer, burn_values=burn_values, options=option_list)
 
-    band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     shapefile = None
 
 
-def create_carray(h5file_uri, type, shape):
+def create_carray(h5file_uri, h5_type, shape):
     """Creates an empty pytables chunked array given a file type and size.
 
         h5file_uri - a uri to store the carray
-        type - an h5file type
+        h5_type - an h5file type
         shape - a tuple indicating rows/columns"""
 
     h5file = tables.openFile(h5file_uri, mode='w')
     root = h5file.root
     filters = tables.Filters(complevel=0)
     return h5file.createCArray(
-        root, 'from_create_carray', type, shape=shape, filters=filters)
+        root, 'from_create_carray', h5_type, shape=shape, filters=filters)
 
 
-def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
+def load_dataset_to_carray(dataset_uri, h5file_uri, array_type=None):
     """Loads a GDAL dataset into a h5file chunked array.
 
-        ds_uri - uri to a GDAL dataset
+        dataset_uri - uri to a GDAL dataset
         h5file_uri - uri to a file that the chunked array will exist on disk
         array_type - (optional) if specified is a GDAL type for what the output
             array should be cast to
 
         returns chunked array representing the original gdal dataset"""
 
-    ds = gdal.Open(ds_uri)
-    band = ds.GetRasterBand(1)
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
     if array_type is None:
         array_type = band.DataType
 
@@ -2923,15 +2922,15 @@ def load_dataset_to_carray(ds_uri, h5file_uri, array_type=None):
 
     carray = create_carray(
         h5file_uri, map_gdal_type_to_atom[array_type],
-        (ds.RasterYSize, ds.RasterXSize))
+        (dataset.RasterYSize, dataset.RasterXSize))
 
-    for row_index in xrange(ds.RasterYSize):
+    for row_index in xrange(dataset.RasterYSize):
         carray[row_index,:] = band.ReadAsArray(
-            0, row_index, ds.RasterXSize, 1)[0]
+            0, row_index, dataset.RasterXSize, 1)[0]
 
     band = None
-    gdal.Dataset.__swig_destroy__(ds)
-    ds = None
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
 
     return carray
 

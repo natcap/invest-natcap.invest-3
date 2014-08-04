@@ -157,6 +157,7 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
 cdef long long _f(long long x, long long i, long long gi):
     return (x-i)*(x-i)+ gi*gi
 
+
 @cython.cdivision(True)
 cdef long long _sep(long long i, long long u, long long gu, long long gi):
     return (u*u - i*i + gu*gu - gi*gi) / (2*(u-i))
