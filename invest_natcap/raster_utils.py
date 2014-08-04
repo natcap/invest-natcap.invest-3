@@ -2136,13 +2136,15 @@ def align_dataset_list(
     def merge_bounding_boxes(bb1, bb2, mode):
         """Helper function to merge two bounding boxes through union or
             intersection"""
-        lte = lambda x, y: x if x <= y else y
-        gt = lambda x, y: x if x > y else y
+        less_than_or_equal = lambda x, y: x if x <= y else y
+        greater_than = lambda x, y: x if x > y else y
 
         if mode == "union":
-            comparison_ops = [lte, gt, gt, lte]
+            comparison_ops = [
+                less_than_or_equal, greater_than, greater_than, 
+                less_than_or_equal]
         if mode == "intersection":
-            comparison_ops = [gt, lte, lte, gt]
+            comparison_ops = [greater_than, lte, lte, greater_than]
 
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
@@ -2206,8 +2208,6 @@ def align_dataset_list(
         n_cols = first_dataset.RasterXSize
 
         mask_uri = temporary_filename(suffix='.tif')
-        LOGGER.debug("base raster: %s" % (dataset_out_uri_list[0]))
-        LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
         first_dataset = None
