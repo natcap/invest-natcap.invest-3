@@ -3054,9 +3054,12 @@ def distance_transform_edt(
     nodata_mask = get_nodata_from_uri(input_mask_uri)
     out_pixel_size = get_cell_size_from_uri(input_mask_uri)
     nodata_out = 255
-    def to_byte(x):
-        return numpy.where(x == nodata_mask, nodata_out, x != 0)
+    def to_byte(input_vector):
+        """converts vector to 1, 0, or nodata value to fit in a byte raster"""
+        return numpy.where(
+            input_vector == nodata_mask, nodata_out, input_vector != 0)
     LOGGER.info('converting input mask to byte dataset')
+    
 
     #64 seems like a reasonable blocksize
     blocksize = 64
@@ -3073,7 +3076,7 @@ def distance_transform_edt(
     try:
         os.remove(mask_as_byte_uri)
     except OSError:
-        LOGGER.warn("couldn't remove file %s" % mask_as_byte_uri)
+        LOGGER.warn("couldn't remove file %s", mask_as_byte_uri)
 
 
 def email_report(message, email_address):
