@@ -797,7 +797,7 @@ def aggregate_raster_values_uri(
     #Loop over each polygon and aggregate
     subset_layer_definition = subset_layer.GetLayerDefn()
 
-    minimal_polygon_sets = calculate_minimal_overlapping_polygon_sets(
+    minimal_polygon_sets = calculate_disjoint_polygon_set(
         shapefile_uri)
 
     for polygon_set in minimal_polygon_sets:
@@ -2966,7 +2966,7 @@ def make_constant_raster_from_base_uri(
     base_dataset = None
 
 
-def calculate_minimal_overlapping_polygon_sets(shapefile_uri):
+def calculate_disjoint_polygon_set(shapefile_uri):
     """Calculates a list of sets of polygons that don't overlap.  Determining
         the minimal number of those sets is an np-complete problem so this is
         an approximation that builds up sets of maximal subsets.
@@ -3059,7 +3059,7 @@ def distance_transform_edt(
         return numpy.where(
             input_vector == nodata_mask, nodata_out, input_vector != 0)
     LOGGER.info('converting input mask to byte dataset')
-    
+
 
     #64 seems like a reasonable blocksize
     blocksize = 64
