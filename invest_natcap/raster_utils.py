@@ -1176,7 +1176,7 @@ def calculate_value_not_in_array(array):
     #min or max.  Catching an exception in case there's an overflow.
     try:
         return sorted_array[0]-1
-    except:
+    except OverflowError:
         return sorted_array[-1]+1
 
 
