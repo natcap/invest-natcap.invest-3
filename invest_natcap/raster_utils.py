@@ -185,8 +185,8 @@ def calculate_raster_stats_uri(dataset_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
 
-       dataset_uri - a uri to a GDAL raster dataset that will be modified by having
-            its band statistics set
+       dataset_uri - a uri to a GDAL raster dataset that will be modified by
+            having its band statistics set
 
         returns nothing"""
 
@@ -336,8 +336,9 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
 
 def new_raster_from_base(
-    base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None, dataset_options=[]):
+        base, output_uri, gdal_format, nodata, datatype, fill_value=None,
+        n_rows=None, n_cols=None, dataset_options=[]):
+
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
@@ -368,8 +369,10 @@ def new_raster_from_base(
         n_rows, n_cols, dataset_options)
 
 
-def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
-              bands, outputURI):
+def new_raster(
+        cols, rows, projection, geotransform, format, nodata, datatype,
+        bands, outputURI):
+
     """Create a new raster with the given properties.
 
         cols - number of pixel columns
@@ -433,21 +436,23 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
     #Define the initial bounding box
     gt = dataset_list[0].GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
-    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * dataset_list[0].RasterXSize,
-                   gt[3] + gt[5] * dataset_list[0].RasterYSize]
+    bounding_box = [
+        gt[0], gt[3], gt[0] + gt[1] * dataset_list[0].RasterXSize,
+        gt[3] + gt[5] * dataset_list[0].RasterYSize]
 
     dataset_files = []
     for dataset in dataset_list:
         dataset_files.append(dataset.GetDescription())
         #intersect the current bounding box with the one just read
         gt = dataset.GetGeoTransform()
-        rec = [gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
-               gt[3] + gt[5] * dataset.RasterYSize]
+        rec = [
+            gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
+            gt[3] + gt[5] * dataset.RasterYSize]
         #This intersects rec with the current bounding box
         bounding_box = [max(rec[0], bounding_box[0]),
-                       min(rec[1], bounding_box[1]),
-                       min(rec[2], bounding_box[2]),
-                       max(rec[3], bounding_box[3])]
+            min(rec[1], bounding_box[1]),
+            min(rec[2], bounding_box[2]),
+            max(rec[3], bounding_box[3])]
 
         #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
@@ -458,10 +463,11 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
         aoi_extent = aoi_layer.GetExtent()
-        bounding_box = [max(aoi_extent[0], bounding_box[0]),
-                       min(aoi_extent[3], bounding_box[1]),
-                       min(aoi_extent[1], bounding_box[2]),
-                       max(aoi_extent[2], bounding_box[3])]
+        bounding_box = [
+            max(aoi_extent[0], bounding_box[0]),
+            min(aoi_extent[3], bounding_box[1]),
+            min(aoi_extent[1], bounding_box[2]),
+            max(aoi_extent[2], bounding_box[3])]
         if not valid_bounding_box(bounding_box):
             raise SpatialExtentOverlapException(
                 "The aoi layer %s doesn't overlap with %s" %
@@ -661,10 +667,10 @@ def aggregate_raster_values_uri(
             associated with ints; if None dictionary returns a value over
             the entire shapefile region that intersects the raster.
         ignore_nodata - (optional) if operation == 'mean' then it does not
-            account for nodata pixels when determining the pixel_mean, otherwise
-            all pixels in the AOI are used for calculation of the mean.  This
-            does not affect hectare_mean which is calculated from the
-            geometrical area of the feature.
+            account for nodata pixels when determining the pixel_mean,
+            otherwise all pixels in the AOI are used for calculation of the
+            mean.  This does not affect hectare_mean which is calculated from
+            the geometrical area of the feature.
         threshold_amount_lookup - (optional) a dictionary indexing the
             shapefile_field's to threshold amounts to subtract from the
             aggregate value.  The result will be clamped to zero.
@@ -677,8 +683,8 @@ def aggregate_raster_values_uri(
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
             pixel_min pixel_max')
-           Each of [sum pixel_mean hectare_mean] contains a dictionary that maps
-           shapefile_field value to the total, pixel mean, hecatare mean,
+           Each of [sum pixel_mean hectare_mean] contains a dictionary that
+           maps shapefile_field value to the total, pixel mean, hecatare mean,
            pixel max, and pixel min of the values under that feature.
            'n_pixels' contains the total number of valid pixels used in that
            calculation.  hectare_mean is None if raster_uri is unprojected.
@@ -841,7 +847,8 @@ def aggregate_raster_values_uri(
         clipped_band = clipped_raster.GetRasterBand(1)
         current_iteration_attribute_ids = set()
         for row_index in range(clipped_band.YSize):
-            mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
+            mask_array = mask_band.ReadAsArray(
+                0, row_index, mask_band.XSize, 1)
             clipped_array = clipped_band.ReadAsArray(
                 0, row_index, clipped_band.XSize, 1)
 
@@ -927,7 +934,7 @@ def aggregate_raster_values_uri(
         except DatasetUnprojected:
             #doesn't make sense to calculate the hectare mean
             LOGGER.warn(
-                'aggregate raster %s is not projected setting hectare_mean to {}'
+                'raster %s is not projected setting hectare_mean to {}'
                 % raster_uri)
             result_tuple.hectare_mean.clear()
 
