@@ -2037,27 +2037,26 @@ def resize_and_resample_dataset_uri(
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
 
-    #create a time object so we only update if a long time has passed
-    class Time():
-        def __init__(self):
-            self.last_time = time.time()
-
     #need to make this a closure so we get the current time and we can affect
     #state
-    def make_callback(time_obj):
-        def callback(dfComplete, pszMessage, pProgressArg):
+    def reproject_callback(df_complete, psz_message, p_progress_arg):
+        """The argument names come from the GDAL API for callbacks."""
+        try:
             current_time = time.time()
-            if (current_time - time_obj.last_time) > 5.0 or dfComplete == 1.0:
-                LOGGER.info("ReprojectImage %.1f%% complete %s" %
-                    (dfComplete * 100, pProgressArg[0]))
-                time_obj.last_time = current_time
-        return callback
+            if ((current_time - reproject_callback.last_time) > 5.0 or 
+                    df_complete == 1.0):
+                LOGGER.info(
+                    "ReprojectImage %.1f%% complete %s, psz_message %s",
+                    df_complete * 100, p_progress_arg[0], psz_message)
+                reproject_callback.last_time = current_time
+        except AttributeError:
+            reproject_callback.last_time = time.time()
 
     # Perform the projection/resampling
     gdal.ReprojectImage(
         original_dataset, output_dataset, original_sr.ExportToWkt(),
         original_sr.ExportToWkt(), resample_dict[resample_method], 0, 0,
-        make_callback(Time()), [output_uri])
+        reproject_callback, [output_uri])
 
     #Make sure the dataset is closed and cleaned up
     original_band = None
