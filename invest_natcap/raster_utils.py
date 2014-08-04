@@ -1918,7 +1918,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
                 dataset_projections[index][1],
                 dataset_projections[index][0].ExportToPrettyWkt(),
                 dataset_projections[index+1][1],
-                dataset_projections[index+1][0].ExportToPrettyWkt()))
+                dataset_projections[index+1][0].ExportToPrettyWkt())
 
     for dataset in dataset_list:
         #Make sure the dataset is closed and cleaned up
