@@ -2978,38 +2978,35 @@ def calculate_disjoint_polygon_set(shapefile_uri):
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
 
-    poly_intersection_lookup = {}
+    poly_intersect_lookup = {}
     LOGGER.info(
         'Converting OGR polygons to Shapely polygons for fast intersection')
     for poly_feat in shapefile_layer:
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
         shapely_polygon = shapely.wkt.loads(poly_wkt)
         poly_fid = poly_feat.GetFID()
-        print '.',
-        poly_intersection_lookup[poly_fid] = {
+        poly_intersect_lookup[poly_fid] = {
             'poly': shapely_polygon,
             'prepared': shapely.prepared.prep(shapely_polygon),
             'intersects': set(),
         }
     shapefile_layer.ResetReading()
-    print
 
     LOGGER.info('Building intersection list')
-    for poly_fid in poly_intersection_lookup:
-        print '.',
-        for intersect_poly_fid in poly_intersection_lookup:
-            polygon = poly_intersection_lookup[poly_fid]['prepared']
-            if polygon.intersects(
-                poly_intersection_lookup[intersect_poly_fid]['poly']):
-                poly_intersection_lookup[poly_fid]['intersects'].add(
+    for poly_fid in poly_intersect_lookup:
+        for intersect_poly_fid in poly_intersect_lookup:
+            polygon = poly_intersect_lookup[poly_fid]['prepared']
+            if polygon.intersects(poly_intersect_lookup[intersect_poly_fid]
+                    ['poly']):
+                poly_intersect_lookup[poly_fid]['intersects'].add(
                     intersect_poly_fid)
-    print
+
     #Build maximal subsets
     subset_list = []
-    while len(poly_intersection_lookup) > 0:
+    while len(poly_intersect_lookup) > 0:
         #sort polygons by increasing number of intersections
         heap = []
-        for poly_fid, poly_dict in poly_intersection_lookup.iteritems():
+        for poly_fid, poly_dict in poly_intersect_lookup.iteritems():
             heapq.heappush(
                 heap, (len(poly_dict['intersects']), poly_fid, poly_dict))
 
@@ -3018,7 +3015,7 @@ def calculate_disjoint_polygon_set(shapefile_uri):
         while len(heap) > 0:
             _, poly_fid, poly_dict = heapq.heappop(heap)
             for maxset_fid in maximal_set:
-                if maxset_fid in poly_intersection_lookup[poly_fid]['intersects']:
+                if maxset_fid in poly_intersect_lookup[poly_fid]['intersects']:
                     #it intersects and can't be part of the maximal subset
                     break
             else:
@@ -3026,10 +3023,10 @@ def calculate_disjoint_polygon_set(shapefile_uri):
                 #the maximal set
                 maximal_set.add(poly_fid)
                 #remove that polygon and update the intersections
-                del poly_intersection_lookup[poly_fid]
+                del poly_intersect_lookup[poly_fid]
             #remove all the polygons from intersections now that they're compuated
         for maxset_fid in maximal_set:
-            for poly_dict in poly_intersection_lookup.itervalues():
+            for poly_dict in poly_intersect_lookup.itervalues():
                 poly_dict['intersects'].discard(maxset_fid)
         subset_list.append(maximal_set)
     return subset_list
