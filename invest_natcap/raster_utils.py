@@ -449,7 +449,8 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
             gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
             gt[3] + gt[5] * dataset.RasterYSize]
         #This intersects rec with the current bounding box
-        bounding_box = [max(rec[0], bounding_box[0]),
+        bounding_box = [
+            max(rec[0], bounding_box[0]),
             min(rec[1], bounding_box[1]),
             min(rec[2], bounding_box[2]),
             max(rec[3], bounding_box[3])]
@@ -476,7 +477,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
     return bounding_box
 
 def create_raster_from_vector_extents_uri(
-    shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
+        shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
     """A wrapper for create_raster_from_vector_extents
 
         shapefile_uri - uri to an OGR datasource to use as the extents of the
@@ -496,7 +497,7 @@ def create_raster_from_vector_extents_uri(
 
 
 def create_raster_from_vector_extents(
-    xRes, yRes, format, nodata, rasterFile, shp):
+        xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
 
@@ -553,7 +554,8 @@ def create_raster_from_vector_extents(
         rasterFile = ''
         driver = gdal.GetDriverByName('MEM')
     #1 means only create 1 band
-    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format,
+    raster = driver.Create(
+        rasterFile, tiff_width, tiff_height, 1, format,
         options=['BIGTIFF=IF_SAFER'])
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
@@ -642,8 +644,8 @@ def vectorize_points(
 
     nodata = band.GetNoDataValue()
 
-    raster_out_array = scipy.interpolate.griddata(point_array,
-        value_array, (grid_y, grid_x), interpolation, nodata)
+    raster_out_array = scipy.interpolate.griddata(
+        point_array, value_array, (grid_y, grid_x), interpolation, nodata)
     band.WriteArray(raster_out_array, 0, 0)
 
     #Make sure the dataset is closed and cleaned up
@@ -653,9 +655,10 @@ def vectorize_points(
 
 
 def aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None, ignore_value_list=[], process_pool=None,
-    all_touched=False):
+        raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
+        threshold_amount_lookup=None, ignore_value_list=[], process_pool=None,
+        all_touched=False):
+
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -727,8 +730,9 @@ def aggregate_raster_values_uri(
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
         if fd == -1 or fd is None:  # -1 returned when field does not exist.
             # Raise exception if user provided a field that's not in vector
-            raise AttributeError(('Vector %s must have a field named %s' %
-                (shapefile_uri, shapefile_field)))
+            raise AttributeError(
+                'Vector %s must have a field named %s' %
+                (shapefile_uri, shapefile_field))
         if fd.GetTypeName() != 'Integer':
             raise TypeError(
                 'Can only aggreggate by integer based fields, requested '
@@ -737,6 +741,7 @@ def aggregate_raster_values_uri(
         rasterize_layer_args['options'].append(
             'ATTRIBUTE=%s' % shapefile_field)
     else:
+        #9999 is a classic unknown value
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
 
@@ -769,8 +774,8 @@ def aggregate_raster_values_uri(
     defn.GetFieldCount()
     for fld_index in range(defn.GetFieldCount()):
         original_field = defn.GetFieldDefn(fld_index)
-        output_field = ogr.FieldDefn(original_field.GetName(),
-            original_field.GetType())
+        output_field = ogr.FieldDefn(
+            original_field.GetName(), original_field.GetType())
         subset_layer.CreateField(output_field)
 
     #Initialize these dictionaries to have the shapefile fields in the original
@@ -783,9 +788,8 @@ def aggregate_raster_values_uri(
     else:
         shapefile_table = {global_id_value: 0.0}
 
-    current_iteration_shapefiles = dict(
-        [(shapefile_id, 0.0) for shapefile_id in
-        shapefile_table.iterkeys()])
+    current_iteration_shapefiles = dict([
+        (shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
 
@@ -866,8 +870,9 @@ def aggregate_raster_values_uri(
                     (~numpy.isnan(clipped_array))]
                 #Remove the nodata and ignore values for later processing
                 masked_values_nodata_removed = (
-                    masked_values[~numpy.in1d(masked_values, [raster_nodata] +
-                    ignore_value_list).reshape(masked_values.shape)])
+                    masked_values[~numpy.in1d(
+                        masked_values, [raster_nodata] + ignore_value_list).
+                        reshape(masked_values.shape)])
 
                 #Find the min and max which might not yet be calculated
                 if masked_values_nodata_removed.size > 0:
@@ -956,8 +961,9 @@ def aggregate_raster_values_uri(
     return result_tuple
 
 
-def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
-    datatype, default_value=None):
+def reclassify_by_dictionary(
+        dataset, rules, output_uri, format, nodata, datatype,
+        default_value=None):
     """Convert all the non-nodata values in dataset to the values mapped to
         by rules.  If there is no rule for an input value it is replaced by
         default_value.  If default_value is None, nodata is used.
@@ -992,20 +998,15 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     # the rules dictionary.
     if default_value == None:
         default_value = nodata
-        LOGGER.debug('Default value not user-defined, using nodata value (%s)',
-            nodata)
     else:
-        LOGGER.debug('User defined default value=%s', default_value)
         rules = rules.copy()
         if nodata not in rules:
             in_nodata = dataset.GetRasterBand(1).GetNoDataValue()
             rules[in_nodata] = nodata
-            LOGGER.debug('Creating a nodata mapping rule: {%s: %s}', in_nodata,
-                nodata)
 
     LOGGER.info('Creating a new raster for reclassification')
-    output_dataset = new_raster_from_base(dataset, output_uri, format, nodata,
-                                          datatype)
+    output_dataset = new_raster_from_base(
+        dataset, output_uri, format, nodata, datatype)
     LOGGER.info('Starting cythonized reclassification')
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype,
@@ -1117,6 +1118,7 @@ def extract_band_and_nodata(dataset, get_array=False):
 
     #Otherwise just return the band and nodata
     return band, nodata
+
 
 def calculate_value_not_in_dataset_uri(dataset_uri):
     """Calcualte a value not contained in a dataset.  Useful for calculating
@@ -1309,7 +1311,7 @@ def warp_reproject_dataset_uri(
     # vrt does not save to disk and is used to get the proper projected bounding
     # box and size.
     vrt = gdal.AutoCreateWarpedVRT(
-            original_dataset, None, output_wkt, gdal.GRA_Bilinear)
+        original_dataset, None, output_wkt, gdal.GRA_Bilinear)
 
     geo_t = vrt.GetGeoTransform()
     x_size = vrt.RasterXSize # Raster xsize
@@ -1320,7 +1322,7 @@ def warp_reproject_dataset_uri(
     (ulx, uly) = (geo_t[0], geo_t[3])
     (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
 
-    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
+    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s", ulx, uly, lrx, lry)
 
     gdal_driver = gdal.GetDriverByName('GTiff')
 
@@ -1343,8 +1345,8 @@ def warp_reproject_dataset_uri(
 
     # Perform the projection/resampling
     gdal.ReprojectImage(
-            original_dataset, output_dataset, original_wkt, output_wkt,
-            resample_dict[resampling_method])
+        original_dataset, output_dataset, original_wkt, output_wkt,
+        resample_dict[resampling_method])
 
     output_dataset.FlushCache()
 
@@ -1407,8 +1409,8 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         #Create the new layer for output_datasource using same name and geometry
         #type from original_datasource, but different projection
         output_layer = output_datasource.CreateLayer(
-                original_layer_dfn.GetName(), output_sr,
-                original_layer_dfn.GetGeomType())
+            original_layer_dfn.GetName(), output_sr,
+            original_layer_dfn.GetGeomType())
 
         #Get the number of fields in original_layer
         original_field_count = original_layer_dfn.GetFieldCount()
@@ -1417,8 +1419,8 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         #shapefiles layer
         for fld_index in range(original_field_count):
             original_field = original_layer_dfn.GetFieldDefn(fld_index)
-            output_field = ogr.FieldDefn(original_field.GetName(),
-                    original_field.GetType())
+            output_field = ogr.FieldDefn(
+                original_field.GetName(), original_field.GetType())
             output_layer.CreateField(output_field)
 
         original_layer.ResetReading()
@@ -1557,7 +1559,8 @@ def get_rat_as_dictionary(dataset):
 
 
 def gaussian_filter_dataset_uri(
-    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
+        dataset_uri, sigma, out_uri, out_nodata, temp_dir=None,
+        constant_factor=1.0):
     """A callthrough to gaussian filter dataset"""
 
     dataset = gdal.Open(dataset_uri)
@@ -1571,7 +1574,8 @@ def gaussian_filter_dataset_uri(
 
 
 def gaussian_filter_dataset(
-    dataset, sigma, out_uri, out_nodata, temp_dir=None, constant_factor=1.0):
+        dataset, sigma, out_uri, out_nodata, temp_dir=None,
+        constant_factor=1.0):
     """A memory efficient gaussian filter function that operates on
         the dataset level and creates a new dataset that's filtered.
         It will treat any nodata value in dataset as 0, and re-nodata
@@ -1652,7 +1656,7 @@ def gaussian_filter_dataset(
     out_band = None
     #Turning on ignore_errors = True in case we can't remove the
     #the temporary directory
-    shutil.rmtree(temp_dir, ignore_errors = True)
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
     out_dataset.FlushCache()
     return out_dataset
@@ -1862,11 +1866,7 @@ def temporary_folder():
     def remove_folder(path):
         """Function to remove a folder and handle exceptions encountered.  This
         function will be registered in atexit."""
-        try:
-            shutil.rmtree(path)
-        except OSError:
-            #This is okay, it means someone else deleted the folder
-            pass
+        shutil.rmtree(path, ignore_errors=True)
 
     atexit.register(remove_folder, path)
     return path
