@@ -799,8 +799,6 @@ def aggregate_raster_values_uri(
 
 
     #Loop over each polygon and aggregate
-    subset_layer_definition = subset_layer.GetLayerDefn()
-
     minimal_polygon_sets = calculate_disjoint_polygon_set(
         shapefile_uri)
 
@@ -1028,8 +1026,7 @@ def calculate_slope(
 
         returns nothing"""
 
-    LOGGER = logging.getLogger('calculate_slope')
-    LOGGER.info('calculate slope on %s' % (dem_dataset_uri))
+    LOGGER.info('calculate slope on %s', dem_dataset_uri)
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
@@ -1086,13 +1083,13 @@ def clip_dataset_uri(
     if nodata is None:
         nodata = calculate_value_not_in_dataset(source_dataset)
 
-    LOGGER.info("clip_dataset nodata value is %s" % nodata)
+    LOGGER.info("clip_dataset nodata value is %s", nodata)
     gdal.Dataset.__swig_destroy__(source_dataset)
     source_dataset = None
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
-    LOGGER.info("clipping dataset %s" % (source_dataset_uri))
+    LOGGER.info("clipping dataset %s", source_dataset_uri)
     vectorize_datasets(
         [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
@@ -1613,15 +1610,15 @@ def gaussian_filter_dataset(
     out_band, out_nodata = extract_band_and_nodata(out_dataset)
 
     shape = (source_band.YSize, source_band.XSize)
-    LOGGER.info('shape %s' % str(shape))
+    LOGGER.info('shape %s', str(shape))
 
-    LOGGER.info('make the source memmap at %s' % source_filename)
+    LOGGER.info('make the source memmap at %s', source_filename)
     source_array = numpy.memmap(
         source_filename, dtype='float32', mode='w+', shape=shape)
-    LOGGER.info('make the mask memmap at %s' % mask_filename)
+    LOGGER.info('make the mask memmap at %s', mask_filename)
     mask_array = numpy.memmap(
         mask_filename, dtype='bool', mode='w+', shape=shape)
-    LOGGER.info('make the dest memmap at %s' % dest_filename)
+    LOGGER.info('make the dest memmap at %s', dest_filename)
     dest_array = numpy.memmap(
         dest_filename, dtype='float32', mode='w+', shape=shape)
 
@@ -1649,7 +1646,7 @@ def gaussian_filter_dataset(
 
     calculate_raster_stats_uri(out_uri)
 
-    LOGGER.info('deleting %s' % temp_dir)
+    LOGGER.info('deleting %s', temp_dir)
     dest_array = None
     mask_array = None
     source_array = None
@@ -2211,13 +2208,14 @@ def align_dataset_list(
     if aoi_uri != None:
         LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
-        first_band = first_dataset.GetRasterBand(1)
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
 
         mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        
+        gdal.__swig_destroy__(first_dataset)
         first_dataset = None
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
