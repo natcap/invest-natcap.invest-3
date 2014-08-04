@@ -1259,9 +1259,9 @@ def get_raster_properties(dataset):
            XSize, YSize
     """
     dataset_dict = {}
-    gt = dataset.GetGeoTransform()
-    dataset_dict['width'] = float(gt[1])
-    dataset_dict['height'] = float(gt[5])
+    geo_transform = dataset.GetGeoTransform()
+    dataset_dict['width'] = float(geo_transform[1])
+    dataset_dict['height'] = float(geo_transform[5])
     dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize
     LOGGER.debug('Raster_Properties : %s', dataset_dict)
