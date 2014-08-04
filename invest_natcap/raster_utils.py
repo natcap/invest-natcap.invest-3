@@ -1687,6 +1687,7 @@ def reclassify_dataset_uri(
     nodata = get_nodata_from_uri(dataset_uri)
 
     def map_dataset_to_value(original_values):
+        """Converts a block of original values to the lookup values"""
         all_mapped = numpy.empty(original_values.shape, dtype=numpy.bool)
         out_array = numpy.empty(original_values.shape, dtype=numpy.float)
         for key, value in value_map.iteritems():
