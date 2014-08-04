@@ -2019,7 +2019,7 @@ def resize_and_resample_dataset_uri(
     gtiff_creation_options = [
         'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
         'BLOCKYSIZE=%d' % block_size[1]]
-    
+
     #If the original band is tiled, then its x blocksize will be different than
     #the number of columns
     if block_size[0] != original_band.XSize:
@@ -2110,12 +2110,14 @@ def align_dataset_list(
     #me a precedent for this.
 
     #make sure that the input lists are of the same length
-    if not reduce(lambda x,y: x if x==y else False,
-        [len(dataset_uri_list), len(dataset_out_uri_list),
-        len(resample_method_list)]):
+    list_lengths = [
+        len(dataset_uri_list), len(dataset_out_uri_list),
+        len(resample_method_list)]
+    if not reduce(lambda x, y: x if x == y else False, list_lengths):
         raise Exception(
             "dataset_uri_list, dataset_out_uri_list, and "
-            "resample_method_list must be the same length")
+            "resample_method_list must be the same length "
+            " current lengths are %s" % (str(list_lengths)))
 
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
@@ -2143,7 +2145,7 @@ def align_dataset_list(
 
         if mode == "union":
             comparison_ops = [
-                less_than_or_equal, greater_than, greater_than, 
+                less_than_or_equal, greater_than, greater_than,
                 less_than_or_equal]
         if mode == "intersection":
             comparison_ops = [
@@ -2191,10 +2193,12 @@ def align_dataset_list(
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
         if process_pool:
-            result_list.append(process_pool.apply_async(
-                resize_and_resample_dataset_uri,
-                args=[original_dataset_uri, bounding_box, out_pixel_size,
-                out_dataset_uri, resample_method]))
+            result_list.append(
+                process_pool.apply_async(
+                    resize_and_resample_dataset_uri,
+                    args=[
+                        original_dataset_uri, bounding_box, out_pixel_size,
+                        out_dataset_uri, resample_method]))
         else:
             resize_and_resample_dataset_uri(
                 original_dataset_uri, bounding_box, out_pixel_size,
@@ -2237,8 +2241,8 @@ def align_dataset_list(
             for out_band, nodata_out in zip(out_band_list, nodata_out_list):
                 dataset_row = out_band.ReadAsArray(
                     0, row_index, n_cols, 1)
-                out_band.WriteArray(numpy.where(
-                    mask_row, nodata_out, dataset_row),
+                out_band.WriteArray(
+                    numpy.where(mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
         #Remove the mask aoi if necessary
@@ -2270,11 +2274,12 @@ def assert_file_existance(dataset_uri_list):
 
 
 def vectorize_datasets(
-    dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
-    nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
-    dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
-    assert_datasets_projected=True, process_pool=None, vectorize_op=True,
-    datasets_are_pre_aligned=False, dataset_options=[]):
+        dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
+        nodata_out, pixel_size_out, bounding_box_mode,
+        resample_method_list=None, dataset_to_align_index=None,
+        dataset_to_bound_index=None, aoi_uri=None,
+        assert_datasets_projected=True, process_pool=None, vectorize_op=True,
+        datasets_are_pre_aligned=False, dataset_options=[]):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2376,7 +2381,8 @@ def vectorize_datasets(
             dataset_uri_list, dataset_out_uri_list, resample_method_list,
             pixel_size_out, bounding_box_mode, dataset_to_align_index,
             dataset_to_bound_index=dataset_to_bound_index,
-            aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected,
+            aoi_uri=aoi_uri,
+            assert_datasets_projected=assert_datasets_projected,
             process_pool=process_pool)
         aligned_datasets = [
             gdal.Open(filename, gdal.GA_ReadOnly) for filename in
@@ -2402,7 +2408,7 @@ def vectorize_datasets(
     #of expensive readasarray calls
     for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
         if (current_block_size[0] * current_block_size[1] >
-            block_size[0] * block_size[1]):
+                block_size[0] * block_size[1]):
             block_size = current_block_size
 
     cols_per_block, rows_per_block = block_size[0], block_size[1]
@@ -2410,8 +2416,9 @@ def vectorize_datasets(
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
 
     dataset_blocks = [
-        numpy.zeros((rows_per_block, cols_per_block),
-        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+        numpy.zeros(
+            (rows_per_block, cols_per_block),
+            dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
@@ -2424,7 +2431,8 @@ def vectorize_datasets(
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
-        mask_array = numpy.zeros((rows_per_block, cols_per_block), dtype=numpy.int8)
+        mask_array = numpy.zeros(
+            (rows_per_block, cols_per_block), dtype=numpy.int8)
         aoi_layer = None
         aoi_datasource = None
 
@@ -2434,11 +2442,13 @@ def vectorize_datasets(
         LOGGER.warn("this call is vectorizing which is deprecated and slow")
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
 
-    LOGGER.info("reading by rows_per_block, cols_per_block, %d, %d",
-        rows_per_block, cols_per_block)
+    LOGGER.info(
+        "reading by rows_per_block, cols_per_block, %d, %d", rows_per_block,
+        cols_per_block)
     dataset_blocks = [
-        numpy.zeros((rows_per_block, cols_per_block),
-        dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+        numpy.zeros(
+            (rows_per_block, cols_per_block),
+            dtype=GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
 
     last_time = time.time()
 
@@ -2460,7 +2470,7 @@ def vectorize_datasets(
 
             for dataset_index in xrange(len(aligned_bands)):
                 if (local_col_index < cols_per_block or
-                    local_row_index < rows_per_block):
+                        local_row_index < rows_per_block):
                     aligned_bands[dataset_index].ReadAsArray(
                         col_offset, row_offset, local_col_index,
                         local_row_index, buf_obj=dataset_blocks[dataset_index])
@@ -2473,7 +2483,7 @@ def vectorize_datasets(
             #Mask out the row if there is a mask
             if aoi_uri != None:
                 if (local_col_index < cols_per_block or
-                    local_row_index < rows_per_block):
+                        local_row_index < rows_per_block):
                     mask_band.ReadAsArray(
                         col_offset, row_offset, local_col_index,
                         local_row_index, buf_obj=mask_array)
@@ -2484,7 +2494,7 @@ def vectorize_datasets(
                 out_block[mask_array == 0] = nodata_out
 
             if (local_col_index < cols_per_block or
-                local_row_index < rows_per_block):
+                    local_row_index < rows_per_block):
                 output_band.WriteArray(
                     out_block[0:local_row_index, 0:local_col_index],
                     xoff=col_offset, yoff=row_offset)
@@ -2540,9 +2550,9 @@ def get_lookup_from_table(table_uri, key_field):
     for key, sub_dict in raw_table_dictionary.iteritems():
         key_value = _smart_cast(key)
         #Map an entire row to its lookup values
-        lookup_dict[key_value] = (
-            dict([(sub_key, _smart_cast(value))
-                for sub_key, value in sub_dict.iteritems()]))
+        lookup_dict[key_value] = (dict(
+            [(sub_key, _smart_cast(value)) for sub_key, value in
+             sub_dict.iteritems()]))
     return lookup_dict
 
 
@@ -2672,7 +2682,7 @@ def vectorize_points_uri(
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
     vectorize_points(
-            datasource, field, output_raster, interpolation=interpolation)
+        datasource, field, output_raster, interpolation=interpolation)
 
 
 def create_directories(directory_list):
@@ -2733,7 +2743,7 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     LOGGER.debug('Create New Layer')
     output_layer = output_datasource.CreateLayer(
-            layer_name, source_sr, ogr.wkbPoint)
+        layer_name, source_sr, ogr.wkbPoint)
 
     # Outer unique keys
     outer_keys = dict_data.keys()
@@ -2824,7 +2834,7 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
         for val in numpy.unique(cur_array):
             if ignore_nodata and val == nodata:
                 continue
-            itemfreq[val] += numpy.count_nonzero(cur_array==val)
+            itemfreq[val] += numpy.count_nonzero(cur_array == val)
 
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
@@ -2906,7 +2916,7 @@ def load_dataset_to_carray(dataset_uri, h5file_uri, array_type=None):
         (dataset.RasterYSize, dataset.RasterXSize))
 
     for row_index in xrange(dataset.RasterYSize):
-        carray[row_index,:] = band.ReadAsArray(
+        carray[row_index, :] = band.ReadAsArray(
             0, row_index, dataset.RasterXSize, 1)[0]
 
     band = None
@@ -2917,8 +2927,8 @@ def load_dataset_to_carray(dataset_uri, h5file_uri, array_type=None):
 
 
 def make_constant_raster_from_base_uri(
-    base_dataset_uri, constant_value, out_uri, nodata_value=None,
-    dataset_type=gdal.GDT_Float32):
+        base_dataset_uri, constant_value, out_uri, nodata_value=None,
+        dataset_type=gdal.GDT_Float32):
     """A helper function that creates a new gdal raster from base, and fills
         it with the constant value provided.
 
@@ -2976,8 +2986,8 @@ def calculate_disjoint_polygon_set(shapefile_uri):
     for poly_fid in poly_intersect_lookup:
         for intersect_poly_fid in poly_intersect_lookup:
             polygon = poly_intersect_lookup[poly_fid]['prepared']
-            if polygon.intersects(poly_intersect_lookup[intersect_poly_fid]
-                    ['poly']):
+            if polygon.intersects(
+                    poly_intersect_lookup[intersect_poly_fid]['poly']):
                 poly_intersect_lookup[poly_fid]['intersects'].add(
                     intersect_poly_fid)
 
@@ -3004,7 +3014,7 @@ def calculate_disjoint_polygon_set(shapefile_uri):
                 maximal_set.add(poly_fid)
                 #remove that polygon and update the intersections
                 del poly_intersect_lookup[poly_fid]
-            #remove all the polygons from intersections now that they're compuated
+            #remove all the polygons from intersections once they're compuated
         for maxset_fid in maximal_set:
             for poly_dict in poly_intersect_lookup.itervalues():
                 poly_dict['intersects'].discard(maxset_fid)
@@ -3013,7 +3023,7 @@ def calculate_disjoint_polygon_set(shapefile_uri):
 
 
 def distance_transform_edt(
-    input_mask_uri, output_distance_uri, process_pool=None):
+        input_mask_uri, output_distance_uri, process_pool=None):
     """Calculate the Euclidean distance transform on input_mask_uri and output
         the result into an output raster
 
@@ -3046,7 +3056,9 @@ def distance_transform_edt(
         dataset_to_align_index=0, assert_datasets_projected=False,
         process_pool=process_pool, vectorize_op=False,
         datasets_are_pre_aligned=True,
-        dataset_options=['TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize])
+        dataset_options=[
+            'TILED=YES', 'BLOCKXSIZE=%d' % blocksize,
+            'BLOCKYSIZE=%d' % blocksize])
 
     raster_cython_utils.distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
@@ -3075,7 +3087,7 @@ def email_report(message, email_address):
     try:
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.starttls()
-        server.login('natcapsoftwareteam@gmail.com','assman64')
+        server.login('natcapsoftwareteam@gmail.com', 'assman64')
         server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
         server.quit()
     except smtplib.socket.gaierror:
@@ -3109,14 +3121,14 @@ def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
         weight_uri, kernel_type, max_distance, output_uri)
 
 def _smart_cast(value):
-        """Attempts to cast value to a float, int, or leave it as string"""
-        #If it's not a string, don't try to cast it because i got a bug
-        #where all my floats were happily cast to ints
-        if type(value) != str:
-            return value
-        for cast_function in [int, float]:
-            try:
-                return cast_function(value)
-            except ValueError:
-                pass
+    """Attempts to cast value to a float, int, or leave it as string"""
+    #If it's not a string, don't try to cast it because i got a bug
+    #where all my floats were happily cast to ints
+    if type(value) != str:
         return value
+    for cast_function in [int, float]:
+        try:
+            return cast_function(value)
+        except ValueError:
+            pass
+    return value
