@@ -2144,7 +2144,9 @@ def align_dataset_list(
                 less_than_or_equal, greater_than, greater_than, 
                 less_than_or_equal]
         if mode == "intersection":
-            comparison_ops = [greater_than, lte, lte, greater_than]
+            comparison_ops = [
+                greater_than, less_than_or_equal, less_than_or_equal,
+                greater_than]
 
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
