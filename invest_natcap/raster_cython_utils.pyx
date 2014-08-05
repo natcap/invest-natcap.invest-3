@@ -422,10 +422,11 @@ def new_raster_from_base(
             'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]]
     LOGGER.info('dataset_options=%s' % str(dataset_options))
-    new_raster = driver.Create(
+    driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
         options=dataset_options)
     base_band = None
+    new_raster = gdal.Open(output_uri.encode('utf-8'), gdal.GA_Update)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)

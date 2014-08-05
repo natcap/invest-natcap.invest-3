@@ -2197,13 +2197,13 @@ def align_dataset_list(
         first_band = first_dataset.GetRasterBand(1)
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
+        first_dataset = None
 
         mask_uri = temporary_filename(suffix='.tif')
         LOGGER.debug("base raster: %s" % (dataset_out_uri_list[0]))
         LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
-        new_raster_from_base_uri(first_dataset, mask_uri, 'GTiff', 255,
+        new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
             gdal.GDT_Byte)
-        first_dataset = None
         mask_dataset = gdal.Open(mask_uri)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
@@ -2228,6 +2228,7 @@ def align_dataset_list(
                     mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
+        LOGGER.info('Cleaning up mask dataset')
         #Remove the mask aoi if necessary
         mask_band = None
         gdal.Dataset.__swig_destroy__(mask_dataset)
