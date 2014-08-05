@@ -2210,13 +2210,14 @@ def align_dataset_list(
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
+        gdal.Dataset.__swig_destroy__(first_dataset)
+        first_dataset = None
 
         mask_uri = temporary_filename(suffix='.tif')
-        mask_dataset = new_raster_from_base(
-            first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
-        
-        gdal.__swig_destroy__(first_dataset)
-        first_dataset = None
+        new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
+            gdal.GDT_Byte)
+
+        mask_dataset = gdal.Open(mask_uri)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
@@ -2243,6 +2244,7 @@ def align_dataset_list(
                     numpy.where(mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
+        LOGGER.info('Cleaning up mask dataset')
         #Remove the mask aoi if necessary
         mask_band = None
         gdal.Dataset.__swig_destroy__(mask_dataset)

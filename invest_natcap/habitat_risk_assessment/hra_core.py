@@ -216,11 +216,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
 
     '''
-    #Seem to have an issue with the figure having residual data points.
-    #Clearing here.
-    matplotlib.pyplot.close('all')
-    matplotlib.rcParams.update({'font.size': 9})
-
     def plot_background_circle(max_value):
         circle_stuff = [(6, '#000000'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
                         (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
@@ -253,20 +248,13 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     #Create plots for each combination of AOI, Hab
     plot_index = 0
 
-    #Know that 8,6 is the default size. Want to know how much to increase the
-    #image length by to fit the plots proportionally.
-    size_scalar = int(math.ceil(num_habs/4))
-    #Stretches things weird if there are only 4. Just going to stretch if there 
-    #are > 4 habs.
-    size_scalar = size_scalar + 1 if size_scalar > 1 else size_scalar
-    fig_size = (8, (6*size_scalar))
-
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
+        LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
 
-        fig = matplotlib.pyplot.figure(plot_index, figsize=fig_size)
+        fig = matplotlib.pyplot.figure(plot_index)
         plot_index += 1
-        matplotlib.pyplot.suptitle(str(aoi_name))
+        matplotlib.pyplot.suptitle(aoi_name)
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
         fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
@@ -313,13 +301,10 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.annotate(element[1], xy=(element[2], 
                     element[3]), xytext= jigger(element[2], element[3]))
 
-        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + str(aoi_name) + '].png')
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
-    #Want megaplot to have slightly bigger fon
-    matplotlib.rcParams.update({'font.size': 11})
-    
     #Create one ecosystem megaplot that plots the points as summed E,C from
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
@@ -349,9 +334,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         #Create the points which are summed AOI's across all Habitats.    
         matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
                     markerfacecolor='black', markersize=8)
-        matplotlib.pyplot.annotate(str(aoi_name),
+        matplotlib.pyplot.annotate(aoi_name,
                     xy=(p_dict['E'], p_dict['C']), 
-                    xytext=jigger(p_dict['E'], p_dict['C']+0.07))
+                    xytext=(p_dict['E'], p_dict['C']+0.07))
                         
     matplotlib.pyplot.xlim([0, max_tot_risk])
     matplotlib.pyplot.ylim([0, max_tot_risk])
@@ -408,7 +393,7 @@ def make_aoi_tables(out_dir, aoi_pairs):
     #table for each AOi used on the subregions shapefile.
     for aoi_name, aoi_list in aoi_pairs.items():
         
-        file.write("<H2>" + str(aoi_name) + "</H2>")
+        file.write("<H2>" + aoi_name + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
         #Headers row
@@ -542,11 +527,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
 
     #Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
-    pixel_size = raster_utils.get_cell_size_from_uri(arb_raster_uri)  
+    LOGGER.debug("arb_uri: %s" % arb_raster_uri)
+    
 
     #Use the first overlap raster as the base for the AOI
-    raster_utils.create_raster_from_vector_extents_uri(cp_aoi_uri, pixel_size,
-                            gdal.GDT_Float32, -1, aoi_rast_uri) 
+    raster_utils.new_raster_from_base_uri(arb_raster_uri, aoi_rast_uri, 'GTiff', 
+                                -1, gdal.GDT_Float32)
 
     #This rasterize should burn a unique burn ID int to each. Need to have a dictionary which
     #associates each burn ID with the AOI 'name' attribute that's required. 
@@ -576,9 +562,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
                                             h + ']_S[' + s + '].tif')
 
+        LOGGER.debug("Entering new funct.")
         rast_uri_list = [e_rast_uri, c_rast_uri, h_rast_uri, hs_rast_uri]
         rast_labels = ['E', 'C', 'H', 'H_S']
         over_pix_sums = aggregate_multi_rasters_uri(aoi_rast_uri, rast_uri_list, rast_labels, [0])
+        LOGGER.debug("%s,%s:%s" % (h, s, over_pix_sums))
+        LOGGER.debug("Exiting new funct.")
         
         for burn_value in over_pix_sums:
             
