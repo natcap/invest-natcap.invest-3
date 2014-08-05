@@ -2508,3 +2508,74 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
         pass#os.remove(dataset_uri)
+
+
+def cache_block_experiment(ds_uri, out_uri):
+    #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
+    cdef int n_rows, n_cols #size of the raster
+    cdef int block_row_size, block_col_size #blocksize of the raster
+    cdef int n_block_rows = 2, n_block_cols = 2 #the number of blocks we'll cache
+    cdef int neighbor_index #a number between 0 and 7 indicating neighbor in the following configuration
+    # 321
+    # 4x0
+    # 567
+    
+    cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
+    cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
+
+    ds = gdal.Open(ds_uri)
+    ds_band = ds.GetRasterBand(1)
+    block_row_size, block_col_size = ds_band.GetBlockSize()
+    n_rows = ds.RasterYSize
+    n_cols = ds.RasterXSize
+
+    cdef float out_nodata = -1.0
+    raster_utils.create_raster_from_base_uri(
+        ds_uri, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+
+    #center point of global index
+    cdef int global_row_index, global_col_index #index into the overall raster
+    cdef int cache_row_block_tag, cache_col_block_tag #the tag section of the global index
+    cdef int cache_row_block_index, cache_col_block_index #the index of the global index
+
+    #neighbor sections of global index
+    cdef int neighbor_global_row_index, neighbor_global_col_index
+    cdef int neighbor_cache_row_block_tag, neighbor_cache_col_block_tag
+    cdef int neighbor_cache_row_block_index, neighbor_cache_col_block_index 
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=2] cache_tag = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((block_row_size, block_col_size), dtype=numpy.byte)
+
+    #now define all the caches
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] ds_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+
+    for global_row_index in xrange(n_rows):
+        for global_col_index in xrange(n_cols):
+            cache_row_block_tag = global_row_index / block_row_size
+            cache_col_block_tag = global_col_index / block_col_size
+            cache_row_block_index = global_row_index % block_row_size
+            cache_col_block_index = global_col_index % block_col_size
+
+            #is cache block not loaded?
+            #deal with dump/load
+
+            for neighbor_index in xrange(8):
+                neighbor_global_row_index = neighbor_row_offset[neighbor_index] + global_row_index
+                neighbor_global_col_index = neighbor_col_offset[neighbor_index] + global_col_index
+                
+                #make sure we're in bounds
+                if (neighbor_global_row_index >= n_rows or neighbor_global_row_index < 0 or
+                    neighbor_global_col_index >= n_cols or neighbor_global_col_index < 0):
+                    continue
+
+                neighbor_cache_row_block_tag = neighbor_global_row_index / block_row_size
+                neighbor_cache_col_block_tag = neighbor_global_col_index / block_col_size
+                neighbor_cache_row_block_index = neighbor_global_row_index % block_row_size
+                neighbor_cache_col_block_index = neighbor_global_col_index % block_col_size
+                
+                #is cache block not loaded?
+                #deal with dump/load
