@@ -711,10 +711,14 @@ def aggregate_raster_values_uri(
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
     mask_uri = temporary_filename(suffix='.tif')
+    LOGGER.info('Creating the mask raster at %s', mask_uri)
     new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
+
+    LOGGER.info('Opening mask dataset %s', mask_uri)
     mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+    LOGGER.info('Opening shapefile %s', shapefile_uri)
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
@@ -725,6 +729,7 @@ def aggregate_raster_values_uri(
         rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
 
     if shapefile_field is not None:
+        LOGGER.info('User provided shapefile field %s', shapefile_field)
         #Make sure that the layer name refers to an integer
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
@@ -744,6 +749,7 @@ def aggregate_raster_values_uri(
         #9999 is a classic unknown value
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
+    LOGGER.info('Rasterize options: %s', rasterize_layer_args['options'])
 
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}
@@ -760,6 +766,7 @@ def aggregate_raster_values_uri(
         pixel_max={})
 
     #make a shapefile that non-overlapping layers can be added to
+    LOGGER.info('Creating new temp vector for non-overlapping layers')
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
     subset_layer_datasouce = driver.CreateDataSource(
@@ -771,6 +778,7 @@ def aggregate_raster_values_uri(
 
     #For every field, create a duplicate field and add it to the new
     #subset_layer layer
+    LOGGER.info('Creating new fields in temp vector')
     defn.GetFieldCount()
     for fld_index in range(defn.GetFieldCount()):
         original_field = defn.GetFieldDefn(fld_index)
