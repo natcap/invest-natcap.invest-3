@@ -1,4 +1,4 @@
-
+import sys
 import math
 cimport numpy as np
 import numpy as np
@@ -835,28 +835,28 @@ def sweep_through_angles( \
             # Move other pixel over otherwise
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
-                for p in range(max_line_length):
-                    print('expected distance', distances[i])
-                    print('actual', p, 'is_active', active_pixel_array[p].is_active, \
-                        'distance', active_pixel_array[p].distance)
-            #    print('pixel', ID)
-            #    print('is_active', active_pixel_array[ID].is_active)
-            #    print('expected dist', distances[i], 'actual', \
-            #        active_pixel_array[ID].distance, 'diff', \
-            #        active_pixel_array[ID].distance-distances[i])
-            #    print('old ID', ID)
-            #    if (ID/2)*2 == ID: # even index: other pixel is the next one
-            #        active_pixel_array[ID] = active_pixel_array[ID+1]
-            #        active_pixel_array[ID+1].is_active = False
-            #        print('new ID', ID + 1)
-            #    else: # odd index: other pixel is the one just before
-            #        active_pixel_array[ID] = active_pixel_array[ID-1]
-            #        active_pixel_array[ID-1].is_active = False
-            #        print('new ID', ID - 1)
-            #    active_pixel_array[ID].is_active = False
-            #    for p in range(max_line_length):
-            #        print('after swap: ID', p, 'is_active', active_pixel_array[p].is_active, \
-            #            'distance', active_pixel_array[p].distance)
+                #for p in range(max_line_length):
+                #    print('expected distance', distances[i])
+                #    print('actual', p, 'is_active', active_pixel_array[p].is_active, \
+                #        'distance', active_pixel_array[p].distance)
+                print('Trying to remove pixel', (-row, col), 'from', ID)
+                if not active_pixel_array[ID].is_active:
+                    print('Already inactive', active_pixel_array[ID].is_active)
+                elif active_pixel_array[ID].distance != distances[i]:
+                    print('Wrong dist', distances[i], 'actual', \
+                        active_pixel_array[ID].distance)
+                if (ID/2)*2 == ID: # even index: other pixel is the next one
+                    active_pixel_array[ID] = active_pixel_array[ID+1]
+                    active_pixel_array[ID+1].is_active = False
+                    print('new ID', ID + 1)
+                else: # odd index: other pixel is the one just before
+                    active_pixel_array[ID] = active_pixel_array[ID-1]
+                    active_pixel_array[ID-1].is_active = False
+                    print('new ID', ID - 1)
+                active_pixel_array[ID].is_active = False
+                #for p in range(max_line_length):
+                #    print('after swap: ID', p, 'is_active', active_pixel_array[p].is_active, \
+                #        'distance', active_pixel_array[p].distance)
             # Making sure that after the switch, we get the right pixel
             message = 'Is active ' + str(active_pixel_array[ID].is_active) + \
                 ', expected distance ' + str(distances[i]) + \
@@ -905,28 +905,30 @@ def sweep_through_angles( \
             #print('Added pixel', (-row, col), 'to', ID, add_events[i])
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
-                print('Pixel ' + str(ID) + ' is already active', \
-                    active_pixel_array[ID].is_active)
-            #    if (ID/2)*2 == ID: # even index: other pixel is the next one
-            #        print('changing ID to ' + str(ID+1))
+                ii = active_pixel_array[ID].index
+                row_before = coord[0][ii] - viewpoint[0]
+                col_before = coord[1][ii] - viewpoint[1]
+                pt_before = (-row_before, col_before)
+                print('Trying to add pixel', (-row, col), 'to', ID, \
+                    'but is already active', pt_before)
+                if (ID/2)*2 == ID: # even index: other pixel is the next one
+                    print('Moving', pt_before, 'to', ID+1)
             #        if active_pixel_array[ID].is_active:
             #            for p in range(max_line_length):
             #                print('Sanity check: ID', p, 'is_active', \
             #                    active_pixel_array[p].is_active, \
             #                    'distance', active_pixel_array[p].distance)
-            #        message = 'Other pixel is also active'
-            #        assert not active_pixel_array[ID+1].is_active, message
-            #        active_pixel_array[ID] = active_pixel_array[ID+1]
-            #    else: # odd index: other pixel is the one just before
-            #        print('changing ID to ' + str(ID-1))
+                    active_pixel_array[ID] = active_pixel_array[ID+1]
+                else: # odd index: other pixel is the one just before
+                    print('Moving', pt_before, 'to', ID-1)
             #        if active_pixel_array[ID].is_active:
             #            for p in range(max_line_length):
             #                print('Sanity check: ID', p, 'is_active', \
             #                    active_pixel_array[p].is_active, \
             #                    'distance', active_pixel_array[p].distance)
-            #        message = 'Other pixel is also active'
-            #        assert not active_pixel_array[ID-1].is_active, message
-            #        active_pixel_array[ID] = active_pixel_array[ID-1]
+                    active_pixel_array[ID] = active_pixel_array[ID-1]
+                message = 'Other pixel is also active'
+                assert not active_pixel_array[ID].is_active, message
             # Make sure that all is good:
             message = "Can't add to already active pixel " + str((Pl, Ps)) + \
                 ' (' + str(ID) + ')'
