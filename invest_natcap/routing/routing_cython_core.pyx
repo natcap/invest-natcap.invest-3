@@ -2556,6 +2556,7 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
 
+    cdef float current_value
     for global_row_index in xrange(n_rows):
         for global_col_index in xrange(n_cols):
             cache_row_block_tag = global_row_index / block_row_size
@@ -2582,6 +2583,7 @@ def cache_block_experiment(ds_uri, out_uri):
                     buf_obj=ds_block[cache_row_block_index, cache_col_block_index])
                 #deal with dump/load
 
+            current_value = 0.0
             for neighbor_index in xrange(8):
                 neighbor_global_row_index = neighbor_row_offset[neighbor_index] + global_row_index
                 neighbor_global_col_index = neighbor_col_offset[neighbor_index] + global_col_index
@@ -2612,3 +2614,5 @@ def cache_block_experiment(ds_uri, out_uri):
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
                         win_xsize=block_col_size, win_ysize=block_row_size,
                         buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
+                current_value += ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, neighbor_cache_row_block_index, neighbor_cache_col_block_index]
+                cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 1
