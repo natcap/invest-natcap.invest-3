@@ -3145,4 +3145,19 @@ def tile_dataset_uri(in_uri, out_uri, blocksize):
 
         returns nothing"""
 
-    pass
+    dataset = gdal.Open(in_uri)
+    band = dataset.GetRasterBand(1)
+    datatype_out = band.DataType
+    nodata_out = get_nodata_from_uri(in_uri)
+    pixel_size_out = get_cell_size_from_uri(in_uri)
+    dataset_options=[
+        'TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize,
+        'BIGTIFF=IF_SAFER']
+    LOGGER.info('tiling dataset with options %s' % (str(dataset_options)))
+    vectorize_datasets(
+        [in_uri], lambda x: x, out_uri, datatype_out,
+        nodata_out, pixel_size_out, 'intersection',
+        resample_method_list=None, dataset_to_align_index=None,
+        dataset_to_bound_index=None, aoi_uri=None,
+        assert_datasets_projected=False, process_pool=None, vectorize_op=False,
+        datasets_are_pre_aligned=False, dataset_options=dataset_options)

@@ -2539,11 +2539,15 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef int global_row_index, global_col_index #index into the overall raster
     cdef int cache_row_block_tag, cache_col_block_tag #the tag section of the global index
     cdef int cache_row_block_index, cache_col_block_index #the index of the global index
+    cdef int cache_row_size, cache_col_size #used to strip the array if it's on the right or bottom boundary
 
     #neighbor sections of global index
     cdef int neighbor_global_row_index, neighbor_global_col_index
     cdef int neighbor_cache_row_block_tag, neighbor_cache_col_block_tag
     cdef int neighbor_cache_row_block_index, neighbor_cache_col_block_index 
+
+    #these are placeholders for the 
+    cdef int current_cache_row_block_tag, current_cache_col_block_tag
 
     cdef numpy.ndarray[numpy.npy_int32, ndim=2] cache_row_tag = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
     cdef numpy.ndarray[numpy.npy_int32, ndim=2] cache_col_tag = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
@@ -2557,6 +2561,8 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
 
+
+    LOGGER.info('11:36am version')
     cdef float current_value
     LOGGER.info('starting iteration')
     last_time = time.time()
@@ -2572,14 +2578,25 @@ def cache_block_experiment(ds_uri, out_uri):
             cache_col_block_index = (global_col_index % block_col_size) % n_block_cols
 
             #is cache block not loaded?
-            if cache_row_tag[cache_row_block_index, cache_col_block_index] != cache_row_block_tag or cache_col_tag[cache_row_block_index, cache_col_block_index] != cache_col_block_tag:
+            current_cache_row_block_tag = cache_row_tag[cache_row_block_index, cache_col_block_index]
+            current_cache_col_block_tag = cache_col_tag[cache_row_block_index, cache_col_block_index]
+            if current_cache_row_block_tag != cache_row_block_tag or current_cache_col_block_tag != cache_col_block_tag:
                 if cache_dirty[cache_row_block_index, cache_col_block_index]:
-                    out_band.WriteArray(out_block[cache_row_block_index, cache_col_block_index],
-                        yoff=cache_row_tag[cache_row_block_index, cache_col_block_index]*block_row_size,
-                        xoff=cache_col_tag[cache_row_block_index, cache_col_block_index]*block_col_size)
+                    cache_col_size = n_cols - current_cache_col_block_tag * block_col_size
+                    if cache_col_size > block_col_size:
+                        cache_col_size = block_col_size
+                    cache_row_size = n_rows - current_cache_row_block_tag * block_row_size
+                    if cache_row_size > block_row_size:
+                        cache_row_size = block_row_size
+
+                    cache_row_size, cache_col_size
+                    out_band.WriteArray(out_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size],
+                        yoff=current_cache_row_block_tag*block_row_size,
+                        xoff=current_cache_col_block_tag*block_col_size)
                     cache_dirty[cache_row_block_index, cache_col_block_index] = 0
                 cache_row_tag[cache_row_block_index, cache_col_block_index] = cache_row_block_tag
                 cache_col_tag[cache_row_block_index, cache_col_block_index] = cache_col_block_tag
+                
                 out_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
                     win_xsize=block_col_size, win_ysize=block_row_size,
@@ -2605,11 +2622,24 @@ def cache_block_experiment(ds_uri, out_uri):
                 neighbor_cache_row_block_index = (neighbor_global_row_index % block_row_size) % n_block_rows
                 neighbor_cache_col_block_index = (neighbor_global_col_index % block_col_size) % n_block_cols
                 
-                if cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] != neighbor_cache_row_block_tag or cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] != neighbor_cache_col_block_tag:
+                current_cache_row_block_tag = cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]
+                current_cache_col_block_tag = cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]
+                if current_cache_row_block_tag != neighbor_cache_row_block_tag or current_cache_col_block_tag != neighbor_cache_col_block_tag:
                     if cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index]:
-                        out_band.WriteArray(out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index],
-                            yoff=cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]*block_row_size,
-                            xoff=cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]*block_col_size)
+
+                        cache_col_size = n_cols - current_cache_col_block_tag * block_col_size
+                        if cache_col_size > block_col_size:
+                            cache_col_size = block_col_size
+                        cache_row_size = n_rows - current_cache_row_block_tag * block_row_size
+                        if cache_row_size > block_row_size:
+                            cache_row_size = block_row_size
+                        try:
+                            out_band.WriteArray(out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, 0:cache_row_size, 0:cache_col_size],
+                                yoff=current_cache_row_block_tag*block_row_size,
+                                xoff=current_cache_col_block_tag*block_col_size)
+                        except ValueError as e:
+                            LOGGER.debug("[%d, %d, 0:%d, 0:%d]", neighbor_cache_row_block_index, neighbor_cache_col_block_index, cache_row_size, cache_col_size)
+                            raise e
                         cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 0
                     cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_row_block_tag
                     cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_col_block_tag
@@ -2628,6 +2658,16 @@ def cache_block_experiment(ds_uri, out_uri):
     for cache_row_block_index in xrange(n_block_rows):
         for cache_col_block_index in xrange(n_block_cols):
             if cache_dirty[cache_row_block_index, cache_col_block_index]:
-                out_band.WriteArray(out_block[cache_row_block_index, cache_col_block_index],
-                    yoff=cache_row_tag[cache_row_block_index, cache_col_block_index]*block_row_size,
-                    xoff=cache_col_tag[cache_row_block_index, cache_col_block_index]*block_col_size)
+                current_cache_row_block_tag = cache_row_tag[cache_row_block_index, cache_col_block_index]
+                current_cache_col_block_tag = cache_col_tag[cache_row_block_index, cache_col_block_index]
+
+                cache_col_size = n_cols - current_cache_col_block_tag * block_col_size
+                if cache_col_size > block_col_size:
+                    cache_col_size = block_col_size
+                cache_row_size = n_rows - current_cache_row_block_tag * block_row_size
+                if cache_row_size > block_row_size:
+                    cache_row_size = block_row_size
+
+                out_band.WriteArray(out_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size],
+                    yoff=current_cache_row_block_tag*block_row_size,
+                    xoff=current_cache_col_block_tag*block_col_size)
