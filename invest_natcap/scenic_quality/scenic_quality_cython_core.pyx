@@ -831,6 +831,9 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        row = coord[0][i] - viewpoint[0]
+        col = coord[1][i] - viewpoint[1]
+
         # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -839,8 +842,6 @@ def sweep_through_angles( \
             active_pixels = remove_active_pixel_cython(active_pixels, d)
             Pl = coord[l][i]*sign[l]
             Ps = coord[s][i]*sign[s]
-            row = coord[0][i] - viewpoint[0]
-            col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Removing pixel', (-row, col), 'from', ID)
             # Expecting valid pixel: is_active and distance == distances[i]
@@ -886,7 +887,7 @@ def sweep_through_angles( \
             else:
                 l = 1 # Long component is J (columns)
                 s = 0 # Short component is I (lines)
-          
+
             Os = viewpoint[s] * sign[s]
             Ol = viewpoint[l] * sign[l]
             Es = perimeter[s][a+1] * sign[s]
@@ -899,8 +900,6 @@ def sweep_through_angles( \
 
             Pl = coord[l][i] * sign[l]
             Ps = coord[s][i] * sign[s]
-            row = coord[0][i] - viewpoint[0]
-            col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Adding pixel', (-row, col), 'to', ID)
             # Active pixels could collide. If so, compute offset

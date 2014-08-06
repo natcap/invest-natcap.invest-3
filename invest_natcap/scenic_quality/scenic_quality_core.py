@@ -26,8 +26,12 @@ def print_sweep_line(sweep_line):
     if sweep_line:
         pixel = sweep_line['closest']
         while pixel is not None:
-            print('pixel', pixel['distance'], 'next', (pixel['next'] \
-            if pixel['next'] is None else pixel['next']['distance']))
+            print( \
+                'pixel', pixel['distance'], \
+                'visibility', pixel['visibility'], 'next', \
+                (pixel['next'] 
+                    if pixel['next'] is None 
+                    else pixel['next']['distance']))
             pixel = pixel['next']
 
 def print_node(node):
@@ -85,6 +89,9 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
         j = J[index]
         if visibility_map[i, j] == 0:
             visibility_map[i, j] = visibility
+            message = 'visibility ' + str(visibility) + \
+                ', visibility_map ' + str(visibility_map)
+            assert visibility == visibility_map[i, j]
         # TODO: Remove this! Debug only!
         #visibility_map[i, j] = pixel['visibility']
         pixel = pixel['next']
@@ -467,9 +474,10 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    #alg_version = 'python'
+    alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
+            coordinates, \
             angles, add_events, center_events, remove_events,\
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
@@ -490,8 +498,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
 def active_pixel_index(O, P, E):
     return scenic_quality_cython_core._active_pixel_index(O, P, E)
 
-def sweep_through_angles(angles, add_events, center_events, remove_events, \
-    I, J, distances, offset_visibility, visibility, visibility_map):
+def sweep_through_angles(viewpoint, angles, add_events, center_events, \
+    remove_events, I, J, distances, offset_visibility, visibility, \
+    visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     angle_count = len(angles)
     # 4- build event lists
@@ -526,28 +535,35 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         v = visibility[c]
         o = offset_visibility[c]
         active_line = add_active_pixel(active_line, c, d, v, o)
+        row = I[c] - viewpoint[0]
+        col = J[c] - viewpoint[1]
+        print('initializing point', (-row, col))
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
     
     #print('cell center events', [center_events[e] for e in cell_center_events])
     #print('cell center events', [e for e in cell_center_events])
+    print_sweep_line(active_line)
 
     # 2- loop through line sweep angles:
-    for a in range(angle_count-1):
-    #   2.1- add cells
+    for a in range(1): #angle_count-2):
+        print('---- angle ----', a, angles[a+1])
+        #   2.1- add cells
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
             # Make sure to remove them from the cell_addition events to
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
-            if center_events[arg_min[add_event_id]] > 0.:
-                c = arg_min[add_event_id]
-                d = distances[c]
-                v = visibility[c]
-                o = offset_visibility[c]
-                active_line = add_active_pixel(active_line, c, d, v, o)
+            c = arg_min[add_event_id]
+            d = distances[c]
+            v = visibility[c]
+            o = offset_visibility[c]
+            active_line = add_active_pixel(active_line, c, d, v, o)
+            row = I[c] - viewpoint[0]
+            col = J[c] - viewpoint[1]
+            print('adding point', (-row, col))
             add_event_id += 1
     #   2.2- remove cells
         while (remove_event_id < remove_event_count) and \
@@ -556,9 +572,13 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             d = distances[c]
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
+            row = I[c] - viewpoint[0]
+            col = J[c] - viewpoint[1]
+            print('removing point', (-row, col))
             remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
+        print_sweep_line(active_line)
 
 
 def execute(args):

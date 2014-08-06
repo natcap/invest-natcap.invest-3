@@ -824,7 +824,7 @@ class TestScenicQuality(unittest.TestCase):
 
 
     def test_visibility_basic_array(self):
-        #return
+        return
         DEM_size = 31
         elevation = np.zeros((DEM_size, DEM_size))
         nodata = -1
@@ -835,16 +835,18 @@ class TestScenicQuality(unittest.TestCase):
         max_dist = 4 
         cell_size = 5.0
         refraction_coeff = 0.13
-        alg_version = 'cython' #'python'
+        #alg_version = 'python'
+        alg_version = 'cython'
         visibility = sqc.compute_viewshed(elevation, nodata, viewpoint, \
             obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, \
             alg_version)
         visibility[visibility > 0] = 1
         visibility[visibility < 0] = 0
         visibility[DEM_size/2, DEM_size/2] = 2
-        #print(visibility.astype(int))
+        print(visibility.astype(int))
 
     def test_cython_vs_python_on_default_1_pt_data(self):
+        #return
         args_uri = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -866,7 +868,6 @@ class TestScenicQuality(unittest.TestCase):
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)
         assert difference == 0.0, message
-	return
 
     def test_cython_vs_python_on_default_data_data(self):
         return
@@ -891,7 +892,6 @@ class TestScenicQuality(unittest.TestCase):
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)
         assert difference == 0.0, message
-	return
 
     def test_cython_vs_python_on_block_island(self):
         return
@@ -918,7 +918,6 @@ class TestScenicQuality(unittest.TestCase):
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)
         assert difference == 0.0, message
-	return
 
     def test_visibility_simple_obstacles(self):
         return
@@ -1003,9 +1002,6 @@ class TestScenicQuality(unittest.TestCase):
         #    (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
         band.WriteArray(visibility)
 	print('file saved in', os.path.join(os.getcwd(), flat_dem_uri))
-
-    def test_visibility_multiple_points(self):
-        pass
 
     def tare_down(self):
         """ Clean up code."""
