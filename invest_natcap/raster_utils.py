@@ -2204,7 +2204,7 @@ def align_dataset_list(
         LOGGER.debug("blocksize: %s" % (str(first_band.GetBlockSize())))
         new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
             gdal.GDT_Byte)
-        mask_dataset = gdal.Open(mask_uri)
+        mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
         mask_band = mask_dataset.GetRasterBand(1)
         mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
