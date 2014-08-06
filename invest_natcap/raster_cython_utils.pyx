@@ -3,6 +3,7 @@ import tempfile
 import logging
 import time
 import sys
+import traceback
 
 cimport numpy
 import numpy
@@ -379,8 +380,10 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
         LOGGER.info('Non-frozen distribution, closing open datasets')
         gdal.Dataset.__swig_destroy__(new_raster)
         gdal.Dataset.__swig_destroy__(base_raster)
-    new_raster = None
-    base_raster = None
+        new_raster = None
+        base_raster = None
+    else:
+        LOGGER.debug('Frozen traceback: %s', traceback.extract_stack())
     LOGGER.info('Finished creating new raster from base')
 
 
