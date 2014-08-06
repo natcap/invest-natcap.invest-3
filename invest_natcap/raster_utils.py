@@ -2433,9 +2433,8 @@ def vectorize_datasets(
         mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
-            dataset_options=dataset_options)
+            fill_value=0, dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)
-        mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
