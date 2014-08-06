@@ -536,7 +536,7 @@ cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, \
     return closest
 
 
-def update_visible_pixels(active_pixels, I, J, d, visibility_map):
+def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Python wrapper for the cython function update_visible_pixels"""
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
@@ -547,7 +547,7 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     active_pixels_length = max(0, len(active_pixels) -1)
     cdef ActivePixel *closest = dict_to_active_pixels(active_pixels)
 
-    update_visible_pixels_cython(closest, I, J, d, visibility_map)
+    update_visible_pixels_cython(closest, I, J, visibility_map)
 
     pixels_deleted = delete_active_pixels(closest)
 
@@ -599,7 +599,6 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
 
 cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
-    np.float64_t d, \
     np.ndarray[np.float64_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
         
@@ -788,23 +787,21 @@ def sweep_through_angles( \
         v = visibility[i]
         o = offset_visibility[i]
         active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
-        center_event_id += 1
         Pl = coord[l][i] * sign[l]
         Ps = coord[s][i] * sign[s]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
         #print('Initialized pixel at ', ID)
-        row = coord[0][i] - viewpoint[0]
-        col = coord[1][i] - viewpoint[1]
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
-        active_pixel_array[ID].row = row
-        active_pixel_array[ID].col = col
+        active_pixel_array[ID].row = coord[0][i] - viewpoint[0]
+        active_pixel_array[ID].col = coord[1][i] - viewpoint[1]
         active_pixel_array[ID].distance = d
         active_pixel_array[ID].visibility = v
         active_pixel_array[ID].offset = o
+        center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
-            active_pixels, coord[0], coord[1], d, visibility_map)
+            active_pixels, coord[0], coord[1], visibility_map)
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map)        
@@ -935,7 +932,7 @@ def sweep_through_angles( \
             add_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython( \
-            active_pixels, coord[0], coord[1], d, visibility_map)
+            active_pixels, coord[0], coord[1], visibility_map)
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map)        

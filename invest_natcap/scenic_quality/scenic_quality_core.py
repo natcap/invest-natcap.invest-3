@@ -36,7 +36,7 @@ def print_node(node):
     (str(None) if node['next'] is None else node['next']['distance'])))
 
 
-def update_visible_pixels(active_pixels, I, J, d, visibility_map):
+def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -528,7 +528,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         active_line = add_active_pixel(active_line, c, d, v, o)
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, d, visibility_map)
+        update_visible_pixels(active_line, I, J, visibility_map)
     
     #print('cell center events', [center_events[e] for e in cell_center_events])
     #print('cell center events', [e for e in cell_center_events])
@@ -558,7 +558,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             active_line = remove_active_pixel(active_line, d)
             remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, d, visibility_map)
+        update_visible_pixels(active_line, I, J, visibility_map)
 
 
 def execute(args):
