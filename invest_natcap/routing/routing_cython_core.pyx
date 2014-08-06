@@ -2561,8 +2561,6 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
 
-
-    LOGGER.info('11:36am version')
     cdef float current_value
     LOGGER.info('starting iteration')
     last_time = time.time()
@@ -2608,11 +2606,11 @@ def cache_block_experiment(ds_uri, out_uri):
                 out_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
                     win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=out_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
+                    buf_obj=out_block[cache_row_block_index, cache_col_block_index])
                 ds_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
                     win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=ds_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
+                    buf_obj=ds_block[cache_row_block_index, cache_col_block_index])
                 #deal with dump/load
 
             current_value = 0.0
@@ -2662,12 +2660,12 @@ def cache_block_experiment(ds_uri, out_uri):
                     out_band.ReadAsArray(
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
                         win_xsize=cache_col_size, win_ysize=cache_row_size,
-                        buf_obj=out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
+                        buf_obj=out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
                     ds_band.ReadAsArray(
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
                         win_xsize=cache_col_size, win_ysize=cache_row_size,
-                        buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
-                current_value += ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, neighbor_cache_row_block_index, neighbor_cache_col_block_index]
+                        buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
+                current_value += ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, neighbor_global_row_index%block_row_size, neighbor_global_col_index%block_col_size]
                 cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 1
 
     #save off the dirty cache
