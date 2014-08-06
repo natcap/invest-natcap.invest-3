@@ -3132,3 +3132,17 @@ def _smart_cast(value):
         except ValueError:
             pass
     return value
+
+
+def tile_dataset_uri(in_uri, out_uri, blocksize):
+    """Takes an existing gdal dataset and resamples it into a tiled raster with
+        blocks of blocksize X blocksize.
+
+        in_uri - dataset to base data from
+        out_uri - output dataset
+        blocksize - defines the side of the square for the raster, this seems
+            to have a lower limit of 16, but is untested
+
+        returns nothing"""
+
+    pass
