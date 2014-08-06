@@ -2514,7 +2514,7 @@ def cache_block_experiment(ds_uri, out_uri):
     #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
     cdef int n_rows, n_cols #size of the raster
     cdef int block_row_size, block_col_size #blocksize of the raster
-    cdef int n_block_rows = 2, n_block_cols = 2 #the number of blocks we'll cache
+    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
     cdef int neighbor_index #a number between 0 and 7 indicating neighbor in the following configuration
     # 321
     # 4x0
@@ -2525,12 +2525,12 @@ def cache_block_experiment(ds_uri, out_uri):
 
     ds = gdal.Open(ds_uri)
     ds_band = ds.GetRasterBand(1)
-    block_row_size, block_col_size = ds_band.GetBlockSize()
+    block_col_size, block_row_size = ds_band.GetBlockSize()
     n_rows = ds.RasterYSize
     n_cols = ds.RasterXSize
 
     cdef float out_nodata = -1.0
-    raster_utils.create_raster_from_base_uri(
+    raster_utils.new_raster_from_base_uri(
         ds_uri, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
     out_ds = gdal.Open(out_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
@@ -2548,7 +2548,8 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef numpy.ndarray[numpy.npy_int32, ndim=2] cache_row_tag = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
     cdef numpy.ndarray[numpy.npy_int32, ndim=2] cache_col_tag = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((block_row_size, block_col_size), dtype=numpy.byte)
-
+    cache_row_tag[:] = -1
+    cache_col_tag[:] = -1
     #now define all the caches
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] ds_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
@@ -2557,12 +2558,18 @@ def cache_block_experiment(ds_uri, out_uri):
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
 
     cdef float current_value
+    LOGGER.info('starting iteration')
+    last_time = time.time()
     for global_row_index in xrange(n_rows):
+        current_time = time.time()
+        if current_time - last_time:
+            LOGGER.info(
+                "cache_block_experiment %.1f%% complete", (global_row_index + 1.0) / n_rows * 100)
         for global_col_index in xrange(n_cols):
             cache_row_block_tag = global_row_index / block_row_size
             cache_col_block_tag = global_col_index / block_col_size
-            cache_row_block_index = global_row_index % block_row_size
-            cache_col_block_index = global_col_index % block_col_size
+            cache_row_block_index = (global_row_index % block_row_size) % n_block_rows
+            cache_col_block_index = (global_col_index % block_col_size) % n_block_cols
 
             #is cache block not loaded?
             if cache_row_tag[cache_row_block_index, cache_col_block_index] != cache_row_block_tag or cache_col_tag[cache_row_block_index, cache_col_block_index] != cache_col_block_tag:
@@ -2571,8 +2578,8 @@ def cache_block_experiment(ds_uri, out_uri):
                         yoff=cache_row_tag[cache_row_block_index, cache_col_block_index]*block_row_size,
                         xoff=cache_col_tag[cache_row_block_index, cache_col_block_index]*block_col_size)
                     cache_dirty[cache_row_block_index, cache_col_block_index] = 0
-                    cache_row_tag[cache_row_block_index, cache_col_block_index] = cache_row_block_tag
-                    cache_col_tag[cache_row_block_index, cache_col_block_index] = cache_col_block_tag
+                cache_row_tag[cache_row_block_index, cache_col_block_index] = cache_row_block_tag
+                cache_col_tag[cache_row_block_index, cache_col_block_index] = cache_col_block_tag
                 out_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
                     win_xsize=block_col_size, win_ysize=block_row_size,
@@ -2595,8 +2602,8 @@ def cache_block_experiment(ds_uri, out_uri):
 
                 neighbor_cache_row_block_tag = neighbor_global_row_index / block_row_size
                 neighbor_cache_col_block_tag = neighbor_global_col_index / block_col_size
-                neighbor_cache_row_block_index = neighbor_global_row_index % block_row_size
-                neighbor_cache_col_block_index = neighbor_global_col_index % block_col_size
+                neighbor_cache_row_block_index = (neighbor_global_row_index % block_row_size) % n_block_rows
+                neighbor_cache_col_block_index = (neighbor_global_col_index % block_col_size) % n_block_cols
                 
                 if cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] != neighbor_cache_row_block_tag or cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] != neighbor_cache_col_block_tag:
                     if cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index]:
@@ -2604,8 +2611,8 @@ def cache_block_experiment(ds_uri, out_uri):
                             yoff=cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]*block_row_size,
                             xoff=cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index]*block_col_size)
                         cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 0
-                        cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_row_block_tag
-                        cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_col_block_tag
+                    cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_row_block_tag
+                    cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_col_block_tag
                     out_band.ReadAsArray(
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
                         win_xsize=block_col_size, win_ysize=block_row_size,
@@ -2616,3 +2623,11 @@ def cache_block_experiment(ds_uri, out_uri):
                         buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
                 current_value += ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, neighbor_cache_row_block_index, neighbor_cache_col_block_index]
                 cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 1
+
+    #save off the dirty cache
+    for cache_row_block_index in xrange(n_block_rows):
+        for cache_col_block_index in xrange(n_block_cols):
+            if cache_dirty[cache_row_block_index, cache_col_block_index]:
+                out_band.WriteArray(out_block[cache_row_block_index, cache_col_block_index],
+                    yoff=cache_row_tag[cache_row_block_index, cache_col_block_index]*block_row_size,
+                    xoff=cache_col_tag[cache_row_block_index, cache_col_block_index]*block_col_size)
