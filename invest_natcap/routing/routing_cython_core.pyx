@@ -2514,7 +2514,7 @@ def cache_block_experiment(ds_uri, out_uri):
     #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
     cdef int n_rows, n_cols #size of the raster
     cdef int block_row_size, block_col_size #blocksize of the raster
-    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
+    cdef int n_block_rows = 5, n_block_cols = 5 #the number of blocks we'll cache
     cdef int neighbor_index #a number between 0 and 7 indicating neighbor in the following configuration
     # 321
     # 4x0
@@ -2568,9 +2568,10 @@ def cache_block_experiment(ds_uri, out_uri):
     last_time = time.time()
     for global_row_index in xrange(n_rows):
         current_time = time.time()
-        if current_time - last_time:
+        if current_time - last_time > 5.0:
             LOGGER.info(
                 "cache_block_experiment %.1f%% complete", (global_row_index + 1.0) / n_rows * 100)
+            last_time = current_time
         for global_col_index in xrange(n_cols):
             cache_row_block_tag = global_row_index / block_row_size
             cache_col_block_tag = global_col_index / block_col_size
@@ -2597,14 +2598,21 @@ def cache_block_experiment(ds_uri, out_uri):
                 cache_row_tag[cache_row_block_index, cache_col_block_index] = cache_row_block_tag
                 cache_col_tag[cache_row_block_index, cache_col_block_index] = cache_col_block_tag
                 
+                cache_col_size = n_cols - cache_col_block_tag * block_col_size
+                if cache_col_size > block_col_size:
+                    cache_col_size = block_col_size
+                cache_row_size = n_rows - cache_row_block_tag * block_row_size
+                if cache_row_size > block_row_size:
+                    cache_row_size = block_row_size
+
                 out_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
-                    win_xsize=block_col_size, win_ysize=block_row_size,
-                    buf_obj=out_block[cache_row_block_index, cache_col_block_index])
+                    win_xsize=cache_col_size, win_ysize=cache_row_size,
+                    buf_obj=out_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
                 ds_band.ReadAsArray(
                     xoff=cache_col_block_tag*block_col_size, yoff=cache_row_block_tag*block_row_size, 
-                    win_xsize=block_col_size, win_ysize=block_row_size,
-                    buf_obj=ds_block[cache_row_block_index, cache_col_block_index])
+                    win_xsize=cache_col_size, win_ysize=cache_row_size,
+                    buf_obj=ds_block[cache_row_block_index, cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
                 #deal with dump/load
 
             current_value = 0.0
@@ -2643,14 +2651,22 @@ def cache_block_experiment(ds_uri, out_uri):
                         cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 0
                     cache_row_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_row_block_tag
                     cache_col_tag[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = neighbor_cache_col_block_tag
+                    
+                    cache_col_size = n_cols - neighbor_cache_col_block_tag * block_col_size
+                    if cache_col_size > block_col_size:
+                        cache_col_size = block_col_size
+                    cache_row_size = n_rows - neighbor_cache_row_block_tag * block_row_size
+                    if cache_row_size > block_row_size:
+                        cache_row_size = block_row_size
+
                     out_band.ReadAsArray(
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
-                        win_xsize=block_col_size, win_ysize=block_row_size,
-                        buf_obj=out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
+                        win_xsize=cache_col_size, win_ysize=cache_row_size,
+                        buf_obj=out_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
                     ds_band.ReadAsArray(
                         xoff=neighbor_cache_col_block_tag*block_col_size, yoff=neighbor_cache_row_block_tag*block_row_size, 
-                        win_xsize=block_col_size, win_ysize=block_row_size,
-                        buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index])
+                        win_xsize=cache_col_size, win_ysize=cache_row_size,
+                        buf_obj=ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, 0:cache_row_size, 0:cache_col_size])
                 current_value += ds_block[neighbor_cache_row_block_index, neighbor_cache_col_block_index, neighbor_cache_row_block_index, neighbor_cache_col_block_index]
                 cache_dirty[neighbor_cache_row_block_index, neighbor_cache_col_block_index] = 1
 
