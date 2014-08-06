@@ -233,7 +233,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
-            return v
             if v > 0:
                 if x < 1000:
                     return a + b*1000 + c*1000**2 + d*1000**3 - \
@@ -381,7 +380,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
     
         # Clean up the viewshed map
-        #os.remove(tmp_viewshed_uri)
+        os.remove(tmp_viewshed_uri)
 
         # Combined_visibility += scaled_viewshed
         if f:

@@ -824,7 +824,7 @@ class TestScenicQuality(unittest.TestCase):
 
 
     def test_visibility_basic_array(self):
-        return
+        #return
         DEM_size = 31
         elevation = np.zeros((DEM_size, DEM_size))
         nodata = -1

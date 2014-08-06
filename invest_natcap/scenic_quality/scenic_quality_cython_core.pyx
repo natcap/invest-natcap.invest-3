@@ -799,12 +799,12 @@ def sweep_through_angles( \
         active_pixel_array[ID].visibility = v
         active_pixel_array[ID].offset = o
         center_event_id += 1
-        # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython( \
-            active_pixels, coord[0], coord[1], visibility_map)
-        update_visible_pixels_fast( \
-            active_pixel_array, coord[0], coord[1], \
-            max_line_length, visibility_map)        
+    # The sweep line is current, now compute pixel visibility
+    update_visible_pixels_cython( \
+        active_pixels, coord[0], coord[1], visibility_map)
+    update_visible_pixels_fast( \
+        active_pixel_array, coord[0], coord[1], \
+        max_line_length, visibility_map)        
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
@@ -831,9 +831,6 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        row = coord[0][i] - viewpoint[0]
-        col = coord[1][i] - viewpoint[1]
-
         # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -842,6 +839,8 @@ def sweep_through_angles( \
             active_pixels = remove_active_pixel_cython(active_pixels, d)
             Pl = coord[l][i]*sign[l]
             Ps = coord[s][i]*sign[s]
+            row = coord[0][i] - viewpoint[0]
+            col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Removing pixel', (-row, col), 'from', ID)
             # Expecting valid pixel: is_active and distance == distances[i]
@@ -900,6 +899,8 @@ def sweep_through_angles( \
 
             Pl = coord[l][i] * sign[l]
             Ps = coord[s][i] * sign[s]
+            row = coord[0][i] - viewpoint[0]
+            col = coord[1][i] - viewpoint[1]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Adding pixel', (-row, col), 'to', ID)
             # Active pixels could collide. If so, compute offset
