@@ -2,6 +2,7 @@ import os
 import tempfile
 import logging
 import time
+import sys
 
 cimport numpy
 import numpy
@@ -373,9 +374,11 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     if base_raster is None:
         raise IOError("%s not found when opening GDAL raster")
     new_raster = new_raster_from_base(base_raster, *args, **kwargs)
-    LOGGER.info('Closing open datasets')
-    gdal.Dataset.__swig_destroy__(new_raster)
-    gdal.Dataset.__swig_destroy__(base_raster)
+
+    if not getattr(sys, 'frozen', False):
+        LOGGER.info('Non-frozen distribution, closing open datasets')
+        gdal.Dataset.__swig_destroy__(new_raster)
+        gdal.Dataset.__swig_destroy__(base_raster)
     new_raster = None
     base_raster = None
     LOGGER.info('Finished creating new raster from base')
