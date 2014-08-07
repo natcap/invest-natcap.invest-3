@@ -2223,13 +2223,16 @@ def align_dataset_list(
 
         mask_uri = temporary_filename(suffix='.tif')
         new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
-            gdal.GDT_Byte)
+            gdal.GDT_Byte, fill_value=0)
 
-        mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+        mask_dataset = gdal.Open(mask_uri)
+        LOGGER.debug('Mask dataset projection: %s',
+            mask_dataset.GetProjection())
         mask_band = mask_dataset.GetRasterBand(1)
-        mask_band.Fill(0)
+        LOGGER.info('Opening AOI layer %s', aoi_uri)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
+        LOGGER.info('Rasterizing the AOI to %s', mask_uri)
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
 
         mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
@@ -2259,6 +2262,11 @@ def align_dataset_list(
         mask_dataset = None
         #Make sure the dataset is closed and cleaned up
         os.remove(mask_uri)
+
+        LOGGER.info('Cleaning up AOI')
+        aoi_layer = None
+        ogr.DataSource.__swig_destroy__(aoi_datasource)
+        aoi_datasource = None
 
 
 def assert_file_existance(dataset_uri_list):
