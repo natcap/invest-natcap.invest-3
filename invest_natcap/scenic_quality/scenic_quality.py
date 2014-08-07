@@ -510,7 +510,7 @@ def execute(args):
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
+    LOGGER.debug("DEM: %s, AOI: %s", aq_args['dem_uri'], aoi_dem_uri)
     raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")

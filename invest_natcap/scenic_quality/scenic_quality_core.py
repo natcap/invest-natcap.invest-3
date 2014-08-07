@@ -9,6 +9,8 @@ from osgeo import gdal
 from invest_natcap import raster_utils
 import scenic_quality_cython_core
 
+logging.getLogger('raster_utils').setLevel(logging.WARNING)
+logging.getLogger('raster_cython_utils').setLevel(logging.WARNING)
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -472,7 +474,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    alg_version = 'python'
+#    alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             coordinates, \
