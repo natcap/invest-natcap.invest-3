@@ -2264,7 +2264,6 @@ def align_dataset_list(
         os.remove(mask_uri)
 
         LOGGER.info('Cleaning up AOI')
-        ogr.Layer.__swig_destroy__(aoi_layer)
         aoi_layer = None
         ogr.DataSource.__swig_destroy__(aoi_datasource)
         aoi_datasource = None
