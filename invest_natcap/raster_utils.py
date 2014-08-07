@@ -2225,7 +2225,7 @@ def align_dataset_list(
         new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
             gdal.GDT_Byte, fill_value=0)
 
-        mask_dataset = gdal.Open(mask_uri)
+        mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
         LOGGER.debug('Mask dataset projection: %s',
             mask_dataset.GetProjection())
         mask_band = mask_dataset.GetRasterBand(1)
@@ -2365,7 +2365,6 @@ def vectorize_datasets(
             passed to the GTiff driver.  Useful for blocksizes, compression,
             etc.
             """
-
     if type(dataset_uri_list) != list:
         raise ValueError(
             "dataset_uri_list was not passed in as a list, maybe a single "
