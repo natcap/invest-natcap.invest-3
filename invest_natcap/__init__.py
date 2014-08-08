@@ -49,7 +49,7 @@ def local_dir(source_file):
             # with 2 dirnames, path is 'invest_natcap/reporting/reporting_data'
             package_dirname = os.path.dirname(os.path.dirname(__file__))
             relpath = os.path.relpath(source_dirname, package_dirname)
-            return os.path.join(os.path.dirname(sys._MEIPASS), relpath)
+            return os.path.join(os.path.dirname(sys.executable), relpath)
         else:
             # assume that if we're in a frozen build, we're in py2exe.  When in
             # py2exe, the directory structure is maintained, so we just return
