@@ -474,7 +474,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-#    alg_version = 'python'
+    alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             coordinates, \
