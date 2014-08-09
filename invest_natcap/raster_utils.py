@@ -2581,6 +2581,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
 
+    LOGGER.debug('Getting lookup from %s, key=%s', csv_table_uri, key_field)
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
         header_row = csv_reader.next()
@@ -2590,8 +2591,13 @@ def get_lookup_from_csv(csv_table_uri, key_field):
         index_to_field = dict(zip(range(len(header_row)), header_row))
 
         lookup_dict = {}
-        for line in csv_reader:
-            key_value = _smart_cast(line[key_index])
+        for line_num, line in enumerate(csv_reader):
+            try:
+                key_value = _smart_cast(line[key_index])
+            except IndexError as error:
+                LOGGER.error('CSV line %s (%s) should have index %s', line_num,
+                    line, key_value)
+                raise error
             #Map an entire row to its lookup values
             lookup_dict[key_value] = (
                 dict([(index_to_field[index], _smart_cast(value))
