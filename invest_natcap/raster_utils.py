@@ -2596,7 +2596,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
                 key_value = _smart_cast(line[key_index])
             except IndexError as error:
                 LOGGER.error('CSV line %s (%s) should have index %s', line_num,
-                    line, key_value)
+                    line, key_index)
                 raise error
             #Map an entire row to its lookup values
             lookup_dict[key_value] = (
