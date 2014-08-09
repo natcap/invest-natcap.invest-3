@@ -567,13 +567,18 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef double visibility = 0
     cdef int index = -1
 
-    #print('update_visible_pixels_fast')
+#    print('update_visible_pixels_fast', pixel_count)
+    for pixel_id in range(2, pixel_count):
+        p = active_pixel_array[pixel_id]
+#        print('pixel', pixel_id, 'is_active', p.is_active)
+
     for pixel_id in range(2, pixel_count):
         p = active_pixel_array[pixel_id]
         # Inactive pixel: either we skip or we exit
         if not p.is_active:
             # No more pixels to check if 2nd inactive pixel beyond position 2
-            if pixel_id > 2 and not active_pixel_array[pixel_id].is_active:
+            if not active_pixel_array[pixel_id-1].is_active and \
+                not active_pixel_array[pixel_id-2].is_active:
                 break
             # Just an inactive pixel, skip it
             else:
@@ -595,7 +600,13 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         index = p.index
         #print('index', index)
         if visibility_map[I[index], J[index]] == 0:
-            assert visibility_map[I[index], J[index]] == visibility
+            #assert visibility_map[I[index], J[index]] == visibility
+            visibility_map[I[index], J[index]] = visibility
+#            print('max_visibility', max_visibility)
+#            print('visibility', (I[index], J[index]), visibility)
+#        else:
+#            print('skipping', (I[index], J[index]))
+#    print('')
 
 cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
@@ -633,6 +644,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
     if closest is NULL:
         return
 
+#    print('update_visible_pixels_cython')
     pixel = closest
     while pixel is not NULL:
         p = deref(pixel)
@@ -650,6 +662,10 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
             visibility_map[I[index], J[index]] = visibility
+#            print('max_visibility', max_visibility)
+#            print('visibility', (I[index], J[index]), visibility)
+#        else:
+#            print('skipping', (I[index], J[index]))
         pixel = p.next
 
 def _active_pixel_index(O, P, E):
@@ -715,6 +731,8 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
+    cdef np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map2
+    visibility_map2 = np.copy(visibility_map)
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
     cdef int a = 0
@@ -779,6 +797,9 @@ def sweep_through_angles( \
 
     # 1- add cells at angle 0
     print('Creating cython event stream')
+    difference = np.sum(np.absolute(visibility_map-visibility_map2))
+    message = 'before initialization: ' + str(difference)
+    assert difference == 0., message
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
@@ -786,7 +807,7 @@ def sweep_through_angles( \
         d = distances[i]
         v = visibility[i]
         o = offset_visibility[i]
-        active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+        #active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
         Pl = coord[l][i] * sign[l]
         Ps = coord[s][i] * sign[s]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
@@ -800,11 +821,14 @@ def sweep_through_angles( \
         active_pixel_array[ID].offset = o
         center_event_id += 1
     # The sweep line is current, now compute pixel visibility
-    update_visible_pixels_cython( \
-        active_pixels, coord[0], coord[1], visibility_map)
+    #update_visible_pixels_cython( \
+    #    active_pixels, coord[0], coord[1], visibility_map)
     update_visible_pixels_fast( \
         active_pixel_array, coord[0], coord[1], \
-        max_line_length, visibility_map)        
+        max_line_length, visibility_map)
+    #difference = np.sum(np.absolute(visibility_map-visibility_map2))
+    #message = 'difference at initialization: ' + str(difference)
+    #assert difference == 0., message
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
@@ -836,7 +860,7 @@ def sweep_through_angles( \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
             d = distances[i]
-            active_pixels = remove_active_pixel_cython(active_pixels, d)
+            #active_pixels = remove_active_pixel_cython(active_pixels, d)
             Pl = coord[l][i]*sign[l]
             Ps = coord[s][i]*sign[s]
             row = coord[0][i] - viewpoint[0]
@@ -878,7 +902,7 @@ def sweep_through_angles( \
             d = distances[i]
             v = visibility[i]
             o = offset_visibility[i]
-            active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
+            #active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
 
             if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
                 l = 0 # Long component is I (lines)
@@ -931,11 +955,14 @@ def sweep_through_angles( \
             arg_min[add_event_id] = 0
             add_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels_cython( \
-            active_pixels, coord[0], coord[1], visibility_map)
+        #update_visible_pixels_cython( \
+        #    active_pixels, coord[0], coord[1], visibility_map)
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
-            max_line_length, visibility_map)        
+            max_line_length, visibility_map) 
+        #difference = np.sum(np.absolute(visibility_map-visibility_map2))
+        #message = 'difference after angle ' + str(a) + ': ' + str(difference)
+        #assert difference == 0., message
 
     # clean up
     free(cell_events)
