@@ -3,6 +3,8 @@ import os
 import numpy as np
 import collections
 import logging
+import cProfile
+import pstats
 
 from osgeo import gdal
 
@@ -482,12 +484,15 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
     else:
-        scenic_quality_cython_core.sweep_through_angles( \
+        cProfile.runctx('scenic_quality_cython_core.sweep_through_angles( \
             np.array(coordinates).astype(int), \
             np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
             add_events, center_events, remove_events, \
             np.array([I, J]), distances, offset_visibility, visibility, \
-            visibility_map)
+            visibility_map)', globals(), locals(), 'stats')
+        p = pstats.Stats('stats')
+        p.sort_stats("time").print_stats(40)
+        p.sort_stats('cumulative').print_stats(40)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1

@@ -211,351 +211,9 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 cdef struct ActivePixel:
     long is_active # Indicate if the pixel is active
     long index # long is python's default int type
-    long row
-    long col
     double distance # double is python's float type
     double visibility
     double offset
-    ActivePixel *next
-
-def print_python_pixel(pixel):
-    print('pixel', pixel['distance'], 'next', \
-    None if pixel['next'] is None else pixel['next']['distance'])
-
-def print_sweep_line(sweep_line):
-    if 'closest' not in sweep_line:
-        print('empty sweep line')
-    else:
-        pixel = sweep_line['closest']
-        while pixel is not None:
-            print_python_pixel(pixel)
-            pixel = pixel['next']
-
-cdef print_active_pixel(ActivePixel *pixel):
-    print('pixel', 'NULL' if pixel is NULL else deref(pixel).distance, \
-    'next', 'NULL' if pixel is NULL or deref(pixel).next is NULL else \
-    deref(deref(pixel).next).distance)
-    
-
-cdef print_active_pixels(ActivePixel *active_pixels):
-    cdef ActivePixel *pixel
-
-    if active_pixels is not NULL:
-        # extract data from the closest distance first
-        pixel = active_pixels
-        print_active_pixel(pixel)
-        # Proceed to the next entry as long as there are valid pixels
-        while pixel.next is not NULL:
-            # get the next pixel
-            pixel = deref(pixel).next
-            print_active_pixel(pixel)
-    else:
-        print('active pixels is empty')
-
-def dict_to_active_pixels_to_dict(sweep_line):
-    """Converts a sweep_line to an ActivePixel array and back and return it.
-    
-    Inputs: 
-        -sweep_line: a sweep line creatd with add_active_pixel in 
-        aesthetic_quality_core.
-
-    Returns a new sweep_line after being converted to ActivePixel 
-    and back. For debug purposes to see if the conversion functions work
-    """
-    original_sweep_line_size = len(sweep_line)
-    # Retreive the active pixels
-    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
-    # Converts the active pixels back to a python dictionary and return it
-    sweep_line = active_pixels_to_dict(active_pixels)
-    message = 'dict_to_active_pixels_to_dict: original sweep line size ' + \
-    str(original_sweep_line_size) + " is different from new sweep line's " + \
-    str(len(sweep_line))
-    assert len(sweep_line) == original_sweep_line_size, message
-    pixels_deleted = delete_active_pixels(active_pixels)
-    message = "dict_to_active_pixels_to_dict: deleted pixel count " + \
-    str(pixels_deleted) + " doesn't agree with sweep line length " + \
-    str(max(0, len(sweep_line) -1))
-    assert pixels_deleted == max(0, (len(sweep_line)-1)), message
-
-    return sweep_line
-
-cdef active_pixel_to_dict(ActivePixel active_pixel):
-    """Convert a single ActivePixel object to a dictionary"""    
-    pixel = {}
-    pixel['index'] = active_pixel.index
-    pixel['visibility'] = active_pixel.visibility
-    pixel['distance'] = active_pixel.distance
-    pixel['next'] = None # might be overridden later
-
-    return pixel
-
-cdef active_pixels_to_dict(ActivePixel *active_pixels):
-    """Convert a python dictionary of active pixels to a C ActivePixel*"""
-    sweep_line = {}
-    cdef ActivePixel pixel
-
-    if active_pixels is not NULL:
-        # extract data from the closest distance first
-        pixel = deref(active_pixels)
-        # create the first distance in sweep_line
-        sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
-        # Make 'closest' point to the first distance
-        sweep_line['closest'] = sweep_line[pixel.distance]
-        # We'll need this later to update the 'next' field if necessary
-        last_distance = pixel.distance
-        # Proceed to the next entry as long as there are valid pixels
-        while pixel.next is not NULL:
-            # get the next pixel
-            pixel = deref(pixel.next)
-        # Fill up the sweep_line with pixels
-        sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
-        # Update the last pixel's 'next' field
-        sweep_line[last_distance]['next'] = sweep_line[pixel.distance]
-        # Update last_distance for next loop
-        last_distance = pixel.distance
-
-    return sweep_line
-
-cdef ActivePixel *dict_to_active_pixels(sweep_line):
-    """Convert a python dictionary of active pixels to a C ActivePixel*"""
-    cdef ActivePixel *active_pixel = NULL # New pixel being created
-    cdef ActivePixel *previous = NULL # previous pixel that needs an update
-    cdef ActivePixel *first_pixel = NULL # closest pixel in the sweep line
-
-    if 'closest' in sweep_line:
-     # Construct the active pixel list with values from sweep_line
-     pixel = sweep_line['closest']
-     while pixel is not None:
-         # Dynamically allocate the active pixels individually
-         active_pixel =<ActivePixel*>malloc(sizeof(ActivePixel))
-         assert active_pixel is not NULL, "can't allocate new active pixel"
-         # Keep the first pixel's address around
-         if first_pixel is NULL:
-              first_pixel = active_pixel
-         # set up the values in active_pixels
-         active_pixel.index = pixel['index']
-         active_pixel.visibility = pixel['visibility']
-         active_pixel.distance = pixel['distance']
-         # Set the 'next' field to NULL for the moment
-         active_pixel.next = NULL
-         # Update the 'next' field if it's possible
-         if previous is not NULL:
-             deref(previous).next = active_pixel
-         # Move on to the next pixel
-         pixel = pixel['next']
-         previous = active_pixel
-
-    return first_pixel
-
-cdef int delete_active_pixels(ActivePixel *first_pixel):
-    """Delete every pixel in the active_pixel linked list"""
-    deleted_pixels = 0 # Keep a count of how many pixels have been deleted
-    cdef ActivePixel *pixel_to_delete = NULL # The pixel to be deleted
-    # Iterate through the linked list and delete every pixel on the way
-    while first_pixel is not NULL:
-        pixel_to_delete = first_pixel
-        first_pixel = deref(first_pixel).next # new first pixel
-        free(pixel_to_delete)
-        deleted_pixels += 1
-
-    return deleted_pixels
-
-def find_active_pixel(sweep_line, distance):
-    """Python wrapper for the cython find_active_pixel_cython function"""
-    cdef: 
-        ActivePixel *active_pixels
-        ActivePixel *active_pixel
-        
-    result = None
-        
-    if 'closest' in sweep_line:
-        # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
-        active_pixels = dict_to_active_pixels(sweep_line)
-        # Invoke the low-level function to find the right value
-        active_pixel = find_active_pixel_cython(active_pixels, distance)
-        # Convert C-style pixel to python dictionary if possible
-        if active_pixel is not NULL:
-            result = active_pixel_to_dict(deref(active_pixel))
-        # clean-up
-        pixels_deleted = delete_active_pixels(active_pixels)
-        # Try to keep track of memory leaks
-        message = "find_active_pixels: deleted pixel count " + \
-        str(pixels_deleted) + " doesn't agree with sweep line length " + \
-        str(max(0, len(sweep_line) -1))
-        assert pixels_deleted == max(0, len(sweep_line)-1), message
-
-    return result
-
-# Find an active pixel based on distance. Return None if it can't be found
-cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance):
-    cdef ActivePixel *pixel = NULL
-    if closest is not NULL:
-        # Get information about first pixel in the list
-        pixel = closest
-        # Move on to next pixel if we can (not a NULL pointer)
-        while pixel is not NULL and deref(pixel).distance < distance:
-            pixel = deref(pixel).next
-
-        if (pixel is not NULL) and (deref(pixel).distance != distance):
-            return NULL
-
-    return pixel
-
-
-def add_active_pixel(sweep_line, index, distance, visibility, offset):
-    """Python wrapper for the cython find_active_pixel_cython function"""
-    #print('adding ' + str(distance) + ' to cython list')
-    #print_sweep_line(sweep_line)
-    # Make sure we're not creating any duplicate
-    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
-    assert distance not in sweep_line, message
-
-    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
-    active_pixels = \
-    add_active_pixel_cython(active_pixels, index, distance, visibility, offset)
-    sweep_line = active_pixels_to_dict(active_pixels)
-    pixels_deleted = delete_active_pixels(active_pixels)
-    message = "add_active_pixels: deleted pixel count " + \
-    str(pixels_deleted) + " doesn't agree with sweep line length " + \
-    str(max(0, len(sweep_line) -1))
-    assert pixels_deleted == max(0, len(sweep_line)-1), message
-
-    return sweep_line
-
-# What is needed: 
-#   -maintain a pool of available pixels
-#   -figure out how to deallocate the active pixels
-cdef inline ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
-    int index, double distance, double visibility, double offset):
-    """Add a pixel to the sweep line in O(n) using a linked_list of
-    linked_cells."""
-
-    cdef:
-        ActivePixel *previous = NULL
-        ActivePixel *pixel = closest
-        ActivePixel *new_pixel = NULL
-    if pixel is not NULL:
-        while deref(pixel).next is not NULL and \
-            deref(pixel).distance < distance:
-            previous = pixel
-            pixel = deref(pixel).next
-        if deref(pixel).next is not NULL:
-            message = "won't override existing distance " + str(distance)
-            assert deref(pixel).distance != distance, message
-
-        new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
-        assert new_pixel is not NULL, 'new pixel assignment failed'
-        deref(new_pixel).next = NULL
-        deref(new_pixel).index = index
-        deref(new_pixel).distance = distance
-        deref(new_pixel).visibility = visibility
-        deref(new_pixel).offset = offset
-
-        # Found something
-        if deref(pixel).distance < distance:
-            # insert at the end
-            deref(pixel).next = new_pixel
-        elif previous is NULL:
-            # insert at the beginning
-            deref(new_pixel).next = closest
-            closest = new_pixel
-        else:
-            # insert between the ends
-            deref(previous).next = new_pixel # previous points to new
-            deref(new_pixel).next = pixel # new points to next pixel
-    # Closest is NULL: just make it point to the new pixel
-    else:
-        closest = <ActivePixel*>malloc(sizeof(ActivePixel))
-        deref(closest).next = NULL
-        deref(closest).index = index
-        deref(closest).distance = distance
-        deref(closest).visibility = visibility
-        deref(closest).offset = offset
-
-    return closest
-
-def remove_active_pixel(sweep_line, distance):
-    """Python wrapper for the cython remove_active_pixel_cython function"""
-    #print('removing ' + str(distance) + ' from cython list')
-    #print_sweep_line(sweep_line)
-    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
-    sweep_line_length = len(sweep_line)
-    active_pixels = \
-    remove_active_pixel_cython(active_pixels, distance)
-    sweep_line = active_pixels_to_dict(active_pixels)
-    pixels_deleted = delete_active_pixels(active_pixels)
-    if pixels_deleted == 0 and sweep_line_length == 0: # Empty list?
-        pixels_deleted = -1 # Adjust so the assertion subtraction is still 0
-    message = "remove_active_pixels: deleted pixel count " + \
-    str(pixels_deleted) + " doesn't agree with sweep line length " + \
-    str(max(0, len(sweep_line) -1))
-    assert pixels_deleted == max(0, len(sweep_line)-1), message
-
-    return sweep_line
-
-cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, \
-    double distance):
-    """Remove a pixel based on distance. Do nothing if can't be found."""
-    cdef ActivePixel *previous = NULL
-    cdef ActivePixel *pixel = NULL
-    cdef ActivePixel *next = NULL
-
-    if closest is not NULL:
-        # Initialize to first pixel in the list
-        pixel = closest
-    # Move on to next pixel if we're not done
-    while (pixel is not NULL) and \
-        (deref(pixel).distance < distance):
-        #print('moving to next pixel')
-        previous = pixel
-        pixel = deref(pixel).next
-    # We reached the end and didn't find anything
-    if pixel is NULL:
-        return closest
-    # We didn't reach the end: either pixel doesn't exist:
-    if deref(pixel).distance != distance:
-        return closest
-    # Or we found the value we want to delete
-    # Make the previous element point to the next
-    # We're at the beginning of the list: update the list's first element
-    if previous is NULL:
-        next = deref(pixel).next
-        # No next pixel: we have to delete 'closest'
-        if next is NULL:
-            free(closest) # same as free(pixel)
-            closest = NULL
-        # Otherwise, update it
-        else:
-            free(closest) # same as free(pixel)
-            closest = next
-    # We're not at the beginning of the list: only update previous
-    else:
-        deref(previous).next = deref(pixel).next
-        free(pixel)
-
-    return closest
-
-
-def update_visible_pixels(active_pixels, I, J, visibility_map):
-    """Python wrapper for the cython function update_visible_pixels"""
-    # Update visibility and create a binary map of visible pixels
-    # -Look at visibility from closer pixels out, keep highest visibility
-    # -A pixel is not visible if its visibility <= highest visibility so far
-    if not active_pixels:
-        return
-
-    active_pixels_length = max(0, len(active_pixels) -1)
-    cdef ActivePixel *closest = dict_to_active_pixels(active_pixels)
-
-    update_visible_pixels_cython(closest, I, J, visibility_map)
-
-    pixels_deleted = delete_active_pixels(closest)
-
-    message = 'update_visible_pixels: deleted pixel count (' + \
-    str(pixels_deleted) + ') differs from original active pixel count ' + \
-    str(active_pixels_length)
-    assert active_pixels_length == pixels_deleted, message
-
 
 cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
@@ -607,66 +265,6 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
 #        else:
 #            print('skipping', (I[index], J[index]))
 #    print('')
-
-cdef void update_visible_pixels_cython(ActivePixel *closest, \
-    np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
-    np.ndarray[np.float64_t, ndim = 2] visibility_map):
-    """Update the array of visible pixels from the active pixel's visibility
-        
-        Inputs:
-        -closest: an ActivePixel pointer to a linked list 
-        of ActivePixel. These are nums with the following fields:
-        -distance: distance between pixel center and viewpoint
-        -visibility: an elevation/distance ratio used by the
-        algorithm to determine what pixels are bostructed
-        -index: pixel index in the event stream, used to find the
-        pixel's coordinates 'i' and 'j'.
-        -next: points to the next pixel, or is None if at the end
-        The linked list is implemented with a dictionary where the
-        pixels distance is the key. The closest pixel is also
-        referenced by the key 'closest'.
-        -I: the array of pixel rows indexable by pixel['index']
-        -J: the array of pixel columns indexable by pixel['index']
-        -visibility_map: a python array the same size as the DEM
-        with 1s for visible pixels and 0s otherwise. Viewpoint is
-        always visible.
-            
-    Returns nothing"""
-    cdef ActivePixel *pixel = NULL
-    cdef ActivePixel p
-    cdef double max_visibility = -1000000.
-    cdef double visibility = 0
-    cdef int index = -1
-     
-    # Update visibility and create a binary map of visible pixels
-    # -Look at visibility from closer pixels out, keep highest visibility
-    # -A pixel is not visible if its visibility <= highest visibility so far
-    if closest is NULL:
-        return
-
-#    print('update_visible_pixels_cython')
-    pixel = closest
-    while pixel is not NULL:
-        p = deref(pixel)
-        # Pixel is visible
-        if p.offset > max_visibility:
-            visibility = 1.
-            visibility = p.offset - max_visibility
-        else:
-            visibility = 0.
-            visibility = p.offset - max_visibility
-        if p.visibility > max_visibility:
-            max_visibility = p.visibility
-
-        # Update the visibility map for this pixel
-        index = p.index
-        if visibility_map[I[index], J[index]] == 0:
-            visibility_map[I[index], J[index]] = visibility
-#            print('max_visibility', max_visibility)
-#            print('visibility', (I[index], J[index]), visibility)
-#        else:
-#            print('skipping', (I[index], J[index]))
-        pixel = p.next
 
 def _active_pixel_index(O, P, E):
     O = [float(O[0]), float(O[1])]
@@ -765,6 +363,7 @@ def sweep_through_angles( \
     cdef double Dl = 0 # Distance along the long component
     cdef double Ds = 0 # Distance along the short component
     cdef int ID = 0 # active pixel index
+    cdef int alternate_ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
     cdef ActivePixel *active_pixel_array = \
@@ -782,7 +381,6 @@ def sweep_through_angles( \
     cdef int remove_event_id = 0
     cdef int remove_event_count = remove_events.size
     # 5- Sort event lists
-    print('sorting the events')
     cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_min = \
         np.argsort(add_events).astype(np.int32)
     cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_center = \
@@ -790,18 +388,7 @@ def sweep_through_angles( \
     cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_max = \
         np.argsort(remove_events).astype(np.int32)
     # Updating active cells
-    active_line = {}
-    cdef ActivePixel *active_pixels = NULL
-    cdef int *cell_events = <int*>malloc(max_line_length*sizeof(int))
-    assert cell_events is not NULL
-
-    cdef ActivePixel px
-
     # 1- add cells at angle 0
-    print('Creating cython event stream')
-    difference = np.sum(np.absolute(visibility_map-visibility_map2))
-    message = 'before initialization: ' + str(difference)
-    assert difference == 0., message
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
@@ -822,8 +409,6 @@ def sweep_through_angles( \
         #print('Initialized pixel at ', ID)
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
-        active_pixel_array[ID].row = coord[0][i] - viewpoint[0]
-        active_pixel_array[ID].col = coord[1][i] - viewpoint[1]
         active_pixel_array[ID].distance = d
         active_pixel_array[ID].visibility = v
         active_pixel_array[ID].offset = o
@@ -860,8 +445,6 @@ def sweep_through_angles( \
             #active_pixels = remove_active_pixel_cython(active_pixels, d)
             Pl = coord[l][i]*sign[l]
             Ps = coord[s][i]*sign[s]
-            row = coord[0][i] - viewpoint[0]
-            col = coord[1][i] - viewpoint[1]
 
             Dl = Pl-Ol # Distance along the long component
             Ds = Ps-Os # Distance along the short component
@@ -874,14 +457,6 @@ def sweep_through_angles( \
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
                 ID = ID+1 if (ID/2)*2 == ID else ID-1
-                message = 'Is active ' + \
-                    str(active_pixel_array[ID].is_active) + \
-                    ', expected distance ' + str(distances[i]) + \
-                    ', actual distance ' + \
-                    str(active_pixel_array[ID].distance)
-                assert active_pixel_array[ID].is_active and \
-                    active_pixel_array[ID].distance == distances[i], \
-                    message
             # Making sure that after the switch, we get the right pixel
             active_pixel_array[ID].is_active = False
 
@@ -914,8 +489,6 @@ def sweep_through_angles( \
 
             Pl = coord[l][i] * sign[l]
             Ps = coord[s][i] * sign[s]
-            row = coord[0][i] - viewpoint[0]
-            col = coord[1][i] - viewpoint[1]
 
             Dl = Pl-Ol # Distance along the long component
             Ds = Ps-Os # Distance along the short component
@@ -926,18 +499,11 @@ def sweep_through_angles( \
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
                 alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1
-                # Make sure that all is good:
-                message = 'Other pixel is also active: (' + \
-                    str(-active_pixel_array[ID-1].row) + ',' + \
-                    str(active_pixel_array[ID+1].col) + ')'
-                assert not active_pixel_array[ID-1].is_active, message
                 # Move existing pixel over
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
             # Add new pixel
             active_pixel_array[ID].is_active = True
             active_pixel_array[ID].index = i
-            active_pixel_array[ID].row = row
-            active_pixel_array[ID].col = col
             active_pixel_array[ID].distance = d
             active_pixel_array[ID].visibility = v
             active_pixel_array[ID].offset = o
@@ -950,7 +516,7 @@ def sweep_through_angles( \
             max_line_length, visibility_map) 
 
     # clean up
-    free(cell_events)
+    free(active_pixel_array)
 
     return visibility_map
 
