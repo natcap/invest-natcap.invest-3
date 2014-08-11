@@ -422,6 +422,8 @@ def new_raster_from_base(
         dataset_options = [
             'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]]
+    if block_size[0] != n_cols and block_size[1] != n_rows:
+        dataset_options.append('TILED=YES')
     LOGGER.info('dataset_options=%s' % str(dataset_options))
     driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
