@@ -762,6 +762,8 @@ def sweep_through_angles( \
     cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
     cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
     cdef double slope = (Es-Os)/(El-Ol)
+    cdef double Dl = 0 # Distance along the long component
+    cdef double Ds = 0 # Distance along the short component
     cdef int ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
@@ -810,7 +812,14 @@ def sweep_through_angles( \
         #active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
         Pl = coord[l][i] * sign[l]
         Ps = coord[s][i] * sign[s]
-        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+
+        Dl = Pl-Ol # Distance along the long component
+        Ds = Ps-Os # Distance along the short component
+    
+        ID = 0 if not Ds and not Dl \
+            else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+
+        #ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
         #print('Initialized pixel at ', ID)
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
@@ -865,7 +874,14 @@ def sweep_through_angles( \
             Ps = coord[s][i]*sign[s]
             row = coord[0][i] - viewpoint[0]
             col = coord[1][i] - viewpoint[1]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+
+            Dl = Pl-Ol # Distance along the long component
+            Ds = Ps-Os # Distance along the short component
+    
+            ID = 0 if not Ds and not Dl \
+                else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+
+            #ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Removing pixel', (-row, col), 'from', ID)
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
@@ -925,7 +941,14 @@ def sweep_through_angles( \
             Ps = coord[s][i] * sign[s]
             row = coord[0][i] - viewpoint[0]
             col = coord[1][i] - viewpoint[1]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+
+            Dl = Pl-Ol # Distance along the long component
+            Ds = Ps-Os # Distance along the short component
+    
+            ID = 0 if not Ds and not Dl \
+                else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+
+            #ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             #print('Adding pixel', (-row, col), 'to', ID)
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
