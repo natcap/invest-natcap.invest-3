@@ -2516,7 +2516,7 @@ def cache_block_experiment(ds_uri, out_uri):
     #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
     cdef int n_rows, n_cols #size of the raster
     cdef int block_row_size, block_col_size #blocksize of the raster
-    cdef int n_block_rows = 5, n_block_cols = 5 #the number of blocks we'll cache
+    cdef int n_block_rows = 2, n_block_cols = 2 #the number of blocks we'll cache
     cdef int neighbor_index #a number between 0 and 7 indicating neighbor in the following configuration
     # 321
     # 4x0
@@ -2538,13 +2538,16 @@ def cache_block_experiment(ds_uri, out_uri):
     out_band = out_ds.GetRasterBand(1)
 
     #center point of global index
-    cdef int global_row_index, global_col_index #index into the overall raster
+    cdef int global_row, global_col #index into the overall raster
     cdef int row_tag, col_tag #the tag section of the global index
     cdef int row_index, col_index #the index of the global index
     cdef int row_block_offset, col_block_offset #index into the cache block
     cdef int cache_row_size, cache_col_size #used to strip the array if it's on the right or bottom boundary
+    cdef int global_col_offset, global_row_offset
+
 
     #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col
     cdef int neighbor_row_index, neighbor_col_index
     cdef int neighbor_row_tag, neighbor_col_tag
     cdef int neighbor_row_block_offset, neighbor_col_block_offset
@@ -2568,20 +2571,20 @@ def cache_block_experiment(ds_uri, out_uri):
     cdef float current_value
     LOGGER.info('starting iteration')
     last_time = time.time()
-    for global_row_index in xrange(n_rows):
+    for global_row in xrange(n_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
-                "cache_block_experiment %.1f%% complete", (global_row_index + 1.0) / n_rows * 100)
+                "cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
-        for global_col_index in xrange(n_cols):
-            row_block_offset = global_row_index % block_row_size
-            row_index = global_row_index // block_row_size % n_block_rows
-            row_tag = global_row_index // block_row_size // n_block_rows
+        for global_col in xrange(n_cols):
+            row_block_offset = global_row % block_row_size
+            row_index = global_row // block_row_size % n_block_rows
+            row_tag = global_row // block_row_size // n_block_rows
 
-            col_block_offset = global_col_index % block_col_size
-            col_index = global_col_index // block_col_size % n_block_cols
-            col_tag = global_col_index // block_col_size // n_block_cols
+            col_block_offset = global_col % block_col_size
+            col_index = global_col // block_col_size % n_block_cols
+            col_tag = global_col // block_col_size // n_block_cols
 
             #is cache block not loaded?
             current_row_tag = row_tag_cache[row_index, col_index]
@@ -2625,21 +2628,24 @@ def cache_block_experiment(ds_uri, out_uri):
             current_value = ds_block[row_index, col_index, row_block_offset, col_block_offset]
             out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
             cache_dirty[row_index, col_index] = 1
-            continue
-
+            
             for neighbor_index in xrange(8):
-                neighbor_row_index = neighbor_row_offset[neighbor_index] + global_row_index
-                neighbor_col_index = neighbor_col_offset[neighbor_index] + global_col_index
+                neighbor_row = neighbor_row_offset[neighbor_index] + global_row
+                neighbor_col = neighbor_col_offset[neighbor_index] + global_col
                 
                 #make sure we're in bounds
-                if (neighbor_row_index >= n_rows or neighbor_row_index < 0 or
-                    neighbor_col_index >= n_cols or neighbor_col_index < 0):
+                if (neighbor_row >= n_rows or neighbor_row < 0 or
+                    neighbor_col >= n_cols or neighbor_col < 0):
                     continue
 
-                neighbor_row_tag = neighbor_row_index / block_row_size
-                neighbor_col_tag = neighbor_col_index / block_col_size
-                neighbor_row_index = (neighbor_row_index % block_row_size) % n_block_rows
-                neighbor_col_index = (neighbor_col_index % block_col_size) % n_block_cols
+                neighbor_block_offset = neighbor_row % block_row_size
+                neighbor_row_index = neighbor_row // block_row_size % n_block_rows
+                neighbor_row_tag = neighbor_row // block_row_size // n_block_rows
+
+                neighbor_block_offset = neighbor_col % block_col_size
+                neighbor_col_index = neighbor_col // block_col_size % n_block_cols
+                neighbor_col_tag = neighbor_col // block_col_size // n_block_cols
+
                 
                 current_row_tag = row_tag_cache[neighbor_row_index, neighbor_col_index]
                 current_col_tag = col_tag_cache[neighbor_row_index, neighbor_col_index]
