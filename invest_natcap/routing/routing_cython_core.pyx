@@ -2509,9 +2509,9 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
         pass#os.remove(dataset_uri)
 
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+#@cython.cdivision(True)
 def cache_block_experiment(ds_uri, out_uri):
     #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
     cdef int n_rows, n_cols #size of the raster
@@ -2591,23 +2591,24 @@ def cache_block_experiment(ds_uri, out_uri):
             current_col_tag = col_tag_cache[row_index, col_index]
             if current_row_tag != row_tag or current_col_tag != col_tag:
                 if cache_dirty[row_index, col_index]:
-                    global_col_offset = current_col_tag * block_col_size * n_block_cols
+                    global_col_offset = (current_col_tag * n_block_cols + col_index) * block_col_size
                     cache_col_size = n_cols - global_col_offset
                     if cache_col_size > block_col_size:
                         cache_col_size = block_col_size
-                    global_row_offset = current_row_tag * block_row_size * n_block_rows
+                    
+                    global_row_offset = (current_row_tag * n_block_rows + row_index) * block_row_size
                     cache_row_size = n_rows - global_row_offset
                     if cache_row_size > block_row_size:
                         cache_row_size = block_row_size
-
+                    
                     out_band.WriteArray(out_block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
                         yoff=global_row_offset, xoff=global_col_offset)
                     cache_dirty[row_index, col_index] = 0
                 row_tag_cache[row_index, col_index] = row_tag
                 col_tag_cache[row_index, col_index] = col_tag
                 
-                global_col_offset = col_tag * block_col_size * n_block_cols
-                global_row_offset = row_tag * block_row_size * n_block_rows
+                global_col_offset = (col_tag * n_block_cols + col_index) * block_col_size
+                global_row_offset = (row_tag * n_block_rows + row_index) * block_row_size
 
                 cache_col_size = n_cols - global_col_offset
                 if cache_col_size > block_col_size:
@@ -2628,7 +2629,7 @@ def cache_block_experiment(ds_uri, out_uri):
             current_value = ds_block[row_index, col_index, row_block_offset, col_block_offset]
             out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
             cache_dirty[row_index, col_index] = 1
-            
+            continue
             for neighbor_index in xrange(8):
                 neighbor_row = neighbor_row_offset[neighbor_index] + global_row
                 neighbor_col = neighbor_col_offset[neighbor_index] + global_col
@@ -2694,8 +2695,8 @@ def cache_block_experiment(ds_uri, out_uri):
                 row_tag = row_tag_cache[row_index, col_index]
                 col_tag = col_tag_cache[row_index, col_index]
 
-                global_col_offset = col_tag * block_col_size * n_block_cols
-                global_row_offset = row_tag * block_row_size * n_block_rows
+                global_col_offset = (col_tag * n_block_cols + col_index) * block_col_size
+                global_row_offset = (row_tag * n_block_rows + row_index) * block_row_size
 
                 cache_col_size = n_cols - global_col_offset
                 if cache_col_size > block_col_size:
