@@ -12,9 +12,6 @@ cdef extern from "stdlib.h":
     void* malloc(size_t size)
     void free(void* ptr)
 
-cdef extern from "math.h":
-    double atan2(double x, double x)
-
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
@@ -329,8 +326,6 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
-    cdef np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map2
-    visibility_map2 = np.copy(visibility_map)
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
     cdef int a = 0
@@ -357,19 +352,30 @@ def sweep_through_angles( \
     cdef double Ol = viewpoint[l] # Origin's coordinate along long axis O[l]
     cdef double Es = -perimeter[s][0] # End point's coord. along short axis E[s]
     cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
+    cdef double Ps
+    cdef double Pl
     cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
     cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
     cdef double slope = (Es-Os)/(El-Ol)
+    cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordL = \
+        coord[l]
+    cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordS = \
+        coord[s]
+    cdef viewpointL = viewpoint[l]
+    cdef viewpointS = viewpoint[s]
+    cdef np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeterL = \
+        perimeter[l]
+    cdef np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeterS = \
+        perimeter[s]
     cdef double Dl = 0 # Distance along the long component
     cdef double Ds = 0 # Distance along the short component
     cdef int ID = 0 # active pixel index
     cdef int alternate_ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
-    cdef ActivePixel *active_pixel_array = \
+    cdef ActivePixel* active_pixel_array = \
         <ActivePixel*>malloc(max_line_length*sizeof(ActivePixel))
     assert active_pixel_array is not NULL
-    cdef ActivePixel active_pixel
     # Deactivate every pixel in the active line
     for index in range(max_line_length):
         active_pixel_array[index].is_active = False
@@ -397,8 +403,8 @@ def sweep_through_angles( \
         v = visibility[i]
         o = offset_visibility[i]
 
-        Pl = coord[l][i] * sign[l]
-        Ps = coord[s][i] * sign[s]
+        Pl = coordL[i] * sign[l]
+        Ps = coordS[i] * sign[s]
 
         Dl = Pl-Ol # Distance along the long component
         Ds = Ps-Os # Distance along the short component
@@ -406,7 +412,6 @@ def sweep_through_angles( \
         ID = 0 if not Ds and not Dl \
             else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
 
-        #print('Initialized pixel at ', ID)
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
         active_pixel_array[ID].distance = d
@@ -419,6 +424,7 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
+#        print('angle', (a, angle_count-2))
         # New angle: recompute constants for fast pixel update algorithm
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -427,10 +433,20 @@ def sweep_through_angles( \
             l = 1 # Long component is J (columns)
             s = 0 # Short component is I (lines)
           
-        Os = viewpoint[s] * sign[s]
-        Ol = viewpoint[l] * sign[l]
-        Es = perimeter[s][a] * sign[s]
-        El = perimeter[l][a] * sign[l]
+        coordL = coord[l]
+        coordS = coord[s]
+
+        viewpointL = viewpoint[l]
+        viewpointS = viewpoint[s]
+
+        perimeterL = perimeter[l]
+        perimeterS = perimeter[s]
+
+        Os = viewpointS * sign[s]
+        Ol = viewpointL * sign[l]
+
+        Es = perimeterS[a] * sign[s]
+        El = perimeterL[a] * sign[l]
 
         Sl = -1 if Ol>El else 1
         Ss = -1 if Os>Es else 1
@@ -442,9 +458,9 @@ def sweep_through_angles( \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
             d = distances[i]
-            #active_pixels = remove_active_pixel_cython(active_pixels, d)
-            Pl = coord[l][i]*sign[l]
-            Ps = coord[s][i]*sign[s]
+
+            Pl = coordL[i]*sign[l]
+            Ps = coordS[i]*sign[s]
 
             Dl = Pl-Ol # Distance along the long component
             Ds = Ps-Os # Distance along the short component
@@ -477,18 +493,18 @@ def sweep_through_angles( \
                 l = 1 # Long component is J (columns)
                 s = 0 # Short component is I (lines)
 
-            Os = viewpoint[s] * sign[s]
-            Ol = viewpoint[l] * sign[l]
-            Es = perimeter[s][a+1] * sign[s]
-            El = perimeter[l][a+1] * sign[l]
+            Os = viewpointS * sign[s]
+            Ol = viewpointL * sign[l]
+            Es = perimeterS[a+1] * sign[s]
+            El = perimeterL[a+1] * sign[l]
 
             Sl = -1 if Ol>El else 1
             Ss = -1 if Os>Es else 1
 
             slope = (Es-Os)/(El-Ol)
 
-            Pl = coord[l][i] * sign[l]
-            Ps = coord[s][i] * sign[s]
+            Pl = coordL[i] * sign[l]
+            Ps = coordS[i] * sign[s]
 
             Dl = Pl-Ol # Distance along the long component
             Ds = Ps-Os # Distance along the short component
@@ -496,6 +512,8 @@ def sweep_through_angles( \
             ID = 0 if not Ds and not Dl \
                 else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
 
+            #if ID<0:
+            #    print('O, P, E', (Ol, Os), (Pl, Ps), (El, Es))
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
                 alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1
