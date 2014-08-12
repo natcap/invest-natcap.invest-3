@@ -846,7 +846,7 @@ class TestScenicQuality(unittest.TestCase):
         print(visibility.astype(int))
 
     def test_cython_vs_python_on_default_1_pt_data(self):
-        return
+        #return
         args_uri = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -870,7 +870,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_cython_vs_python_on_default_data(self):
-        return
+        #return
         args_uri = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -894,7 +894,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_cython_vs_python_on_block_island(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
