@@ -2555,9 +2555,9 @@ def cache_block_experiment(ds_uri, out_uri):
     #these are placeholders for the 
     cdef int current_row_tag, current_col_tag
 
-    cdef numpy.ndarray[numpy.npy_int32, ndim=2] row_tag_cache = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.npy_int32, ndim=2] col_tag_cache = numpy.zeros((block_row_size, block_col_size), dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((block_row_size, block_col_size), dtype=numpy.byte)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=2] row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=2] col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
     row_tag_cache[:] = -1
     col_tag_cache[:] = -1
     
@@ -2579,12 +2579,12 @@ def cache_block_experiment(ds_uri, out_uri):
             last_time = current_time
         for global_col in xrange(n_cols):
             row_block_offset = global_row % block_row_size
-            row_index = global_row // block_row_size % n_block_rows
-            row_tag = global_row // block_row_size // n_block_rows
+            row_index = (global_row // block_row_size) % n_block_rows
+            row_tag = (global_row // block_row_size) // n_block_rows
 
             col_block_offset = global_col % block_col_size
-            col_index = global_col // block_col_size % n_block_cols
-            col_tag = global_col // block_col_size // n_block_cols
+            col_index = (global_col // block_col_size) % n_block_cols
+            col_tag = (global_col // block_col_size) // n_block_cols
 
             #is cache block not loaded?
             current_row_tag = row_tag_cache[row_index, col_index]
@@ -2595,7 +2595,7 @@ def cache_block_experiment(ds_uri, out_uri):
                     cache_col_size = n_cols - global_col_offset
                     if cache_col_size > block_col_size:
                         cache_col_size = block_col_size
-                    
+
                     global_row_offset = (current_row_tag * n_block_rows + row_index) * block_row_size
                     cache_row_size = n_rows - global_row_offset
                     if cache_row_size > block_row_size:
@@ -2603,6 +2603,7 @@ def cache_block_experiment(ds_uri, out_uri):
                     
                     out_band.WriteArray(out_block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
                         yoff=global_row_offset, xoff=global_col_offset)
+                    out_band.FlushCache()
                     cache_dirty[row_index, col_index] = 0
                 row_tag_cache[row_index, col_index] = row_tag
                 col_tag_cache[row_index, col_index] = col_tag
@@ -2689,6 +2690,7 @@ def cache_block_experiment(ds_uri, out_uri):
                 cache_dirty[neighbor_row_index, neighbor_col_index] = 1
 
     #save off the dirty cache
+    return
     for row_index in xrange(n_block_rows):
         for col_index in xrange(n_block_cols):
             if cache_dirty[row_index, col_index]:
