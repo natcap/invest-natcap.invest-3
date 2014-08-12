@@ -2632,9 +2632,6 @@ def cache_block_experiment(ds_uri, out_uri):
                             buf_obj=ds_block[row_index, col_index, 0:cache_row_size, 0:cache_col_size])
 
                     current_value = ds_block[row_index, col_index, row_block_offset, col_block_offset]
-                    out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
-                    cache_dirty[row_index, col_index] = 1
-                    continue
                     for neighbor_index in xrange(8):
                         neighbor_row = neighbor_row_offset[neighbor_index] + global_row
                         neighbor_col = neighbor_col_offset[neighbor_index] + global_col
@@ -2644,54 +2641,58 @@ def cache_block_experiment(ds_uri, out_uri):
                             neighbor_col >= n_cols or neighbor_col < 0):
                             continue
 
-                        neighbor_block_offset = neighbor_row % block_row_size
-                        neighbor_row_index = neighbor_row // block_row_size % n_block_rows
-                        neighbor_row_tag = neighbor_row // block_row_size // n_block_rows
+                        neighbor_row_block_offset = neighbor_row % block_row_size
+                        neighbor_row_index = (neighbor_row // block_row_size) % n_block_rows
+                        neighbor_row_tag = (neighbor_row // block_row_size) // n_block_rows
 
-                        neighbor_block_offset = neighbor_col % block_col_size
-                        neighbor_col_index = neighbor_col // block_col_size % n_block_cols
-                        neighbor_col_tag = neighbor_col // block_col_size // n_block_cols
+                        neighbor_col_block_offset = neighbor_col % block_col_size
+                        neighbor_col_index = (neighbor_col // block_col_size) % n_block_cols
+                        neighbor_col_tag = (neighbor_col // block_col_size) // n_block_cols
 
-                        
                         current_row_tag = row_tag_cache[neighbor_row_index, neighbor_col_index]
                         current_col_tag = col_tag_cache[neighbor_row_index, neighbor_col_index]
                         if current_row_tag != neighbor_row_tag or current_col_tag != neighbor_col_tag:
                             if cache_dirty[neighbor_row_index, neighbor_col_index]:
 
-                                cache_col_size = n_cols - current_col_tag * block_col_size
+                                global_col_offset = (current_col_tag * n_block_cols + neighbor_col_index) * block_col_size
+                                cache_col_size = n_cols - global_col_offset
                                 if cache_col_size > block_col_size:
                                     cache_col_size = block_col_size
-                                cache_row_size = n_rows - current_row_tag * block_row_size
+
+                                global_row_offset = (current_row_tag * n_block_rows + neighbor_row_index) * block_row_size
+                                cache_row_size = n_rows - global_row_offset
                                 if cache_row_size > block_row_size:
                                     cache_row_size = block_row_size
-                                try:
-                                    out_band.WriteArray(out_block[neighbor_row_index, neighbor_col_index, 0:cache_row_size, 0:cache_col_size],
-                                        yoff=current_row_tag*block_row_size,
-                                        xoff=current_col_tag*block_col_size)
-                                except ValueError as e:
-                                    LOGGER.debug("[%d, %d, 0:%d, 0:%d]", neighbor_row_index, neighbor_col_index, cache_row_size, cache_col_size)
-                                    raise e
-                                cache_dirty[neighbor_row_index, neighbor_index] = 0
+                                
+                                out_band.WriteArray(out_block[neighbor_row_index, neighbor_col_index, 0:cache_row_size, 0:cache_col_size],
+                                    yoff=global_row_offset, xoff=global_col_offset)
+
+                                cache_dirty[neighbor_row_index, neighbor_col_index] = 0
                             row_tag_cache[neighbor_row_index, neighbor_col_index] = neighbor_row_tag
                             col_tag_cache[neighbor_row_index, neighbor_col_index] = neighbor_col_tag
                             
-                            cache_col_size = n_cols - neighbor_col_tag * block_col_size
+                            global_col_offset = (neighbor_col_tag * n_block_cols + neighbor_col_index) * block_col_size
+                            cache_col_size = n_cols - global_col_offset
                             if cache_col_size > block_col_size:
                                 cache_col_size = block_col_size
-                            cache_row_size = n_rows - neighbor_row_tag * block_row_size
+
+                            global_row_offset = (neighbor_row_tag * n_block_rows + neighbor_row_index) * block_row_size
+                            cache_row_size = n_rows - global_row_offset
                             if cache_row_size > block_row_size:
                                 cache_row_size = block_row_size
 
                             out_band.ReadAsArray(
-                                xoff=neighbor_col_tag*block_col_size, yoff=neighbor_row_tag*block_row_size, 
+                                xoff=global_col_offset, yoff=global_row_offset, 
                                 win_xsize=cache_col_size, win_ysize=cache_row_size,
                                 buf_obj=out_block[neighbor_row_index, neighbor_col_index])
                             ds_band.ReadAsArray(
-                                xoff=neighbor_col_tag*block_col_size, yoff=neighbor_row_tag*block_row_size, 
+                                xoff=global_col_offset, yoff=global_row_offset, 
                                 win_xsize=cache_col_size, win_ysize=cache_row_size,
                                 buf_obj=ds_block[neighbor_row_index, neighbor_col_index])
-                        current_value += ds_block[neighbor_row_index, neighbor_col_index, neighbor_row_index%block_row_size, neighbor_col_index%block_col_size]
+                        current_value += ds_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
                         cache_dirty[neighbor_row_index, neighbor_col_index] = 1
+                    out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
+                    cache_dirty[row_index, col_index] = 1
 
     #save off the dirty cache
     for row_index in xrange(n_block_rows):
