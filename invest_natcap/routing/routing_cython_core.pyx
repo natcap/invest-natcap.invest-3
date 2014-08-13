@@ -2684,11 +2684,11 @@ def cache_block_experiment(ds_uri, out_uri):
                             out_band.ReadAsArray(
                                 xoff=global_col_offset, yoff=global_row_offset, 
                                 win_xsize=cache_col_size, win_ysize=cache_row_size,
-                                buf_obj=out_block[neighbor_row_index, neighbor_col_index])
+                                buf_obj=out_block[neighbor_row_index, neighbor_col_index, 0:cache_row_size, 0:cache_col_size])
                             ds_band.ReadAsArray(
                                 xoff=global_col_offset, yoff=global_row_offset, 
                                 win_xsize=cache_col_size, win_ysize=cache_row_size,
-                                buf_obj=ds_block[neighbor_row_index, neighbor_col_index])
+                                buf_obj=ds_block[neighbor_row_index, neighbor_col_index, 0:cache_row_size, 0:cache_col_size])
                         current_value += ds_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
                         cache_dirty[neighbor_row_index, neighbor_col_index] = 1
                     out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
