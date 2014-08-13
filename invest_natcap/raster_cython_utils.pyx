@@ -418,9 +418,9 @@ def new_raster_from_base(
     base_band = base.GetRasterBand(1)
     block_size = base_band.GetBlockSize()
     
-    dataset_options = dataset_options.copy()
 
     if dataset_options == []:
+        dataset_options = dataset_options.copy()
         #first, should it be tiled?  yes if it's not striped
         if block_size[0] != n_cols and block_size[1] != n_rows:
             dataset_options.insert(0, 'TILED=YES')
