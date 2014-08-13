@@ -3,15 +3,19 @@ import os
 import numpy as np
 import collections
 import logging
+import cProfile
+import pstats
 
 from osgeo import gdal
 
 from invest_natcap import raster_utils
 import scenic_quality_cython_core
 
+logging.getLogger('raster_utils').setLevel(logging.WARNING)
+logging.getLogger('raster_cython_utils').setLevel(logging.WARNING)
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', level=logging.WARNING, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('scenic_quality_core')
 
 # Linked cells used for the active pixels
@@ -26,8 +30,12 @@ def print_sweep_line(sweep_line):
     if sweep_line:
         pixel = sweep_line['closest']
         while pixel is not None:
-            print('pixel', pixel['distance'], 'next', (pixel['next'] \
-            if pixel['next'] is None else pixel['next']['distance']))
+            print( \
+                'pixel', pixel['distance'], \
+                'visibility', pixel['visibility'], 'next', \
+                (pixel['next'] 
+                    if pixel['next'] is None 
+                    else pixel['next']['distance']))
             pixel = pixel['next']
 
 def print_node(node):
@@ -36,7 +44,7 @@ def print_node(node):
     (str(None) if node['next'] is None else node['next']['distance'])))
 
 
-def update_visible_pixels(active_pixels, I, J, d, visibility_map):
+def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -70,14 +78,17 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
     while pixel is not None:
         # Pixel is visible
         if pixel['offset'] > max_visibility:
+            #print('pixel is visible:', pixel['offset'], '>',max_visibility)
             visibility = 1
             visibility = pixel['offset'] - max_visibility
         # Pixel is not visible
         else:
+            #print('pixel is not visible:', pixel['offset'], '<=',max_visibility)
             visibility = 0
             visibility = pixel['offset'] - max_visibility
         # Update max_visibility for this pixel
         if pixel['visibility'] > max_visibility:
+            #print('Updating visibility', pixel['visibility'], '>', max_visibility)
 	    max_visibility = pixel['visibility']
         # Update the visibility map for this pixel
         index = pixel['index']
@@ -85,8 +96,6 @@ def update_visible_pixels(active_pixels, I, J, d, visibility_map):
         j = J[index]
         if visibility_map[i, j] == 0:
             visibility_map[i, j] = visibility
-        # TODO: Remove this! Debug only!
-        #visibility_map[i, j] = pixel['visibility']
         pixel = pixel['next']
 
 
@@ -470,6 +479,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
+            coordinates, \
             angles, add_events, center_events, remove_events,\
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
@@ -480,6 +490,15 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             add_events, center_events, remove_events, \
             np.array([I, J]), distances, offset_visibility, visibility, \
             visibility_map)
+#        cProfile.runctx('scenic_quality_cython_core.sweep_through_angles( \
+#            np.array(coordinates).astype(int), \
+#            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
+#            add_events, center_events, remove_events, \
+#            np.array([I, J]), distances, offset_visibility, visibility, \
+#            visibility_map)', globals(), locals(), 'stats')
+#        p = pstats.Stats('stats')
+#        p.sort_stats("time").print_stats(40)
+#        p.sort_stats('cumulative').print_stats(40)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
@@ -490,8 +509,9 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
 def active_pixel_index(O, P, E):
     return scenic_quality_cython_core._active_pixel_index(O, P, E)
 
-def sweep_through_angles(angles, add_events, center_events, remove_events, \
-    I, J, distances, offset_visibility, visibility, visibility_map):
+def sweep_through_angles(viewpoint, angles, add_events, center_events, \
+    remove_events, I, J, distances, offset_visibility, visibility, \
+    visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     angle_count = len(angles)
     # 4- build event lists
@@ -506,18 +526,10 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
     arg_center = np.argsort(center_events)
     arg_max = np.argsort(remove_events)
 
-    #print('arg_min')
-    #print(arg_min)
-    #print('arg_center')
-    #print(arg_center)
-    #print('arg_max')
-    #print(arg_max)
-
     # Updating active cells
     active_line = {}
     # 1- add cells at angle 0
     #LOGGER.debug('Creating python event stream')
-    #print('visibility map 1s:', np.sum(visibility_map))
     # Create cell_center_events
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
@@ -527,28 +539,11 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         o = offset_visibility[c]
         active_line = add_active_pixel(active_line, c, d, v, o)
         center_event_id += 1
-        # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, d, visibility_map)
+    # The sweep line is current, now compute pixel visibility
+    update_visible_pixels(active_line, I, J, visibility_map)
     
-    #print('cell center events', [center_events[e] for e in cell_center_events])
-    #print('cell center events', [e for e in cell_center_events])
-
     # 2- loop through line sweep angles:
-    for a in range(angle_count-1):
-    #   2.1- add cells
-        while (add_event_id < add_event_count) and \
-            (add_events[arg_min[add_event_id]] < angles[a+1]):
-            # The active cell list is initialized with those at angle 0.
-            # Make sure to remove them from the cell_addition events to
-            # avoid duplicates, but do not remove them from remove_cell events,
-            # because they still need to be removed
-            if center_events[arg_min[add_event_id]] > 0.:
-                c = arg_min[add_event_id]
-                d = distances[c]
-                v = visibility[c]
-                o = offset_visibility[c]
-                active_line = add_active_pixel(active_line, c, d, v, o)
-            add_event_id += 1
+    for a in range(angle_count-2):
     #   2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -557,8 +552,17 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
             remove_event_id += 1
+        #   2.1- add cells
+        while (add_event_id < add_event_count) and \
+            (add_events[arg_min[add_event_id]] < angles[a+1]):
+            c = arg_min[add_event_id]
+            d = distances[c]
+            v = visibility[c]
+            o = offset_visibility[c]
+            active_line = add_active_pixel(active_line, c, d, v, o)
+            add_event_id += 1
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, I, J, d, visibility_map)
+        update_visible_pixels(active_line, I, J, visibility_map)
 
 
 def execute(args):

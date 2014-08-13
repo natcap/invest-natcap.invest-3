@@ -711,10 +711,14 @@ def aggregate_raster_values_uri(
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
     mask_uri = temporary_filename(suffix='.tif')
+    LOGGER.info('Creating the mask raster at %s', mask_uri)
     new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
+
+    LOGGER.info('Opening mask dataset %s', mask_uri)
     mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+    LOGGER.info('Opening shapefile %s', shapefile_uri)
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
@@ -725,6 +729,7 @@ def aggregate_raster_values_uri(
         rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
 
     if shapefile_field is not None:
+        LOGGER.info('User provided shapefile field %s', shapefile_field)
         #Make sure that the layer name refers to an integer
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
@@ -744,6 +749,7 @@ def aggregate_raster_values_uri(
         #9999 is a classic unknown value
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
+    LOGGER.info('Rasterize options: %s', rasterize_layer_args['options'])
 
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}
@@ -760,6 +766,7 @@ def aggregate_raster_values_uri(
         pixel_max={})
 
     #make a shapefile that non-overlapping layers can be added to
+    LOGGER.info('Creating new temp vector for non-overlapping layers')
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
     subset_layer_datasouce = driver.CreateDataSource(
@@ -771,6 +778,7 @@ def aggregate_raster_values_uri(
 
     #For every field, create a duplicate field and add it to the new
     #subset_layer layer
+    LOGGER.info('Creating new fields in temp vector')
     defn.GetFieldCount()
     for fld_index in range(defn.GetFieldCount()):
         original_field = defn.GetFieldDefn(fld_index)
@@ -2215,13 +2223,16 @@ def align_dataset_list(
 
         mask_uri = temporary_filename(suffix='.tif')
         new_raster_from_base_uri(dataset_out_uri_list[0], mask_uri, 'GTiff', 255,
-            gdal.GDT_Byte)
+            gdal.GDT_Byte, fill_value=0)
 
-        mask_dataset = gdal.Open(mask_uri)
+        mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+        LOGGER.debug('Mask dataset projection: %s',
+            mask_dataset.GetProjection())
         mask_band = mask_dataset.GetRasterBand(1)
-        mask_band.Fill(0)
+        LOGGER.info('Opening AOI layer %s', aoi_uri)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
+        LOGGER.info('Rasterizing the AOI to %s', mask_uri)
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
 
         mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
@@ -2251,6 +2262,11 @@ def align_dataset_list(
         mask_dataset = None
         #Make sure the dataset is closed and cleaned up
         os.remove(mask_uri)
+
+        LOGGER.info('Cleaning up AOI')
+        aoi_layer = None
+        ogr.DataSource.__swig_destroy__(aoi_datasource)
+        aoi_datasource = None
 
 
 def assert_file_existance(dataset_uri_list):
@@ -2349,7 +2365,6 @@ def vectorize_datasets(
             passed to the GTiff driver.  Useful for blocksizes, compression,
             etc.
             """
-
     if type(dataset_uri_list) != list:
         raise ValueError(
             "dataset_uri_list was not passed in as a list, maybe a single "
@@ -2425,9 +2440,8 @@ def vectorize_datasets(
         mask_uri = temporary_filename(suffix='.tif')
         mask_dataset = new_raster_from_base(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
-            dataset_options=dataset_options)
+            fill_value=0, dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)
-        mask_band.Fill(0)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
@@ -2557,6 +2571,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
 
+    LOGGER.debug('Getting lookup from %s, key=%s', csv_table_uri, key_field)
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
         header_row = csv_reader.next()
@@ -2566,8 +2581,13 @@ def get_lookup_from_csv(csv_table_uri, key_field):
         index_to_field = dict(zip(range(len(header_row)), header_row))
 
         lookup_dict = {}
-        for line in csv_reader:
-            key_value = _smart_cast(line[key_index])
+        for line_num, line in enumerate(csv_reader):
+            try:
+                key_value = _smart_cast(line[key_index])
+            except IndexError as error:
+                LOGGER.error('CSV line %s (%s) should have index %s', line_num,
+                    line, key_index)
+                raise error
             #Map an entire row to its lookup values
             lookup_dict[key_value] = (
                 dict([(index_to_field[index], _smart_cast(value))

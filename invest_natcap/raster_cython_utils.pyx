@@ -2,6 +2,8 @@ import os
 import tempfile
 import logging
 import time
+import sys
+import traceback
 
 cimport numpy
 import numpy
@@ -373,10 +375,12 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     if base_raster is None:
         raise IOError("%s not found when opening GDAL raster")
     new_raster = new_raster_from_base(base_raster, *args, **kwargs)
+
     gdal.Dataset.__swig_destroy__(new_raster)
     gdal.Dataset.__swig_destroy__(base_raster)
     new_raster = None
     base_raster = None
+    LOGGER.info('Finished creating new raster from base')
 
 
 def new_raster_from_base(
@@ -417,6 +421,7 @@ def new_raster_from_base(
     
     base_band = base.GetRasterBand(1)
     block_size = base_band.GetBlockSize()
+    base_band = None
     
 
     if dataset_options == None:
@@ -434,20 +439,23 @@ def new_raster_from_base(
                 'BLOCKYSIZE=%d' % block_size[1],
                 'BIGTIFF=IF_SAFER']
     LOGGER.info('dataset_options=%s' % str(dataset_options))
-    driver.Create(
+    new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
         options=dataset_options)
     LOGGER.info('n_cols, n_rows %d %d', n_cols, n_rows)
-    base_band = None
-    new_raster = gdal.Open(output_uri.encode('utf-8'), gdal.GA_Update)
+    LOGGER.info('Setting projection=%s', projection)
     new_raster.SetProjection(projection)
+    LOGGER.info('Setting geotransform=%s', geotransform)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 
+    LOGGER.info('Setting nodata value=%s', nodata)
     band.SetNoDataValue(nodata)
     if fill_value != None:
+        LOGGER.info('Filling band with %s', fill_value)
         band.Fill(fill_value)
     else:
+        LOGGER.info('Filling band with nodata=%s', nodata)
         band.Fill(nodata)
     band = None
 
