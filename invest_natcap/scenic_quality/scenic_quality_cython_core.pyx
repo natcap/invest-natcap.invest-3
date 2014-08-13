@@ -416,7 +416,7 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
-        # New angle: recompute constants for fast pixel update algorithm
+        # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
             s = 1 # Short component is J (columns)
@@ -424,6 +424,8 @@ def sweep_through_angles( \
             l = 1 # Long component is J (columns)
             s = 0 # Short component is I (lines)
           
+        coordL = coord[l]
+
         Os = viewpoint[s] * sign[s]
         Ol = viewpoint[l] * sign[l]
         Es = perimeter[s][a] * sign[s]
@@ -434,12 +436,11 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
             d = distances[i]
-            Pl = coord[l][i]*sign[l]
+            Pl = coordL[i]*sign[l]
             Ps = coord[s][i]*sign[s]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             # Expecting valid pixel: is_active and distance == distances[i]
@@ -453,6 +454,25 @@ def sweep_through_angles( \
             arg_max[remove_event_id] = 0
             remove_event_id += 1
         # 2.1- add cells
+        if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
+            l = 0 # Long component is I (lines)
+            s = 1 # Short component is J (columns)
+        else:
+            l = 1 # Long component is J (columns)
+            s = 0 # Short component is I (lines)
+
+        coordL = coord[l]
+
+        Os = viewpoint[s] * sign[s]
+        Ol = viewpoint[l] * sign[l]
+        Es = perimeter[s][a+1] * sign[s]
+        El = perimeter[l][a+1] * sign[l]
+
+        Sl = -1 if Ol>El else 1
+        Ss = -1 if Os>Es else 1
+
+        slope = (Es-Os)/(El-Ol)
+
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             i = arg_min[add_event_id]
@@ -460,23 +480,6 @@ def sweep_through_angles( \
             v = visibility[i]
             o = offset_visibility[i]
             #active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
-
-            if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
-                l = 0 # Long component is I (lines)
-                s = 1 # Short component is J (columns)
-            else:
-                l = 1 # Long component is J (columns)
-                s = 0 # Short component is I (lines)
-
-            Os = viewpoint[s] * sign[s]
-            Ol = viewpoint[l] * sign[l]
-            Es = perimeter[s][a+1] * sign[s]
-            El = perimeter[l][a+1] * sign[l]
-
-            Sl = -1 if Ol>El else 1
-            Ss = -1 if Os>Es else 1
-
-            slope = (Es-Os)/(El-Ol)
 
             Pl = coord[l][i] * sign[l]
             Ps = coord[s][i] * sign[s]
