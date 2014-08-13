@@ -224,10 +224,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Compute the distance for each point
     def compute_distance(vi, vj, cell_size):
         def compute(i, j, v):
-            if v > 0:
-                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-            else:
-                return -1.
+            result = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
+            result[v <= 0] = -1
+            #if v > 0:
+            #    return 
+            #else:
+            #    return -1.
+            return result
         return compute
 
     # Apply the valuation functions to the distance
@@ -248,6 +251,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     def logarithmic(a, b, max_valuation_radius):
         def compute(x, v):
+            return v
             if v > 0:
                 if x < 1000:
                     return a + b*math.log(1000) - (b/1000)*(1000-x)
@@ -361,24 +365,28 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         tmp_distance_uri, 'GTiff', \
         255, gdal.GDT_Byte, fill_value = 255)
         distance_fn = compute_distance(i,j, cell_size)
-        raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
-        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        raster_utils.vectorize_datasets( \
+            [I_uri, J_uri, tmp_visibility_uri], distance_fn, \
+            tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union", \
+            vectorize_op=False)
 
         # Visibility + distance => viewshed map
         tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets(
             [tmp_distance_uri, tmp_visibility_uri],
             valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
-            "union")
+            "union", vectorize_op=False)
 
         # Clean up the distance map
         os.remove(tmp_distance_uri)
 
         # Coefficient * viewshed => scaled_viewshed
         apply_coefficient = multiply(coefficient)
-        scaled_viewshed_uri = os.path.join(base_uri, 'scaled_viewshed_' + str(f) + '.tif')
-        raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
-        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+        scaled_viewshed_uri = \
+            os.path.join(base_uri, 'scaled_viewshed_' + str(f) + '.tif')
+        raster_utils.vectorize_datasets( \
+            [tmp_viewshed_uri], apply_coefficient, scaled_viewshed_uri, \
+            gdal.GDT_Float64, 0., cell_size, "union", vectorize_op=False)
     
         # Clean up the viewshed map
         os.remove(tmp_viewshed_uri)
