@@ -420,7 +420,8 @@ def new_raster_from_base(
     
 
     if dataset_options == []:
-        dataset_options = dataset_options.copy()
+        #make a new list to make sure we aren't ailiasing one passed in
+        dataset_options = []
         #first, should it be tiled?  yes if it's not striped
         if block_size[0] != n_cols and block_size[1] != n_rows:
             dataset_options.insert(0, 'TILED=YES')
