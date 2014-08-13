@@ -2513,6 +2513,7 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
 @cython.wraparound(False)
 @cython.cdivision(True)
 def cache_block_experiment(ds_uri, out_uri):
+    LOGGER.info('starting cache_block_experiment')
     #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
     cdef int n_rows, n_cols #size of the raster
     cdef int block_row_size, block_col_size #blocksize of the raster
@@ -2521,7 +2522,6 @@ def cache_block_experiment(ds_uri, out_uri):
     # 321
     # 4x0
     # 567
-    
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
