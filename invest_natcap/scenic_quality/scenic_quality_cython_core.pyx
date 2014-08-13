@@ -326,8 +326,6 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
-    cdef np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map2
-    visibility_map2 = np.copy(visibility_map)
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
     cdef int a = 0
@@ -354,16 +352,30 @@ def sweep_through_angles( \
     cdef double Ol = viewpoint[l] # Origin's coordinate along long axis O[l]
     cdef double Es = -perimeter[s][0] # End point's coord. along short axis E[s]
     cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
+    cdef double Ps
+    cdef double Pl
     cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
     cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
     cdef double slope = (Es-Os)/(El-Ol)
+    #cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordL = \
+    #    coord[l]
+    #cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordS = \
+    #    coord[s]
+    cdef int viewpointL = viewpoint[l]
+    cdef int viewpointS = viewpoint[s]
+    #cdef np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeterL = \
+    #    perimeter[l]
+    #cdef np.ndarray[np.int64_t, ndim = 1, mode="c"] perimeterS = \
+    #    perimeter[s]
+    cdef double Dl = 0 # Distance along the long component
+    cdef double Ds = 0 # Distance along the short component
     cdef int ID = 0 # active pixel index
+    cdef int alternate_ID = 0 # active pixel index
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
-    cdef ActivePixel *active_pixel_array = \
+    cdef ActivePixel* active_pixel_array = \
         <ActivePixel*>malloc(max_line_length*sizeof(ActivePixel))
     assert active_pixel_array is not NULL
-    cdef ActivePixel active_pixel
     # Deactivate every pixel in the active line
     for index in range(max_line_length):
         active_pixel_array[index].is_active = False
@@ -375,7 +387,6 @@ def sweep_through_angles( \
     cdef int remove_event_id = 0
     cdef int remove_event_count = remove_events.size
     # 5- Sort event lists
-    print('sorting the events')
     cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_min = \
         np.argsort(add_events).astype(np.int32)
     cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_center = \
@@ -393,7 +404,14 @@ def sweep_through_angles( \
         o = offset_visibility[i]
         Pl = coord[l][i] * sign[l]
         Ps = coord[s][i] * sign[s]
-        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+        #Pl = coordL[i] * sign[l]
+        #Ps = coordS[i] * sign[s]
+        Dl = Pl-Ol # Distance along the long component
+        Ds = Ps-Os # Distance along the short component
+        ID = 0 if not Ds and not Dl \
+            else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+        message = 'initialize: ID=' + str(ID) + ' max ID ' + str(max_line_length)
+        assert ID >= 0 and ID < max_line_length, message
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
         active_pixel_array[ID].distance = d
@@ -406,6 +424,7 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
+        print('angle', a, '/', angle_count-3)
         # New angle: recompute constants for fast pixel update algorithm
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -414,10 +433,20 @@ def sweep_through_angles( \
             l = 1 # Long component is J (columns)
             s = 0 # Short component is I (lines)
           
+        #coordL = coord[l]
+        #coordS = coord[s]
+
+        #viewpointL = viewpoint[l]
+        #viewpointS = viewpoint[s]
+
+        #perimeterL = perimeter[l]
+        #perimeterS = perimeter[s]
+
         Os = viewpoint[s] * sign[s]
         Ol = viewpoint[l] * sign[l]
+
         Es = perimeter[s][a] * sign[s]
-        El = perimeter[l][a] * sign[l]
+        El = perimeter[s][a] * sign[l]
 
         Sl = -1 if Ol>El else 1
         Ss = -1 if Os>Es else 1
@@ -428,16 +457,36 @@ def sweep_through_angles( \
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
+            print('event', i, 'id', remove_event_id)
             d = distances[i]
-            Pl = coord[l][i]*sign[l]
-            Ps = coord[s][i]*sign[s]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+
+            Pl = coord[l][i] * sign[l]
+            Ps = coord[s][i] * sign[s]
+
+            #Pl = coordL[i]*sign[l]
+            #Ps = coordS[i]*sign[s]
+
+            #message = 'Pl remove: ' + str(P_l) + ' vs ' + str(Pl) + \
+            #    ', coord: ' + str(coord[l][i]) + ' vs ' + str(coordL[i])
+            #assert P_l == Pl, message
+            #message = 'Ps remove: ' + str(P_s) + ' vs ' + str(Ps) + \
+            #    ', coord: ' + str(coord[l][i]) + ' vs ' + str(coordL[i])
+            #assert P_s == Ps, message
+
+            Dl = Pl-Ol # Distance along the long component
+            Ds = Ps-Os # Distance along the short component
+
+            ID = 0 if not Ds and not Dl \
+                else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
                 ID = ID+1 if (ID/2)*2 == ID else ID-1
             # Making sure that after the switch, we get the right pixel
+            message = 'remove: ID=' + str(ID) + ' max ID ' + str(max_line_length) + \
+                ', O ' + str((Ol, Os)) + 'P ' + str((Pl, Ps)) + 'E ' + str((El, Es))
+            assert ID >= 0 and ID < max_line_length, message
             active_pixel_array[ID].is_active = False
 
             arg_max[remove_event_id] = 0
@@ -462,6 +511,11 @@ def sweep_through_angles( \
             Es = perimeter[s][a+1] * sign[s]
             El = perimeter[l][a+1] * sign[l]
 
+#            Os = viewpointS * sign[s]
+#            Ol = viewpointL * sign[l]
+#            Es = perimeterS[a+1] * sign[s]
+#            El = perimeterL[a+1] * sign[l]
+
             Sl = -1 if Ol>El else 1
             Ss = -1 if Os>Es else 1
 
@@ -469,13 +523,32 @@ def sweep_through_angles( \
 
             Pl = coord[l][i] * sign[l]
             Ps = coord[s][i] * sign[s]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+
+            #Pl = coordL[i] * sign[l]
+            #Ps = coordS[i] * sign[s]
+
+            #message = 'Pl add: ' + str(P_l) + ' vs ' + str(Pl) + \
+            #    ', coord: ' + str(coord[l][i]) + ' vs ' + str(coordL[i])
+            #assert P_l == Pl, message
+            #message = 'Ps add: ' + str(P_s) + ' vs ' + str(Ps) + \
+            #    ', coord: ' + str(coord[l][i]) + ' vs ' + str(coordL[i])
+            #assert P_s == Ps, message
+
+            Dl = Pl-Ol # Distance along the long component
+            Ds = Ps-Os # Distance along the short component
+            ID = 0 if not Ds and not Dl \
+                else int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
                 alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1
                 # Move existing pixel over
+                message = 'alternate_ID=' + str(ID) + ' max ID ' + str(max_line_length)
+                assert ID >= 0 and ID < max_line_length, message
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
             # Add new pixel
+            message = 'add: ID=' + str(ID) + ' max ID ' + str(max_line_length)
+            assert ID >= 0 and ID < max_line_length, message
             active_pixel_array[ID].is_active = True
             active_pixel_array[ID].index = i
             active_pixel_array[ID].distance = d
