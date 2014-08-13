@@ -213,9 +213,9 @@ cdef struct ActivePixel:
     double offset
 
 cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
-    np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
-    int pixel_count, \
-    np.ndarray[np.float64_t, ndim = 2] visibility_map):
+    np.ndarray[np.int32_t, ndim = 1] I, \
+    np.ndarray[np.int32_t, ndim = 1] J, \
+    int pixel_count, np.ndarray[np.float64_t, ndim = 2] visibility_map):
         
     cdef ActivePixel p
     cdef double max_visibility = -1000000.
@@ -385,6 +385,8 @@ def sweep_through_angles( \
 
     cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordL = \
         coord[l]
+    cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordS = \
+        coord[s]
 
     # 1- add cells at angle 0
     # Collect cell_center events
@@ -395,7 +397,7 @@ def sweep_through_angles( \
         v = visibility[i]
         o = offset_visibility[i]
         Pl = coordL[i] * sign[l]
-        Ps = coord[s][i] * sign[s]
+        Ps = coordS[i] * sign[s]
         ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
         assert ID>=0 and ID<max_line_length
         active_pixel_array[ID].is_active = True
@@ -425,6 +427,7 @@ def sweep_through_angles( \
             s = 0 # Short component is I (lines)
           
         coordL = coord[l]
+        coordS = coord[s]
 
         Os = viewpoint[s] * sign[s]
         Ol = viewpoint[l] * sign[l]
@@ -441,7 +444,7 @@ def sweep_through_angles( \
             i = arg_max[remove_event_id]
             d = distances[i]
             Pl = coordL[i]*sign[l]
-            Ps = coord[s][i]*sign[s]
+            Ps = coordS[i]*sign[s]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
@@ -462,6 +465,7 @@ def sweep_through_angles( \
             s = 0 # Short component is I (lines)
 
         coordL = coord[l]
+        coordS = coord[s]
 
         Os = viewpoint[s] * sign[s]
         Ol = viewpoint[l] * sign[l]
@@ -479,10 +483,9 @@ def sweep_through_angles( \
             d = distances[i]
             v = visibility[i]
             o = offset_visibility[i]
-            #active_pixels = add_active_pixel_cython(active_pixels, i, d, v, o)
 
-            Pl = coord[l][i] * sign[l]
-            Ps = coord[s][i] * sign[s]
+            Pl = coordL[i] * sign[l]
+            Ps = coordS[i] * sign[s]
             ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
