@@ -381,7 +381,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None, dataset_options=[]):
+    n_rows=None, n_cols=None, dataset_options=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
@@ -419,7 +419,7 @@ def new_raster_from_base(
     block_size = base_band.GetBlockSize()
     
 
-    if dataset_options == []:
+    if dataset_options == None:
         #make a new list to make sure we aren't ailiasing one passed in
         dataset_options = []
         #first, should it be tiled?  yes if it's not striped
