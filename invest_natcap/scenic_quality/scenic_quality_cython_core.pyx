@@ -221,11 +221,7 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef double max_visibility = -1000000.
     cdef double visibility = 0
     cdef int index = -1
-
-#    print('update_visible_pixels_fast', pixel_count)
-    for pixel_id in range(2, pixel_count):
-        p = active_pixel_array[pixel_id]
-#        print('pixel', pixel_id, 'is_active', p.is_active)
+    cdef int pixel_id
 
     for pixel_id in range(2, pixel_count):
         p = active_pixel_array[pixel_id]
@@ -238,9 +234,6 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
             # Just an inactive pixel, skip it
             else:
                 continue
-        #row = p.row if p.is_active else float('nan')
-        #col = p.col if p.is_active else float('nan')
-        #print('pixel', pixel_id, (-row, col), 'active', p.is_active)
         # Pixel is visible
         if p.offset > max_visibility:
             visibility = 1.
@@ -253,15 +246,8 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
 
         # Update the visibility map for this pixel
         index = p.index
-        #print('index', index)
         if visibility_map[I[index], J[index]] == 0:
-            #assert visibility_map[I[index], J[index]] == visibility
             visibility_map[I[index], J[index]] = visibility
-#            print('max_visibility', max_visibility)
-#            print('visibility', (I[index], J[index]), visibility)
-#        else:
-#            print('skipping', (I[index], J[index]))
-#    print('')
 
 def _active_pixel_index(O, P, E):
     O = [float(O[0]), float(O[1])]
@@ -279,6 +265,8 @@ def _active_pixel_index(O, P, E):
     Ol = O[l]
     Es = E[s]
     El = E[l]
+    Dl = P[l]-Ol
+    Ds = P[s]-Os
 
     Sl = -1 if (Ol>El) else 1
     Ss = -1 if (Os>Es) else 1
@@ -288,28 +276,16 @@ def _active_pixel_index(O, P, E):
     #    print('Os', Os, 'Ol', Ol, 'Es', Es, 'El', El, 'Ps', P[s], 'Pl', P[l])
     #    print('Es-Os', Es-Os, ' / El-Ol', El-Ol, 'slope', slope)
 
-    return active_pixel_index(Ol, Os, P[l], P[s], El, Es, Sl, Ss, slope)
+    return active_pixel_index(Ol, Os, P[l], P[s], El, Es, Dl, Ds, Sl, Ss, slope)
 
 cdef int active_pixel_index(double Ol, double Os, \
                         double Pl, double Ps, \
                         double El, double Es, \
+                        double Dl, double Ds, \
                         double Sl, double Ss,
                         double slope):
-    cdef double Dl = Pl-Ol # Distance along the long component
-    cdef double Ds = Ps-Os # Distance along the short component
     
-    if not Ds and not Dl: # P == O => index is 0 by convention
-        return 0
-    else:
-        #print('')
-        #print('O', (Ol, Os), 'P', (Pl, Ps), 'E', (El, Es))
-        #print('Signs', (Sl, Ss), 'Distances', (Dl, Ds), 'slope', slope)
-        #print('base index', Sl*2*Dl, 'offset', (Ss*Ds-Ss*int(Ss*slope*(Dl-Sl*.5)+.5)))
-        #print('pixel elev.', Ds*Ss, 'distance', Dl-Sl*.5, 'slope', slope, \
-        #    'boundary elev.', slope*(Dl-Sl*.5), \
-        #    'rounded', int(Ss*slope*(Dl-Sl*.5)+.5), \
-        #    'diff', Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))
-        return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5)))
+    return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))) if Ds or Dl else 0
 
 
 #@cython.boundscheck(False)
@@ -320,6 +296,9 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] center_events, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] remove_events, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] arg_min, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] arg_center, \
+    np.ndarray[np.int64_t, ndim = 1, mode="c"] arg_max, \
     np.ndarray[np.int32_t, ndim = 2, mode="c"] coord, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
@@ -355,9 +334,12 @@ def sweep_through_angles( \
     cdef np.int32_t Ps = 0
     cdef double Es = -perimeter[s][0] # End point's coord. along short axis E[s]
     cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
+    cdef double Dl = 0 # Distance along the long component
+    cdef double Ds = 0 # Distance along the short component
     cdef double Sl = -1 if Ol>El else 1 # Sign of the direction from O to E
     cdef double Ss = -1 if Os>Es else 1 # Sign of the direction from O to E
     cdef double slope = (Es-Os)/(El-Ol)
+    cdef double dbl = 0
     cdef int ID = 0 # active pixel index
     cdef int alternate_ID = 0
     # Active line container: an array that can contain twice the pixels in
@@ -375,18 +357,9 @@ def sweep_through_angles( \
     cdef int center_event_count = center_events.size
     cdef int remove_event_id = 0
     cdef int remove_event_count = remove_events.size
-    # 5- Sort event lists
-    cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_min = \
-        np.argsort(add_events).astype(np.int32)
-    cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_center = \
-        np.argsort(center_events).astype(np.int32)
-    cdef np.ndarray[np.int32_t, ndim=1, mode="c"] arg_max = \
-        np.argsort(remove_events).astype(np.int32)
 
-    cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordL = \
-        coord[l]
-    cdef np.ndarray[np.int32_t, ndim = 1, mode="c"] coordS = \
-        coord[s]
+    cdef np.int32_t [:] coordL = coord[l]
+    cdef np.int32_t [:] coordS = coord[s]
 
     # 1- add cells at angle 0
     # Collect cell_center events
@@ -398,7 +371,10 @@ def sweep_through_angles( \
         o = offset_visibility[i]
         Pl = coordL[i] * sign[l]
         Ps = coordS[i] * sign[s]
-        ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+        Dl = Pl-Ol
+        Ds = Ps-Os
+        ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+            if Ds or Dl else 0
         assert ID>=0 and ID<max_line_length
         active_pixel_array[ID].is_active = True
         active_pixel_array[ID].index = i
@@ -407,14 +383,9 @@ def sweep_through_angles( \
         active_pixel_array[ID].offset = o
         center_event_id += 1
     # The sweep line is current, now compute pixel visibility
-    #update_visible_pixels_cython( \
-    #    active_pixels, coord[0], coord[1], visibility_map)
     update_visible_pixels_fast( \
         active_pixel_array, coord[0], coord[1], \
         max_line_length, visibility_map)
-    #difference = np.sum(np.absolute(visibility_map-visibility_map2))
-    #message = 'difference at initialization: ' + str(difference)
-    #assert difference == 0., message
 
     # 2- loop through line sweep angles:
     for a in range(angle_count-2):
@@ -445,7 +416,10 @@ def sweep_through_angles( \
             d = distances[i]
             Pl = coordL[i]*sign[l]
             Ps = coordS[i]*sign[s]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            Dl = Pl-Ol
+            Ds = Ps-Os
+            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+                if Ds or Dl else 0
             # Expecting valid pixel: is_active and distance == distances[i]
             # Move other pixel over otherwise
             if not active_pixel_array[ID].is_active or \
@@ -486,7 +460,10 @@ def sweep_through_angles( \
 
             Pl = coordL[i] * sign[l]
             Ps = coordS[i] * sign[s]
-            ID = active_pixel_index(Ol, Os, Pl, Ps, El, Es, Sl, Ss, slope)
+            Dl = Pl-Ol
+            Ds = Ps-Os
+            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+                if Ds or Dl else 0
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
                 alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1

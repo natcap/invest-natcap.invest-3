@@ -447,13 +447,11 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
         v, max_dist)
     arg_min = np.argsort(add_events)
     arg_max = np.argsort(remove_events)
-    #print('add_events')
-    #print(add_events[arg_min])
-    #print('remove_events')
-    #print(remove_events[arg_max])
+    arg_center = np.argsort(center_events)
     # I and J are relative to the viewshed_shape. Make them absolute
     I += row_min
     J += col_min
+    coord = np.array([I, J])
     distances_sq = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     distances = np.sqrt(distances_sq)
     # Computation of the visibility:
@@ -476,7 +474,6 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility /= distances * cell_size
     offset_visibility /= distances * cell_size
 
-    #alg_version = 'python'
     if alg_version is 'python':
         sweep_through_angles( \
             coordinates, \
@@ -484,21 +481,23 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
     else:
-        scenic_quality_cython_core.sweep_through_angles( \
-            np.array(coordinates).astype(int), \
-            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
-            add_events, center_events, remove_events, \
-            np.array([I, J]), distances, offset_visibility, visibility, \
-            visibility_map)
-#        cProfile.runctx('scenic_quality_cython_core.sweep_through_angles( \
+#        scenic_quality_cython_core.sweep_through_angles( \
 #            np.array(coordinates).astype(int), \
 #            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
 #            add_events, center_events, remove_events, \
-#            np.array([I, J]), distances, offset_visibility, visibility, \
-#            visibility_map)', globals(), locals(), 'stats')
-#        p = pstats.Stats('stats')
-#        p.sort_stats("time").print_stats(40)
-#        p.sort_stats('cumulative').print_stats(40)
+#            arg_min, arg_center, arg_max, \
+#            coord, distances, offset_visibility, visibility, \
+#            visibility_map)
+        cProfile.runctx('scenic_quality_cython_core.sweep_through_angles( \
+            np.array(coordinates).astype(int), \
+            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
+            add_events, center_events, remove_events, \
+            arg_min, arg_center, arg_max, \
+            coord, distances, offset_visibility, visibility, \
+            visibility_map)', globals(), locals(), 'stats')
+        p = pstats.Stats('stats')
+        p.sort_stats("time").print_stats(40)
+        p.sort_stats('cumulative').print_stats(40)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
