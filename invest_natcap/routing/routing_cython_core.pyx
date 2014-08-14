@@ -2509,7 +2509,104 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
         pass#os.remove(dataset_uri)
 
+cdef class BlockCache:
+    cdef numpy.int32_t[:,:] row_tag_cache
+    cdef numpy.int32_t[:,:] col_tag_cache
+    cdef numpy.int8_t[:,:] cache_dirty
+    cdef int n_block_rows
+    cdef int n_block_cols
+    cdef int block_col_size
+    cdef int block_row_size
+    cdef int n_rows
+    cdef int n_cols
+    band_list = []
+    block_list = []
+    update_list = []
 
+    def __cinit__(
+        self, int n_block_rows, int n_block_cols, int n_rows, int n_cols, int block_row_size, int block_col_size, band_list, block_list, update_list, numpy.int8_t[:,:] cache_dirty):
+        self.n_block_rows = n_block_rows
+        self.n_block_cols = n_block_cols
+        self.block_col_size = block_col_size
+        self.block_row_size = block_row_size
+        self.n_rows = n_rows
+        self.n_cols = n_cols
+        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.cache_dirty = cache_dirty
+        self.row_tag_cache[:] = -1
+        self.col_tag_cache[:] = -1
+        self.band_list[:] = band_list
+        self.block_list[:] = block_list
+        self.update_list[:] = update_list
+
+    cdef void update_cache(self, int row_index, int col_index, int row_tag, int col_tag):
+        cdef int current_row_tag = self.row_tag_cache[row_index, col_index]
+        cdef int current_col_tag = self.col_tag_cache[row_index, col_index]
+        cdef int cache_row_size, cache_col_size
+        cdef int global_row_offset, global_col_offset
+        if current_row_tag != row_tag or current_col_tag != col_tag:
+            if self.cache_dirty[row_index, col_index]:
+                global_col_offset = (current_col_tag * self.n_block_cols + col_index) * self.block_col_size
+                cache_col_size = self.n_cols - global_col_offset
+                if cache_col_size > self.block_col_size:
+                    cache_col_size = self.block_col_size
+                
+                global_row_offset = (current_row_tag * self.n_block_rows + row_index) * self.block_row_size
+                cache_row_size = self.n_rows - global_row_offset
+                if cache_row_size > self.block_row_size:
+                    cache_row_size = self.block_row_size
+                
+                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                    if update:
+                        band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
+                            yoff=global_row_offset, xoff=global_col_offset)
+                self.cache_dirty[row_index, col_index] = 0
+            self.row_tag_cache[row_index, col_index] = row_tag
+            self.col_tag_cache[row_index, col_index] = col_tag
+                
+            global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
+            global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
+
+            cache_col_size = self.n_cols - global_col_offset
+            if cache_col_size > self.block_col_size:
+                cache_col_size = self.block_col_size
+            cache_row_size = self.n_rows - global_row_offset
+            if cache_row_size > self.block_row_size:
+                cache_row_size = self.block_row_size
+            
+            for band, block in zip(self.band_list, self.block_list):
+                band.ReadAsArray(
+                    xoff=global_col_offset, yoff=global_row_offset,
+                    win_xsize=cache_col_size, win_ysize=cache_row_size,
+                    buf_obj=block[row_index, col_index, 0:cache_row_size, 0:cache_col_size])
+
+    cdef void flush_cache(self):
+        cdef int global_row_offset, global_col_offset
+        cdef int cache_row_size, cache_col_size
+        for row_index in xrange(self.n_block_rows):
+            for col_index in xrange(self.n_block_cols):
+                row_tag = self.row_tag_cache[row_index, col_index]
+                col_tag = self.col_tag_cache[row_index, col_index]
+
+                if self.cache_dirty[row_index, col_index]:
+                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
+                    cache_col_size = self.n_cols - global_col_offset
+                    if cache_col_size > self.block_col_size:
+                        cache_col_size = self.block_col_size
+                    
+                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
+                    cache_row_size = self.n_rows - global_row_offset
+                    if cache_row_size > self.block_row_size:
+                        cache_row_size = self.block_row_size
+                    
+                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                        if update:
+                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
+                                yoff=global_row_offset, xoff=global_col_offset)
+
+                    
+'''
 def _update_cache(
     int current_row_tag, int current_col_tag, int col_tag, int row_tag, int row_index, 
     int col_index, int n_block_rows, int n_block_cols, int n_rows, int n_cols,
@@ -2554,7 +2651,7 @@ def _update_cache(
             xoff=global_col_offset, yoff=global_row_offset,
             win_xsize=cache_col_size, win_ysize=cache_row_size,
             buf_obj=block[row_index, col_index, 0:cache_row_size, 0:cache_col_size])
-    
+   ''' 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -2602,11 +2699,11 @@ def cache_block_experiment(ds_uri, out_uri):
     #these are placeholders for the 
     cdef int current_row_tag, current_col_tag
 
-    cdef numpy.ndarray[numpy.npy_int32, ndim=2] row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+    '''cdef numpy.ndarray[numpy.npy_int32, ndim=2] row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
     cdef numpy.ndarray[numpy.npy_int32, ndim=2] col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
     row_tag_cache[:] = -1
-    col_tag_cache[:] = -1
+    col_tag_cache[:] = -1'''
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
     
     #define all the caches
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] ds_block = numpy.zeros(
@@ -2614,6 +2711,14 @@ def cache_block_experiment(ds_uri, out_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+
+    band_list = [ds_band, out_band]
+    block_list = [ds_block, out_block]
+    update_list = [False, True]
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
 
     cdef float current_value
     LOGGER.info('starting iteration')
@@ -2638,6 +2743,8 @@ def cache_block_experiment(ds_uri, out_uri):
                     col_tag = (global_col // block_col_size) // n_block_cols
 
                     #is cache block not loaded?
+                    block_cache.update_cache(row_index, col_index, row_tag, col_tag)
+                    '''
                     current_row_tag = row_tag_cache[row_index, col_index]
                     current_col_tag = col_tag_cache[row_index, col_index]
                     if current_row_tag != row_tag or current_col_tag != col_tag:
@@ -2649,7 +2756,7 @@ def cache_block_experiment(ds_uri, out_uri):
                             col_tag_cache,
                             cache_dirty,
                             [out_band, ds_band], [out_block, ds_block], [True, False])
-
+'''
                     current_value = ds_block[row_index, col_index, row_block_offset, col_block_offset]
                     for neighbor_index in xrange(8):
                         neighbor_row = neighbor_row_offset[neighbor_index] + global_row
@@ -2668,6 +2775,8 @@ def cache_block_experiment(ds_uri, out_uri):
                         neighbor_col_index = (neighbor_col // block_col_size) % n_block_cols
                         neighbor_col_tag = (neighbor_col // block_col_size) // n_block_cols
 
+                        block_cache.update_cache(neighbor_row_index, neighbor_col_index, neighbor_row_tag, neighbor_col_tag)
+                        '''
                         current_row_tag = row_tag_cache[neighbor_row_index, neighbor_col_index]
                         current_col_tag = col_tag_cache[neighbor_row_index, neighbor_col_index]
                         if current_row_tag != neighbor_row_tag or current_col_tag != neighbor_col_tag:
@@ -2676,14 +2785,15 @@ def cache_block_experiment(ds_uri, out_uri):
                                 neighbor_col_index, n_block_rows, n_block_cols, n_rows, n_cols,
                                 block_col_size, block_row_size, row_tag_cache, col_tag_cache,
                                 cache_dirty, [out_band, ds_band], [out_block, ds_block], [True, False])
-
+'''
                         current_value += ds_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
                         cache_dirty[neighbor_row_index, neighbor_col_index] = 1
                     out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
                     cache_dirty[row_index, col_index] = 1
 
     #save off the dirty cache
-    for row_index in xrange(n_block_rows):
+    block_cache.flush_cache()
+    '''for row_index in xrange(n_block_rows):
         for col_index in xrange(n_block_cols):
             if cache_dirty[row_index, col_index]:
                 row_tag = row_tag_cache[row_index, col_index]
@@ -2697,3 +2807,4 @@ def cache_block_experiment(ds_uri, out_uri):
                     col_tag_cache,
                     cache_dirty,
                     [out_band, ds_band], [out_block, ds_block], [True, False])
+'''
