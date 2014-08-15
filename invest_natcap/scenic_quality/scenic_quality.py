@@ -233,6 +233,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
         def compute(x, v):
+            return v
             if v > 0:
                 if x < 1000:
                     return a + b*1000 + c*1000**2 + d*1000**3 - \
@@ -510,7 +511,7 @@ def execute(args):
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
+    LOGGER.debug("DEM: %s, AOI: %s", aq_args['dem_uri'], aoi_dem_uri)
     raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")

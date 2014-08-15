@@ -835,7 +835,7 @@ def _build_flat_set(
     LOGGER.debug("blocksize: %s" % (str(band.GetBlockSize())))
     LOGGER.info('create dem array in _build_flat_set')
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = numpy.empty(
-        (3,n_cols), dtype=numpy.float32)
+        (3, n_cols), dtype=numpy.float32)
     
     band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
