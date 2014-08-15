@@ -836,7 +836,7 @@ def _build_flat_set(
     LOGGER.info('create dem array in _build_flat_set')
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = numpy.empty(
         (3, n_cols), dtype=numpy.float32)
-    
+
     band.ReadAsArray(
         xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
         win_ysize=3, buf_obj=dem_array)
@@ -2540,33 +2540,45 @@ cdef class BlockCache:
         self.block_list[:] = block_list
         self.update_list[:] = update_list
 
-    cdef void update_cache(self, int row_index, int col_index, int row_tag, int col_tag):
-        cdef int current_row_tag = self.row_tag_cache[row_index, col_index]
-        cdef int current_col_tag = self.col_tag_cache[row_index, col_index]
+    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
+#    cdef void update_cache(self, int row_index, int col_index, int row_tag, int col_tag):
         cdef int cache_row_size, cache_col_size
         cdef int global_row_offset, global_col_offset
+        cdef int row_tag, col_tag
+
+        row_block_offset[0] = global_row % self.block_row_size
+        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
+        row_tag = (global_row // self.block_row_size) // self.n_block_rows
+
+        col_block_offset[0] = global_col % self.block_col_size
+        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
+        col_tag = (global_col // self.block_col_size) // self.n_block_cols
+
+        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
+        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
+        
         if current_row_tag != row_tag or current_col_tag != col_tag:
-            if self.cache_dirty[row_index, col_index]:
-                global_col_offset = (current_col_tag * self.n_block_cols + col_index) * self.block_col_size
+            if self.cache_dirty[row_index[0], col_index[0]]:
+                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
                 cache_col_size = self.n_cols - global_col_offset
                 if cache_col_size > self.block_col_size:
                     cache_col_size = self.block_col_size
                 
-                global_row_offset = (current_row_tag * self.n_block_rows + row_index) * self.block_row_size
+                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
                 cache_row_size = self.n_rows - global_row_offset
                 if cache_row_size > self.block_row_size:
                     cache_row_size = self.block_row_size
                 
                 for band, block, update in zip(self.band_list, self.block_list, self.update_list):
                     if update:
-                        band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
+                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
                             yoff=global_row_offset, xoff=global_col_offset)
-                self.cache_dirty[row_index, col_index] = 0
-            self.row_tag_cache[row_index, col_index] = row_tag
-            self.col_tag_cache[row_index, col_index] = col_tag
+                self.cache_dirty[row_index[0], col_index[0]] = 0
+            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
+            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
                 
-            global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
-            global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
+            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
+            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
 
             cache_col_size = self.n_cols - global_col_offset
             if cache_col_size > self.block_col_size:
@@ -2579,11 +2591,12 @@ cdef class BlockCache:
                 band.ReadAsArray(
                     xoff=global_col_offset, yoff=global_row_offset,
                     win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=block[row_index, col_index, 0:cache_row_size, 0:cache_col_size])
+                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
 
     cdef void flush_cache(self):
         cdef int global_row_offset, global_col_offset
         cdef int cache_row_size, cache_col_size
+        cdef int row_index, col_index
         for row_index in xrange(self.n_block_rows):
             for col_index in xrange(self.n_block_cols):
                 row_tag = self.row_tag_cache[row_index, col_index]
@@ -2743,20 +2756,11 @@ def cache_block_experiment(ds_uri, out_uri):
                     col_tag = (global_col // block_col_size) // n_block_cols
 
                     #is cache block not loaded?
-                    block_cache.update_cache(row_index, col_index, row_tag, col_tag)
-                    '''
-                    current_row_tag = row_tag_cache[row_index, col_index]
-                    current_col_tag = col_tag_cache[row_index, col_index]
-                    if current_row_tag != row_tag or current_col_tag != col_tag:
-                        _update_cache(
-                            current_row_tag, current_col_tag, col_tag, row_tag, row_index, 
-                            col_index, n_block_rows, n_block_cols, n_rows, n_cols,
-                            block_col_size, block_row_size, 
-                            row_tag_cache,
-                            col_tag_cache,
-                            cache_dirty,
-                            [out_band, ds_band], [out_block, ds_block], [True, False])
-'''
+                    #block_cache.update_cache(row_index, col_index, row_tag, col_tag)
+
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+
+                    
                     current_value = ds_block[row_index, col_index, row_block_offset, col_block_offset]
                     for neighbor_index in xrange(8):
                         neighbor_row = neighbor_row_offset[neighbor_index] + global_row
@@ -2775,17 +2779,9 @@ def cache_block_experiment(ds_uri, out_uri):
                         neighbor_col_index = (neighbor_col // block_col_size) % n_block_cols
                         neighbor_col_tag = (neighbor_col // block_col_size) // n_block_cols
 
-                        block_cache.update_cache(neighbor_row_index, neighbor_col_index, neighbor_row_tag, neighbor_col_tag)
-                        '''
-                        current_row_tag = row_tag_cache[neighbor_row_index, neighbor_col_index]
-                        current_col_tag = col_tag_cache[neighbor_row_index, neighbor_col_index]
-                        if current_row_tag != neighbor_row_tag or current_col_tag != neighbor_col_tag:
-                            _update_cache(
-                                current_row_tag, current_col_tag, neighbor_col_tag, neighbor_row_tag, neighbor_row_index, 
-                                neighbor_col_index, n_block_rows, n_block_cols, n_rows, n_cols,
-                                block_col_size, block_row_size, row_tag_cache, col_tag_cache,
-                                cache_dirty, [out_band, ds_band], [out_block, ds_block], [True, False])
-'''
+                        #block_cache.update_cache(neighbor_row_index, neighbor_col_index, neighbor_row_tag, neighbor_col_tag)
+                        block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+
                         current_value += ds_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
                         cache_dirty[neighbor_row_index, neighbor_col_index] = 1
                     out_block[row_index, col_index, row_block_offset, col_block_offset] = current_value
@@ -2793,18 +2789,3 @@ def cache_block_experiment(ds_uri, out_uri):
 
     #save off the dirty cache
     block_cache.flush_cache()
-    '''for row_index in xrange(n_block_rows):
-        for col_index in xrange(n_block_cols):
-            if cache_dirty[row_index, col_index]:
-                row_tag = row_tag_cache[row_index, col_index]
-                col_tag = col_tag_cache[row_index, col_index]
-
-                _update_cache(
-                    row_tag, col_tag, col_tag, row_tag, row_index, 
-                    col_index, n_block_rows, n_block_cols, n_rows, n_cols,
-                    block_col_size, block_row_size, 
-                    row_tag_cache,
-                    col_tag_cache,
-                    cache_dirty,
-                    [out_band, ds_band], [out_block, ds_block], [True, False])
-'''
