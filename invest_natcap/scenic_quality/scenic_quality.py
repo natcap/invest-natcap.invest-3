@@ -269,16 +269,27 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         return compute
 
     def logarithmic(a, b, max_valuation_radius):
-        def compute(x, v):
-            if v > 0:
-                if x < 1000:
-                    return a + b*math.log(1000) - (b/1000)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*math.log(x)
-                else:
-                    return 0.
-            else:
-                return 0.
+        def compute(x, mask):
+            result = np.zeros_like(x)
+
+            f = a + b*np.log(x)
+            result[x <= max_valuation_radius] = f[x <= max_valuation_radius]
+
+            f = a + b*np.log(1000) - (b/1000)*(1000-x)
+            result[x < 1000] = f[x < 1000]
+            result[mask <= 0.] = 0.
+
+            return result
+
+            #if v > 0:
+            #    if x < 1000:
+            #        return a + b*math.log(1000) - (b/1000)*(1000-x)
+            #    elif x <= max_valuation_radius:
+            #        return a + b*math.log(x)
+            #    else:
+            #        return 0.
+            #else:
+            #    return 0.
         return compute
 
     # Multiply a value by a constant
