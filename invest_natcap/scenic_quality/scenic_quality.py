@@ -405,7 +405,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             os.path.join(base_uri, 'scaled_viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets( \
             [tmp_viewshed_uri], apply_coefficient, scaled_viewshed_uri, \
-            gdal.GDT_Float64, 0., cell_size, "union", vectorize_op=True)
+            gdal.GDT_Float64, 0., cell_size, "union", vectorize_op=False)
     
         # Clean up the viewshed map
         os.remove(tmp_viewshed_uri)
