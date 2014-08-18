@@ -3,7 +3,9 @@ import logging
 import os
 import csv
 import struct
+import shutil
 import math
+import tempfile
 
 from osgeo import gdal
 from osgeo import ogr
@@ -641,6 +643,8 @@ def execute(args):
     valuation_checked = args.pop('valuation_container', False)
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
+        LOGGER.debug('Attempting to clean up the temp dir')
+        shutil.rmtree(tempfile.gettempdir())
         return
 
     LOGGER.info('Starting Wind Energy Valuation Model')
@@ -683,7 +687,7 @@ def execute(args):
     pixel_size = raster_utils.get_cell_size_from_uri(harvested_masked_uri)
     # URI for final distance transform used in valuation calculations
     tmp_dist_final_uri = os.path.join(
-                inter_dir, 'final_distances_trans%s.tif' % suffix)
+                inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     # Handle Grid Points
     if 'grid_points_uri' in args:
@@ -1099,7 +1103,8 @@ def execute(args):
                 [harvested_masked_uri], calculate_carbon_op, carbon_uri,
                 gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
                 vectorize_op=False)
-
+    LOGGER.debug('Attempting to clean up the temp dir')
+    shutil.rmtree(tempfile.gettempdir())
     LOGGER.info('Wind Energy Valuation Model Complete')
 
 def get_shapefile_feature_count(shape_uri):
