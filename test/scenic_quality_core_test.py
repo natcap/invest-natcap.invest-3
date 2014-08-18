@@ -962,7 +962,7 @@ class TestScenicQuality(unittest.TestCase):
             for entry in args:
                 print('entry', entry, args[entry], type(args[entry]))
         sq.execute(args)
-        reference_uri = "../../ScenicQuality/tests/block-island/cython_distance/output/vshed.tif"
+        reference_uri = "../../ScenicQuality/tests/block-island/cython_polynomial/output/vshed.tif"
         reference_raster = gdal.Open(reference_uri)
         message = "Cannot open " + reference_uri
         assert reference_raster is not None, message

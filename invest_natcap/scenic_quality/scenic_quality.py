@@ -185,8 +185,10 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
+    input_nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
     input_raster = gdal.Open(in_dem_uri)
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_array[input_array == input_nodata] = 0.
     input_raster = None
 
     # Create a raster from base before passing it to viewshed
@@ -241,12 +243,17 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
-        def compute(x, v):
-            result = a + b*x + c*x**2 + d*x**3
-            linear = a + b*1000 + c*1000**2 + d*1000**3 - \
-                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
-            result[x < 1000] = linear
-            result[v <= 0] = 0
+        print('max_valuation_radius', max_valuation_radius)
+        def compute(x, mask):
+            result = np.zeros_like(x)
+
+            f = a + b*x + c*x**2 + d*x**3
+            result[x <= max_valuation_radius] = f[x <= max_valuation_radius]
+
+            f = a+b*1000+c*1000**2+d*1000**3-(b+2*c*1000+3*d*1000**2)*(1000-x)
+            result[x < 1000] = f[x < 1000]
+            result[mask <= 0.] = 0.
+
             return result
 
             #if v > 0:
@@ -302,7 +309,8 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert valuation_function is not None
     
     # Make sure the values don't become too small at max_valuation_radius:
-    edge_value = valuation_function(max_valuation_radius, 1)
+    edge_value = valuation_function(np.array([max_valuation_radius, 0]), 1)[0]
+#    edge_value = valuation_function(max_valuation_radius, 1)
     message = "Valuation function can't be negative if evaluated at " + \
     str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
     assert edge_value >= 0., message
