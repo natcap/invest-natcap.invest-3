@@ -2636,7 +2636,8 @@ def cache_block_experiment(ds_uri, out_uri):
 
     ds = gdal.Open(ds_uri)
     ds_band = ds.GetRasterBand(1)
-    cdef int block_col_size, block_row_size = ds_band.GetBlockSize()
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = ds_band.GetBlockSize()
     cdef int n_rows = ds.RasterYSize
     cdef int n_cols = ds.RasterXSize
 
@@ -2648,43 +2649,38 @@ def cache_block_experiment(ds_uri, out_uri):
 
     #center point of global index
     cdef int global_row, global_col #index into the overall raster
-    cdef int row_index, col_index #the index of the global index
+    cdef int row_index, col_index #the index of the cache block
     cdef int row_block_offset, col_block_offset #index into the cache block
-    cdef int global_col_offset, global_row_offset
-    cdef int global_block_row, global_block_col
-
+    cdef int global_block_row, global_block_col #used to walk the global blocks
 
     #neighbor sections of global index
-    cdef int neighbor_row, neighbor_col
-    cdef int neighbor_row_index, neighbor_col_index
-    cdef int neighbor_row_block_offset, neighbor_col_block_offset
-
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
     
     #define all the caches
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] ds_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
-
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] out_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
 
+    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
     band_list = [ds_band, out_band]
     block_list = [ds_block, out_block]
     update_list = [False, True]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
 
     cdef BlockCache block_cache = BlockCache(
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
-
     cdef float current_value
-    LOGGER.info('starting iteration')
+    LOGGER.info('starting iteration through blocks')
     last_time = time.time()
 
     for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info(
-                "cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
         for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
             LOGGER.info('global_block_row global_block_col %d %d', global_block_row, global_block_col)
@@ -2698,8 +2694,7 @@ def cache_block_experiment(ds_uri, out_uri):
                         neighbor_col = neighbor_col_offset[neighbor_index] + global_col
                         
                         #make sure we're in bounds
-                        if (neighbor_row >= n_rows or neighbor_row < 0 or
-                            neighbor_col >= n_cols or neighbor_col < 0):
+                        if (neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0):
                             continue
                         block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
 
