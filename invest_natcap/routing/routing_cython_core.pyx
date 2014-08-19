@@ -1475,8 +1475,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index, flat_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
-        flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
+        flow_direction_max_slope, slope_max, nodata_flow
 
+    cdef float dem_nodata
     #need this if statement because dem_nodata is statically typed
     if raster_utils.get_nodata_from_uri(dem_uri) != None:
         dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
