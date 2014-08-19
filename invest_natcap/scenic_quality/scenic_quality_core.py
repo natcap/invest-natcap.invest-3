@@ -3,7 +3,6 @@ import os
 import numpy as np
 import collections
 import logging
-
 from osgeo import gdal
 
 from invest_natcap import raster_utils

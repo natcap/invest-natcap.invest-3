@@ -197,14 +197,10 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
         0., gdal.GDT_Float32, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
-    #cProfile.runctx('\
-    compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-        cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
-        refr_coeff, args)#', \
-    # globals(), locals(), 'stats')
-    #p = pstats.Stats('stats')
-    #p.sort_stats("time").print_stats(40)
-    #p.sort_stats('cumulative').print_stats(40)
+    cProfile.runctx('compute_viewshed(input_array, visibility_uri, in_structure_uri, cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, refr_coeff, args)', globals(), locals(), 'stats')
+    p = pstats.Stats('stats')
+    p.sort_stats("time").print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
 
     os.remove(I_uri)
     os.remove(J_uri)
@@ -230,17 +226,25 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
-        def distance(vi, vj, cell_size, coeff):
-            def compute(i, j, mask, accum):
+        C1 = a+b*1000+c*1000**2+d*1000**3
+        C2 = (b+2*c*1000+3*d*1000**2)
+        def distance(vi, vj, cell_size, coeff, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
+            C1 *= coeff
+            C2 *= coeff
+            a *= coeff
+            b *= coeff
+            c *= coeff
+            d *= coeff
+            def compute(i, j, mask, accum, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
                 x = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
 
                 result = np.zeros_like(x)
 
                 f = a + b*x + c*x**2 + d*x**3
-                result[x <= max_valuation_radius] = coeff * f[x <= max_valuation_radius]
+                result[x <= max_valuation_radius] = f[x <= max_valuation_radius]
 
-                f = a+b*1000+c*1000**2+d*1000**3-(b+2*c*1000+3*d*1000**2)*(1000-x)
-                result[x < 1000] = coeff * f[x < 1000]
+                f = C1 - C2 * (1000-x)
+                result[x < 1000] = f[x < 1000]
                 result[mask <= 0.] = 0.
 
                 accum += result
@@ -366,7 +370,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         raster_utils.vectorize_datasets(
             [I_uri, J_uri, tmp_visibility_uri, visibility_uri],
             valuation_function_d, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
-            "union", vectorize_op=False)
+            "union", vectorize_op=False, datasets_are_pre_aligned=True)
 
         # Combined_visibility += scaled_viewshed
         shutil.copy(tmp_viewshed_uri, visibility_uri)

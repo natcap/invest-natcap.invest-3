@@ -272,9 +272,6 @@ def _active_pixel_index(O, P, E):
     Ss = -1 if (Os>Es) else 1
 
     slope = 0 if El==Ol else (Es-Os) / (El-Ol)
-    #if El!=Ol:
-    #    print('Os', Os, 'Ol', Ol, 'Es', Es, 'El', El, 'Ps', P[s], 'Pl', P[l])
-    #    print('Es-Os', Es-Os, ' / El-Ol', El-Ol, 'slope', slope)
 
     return active_pixel_index(Ol, Os, P[l], P[s], El, Es, Dl, Ds, Sl, Ss, slope)
 
@@ -285,7 +282,8 @@ cdef int active_pixel_index(double Ol, double Os, \
                         double Sl, double Ss,
                         double slope):
     
-    return int(Sl*2*Dl+(Ss*Ds-int(Ss*slope*(Dl-Sl*.5)+.5))) if Ds or Dl else 0
+    return <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+        if Ds or Dl else 0
 
 
 #@cython.boundscheck(False)
