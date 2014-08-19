@@ -768,51 +768,6 @@ cdef struct Row_Col_Weight_Tuple:
     int weight
 
     
-cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, numpy.ndarray[numpy.npy_float32, ndim=2] dem_array, float nodata_value):
-    cdef int neighbor_row_index, neighbor_col_index
-    if (row_index <= 0 or row_index >= n_rows - 1 or 
-        col_index <= 0 or col_index >= n_cols - 1):
-        return 0
-    if dem_array[row_index, col_index] == nodata_value: return 0    
-    for neighbor_index in xrange(8):
-        neighbor_row_index = row_index + row_offsets[neighbor_index]            
-        neighbor_col_index = col_index + col_offsets[neighbor_index]            
-        
-        if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
-            return 0
-        if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
-            return 0
-    return 1
-              
-
-cdef int _is_sink(
-    int row_index, int col_index, int n_rows, int n_cols, int* row_offsets,
-    int *col_offsets, numpy.ndarray[numpy.npy_float32, ndim=2] dem_array, float nodata_value):
-
-    cdef int neighbor_row_index, neighbor_col_index
-    if dem_array[row_index, col_index] == nodata_value: return 0
-    
-    if _is_flat(row_index, col_index, n_rows, n_cols, row_offsets,
-                col_offsets, dem_array, nodata_value):
-        return 0
-    
-    for neighbor_index in xrange(8):
-        neighbor_row_index = row_index + row_offsets[neighbor_index]
-        if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-            continue
-        neighbor_col_index = col_index + col_offsets[neighbor_index]
-        if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-            continue
-            
-        if (dem_array[neighbor_row_index, neighbor_col_index] ==
-            dem_array[row_index, col_index] and
-            _is_flat(neighbor_row_index, neighbor_col_index,
-                     n_rows, n_cols, row_offsets, col_offsets,
-                     dem_array, nodata_value)):
-            return 1
-    return 0
-
-    
 def _build_flat_set(
     char *dem_uri, float nodata_value, c_set[int] &flat_set):
     
