@@ -814,69 +814,81 @@ cdef int _is_sink(
 
     
 def _build_flat_set(
-    char *dem_uri, float nodata_value, int n_rows, int n_cols,
-    c_set[int] &flat_set):
+    char *dem_uri, float nodata_value, c_set[int] &flat_set):
     
     LOGGER.debug('in _build_flat_set')
     
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
     
     cdef double dem_value, neighbor_dem_value
-    #get the ceiling of the integer division
-    cdef int *allowed_neighbor = [1, 1, 1, 1, 1, 1, 1, 1]
-
-    cdef int row_index, col_index
-    cdef int ul_row_index = 0, ul_col_index = 0
-    cdef int lr_col_index = n_cols, lr_row_index = 3
     
     dem_ds = gdal.Open(dem_uri)
     band = dem_ds.GetRasterBand(1)
-    LOGGER.debug("blocksize: %s" % (str(band.GetBlockSize())))
-    LOGGER.info('create dem array in _build_flat_set')
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = numpy.empty(
-        (3, n_cols), dtype=numpy.float32)
 
-    band.ReadAsArray(
-        xoff=ul_col_index, yoff=ul_row_index, win_xsize=n_cols,
-        win_ysize=3, buf_obj=dem_array)
-    cdef int y_offset, local_y_offset
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = band.GetBlockSize()
+    cdef int n_rows = dem_ds.RasterYSize
+    cdef int n_cols = dem_ds.RasterXSize
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+    
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.int8)
+
+    cache_dirty[:] = 0
+    band_list = [band]
+    block_list = [dem_block]
+    update_list = [False]
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
     
     last_time = time.time()
     #not flat on the edges of the raster, could be a sink
-    for row_index in range(1, n_rows-1):
+    for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
         current_time = time.time()
-        
         if current_time - last_time > 5.0:
-            LOGGER.info('identify flat calls %.2f%% complete' % (100.0 * float(row_index)/n_rows))
+            LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
-        
-        #Grab three rows at a time and be careful of the top and bottom edge
-        y_offset = row_index - 1
-            
-        band.ReadAsArray(
-            xoff=0, yoff=y_offset, win_xsize=n_cols,
-            win_ysize=3, buf_obj=dem_array)
+        for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+            LOGGER.info('global_block_row global_block_col %d %d', global_block_row, global_block_col)
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
 
-        #not flat on the edges of the raster
-        for col_index in range(1, n_cols - 1):
-            dem_value = dem_array[1, col_index]
-            if dem_value == nodata_value:
-                continue
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    dem_value = dem_block[row_index, col_index, row_block_offset, col_block_offset]
+                    if dem_value == nodata_value:
+                        continue
 
-            #check all the neighbors, if nodata or lower, this isn't flat
-            for neighbor_index in xrange(8):
-                neighbor_row_index = 1 + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                
-                neighbor_dem_value = dem_array[neighbor_row_index, neighbor_col_index]
-                if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
-                    break
-            else:
-                #This is a flat element
-                flat_set.insert(row_index * n_cols + col_index)
-    
-    cdef int w_row_index, w_col_index
+                    #check all the neighbors, if nodata or lower, this isn't flat
+                    for neighbor_index in xrange(8):
+                        neighbor_row = neighbor_row_offset[neighbor_index] + global_row
+                        neighbor_col = neighbor_col_offset[neighbor_index] + global_col
+                        
+                        if (neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0):
+                            continue
+                        block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+                        neighbor_dem_value = dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                        if neighbor_dem_value < dem_value or neighbor_dem_value == nodata_value:
+                            break
+                    else:
+                        #This is a flat element
+                        flat_set.insert(global_row * n_cols + global_col)
 
  
 def fill_pits(dem_uri, dem_out_uri):
@@ -1011,7 +1023,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef c_set[int] flat_set_for_looping
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    _build_flat_set(dem_out_uri, nodata_value, n_rows, n_cols, flat_set)
+    _build_flat_set(dem_out_uri, nodata_value, flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
     
     dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
