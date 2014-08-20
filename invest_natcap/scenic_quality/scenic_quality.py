@@ -364,10 +364,11 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
 
-    arg_dist = np.argsort(max_dist)
+    arg_dist = np.argsort(max_distances)
 
-    for f in range(feature_count):
-        print("Processing viewpoint " + str(f))
+    for dist in range(arg_dist.size-1, -1, -1):
+        f = arg_dist[dist]
+        print("Iteration " + str(dist) + ", processing viewpoint " + str(f))
 
         max_dist = max_distances[f]
         coefficient = coefficients[f]
