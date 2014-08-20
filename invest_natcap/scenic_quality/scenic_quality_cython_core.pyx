@@ -208,10 +208,8 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
                 continue
         # Pixel is visible
         if p.offset > max_visibility:
-            visibility = 1.
             visibility = p.offset - max_visibility
         else:
-            visibility = 0.
             visibility = p.offset - max_visibility
         if p.visibility > max_visibility:
             max_visibility = p.visibility
