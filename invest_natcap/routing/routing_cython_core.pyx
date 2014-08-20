@@ -24,6 +24,7 @@ from libc.math cimport atan
 from libc.math cimport atan2
 from libc.math cimport tan
 from libc.math cimport sqrt
+from libc.math cimport ceil
 
 from invest_natcap import raster_utils
 
@@ -815,12 +816,12 @@ cdef _build_flat_set(
     
     last_time = time.time()
     #not flat on the edges of the raster, could be a sink
-    for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+    for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
-        for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+        for global_block_col in xrange(int(ceil(float(n_cols) / block_col_size))):
             for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
                 for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
 
@@ -1537,7 +1538,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
 
     #center point of global index
-    cdef int block_row_size=3, block_col_size=3
+    cdef int block_row_size, block_col_size
+    block_col_size, block_row_size = dem_band.GetBlockSize()
     cdef int global_row, global_col, e_0_row, e_0_col, e_1_row, e_1_col, e_2_row, e_2_col #index into the overall raster
     cdef int e_0_row_index, e_0_col_index #the index of the cache block
     cdef int e_0_row_block_offset, e_0_col_block_offset #index into the cache block
@@ -1574,16 +1576,18 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
     cdef double lowest_dem, dem_value, flow_direction_value
-    cdef queue[int] unresolved_cells
     cdef float current_time, last_time
+
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
     last_time = time.time()
     #flow not defined on the edges, so just go 1 row in 
-    for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+    for global_block_row in xrange(n_global_block_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info("flow_direction_inf %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
-        for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+        for global_block_col in xrange(n_global_block_cols):
             for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
                 for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
                     #is cache block not loaded?
@@ -1704,8 +1708,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                                 a_f[max_index] * flow_direction_max_slope +
                                 a_c[max_index] * 3.14159265 / 2.0)
                             cache_dirty[e_0_row_index, e_0_col_index] = 1
-                        else:
-                            unresolved_cells.push(global_col + global_row * n_cols)
                         #just in case we set 2pi rather than 0
                         #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
                         #    flow_array[0, col_index]  = 0.0
@@ -1714,10 +1716,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                             flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
                                 3.14159265 / 4.0 * max_downhill_facet)
                             cache_dirty[e_0_row_index, e_0_col_index] = 1
-                        else:
-                            unresolved_cells.push(global_col + global_row * n_cols)
-    
-    
+
     block_cache.flush_cache()
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
