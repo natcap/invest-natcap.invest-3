@@ -376,6 +376,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         shutil.copy(tmp_viewshed_uri, visibility_uri)
 
         # Clean up scaled_viewshed and visibility
+        os.remove(tmp_viewshed_uri)
         os.remove(tmp_visibility_uri)
 
     layer = None
