@@ -1717,60 +1717,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         else:
                             unresolved_cells.push(global_col + global_row * n_cols)
     
-    cdef queue[int] unresolved_cells_defer
-    cdef int previous_unresolved_size = unresolved_cells.size()
-    last_time = time.time()
-    while unresolved_cells.size() > 0:
-        flat_index = unresolved_cells.front()
-        unresolved_cells.pop()
     
-        global_row = flat_index / n_cols
-        global_col = flat_index % n_cols
-            
-        #We load 3 rows at a time and we know unresolved directions can only
-        #occur in the middle of the raster
-        if global_row == 0 or global_row == n_rows - 1 or global_col == 0 or global_col == n_cols - 1:
-            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (global_row, global_col))
-        
-        block_cache.update_cache(global_row, global_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
-        e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
-
-        dem_value = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
-        flow_direction_value = flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
-        
-        for facet_index in range(8):
-            e_1_row = row_offsets[facet_index] + global_row
-            e_1_col = col_offsets[facet_index] + global_col
-            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
-            if (dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] == dem_value and
-                flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] != flow_nodata):
-                flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] = facet_index * 3.14159265 / 4.0
-                cache_dirty[e_1_row_index, e_1_col_index] = 1
-                break
-        else:        
-            #maybe we can drain to nodata
-            for facet_index in range(8):
-                e_1_row = row_offsets[facet_index] + global_row
-                e_1_col = col_offsets[facet_index] + global_col
-                block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
-                if dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] == dem_nodata:
-                    flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] = facet_index * 3.14159265 / 4.0
-                    cache_dirty[e_1_row_index, e_1_col_index] = 1
-                    break
-            else:
-                #we couldn't resolve it, try again later
-                unresolved_cells_defer.push(flat_index)
-                
-        if unresolved_cells.size() == 0:
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info('previous_unresolved_size=%d unresolved_cells_defer.size=%d' % (previous_unresolved_size, unresolved_cells_defer.size()))
-                last_time = current_time
-            if unresolved_cells_defer.size() < previous_unresolved_size:
-                previous_unresolved_size = unresolved_cells_defer.size()
-                while unresolved_cells_defer.size() > 0:
-                    unresolved_cells.push(unresolved_cells_defer.front())
-                    unresolved_cells_defer.pop()
     block_cache.flush_cache()
     flow_band = None
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
