@@ -821,7 +821,6 @@ def _build_flat_set(
             LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
         for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
-            LOGGER.info('global_block_row global_block_col %d %d', global_block_row, global_block_col)
             for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
                 for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
 
@@ -1526,7 +1525,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     d_1 = raster_utils.get_cell_size_from_uri(dem_uri)
     d_2 = d_1
     cdef double max_r = numpy.pi / 4.0
-    
+
     #Create a flow carray and respective dataset
     cdef float flow_nodata = -9999
     raster_utils.new_raster_from_base_uri(
@@ -1534,171 +1533,190 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         gdal.GDT_Float32, fill_value=flow_nodata)
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
     flow_band = flow_direction_dataset.GetRasterBand(1)
-    #we'll write into this array and save every row
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = numpy.empty(
-        (1, n_cols), dtype=numpy.float32)
+
+    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
+
+    #center point of global index
+    cdef int block_row_size=3, block_col_size=3
+    cdef int global_row, global_col, e_0_row, e_0_col, e_1_row, e_1_col, e_2_row, e_2_col #index into the overall raster
+    cdef int e_0_row_index, e_0_col_index #the index of the cache block
+    cdef int e_0_row_block_offset, e_0_col_block_offset #index into the cache block
+    cdef int e_1_row_index, e_1_col_index #the index of the cache block
+    cdef int e_1_row_block_offset, e_1_col_block_offset #index into the cache block
+    cdef int e_2_row_index, e_2_col_index #the index of the cache block
+    cdef int e_2_row_block_offset, e_2_col_block_offset #index into the cache block
+
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
     
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flow_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    
+    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    band_list = [dem_band, flow_band]
+    block_list = [dem_block, flow_block]
+    update_list = [False, True]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
     LOGGER.info("calculating d-inf per pixel flows")
     
     cdef int row_offset, col_offset
-
-    cdef int e_0_row_index, e_0_col_index, e_1_row_index, e_1_col_index, e_2_row_index, e_2_col_index
-    cdef float[:, :] dem_window
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
     cdef double lowest_dem, dem_value, flow_direction_value
     cdef queue[int] unresolved_cells
-    
+    cdef float current_time, last_time
+    last_time = time.time()
     #flow not defined on the edges, so just go 1 row in 
-    for row_index in range(n_rows):
-        #We load 3 rows at a time
-        y_offset = row_index - 1
-        local_y_offset = 1
-        
-        if row_index == 0:
-            y_offset = 0
-            local_y_offset = 0
-        if row_index == n_rows - 1:
-            y_offset = n_rows - 3
-            local_y_offset = 2
-        
-        dem_window = dem_band.ReadAsArray(
-            xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-        
-        #clear out the flow array from the previous loop
-        flow_array[:] = flow_nodata
-        #flow not defined on the edges, so just go 1 col in 
-        for col_index in range(n_cols):
+    for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("flow_direction_inf %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            last_time = current_time
+        for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
+                    #is cache block not loaded?
 
-            e_0_row_index = e_0_offsets[0] + local_y_offset
-            e_0_col_index = e_0_offsets[1] + col_index
-            e_0 = dem_window[e_0_row_index, e_0_col_index]
+                    e_0_row = e_0_offsets[0] + global_row
+                    e_0_col = e_0_offsets[1] + global_col
 
-            #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_window[local_y_offset, col_index] == dem_nodata:
-                continue
-                
-            max_downhill_facet = -1
-            lowest_dem = e_0
-            #we have a special case if we're on the border of the raster
-            if (col_index == 0 or col_index == n_cols - 1 or 
-                row_index == 0 or row_index == n_rows - 1):
-                #loop through the neighbor edges, and manually set a direction
-                for facet_index in range(8):
-                    e_1_row_index = row_offsets[facet_index] + local_y_offset
-                    e_1_col_index = col_offsets[facet_index] + col_index
-                    if (e_1_col_index == -1 or e_1_col_index == n_cols or
-                        e_1_row_index == -1 or e_1_row_index == 3):
+                    block_cache.update_cache(e_0_row, e_0_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
+                    e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
+
+                    #skip if we're on a nodata pixel skip
+                    if e_0 == dem_nodata:
                         continue
-                    e_1 = dem_window[e_1_row_index, e_1_col_index]
-                    if e_1 == dem_nodata:
+
+                    max_downhill_facet = -1
+                    lowest_dem = e_0
+                    #we have a special case if we're on the border of the raster
+                    if (e_0_col == 0 or e_0_col == n_cols - 1 or e_0_row == 0 or e_0_row == n_rows - 1):
+                        #loop through the neighbor edges, and manually set a direction
+                        for facet_index in range(8):
+                            e_1_row = row_offsets[facet_index] + global_row
+                            e_1_col = col_offsets[facet_index] + global_col
+                            if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
+                                continue
+                            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+                            e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
+                            if e_1 == dem_nodata:
+                                continue
+                            if e_1 < lowest_dem:
+                                lowest_dem = e_1
+                                max_downhill_facet = facet_index
+                                
+                        if max_downhill_facet != -1:
+                            flow_direction = 3.14159265 / 4.0 * max_downhill_facet
+                        else:
+                            #we need to point to the left or right
+                            if global_col == 0:
+                                flow_direction = 3.14159265 / 2.0 * 2
+                            elif global_col == n_cols - 1:
+                                flow_direction = 3.14159265 / 2.0 * 0
+                            elif global_row == 0:
+                                flow_direction = 3.14159265 / 2.0 * 1
+                            elif global_row == n_rows - 1:
+                                flow_direction = 3.14159265 / 2.0 * 3
+                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = flow_direction
+                        cache_dirty[e_0_row_index, e_0_col_index] = 1
+                        #done with this pixel, go to the next
                         continue
-                    if e_1 < lowest_dem:
-                        lowest_dem = e_1
-                        max_downhill_facet = facet_index
                         
-                if max_downhill_facet != -1:
-                    flow_array[0, col_index] = (
-                        3.14159265 / 4.0 * max_downhill_facet)
-                else:
-                    #we need to point to the left or right
-                    if col_index == 0:
-                        flow_array[0, col_index] = (
-                            3.14159265 / 2.0 * 2)
-                    elif col_index == n_cols - 1:
-                        flow_array[0, col_index] = (
-                            3.14159265 / 2.0 * 0)
-                    elif row_index == 0:
-                        flow_array[0, col_index] = (
-                            3.14159265 / 2.0 * 1)
-                    elif row_index == n_rows - 1:
-                        flow_array[0, col_index] = (
-                            3.14159265 / 2.0 * 3)
-                #done with this pixel, go to the next
-                continue
-                
-            #Calculate the flow flow_direction for each facet
-            slope_max = 0 #use this to keep track of the maximum down-slope
-            flow_direction_max_slope = 0 #flow direction on max downward slope
-            max_index = 0 #index to keep track of max slope facet
-            
-            #max_downhill_facet = -1
-            #lowest_dem = e_0
-            contaminated = False
-            for facet_index in range(8):
-                #This defines the three points the facet
-                e_1_row_index = e_1_offsets[facet_index * 2 + 0] + local_y_offset
-                e_1_col_index = e_1_offsets[facet_index * 2 + 1] + col_index
-                e_2_row_index = e_2_offsets[facet_index * 2 + 0] + local_y_offset
-                e_2_col_index = e_2_offsets[facet_index * 2 + 1] + col_index
-
-                e_1 = dem_window[e_1_row_index, e_1_col_index]
-                e_2 = dem_window[e_2_row_index, e_2_col_index]
-
-                if facet_index % 2 == 0 and e_1 != dem_nodata and e_1 < lowest_dem:
-                    lowest_dem = e_1
-                    max_downhill_facet = facet_index
-                elif facet_index % 2 == 1 and e_2 != dem_nodata and e_2 < lowest_dem:
-                    lowest_dem = e_2
-                    max_downhill_facet = facet_index
-                
-                #avoid calculating a slope on nodata values
-                if e_1 == dem_nodata or e_2 == dem_nodata:
-                    #If any neighbors are nodata, it's contaminated
-                    contaminated = True
-                    continue
+                    #Calculate the flow flow_direction for each facet
+                    slope_max = 0 #use this to keep track of the maximum down-slope
+                    flow_direction_max_slope = 0 #flow direction on max downward slope
+                    max_index = 0 #index to keep track of max slope facet
                     
-                #s_1 is slope along straight edge
-                s_1 = (e_0 - e_1) / d_1 #Eqn 1
-                #slope along diagonal edge
-                s_2 = (e_1 - e_2) / d_2 #Eqn 2
-                
-                flow_direction = atan2(s_2, s_1) #Eqn 3
-                
-                if flow_direction < 0: #Eqn 4
-                    #If the flow direction goes off one side, set flow
-                    #direction to that side and the slope to the straight line
-                    #distance slope
-                    flow_direction = 0
-                    slope = s_1
-                elif flow_direction > max_r: #Eqn 5
-                    #If the flow direciton goes off the diagonal side, figure
-                    #out what its value is and
-                    flow_direction = max_r
-                    slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
-                else:
-                    slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
-                    
-                if slope > slope_max:
-                    flow_direction_max_slope = flow_direction
-                    slope_max = slope
-                    max_index = facet_index
-                
-            # This is the fallthrough condition for the for loop, we reach
-            # it only if we haven't encountered an invalid slope or pixel
-            # that caused the above algorithm to break out 
-            #Calculate the global angle depending on the max slope facet
-            if not contaminated:
-                if slope_max > 0:
-                    flow_array[0, col_index] = (
-                        a_f[max_index] * flow_direction_max_slope +
-                        a_c[max_index] * 3.14159265 / 2.0)
-                else:
-                    unresolved_cells.push(col_index + row_index * n_cols)
-                #just in case we set 2pi rather than 0
-                #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
-                #    flow_array[0, col_index]  = 0.0
-            else:
-                if max_downhill_facet != -1:
-                    flow_array[0, col_index] = (
-                        3.14159265 / 4.0 * max_downhill_facet)
-                else:
-                    unresolved_cells.push(col_index + row_index * n_cols)
-        #save the current flow row
-        flow_band.WriteArray(flow_array, 0, row_index)
+                    #max_downhill_facet = -1
+                    #lowest_dem = e_0
+                    contaminated = False
+                    for facet_index in range(8):
+                        #This defines the three points the facet
+
+                        e_1_row = e_1_offsets[facet_index * 2 + 0] + global_row
+                        e_1_col = e_1_offsets[facet_index * 2 + 1] + global_col
+                        e_2_row = e_2_offsets[facet_index * 2 + 0] + global_row
+                        e_2_col = e_2_offsets[facet_index * 2 + 1] + global_col
+
+                        block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+                        block_cache.update_cache(e_2_row, e_2_col, &e_2_row_index, &e_2_col_index, &e_2_row_block_offset, &e_2_col_block_offset)
+                        
+                        e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
+                        e_2 = dem_block[e_2_row_index, e_2_col_index, e_2_row_block_offset, e_2_col_block_offset]
+
+                        if facet_index % 2 == 0 and e_1 != dem_nodata and e_1 < lowest_dem:
+                            lowest_dem = e_1
+                            max_downhill_facet = facet_index
+                        elif facet_index % 2 == 1 and e_2 != dem_nodata and e_2 < lowest_dem:
+                            lowest_dem = e_2
+                            max_downhill_facet = facet_index
+                        
+                        #avoid calculating a slope on nodata values
+                        if e_1 == dem_nodata or e_2 == dem_nodata:
+                            #If any neighbors are nodata, it's contaminated
+                            contaminated = True
+                            continue
+                            
+                        #s_1 is slope along straight edge
+                        s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                        #slope along diagonal edge
+                        s_2 = (e_1 - e_2) / d_2 #Eqn 2
+                        
+                        flow_direction = atan2(s_2, s_1) #Eqn 3
+                        
+                        if flow_direction < 0: #Eqn 4
+                            #If the flow direction goes off one side, set flow
+                            #direction to that side and the slope to the straight line
+                            #distance slope
+                            flow_direction = 0
+                            slope = s_1
+                        elif flow_direction > max_r: #Eqn 5
+                            #If the flow direciton goes off the diagonal side, figure
+                            #out what its value is and
+                            flow_direction = max_r
+                            slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                        else:
+                            slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                            
+                        if slope > slope_max:
+                            flow_direction_max_slope = flow_direction
+                            slope_max = slope
+                            max_index = facet_index
+                        
+                    # This is the fallthrough condition for the for loop, we reach
+                    # it only if we haven't encountered an invalid slope or pixel
+                    # that caused the above algorithm to break out 
+                    #Calculate the global angle depending on the max slope facet
+                    if not contaminated:
+                        if slope_max > 0:
+                            flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
+                                a_f[max_index] * flow_direction_max_slope +
+                                a_c[max_index] * 3.14159265 / 2.0)
+                            cache_dirty[e_0_row_index, e_0_col_index] = 1
+                        else:
+                            unresolved_cells.push(global_col + global_row * n_cols)
+                        #just in case we set 2pi rather than 0
+                        #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
+                        #    flow_array[0, col_index]  = 0.0
+                    else:
+                        if max_downhill_facet != -1:
+                            flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
+                                3.14159265 / 4.0 * max_downhill_facet)
+                            cache_dirty[e_0_row_index, e_0_col_index] = 1
+                        else:
+                            unresolved_cells.push(global_col + global_row * n_cols)
     
-    y_offset = -1
-    cdef int dirty_cache = 0
     cdef queue[int] unresolved_cells_defer
     cdef int previous_unresolved_size = unresolved_cells.size()
     last_time = time.time()
@@ -1706,43 +1724,38 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         flat_index = unresolved_cells.front()
         unresolved_cells.pop()
     
-        row_index = flat_index / n_cols
-        col_index = flat_index % n_cols
+        global_row = flat_index / n_cols
+        global_col = flat_index % n_cols
             
         #We load 3 rows at a time and we know unresolved directions can only
         #occur in the middle of the raster
-        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
-            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
-        if y_offset != row_index - 1:
-            if dirty_cache:
-                flow_band.WriteArray(flow_array, 0, y_offset)
-                dirty_cache = 0
-            local_y_offset = 1
-            y_offset = row_index - 1
-            dem_window = dem_band.ReadAsArray(
-                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-            flow_array = flow_band.ReadAsArray(
-                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-                
-        dem_value = dem_window[1, col_index]
-        flow_direction_value = flow_array[1, col_index]
+        if global_row == 0 or global_row == n_rows - 1 or global_col == 0 or global_col == n_cols - 1:
+            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (global_row, global_col))
+        
+        block_cache.update_cache(global_row, global_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
+        e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
+
+        dem_value = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
+        flow_direction_value = flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
         
         for facet_index in range(8):
-            e_1_row_index = row_offsets[facet_index] + local_y_offset
-            e_1_col_index = col_offsets[facet_index] + col_index
-            if (dem_window[e_1_row_index, e_1_col_index] == dem_value and
-                flow_array[e_1_row_index, e_1_col_index] != flow_nodata):
-                flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
-                dirty_cache = 1
+            e_1_row = row_offsets[facet_index] + global_row
+            e_1_col = col_offsets[facet_index] + global_col
+            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+            if (dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] == dem_value and
+                flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] != flow_nodata):
+                flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] = facet_index * 3.14159265 / 4.0
+                cache_dirty[e_1_row_index, e_1_col_index] = 1
                 break
         else:        
             #maybe we can drain to nodata
             for facet_index in range(8):
-                e_1_row_index = row_offsets[facet_index] + local_y_offset
-                e_1_col_index = col_offsets[facet_index] + col_index
-                if dem_window[e_1_row_index, e_1_col_index] == dem_nodata:
-                    flow_array[1, col_index] = facet_index * 3.14159265 / 4.0
-                    dirty_cache = 1
+                e_1_row = row_offsets[facet_index] + global_row
+                e_1_col = col_offsets[facet_index] + global_col
+                block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+                if dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] == dem_nodata:
+                    flow_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset] = facet_index * 3.14159265 / 4.0
+                    cache_dirty[e_1_row_index, e_1_col_index] = 1
                     break
             else:
                 #we couldn't resolve it, try again later
@@ -1758,16 +1771,23 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 while unresolved_cells_defer.size() > 0:
                     unresolved_cells.push(unresolved_cells_defer.front())
                     unresolved_cells_defer.pop()
+    block_cache.flush_cache()
+    flow_band = None
+    gdal.Dataset.__swig_destroy__(flow_direction_dataset)
+    flow_direction_dataset = None
+    raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
+
+'''
     while unresolved_cells_defer.size() > 0:
         flat_index = unresolved_cells_defer.front()
         unresolved_cells_defer.pop()
     
-        row_index = flat_index / n_cols
-        col_index = flat_index % n_cols
+        global_row = flat_index / n_cols
+        global_col = flat_index % n_cols
         #We load 3 rows at a time and we know unresolved directions can only
         #occur in the middle of the raster
-        if row_index == 0 or row_index == n_rows - 1 or col_index == 0 or col_index == n_cols - 1:
+        if global_row == 0 or global_row == n_rows - 1 or global_col == 0 or global_col == n_cols - 1:
             raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
         if y_offset != row_index - 1:
             if dirty_cache:
@@ -1784,11 +1804,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     if dirty_cache:
         flow_band.WriteArray(flow_array, 0, y_offset)
         dirty_cache = 0
+'''
 
-    flow_band = None
-    gdal.Dataset.__swig_destroy__(flow_direction_dataset)
-    flow_direction_dataset = None
-    raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
 
 def find_sinks(dem_uri):
@@ -2593,8 +2610,6 @@ cdef class BlockCache:
 @cython.cdivision(True)
 def cache_block_experiment(ds_uri, out_uri):
     LOGGER.info('starting cache_block_experiment')
-    #This is a set of common variables that's useful for indexing into a 2D cache blocked grid
-    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
     cdef int neighbor_index #a number between 0 and 7 indicating neighbor in the following configuration
     # 321
     # 4x0
@@ -2614,6 +2629,8 @@ def cache_block_experiment(ds_uri, out_uri):
         ds_uri, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
     out_ds = gdal.Open(out_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
+
+    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
 
     #center point of global index
     cdef int global_row, global_col #index into the overall raster
