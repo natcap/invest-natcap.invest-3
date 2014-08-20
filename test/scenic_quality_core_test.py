@@ -895,8 +895,8 @@ class TestScenicQuality(unittest.TestCase):
 
     def test_cython_vs_python_on_block_island(self):
         #return
-        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_10m.json"
-        #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
+        #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_10m_1pt.json"
+        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
             for entry in args:

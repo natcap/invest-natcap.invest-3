@@ -72,6 +72,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         -0.5, -0.5, 0.5, 0.5, \
         -0.5, -0.5, -0.5, 0.5, \
         0.5, -0.5, -0.5, 0.5]
+        np.float64_t angle = 0.
         # constants for fast axess of extreme_cell_points
         size_t SECTOR_SIZE = 4 # 4 values in a row
         size_t POINT_SIZE = 2 # 2 coordinates per point per point
@@ -89,21 +90,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         # offset from the cell center to the last corner
         double max_corner_offset_row
         double max_corner_offset_col
-        # C array that will be used in the loop
-        # pointer to min angle values
-        double *min_a_ptr = NULL
-        # pointer to cell center angle values
-        double *a_ptr = NULL
-        # pointer to max angle values
-        double *max_a_ptr = NULL
-        # pointer to the cells row number
-        long *I_ptr = NULL
-        # pointer to the cells column number
-        long *J_ptr = NULL
         # variables used in the loop
         int cell_id = 0 # processed cell counter
-        int row # row counter
-        int col # column counter
+        np.int32_t row # row counter
+        np.int32_t col # column counter
         int sector # current sector
 
     # Count sixe of arrays before allocating
@@ -122,11 +112,12 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
                 continue
             cell_count += 1
     # Allocate the arrays
-    min_a_ptr = <double *>malloc((cell_count) * sizeof(double))
-    a_ptr = <double *>malloc((cell_count) * sizeof(double))
-    max_a_ptr = <double *>malloc((cell_count) * sizeof(double))
-    I_ptr = <long *>malloc((cell_count) * sizeof(long))
-    J_ptr = <long *>malloc((cell_count) * sizeof(long))
+    min_angles = np.ndarray(cell_count, dtype = np.float64)
+    angles = np.ndarray(cell_count, dtype = np.float64)
+    max_angles = np.ndarray(cell_count, dtype = np.float64)
+    I = np.ndarray(cell_count, dtype = np.int32)
+    J = np.ndarray(cell_count, dtype = np.int32)
+
 
     # Fill out the arrays
     # Loop through the rows
@@ -144,15 +135,16 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
                 continue
             # cell coordinates
             # Update list of rows and list of cols
-            I_ptr[cell_id] = row
-            J_ptr[cell_id] = col
+            I[cell_id] = row
+            J[cell_id] = col
             # Compute the angle of the cell center
-            angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
-            a_ptr[cell_id] = (angle + two_pi) % two_pi
+            angle = <np.float64_t>(atan2(-(row - viewpoint_row), col - viewpoint_col) + \
+                two_pi) % two_pi
+            angles[cell_id] = angle
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = <int>(4. * a_ptr[cell_id] / two_pi) * 2
+            sector = <int>(4. * angle / two_pi) * 2
             # The if statement adjusts for all the 8 angles
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
@@ -174,29 +166,9 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             min_angle = atan2(-min_corner_row, min_corner_col)
             max_angle = atan2(-max_corner_row, max_corner_col)
             # Save the angles in the fast C arrays
-            min_a_ptr[cell_id] = (min_angle + two_pi) % two_pi 
-            max_a_ptr[cell_id] = (max_angle + two_pi) % two_pi
+            min_angles[cell_id] = (min_angle + two_pi) % two_pi 
+            max_angles[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
-    # Copy C-array contents to numpy arrays:
-    # TODO: use memcpy if possible (or memoryviews?)
-    min_angles = np.ndarray(cell_count, dtype = np.float)
-    angles = np.ndarray(cell_count, dtype = np.float)
-    max_angles = np.ndarray(cell_count, dtype = np.float)
-    I = np.ndarray(cell_count, dtype = np.int32)
-    J = np.ndarray(cell_count, dtype = np.int32)
-
-    for i in range(cell_count):
-        min_angles[i] = min_a_ptr[i]
-        angles[i] = a_ptr[i]
-        max_angles[i] = max_a_ptr[i]
-        I[i] = I_ptr[i]
-        J[i] = J_ptr[i]
-    # clean-up
-    free(I_ptr)
-    free(J_ptr)
-    free(min_a_ptr)
-    free(a_ptr)
-    free(max_a_ptr)
 
     return (min_angles, angles, max_angles, I, J)
 
