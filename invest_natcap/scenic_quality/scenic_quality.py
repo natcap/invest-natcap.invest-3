@@ -377,6 +377,18 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         i = viewpoint_row[f]
         j = viewpoint_col[f]
 
+        # Compute arrays that can be cashed for identical max_dist
+        # perimeter
+        # angles
+        # add_events
+        # center_events
+        # remove_events
+        # arg_min
+        # arg_center
+        # arg_max
+        # coord
+        # distances
+        
         # Create a visibility map
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
