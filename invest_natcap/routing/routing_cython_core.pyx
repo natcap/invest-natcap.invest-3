@@ -768,7 +768,7 @@ cdef struct Row_Col_Weight_Tuple:
     int weight
 
     
-def _build_flat_set(
+cdef _build_flat_set(
     char *dem_uri, float nodata_value, c_set[int] &flat_set):
     
     LOGGER.debug('in _build_flat_set')
