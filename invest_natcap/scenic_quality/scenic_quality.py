@@ -312,9 +312,19 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
+
+    array_shape = (rows, cols)
+    
+    # Create arrays for the parameters used for the computation at each viewpoint
+    max_distances = np.ones(feature_count).astype(int) * -1
+    coefficients = np.ones(feature_count)
+    obs_elevations = np.zeros(feature_count)
+    tgt_elevations = np.zeros(feature_count)
+    viewpoint_row = np.ones(feature_count).astype(int) * -1
+    viewpoint_col = np.ones(feature_count).astype(int) * -1
+
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
-        print("Processing viewpoint " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         # Check for feature information (radius, coeff, height)
@@ -332,15 +342,16 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                         str(max_dist) + ')')
                     LOGGER.warning( \
                         'The valuation is performed beyond what is visible')
-                max_dist = int(max_dist/cell_size)
+                max_distances[f] = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
-                coefficient = float(feature.GetField(field))
+                coefficients[f] = float(feature.GetField(field))
+                #coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
             if field_name.lower() == 'offseta':
-                obs_elev = float(feature.GetField(field))
+                obs_elevations[f] = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
             if field_name.lower() == 'offsetb':
-                tgt_elev = float(feature.GetField(field))
+                tgt_elevations[f] = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 
         geometry = feature.GetGeometryRef()
@@ -350,11 +361,21 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
 
-        array_shape = (rows, cols)
-    
+    arg_dist = np.argsort(max_dist)
+
+    for f in range(feature_count):
+        print("Processing viewpoint " + str(f))
+
+        max_dist = max_distances[f]
+        coefficient = coefficients[f]
+        obs_elev = obs_elevations[f]
+        tgt_elev = tgt_elevations[f]
+        i = viewpoint_row[f]
+        j = viewpoint_col[f]
+
         # Create a visibility map
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
