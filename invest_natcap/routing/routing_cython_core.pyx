@@ -88,81 +88,53 @@ def calculate_transport(
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
-
-    cdef int CACHE_ROWS = n_rows
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] outflow_weights_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_cache
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] absorption_rate_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_cache
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] stream_cache
-    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
-    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
-    
-    while True:
-        try:
-            outflow_direction_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
-            outflow_weights_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            source_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            absorption_rate_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            loss_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))   
-            flux_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            stream_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
-            cache_tag = (
-                numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
-            cache_dirty = (
-                numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
-    
-            break
-        except MemoryError as e:
-            LOGGER.warn(
-                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
-                'reducing by half')
-            CACHE_ROWS /= 2
-            if CACHE_ROWS < 3:
-                LOGGER.error(
-                    'The cache size is too small now, '
-                    "don't know what to do.  Failing.")
-                raise e
-    
-    cdef int stream_nodata = 0
-    if stream_uri != None:
-        stream_dataset = gdal.Open(stream_uri)
-        stream_band = stream_dataset.GetRasterBand(1)
-        stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
-    else:
-        stream_band = None
-    
-        
-
-    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
-    cache_tag[:] = -1
-    cache_dirty[:] = 0
-    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = outflow_direction_band.GetBlockSize()
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+    
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] source_block =numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] absorption_rate_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] loss_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flux_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.int8)
+
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
-        
-        
+    
     outflow_weights_dataset = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
     cdef int outflow_weights_nodata = raster_utils.get_nodata_from_uri(
         outflow_weights_uri)
-    
-
     source_dataset = gdal.Open(source_uri)
     source_band = source_dataset.GetRasterBand(1)
     cdef int source_nodata = raster_utils.get_nodata_from_uri(
         source_uri)
-
     absorption_rate_dataset = gdal.Open(absorption_rate_uri)
     absorption_rate_band = absorption_rate_dataset.GetRasterBand(1)
     cdef int absorption_rate_nodata = raster_utils.get_nodata_from_uri(
@@ -170,7 +142,6 @@ def calculate_transport(
 
     #Create output arrays for loss and flux
     transport_nodata = -1.0
-
     loss_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
         gdal.GDT_Float32)
@@ -179,6 +150,25 @@ def calculate_transport(
         outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
         gdal.GDT_Float32)
     flux_band = flux_dataset.GetRasterBand(1)
+
+    cache_dirty[:] = 0
+    band_list = [outflow_direction_band, outflow_weights_band, source_band, absorption_rate_band, loss_band, flux_band]
+    block_list = [outflow_direction_block, outflow_weights_block, source_block, absorption_rate_block, loss_block, flux_block]
+    update_list = [False, False, False, False, True, True]
+    
+    cdef int stream_nodata = 0
+    if stream_uri != None:
+        stream_dataset = gdal.Open(stream_uri)
+        stream_band = stream_dataset.GetRasterBand(1)
+        stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
+        band_list.append(stream_band)
+        block_list.append(stream_block)
+        update_list.append(False)
+    else:
+        stream_band = None
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     #Process flux through the grid
     cdef stack[int] cells_to_process
@@ -198,166 +188,101 @@ def calculate_transport(
 
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int current_index
-    cdef int old_row_index
-    cdef int current_row
-    cdef int current_col
     cdef int neighbor_direction
-    cdef int neighbor_row
-    cdef int neighbor_col
     cdef double absorption_rate
     cdef double outflow_weight
     cdef double in_flux
-    cdef int cache_row_offset, neighbor_row_index, cache_row_index, row_tag
-
+    cdef int current_neighbor_index
+    
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
-    cdef int n_steps = 0
     last_time = time.time()
     while cells_to_process.size() > 0:
-        n_steps += 1
-        if n_steps % 1000000 == 0:
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info('Steps cells_to_process.size() = %d' % (cells_to_process.size()))
-                last_time = current_time
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info('Steps cells_to_process.size() = %d' % (cells_to_process.size()))
+            last_time = current_time
     
         current_index = cells_to_process.top()
         cells_to_process.pop()
-        current_row = current_index / n_cols
-        current_col = current_index % n_cols
+        global_row = current_index / n_cols
+        global_col = current_index % n_cols
         #see if we need to update the row cache
-        for cache_row_offset in range(-1, 2):
-            neighbor_row_index = current_row + cache_row_offset
-            #see if that row is out of bounds
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                continue
-            #otherwise check if the cache needs an update
-            cache_row_index = neighbor_row_index % CACHE_ROWS
-            row_tag = neighbor_row_index / CACHE_ROWS
-            
-            if cache_tag[cache_row_index] == row_tag:
-                #cache is up to date, so skip
-                continue
-                
-            #see if we need to save the cache
-            if cache_dirty[cache_row_index]:
-                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                loss_band.WriteArray(
-                    loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                flux_band.WriteArray(
-                    flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                cache_dirty[cache_row_index] = 0
-                
-            #load a new row
-            flux_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=flux_cache[cache_row_index].reshape((1,n_cols)))
-            loss_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=loss_cache[cache_row_index].reshape((1,n_cols)))
-            absorption_rate_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=absorption_rate_cache[cache_row_index].reshape((1,n_cols)))
-            source_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=source_cache[cache_row_index].reshape((1,n_cols)))
-            outflow_direction_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
-            outflow_weights_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
-            if stream_band != None:
-                stream_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=stream_cache[cache_row_index].reshape((1,n_cols)))
-            else:
-                stream_cache[:] = 0
-            cache_tag[cache_row_index] = row_tag
-                
-        cache_row_index = current_row % CACHE_ROWS
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         
         #Ensure we are working on a valid pixel
-        if (source_cache[cache_row_index, current_col] == source_nodata):
-            flux_cache[cache_row_index, current_col] = 0.0
-            loss_cache[cache_row_index, current_col] = 0.0
-            cache_dirty[cache_row_index] = 1
+        if source_block[row_index, col_index, row_block_offset, col_block_offset] == source_nodata:
+            flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            cache_dirty[row_index, col_index] = 1
 
         #We have real data that make the absorption array nodata sometimes
         #right now the best thing to do is treat it as 0.0 so everything else
         #routes
-        if (absorption_rate_cache[cache_row_index, current_col] == 
-            absorption_rate_nodata):
-            absorption_rate_cache[cache_row_index, current_col] = 0.0
+        if absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset] == absorption_rate_nodata:
+            absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
 
-        if flux_cache[cache_row_index, current_col] == transport_nodata:
-            if stream_cache[cache_row_index, current_col] == 0:
-                flux_cache[cache_row_index, current_col] = source_cache[
-                    cache_row_index, current_col]
+        if flux_block[row_index, col_index, row_block_offset, col_block_offset] == transport_nodata:
+            if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 0:
+                flux_block[row_index, col_index, row_block_offset, col_block_offset] = (
+                    source_block[row_index, col_index, row_block_offset, col_block_offset])
             else:
-                flux_cache[cache_row_index, current_col] = 0.0
-            loss_cache[cache_row_index, current_col] = 0.0
-            cache_dirty[cache_row_index] = 1
+                flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            cache_dirty[row_index, col_index] = 1
             if absorb_source:
-                absorption_rate = (
-                    absorption_rate_cache[cache_row_index, current_col])
-                loss_cache[cache_row_index, current_col] = (
-                    absorption_rate * flux_cache[cache_row_index, current_col])
-                flux_cache[cache_row_index, current_col] *= (1 - absorption_rate)
+                absorption_rate = absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset]
+                loss_block[row_index, col_index, row_block_offset, col_block_offset] = (
+                    absorption_rate * flux_block[row_index, col_index, row_block_offset, col_block_offset])
+                flux_block[row_index, col_index, row_block_offset, col_block_offset] *= (1 - absorption_rate)
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
-            cache_cache_neighbor_row = (
-                cache_row_index+row_offsets[direction_index]) % CACHE_ROWS
-            neighbor_row = current_row+row_offsets[direction_index]
-            neighbor_col = current_col+col_offsets[direction_index]
+            neighbor_row = global_row + row_offsets[direction_index]
+            neighbor_col = global_col + col_offsets[direction_index]
 
             #See if neighbor out of bounds
-            if (neighbor_row < 0 or neighbor_row >= n_rows or
-                neighbor_col < 0 or neighbor_col >= n_cols):
+            if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
+            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
             #if neighbor inflows
-            neighbor_direction = (
-                outflow_direction_cache[cache_cache_neighbor_row, neighbor_col])
+            neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
-            if (inflow_offsets[direction_index] != neighbor_direction and
-                inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
+            if (inflow_offsets[direction_index] != neighbor_direction and inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
                 #then neighbor doesn't inflow into current cell
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_cache[cache_cache_neighbor_row, neighbor_col]
+            outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
             
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
 
             if outflow_weight < 0.001:
                 continue
-            in_flux = flux_cache[cache_cache_neighbor_row, neighbor_col]
+            in_flux = flux_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
             if in_flux != transport_nodata:
-                absorption_rate = (
-                    absorption_rate_cache[cache_row_index, current_col])
+                absorption_rate = absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset]
 
                 #If it's not a stream, route the flux normally
-                if stream_cache[cache_row_index, current_col] == 0:
-                    flux_cache[cache_row_index, current_col] += (
+                if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 0:
+                    flux_block[row_index, col_index, row_block_offset, col_block_offset] += (
                         outflow_weight * in_flux * (1.0 - absorption_rate))
 
-                    loss_cache[cache_row_index, current_col] += (
+                    loss_block[row_index, col_index, row_block_offset, col_block_offset] += (
                         outflow_weight * in_flux * absorption_rate)
                 else:
                     #Otherwise if it is a stream, all flux routes to the outlet
                     #we don't want it absorbed later
-                    flux_cache[cache_row_index, current_col] = 0.0
-                    loss_cache[cache_row_index, current_col] = 0.0
-                cache_dirty[cache_row_index] = 1
+                    flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+                    loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+                cache_dirty[row_index, col_index] = 1
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
@@ -367,21 +292,12 @@ def calculate_transport(
                 #Calculating the flat index for the neighbor and starting
                 #at it's neighbor index of 0
                 #a global neighbor row needs to be calculated
-                cells_to_process.push((current_row+row_offsets[direction_index]) * n_cols + neighbor_col)
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
                 cell_neighbor_to_process.push(0)
                 break
 
     LOGGER.info('Flushing remaining dirty cache to disk')
-    #Write results to disk
-    for cache_row_index in range(CACHE_ROWS):
-        if cache_dirty[cache_row_index]:
-            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-            flux_band.WriteArray(
-                flux_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-            loss_band.WriteArray(
-                loss_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-            cache_dirty[cache_row_index] = 0
-
+    block_cache.flush_cache()
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
 
