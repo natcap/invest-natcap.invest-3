@@ -233,6 +233,10 @@ def write_html(html_obj, out_uri):
     html_str = u('<html>')
 
     for section in ['head', 'body']:
+        # Ensure the browser interprets the html file as utf-8
+        if section == 'head':
+            html_str += '<meta charset="UTF-8">'
+
         # Write the tag for the section
         html_str += '<%s>' % u(section)
         # Get the list of html string elements for this section
