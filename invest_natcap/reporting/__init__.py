@@ -8,6 +8,7 @@ import csv
 import json
 import codecs
 import re
+from types import StringType
 
 import numpy as np
 from osgeo import gdal
@@ -24,6 +25,8 @@ REPORTING_DATA = os.path.join(
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
+
+u = lambda string: unicode(string, 'utf-8')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
@@ -227,16 +230,22 @@ def write_html(html_obj, out_uri):
     LOGGER.debug('Writing HTML page')
 
     # Start the string that will be written as the html file
-    html_str = '<html>'
+    html_str = u('<html>')
 
     for section in ['head', 'body']:
+        # Ensure the browser interprets the html file as utf-8
+        if section == 'head':
+            html_str += '<meta charset="UTF-8">'
+
         # Write the tag for the section
-        html_str += '<%s>' % section
+        html_str += '<%s>' % u(section)
         # Get the list of html string elements for this section
         sect_elements = html_obj[section]
 
         for element in sect_elements:
             # Add each element to the html string
+            if type(element) is StringType:
+                element = u(element)
             html_str += element
 
         # Add the closing tag for the section
