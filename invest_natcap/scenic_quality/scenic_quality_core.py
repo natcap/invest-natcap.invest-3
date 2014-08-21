@@ -366,7 +366,7 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     angles, v, viewshed_shape, row_min, col_min, \
     add_events, center_events, remove_events, I, J, \
     arg_min, arg_max, arg_center, \
-    coord, distances_sq, distances, \
+    coord, distances_sq, distances, visibility, offset_visibility, \
     output_uri, obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
     refraction_coeff=None, alg_version='cython'):
     """Compute the viewshed for a single observer. 
@@ -385,26 +385,6 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
             (default) or 'python'.
 
         Returns the visibility map for the DEM as a numpy array"""
-    # Computation of the visibility:
-    # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
-    visibility = (input_array[(I, J)] - \
-    input_array[coordinates[0], coordinates[1]] - obs_elev).astype(np.float64)
-    offset_visibility = visibility + tgt_elev
-    # 2- Factor the effect of refraction in the elevation.
-    # From the equation on the ArcGIS website:
-    # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
-    D_earth = 12740000. # Diameter of the earth in meters
-    correction = (distances_sq*cell_size**2).astype(float) * \
-        (refraction_coeff - 1.) / D_earth
-    #print("refraction coeff", refraction_coeff)
-    #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
-    #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
-    visibility += correction
-    offset_visibility += correction
-    # 3- Divide the height by the distance to get a visibility score
-    visibility /= distances * cell_size
-    offset_visibility /= distances * cell_size
-
     if alg_version is 'python':
         sweep_through_angles( \
             coordinates, \
