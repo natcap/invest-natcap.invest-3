@@ -325,13 +325,19 @@ def calculate_flow_weights(
     LOGGER.info('Calculating flow graph')
     start = time.clock()
 
-    
     flow_direction_dataset = gdal.Open(flow_direction_uri)
     cdef double flow_direction_nodata
     flow_direction_band, flow_direction_nodata = \
         raster_utils.extract_band_and_nodata(flow_direction_dataset)
     flow_direction_band = flow_direction_dataset.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_window
+
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = flow_direction_band.GetBlockSize()
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flow_direction_block = numpy.empty(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
     
     #This is the array that's used to keep track of the connections of the
     #current cell to those *inflowing* to the cell, thus the 8 directions
@@ -341,18 +347,41 @@ def calculate_flow_weights(
     cdef int outflow_direction_nodata = 9
     outflow_direction_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, outflow_direction_uri, 'GTiff',
-        outflow_direction_nodata, gdal.GDT_Byte)
+        outflow_direction_nodata, gdal.GDT_Byte, fill_value=outflow_direction_nodata)
     outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_window = (
-        numpy.empty((1, n_cols), dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_byte, ndim=4] outflow_direction_block = (
+        numpy.empty((n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8))
     
     cdef double outflow_weights_nodata = -1.0
     outflow_weights_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, outflow_weights_uri, 'GTiff',
-        outflow_weights_nodata, gdal.GDT_Float32)
+        outflow_weights_nodata, gdal.GDT_Float32, fill_value=outflow_weights_nodata)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_window = (
-        numpy.empty((1, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = (
+        numpy.empty((n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32))
+
+    #center point of global index
+    cdef int global_row, global_col, global_block_row, global_block_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+    
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.int8)
+
+    cache_dirty[:] = 0
+    band_list = [flow_direction_band, outflow_direction_band, outflow_weights_band]
+    block_list = [flow_direction_block, outflow_direction_block, outflow_weights_block]
+    update_list = [False, True, True]
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
 
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
@@ -364,66 +393,67 @@ def calculate_flow_weights(
         1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
 
     #Iterate over flow directions
-    cdef int row_index, col_index, neighbor_direction_index
+    cdef int neighbor_direction_index
     cdef long current_index
     cdef double flow_direction, flow_angle_to_neighbor, outflow_weight
-    
-    for row_index in range(n_rows):
+
+    last_time = time.time()        
+    for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("calculate_flow_weights %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            last_time = current_time
+        for global_block_col in xrange(int(ceil(float(n_cols) / block_col_size))):
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    flow_direction = flow_direction_block[row_index, col_index, row_block_offset, col_block_offset]
+                    #make sure the flow direction is defined, if not, skip this cell
+                    if flow_direction == flow_direction_nodata:
+                        continue
+                    found = False
+                    for neighbor_direction_index in range(n_neighbors):
+                        flow_angle_to_neighbor = abs(
+                            angle_to_neighbor[neighbor_direction_index] -
+                            flow_direction)
+                        if flow_angle_to_neighbor <= PI/4.0:
+                            found = True
+
+                            #Determine if the direction we're on is oriented at 90
+                            #degrees or 45 degrees.  Given our orientation even number
+                            #neighbor indexes are oriented 90 degrees and odd are 45
+                            outflow_weight = 0.0
+
+                            if neighbor_direction_index % 2 == 0:
+                                outflow_weight = 1.0 - tan(flow_angle_to_neighbor)
+                            else:
+                                outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
+
+                            #This will handle cases where almost all flow is going in
+                            #one direction, or is supposed to go in one direction,
+                            #but because of machine error splits insignificantly
+                            #between two cells. The 0.999 is a little overkill but works
+                            if outflow_weight > 0.999:
+                                outflow_weight = 1.0
+
+                            #If the outflow is nearly 0, make push it all
+                            #to the next neighbor
+                            if outflow_weight < 0.001:
+                                outflow_weight = 1.0
+                                neighbor_direction_index = \
+                                    (neighbor_direction_index + 1) % 8
+
+                            outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset] = neighbor_direction_index
+                            outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset] = outflow_weight
+                            cache_dirty[row_index, col_index] = 1
+
+                            #we found the outflow direction
+                            break
+                    if not found:
+                        LOGGER.debug('no flow direction found for %s %s' % \
+                                         (row_index, col_index))
+    block_cache.flush_cache()
         
-        outflow_direction_window[:] = outflow_direction_nodata
-        outflow_weights_window[:] = outflow_weights_nodata
-        
-        flow_direction_window = flow_direction_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
-    
-        for col_index in range(n_cols):
-            flow_direction = flow_direction_window[0, col_index]
-            #make sure the flow direction is defined, if not, skip this cell
-            if flow_direction == flow_direction_nodata:
-                continue
-            found = False
-            for neighbor_direction_index in range(n_neighbors):
-                flow_angle_to_neighbor = abs(
-                    angle_to_neighbor[neighbor_direction_index] -
-                    flow_direction)
-                if flow_angle_to_neighbor <= PI/4.0:
-                    found = True
-
-                    #Determine if the direction we're on is oriented at 90
-                    #degrees or 45 degrees.  Given our orientation even number
-                    #neighbor indexes are oriented 90 degrees and odd are 45
-                    outflow_weight = 0.0
-
-                    if neighbor_direction_index % 2 == 0:
-                        outflow_weight = 1.0 - tan(flow_angle_to_neighbor)
-                    else:
-                        outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
-
-                    #This will handle cases where almost all flow is going in
-                    #one direction, or is supposed to go in one direction,
-                    #but because of machine error splits insignificantly
-                    #between two cells. The 0.999 is a little overkill but works
-                    if outflow_weight > 0.999:
-                        outflow_weight = 1.0
-
-                    #If the outflow is nearly 0, make push it all
-                    #to the next neighbor
-                    if outflow_weight < 0.001:
-                        outflow_weight = 1.0
-                        neighbor_direction_index = \
-                            (neighbor_direction_index + 1) % 8
-
-                    outflow_direction_window[0, col_index] = neighbor_direction_index
-                    outflow_weights_window[0, col_index] = outflow_weight
-
-                    #we found the outflow direction
-                    break
-            if not found:
-                LOGGER.debug('no flow direction found for %s %s' % \
-                                 (row_index, col_index))
-        outflow_weights_band.WriteArray(outflow_weights_window, xoff=0, yoff=row_index)
-        outflow_direction_band.WriteArray(outflow_direction_window, xoff=0, yoff=row_index)
-
     LOGGER.info('Done calculating flow weights elapsed time %ss' % \
                     (time.clock()-start))
 
