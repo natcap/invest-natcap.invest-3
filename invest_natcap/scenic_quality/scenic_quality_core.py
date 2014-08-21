@@ -362,41 +362,13 @@ def cell_angles(cell_coords, viewpoint):
     return angles
 
 
-def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
-    coordinates, obs_elev=1.75, tgt_elev=0.0, \
-    max_dist=-1., refraction_coeff=None, alg_version='cython'):
-    """URI wrapper for the viewshed computation function
-        
-        Inputs: 
-            -input_array: numpy array of the elevation raster map
-            -cell_size: raster cell size in meters
-            -array_shape: input_array_shape as returned from ndarray.shape()
-            -nodata: input_array's raster nodata value
-            -output_uri: output raster uri, compatible with input_array's size
-            -coordinates: tuple (east, north) of coordinates of viewing
-                position
-            -obs_elev: observer elevation above the raster map.
-            -tgt_elev: offset for target elevation above the ground. Applied to
-                every point on the raster
-            -max_dist: maximum visibility radius. By default infinity (-1), 
-            -refraction_coeff: refraction coefficient (0.0-1.0)
-            -alg_version: name of the algorithm to be used. Either 'cython'
-            (default) or 'python'.
-
-        Returns nothing"""
-    # Compute the viewshed on it
-    output_array = compute_viewshed(input_array, nodata, coordinates, \
-    obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
-    
-    # Save the output in the output URI
-    output_raster = gdal.Open(output_uri, gdal.GA_Update)
-    message = 'Cannot open file ' + output_uri
-    assert output_raster is not None, message
-    output_raster.GetRasterBand(1).WriteArray(output_array)
-
-
-def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
-    tgt_elev, max_dist, cell_size, refraction_coeff, alg_version):
+def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinates, \
+    angles, v, viewshed_shape, row_min, col_min, \
+    add_events, center_events, remove_events, I, J, \
+    arg_min, arg_max, arg_center, \
+    coord, distances_sq, distances, \
+    output_uri, obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
+    refraction_coeff=None, alg_version='cython'):
     """Compute the viewshed for a single observer. 
         Inputs: 
             -input_array: a numpy array of terrain elevations
@@ -413,44 +385,6 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             (default) or 'python'.
 
         Returns the visibility map for the DEM as a numpy array"""
-    visibility_map = np.zeros(input_array.shape)
-    # Visibility convention: 1 visible, \
-    # <0 is additional height to become visible
-    visibility_map[input_array == nodata] = 2. 
-    array_shape = input_array.shape
-    # 1- get perimeter cells
-    # TODO: Make this function return 10 scalars instead of 2 arrays 
-    perimeter_cells = \
-    get_perimeter_cells(array_shape, coordinates, max_dist)
-    # 1.1- remove perimeter cell if same coord as viewpoint
-    # 2- compute cell angles
-    # TODO: move nympy array creation code from get_perimeter_cell in
-    # cell_angles + append the last element (2 PI) automatically
-    angles = cell_angles(perimeter_cells, coordinates)
-    angles = np.append(angles, 2.0 * math.pi)
-    #print('angles')
-    #print(angles)
-    # 3- compute information on raster cells
-    row_max = np.amax(perimeter_cells[0])
-    row_min = np.amin(perimeter_cells[0])
-    col_max = np.amax(perimeter_cells[1])
-    col_min = np.amin(perimeter_cells[1])
-    # Shape of the viewshed
-    viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
-    # Viewer's coordiantes relative to the viewshed 
-    v = (coordinates[0] - row_min, coordinates[1] - col_min)
-    add_events, center_events, remove_events, I, J = \
-        scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
-        v, max_dist)
-    arg_min = np.argsort(add_events)
-    arg_max = np.argsort(remove_events)
-    arg_center = np.argsort(center_events)
-    # I and J are relative to the viewshed_shape. Make them absolute
-    I += row_min
-    J += col_min
-    coord = np.array([I, J])
-    distances_sq = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
-    distances = np.sqrt(distances_sq)
     # Computation of the visibility:
     # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
     visibility = (input_array[(I, J)] - \
@@ -489,8 +423,11 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
 
-    return visibility_map
-
+    # Save the output in the output URI
+    output_raster = gdal.Open(output_uri, gdal.GA_Update)
+    message = 'Cannot open file ' + output_uri
+    assert output_raster is not None, message
+    output_raster.GetRasterBand(1).WriteArray(visibility_map)
 
 def active_pixel_index(O, P, E):
     return scenic_quality_cython_core._active_pixel_index(O, P, E)

@@ -15,7 +15,7 @@ from osgeo import osr
 
 from invest_natcap import raster_utils
 from invest_natcap.scenic_quality import scenic_quality_core
-#from invest_natcap.overlap_analysis import overlap_analysis
+import scenic_quality_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -378,25 +378,61 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         j = viewpoint_col[f]
 
         # Compute arrays that can be cashed for identical max_dist
-        # perimeter
-        # angles
-        # add_events
-        # center_events
-        # remove_events
-        # arg_min
-        # arg_center
-        # arg_max
-        # coord
-        # distances
-        
+
         # Create a visibility map
+        # Visibility convention: 1 visible, \
+        # <0 is additional height to become visible
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
             0., gdal.GDT_Float64, fill_value=0.)
+        visibility_map = np.zeros(input_array.shape)
+        visibility_map[input_array == nodata] = 2. 
+
+        # perimeter
+        # 1- get perimeter cells
+        perimeter_cells = \
+            scenic_quality_core.get_perimeter_cells(input_array.shape, (i,j), max_dist)
+        # angles
+        # 2- compute cell angles
+        # cell_angles + append the last element (2 PI) automatically
+        angles = scenic_quality_core.cell_angles(perimeter_cells, (i,j))
+        angles = np.append(angles, 2.0 * math.pi)
+        # Viewshed information
+        # 3- compute information on raster cells
+        row_max = np.amax(perimeter_cells[0])
+        row_min = np.amin(perimeter_cells[0])
+        col_max = np.amax(perimeter_cells[1])
+        col_min = np.amin(perimeter_cells[1])
+        # Shape of the viewshed
+        viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
+        # Viewer's coordiantes relative to the viewshed 
+        v = (i - row_min, j - col_min)
+
+        # add_events, center_events, remove_events
+        add_events, center_events, remove_events, I, J = \
+            scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
+            v, max_dist)
+        # arg_min, arg_center, arg_max
+        arg_min = np.argsort(add_events)
+        arg_max = np.argsort(remove_events)
+        arg_center = np.argsort(center_events)
+        # I and J are relative to the viewshed_shape. Make them absolute
+        I += row_min
+        J += col_min
+        # coord
+        coord = np.array([I, J])
+        # distances
+        distances_sq = (i - I)**2 + (j - J)**2
+        distances = np.sqrt(distances_sq)
+        
         scenic_quality_core.viewshed(
-            input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
-            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+            input_array, cell_size, visibility_map, perimeter_cells, \
+            (i,j), angles, v, viewshed_shape, row_min, col_min, \
+            add_events, center_events, remove_events, I, J, \
+            arg_min, arg_max, arg_center, \
+            coord, distances_sq, distances, \
+            tmp_visibility_uri, obs_elev, tgt_elev, max_dist, refr_coeff)
         
         # Visibility + distance => viewshed map
         valuation_function_d = valuation_function(i,j, cell_size, coefficient)
