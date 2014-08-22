@@ -370,9 +370,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
     I_band = I_raster.GetRasterBand(1)
     I_array = I_band.ReadAsArray()
+    I_band = None
+    I_raster = None
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
     J_band = J_raster.GetRasterBand(1)
     J_array = J_band.ReadAsArray()
+    J_band = None
+    J_raster = None
 
 
     last_dist = 0

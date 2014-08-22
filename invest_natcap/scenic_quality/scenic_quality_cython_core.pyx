@@ -181,7 +181,27 @@ def polynomial(double a, double b, double c, double d, \
     np.ndarray[np.float64_t, ndim = 2] mask, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
-    return 1.
+    cdef:
+        double C1 = a+b*1000+c*1000**2+d*1000**3 * coeff
+        double C2 = (b+2*c*1000+3*d*1000**2) * coeff
+        double x = 0.
+    a *= coeff
+    b *= coeff
+    c *= coeff
+    d *= coeff
+ 
+    row_count = accum.shape[0]
+    col_count = accum.shape[1]
+
+    for row in range(row_count):
+        for col in range(col_count):
+            x = ((vi - I[row, col])**2 + (vj - J[row, col]**2))**.5 * cell_size
+
+            if mask[row, col]:
+                if x < 1000:
+                    accum[row, col] += C1 - C2 * (1000 - x)
+                elif x < max_valuation_radius:
+                    accum[row, col] += a + b*x + c*x**2 + d*x**3
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
