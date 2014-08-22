@@ -194,7 +194,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        0., gdal.GDT_Float32, fill_value = 0.)
+        0., gdal.GDT_Float64, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
     cProfile.runctx('compute_viewshed(input_array, visibility_uri, in_structure_uri, cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, refr_coeff, args)', globals(), locals(), 'stats')
@@ -366,8 +366,16 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     arg_dist = np.argsort(max_distances)
 
-    last_dist = 0
 
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_band = I_raster.GetRasterBand(1)
+    I_array = I_band.ReadAsArray()
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_band = J_raster.GetRasterBand(1)
+    J_array = J_band.ReadAsArray()
+
+
+    last_dist = 0
     for dist in range(arg_dist.size-1, -1, -1):
         f = arg_dist[dist]
         print("Iteration " + str(dist) + ", processing viewpoint " + str(f))
@@ -463,6 +471,20 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             [I_uri, J_uri, tmp_visibility_uri, visibility_uri],
             valuation_function_d, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
             "union", vectorize_op=False, datasets_are_pre_aligned=True)
+
+        # Invoke the polynomial valuation function:
+        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_array = visibility_band.ReadAsArray()
+        accum_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+        accum_band = accum_raster.GetRasterBand(1)
+        accum_visibility = accum_band.ReadAsArray()
+        scenic_quality_cython_core.polynomial(a, b, c, d, \
+            max_valuation_radius, i, j, cell_size, \
+            coefficient , \
+            I_array , \
+            J_array, \
+            visibility_array, accum_visibility)
 
         # Combined_visibility += scaled_viewshed
         shutil.copy(tmp_viewshed_uri, visibility_uri)

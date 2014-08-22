@@ -172,9 +172,16 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
     return (min_angles, angles, max_angles, I, J)
 
-# Cython versions of aesthetic_quality_core's active_pixel helper functions
-# I'm trying to avoid cythonizing the more efficient version with skip lists,
-# because they are much more complicated to design and maintain.
+# Function that computes the polynomial valuation function 
+def polynomial(double a, double b, double c, double d, \
+    int max_valuation_radius, int vi, int vj, double cell_size, \
+    double coeff, \
+    np.ndarray[np.float32_t, ndim = 2] I, \
+    np.ndarray[np.float32_t, ndim = 2] J, \
+    np.ndarray[np.float64_t, ndim = 2] mask, \
+    np.ndarray[np.float64_t, ndim = 2] accum):
+
+    return 1.
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
