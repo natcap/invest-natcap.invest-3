@@ -1,5 +1,6 @@
 """A helper module for generating html tables that are represented as Strings"""
 import logging
+from types import StringType
 
 LOGGER = logging.getLogger('invest_natcap.table_generator')
 
@@ -50,7 +51,10 @@ def generate_table(table_dict, attributes=None):
 
     LOGGER.info('Generating HTML Table String')
 
-    u = lambda string: unicode(string, 'utf-8')
+    def u(string):
+        if type(string) is StringType:
+            return unicode(string, 'utf-8')
+        return string
 
     # Initialize the string that will store the html representation of the table
     table_string = u('')
