@@ -96,7 +96,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         np.int32_t col # column counter
         int sector # current sector
 
-    # Count sixe of arrays before allocating
+    # Count size of arrays before allocating
     # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
