@@ -436,39 +436,37 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         band.Fill(nodata)
         band.FlushCache()
 
-        #####
         band = None
         raster = None
         layer = None
         datasource = None
 
+        # Burn polygon land values onto newly constructed raster
         raster_utils.rasterize_layer_uri(
             out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
-        #nodata_to_zero_uri = raster_utils.temporary_filename()
-        nodata_to_zero_uri = os.path.join(dir, name + '_nodata_to_zero.tif')
+        nodata_to_zero_uri = raster_utils.temporary_filename()
 
         def nodata_to_zero(chunk):
+            """vectorize_dataset operation to turn nodata values
+                 to 0s
+
+                chunk - a numpy array
+
+                returns - a numpy array
+            """
             return np.where(chunk == nodata, 0., chunk)
 
         cell_size = raster_utils.get_cell_size_from_uri(out_uri)
+        # Convert nodata values to 0 to prep for distance transform
         raster_utils.vectorize_datasets(
             [out_uri], nodata_to_zero, nodata_to_zero_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
-        #ones_to_zero_uri = raster_utils.temporary_filename()
-        #def ones_to_zero(chunk):
-        #    return np.where(chunk == 1., 0., 1.0)
-
-        #raster_utils.vectorize_datasets(
-        #    [nodata_to_zero_uri], ones_to_zero, ones_to_zero_uri, gdal.GDT_Float32, nodata, #cell_size, "intersection", vectorize_op=False)
-
-        #dist_trans_uri = raster_utils.temporary_filename()
-        dist_trans_uri = os.path.join(dir, name + '_dist_trans.tif')
+        dist_trans_uri = raster_utils.temporary_filename()
         raster_utils.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
 
-        #decay_uri = raster_utils.temporary_filename()
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
-
+        # Do buffering protocol specified
         if buff == 0:
             make_zero_buff_decay_array(dist_trans_uri, new_buff_uri, nodata)
         elif decay_eq == 'None':
@@ -478,79 +476,34 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         elif decay_eq == 'Linear':
             make_lin_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
 
-        stress_dict[name] = new_buff_uri
-
-        #####
-
-        #gdal.RasterizeLayer(raster, [1], layer, burn_values=[1],
-        #                                        options=['ALL_TOUCHED=TRUE'])
-
-        #Now, want to take that raster, and make it into a buffered version of
-        #itself.
-        #base_array = band.ReadAsArray()
-
-        #Right now, our nodata is -1, and data is 1. Need to make it so nodata is
-        #0 to be swapped on the next line.
-        #base_array[base_array == -1.] = 0.
-
-        #Swaps 0's and 1's for use with the distance transform function.
-        #swp_array = (base_array + 1) % 2
-
-        #The array with each value being the distance from its own cell to land
-        #dist_array = ndimage.distance_transform_edt(swp_array,
-        #                                            sampling=grid_size)
-
-        #Need to have a special case for 0's, to avoid divide by 0 errors
-        #if buff == 0:
-        #    decay_array = make_zero_buff_decay_array(dist_array, nodata)
-        #elif decay_eq == 'None':
-        #    decay_array = make_no_decay_array(dist_array, buff, nodata)
-        #elif decay_eq == 'Exponential':
-        #    decay_array = make_exp_decay_array(dist_array, buff, nodata)
-        #elif decay_eq == 'Linear':
-        #    decay_array = make_lin_decay_array(dist_array, buff, nodata)
-
-        #Create a new file to which we should write our buffered rasters.
-        #Eventually, we will use the filename without buff, because it will
-        #just be assumed to be buffered
-        #new_buff_uri = os.path.join(dir, name + '_buff.tif')
-
-        #new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
-        #                    'GTiff', -1., gdal.GDT_Float32)
-
-        #n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
-        #n_band.Fill(n_nodata)
-
-        #n_band.WriteArray(decay_array)
-
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
-        #stress_dict[name] = new_buff_uri
+        stress_dict[name] = new_buff_uri
 
     return stress_dict
 
 def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
-    '''Creates an array in the case of a zero buffer width, where we should
+    '''Creates a raster in the case of a zero buffer width, where we should
     have is land and nodata values.
 
     Input:
-        dist_array- A numpy array where each pixel value represents the
-            distance to the closest piece of land.
+        dist_trans_uri- uri to a gdal raster where each pixel value represents
+            the distance to the closest piece of land.
+        out_uri- uri for the gdal raster output with the buffered outputs
         nodata- The value which should be placed into anything that is not land.
-    Returns:
-        A numpy array reprsenting land with 1's, and everything else with nodata.
+    Returns: Nothing
     '''
 
-    #Since we know anything that is land is currently represented as 0's, want
-    #to turn that back into 1's.
-    #dist_array[dist_array == 0] = 1
-
-    #everything else will just be nodata
-    #dist_array[dist_array > 1] = nodata
-
-    #return dist_array
-
     def zero_buff_op(chunk):
+        """vecorize_dataset operation to replace 0s with 1s
+            and mask out anything not land
+
+            chunk - numpy block
+
+            returns - numpy array with buffered values
+        """
+        #Since we know anything that is land is currently represented as 0's, want
+        #to turn that back into 1's. everything else will just be nodata
         swap = np.where(chunk == 0., 1, chunk)
         return np.where(swap > 1., nodata, swap)
 
@@ -560,51 +513,53 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
 
 
 def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create an array where the area around land is a function of
+    '''Should create a raster where the area around land is a function of
     linear decay from the values representing the land.
 
     Input:
-        dist_array- A numpy array where each pixel value represents the
-            distance to the closest piece of land.
+        dist_trans_uri- uri to a gdal raster where each pixel value represents
+            the distance to the closest piece of land.
+        out_uri- uri for the gdal raster output with the buffered outputs
         buff- The distance surrounding the land that the user desires to buffer
             with linearly decaying values.
         nodata- The value which should be placed into anything not land or
             buffer area.
-    Returns:
-        A numpy array reprsenting land with 1's, and everything within the buffer
-        zone as linearly decayed values from 1.
+    Returns: Nothing
     '''
-
-    #The decay rate should be approximately -1/distance we want 0 to be at.
-    #We add one to have a proper y-intercept.
-    #lin_decay_array = -dist_array/buff + 1.0
-    #lin_decay_array[lin_decay_array < 0] = nodata
-
-    #return lin_decay_array
+    buff = float(buff)
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
 
     def lin_decay_op(chunk):
-        lin_decay_chunk = -chunk / buff + 1.0
+        """vecorize_dataset operation to create a buffer around
+            land masses based on a linear rate of decay
+
+            chunk - numpy block
+
+            returns - numpy array with buffered values
+        """
+        chunk_met = chunk * cell_size
+        #The decay rate should be approximately -1/distance we want 0 to be at.
+        #We add one to have a proper y-intercept.
+        lin_decay_chunk = -chunk_met / buff + 1.0
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
-    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+            [dist_trans_uri], lin_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
 def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create an array where the area around the land is a function of
+    '''Should create a raster where the area around the land is a function of
     exponential decay from the land values.
 
     Input:
-        dist_array- Numpy array where each pixel value represents the distance
-            to the closest piece of land.
+        dist_trans_uri- uri to a gdal raster where each pixel value represents
+            the distance to the closest piece of land.
+        out_uri- uri for the gdal raster output with the buffered outputs
         buff- The distance surrounding the land that the user desires to buffer
             with exponentially decaying values.
         nodata- The value which should be placed into anything not land or
             buffer area.
-    Returns:
-        A numpy array representing land with 1's and eveything withing the buffer
-        zone as exponentially decayed values from 1.
+    Returns: Nothing
     '''
 
     #Want a cutoff for the decay amount after which we will say things are
@@ -614,52 +569,53 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
     #Need to have a value representing the decay rate for the exponential decay
     rate = -math.log(cutoff) / buff
-
-    #exp_decay_array = np.exp(-rate * dist_array)
-    #exp_decay_array[exp_decay_array < cutoff] = nodata
-
-    #return exp_decay_array
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
 
     def exp_decay_op(chunk):
-        exp_decay_chunk = np.exp(-rate * chunk)
+        """vecorize_dataset operation to create a buffer around
+            land masses based on an exponential rate of decay
+
+            chunk - numpy block
+
+            returns - numpy array with buffered values
+        """
+        chunk_met = chunk * cell_size
+        exp_decay_chunk = np.exp(-rate * chunk_met)
         return np.where(exp_decay_chunk < cutoff, nodata, exp_decay_chunk)
 
-    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
     raster_utils.vectorize_datasets(
             [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
 def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create an array where the buffer zone surrounding the land is
+    '''Should create a raster where the buffer zone surrounding the land is
     buffered with the same values as the land, essentially creating an equally
     weighted larger landmass.
 
     Input:
-        dist_array- Numpy array where each pixel value represents the distance
-            to the closest piece of land.
+        dist_trans_uri- uri to a gdal raster where each pixel value represents
+            the distance to the closest piece of land.
+        out_uri- uri for the gdal raster output with the buffered outputs
         buff- The distance surrounding the land that the user desires to buffer
             with land data values.
         nodata- The value which should be placed into anything not land or
             buffer area.
-    Returns:
-        A numpy array representing both land and buffer zone with 1's, and \
-        everything outside that with nodata values.
+    Returns: Nothing
     '''
 
-    #Setting anything within the buffer zone to 1, and anything outside
-    #that distance to nodata.
-    #inner_zone_index = dist_array <= buff
-    #dist_array[inner_zone_index] = 1
-    #dist_array[~inner_zone_index] = nodata
-
-    #return dist_array
-
-    LOGGER.debug("Make_No_Decay_Array : %s", dist_trans_uri)
     buff = float(buff)
     cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
 
     def no_decay_op(chunk):
+        """vecorize_dataset operation to create a constant buffer
+
+            chunk - numpy block
+
+            returns - numpy array with buffered values
+        """
         chunk_met = chunk * cell_size
+        #Setting anything within the buffer zone to 1, and anything outside
+        #that distance to nodata.
         return np.where(chunk_met <= buff, 1., nodata)
 
     raster_utils.vectorize_datasets(

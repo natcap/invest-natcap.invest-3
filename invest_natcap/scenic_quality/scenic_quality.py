@@ -247,41 +247,37 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             b *= coeff
             c *= coeff
             d *= coeff
-            def compute(x, mask, accum, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
-                #x = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-
-                result = np.zeros_like(x)
+            def compute(x, mask, previous, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
+                current = np.zeros_like(x)
 
                 f = a + b*x + c*x**2 + d*x**3
-                result[x <= max_valuation_radius] = f[x <= max_valuation_radius]
+                current[x <= max_valuation_radius] = f[x <= max_valuation_radius]
 
                 f = C1 - C2 * (1000-x)
-                result[x < 1000] = f[x < 1000]
-                result[mask <= 0.] = 0.
+                current[x < 1000] = f[x < 1000]
+                current[mask <= 0.] = 0.
 
-                accum += result
+                current += previous
 
-                return accum
+                return current
             return compute
         return distance
 
     def logarithmic(a, b, max_valuation_radius):
         def distance(vi, vj, cell_size, coeff):
-            def compute(i, j, mask, accum):
-                x = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-
-                result = np.zeros_like(x)
+            def compute(x, mask, previous):
+                current = np.zeros_like(x)
 
                 f = a + b*np.log(x)
-                result[x <= max_valuation_radius] = coeff * f[x <= max_valuation_radius]
+                current[x <= max_valuation_radius] = coeff * f[x <= max_valuation_radius]
 
                 f = a + b*np.log(1000) - (b/1000)*(1000-x)
-                result[x < 1000] = coeff * f[x < 1000]
-                result[mask <= 0.] = 0.
+                current[x < 1000] = coeff * f[x < 1000]
+                current[mask <= 0.] = 0.
 
-                accum += result
+                current += previous
 
-                return accum
+                return current
             return compute
         return distance
 
@@ -303,15 +299,15 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert valuation_function is not None
     
     # Make sure the values don't become too small at max_valuation_radius:
-    test_function = valuation_function(0, 0, max_valuation_radius, 1)
-    edge_value = test_function(np.array([0]), \
-                                    np.array([1]), \
-                                    np.array([1]), \
-                                    np.array([0]))
+#    test_function = valuation_function(0, 0, max_valuation_radius, 1)
+#    edge_value = test_function(np.array([0]), \
+#                                    np.array([1]), \
+#                                    np.array([1]), \
+#                                    np.array([0]))
 #    edge_value = valuation_function(max_valuation_radius, 1)
-    message = "Valuation function can't be negative if evaluated at " + \
-    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
-    assert edge_value >= 0., message
+#    message = "Valuation function can't be negative if evaluated at " + \
+#    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+#    assert edge_value >= 0., message
         
     # Base path uri
     base_uri = os.path.split(visibility_uri)[0]
@@ -451,9 +447,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
             v, max_dist)
         # arg_min, arg_center, arg_max
-        arg_min = np.argsort(add_events)
-        arg_max = np.argsort(remove_events)
-        arg_center = np.argsort(center_events)
+        arg_min = np.argsort(add_events).astype(np.int64)
+        arg_max = np.argsort(remove_events).astype(np.int64)
+        arg_center = np.argsort(center_events).astype(np.int64)
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
         J += col_min
@@ -491,7 +487,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         distances_band = None
         distances_raster = None
 
-        scenic_quality_core.viewshed(
+        visibility_array = scenic_quality_core.viewshed(
             input_array, cell_size, visibility_map, perimeter_cells, \
             (i,j), angles, v, viewshed_shape, row_min, col_min, \
             add_events, center_events, remove_events, I, J, \
@@ -508,35 +504,36 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             "union", vectorize_op=False, datasets_are_pre_aligned=True)
 
         # Combined_visibility += scaled_viewshed
-        #shutil.copy(tmp_viewshed_uri, visibility_uri)
+        shutil.copy(tmp_viewshed_uri, visibility_uri)
 
-        viewshed_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
-        viewshed_band = viewshed_raster.GetRasterBand(1)
-        viewshed_array = viewshed_band.ReadAsArray()
-        viewshed_band = None
-        viewshed_raster = None
+#        vectorized_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
+#        vectorized_band = vectorized_raster.GetRasterBand(1)
+#        vectorized_array = vectorized_band.ReadAsArray()
+#        vectorized_band = None
+#        vectorized_raster = None
         
         # Invoke the polynomial valuation function:
-        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_array = visibility_band.ReadAsArray()
-        visibility_band = None
-        visibility_raster = None
-        scenic_quality_cython_core.polynomial(a, b, c, d, \
-            max_valuation_radius, i, j, cell_size, \
-            coefficient , \
-            distances_array , \
-            visibility_array, accum_visibility)
+#        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
+#        visibility_band = visibility_raster.GetRasterBand(1)
+#        visibility_array = visibility_band.ReadAsArray()
+#        visibility_band = None
+#        visibility_raster = None
 
-        diff = np.sum(np.absolute(viewshed_array - accum_visibility))
-        if diff:
-            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-            visibility_band = visibility_raster.GetRasterBand(1)
-            accum_visibility = visibility_band.WriteArray(accum_visibility)
-            visibility_band = None
-            visibility_raster = None
-        message = 'difference = ' + str(diff)    
-        assert diff == 0.0, message
+#        scenic_quality_cython_core.polynomial(a, b, c, d, \
+#            max_valuation_radius, i, j, cell_size, \
+#            coefficient , \
+#            distances_array , \
+#            visibility_array, accum_visibility)
+
+#        diff = np.sum(np.absolute(vectorized_array - accum_visibility))
+#        if diff:
+#            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+#            visibility_band = visibility_raster.GetRasterBand(1)
+#            accum_visibility = visibility_band.WriteArray(vectorized_array)
+#            visibility_band = None
+#            visibility_raster = None
+#        message = 'difference = ' + str(diff)    
+#        assert diff == 0.0, message
         
         # Clean up scaled_viewshed and visibility
         os.remove(tmp_viewshed_uri)
@@ -544,11 +541,11 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         last_dist = max_distances[f]
 
-    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-    visibility_band = visibility_raster.GetRasterBand(1)
-    visibility_band.WriteArray(accum_visibility)
-    visibility_band = None
-    visibility_raster = None
+#    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+#    visibility_band = visibility_raster.GetRasterBand(1)
+#    visibility_band.WriteArray(accum_visibility)
+#    visibility_band = None
+#    visibility_raster = None
 
     layer = None
     shapefile = None

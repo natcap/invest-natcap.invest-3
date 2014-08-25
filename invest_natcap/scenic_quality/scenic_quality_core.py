@@ -338,8 +338,8 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     rows += i_min
     cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-    rows = np.roll(rows, viewpoint[0] - i_min).astype(int)
-    cols = np.roll(cols, viewpoint[0] - i_min).astype(int)
+    rows = np.roll(rows, viewpoint[0] - i_min).astype(np.int64)
+    cols = np.roll(cols, viewpoint[0] - i_min).astype(np.int64)
     return (rows, cols)
 
 
@@ -393,8 +393,9 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
             visibility_map)
     else:
         scenic_quality_cython_core.sweep_through_angles( \
-            np.array(coordinates).astype(int), \
-            np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
+            np.array(coordinates).astype(np.int64), \
+            np.array([perimeter_cells[0], \
+                perimeter_cells[1]]), angles, \
             add_events, center_events, remove_events, \
             arg_min, arg_center, arg_max, \
             coord, distances, offset_visibility, visibility, \
@@ -408,6 +409,9 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(visibility_map)
+
+    # Return the output to save computation
+    return visibility_map
 
 def active_pixel_index(O, P, E):
     return scenic_quality_cython_core._active_pixel_index(O, P, E)
