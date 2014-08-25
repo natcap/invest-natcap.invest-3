@@ -338,8 +338,8 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     rows += i_min
     cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-    rows = np.roll(rows, viewpoint[0] - i_min).astype(int)
-    cols = np.roll(cols, viewpoint[0] - i_min).astype(int)
+    rows = np.roll(rows, viewpoint[0] - i_min).astype(np.int64)
+    cols = np.roll(cols, viewpoint[0] - i_min).astype(np.int64)
     return (rows, cols)
 
 
@@ -394,8 +394,8 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     else:
         scenic_quality_cython_core.sweep_through_angles( \
             np.array(coordinates).astype(np.int64), \
-            np.array([perimeter_cells[0].astype(np.int64), \
-                perimeter_cells[1].astype(np.int64)]), angles, \
+            np.array([perimeter_cells[0], \
+                perimeter_cells[1]]), angles, \
             add_events, center_events, remove_events, \
             arg_min, arg_center, arg_max, \
             coord, distances, offset_visibility, visibility, \

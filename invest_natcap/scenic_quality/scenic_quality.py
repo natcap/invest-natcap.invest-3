@@ -447,9 +447,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
             v, max_dist)
         # arg_min, arg_center, arg_max
-        arg_min = np.argsort(add_events)
-        arg_max = np.argsort(remove_events)
-        arg_center = np.argsort(center_events)
+        arg_min = np.argsort(add_events).astype(np.int64)
+        arg_max = np.argsort(remove_events).astype(np.int64)
+        arg_center = np.argsort(center_events).astype(np.int64)
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
         J += col_min
