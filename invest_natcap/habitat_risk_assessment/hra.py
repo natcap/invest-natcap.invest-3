@@ -20,8 +20,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class ImproperCriteriaAttributeName(Exception):
     '''An excepion to pass in hra non core if the criteria provided by the user
-    for use in spatially explicit rating do not contain the proper attribute 
-    name. The attribute should be named 'RATING', and must exist for every shape 
+    for use in spatially explicit rating do not contain the proper attribute
+    name. The attribute should be named 'RATING', and must exist for every shape
     in every layer provided.'''
     pass
 
@@ -53,7 +53,7 @@ def execute(args):
             JSON file that has directory locations (potentially) for habitats,
             species, stressors, and criteria.
         args['grid_size']- Int representing the desired pixel dimensions of
-            both intermediate and ouput rasters. 
+            both intermediate and ouput rasters.
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell. This will be
             either 'Euclidean' or 'Multiplicative'.
@@ -69,7 +69,7 @@ def execute(args):
             attribute "name" as a way of identifying each individual shape.
 
     Intermediate:
-        hra_args['habitats_dir']- The directory location of all habitat 
+        hra_args['habitats_dir']- The directory location of all habitat
             shapefiles. These will be parsed though and rasterized to be passed
             to hra_core module. This may not exist if 'species_dir' exists.
         hra_args['species_dir']- The directory location of all species
@@ -78,8 +78,8 @@ def execute(args):
         hra_args['stressors_dir']- The string describing a directory location of
             all stressor shapefiles. Will be parsed through and rasterized
             to be passed on to hra_core.
-        hra_args['criteria_dir']- The directory which holds the criteria 
-            shapefiles. May not exist if the user does not desire criteria 
+        hra_args['criteria_dir']- The directory which holds the criteria
+            shapefiles. May not exist if the user does not desire criteria
             shapefiles. This will be in a VERY specific format, which shall be
             described in the user's guide.
         hra_args['buffer_dict']- A dictionary that links the string name of each
@@ -91,17 +91,17 @@ def execute(args):
             }
         hra_args['h_s_c']- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
-            h-s will hold criteria that apply to habitat and stressor overlaps, 
-            and be applied to the consequence score. The structure's outermost 
-            keys are tuples of (Habitat, Stressor) names. The overall structure 
+            h-s will hold criteria that apply to habitat and stressor overlaps,
+            and be applied to the consequence score. The structure's outermost
+            keys are tuples of (Habitat, Stressor) names. The overall structure
             will be as pictured:
 
-            {(Habitat A, Stressor 1): 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+            {(Habitat A, Stressor 1):
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -112,7 +112,7 @@ def execute(args):
             raster information. The outermost keys are habitat names.
         hra_args['h_s_e']- Similar to the h_s dictionary, a multi-level
             dictionary containing habitat-stressor-specific criteria ratings and
-            raster information which should be applied to the exposure score. 
+            raster information which should be applied to the exposure score.
             The outermost keys are tuples of (Habitat, Stressor) names.
 
    Output:
@@ -122,17 +122,17 @@ def execute(args):
             and intermediate folders will be subfolders of this one.
         hra_args['h_s_c']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
-            a dataset URI that shows the potentially buffered overlap between the 
+            a dataset URI that shows the potentially buffered overlap between the
             habitat and stressor. Additionally, any raster criteria will
-            be placed in their criteria name subdictionary. The overall 
+            be placed in their criteria name subdictionary. The overall
             structure will be as pictured:
 
-            {(Habitat A, Stressor 1): 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+            {(Habitat A, Stressor 1):
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -148,16 +148,16 @@ def execute(args):
             dictionary containing habitat-stressor-specific criteria ratings and
             shapes. The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
-            a dataset URI that shows the potentially buffered overlap between the 
+            a dataset URI that shows the potentially buffered overlap between the
             habitat and stressor. Additionally, any raster criteria will
-            be placed in their criteria name subdictionary. 
+            be placed in their criteria name subdictionary.
         hra_args['risk_eq']- String which identifies the equation to be used
-            for calculating risk.  The core module should check for 
-            possibilities, and send to a different function when deciding R 
+            for calculating risk.  The core module should check for
+            possibilities, and send to a different function when deciding R
             dependent on this.
         hra_args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
-    
+
     Returns nothing.
     '''
 
@@ -168,14 +168,14 @@ def execute(args):
     hra_args['workspace_dir'] = args['workspace_dir']
 
     hra_args['risk_eq'] = args['risk_eq']
-    
+
     #Depending on the risk calculation equation, this should return the highest
     #possible value of risk for any given habitat-stressor pairing. The highest
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
     max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
     hra_args['max_risk'] = max_r
-    
+
     #Pass along the max number of stressors the user believes will overlap one
     #another
     hra_args['max_stress'] = args['max_stress']
@@ -183,10 +183,10 @@ def execute(args):
     #Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
-            shutil.rmtree(folder) 
+            shutil.rmtree(folder)
 
         os.makedirs(folder)
-   
+
     #If using aoi zones are desired, pass the AOI layer directly to core to be
     #dealt with there.
     if 'aoi_tables' in args:
@@ -196,14 +196,14 @@ def execute(args):
         #implimented.
         shape = ogr.Open(args['aoi_tables'])
         layer = shape.GetLayer()
-    
+
         lower_attrib = None
         for feature in layer:
-            
+
             if lower_attrib == None:
-                lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()),
                             feature.items().keys()))
-            
+
             if 'name' not in lower_attrib:
                 raise ImproperAOIAttributeName("Subregion layer attributes must \
                     contain the attribute \"Name\" in order to be properly used \
@@ -212,7 +212,7 @@ def execute(args):
         #By this point, we know that the AOI layer contains the 'name' attribute,
         #in some form. Pass that on to the core so that the name can be easily
         #pulled from the layers.
-        hra_args['aoi_key'] = lower_attrib['name']        
+        hra_args['aoi_key'] = lower_attrib['name']
         hra_args['aoi_tables'] = args['aoi_tables']
 
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
@@ -231,10 +231,10 @@ def execute(args):
 
     for folder in (crit_dir, hab_dir, stress_dir, overlap_dir):
         if (os.path.exists(folder)):
-            shutil.rmtree(folder) 
+            shutil.rmtree(folder)
 
         os.makedirs(folder)
-    
+
     #Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
@@ -245,7 +245,7 @@ def execute(args):
     LOGGER.info('Rasterizing shapefile layers.')
 
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
-    
+
     #Get all stressor URI's
     stress_names = listdir(hra_args['stressors_dir'])
     stress_list = fnmatch.filter(stress_names, '*.shp')
@@ -253,20 +253,20 @@ def execute(args):
     #Want a super simple dictionary of the stressor rasters we will use for overlap.
     #The local var stress_dir is the location that should be used for rasterized
     #stressor shapefiles.
-    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'], 
+    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'],
                     args['decay_eq'], hra_args['buffer_dict'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'],
             stress_dict, hra_args['h_s_c'],hra_args['h_s_e'], args['grid_size'])
-    
+
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
-        
-        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+
+        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'],
                     hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
 
     #No reason to hold the directory paths in memory since all info is now
@@ -278,8 +278,8 @@ def execute(args):
     hra_core.execute(hra_args)
 
 def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
-    '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
-    and stressor raster, and return the overlap of the two. Should add that as 
+    '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat
+    and stressor raster, and return the overlap of the two. Should add that as
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
 
     Input:
@@ -287,13 +287,13 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             placed.
         habitats- The habitats criteria dictionary, which will contain a
             dict[Habitat]['DS']. The structure will be as follows:
-            
-            {Habitat A: 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+
+            {Habitat A:
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -305,17 +305,17 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             of the stressor, and it will map to the URI of the stressor DS.
         h_s_c- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
-            h-s will hold criteria that apply to habitat and stressor overlaps, 
-            and be applied to the consequence score. The structure's outermost 
-            keys are tuples of (Habitat, Stressor) names. The overall structure 
+            h-s will hold criteria that apply to habitat and stressor overlaps,
+            and be applied to the consequence score. The structure's outermost
+            keys are tuples of (Habitat, Stressor) names. The overall structure
             will be as pictured:
 
-            {(Habitat A, Stressor 1): 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+            {(Habitat A, Stressor 1):
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -323,7 +323,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             }
         h_s_e- Similar to the h_s dictionary, a multi-level
             dictionary containing habitat-stressor-specific criteria ratings and
-            raster information which should be applied to the exposure score. 
+            raster information which should be applied to the exposure score.
             The outermost keys are tuples of (Habitat, Stressor) names.
         grid_size- The desired pixel size for the rasters that will be created
             for each habitat and stressor.
@@ -332,7 +332,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         An edited versions of h_s_e and h_s_c, each of which contains an overlap
         DS at dict[(Hab, Stress)]['DS']. That key will map to the URI for the
         corresponding raster DS.
-    
+
     Returns nothing.
     '''
     for pair in h_s_c:
@@ -340,9 +340,9 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h, s = pair
         h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
         s_nodata = raster_utils.get_nodata_from_uri(stress_dict[s])
- 
+
         files = [habitats[h]['DS'], stress_dict[s]]
-        
+
         def add_h_s_pixels(h_pix, s_pix):
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
@@ -351,21 +351,21 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
                 return s_pix
             else:
                 return h_nodata
-        
+
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
-        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
-                        gdal.GDT_Float32, -1., grid_size, "union", 
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri,
+                        gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
-        
+
         h_s_c[pair]['DS'] = out_uri
         h_s_e[pair]['DS'] = out_uri
 
 
 def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
     '''Creating a simple dictionary that will map stressor name to a rasterized
-    version of that stressor shapefile. The key will be a string containing 
+    version of that stressor shapefile. The key will be a string containing
     stressor name, and the value will be the URI of the rasterized shapefile.
 
     Input:
@@ -381,31 +381,31 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
             int which correlates to desired buffer size.
 
     Output:
-        A potentially buffered and rasterized version of each stressor shapefile 
+        A potentially buffered and rasterized version of each stressor shapefile
             provided, which will be stored in 'dir'.
 
     Returns:
         stress_dict- A simple dictionary which maps a string key of the stressor
             name to the URI for the output raster.
-    
+
     '''
-    
+
     stress_dict = {}
 
     for shape in stress_list:
-        
+
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
-       
+
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
 
         buff = buffer_dict[name]
-       
+
         #Want to set this specifically to make later overlap easier.
         nodata = -1.
 
@@ -413,15 +413,15 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         #surround the raster, since we know that we can be expanding by at
         #least buffer size more. For reference, look to "~/workspace/Examples/expand_raster.py"
         shp_extent = layer.GetExtent()
-        
+
         #These have to be expanded by 2 * buffer to account for both sides
         width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
-        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff 
+        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff
         p_width = int(np.ceil(width / grid_size))
         p_height = int(np.ceil(height /grid_size))
-         
+
         driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32) 
+        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
 
         #increase everything by buffer size
         transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
@@ -436,54 +436,100 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         band.Fill(nodata)
         band.FlushCache()
 
-        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
-                                                options=['ALL_TOUCHED=TRUE'])
-       
+        #####
+        band = None
+        raster = None
+        layer = None
+        datasource = None
+
+        raster_utils.rasterize_layer_uri(
+            out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
+
+        #nodata_to_zero_uri = raster_utils.temporary_filename()
+        nodata_to_zero_uri = os.path.join(dir, name + '_nodata_to_zero.tif')
+
+        def nodata_to_zero(chunk):
+            return np.where(chunk == nodata, 0., chunk)
+
+        cell_size = raster_utils.get_cell_size_from_uri(out_uri)
+        raster_utils.vectorize_datasets(
+            [out_uri], nodata_to_zero, nodata_to_zero_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+
+        #ones_to_zero_uri = raster_utils.temporary_filename()
+        #def ones_to_zero(chunk):
+        #    return np.where(chunk == 1., 0., 1.0)
+
+        #raster_utils.vectorize_datasets(
+        #    [nodata_to_zero_uri], ones_to_zero, ones_to_zero_uri, gdal.GDT_Float32, nodata, #cell_size, "intersection", vectorize_op=False)
+
+        #dist_trans_uri = raster_utils.temporary_filename()
+        dist_trans_uri = os.path.join(dir, name + '_dist_trans.tif')
+        raster_utils.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
+
+        #decay_uri = raster_utils.temporary_filename()
+        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+
+        if buff == 0:
+            make_zero_buff_decay_array(dist_trans_uri, new_buff_uri, nodata)
+        elif decay_eq == 'None':
+            make_no_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
+        elif decay_eq == 'Exponential':
+            make_exp_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
+        elif decay_eq == 'Linear':
+            make_lin_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
+
+        stress_dict[name] = new_buff_uri
+
+        #####
+
+        #gdal.RasterizeLayer(raster, [1], layer, burn_values=[1],
+        #                                        options=['ALL_TOUCHED=TRUE'])
+
         #Now, want to take that raster, and make it into a buffered version of
         #itself.
-        base_array = band.ReadAsArray()
-       
+        #base_array = band.ReadAsArray()
+
         #Right now, our nodata is -1, and data is 1. Need to make it so nodata is
         #0 to be swapped on the next line.
-        base_array[base_array == -1.] = 0.
+        #base_array[base_array == -1.] = 0.
 
         #Swaps 0's and 1's for use with the distance transform function.
-        swp_array = (base_array + 1) % 2
+        #swp_array = (base_array + 1) % 2
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(swp_array, 
-                                                    sampling=grid_size)
+        #dist_array = ndimage.distance_transform_edt(swp_array,
+        #                                            sampling=grid_size)
 
         #Need to have a special case for 0's, to avoid divide by 0 errors
-        if buff == 0:
-            decay_array = make_zero_buff_decay_array(dist_array, nodata)
-        elif decay_eq == 'None':
-            decay_array = make_no_decay_array(dist_array, buff, nodata)
-        elif decay_eq == 'Exponential':
-            decay_array = make_exp_decay_array(dist_array, buff, nodata)
-        elif decay_eq == 'Linear':
-            decay_array = make_lin_decay_array(dist_array, buff, nodata)
-        
+        #if buff == 0:
+        #    decay_array = make_zero_buff_decay_array(dist_array, nodata)
+        #elif decay_eq == 'None':
+        #    decay_array = make_no_decay_array(dist_array, buff, nodata)
+        #elif decay_eq == 'Exponential':
+        #    decay_array = make_exp_decay_array(dist_array, buff, nodata)
+        #elif decay_eq == 'Linear':
+        #    decay_array = make_lin_decay_array(dist_array, buff, nodata)
+
         #Create a new file to which we should write our buffered rasters.
         #Eventually, we will use the filename without buff, because it will
         #just be assumed to be buffered
-        new_buff_uri = os.path.join(dir, name + '_buff.tif')
-        
-        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
-                            'GTiff', -1., gdal.GDT_Float32)
-        
-        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
-        n_band.Fill(n_nodata)
-        
-        n_band.WriteArray(decay_array)
+        #new_buff_uri = os.path.join(dir, name + '_buff.tif')
+
+        #new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
+        #                    'GTiff', -1., gdal.GDT_Float32)
+
+        #n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        #n_band.Fill(n_nodata)
+
+        #n_band.WriteArray(decay_array)
 
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
-        stress_dict[name] = new_buff_uri
-    
+        #stress_dict[name] = new_buff_uri
+
     return stress_dict
 
-def make_zero_buff_decay_array(dist_array, nodata):
+def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
     '''Creates an array in the case of a zero buffer width, where we should
     have is land and nodata values.
 
@@ -497,15 +543,24 @@ def make_zero_buff_decay_array(dist_array, nodata):
 
     #Since we know anything that is land is currently represented as 0's, want
     #to turn that back into 1's.
-    dist_array[dist_array == 0] = 1
+    #dist_array[dist_array == 0] = 1
 
     #everything else will just be nodata
-    dist_array[dist_array > 1] = nodata
+    #dist_array[dist_array > 1] = nodata
 
-    return dist_array
+    #return dist_array
 
-def make_lin_decay_array(dist_array, buff, nodata):
-    '''Should create an array where the area around land is a function of 
+    def zero_buff_op(chunk):
+        swap = np.where(chunk == 0., 1, chunk)
+        return np.where(swap > 1., nodata, swap)
+
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
+    raster_utils.vectorize_datasets(
+            [dist_trans_uri], zero_buff_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+
+
+def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
+    '''Should create an array where the area around land is a function of
     linear decay from the values representing the land.
 
     Input:
@@ -522,12 +577,21 @@ def make_lin_decay_array(dist_array, buff, nodata):
 
     #The decay rate should be approximately -1/distance we want 0 to be at.
     #We add one to have a proper y-intercept.
-    lin_decay_array = -dist_array/buff + 1.0
-    lin_decay_array[lin_decay_array < 0] = nodata
+    #lin_decay_array = -dist_array/buff + 1.0
+    #lin_decay_array[lin_decay_array < 0] = nodata
 
-    return lin_decay_array
+    #return lin_decay_array
 
-def make_exp_decay_array(dist_array, buff, nodata):
+    def lin_decay_op(chunk):
+        lin_decay_chunk = -chunk / buff + 1.0
+        return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
+
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
+    raster_utils.vectorize_datasets(
+            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+
+
+def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''Should create an array where the area around the land is a function of
     exponential decay from the land values.
 
@@ -549,14 +613,23 @@ def make_exp_decay_array(dist_array, buff, nodata):
     cutoff = 0.01
 
     #Need to have a value representing the decay rate for the exponential decay
-    rate = -math.log(cutoff)/ buff
+    rate = -math.log(cutoff) / buff
 
-    exp_decay_array = np.exp(-rate * dist_array)
-    exp_decay_array[exp_decay_array < cutoff] = nodata
+    #exp_decay_array = np.exp(-rate * dist_array)
+    #exp_decay_array[exp_decay_array < cutoff] = nodata
 
-    return exp_decay_array
+    #return exp_decay_array
 
-def make_no_decay_array(dist_array, buff, nodata):
+    def exp_decay_op(chunk):
+        exp_decay_chunk = np.exp(-rate * chunk)
+        return np.where(exp_decay_chunk < cutoff, nodata, exp_decay_chunk)
+
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
+    raster_utils.vectorize_datasets(
+            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+
+
+def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''Should create an array where the buffer zone surrounding the land is
     buffered with the same values as the land, essentially creating an equally
     weighted larger landmass.
@@ -575,25 +648,37 @@ def make_no_decay_array(dist_array, buff, nodata):
 
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.
-    inner_zone_index = dist_array <= buff
-    dist_array[inner_zone_index] = 1
-    dist_array[~inner_zone_index] = nodata  
-    
-    return dist_array
+    #inner_zone_index = dist_array <= buff
+    #dist_array[inner_zone_index] = 1
+    #dist_array[~inner_zone_index] = nodata
+
+    #return dist_array
+
+    LOGGER.debug("Make_No_Decay_Array : %s", dist_trans_uri)
+    buff = float(buff)
+    cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
+
+    def no_decay_op(chunk):
+        chunk_met = chunk * cell_size
+        return np.where(chunk_met <= buff, 1., nodata)
+
+    raster_utils.vectorize_datasets(
+            [dist_trans_uri], no_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
     them to a raster.
-    
+
     Input:
-        dir- Directory into which all completed habitat rasters should be 
+        dir- Directory into which all completed habitat rasters should be
             placed.
-        habitats- A multi-level dictionary containing all habitat and 
+        habitats- A multi-level dictionary containing all habitat and
             species-specific criteria ratings and rasters.
         hab_list- File URI's for all shapefile in habitats dir, species dir, or
             both.
         grid_size- Int representing the desired pixel dimensions of
-            both intermediate and ouput rasters. 
+            both intermediate and ouput rasters.
 
     Output:
         A modified version of habitats, into which we have placed the URI to the
@@ -602,7 +687,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
    '''
 
     for shape in hab_list:
-        
+
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
@@ -610,11 +695,11 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         name = os.path.splitext(os.path.split(shape)[1])[0]
 
         out_uri = os.path.join(dir, name + '.tif')
-        
+
         raster_utils.create_raster_from_vector_extents_uri(shape, grid_size,
                     gdal.GDT_Float32, -1., out_uri)
 
-        raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1], 
+        raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1],
                                                 option_list=['ALL_TOUCHED=TRUE'])
         habitats[name]['DS'] = out_uri
 
@@ -626,16 +711,16 @@ def calc_max_rating(risk_eq, max_rating):
         risk_eq- The equation that will be used to determine risk.
         max_rating- The highest possible value that could be given as a
             criteria rating, data quality, or weight.
-    
+
     Returns:
         An int representing the highest possible risk value for any given h-s
         overlap raster.
     '''
-    
+
     #The max_rating ends up being the simplified result of each of the E and
     #C equations when the same value is used in R/DQ/W. Thus for E and C, their
     #max value is equivalent to the max_rating.
-    
+
     if risk_eq == 'Multiplicative':
         max_r = max_rating * max_rating
 
@@ -656,6 +741,7 @@ def listdir(path):
     Returns:
         A list of full URIs contained within 'path'.
     '''
+    LOGGER.debug("PATH: %s", path)
     file_names = os.listdir(path)
     uris = map(lambda x: os.path.join(path, x), file_names)
 
@@ -668,10 +754,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     Input:
         dir- Directory into which the raserized criteria shapefiles should be
             placed.
-        crit_dict- A multi-level dictionary of criteria shapefiles. The 
+        crit_dict- A multi-level dictionary of criteria shapefiles. The
             outermost keys refer to the dictionary they belong with. The
             structure will be as follows:
-            
+
             {'h':
                 {'HabA':
                     {'CriteriaName: "Shapefile Datasource URI"...}, ...
@@ -687,17 +773,17 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             }
         h_s_c- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
-            h-s will hold only criteria that apply to habitat and stressor 
-            overlaps. The structure's outermost keys are tuples of 
-            (Habitat, Stressor) names. The overall structure will be as 
+            h-s will hold only criteria that apply to habitat and stressor
+            overlaps. The structure's outermost keys are tuples of
+            (Habitat, Stressor) names. The overall structure will be as
             pictured:
 
-            {(Habitat A, Stressor 1): 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+            {(Habitat A, Stressor 1):
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -709,17 +795,17 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             raster information. The outermost keys are habitat names. Within
             the dictionary, the habitats['habName']['DS'] will be the URI of
             the raster of that habitat.
-        h_s_e- Similar to the h-s dictionary, a multi-level dictionary 
-            containing all stressor-specific criteria ratings and 
-            raster information. The outermost keys are tuples of 
+        h_s_e- Similar to the h-s dictionary, a multi-level dictionary
+            containing all stressor-specific criteria ratings and
+            raster information. The outermost keys are tuples of
             (Habitat, Stressor) names.
         grid_size- An int representing the desired pixel size for the criteria
-            rasters. 
+            rasters.
     Output:
         A set of rasterized criteria files. The criteria shapefiles will be
             burned based on their 'Rating' attribute. These will be placed in
             the 'dir' folder.
-        
+
         An appended version of habitats, h_s_e, and h_s_c which will include
         entries for criteria rasters at 'Rating' in the appropriate dictionary.
         'Rating' will map to the URI of the corresponding criteria dataset.
@@ -728,7 +814,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     '''
     #H-S-C
     for pair in crit_dict['h_s_c']:
-        
+
         for c_name, c_path in crit_dict['h_s_c'][pair].iteritems():
 
             #The path coming in from the criteria should be of the form
@@ -739,28 +825,28 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             #Since all features will contain the same set of attributes,
             #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating' 
+            #can just use the last feature queried to figure out how 'rating'
             #was used.
             lower_attrib = None
 
             for feature in layer:
-                
+
                 if lower_attrib == None:
-                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()),
                                 feature.items().keys()))
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
-                
+
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
             raster_utils.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
-            
+
             raster_utils.rasterize_layer_uri(
-                out_uri_pre_overlap, c_path, 
+                out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
 
             #Want to do a vectorize with the base layer, to make sure we're not
@@ -778,13 +864,13 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 else:
                     return base_nodata
 
-            out_uri = os.path.join(dir, filename + '.tif') 
-        
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
                         overlap_hsc_spat_crit, out_uri, gdal.GDT_Float32, -1.,
-                        grid_size, "union", resample_method_list=None, 
+                        grid_size, "union", resample_method_list=None,
                         dataset_to_align_index=0, aoi_uri=None)
-    
+
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
@@ -795,7 +881,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
     #Habs
     for h in crit_dict['h']:
-        
+
         for c_name, c_path in crit_dict['h'][h].iteritems():
 
             #The path coming in from the criteria should be of the form
@@ -806,35 +892,35 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             #Since all features will contain the same set of attributes,
             #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating' 
+            #can just use the last feature queried to figure out how 'rating'
             #was used.
             lower_attrib = None
 
             for feature in layer:
-                
+
                 if lower_attrib == None:
-                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()),
                                 feature.items().keys()))
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
-            
+
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
-            
+
             raster_utils.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
-            
+
             raster_utils.rasterize_layer_uri(
-                out_uri_pre_overlap, c_path, 
+                out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-            
+
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
             base_uri = habitats[h]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-            
+
             def overlap_h_spat_crit(base_pix, spat_pix):
 
                 #If there is no overlap, just return whatever is underneath.
@@ -845,14 +931,14 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 else:
                     return base_nodata
 
-            out_uri = os.path.join(dir, filename + '.tif') 
-        
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
-                        overlap_h_spat_crit, out_uri, gdal.GDT_Float32, -1., 
-                        grid_size, "union", resample_method_list=None, 
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
+                        overlap_h_spat_crit, out_uri, gdal.GDT_Float32, -1.,
+                        grid_size, "union", resample_method_list=None,
                         dataset_to_align_index=0, aoi_uri=None)
-            
-            if c_name in habitats[h]['Crit_Rasters']:  
+
+            if c_name in habitats[h]['Crit_Rasters']:
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
                 raise DQWeightNotFound("All spatial criteria desired within the \
@@ -861,7 +947,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                     relavant criteria data.")
     #H-S-E
     for pair in crit_dict['h_s_e']:
-        
+
         for c_name, c_path in crit_dict['h_s_e'][pair].iteritems():
 
             #The path coming in from the criteria should be of the form
@@ -872,35 +958,35 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             #Since all features will contain the same set of attributes,
             #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating' 
+            #can just use the last feature queried to figure out how 'rating'
             #was used.
             lower_attrib = None
 
             for feature in layer:
-                
+
                 if lower_attrib == None:
-                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()),
                                 feature.items().keys()))
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
-                
+
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
             raster_utils.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
-            
+
             raster_utils.rasterize_layer_uri(
-                out_uri_pre_overlap, c_path, 
+                out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-                
+
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
             base_uri = h_s_e[pair]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-            
+
             def overlap_hse_spat_crit(base_pix, spat_pix):
 
                 #If there is no overlap, just return whatever is underneath.
@@ -911,11 +997,11 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 else:
                     return base_nodata
 
-            out_uri = os.path.join(dir, filename + '.tif') 
-        
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
                         overlap_hse_spat_crit, out_uri, gdal.GDT_Float32, -1.,
-                        grid_size, "union", resample_method_list=None, 
+                        grid_size, "union", resample_method_list=None,
                         dataset_to_align_index=0, aoi_uri=None)
 
             if c_name in h_s_e[pair]['Crit_Rasters']:
@@ -930,7 +1016,7 @@ def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
     equivalent dictionaries in args so that they can be processed before being
     passed into the core module.
-    
+
     Input:
         csv_uri- Reference to the folder location of the CSV tables containing
             all habitat and stressor rating information.
@@ -940,22 +1026,22 @@ def unpack_over_dict(csv_uri, args):
         A modified args dictionary containing dictionary versions of the CSV
         tables located in csv_uri. The dictionaries should be of the forms as
         follows.
-           
-        h_s_c- A multi-level structure which will hold all criteria ratings, 
-            both numerical and raster that apply to habitat and stressor 
-            overlaps. The structure, whose keys are tuples of 
+
+        h_s_c- A multi-level structure which will hold all criteria ratings,
+            both numerical and raster that apply to habitat and stressor
+            overlaps. The structure, whose keys are tuples of
             (Habitat, Stressor) names and map to an inner dictionary will have
             2 outer keys containing numeric-only criteria, and raster-based
             criteria. At this time, we should only have two entries in a
             criteria raster entry, since we have yet to add the rasterized
             versions of the criteria.
 
-            {(Habitat A, Stressor 1): 
-                    {'Crit_Ratings': 
-                        {'CritName': 
+            {(Habitat A, Stressor 1):
+                    {'Crit_Ratings':
+                        {'CritName':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-                    'Crit_Rasters': 
+                    'Crit_Rasters':
                         {'CritName':
                             {'Weight': 1.0, 'DQ': 1.0}
                         },
@@ -963,8 +1049,8 @@ def unpack_over_dict(csv_uri, args):
             }
         habitats- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            weights and data quality for the rasters.         
-        h_s_e- Similar to the h-s dictionary, a multi-level dictionary 
+            weights and data quality for the rasters.
+        h_s_e- Similar to the h-s dictionary, a multi-level dictionary
             containing habitat stressor-specific criteria ratings and
             weights and data quality for the rasters.
     Returns nothing.
