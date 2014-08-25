@@ -277,7 +277,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
                 current += previous
 
-                return accum
+                return current
             return compute
         return distance
 
@@ -536,8 +536,8 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 #        assert diff == 0.0, message
         
         # Clean up scaled_viewshed and visibility
-        os.remove(tmp_viewshed_uri)
-        os.remove(tmp_visibility_uri)
+        #os.remove(tmp_viewshed_uri)
+        #os.remove(tmp_visibility_uri)
 
         last_dist = max_distances[f]
 

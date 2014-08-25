@@ -392,8 +392,9 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
             I, J, distances, offset_visibility, visibility, \
             visibility_map)
     else:
+        coordinates = np.array(coordinates).astype(np.int64)
         scenic_quality_cython_core.sweep_through_angles( \
-            np.array(coordinates).astype(int), \
+            coordinates, \
             np.array([perimeter_cells[0], perimeter_cells[1]]), angles, \
             add_events, center_events, remove_events, \
             arg_min, arg_center, arg_max, \
