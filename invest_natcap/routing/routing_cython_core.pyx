@@ -838,7 +838,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #copy dem_uri to a float dataset so we know the type
     pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
-    dem_tmp_fill_uri = 'temp_fill.tif'
+    dem_tmp_fill_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
         [dem_uri], lambda x: x, dem_tmp_fill_uri, gdal.GDT_Float32,
         nodata_value, pixel_size, 'intersection',
@@ -880,14 +880,14 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     LOGGER.info('finished flat cell detection, now identify plateaus')
 
-    dem_sink_offset_uri = 'dem_sink_offset.tif'#raster_utils.temporary_filename()
+    dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         fill_value=INF)
     dem_sink_offset_ds = gdal.Open(dem_sink_offset_uri, gdal.GA_Update)
     dem_sink_offset_band = dem_sink_offset_ds.GetRasterBand(1)
 
-    dem_edge_offset_uri = 'dem_edge_offset.tif'#raster_utils.temporary_filename()
+    dem_edge_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
         fill_value=INF)
@@ -1122,14 +1122,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             block_col_width = min((global_block_col+1)*block_col_size, n_cols) - global_block_col*block_col_size
             block_row_width = min((global_block_row+1)*block_row_size, n_rows) - global_block_row*block_row_size
             block = dem_edge_offset_block[row_index, col_index, 0:block_row_width, 0:block_col_width]
-            #LOGGER.debug('block_row_size, block_col_size, %d %d' % (block_row_size, block_col_size))
-            #LOGGER.debug('n_global_block_rows, n_global_block_cols %d %d' % (n_global_block_rows, n_global_block_cols))
-            #LOGGER.debug('max distance %d, %d, %d, %d' % (row_index, col_index, block_row_width, block_row_height))
-
-            #dem_edge_offset_band.ReadAsArray(
-            #    xoff=global_block_col*block_col_size, yoff=global_block_row*block_row_size,
-            #    win_xsize=min((global_block_col+1)*block_col_size, n_cols) - global_block_col*block_col_size, 
-            #    win_ysize=min((global_block_row+1)*block_row_size, n_rows) - global_block_row*block_row_size)
+            
             try:
                 max_distance = max(
                     max_distance, numpy.max(block[(block!=INF) & (block!=nodata_value)]))
