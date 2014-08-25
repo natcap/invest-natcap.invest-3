@@ -403,11 +403,14 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
 
+    # Return the output to save computation
+    return visibility_map
+
     # Save the output in the output URI
-    output_raster = gdal.Open(output_uri, gdal.GA_Update)
-    message = 'Cannot open file ' + output_uri
-    assert output_raster is not None, message
-    output_raster.GetRasterBand(1).WriteArray(visibility_map)
+#    output_raster = gdal.Open(output_uri, gdal.GA_Update)
+#    message = 'Cannot open file ' + output_uri
+#    assert output_raster is not None, message
+#    output_raster.GetRasterBand(1).WriteArray(visibility_map)
 
 def active_pixel_index(O, P, E):
     return scenic_quality_cython_core._active_pixel_index(O, P, E)
