@@ -96,7 +96,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         np.int32_t col # column counter
         int sector # current sector
 
-    # Count sixe of arrays before allocating
+    # Count size of arrays before allocating
     # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
@@ -172,9 +172,53 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
     return (min_angles, angles, max_angles, I, J)
 
-# Cython versions of aesthetic_quality_core's active_pixel helper functions
-# I'm trying to avoid cythonizing the more efficient version with skip lists,
-# because they are much more complicated to design and maintain.
+def compute_distances(int vi, int vj, double cell_size, \
+    np.ndarray[np.float32_t, ndim = 2] I, \
+    np.ndarray[np.float32_t, ndim = 2] J, \
+    np.ndarray[np.float64_t, ndim = 2] distance):
+
+    row_count = I.shape[0]
+    col_count = J.shape[1]
+
+    for row in range(row_count):
+        for col in range(col_count):
+            distance[row, col] = \
+                ((vi - I[row, col])**2 + (vj - J[row, col])**2)**.5 * cell_size
+ 
+
+# Function that computes the polynomial valuation function 
+def polynomial(double a, double b, double c, double d, \
+    int max_valuation_radius, int vi, int vj, double cell_size, \
+    double coeff, \
+    np.ndarray[np.float64_t, ndim = 2] X, \
+    np.ndarray[np.float64_t, ndim = 2] mask, \
+    np.ndarray[np.float64_t, ndim = 2] accum):
+
+    cdef:
+        double C1 = a+b*1000+c*1000**2+d*1000**3 * coeff
+        double C2 = (b+2*c*1000+3*d*1000**2) * coeff
+        #double x = 0.
+    a *= coeff
+    b *= coeff
+    c *= coeff
+    d *= coeff
+ 
+    row_count = accum.shape[0]
+    col_count = accum.shape[1]
+
+    for row in range(row_count):
+        for col in range(col_count):
+            x = X[row, col]
+            #accum[row, col] = mask[row, col] #+= 1. if mask[row, col] >= 0. else 0.
+            if mask[row, col] > 0.:
+                if x < 1000:
+                    accum[row, col] += C1 - C2 * (1000 - x)
+                elif x <= max_valuation_radius:
+                    accum[row, col] += a + b*x + c*x**2 + d*x**3
+            #    else:
+            #        accum[row, col] = 0.
+            #else:
+            #    accum[row, col] = 0.
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:

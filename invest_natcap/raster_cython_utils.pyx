@@ -385,7 +385,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 def new_raster_from_base(
     base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None, dataset_options=[]):
+    n_rows=None, n_cols=None, dataset_options=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
@@ -423,14 +423,26 @@ def new_raster_from_base(
     block_size = base_band.GetBlockSize()
     base_band = None
     
-    if dataset_options == []:
-        dataset_options = [
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]]
+
+    if dataset_options == None:
+        #make a new list to make sure we aren't ailiasing one passed in
+        dataset_options = []
+        #first, should it be tiled?  yes if it's not striped
+        if block_size[0] != n_cols and block_size[1] != n_rows:
+            dataset_options.insert(0, 'TILED=YES')
+            #if it's tiled can't have tiled block sizes less than 16
+            for block_index in [0, 1]:
+                if block_size[block_index] < 16:
+                    block_size[block_index] = 16
+            dataset_options = [
+                'BLOCKXSIZE=%d' % block_size[0],
+                'BLOCKYSIZE=%d' % block_size[1],
+                'BIGTIFF=IF_SAFER']
     LOGGER.info('dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
         options=dataset_options)
+    LOGGER.info('n_cols, n_rows %d %d', n_cols, n_rows)
     LOGGER.info('Setting projection=%s', projection)
     new_raster.SetProjection(projection)
     LOGGER.info('Setting geotransform=%s', geotransform)

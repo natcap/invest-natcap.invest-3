@@ -2469,11 +2469,15 @@ def vectorize_datasets(
 
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
-        local_row_index = (n_rows - row_offset)
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
 
         for col_block_index in xrange(n_col_blocks):
             col_offset = col_block_index * cols_per_block
-            local_col_index = (n_cols - col_offset)
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
 
             current_time = time.time()
             if current_time - last_time > 5.0:
@@ -2484,38 +2488,24 @@ def vectorize_datasets(
                 last_time = current_time
 
             for dataset_index in xrange(len(aligned_bands)):
-                if (local_col_index < cols_per_block or
-                        local_row_index < rows_per_block):
-                    aligned_bands[dataset_index].ReadAsArray(
-                        col_offset, row_offset, local_col_index,
-                        local_row_index, buf_obj=dataset_blocks[dataset_index])
-                else:
-                    aligned_bands[dataset_index].ReadAsArray(
-                        col_offset, row_offset, cols_per_block, rows_per_block,
-                        buf_obj=dataset_blocks[dataset_index])
+                aligned_bands[dataset_index].ReadAsArray(
+                    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                    win_ysize=row_block_width, 
+                    buf_obj=dataset_blocks[dataset_index][0:row_block_width,0:col_block_width])
+                
             out_block = dataset_pixel_op(*dataset_blocks)
 
             #Mask out the row if there is a mask
             if aoi_uri != None:
-                if (local_col_index < cols_per_block or
-                        local_row_index < rows_per_block):
-                    mask_band.ReadAsArray(
-                        col_offset, row_offset, local_col_index,
-                        local_row_index, buf_obj=mask_array)
-                else:
-                    mask_band.ReadAsArray(
-                        col_offset, row_offset, cols_per_block, rows_per_block,
-                        buf_obj=mask_array)
+                mask_band.ReadAsArray(
+                    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                    win_ysize=row_block_width, 
+                    buf_obj=mask_array[0:row_block_width,0:col_block_width])
                 out_block[mask_array == 0] = nodata_out
-
-            if (local_col_index < cols_per_block or
-                    local_row_index < rows_per_block):
-                output_band.WriteArray(
-                    out_block[0:local_row_index, 0:local_col_index],
-                    xoff=col_offset, yoff=row_offset)
-            else:
-                output_band.WriteArray(
-                    out_block, xoff=col_offset, yoff=row_offset)
+    
+            output_band.WriteArray(
+                out_block[0:row_block_width, 0:col_block_width],
+                xoff=col_offset, yoff=row_offset)
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
@@ -3158,3 +3148,32 @@ def _smart_cast(value):
         except ValueError:
             pass
     return value
+
+
+def tile_dataset_uri(in_uri, out_uri, blocksize):
+    """Takes an existing gdal dataset and resamples it into a tiled raster with
+        blocks of blocksize X blocksize.
+
+        in_uri - dataset to base data from
+        out_uri - output dataset
+        blocksize - defines the side of the square for the raster, this seems
+            to have a lower limit of 16, but is untested
+
+        returns nothing"""
+
+    dataset = gdal.Open(in_uri)
+    band = dataset.GetRasterBand(1)
+    datatype_out = band.DataType
+    nodata_out = get_nodata_from_uri(in_uri)
+    pixel_size_out = get_cell_size_from_uri(in_uri)
+    dataset_options=[
+        'TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize,
+        'BIGTIFF=IF_SAFER']
+    LOGGER.info('tiling dataset with options %s' % (str(dataset_options)))
+    vectorize_datasets(
+        [in_uri], lambda x: x, out_uri, datatype_out,
+        nodata_out, pixel_size_out, 'intersection',
+        resample_method_list=None, dataset_to_align_index=None,
+        dataset_to_bound_index=None, aoi_uri=None,
+        assert_datasets_projected=False, process_pool=None, vectorize_op=False,
+        datasets_are_pre_aligned=False, dataset_options=dataset_options)
