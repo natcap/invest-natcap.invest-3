@@ -6,6 +6,8 @@ import numpy as np
 import scipy.stats
 import shutil
 import logging
+import cProfile
+import pstats
 
 from osgeo import gdal
 from osgeo import ogr
@@ -13,7 +15,7 @@ from osgeo import osr
 
 from invest_natcap import raster_utils
 from invest_natcap.scenic_quality import scenic_quality_core
-#from invest_natcap.overlap_analysis import overlap_analysis
+import scenic_quality_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -163,6 +165,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     base_uri = os.path.split(out_viewshed_uri)[0]
     I_uri = os.path.join(base_uri, 'I.tif')
     J_uri = os.path.join(base_uri, 'J.tif')
+    distances_uri = os.path.join(base_uri, 'distances.tif')
     #I_uri = raster_utils.temporary_filename()
     #J_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
@@ -179,31 +182,43 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     J_band.WriteArray(J)
     J_band = None
     J_raster = None
+    raster_utils.new_raster_from_base_uri(in_dem_uri, distances_uri, 'GTiff', \
+        -32768., gdal.GDT_Float64, fill_value = -1.)
+    #distances_raster = gdal.Open(distances_uri, gdal.GA_Update)
+    #distances_band = distances_raster.GetRasterBand(1)
+    #distances_band.WriteArray(distances)
+    #distances_band = None
+    #distances_raster = None
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
+    input_nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
     input_raster = gdal.Open(in_dem_uri)
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    input_array[input_array == input_nodata] = 0.
     input_raster = None
 
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        2., gdal.GDT_Float32, fill_value = 2.)
+        0., gdal.GDT_Float64, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
-    #compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,
-    compute_viewshed(input_array, visibility_uri, in_structure_uri,
-    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
-    refr_coeff, args)
+    #cProfile.runctx('
+    compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+        cell_size, rows, cols, nodata, GT, I_uri, J_uri, distances_uri, \
+        curvature_correction, refr_coeff, args)
+    #', globals(), locals(), 'stats')
+    #p = pstats.Stats('stats')
+    #p.sort_stats("time").print_stats(20)
+    #p.sort_stats('cumulative').print_stats(20)
 
     os.remove(I_uri)
     os.remove(J_uri)
 
-#def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, distances_uri, curvature_correction, \
     refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
@@ -221,53 +236,54 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     #input_band = None
     #input_raster = None
 
-    # Compute the distance for each point
-    def compute_distance(vi, vj, cell_size):
-        def compute(i, j, v):
-            if v > 0:
-                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-            else:
-                return -1.
-        return compute
-
     # Apply the valuation functions to the distance
     def polynomial(a, b, c, d, max_valuation_radius):
-        def compute(x, v):
-            return v
-            if v > 0:
-                if x < 1000:
-                    return a + b*1000 + c*1000**2 + d*1000**3 - \
-                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*x + c*x**2 + d*x**3
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
+        C1 = a+b*1000+c*1000**2+d*1000**3
+        C2 = (b+2*c*1000+3*d*1000**2)
+        def distance(vi, vj, cell_size, coeff, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
+            C1 *= coeff
+            C2 *= coeff
+            a *= coeff
+            b *= coeff
+            c *= coeff
+            d *= coeff
+            def compute(x, mask, accum, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
+                #x = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
+
+                result = np.zeros_like(x)
+
+                f = a + b*x + c*x**2 + d*x**3
+                result[x <= max_valuation_radius] = f[x <= max_valuation_radius]
+
+                f = C1 - C2 * (1000-x)
+                result[x < 1000] = f[x < 1000]
+                result[mask <= 0.] = 0.
+
+                accum += result
+
+                return accum
+            return compute
+        return distance
 
     def logarithmic(a, b, max_valuation_radius):
-        def compute(x, v):
-            if v > 0:
-                if x < 1000:
-                    return a + b*math.log(1000) - (b/1000)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*math.log(x)
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
+        def distance(vi, vj, cell_size, coeff):
+            def compute(i, j, mask, accum):
+                x = ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
 
-    # Multiply a value by a constant
-    def multiply(c):
-        def compute(x):
-            return x*c
-        return compute
+                result = np.zeros_like(x)
 
-    # Used to summ raster values
-    def sum_rasters(*x):
-        return np.sum(x, axis = 0)
+                f = a + b*np.log(x)
+                result[x <= max_valuation_radius] = coeff * f[x <= max_valuation_radius]
+
+                f = a + b*np.log(1000) - (b/1000)*(1000-x)
+                result[x < 1000] = coeff * f[x < 1000]
+                result[mask <= 0.] = 0.
+
+                accum += result
+
+                return accum
+            return compute
+        return distance
 
     # Setup valuation function
     a = args["a_coefficient"]
@@ -287,7 +303,12 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert valuation_function is not None
     
     # Make sure the values don't become too small at max_valuation_radius:
-    edge_value = valuation_function(max_valuation_radius, 1)
+    test_function = valuation_function(0, 0, max_valuation_radius, 1)
+    edge_value = test_function(np.array([0]), \
+                                    np.array([1]), \
+                                    np.array([1]), \
+                                    np.array([0]))
+#    edge_value = valuation_function(max_valuation_radius, 1)
     message = "Valuation function can't be negative if evaluated at " + \
     str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
     assert edge_value >= 0., message
@@ -303,9 +324,19 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
+
+    array_shape = (rows, cols)
+    
+    # Create arrays for the parameters used for the computation at each viewpoint
+    max_distances = np.ones(feature_count).astype(int) * -1
+    coefficients = np.ones(feature_count)
+    obs_elevations = np.zeros(feature_count)
+    tgt_elevations = np.zeros(feature_count)
+    viewpoint_row = np.ones(feature_count).astype(int) * -1
+    viewpoint_col = np.ones(feature_count).astype(int) * -1
+
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
-        print("Processing viewpoint " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         # Check for feature information (radius, coeff, height)
@@ -323,15 +354,16 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                         str(max_dist) + ')')
                     LOGGER.warning( \
                         'The valuation is performed beyond what is visible')
-                max_dist = int(max_dist/cell_size)
+                max_distances[f] = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
-                coefficient = float(feature.GetField(field))
+                coefficients[f] = float(feature.GetField(field))
+                #coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
             if field_name.lower() == 'offseta':
-                obs_elev = float(feature.GetField(field))
+                obs_elevations[f] = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
             if field_name.lower() == 'offsetb':
-                tgt_elev = float(feature.GetField(field))
+                tgt_elevations[f] = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 
         geometry = feature.GetGeometryRef()
@@ -341,61 +373,182 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
 
-        array_shape = (rows, cols)
-    
+    arg_dist = np.argsort(max_distances)
+
+
+    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_band = I_raster.GetRasterBand(1)
+    I_array = I_band.ReadAsArray()
+    I_band = None
+    I_raster = None
+    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_band = J_raster.GetRasterBand(1)
+    J_array = J_band.ReadAsArray()
+    J_band = None
+    J_raster = None
+
+    visibility_raster = gdal.Open(visibility_uri)
+    visibility_band = visibility_raster.GetRasterBand(1)
+    accum_visibility = visibility_band.ReadAsArray()
+    accum_visibility[:] = 0.0
+    visibility_band = None
+    visibility_raster = None
+
+    # Compute distances
+    distances_array = np.copy(accum_visibility)
+    distances_array[:] = 0.
+
+    last_dist = 0
+    for dist in range(arg_dist.size-1, -1, -1):
+        f = arg_dist[dist]
+        print("Iteration " + str(dist) + ", processing viewpoint " + str(f))
+
+        max_dist = max_distances[f]
+        coefficient = coefficients[f]
+        obs_elev = obs_elevations[f]
+        tgt_elev = tgt_elevations[f]
+        i = viewpoint_row[f]
+        j = viewpoint_col[f]
+
+        # Compute arrays that can be cashed for identical max_dist
+
         # Create a visibility map
+        # Visibility convention: 1 visible, \
+        # <0 is additional height to become visible
         tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
         raster_utils.new_raster_from_base_uri( \
             visibility_uri, tmp_visibility_uri, 'GTiff', \
-            255, gdal.GDT_Float64, fill_value=255)
-        scenic_quality_core.viewshed(
-            input_array, cell_size, array_shape, nodata, tmp_visibility_uri,
-            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
-        
-        # Compute a distance map
-        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(visibility_uri, \
-        tmp_distance_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
-        distance_fn = compute_distance(i,j, cell_size)
-        raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
-        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+            0., gdal.GDT_Float64, fill_value=0.)
+        visibility_map = np.zeros(input_array.shape)
+        visibility_map[input_array == nodata] = 2. 
 
+        # perimeter
+        # 1- get perimeter cells
+        perimeter_cells = \
+            scenic_quality_core.get_perimeter_cells(input_array.shape, (i,j), max_dist)
+        # angles
+        # 2- compute cell angles
+        # cell_angles + append the last element (2 PI) automatically
+        angles = scenic_quality_core.cell_angles(perimeter_cells, (i,j))
+        angles = np.append(angles, 2.0 * math.pi)
+        # Viewshed information
+        # 3- compute information on raster cells
+        row_max = np.amax(perimeter_cells[0])
+        row_min = np.amin(perimeter_cells[0])
+        col_max = np.amax(perimeter_cells[1])    
+        col_min = np.amin(perimeter_cells[1])
+        # Shape of the viewshed
+        viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
+
+        # Viewer's coordiantes relative to the viewshed 
+        v = (i - row_min, j - col_min)
+
+        # add_events, center_events, remove_events
+        add_events, center_events, remove_events, I, J = \
+            scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
+            v, max_dist)
+        # arg_min, arg_center, arg_max
+        arg_min = np.argsort(add_events)
+        arg_max = np.argsort(remove_events)
+        arg_center = np.argsort(center_events)
+        # I and J are relative to the viewshed_shape. Make them absolute
+        I += row_min
+        J += col_min
+        # coord
+        coord = np.array([I, J])
+
+        # distances
+        distances_sq = (i - I)**2 + (j - J)**2
+        distances = np.sqrt(distances_sq)
+        # Computation of the visibility:
+        # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
+        visibility = (input_array[(I, J)] - \
+            input_array[i, j] - obs_elev).astype(np.float64)
+        offset_visibility = visibility + tgt_elev
+    
+        # 2- Factor the effect of refraction in the elevation.
+        # From the equation on the ArcGIS website:
+        # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
+        D_earth = 12740000. # Diameter of the earth in meters
+        correction = (distances_sq*cell_size**2).astype(float) * \
+            (refr_coeff - 1.) / D_earth
+        visibility += correction
+        offset_visibility += correction
+        # 3- Divide the height by the distance to get a visibility score
+        visibility /= distances * cell_size
+        offset_visibility /= distances * cell_size
+
+   
+        # Compute distances
+        scenic_quality_cython_core.compute_distances( \
+            i, j, cell_size, I_array, J_array, distances_array)
+        distances_raster = gdal.Open(distances_uri, gdal.GA_Update)
+        distances_band = distances_raster.GetRasterBand(1)
+        distances_band.WriteArray(distances_array)
+        distances_band = None
+        distances_raster = None
+
+        scenic_quality_core.viewshed(
+            input_array, cell_size, visibility_map, perimeter_cells, \
+            (i,j), angles, v, viewshed_shape, row_min, col_min, \
+            add_events, center_events, remove_events, I, J, \
+            arg_min, arg_max, arg_center, \
+            coord, distances_sq, distances, visibility, offset_visibility, \
+            tmp_visibility_uri, obs_elev, tgt_elev, max_dist, refr_coeff)
+        
         # Visibility + distance => viewshed map
+        valuation_function_d = valuation_function(i,j, cell_size, coefficient)
         tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
         raster_utils.vectorize_datasets(
-            [tmp_distance_uri, tmp_visibility_uri],
-            valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
-            "union")
-
-        # Clean up the distance map
-        os.remove(tmp_distance_uri)
-
-        # Coefficient * viewshed => scaled_viewshed
-        apply_coefficient = multiply(coefficient)
-        scaled_viewshed_uri = os.path.join(base_uri, 'scaled_viewshed_' + str(f) + '.tif')
-        raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
-        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
-    
-        # Clean up the viewshed map
-        os.remove(tmp_viewshed_uri)
+            [distances_uri, tmp_visibility_uri, visibility_uri],
+            valuation_function_d, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
+            "union", vectorize_op=False, datasets_are_pre_aligned=True)
 
         # Combined_visibility += scaled_viewshed
-        if f:
-            shutil.copy(visibility_uri, tmp_visibility_uri)
-            raster_utils.vectorize_datasets( \
-                [scaled_viewshed_uri, tmp_visibility_uri], sum_rasters, \
-                visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", \
-                vectorize_op=False)
-        else:
-            shutil.copy(scaled_viewshed_uri, visibility_uri)
+        #shutil.copy(tmp_viewshed_uri, visibility_uri)
 
+        viewshed_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
+        viewshed_band = viewshed_raster.GetRasterBand(1)
+        viewshed_array = viewshed_band.ReadAsArray()
+        viewshed_band = None
+        viewshed_raster = None
+        
+        # Invoke the polynomial valuation function:
+        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_array = visibility_band.ReadAsArray()
+        visibility_band = None
+        visibility_raster = None
+        scenic_quality_cython_core.polynomial(a, b, c, d, \
+            max_valuation_radius, i, j, cell_size, \
+            coefficient , \
+            distances_array , \
+            visibility_array, accum_visibility)
+
+        diff = np.sum(np.absolute(viewshed_array - accum_visibility))
+        if diff:
+            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+            visibility_band = visibility_raster.GetRasterBand(1)
+            accum_visibility = visibility_band.WriteArray(accum_visibility)
+            visibility_band = None
+            visibility_raster = None
+        message = 'difference = ' + str(diff)    
+        assert diff == 0.0, message
+        
         # Clean up scaled_viewshed and visibility
+        os.remove(tmp_viewshed_uri)
         os.remove(tmp_visibility_uri)
-        os.remove(scaled_viewshed_uri)
+
+        last_dist = max_distances[f]
+
+    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+    visibility_band = visibility_raster.GetRasterBand(1)
+    visibility_band.WriteArray(accum_visibility)
+    visibility_band = None
+    visibility_raster = None
 
     layer = None
     shapefile = None

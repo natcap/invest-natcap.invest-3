@@ -843,10 +843,10 @@ class TestScenicQuality(unittest.TestCase):
         visibility[visibility > 0] = 1
         visibility[visibility < 0] = 0
         visibility[DEM_size/2, DEM_size/2] = 2
-        print(visibility.astype(int))
+        #print(visibility.astype(int))
 
     def test_cython_vs_python_on_default_1_pt_data(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/default-1-pt/run_parameters_default-1-pt.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -870,7 +870,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_cython_vs_python_on_default_data(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/default-data/run_parameters_default-data.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -894,7 +894,8 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_cython_vs_python_on_block_island(self):
-        return
+        #return
+        #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_10m_1pt.json"
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -902,6 +903,92 @@ class TestScenicQuality(unittest.TestCase):
                 print('entry', entry, args[entry], type(args[entry]))
         sq.execute(args)
         reference_uri = "../../ScenicQuality/tests/block-island/python/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/block-island/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        difference = np.sum(np.absolute(reference_array - computed_array))
+        message = "Computed viewshed " + computed_uri + \
+            " doesn't correspond to " + reference_uri + '. diff = ' + \
+            str(difference)
+        assert difference == 0.0, message
+
+    def test_distance_on_block_island(self):
+        return
+        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_distance.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
+            for entry in args:
+                print('entry', entry, args[entry], type(args[entry]))
+        sq.execute(args)
+        reference_uri = "../../ScenicQuality/tests/block-island/cython_distance/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/block-island/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri, gdal.GA_Update)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        difference = np.absolute(reference_array - computed_array)
+        differences = np.where(difference)
+        difference[differences] /= reference_array[differences]
+        significant = np.where(difference[differences] > 1e-7)
+        differences = (differences[0][significant], differences[1][significant])
+        print('significant', significant[0].size, difference[differences])
+        difference = np.sum(difference[differences])
+        ref_sum = np.sum(reference_array)
+        comp_sum = np.sum(computed_array)
+        message = "Computed viewshed " + computed_uri + ' ' + str(comp_sum) + \
+            " doesn't correspond to " + reference_uri + ' ' + str(ref_sum) + \
+            '. ' + str(differences) + ' differences = ' + str(difference)
+        assert difference == 0.0, message
+
+    def test_polynomial_valuation_on_block_island(self):
+        return
+        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_polynomial.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
+            for entry in args:
+                print('entry', entry, args[entry], type(args[entry]))
+        sq.execute(args)
+        reference_uri = "../../ScenicQuality/tests/block-island/cython_polynomial/output/vshed.tif"
+        reference_raster = gdal.Open(reference_uri)
+        message = "Cannot open " + reference_uri
+        assert reference_raster is not None, message
+        reference_band = reference_raster.GetRasterBand(1)
+        reference_array = reference_band.ReadAsArray()
+        computed_uri = "../../ScenicQuality/tests/block-island/cython/output/vshed.tif"
+        computed_raster = gdal.Open(computed_uri)
+        message = "Cannot open " + computed_uri
+        assert computed_raster is not None, message
+        computed_band = computed_raster.GetRasterBand(1)
+        computed_array = computed_band.ReadAsArray()
+        difference = np.sum(np.absolute(reference_array - computed_array))
+        message = "Computed viewshed " + computed_uri + \
+            " doesn't correspond to " + reference_uri + '. diff = ' + \
+            str(difference)
+        assert difference == 0.0, message
+
+    def test_logarithmic_valuation_on_block_island(self):
+        return
+        args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_log.json"
+        with open(args_uri) as args_file:
+            args = json.load(args_file)
+            for entry in args:
+                print('entry', entry, args[entry], type(args[entry]))
+        sq.execute(args)
+        reference_uri = "../../ScenicQuality/tests/block-island/cython_log/output/vshed.tif"
         reference_raster = gdal.Open(reference_uri)
         message = "Cannot open " + reference_uri
         assert reference_raster is not None, message

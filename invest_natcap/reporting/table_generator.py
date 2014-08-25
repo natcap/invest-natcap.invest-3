@@ -1,5 +1,6 @@
 """A helper module for generating html tables that are represented as Strings"""
 import logging
+from types import StringType
 
 LOGGER = logging.getLogger('invest_natcap.table_generator')
 
@@ -50,13 +51,18 @@ def generate_table(table_dict, attributes=None):
 
     LOGGER.info('Generating HTML Table String')
 
+    def u(string):
+        if type(string) is StringType:
+            return unicode(string, 'utf-8')
+        return string
+
     # Initialize the string that will store the html representation of the table
-    table_string = ''
+    table_string = u('')
 
     if 'attributes' in table_dict:
         table_string += '<table'
         for attr_key, attr_value in table_dict['attributes'].iteritems():
-            table_string += ' %s="%s"' % (attr_key, attr_value)
+            table_string += ' %s="%s"' % (u(attr_key), u(attr_value))
 
         table_string += '>'
     else:
@@ -140,9 +146,9 @@ def generate_table(table_dict, attributes=None):
         # Add each column header to the html string
         try:
             col_attr = attr_to_string(col_dict['attr'])
-            table_string += '<th%s>%s</th>' % (col_attr, col_dict['name'])
+            table_string += '<th%s>%s</th>' % (u(col_attr), u(col_dict['name']))
         except KeyError:
-            table_string += '<th>%s</th>' % col_dict['name']
+            table_string += '<th>%s</th>' % u(col_dict['name'])
 
     # Add the closing tag for the table header
     table_string += '</tr></thead>'

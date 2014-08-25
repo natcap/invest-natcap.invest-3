@@ -17,6 +17,7 @@ import tables
 import heapq
 import time
 import smtplib
+from types import StringType
 
 from osgeo import gdal
 from osgeo import osr
@@ -2571,10 +2572,15 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
 
+    def u(string):
+        if type(string) is StringType:
+            return unicode(string, 'utf-8')
+        return string
+
     LOGGER.debug('Getting lookup from %s, key=%s', csv_table_uri, key_field)
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
-        header_row = csv_reader.next()
+        header_row = map(lambda s: u(s), csv_reader.next())
         key_index = header_row.index(key_field)
         #This makes a dictionary that maps the headers to the indexes they
         #represent in the soon to be read lines

@@ -3,18 +3,16 @@ import logging
 import os
 import csv
 import struct
+import shutil
 import math
 import tempfile
-import shutil
 
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
 import numpy as np
-import scipy.ndimage as ndimage
 from scipy import integrate
-from scipy import spatial
 #required for py2exe to build
 from scipy.sparse.csgraph import _validation
 import shapely.wkt
@@ -645,6 +643,8 @@ def execute(args):
     valuation_checked = args.pop('valuation_container', False)
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
+        LOGGER.debug('Attempting to clean up the temp dir')
+        shutil.rmtree(tempfile.gettempdir())
         return
 
     LOGGER.info('Starting Wind Energy Valuation Model')
@@ -682,6 +682,12 @@ def execute(args):
                 'and spelled correctly.')
 
     LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
+
+    # Pixel size to be used in later calculations and raster creations
+    pixel_size = raster_utils.get_cell_size_from_uri(harvested_masked_uri)
+    # URI for final distance transform used in valuation calculations
+    tmp_dist_final_uri = os.path.join(
+                inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     # Handle Grid Points
     if 'grid_points_uri' in args:
@@ -769,90 +775,53 @@ def execute(args):
                     land_projected_uri, grid_to_land_dist_local,
                     land_to_grid_field)
 
-            # In order to get the proper land to grid distances that each ocean
-            # point corresponds to, we need to build up a KDTree from the land
-            # points geometries and then iterate through each wind energy point
-            # seeing which land point it is closest to. Knowing which land
-            # point is closest allows us to add the proper land to grid
-            # distance to the wind energy point ocean points.
-
-            # Get the land points geometries
-            land_geoms = get_points_geometries(land_projected_uri)
-
-            # Build a dictionary from the land points datasource so that we can
-            # have access to what land point has what land to grid distance
-
-            land_dict = get_dictionary_from_shape(land_projected_uri)
-            LOGGER.debug('land_dict : %s', land_dict)
-
-            # Build up the KDTree for land points geometries
-            kd_tree = spatial.KDTree(land_geoms)
-
-            # Initialize a list to store all the proper grid to land distances
-            # to add to the wind energy point datasource later
-            grid_to_land_dist = []
-
-        def get_grid_land_dist(wind_points_data_uri):
-            """A wrapper function for getting the grid to land distance and
-                adding it to the point shapefile.
-
-                wind_points_data_uri - a URI to an OGR Datasource for the wind
-                energy points
-
-                returns - nothing"""
-            wind_energy_points = ogr.Open(wind_points_data_uri)
-            wind_energy_layer = wind_energy_points.GetLayer()
-            for feat in wind_energy_layer:
-                geom = feat.GetGeometryRef()
-                x_loc = geom.GetX()
-                y_loc = geom.GetY()
-
-                # Create a point from the geometry
-                point = np.array([x_loc, y_loc])
-
-                # Get the shortest distance and closest index from the land
-                # points
-                _, closest_index = kd_tree.query(point)
-
-                # Knowing the closest index we can look into the land geoms
-                # lists, pull that lat/long key, and then use that to index
-                # into the dictionary to get the proper distance
-                l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G']
-                grid_to_land_dist.append(l2g_dist)
-
-            wind_energy_points = None
-
-        if land_exists:
-            # Calculate and add grid to land point distances
-            get_grid_land_dist(final_wind_points_uri)
-            land_shape_uri = land_projected_uri
+            # Calculate distance raster
+            calculate_distances_land_grid(
+                land_projected_uri, harvested_masked_uri, tmp_dist_final_uri)
         else:
-            grid_shape_uri = grid_projected_uri
+            # Calculate distance raster
+            calculate_distances_grid(
+                grid_projected_uri, harvested_masked_uri, tmp_dist_final_uri)
     else:
         LOGGER.info('Grid points not provided')
         LOGGER.debug('No grid points, calculating distances using land polygon')
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
-        land_shape_uri = land_poly_proj_uri
+        # The average land cable distance in km converted to meters
+        avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
-        # The average land cable distance in km
-        avg_grid_distance = float(args['avg_grid_distance'])
+        land_poly_rasterized_uri = raster_utils.temporary_filename('.tif')
+        # Create new raster and fill with 0s to set up for distance transform
+        raster_utils.new_raster_from_base_uri(
+            harvested_masked_uri, land_poly_rasterized_uri, 'GTiff',
+            out_nodata, gdal.GDT_Float32, fill_value=0.0)
+        # Burn polygon features into raster with values of 1s to set up for
+        # distance transform
+        raster_utils.rasterize_layer_uri(
+            land_poly_rasterized_uri, land_poly_proj_uri, burn_values=[1.0],
+            option_list=["ALL_TOUCHED=TRUE"])
 
-        # When using the land polygon to conduct distances there is a set
-        # constant distance for land point to grid points. The following lines
-        # add a new field to each point with that distance
-        feat_count = get_shapefile_feature_count(final_wind_points_uri)
+        tmp_dist_uri = raster_utils.temporary_filename('.tif')
+        raster_utils.distance_transform_edt(
+            land_poly_rasterized_uri, tmp_dist_uri, process_pool=None)
 
-        # Build up an array the same size as how many features (points) there
-        # are. This is constructed so we can call the
-        # 'add_field_to_shape_given_list' function.
-        grid_to_land_dist = np.ones(feat_count)
+        def add_avg_dist_op(tmp_dist):
+            """vectorize_datasets operation to convert distances
+                to meters and add in average grid to land distances
 
-        # Set each value in the array to the constant distance for land to grid
-        # points
-        grid_to_land_dist = grid_to_land_dist * avg_grid_distance
-        # Indicate that land polygon will be used for distances
-        land_exists = True
+                tmp_dist - a numpy array of distances
+
+                returns - distance values in meters with average grid to
+                    land distance factored in
+            """
+            return np.where(
+                tmp_dist != out_nodata,
+                tmp_dist * pixel_size + avg_grid_distance, out_nodata)
+
+        raster_utils.vectorize_datasets(
+            [tmp_dist_uri], add_avg_dist_op, tmp_dist_final_uri,
+            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+            vectorize_op=False)
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -930,30 +899,6 @@ def execute(args):
     # turbines rated power
     total_mega_watt = mega_watt * number_of_turbines
 
-    # Get the shortest distances from each ocean point to the land points
-    if land_exists:
-        land_to_ocean_dist = point_to_polygon_distance(
-                land_shape_uri, final_wind_points_uri)
-        # Add the ocean to land distance value for each point as a new field
-        ocean_to_land_field = 'O2L_km'
-        LOGGER.info('Adding ocean to land distances')
-        add_field_to_shape_given_list(
-                final_wind_points_uri, land_to_ocean_dist, ocean_to_land_field)
-        # Add the grid to land distance value for each point as a new field
-        land_to_grid_field = 'L2G_km'
-        LOGGER.info('Adding land to grid distances')
-        add_field_to_shape_given_list(
-                final_wind_points_uri, grid_to_land_dist, land_to_grid_field)
-    # No land points, get distance as crow flies from ocean points to grid
-    else:
-        grid_to_ocean_dist = point_to_polygon_distance(
-                grid_shape_uri, final_wind_points_uri)
-        # Add the ocean to grid distance value for each point as a new field
-        grid_to_ocean_field = 'g2o_km'
-        LOGGER.info('Adding grid to ocean distances')
-        add_field_to_shape_given_list(
-                final_wind_points_uri, grid_to_ocean_dist, grid_to_ocean_field)
-
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_of_turbines
     LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
@@ -975,145 +920,168 @@ def execute(args):
     disc_time = disc_const**time
     LOGGER.debug('disc_time : %s', disc_time)
 
-    # Create list for 3 new fields to be created based on the 3 outputs
-    npv_field = 'NPV_$mill'
-    levelized_cost_field = 'Lev_$/kWh'
-    carbon_field = 'CO2_tons'
-    val_field_list = [npv_field, levelized_cost_field, carbon_field]
+    def calculate_npv_op(harvested_row, distance_row):
+        """vectorize_datasets operation that computes the net present value
 
-    def calculate_valuation_outputs(wind_energy_points_uri):
-        """Wrapper function for the valuation calculations which are added to
-            the wind energy point shapefile.
+            harvested_row - a nd numpy array for wind harvested
 
-            wind_energy_points_uri - a URI to an OGR shapefile for the wind
-                energy points
+            distance_row - a nd numpy array for distances
 
-            returns - nothing"""
-        wind_energy_points = ogr.Open(wind_energy_points_uri, 1)
-        wind_energy_layer = wind_energy_points.GetLayer()
-        LOGGER.debug('Creating new NPV, Levelized Cost and CO2 field')
-        for new_field in val_field_list:
-            field = ogr.FieldDefn(new_field, ogr.OFTReal)
-            wind_energy_layer.CreateField(field)
+            returns - net present value
+        """
+        # Total cable distance converted to kilometers
+        total_cable_dist = distance_row / 1000.0
 
-        LOGGER.info('Calculating the NPV for each wind farm')
-        # Iterate over each point calculating the NPV
-        for feat in wind_energy_layer:
-            npv_index = feat.GetFieldIndex(npv_field)
-            levelized_index = feat.GetFieldIndex(levelized_cost_field)
-            co2_index = feat.GetFieldIndex(carbon_field)
-            energy_index = feat.GetFieldIndex('Harv_MWhr')
-            # If using land for distances, get ocean to land and land to grid
-            # distances, else use grid to ocean distances
-            if land_exists:
-                o2l_index = feat.GetFieldIndex(ocean_to_land_field)
-                l2g_index = feat.GetFieldIndex(land_to_grid_field)
-                o2l_val = feat.GetField(o2l_index)
-                l2g_val = feat.GetField(l2g_index)
-                total_cable_dist = o2l_val + l2g_val
-            else:
-                g2o_index = feat.GetFieldIndex(grid_to_ocean_field)
-                total_cable_dist = feat.GetField(g2o_index)
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = harvested_row * 1000.0
 
-            # The energy value converted from MWhr/yr (Mega Watt hours as output
-            # from CK's biophysical model equations) to kWhr for the
-            # valuation model
-            energy_val = feat.GetField(energy_index) * 1000.0
+        # Initialize cable cost variable
+        cable_cost = 0.0
 
-            # Initialize cable cost variable
-            cable_cost = 0
+        # The break at 'circuit_break' indicates the difference in using AC
+        # and DC current systems
+        cable_cost = np.where(total_cable_dist <= circuit_break,
+            (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist),
+            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist))
+        # Mask out nodata values
+        cable_cost = np.where(
+            harvested_row == out_nodata, out_nodata, cable_cost)
 
-            # The break at 'circuit_break' indicates the difference in using AC
-            # and DC current systems
-            if total_cable_dist <= circuit_break:
-                cable_cost = (mw_coef_ac * total_mega_watt) + \
-                                (cable_coef_ac * total_cable_dist)
-            else:
-                cable_cost = (mw_coef_dc * total_mega_watt) + \
-                                (cable_coef_dc * total_cable_dist)
+        # Compute the total CAP
+        cap = cap_less_dist + cable_cost
 
-            # Compute the total CAP
-            cap = cap_less_dist + cable_cost
+        # Nominal total capital costs including installation and
+        # miscellaneous costs (capex)
+        capex = cap / (1.0 - install_cost - misc_capex_cost)
 
-            # Nominal total capital costs including installation and
-            # miscellaneous costs (capex)
-            capex = cap / (1.0 - install_cost - misc_capex_cost)
+        # The ongoing cost of the farm
+        ongoing_capex = op_maint_cost * capex
 
-            # The ongoing cost of the farm
-            ongoing_capex = op_maint_cost * capex
+        # The cost to decommission the farm
+        decommish_capex = decom * capex / disc_time
 
-            # The cost to decommission the farm
-            decommish_capex = decom * capex / disc_time
+        # Variable to store the summation of the revenue less the
+        # ongoing costs, adjusted for discount rate
+        comp_one_sum = 0.0
 
-            # Variable to store the summation of the revenue less the
-            # ongoing costs, adjusted for discount rate
-            comp_one_sum = 0
-            # Variable to store the numerator summation part of the
-            # levelized cost
-            levelized_cost_sum = 0
-            # Variable to store the denominator summation part of the
-            # levelized cost
-            levelized_cost_denom = 0
+        # Calculate the total NPV summation over the lifespan of the wind
+        # farm. Starting at year 1, because year 0 yields no revenue
+        for year in xrange(1, len(price_list)):
+            # Dollar per kiloWatt hour
+            dollar_per_kwh = float(price_list[year])
 
-            # Calculate the total NPV summation over the lifespan of the wind
-            # farm as well as the levelized cost
-            for year in xrange(len(price_list)):
-                # Dollar per kiloWatt hour
-                dollar_per_kwh = float(price_list[year])
+            # The price per kWh for energy converted to units of millions of
+            #  dollars to correspond to the units for valuation costs
+            mill_dollar_per_kwh = dollar_per_kwh / 1000000.0
 
-                # The price per kWh for energy converted to units of millions of dollars to
-                # correspond to the units for valuation costs
-                mill_dollar_per_kwh = dollar_per_kwh / 1000000
+            # The revenue in millions of dollars for the wind farm. The
+            # energy_val is in kWh the farm.
+            rev = energy_val * mill_dollar_per_kwh
 
-                # If year is 0 then it is considered a construction year where
-                # revenue is 0 and we do NOT accrue any ongoing costs
-                if year != 0:
-                    # The revenue in millions of dollars for the wind farm. The
-                    # energy_val is in kWh the farm.
-                    rev = energy_val * mill_dollar_per_kwh
+            # Calculate the first component summation of the NPV equation
+            comp_one_sum = (
+                comp_one_sum + (rev - ongoing_capex) / disc_const**year)
 
-                    # Calcuate the first component summation of the NPV equation
-                    comp_one_sum = \
-                        comp_one_sum + (rev - ongoing_capex) / disc_const**year
+        return np.where(
+            (harvested_row != out_nodata) & (distance_row != out_nodata),
+            comp_one_sum - decommish_capex - capex, out_nodata)
 
-                    # Calculate the numerator summation value for levelized
-                    # cost of energy
-                    levelized_cost_sum = levelized_cost_sum + (
-                            (ongoing_capex / disc_const**year))
+    def calculate_levelized_op(harvested_row, distance_row):
+        """vectorize_datasets operation that computes the levelized cost
 
-                # Calculate the denominator summation value for levelized
-                # cost of energy
-                levelized_cost_denom = levelized_cost_denom + (
-                        energy_val / disc_const**year)
+            harvested_row - a nd numpy array for wind harvested
 
-            # Add this years NPV value to the running total
-            npv = comp_one_sum - decommish_capex - capex
+            distance_row - a nd numpy array for distances
 
-            # Calculate the levelized cost of energy
-            levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
-                    levelized_cost_denom)
+            returns - the levelized cost
+        """
+        # Total cable distance converted to kilometers
+        total_cable_dist = distance_row / 1000.0
 
-            # Levelized cost of energy converted from millions of dollars to
-            # dollars
-            levelized_cost = levelized_cost * 1000000
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = harvested_row * 1000.0
 
-            # The amount of CO2 not released into the atmosphere, with the
-            # constant conversion factor provided in the users guide by
-            # Rob Griffin
-            carbon_coef = float(val_parameters_dict['carbon_coefficient'])
-            carbon_emissions = carbon_coef * energy_val
+        # Initialize cable cost variable
+        cable_cost = 0.0
 
-            feat.SetField(npv_index, npv)
-            feat.SetField(levelized_index, levelized_cost)
-            feat.SetField(co2_index, carbon_emissions)
+        # The break at 'circuit_break' indicates the difference in using AC
+        # and DC current systems
+        cable_cost = np.where(total_cable_dist <= circuit_break,
+            (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist),
+            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist))
+        # Mask out nodata values
+        cable_cost = np.where(
+            harvested_row == out_nodata, out_nodata, cable_cost)
 
-            wind_energy_layer.SetFeature(feat)
+        # Compute the total CAP
+        cap = cap_less_dist + cable_cost
 
-        wind_energy_layer.SyncToDisk()
-        wind_energy_points = None
+        # Nominal total capital costs including installation and
+        # miscellaneous costs (capex)
+        capex = cap / (1.0 - install_cost - misc_capex_cost)
 
-    # Calculate the valuation outputs for wind energy
-    calculate_valuation_outputs(final_wind_points_uri)
+        # The ongoing cost of the farm
+        ongoing_capex = op_maint_cost * capex
+
+        # The cost to decommission the farm
+        decommish_capex = decom * capex / disc_time
+
+        # Variable to store the numerator summation part of the
+        # levelized cost
+        levelized_cost_sum = 0.0
+        # Variable to store the denominator summation part of the
+        # levelized cost
+        levelized_cost_denom = 0.0
+
+        # Calculate the denominator summation value for levelized
+        # cost of energy at year 0
+        levelized_cost_denom = levelized_cost_denom + (
+                energy_val / disc_const**0)
+
+        # Calculate the levelized cost over the lifespan of the farm
+        for year in xrange(1, len(price_list)):
+            # Calculate the numerator summation value for levelized
+            # cost of energy
+            levelized_cost_sum = levelized_cost_sum + (
+                    (ongoing_capex / disc_const**year))
+
+            # Calculate the denominator summation value for levelized
+            # cost of energy
+            levelized_cost_denom = levelized_cost_denom + (
+                    energy_val / disc_const**year)
+
+        # Calculate the levelized cost of energy
+        levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
+                levelized_cost_denom)
+
+        # Levelized cost of energy converted from millions of dollars to
+        # dollars
+        return np.where(harvested_row == out_nodata,
+            out_nodata, levelized_cost * 1000000.0)
+
+    # The amount of CO2 not released into the atmosphere, with the
+    # constant conversion factor provided in the users guide by
+    # Rob Griffin
+    carbon_coef = float(val_parameters_dict['carbon_coefficient'])
+
+    def calculate_carbon_op(harvested_row):
+        """vectorize_dataset operation to calculate the carbon offset
+
+            harvested_row - a nd numpy array
+
+            returns - a nd numpy array of carbon offset values
+        """
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = harvested_row * 1000.0
+
+        return np.where(
+            harvested_row == out_nodata, out_nodata, carbon_coef * energy_val)
 
     # URIs for output rasters
     npv_uri = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
@@ -1121,43 +1089,22 @@ def execute(args):
             out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_uri = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    # List of output URIs
-    uri_list = [npv_uri, levelized_uri, carbon_uri]
+    raster_utils.vectorize_datasets(
+                [harvested_masked_uri, tmp_dist_final_uri], calculate_npv_op,
+                npv_uri, gdal.GDT_Float32, out_nodata, pixel_size,
+                'intersection', vectorize_op=False)
 
-    for valuation_uri, field in zip(uri_list, val_field_list):
-        # Create a raster for the points to be vectorized to
-        LOGGER.info('Creating Output raster : %s', valuation_uri)
-        # Creating a temperary uri here because new_raster_from_base requires
-        # one, even if the format is 'MEM'
-        tmp_val_uri = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+                [harvested_masked_uri, tmp_dist_final_uri],
+                calculate_levelized_op, levelized_uri, gdal.GDT_Float32,
+                out_nodata, pixel_size, 'intersection', vectorize_op=False)
 
-        raster_utils.create_raster_from_vector_extents_uri(
-                final_wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
-                tmp_val_uri)
-
-        # Interpolate and vectorize the points field onto a gdal dataset
-        LOGGER.info('Vectorizing the points from the %s field', field)
-        raster_utils.vectorize_points_uri(
-                final_wind_points_uri, field, tmp_val_uri,
-                interpolation = 'linear')
-
-        valuation_mask_list = [tmp_val_uri, depth_mask_uri]
-
-        # If a distance mask was created then add it to the raster list to pass
-        # in for masking out the output datasets
-        try:
-            valuation_mask_list.append(dist_mask_uri)
-        except NameError:
-            LOGGER.debug('NO Distance Mask to add to list')
-
-        # Mask out any areas where distance or depth has determined that wind
-        # farms cannot be located
-        LOGGER.info('Mask out depth and [distance] areas from Valuation raster')
-        raster_utils.vectorize_datasets(
-                valuation_mask_list, mask_out_depth_dist, valuation_uri,
-                gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
-                vectorize_op = False)
-
+    raster_utils.vectorize_datasets(
+                [harvested_masked_uri], calculate_carbon_op, carbon_uri,
+                gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+                vectorize_op=False)
+    LOGGER.debug('Attempting to clean up the temp dir')
+    shutil.rmtree(tempfile.gettempdir())
     LOGGER.info('Wind Energy Valuation Model Complete')
 
 def get_shapefile_feature_count(shape_uri):
@@ -1846,3 +1793,197 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
 
     LOGGER.debug('Leaving clip_datasource')
     output_datasource = None
+
+def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
+    """Creates a distance transform raster based on the shortest distances
+        of each point feature in 'land_shape_uri' and each features
+        'L2G' field.
+
+        land_shape_uri - a URI to an OGR shapefile that has the desired
+            features to get the distance from (required)
+
+        harvested_masked_uri - a URI to a GDAL raster that is used to get
+            the proper extents and configuration for new rasters
+
+        tmp_dist_final_uri - a URI to a GDAL raster for the final
+            distance transform raster output
+
+        returns - Nothing
+    """
+    # Open the point shapefile and get the layer
+    land_points = ogr.Open(land_shape_uri)
+    land_pts_layer = land_points.GetLayer()
+    # A list to hold the land to grid distances in order for each point
+    # features 'L2G' field
+    l2g_dist = []
+    # A list to hold the individual distance transform URI's in order
+    uri_list = []
+
+    # Get nodata value from biophsyical output raster
+    out_nodata = raster_utils.get_nodata_from_uri(harvested_masked_uri)
+    # Get pixel size
+    pixel_size = raster_utils.get_cell_size_from_uri(harvested_masked_uri)
+
+    for feat in land_pts_layer:
+        # Get the point features land to grid value and add it to the list
+        field_index = feat.GetFieldIndex("L2G")
+        l2g_dist.append(float(feat.GetField(field_index)))
+
+        # Create a new shapefile with only one feature to burn onto a raster
+        # in order to get the distance transform based on that one feature
+        output_driver = ogr.GetDriverByName('ESRI Shapefile')
+        tmp_uri = raster_utils.temporary_folder()
+        output_datasource = output_driver.CreateDataSource(tmp_uri)
+
+        # Get the original_layer definition which holds needed attribute values
+        original_layer_dfn = land_pts_layer.GetLayerDefn()
+
+        # Create the new layer for output_datasource using same name and
+        # geometry type from original_datasource as well as spatial reference
+        output_layer = output_datasource.CreateLayer(
+                original_layer_dfn.GetName(), land_pts_layer.GetSpatialRef(),
+                original_layer_dfn.GetGeomType())
+
+        # Get the number of fields in original_layer
+        original_field_count = original_layer_dfn.GetFieldCount()
+
+        # For every field, create a duplicate field and add it to the new
+        # shapefiles layer
+        for fld_index in range(original_field_count):
+            original_field = original_layer_dfn.GetFieldDefn(fld_index)
+            output_field = ogr.FieldDefn(
+                    original_field.GetName(), original_field.GetType())
+            # NOT setting the WIDTH or PRECISION because that seems to be
+            # unneeded and causes interesting OGR conflicts
+            output_layer.CreateField(output_field)
+
+        # Copy original_datasource's feature and set as new shapes feature
+        output_feature = ogr.Feature(
+                feature_def=output_layer.GetLayerDefn())
+
+        # Since the original feature is of interest add it's fields and
+        # Values to the new feature from the intersecting geometries
+        # The False in SetFrom() signifies that the fields must match
+        # exactly
+        output_feature.SetFrom(feat, False)
+        output_layer.CreateFeature(output_feature)
+
+        output_feature = None
+        output_layer = None
+        output_datasource = None
+
+        land_pts_rasterized_uri = raster_utils.temporary_filename('.tif')
+        # Create a new raster based on a biophysical output and fill with 0's
+        # to set up for distance transform
+        raster_utils.new_raster_from_base_uri(
+            harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
+            out_nodata, gdal.GDT_Float32, fill_value=0.0)
+        # Burn single feature onto the raster with value of 1 to set up for
+        # distance transform
+        raster_utils.rasterize_layer_uri(
+            land_pts_rasterized_uri, tmp_uri, burn_values=[1.0],
+            option_list=["ALL_TOUCHED=TRUE"])
+
+        dist_uri = raster_utils.temporary_filename('.tif')
+        raster_utils.distance_transform_edt(
+            land_pts_rasterized_uri, dist_uri, process_pool=None)
+        # Add each features distance transform result to list
+        uri_list.append(dist_uri)
+
+    def land_ocean_dist(*rasters):
+        """vectorize_dataset operation to aggregate each features distance
+            transform output and create one distance output that has the
+            shortest distances combined with each features land to grid
+            distance
+
+            *rasters - a numpy array of numpy nd arrays
+
+            returns - a nd numpy array of the shortest distances
+        """
+        # Get the shape of the incoming numpy arrays
+        shape = rasters[0].shape
+        # Create a numpy array of 1's with proper shape
+        land_grid = np.ones(shape)
+        # Initialize numpy array with land to grid distances from the first
+        # array
+        land_grid = land_grid * l2g_dist[0]
+        # Initialize final minimum distances array to first rasters
+        distances = rasters[0]
+        # Get the length of rasters lists to use in iteration and
+        # indexing
+        size = len(rasters)
+
+        for index in range(1, size):
+            raster = rasters[index]
+            # Get the land to grid distances corresponding to current
+            # indexed raster
+            new_dist = np.ones(shape)
+            new_dist = new_dist * l2g_dist[index]
+            # Create a mask to indicate minimum distances
+            mask = raster < distances
+            # Replace distance values with minimum
+            distances = np.where(mask, raster, distances)
+            # Replace land to grid distances based on mask
+            land_grid = np.where(mask, new_dist, land_grid)
+
+        # Convert to meters from number of pixels
+        distances = distances * pixel_size
+        # Return and add land to grid distances to final distances
+        return distances + land_grid
+
+    raster_utils.vectorize_datasets(
+                uri_list, land_ocean_dist, tmp_dist_final_uri, gdal.GDT_Float32,
+                out_nodata, pixel_size, 'intersection', vectorize_op=False)
+
+def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
+    """Creates a distance transform raster from an OGR shapefile. The function
+        first burns the features from 'land_shape_uri' onto a raster using
+        'harvested_masked_uri' as the base for that raster. It then does a
+        distance transform from those locations and converts from pixel
+        distances to distance in meters.
+
+        land_shape_uri - a URI to an OGR shapefile that has the desired
+            features to get the distance from (required)
+
+        harvested_masked_uri - a URI to a GDAL raster that is used to get
+            the proper extents and configuration for new rasters
+
+        tmp_dist_final_uri - a URI to a GDAL raster for the final
+            distance transform raster output
+
+        returns - Nothing
+    """
+    land_pts_rasterized_uri = raster_utils.temporary_filename('.tif')
+    # Get nodata value to use in raster creation and masking
+    out_nodata = raster_utils.get_nodata_from_uri(harvested_masked_uri)
+    # Get pixel size from biophysical output
+    pixel_size = raster_utils.get_cell_size_from_uri(harvested_masked_uri)
+    # Create a new raster based on harvested_masked_uri and fill with 0's
+    # to set up for distance transform
+    raster_utils.new_raster_from_base_uri(
+        harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
+        out_nodata, gdal.GDT_Float32, fill_value=0.0)
+    # Burn features from land_shape_uri onto raster with values of 1 to
+    # set up for distance transform
+    raster_utils.rasterize_layer_uri(
+        land_pts_rasterized_uri, land_shape_uri, burn_values=[1.0],
+        option_list=["ALL_TOUCHED=TRUE"])
+
+    tmp_dist_uri = raster_utils.temporary_filename('.tif')
+    # Run distance transform
+    raster_utils.distance_transform_edt(
+        land_pts_rasterized_uri, tmp_dist_uri, process_pool=None)
+
+    def dist_meters_op(tmp_dist):
+        """vectorize_dataset operation that multiplies by the pixel size
+
+            tmp_dist - an nd numpy array
+
+            returns - an nd numpy array multiplied by a pixel size
+        """
+        return np.where(
+            tmp_dist != out_nodata, tmp_dist * pixel_size, out_nodata)
+
+    raster_utils.vectorize_datasets(
+        [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,
+        out_nodata, pixel_size, 'intersection', vectorize_op=False)
