@@ -413,9 +413,7 @@ def calculate_flow_weights(
                         continue
                     found = False
                     for neighbor_direction_index in range(n_neighbors):
-                        flow_angle_to_neighbor = abs(
-                            angle_to_neighbor[neighbor_direction_index] -
-                            flow_direction)
+                        flow_angle_to_neighbor = abs(angle_to_neighbor[neighbor_direction_index] - flow_direction)
                         if flow_angle_to_neighbor <= PI/4.0:
                             found = True
 
@@ -440,8 +438,7 @@ def calculate_flow_weights(
                             #to the next neighbor
                             if outflow_weight < 0.001:
                                 outflow_weight = 1.0
-                                neighbor_direction_index = \
-                                    (neighbor_direction_index + 1) % 8
+                                neighbor_direction_index = (neighbor_direction_index + 1) % 8
 
                             outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset] = neighbor_direction_index
                             outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset] = outflow_weight
@@ -458,7 +455,7 @@ def calculate_flow_weights(
                     (time.clock()-start))
 
 
-def percent_to_sink(
+'''def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,
     outflow_weights_uri, effect_uri):
     """This function calculates the amount of load from a single pixel
@@ -498,46 +495,43 @@ def percent_to_sink(
     effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
     effect_band = effect_dataset.GetRasterBand(1)
 
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = effect_band.GetBlockSize()
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+    
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] effect_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] sink_pixels_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] export_rate_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.int8)
+
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef int outflow_weights_nodata = raster_utils.get_nodata_from_uri(
+        outflow_weights_uri)
+
     cdef int n_cols = effect_dataset.RasterXSize
     cdef int n_rows = effect_dataset.RasterYSize
-    
-    cdef int CACHE_ROWS = n_rows
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_cache
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_cache
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_cache
-    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
-    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
-    
-    while True:
-        try:
-            effect_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            sink_pixels_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
-            export_rate_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            outflow_direction_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.int8))
-            outflow_weights_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            cache_tag = (
-                numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
-            cache_dirty = (
-                numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
-            break
-        except MemoryError as e:
-            LOGGER.warn(
-                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
-                'reducing by half')
-            CACHE_ROWS /= 2
-            if CACHE_ROWS < 3:
-                LOGGER.error(
-                    'The cache size is too small now, '
-                    "don't know what to do.  Failing.")
-                raise e
-    
     
     sink_pixels_dataset = gdal.Open(sink_pixels_uri)
     sink_pixels_band = sink_pixels_dataset.GetRasterBand(1)
@@ -546,7 +540,7 @@ def percent_to_sink(
     
     export_rate_dataset = gdal.Open(export_rate_uri)
     export_rate_band = export_rate_dataset.GetRasterBand(1)
-    cdef double export_rate_nodata = raster_utils.get_nodata_from_uri(
+    cdef float export_rate_nodata = raster_utils.get_nodata_from_uri(
         export_rate_uri)
     
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
@@ -554,11 +548,16 @@ def percent_to_sink(
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
     
-    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
-    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    cdef double outflow_weights_nodata = raster_utils.get_nodata_from_uri(
-        outflow_weights_uri)
+    #####################################
+    cache_dirty[:] = 0
+    band_list = [effect_band, sink_pixels_band, export_rate_band, outflow_direction_band, outflow_weights_band]
+    block_list = [effect_block, sink_pixels_block, export_rate_block, outflow_direction_block, outflow_weights_block]
+    update_list = [False, False, False, False, True, True]
     
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
+
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
@@ -568,108 +567,56 @@ def percent_to_sink(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int index, row_index, col_index, cache_row_index, neighbor_row_index, cache_neighbor_row_index, neighbor_col_index, neighbor_index, neighbor_outflow_direction, cache_row_offset, old_row_index
+    cdef int flat_index, neighbor_index, neighbor_outflow_direction
     cdef double outflow_weight, neighbor_outflow_weight
     
     #initially nothing is loaded in the cache, use -1 to indicate that as a tag
-    cache_tag[:] = -1
-    cache_dirty[:] = 0
-    
     
     cdef queue[int] process_queue
     #Queue the sinks
-    for row_index in xrange(n_rows):
-        effect_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols,
-            win_ysize=1, buf_obj=effect_cache[0].reshape((1,n_cols)))
-        sink_pixels_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols,
-            win_ysize=1, buf_obj=sink_pixels_cache[0].reshape((1,n_cols)))
-        for col_index in xrange(n_cols):
-            if sink_pixels_cache[0, col_index] == 1:
-                effect_cache[0, col_index] = 1.0
-                process_queue.push(row_index * n_cols + col_index)
-        effect_band.WriteArray(
-            effect_cache[0].reshape((1,n_cols)), xoff=0, yoff=row_index)
-
-    while process_queue.size() > 0:
-        index = process_queue.front()
-        process_queue.pop()
-        row_index = index / n_cols
-        col_index = index % n_cols
-
-        for cache_row_offset in range(-1, 2):
-            neighbor_row_index = row_index + cache_row_offset
-            #see if that row is out of bounds
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                continue
-            #otherwise check if the cache needs an update
-            cache_row_index = neighbor_row_index % CACHE_ROWS
-            row_tag = neighbor_row_index / CACHE_ROWS
-            
-            if cache_tag[cache_row_index] == row_tag:
-                #cache is up to date, so skip
-                continue
-                
-            #see if we need to save the cache
-            if cache_dirty[cache_row_index]:
-                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                effect_band.WriteArray(
-                    effect_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                cache_dirty[cache_row_index] = 0
-                
-            #load a new row
-            sink_pixels_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=sink_pixels_cache[cache_row_index].reshape((1,n_cols)))
-            export_rate_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=export_rate_cache[cache_row_index].reshape((1,n_cols)))
-            outflow_direction_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=outflow_direction_cache[cache_row_index].reshape((1,n_cols)))
-            outflow_weights_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=outflow_weights_cache[cache_row_index].reshape((1,n_cols)))
-            effect_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=effect_cache[cache_row_index].reshape((1,n_cols)))
-            cache_tag[cache_row_index] = row_tag
-                
-        cache_row_index = row_index % CACHE_ROWS
+    for global_row in xrange(n_rows):
+        for global_col in xrange(n_cols):
+            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+            if sink_pixels_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
+                effect_block[row_index, col_index, row_block_offset, col_block_offset] = 1.0
+                cache_dirty[row_index, col_index] = 1
+                process_queue.push(global_row * n_cols + global_col)
         
-        if export_rate_cache[cache_row_index, col_index] == export_rate_nodata:
+    while process_queue.size() > 0:
+        flat_index = process_queue.front()
+        process_queue.pop()
+        global_row = flat_index / n_cols
+        global_col = flat_index % n_cols
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+        
+        if export_rate_block[row_index, col_index, row_block_offset, col_block_offset] == export_rate_nodata:
             continue
 
         #if the outflow weight is nodata, then not a valid pixel
-        outflow_weight = outflow_weights_cache[cache_row_index, col_index]
+        outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
         if outflow_weight == outflow_weights_nodata:
             continue
 
         for neighbor_index in range(8):
-            cache_neighbor_row_index = (cache_row_index + row_offsets[neighbor_index]) % CACHE_ROWS
-            neighbor_row_index = row_index + row_offsets[neighbor_index]
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+            neighbor_row = global_row + row_offsets[neighbor_index]
+            neighbor_col = global_col = col_offsets[neighbor_index]
+            if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col_index >= n_cols:
                 #out of bounds
                 continue
-
-            neighbor_col_index = col_index + col_offsets[neighbor_index]
-            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-                #out of bounds
-                continue
-
-            if sink_pixels_cache[cache_neighbor_row_index, neighbor_col_index] == 1:
+            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+            
+            if sink_pixels_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == 1:
                 #it's already a sink
                 continue
 
             neighbor_outflow_direction = (
-                outflow_direction_cache[cache_neighbor_row_index, neighbor_col_index])
+                outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset])
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_direction == outflow_direction_nodata:
                 continue
 
             neighbor_outflow_weight = (
-                outflow_weights_cache[cache_neighbor_row_index, neighbor_col_index])
+                outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset])
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_weight == outflow_direction_nodata:
                 continue
@@ -686,27 +633,22 @@ def percent_to_sink(
 
             if it_flows_here:
                 #If we haven't processed that effect yet, set it to 0 and append to the queue
-                if effect_cache[cache_neighbor_row_index, neighbor_col_index] == effect_nodata:
+                if effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == effect_nodata:
                     process_queue.push(neighbor_row_index * n_cols + neighbor_col_index)
-                    effect_cache[cache_neighbor_row_index, neighbor_col_index] = 0.0
+                    effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] = 0.0
 
                 #the percent of the pixel upstream equals the current percent 
                 #times the percent flow to that pixels times the 
-                effect_cache[cache_neighbor_row_index, neighbor_col_index] += (
-                    effect_cache[cache_row_index, col_index] *
+                effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] += (
+                    effect_block[row_index, col_index, row_block_offset, col_block_offset] *
                     neighbor_outflow_weight *
-                    export_rate_cache[cache_row_index, col_index])
-                cache_dirty[cache_neighbor_row_index] = 1
+                    export_rate_block[row_index, col_index, row_block_offset, col_block_offset])
+                cache_dirty[neighbor_row_index, neighbor_col_index] = 1
 
-    for cache_row_index in range(CACHE_ROWS):
-        if cache_dirty[cache_row_index]:
-            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-            effect_band.WriteArray(
-                effect_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-            cache_dirty[cache_row_index] = 0
-                
+    cache_dirty.flush_cache()
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
                     (time.clock() - start_time))
+'''
 
 
 cdef struct Row_Col_Weight_Tuple:
@@ -883,39 +825,39 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             
         returns nothing"""
 
-    dem_ds = gdal.Open(dem_uri, gdal.GA_ReadOnly)
-    cdef int n_rows = dem_ds.RasterYSize
-    cdef int n_cols = dem_ds.RasterXSize
-        
-    #copy the dem to a different dataset so we know the type
-    dem_band = dem_ds.GetRasterBand(1)
+    cdef int n_rows, n_cols
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(dem_uri)
     raw_nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     
-    cdef double nodata_value
+    cdef float nodata_value
     if raw_nodata_value is not None:
         nodata_value = raw_nodata_value
     else:
         LOGGER.warn("Nodata value not set, defaulting to -9999.9")
         nodata_value = -9999.9
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, dem_out_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        INF)
-    dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
-    dem_out_band = dem_out_ds.GetRasterBand(1)
-    cdef int row_index, col_index
-    for row_index in range(n_rows):
-        dem_out_array = dem_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1)
-        dem_out_band.WriteArray(dem_out_array, xoff=0, yoff=row_index)
 
-    dem_band = None
-    gdal.Dataset.__swig_destroy__(dem_ds)
-    dem_ds = None
-    dem_out_band.FlushCache()
-    dem_out_band = None
-    dem_out_ds.FlushCache()
-    gdal.Dataset.__swig_destroy__(dem_out_ds)
-    dem_out_ds = None
+    #copy dem_uri to a float dataset so we know the type
+    pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    dem_tmp_fill_uri = 'temp_fill.tif'
+    raster_utils.vectorize_datasets(
+        [dem_uri], lambda x: x, dem_tmp_fill_uri, gdal.GDT_Float32,
+        nodata_value, pixel_size, 'intersection',
+        vectorize_op=False, datasets_are_pre_aligned=False)
+    
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+    
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
     LOGGER.info('identify flat cells')
     
     #search for flat cells
@@ -924,12 +866,12 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef c_set[int] flat_set_for_looping
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    _build_flat_set(dem_out_uri, nodata_value, flat_set)
+    _build_flat_set(dem_tmp_fill_uri, nodata_value, flat_set)
     LOGGER.debug("flat_set size %d" % (flat_set.size()))
     
-    dem_out_ds = gdal.Open(dem_out_uri, gdal.GA_Update)
+    dem_out_ds = gdal.Open(dem_tmp_fill_uri, gdal.GA_Update)
     dem_out_band = dem_out_ds.GetRasterBand(1)
-    
+
     cdef int flat_index
     #make a copy of the flat index so we can break it down for iteration but
     #keep the old one for rapid testing of flat cells
@@ -938,17 +880,17 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     LOGGER.info('finished flat cell detection, now identify plateaus')
 
-    dem_sink_offset_uri = raster_utils.temporary_filename()
+    dem_sink_offset_uri = 'dem_sink_offset.tif'#raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_sink_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        INF)
+        fill_value=INF)
     dem_sink_offset_ds = gdal.Open(dem_sink_offset_uri, gdal.GA_Update)
     dem_sink_offset_band = dem_sink_offset_ds.GetRasterBand(1)
 
-    dem_edge_offset_uri = raster_utils.temporary_filename()
+    dem_edge_offset_uri = 'dem_edge_offset.tif'#raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
         dem_uri, dem_edge_offset_uri, 'GTiff', nodata_value, gdal.GDT_Float32,
-        INF)
+        fill_value=INF)
     dem_edge_offset_ds = gdal.Open(dem_edge_offset_uri, gdal.GA_Update)
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
@@ -964,104 +906,55 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef queue[Row_Col_Weight_Tuple] edge_queue
     
-    cdef int CACHE_ROWS = n_rows
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset_cache
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_edge_offset_cache
-    cdef numpy.ndarray[numpy.npy_int32, ndim=1] cache_tag
-    cdef numpy.ndarray[numpy.npy_byte, ndim=1] cache_dirty
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = dem_out_band.GetBlockSize()
 
-    #Try to allocate some memory, we do this because we encountered out of
-    #memory errors before
-    while True:
-        try:
-            dem_cache = (numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            dem_sink_offset_cache = numpy.empty(
-                (CACHE_ROWS, n_cols), dtype=numpy.float32)
-            dem_edge_offset_cache = (
-                numpy.empty((CACHE_ROWS, n_cols), dtype=numpy.float32))
-            cache_tag = (numpy.empty((CACHE_ROWS,), dtype=numpy.int32))
-            cache_dirty = (
-                numpy.zeros((CACHE_ROWS,), dtype=numpy.int8))
-            break
-        except MemoryError as e:
-            LOGGER.warn(
-                'Warning a cache row size of %d was too large, ' % CACHE_ROWS +
-                'reducing by half')
-            CACHE_ROWS /= 2
-            if CACHE_ROWS < 3:
-                LOGGER.error(
-                    'The cache size is too small now, '
-                    "don't know what to do.  Failing.")
-                raise e
-    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
-    cache_tag[:] = -1   
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_sink_offset_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_edge_offset_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.int8)
+
+
+    band_list = [dem_out_band, dem_sink_offset_band, dem_edge_offset_band]
+    block_list = [dem_block, dem_sink_offset_block, dem_edge_offset_block]
+    update_list = [False, True, True]
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef Row_Col_Weight_Tuple current_cell_tuple
-    cdef int cache_row_offset, cache_row_index, row_tag
-    cdef int neighbor_cache_row_index, neighbor_row_index, neighbor_col_index
     
     cdef Row_Col_Weight_Tuple t
     cdef int weight, region_count = 0
-
+    last_time = time.time()
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
         flat_index = deref(flat_set_for_looping.begin())
         flat_set_for_looping.erase(flat_index)
         
-        row_index = flat_index / n_cols
+        global_row = flat_index / n_cols
+        global_col = flat_index % n_cols
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         
-        #see if we need to update the row cache
-        for cache_row_offset in range(-1, 2):
-            neighbor_row_index = row_index + cache_row_offset
-            #see if that row is out of bounds
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                continue
-            #otherwise check if the cache needs an update
-            cache_row_index = neighbor_row_index % CACHE_ROWS
-            row_tag = neighbor_row_index / CACHE_ROWS
-            
-            if cache_tag[cache_row_index] == row_tag:
-                #cache is up to date, so skip
-                continue
-            
-            #see if we need to save the cache
-            if cache_dirty[cache_row_index]:
-                old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                dem_sink_offset_band.WriteArray(
-                    dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                dem_edge_offset_band.WriteArray(
-                    dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                cache_dirty[cache_row_index] = 0
-                
-            #load a new row
-            cache_tag[cache_row_index] = row_tag
-            dem_out_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=dem_cache[cache_row_index].reshape((1,n_cols)))
-            dem_sink_offset_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)))
-            dem_edge_offset_band.ReadAsArray(
-                xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
-        
-        cache_row_index = row_index % CACHE_ROWS
-        col_index = flat_index % n_cols
-        if dem_cache[cache_row_index, col_index] == nodata_value:
+        if dem_block[row_index, col_index, row_block_offset, col_block_offset] == nodata_value:
             continue
 
         #see if we already processed this cell looking for edges and sinks
-        if dem_sink_offset_cache[cache_row_index, col_index] != INF:
+        if dem_sink_offset_block[row_index, col_index, row_block_offset, col_block_offset] != INF:
             continue
 
         #mark the cell as visited
-        dem_sink_offset_cache[cache_row_index, col_index] = MAX_DISTANCE
-        cache_dirty[cache_row_index] = 1 #just changed dem_sink_offset, we're dirty
+        dem_sink_offset_block[row_index, col_index, row_block_offset, col_block_offset] = MAX_DISTANCE
+        cache_dirty[row_index, col_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        if region_count % 100000 == 0:
-            LOGGER.info('working on plateau #%d (reports every 100000 plateaus) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info('working on plateau #%d (reports every 5 seconds) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
+            last_time = current_time
         
         #Visit a flat region and search for sinks and edges
         while flat_region_queue.size() > 0:
@@ -1069,111 +962,65 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             flat_set_for_looping.erase(flat_index)
             flat_region_queue.pop()
             
-            row_index = flat_index / n_cols
-            
-            #see if we need to update the row cache
-            for cache_row_offset in range(-1, 2):
-                neighbor_row_index = row_index + cache_row_offset
-                #see if that row is out of bounds
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                    continue
-                #otherwise check if the cache needs an update
-                cache_row_index = neighbor_row_index % CACHE_ROWS
-                row_tag = neighbor_row_index / CACHE_ROWS
-                
-                if cache_tag[cache_row_index] == row_tag:
-                    #cache is up to date, so skip
-                    continue
-                    
-                #see if we need to save the cache
-                if cache_dirty[cache_row_index]:
-                    old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                    dem_sink_offset_band.WriteArray(
-                        dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    dem_edge_offset_band.WriteArray(
-                        dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    cache_dirty[cache_row_index] = 0
-                    
-                #load a new row
-                cache_tag[cache_row_index] = row_tag
-                dem_out_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_cache[cache_row_index].reshape((1,n_cols)))
-                dem_sink_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)))
-                dem_edge_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
-
-            cache_row_index = row_index % CACHE_ROWS
-            col_index = flat_index % n_cols
-
+            global_row = flat_index / n_cols
+            global_col = flat_index % n_cols
+            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+        
             #test if this point is an edge
             #if it's flat it could be an edge
             if flat_set.find(flat_index) != flat_set.end():
                 for neighbor_index in xrange(8):
-                    neighbor_row_index = row_index + row_offsets[neighbor_index]
-                    neighbor_col_index = col_index + col_offsets[neighbor_index]
+                    neighbor_row = global_row + row_offsets[neighbor_index]
+                    neighbor_col = global_col + col_offsets[neighbor_index]
                     
-                    if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                        continue
-                    if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                    if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
 
-                    neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
-                    
+                    block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                     #ignore nodata
-                    if (dem_cache[neighbor_cache_row_index, neighbor_col_index] ==
-                        nodata_value):
+                    if dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == nodata_value:
                         continue
 
                     #if we don't abut a higher pixel then skip
-                    if (dem_cache[neighbor_cache_row_index, neighbor_col_index] <=
-                        dem_cache[cache_row_index, col_index]):
+                    if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] <=
+                        dem_block[row_index, col_index, row_block_offset, col_block_offset]):
                         continue
 
                     #otherwise we're next to an uphill pixel, that means we're an edge
-                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                    t = Row_Col_Weight_Tuple(global_row, global_col, 0)
                     edge_queue.push(t)
-                    dem_edge_offset_cache[cache_row_index, col_index] = 0
-                    cache_dirty[cache_row_index] = 1
+                    dem_edge_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
+                    cache_dirty[row_index, col_index] = 1
                     break
             else:
                 #it's been pushed onto the plateau queue, so we know it's in the same
                 #region, but it's not flat, so it must be a sink
-                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                t = Row_Col_Weight_Tuple(global_row, global_col, 0)
                 sink_queue.push(t)
-                dem_sink_offset_cache[cache_row_index, col_index] = 0
-                cache_dirty[cache_row_index] = 1
+                dem_sink_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
+                cache_dirty[row_index, col_index] = 1
 
             #loop neighbor and test to see if we can extend
             for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]                
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                neighbor_row = global_row + row_offsets[neighbor_index]                
+                neighbor_col = global_col + col_offsets[neighbor_index]
+                if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
                     continue
-                    
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-                    continue
+                block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
 
-                neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
-                    
                 #skip if we're not on the same plateau
-                if (dem_cache[neighbor_cache_row_index, neighbor_col_index] !=
-                    dem_cache[cache_row_index, col_index]):
+                if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] !=
+                    dem_block[row_index, col_index, row_block_offset, col_block_offset]):
                     continue
 
                 #ignore if we've already visited the neighbor
-                if dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] != INF:
+                if dem_sink_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] != INF:
                     continue
 
                 #otherwise extend our search
-                flat_region_queue.push(
-                    (row_index + row_offsets[neighbor_index]) * n_cols +
-                    col_index + col_offsets[neighbor_index])
-                dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] = MAX_DISTANCE
-                cache_dirty[neighbor_cache_row_index] = 1
+                flat_region_queue.push(neighbor_row * n_cols + neighbor_col)
+                dem_sink_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] = MAX_DISTANCE
+                cache_dirty[neighbor_row_index, neighbor_col_index] = 1
 
         #process sink offsets for region
         while sink_queue.size() > 0:
@@ -1181,79 +1028,41 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             current_cell_tuple = sink_queue.front()
             sink_queue.pop()
             
-            row_index = current_cell_tuple.row_index
-            col_index = current_cell_tuple.col_index
+            global_row = current_cell_tuple.row_index
+            global_col = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
-
-            #see if we need to update the row cache
-            for cache_row_offset in range(-1, 2):
-                neighbor_row_index = row_index + cache_row_offset
-                #see if that row is out of bounds
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                    continue
-                #otherwise check if the cache needs an update
-                cache_row_index = neighbor_row_index % CACHE_ROWS
-                row_tag = neighbor_row_index / CACHE_ROWS
-                
-                if cache_tag[cache_row_index] == row_tag:
-                    #cache is up to date, so skip
-                    continue
-                    
-                #see if we need to save the cache
-                if cache_dirty[cache_row_index]:
-                    old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                    dem_sink_offset_band.WriteArray(
-                        dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    dem_edge_offset_band.WriteArray(
-                        dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    cache_dirty[cache_row_index] = 0
-                    
-                #load a new row
-                cache_tag[cache_row_index] = row_tag
-                dem_out_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_cache[cache_row_index].reshape((1,n_cols)))
-                dem_sink_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)))
-                dem_edge_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
-
-            cache_row_index = row_index % CACHE_ROWS
+            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
 
             for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                    continue
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                neighbor_row = global_row + row_offsets[neighbor_index]
+                neighbor_col = global_col + col_offsets[neighbor_index]
+
+                if neighbor_row_index < 0 or neighbor_row_index >= n_rows or neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
                 
-                flat_index = neighbor_row_index * n_cols + neighbor_col_index
+                flat_index = neighbor_row * n_cols + neighbor_col
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
-                neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
-                
+                block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+
                 #If the neighbor is at a different height, then skip
-                if (dem_cache[cache_row_index, col_index] != 
-                    dem_cache[neighbor_cache_row_index, neighbor_col_index]):
+                if (dem_block[row_index, col_index, row_block_offset, col_block_offset] != 
+                    dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]):
                     continue
 
                 #if the neighbor's weight is less than the weight we'd project to it
                 #no need to update it, we're done w/ that direction
-                if (dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] <=
+                if (dem_sink_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] <=
                     weight + 1):
                     continue
 
                 #otherwise, project onto the neighbor
-                t = Row_Col_Weight_Tuple(
-                    neighbor_row_index, neighbor_col_index, weight + 1)
+                t = Row_Col_Weight_Tuple(neighbor_row, neighbor_col, weight + 1)
                 sink_queue.push(t)
-                dem_sink_offset_cache[neighbor_cache_row_index, neighbor_col_index] = weight + 1
-                cache_dirty[neighbor_cache_row_index] = 1
+                dem_sink_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] = weight + 1
+                cache_dirty[neighbor_row_index, neighbor_col_index] = 1
 
         #process edge offsets for region
         while edge_queue.size() > 0:
@@ -1261,127 +1070,77 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
             
-            row_index = current_cell_tuple.row_index
-            col_index = current_cell_tuple.col_index
+            global_row = current_cell_tuple.row_index
+            global_col = current_cell_tuple.col_index
             weight = current_cell_tuple.weight
-
-            #see if we need to update the row cache
-            for cache_row_offset in range(-1, 2):
-                neighbor_row_index = row_index + cache_row_offset
-                #see if that row is out of bounds
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                    continue
-                #otherwise check if the cache needs an update
-                cache_row_index = neighbor_row_index % CACHE_ROWS
-                row_tag = neighbor_row_index / CACHE_ROWS
-                
-                if cache_tag[cache_row_index] == row_tag:
-                    #cache is up to date, so skip
-                    continue
-                    
-                #see if we need to save the cache
-                if cache_dirty[cache_row_index]:
-                    old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-                    dem_sink_offset_band.WriteArray(
-                        dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    dem_edge_offset_band.WriteArray(
-                        dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-                    cache_dirty[cache_row_index] = 0
-                    
-                #load a new row
-                cache_tag[cache_row_index] = row_tag
-                dem_out_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_cache[cache_row_index].reshape((1,n_cols)))
-                dem_sink_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)))
-                dem_edge_offset_band.ReadAsArray(
-                    xoff=0, yoff=neighbor_row_index, win_xsize=n_cols,
-                    win_ysize=1, buf_obj=dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)))
-
-            cache_row_index = row_index % CACHE_ROWS
-
+            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+            
             for neighbor_index in xrange(8):
-                neighbor_row_index = row_index + row_offsets[neighbor_index]
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                neighbor_row = global_row + row_offsets[neighbor_index]
+                neighbor_col = global_col + col_offsets[neighbor_index]
+
+                if neighbor_row_index < 0 or neighbor_row_index >= n_rows or neighbor_col_index < 0 or neighbor_col_index >= n_cols:
                     continue
-                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-                    continue
-                
-                neighbor_cache_row_index = neighbor_row_index % CACHE_ROWS
+                block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                 
                 #If the neighbor is not at the same height, skip
-                if (dem_cache[cache_row_index, col_index] !=
-                    dem_cache[neighbor_cache_row_index, neighbor_col_index]):
+                if (dem_block[row_index, col_index, row_block_offset, col_block_offset] != 
+                    dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]):
                     continue
 
-                flat_index = neighbor_row_index * n_cols + neighbor_col_index
+                flat_index = neighbor_row * n_cols + neighbor_col
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
                     continue
 
                 #if the neighbors weight is less than the weight we'll project, skip
-                if dem_edge_offset_cache[neighbor_cache_row_index, neighbor_col_index] <= weight + 1:
+                if dem_edge_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] <= weight + 1:
                     continue
 
-                dem_edge_offset_cache[neighbor_cache_row_index, neighbor_col_index] = weight + 1
-                cache_dirty[neighbor_cache_row_index] = 1
+                dem_edge_offset_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] = weight + 1
+                cache_dirty[neighbor_row_index, neighbor_col_index] = 1
                 #otherwise project the current weight to the neighbor
-                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, weight + 1)
+                t = Row_Col_Weight_Tuple(neighbor_row, neighbor_col, weight + 1)
                 edge_queue.push(t)
                 
-    LOGGER.info('saving back the dirty cache')
-    
-    #see if we need to save the cache
-    for cache_row_index in range(CACHE_ROWS):
-        if cache_dirty[cache_row_index]:
-            old_row_index = cache_tag[cache_row_index] * CACHE_ROWS + cache_row_index
-            dem_sink_offset_band.WriteArray(
-                dem_sink_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-            dem_edge_offset_band.WriteArray(
-                dem_edge_offset_cache[cache_row_index].reshape((1,n_cols)), xoff=0, yoff=old_row_index)
-            cache_dirty[cache_row_index] = 0
-                
-                
-    LOGGER.debug('region_count: %d' % region_count)
-    LOGGER.info('edge cell hits %d' % edge_cell_hits)
-    LOGGER.info('sink cell hits %d' % sink_cell_hits)
-    
     #Find max distance
     LOGGER.debug('calculating max distance')
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] row_array = (
-        numpy.empty((1, n_cols), dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] block
     cdef int max_distance = -1
-    
-    for row_index in range(n_rows):
-        dem_edge_offset_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
-            buf_obj=row_array)
-        try:
-            max_distance = max(
-                max_distance, numpy.max(row_array[(row_array!=INF) & (row_array!=nodata_value)]))
-        except ValueError:
-            #no non-infinity elements, that's normal
-            pass
+
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+    cdef int block_col_width, block_row_width
+
+    for global_block_row in xrange(n_global_block_rows):
+        for global_block_col in xrange(n_global_block_cols):
+
+            block_cache.update_cache(
+                global_block_row*block_row_size, global_block_col*block_col_size, 
+                &row_index, &col_index, &row_block_offset, &col_block_offset)
+            
+            block_col_width = min((global_block_col+1)*block_col_size, n_cols) - global_block_col*block_col_size
+            block_row_width = min((global_block_row+1)*block_row_size, n_rows) - global_block_row*block_row_size
+            block = dem_edge_offset_block[row_index, col_index, 0:block_row_width, 0:block_col_width]
+            #LOGGER.debug('block_row_size, block_col_size, %d %d' % (block_row_size, block_col_size))
+            #LOGGER.debug('n_global_block_rows, n_global_block_cols %d %d' % (n_global_block_rows, n_global_block_cols))
+            #LOGGER.debug('max distance %d, %d, %d, %d' % (row_index, col_index, block_row_width, block_row_height))
+
+            #dem_edge_offset_band.ReadAsArray(
+            #    xoff=global_block_col*block_col_size, yoff=global_block_row*block_row_size,
+            #    win_xsize=min((global_block_col+1)*block_col_size, n_cols) - global_block_col*block_col_size, 
+            #    win_ysize=min((global_block_row+1)*block_row_size, n_rows) - global_block_row*block_row_size)
+            try:
+                max_distance = max(
+                    max_distance, numpy.max(block[(block!=INF) & (block!=nodata_value)]))
+            except ValueError:
+                #no non-infinity elements, that's normal
+                pass
+
     LOGGER.debug("max_distance %s" % (str(max_distance)))
+    
     #Add the final offsets to the dem array
-    dem_array = numpy.empty((1, n_cols), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset_array = (
-        numpy.empty((1, n_cols), dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset_array = (
-        numpy.empty((1, n_cols), dtype=numpy.float32))
-    for row_index in range(n_rows):
-        dem_out_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
-            buf_obj=dem_array)
-        dem_sink_offset_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
-            buf_obj=dem_sink_offset_array)
-        dem_edge_offset_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=n_cols, win_ysize=1,
-            buf_obj=dem_edge_offset_array)
+    def offset_dem(dem_sink_offset_array, dem_edge_offset_array, dem_array):
         mask_array = ((dem_sink_offset_array != INF) &
                       (dem_edge_offset_array != INF) &
                       (dem_sink_offset_array != MAX_DISTANCE) &
@@ -1398,8 +1157,24 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             max_distance+1-dem_edge_offset_array+offset_array, 0.0)
 
         dem_array += offset_array / 10000.0
+        return dem_array
 
-        dem_out_band.WriteArray(dem_array, xoff=0, yoff=row_index)
+    
+    LOGGER.info('saving back the dirty cache')
+    block_cache.flush_cache()
+    
+    dem_out_band = None
+    dem_sink_offset_band = None
+    dem_edge_offset_band = None
+    
+    gdal.Dataset.__swig_destroy__(dem_out_ds)
+    gdal.Dataset.__swig_destroy__(dem_sink_offset_ds)
+    gdal.Dataset.__swig_destroy__(dem_edge_offset_ds)
+    
+    raster_utils.vectorize_datasets(
+        [dem_sink_offset_uri, dem_edge_offset_uri, dem_tmp_fill_uri], offset_dem, dem_out_uri, gdal.GDT_Float32,
+        nodata_value, pixel_size, 'intersection',
+        vectorize_op=False, datasets_are_pre_aligned=True)
 
     
 def flow_direction_inf(dem_uri, flow_direction_uri):
@@ -2496,6 +2271,8 @@ cdef class BlockCache:
                         if update:
                             band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
                                 yoff=global_row_offset, xoff=global_col_offset)
+        for band in self.band_list:
+            band.FlushCache()
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
