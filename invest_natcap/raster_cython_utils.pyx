@@ -428,24 +428,18 @@ def new_raster_from_base(
         #make a new list to make sure we aren't ailiasing one passed in
         dataset_options = []
         #first, should it be tiled?  yes if it's not striped
-        if block_size[0] != n_cols and block_size[1] != n_rows:
-            dataset_options.insert(0, 'TILED=YES')
-            #if it's tiled can't have tiled block sizes less than 16
-            for block_index in [0, 1]:
-                if block_size[block_index] < 16:
-                    block_size[block_index] = 16
+        if block_size[0] != n_cols:
+            #just do 256x256 blocks
             dataset_options = [
-                'BLOCKXSIZE=%d' % block_size[0],
-                'BLOCKYSIZE=%d' % block_size[1],
+                'TILED=YES',
+                'BLOCKXSIZE=256'
+                'BLOCKYSIZE=256',
                 'BIGTIFF=IF_SAFER']
-    LOGGER.info('dataset_options=%s' % str(dataset_options))
+    LOGGER.info('raster_cython_core.new_raster_from_base dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
         options=dataset_options)
-    LOGGER.info('n_cols, n_rows %d %d', n_cols, n_rows)
-    LOGGER.info('Setting projection=%s', projection)
     new_raster.SetProjection(projection)
-    LOGGER.info('Setting geotransform=%s', geotransform)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 

@@ -338,7 +338,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 def new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-        n_rows=None, n_cols=None, dataset_options=[]):
+        n_rows=None, n_cols=None, dataset_options=None):
 
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
@@ -2003,7 +2003,8 @@ def resize_and_resample_dataset_uri(
         }
 
     original_dataset = gdal.Open(original_dataset_uri)
-    original_band, original_nodata = extract_band_and_nodata(original_dataset)
+    original_band = original_dataset.GetRasterBand(1)
+    original_nodata = original_band.GetNoDataValue()
 
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
@@ -2017,24 +2018,29 @@ def resize_and_resample_dataset_uri(
         int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
 
     #create the new x and y size
-    gdal_driver = gdal.GetDriverByName('GTiff')
     block_size = original_band.GetBlockSize()
     LOGGER.info(
-        '%s band size: %s', original_dataset_uri, original_band.GetBlockSize())
-
-    gtiff_creation_options = [
-        'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-        'BLOCKYSIZE=%d' % block_size[1]]
-
+        'resize_and_resample_dataset_uri %s band size: %s', original_dataset_uri, block_size)
     #If the original band is tiled, then its x blocksize will be different than
     #the number of columns
-    if block_size[0] != original_band.XSize:
-        gtiff_creation_options.append('TILED=YES')
+    if block_size[0] != original_band.XSize and original_band.XSize > 256 and original_band.YSize > 256:
+        #it makes sense for a wad of invest functions to use 256x256 blocks, lets do that here
+        block_size[0] = 256
+        block_size[1] = 256
+        gtiff_creation_options = [
+            'TILED=YES', 'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]]
+    else:
+        gtiff_creation_options = [
+            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
+            'BLOCKYSIZE=%d' % block_size[1]]
 
     create_directories([os.path.dirname(output_uri)])
+    LOGGER.debug('resize_and_resample_dataset_uri gtiff_creation_options %s' % (gtiff_creation_options))
+    gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
-        output_uri, new_x_size, new_y_size, 1, original_band.DataType)#,
-        #options=gtiff_creation_options)
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType,
+        options=gtiff_creation_options)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
@@ -2296,7 +2302,7 @@ def vectorize_datasets(
         resample_method_list=None, dataset_to_align_index=None,
         dataset_to_bound_index=None, aoi_uri=None,
         assert_datasets_projected=True, process_pool=None, vectorize_op=True,
-        datasets_are_pre_aligned=False, dataset_options=[]):
+        datasets_are_pre_aligned=False, dataset_options=None):
 
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2419,7 +2425,7 @@ def vectorize_datasets(
         dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
     block_size = output_band.GetBlockSize()
-
+    LOGGER.info('vectorize_datasets %s blocksize %d %d' % (dataset_out_uri, block_size[0], block_size[1]))
     #makes sense to get the largest block size possible to reduce the number
     #of expensive readasarray calls
     for current_block_size in [band.GetBlockSize() for band in aligned_bands]:

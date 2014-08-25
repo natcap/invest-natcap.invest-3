@@ -909,6 +909,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int block_col_size, block_row_size
     block_col_size, block_row_size = dem_out_band.GetBlockSize()
 
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
+    block_col_size, block_row_size = dem_band.GetBlockSize()
+    
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_sink_offset_block = numpy.zeros(
@@ -917,7 +921,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (n_block_rows, n_block_cols), dtype=numpy.int8)
-
 
     band_list = [dem_out_band, dem_sink_offset_band, dem_edge_offset_band]
     block_list = [dem_block, dem_sink_offset_block, dem_edge_offset_block]
