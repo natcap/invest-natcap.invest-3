@@ -544,7 +544,7 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+            [dist_trans_uri], lin_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
 def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
