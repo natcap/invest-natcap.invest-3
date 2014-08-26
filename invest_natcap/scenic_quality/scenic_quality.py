@@ -423,10 +423,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # Create a visibility map
         # Visibility convention: 1 visible, \
         # <0 is additional height to become visible
-        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri( \
-            visibility_uri, tmp_visibility_uri, 'GTiff', \
-            0., gdal.GDT_Float64, fill_value=0.)
+#        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+#        raster_utils.new_raster_from_base_uri( \
+#            visibility_uri, tmp_visibility_uri, 'GTiff', \
+#            0., gdal.GDT_Float64, fill_value=0.)
         visibility_map = np.zeros(input_array.shape)
         visibility_map[input_array == nodata] = 2. 
 
@@ -502,65 +502,21 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             add_events, center_events, remove_events, I, J, \
             arg_min, arg_max, arg_center, \
             coord, distances_sq, distances, visibility, offset_visibility, \
-            tmp_visibility_uri, obs_elev, tgt_elev, max_dist, refr_coeff)
+            obs_elev, tgt_elev, max_dist, refr_coeff)
         
-        # Visibility + distance => viewshed map
-        valuation_function_d = valuation_function(i,j, cell_size, coefficient)
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
-        raster_utils.vectorize_datasets(
-            [distances_uri, tmp_visibility_uri, visibility_uri],
-            valuation_function_d, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
-            "union", vectorize_op=False, datasets_are_pre_aligned=True)
-
-        # Combined_visibility += scaled_viewshed
-        shutil.copy(tmp_viewshed_uri, visibility_uri)
-
-        vectorized_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
-        vectorized_band = vectorized_raster.GetRasterBand(1)
-        vectorized_array = vectorized_band.ReadAsArray()
-        vectorized_band = None
-        vectorized_raster = None
-        
-        # Invoke the polynomial valuation function:
-        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_array = visibility_band.ReadAsArray()
-        visibility_band = None
-        visibility_raster = None
-
         cython_valuation_function(a, b, c, d, \
             max_valuation_radius, i, j, cell_size, \
             coefficient , \
             distances_array , \
             visibility_array, accum_visibility)
 
-#        scenic_quality_cython_core.polynomial(a, b, c, d, \
-#            max_valuation_radius, i, j, cell_size, \
-#            coefficient , \
-#            distances_array , \
-#            visibility_array, accum_visibility)
-
-        diff = np.sum(np.absolute(vectorized_array - accum_visibility))
-        if diff:
-            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-            visibility_band = visibility_raster.GetRasterBand(1)
-            accum_visibility = visibility_band.WriteArray(vectorized_array - accum_visibility)
-            visibility_band = None
-            visibility_raster = None
-        message = 'difference = ' + str(diff)    
-        assert diff == 0.0, message
-        
-        # Clean up scaled_viewshed and visibility
-        os.remove(tmp_viewshed_uri)
-        os.remove(tmp_visibility_uri)
-
         last_dist = max_distances[f]
 
-#    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-#    visibility_band = visibility_raster.GetRasterBand(1)
-#    visibility_band.WriteArray(accum_visibility)
-#    visibility_band = None
-#    visibility_raster = None
+    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+    visibility_band = visibility_raster.GetRasterBand(1)
+    visibility_band.WriteArray(accum_visibility)
+    visibility_band = None
+    visibility_raster = None
 
     layer = None
     shapefile = None
