@@ -236,57 +236,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     #input_band = None
     #input_raster = None
 
-    # Apply the valuation functions to the distance
-    def polynomial(a, b, c, d, max_valuation_radius):
-        C1 = a+b*1000+c*1000**2+d*1000**3
-        C2 = (b+2*c*1000+3*d*1000**2)
-        def distance(vi, vj, cell_size, coeff, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
-            C1 *= coeff
-            C2 *= coeff
-            a *= coeff
-            b *= coeff
-            c *= coeff
-            d *= coeff
-            def compute(x, mask, previous, C1=C1, C2=C2, a=a, b=b, c=c, d=d):
-                current = np.zeros_like(x)
-
-                f = a + b*x + c*x**2 + d*x**3
-                current[x <= max_valuation_radius] = f[x <= max_valuation_radius]
-
-                f = C1 - C2 * (1000-x)
-                current[x < 1000] = f[x < 1000]
-                current[mask <= 0.] = 0.
-
-                current += previous
-
-                return current
-            return compute
-        return distance
-
-    def logarithmic(a, b, max_valuation_radius):
-        C1 = a + b*np.log(1000)
-        C2 = (b/1000)
-        def distance(vi, vj, cell_size, coeff, C1=C1, C2=C2, a=a, b=b):
-            C1 *= coeff
-            C2 *= coeff
-            a *= coeff
-            b *= coeff
-            def compute(x, mask, previous, C1=C1, C2=C2, a=a, b=b):
-                current = np.zeros_like(x)
-
-                f = a + b*np.log(x)
-                current[x <= max_valuation_radius] = f[x <= max_valuation_radius]
-
-                f = C1 - C2*(1000-x)
-                current[x < 1000] = f[x < 1000]
-                current[mask <= 0.] = 0.
-
-                current += previous
-
-                return current
-            return compute
-        return distance
-
     # Setup valuation function
     a = args["a_coefficient"]
     b = args["b_coefficient"]
@@ -294,16 +243,13 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     d = args["d_coefficient"]
 
     valuation_function = None
-    cython_valuation_function = None
     max_valuation_radius = args['max_valuation_radius']
     if "polynomial" in args["valuation_function"]:
         print("Polynomial")
-        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
-        cython_valuation_function = scenic_quality_cython_core.polynomial
+        valuation_function = scenic_quality_cython_core.polynomial
     elif "logarithmic" in args['valuation_function']:
         print("logarithmic")
-        valuation_function = logarithmic(a, b, max_valuation_radius)
-        cython_valuation_function = scenic_quality_cython_core.logarithmic
+        valuation_function = scenic_quality_cython_core.logarithmic
 
     assert valuation_function is not None
     
@@ -423,10 +369,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # Create a visibility map
         # Visibility convention: 1 visible, \
         # <0 is additional height to become visible
-#        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-#        raster_utils.new_raster_from_base_uri( \
-#            visibility_uri, tmp_visibility_uri, 'GTiff', \
-#            0., gdal.GDT_Float64, fill_value=0.)
         visibility_map = np.zeros(input_array.shape)
         visibility_map[input_array == nodata] = 2. 
 
@@ -504,7 +446,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             coord, distances_sq, distances, visibility, offset_visibility, \
             obs_elev, tgt_elev, max_dist, refr_coeff)
         
-        cython_valuation_function(a, b, c, d, \
+        valuation_function(a, b, c, d, \
             max_valuation_radius, i, j, cell_size, \
             coefficient , \
             distances_array , \
