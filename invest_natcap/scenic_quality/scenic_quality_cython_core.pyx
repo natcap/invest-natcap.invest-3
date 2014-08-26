@@ -8,6 +8,7 @@ from cython.operator import dereference as deref
 from libc.math cimport atan2
 from libc.math cimport sin
 from libc.math cimport sqrt
+from libc.math cimport log
 
 cdef extern from "stdlib.h":
     void* malloc(size_t size)
@@ -202,6 +203,8 @@ def polynomial(double a, double b, double c, double d, \
     cdef:
         double C1 = a+b*1000+c*1000**2+d*1000**3 * coeff
         double C2 = (b+2*c*1000+3*d*1000**2) * coeff
+        double x
+        int row, col
     a *= coeff
     b *= coeff
     c *= coeff
@@ -229,8 +232,10 @@ def logarithmic(double a, double b, double c, double d, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
     cdef:
-        double C1 = a + b*np.log(1000)
+        double C1 = a + b*log(1000)
         double C2 = (b/1000)
+        double x
+        int row, col
     a *= coeff
     b *= coeff
     c *= coeff
@@ -246,7 +251,7 @@ def logarithmic(double a, double b, double c, double d, \
             if x < 1000:
                 accum[row, col] += C1 - C2*(1000-x)
             elif x <= max_valuation_radius:
-                accum[row, col] += a + b*np.log(x)
+                accum[row, col] += a + b*log(x)
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:

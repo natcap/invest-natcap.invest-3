@@ -195,14 +195,14 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
         0., gdal.GDT_Float64, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
-    #cProfile.runctx('
-    compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+    cProfile.runctx( \
+        'compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
-        curvature_correction, refr_coeff, args)
-    #', globals(), locals(), 'stats')
-    #p = pstats.Stats('stats')
-    #p.sort_stats("time").print_stats(20)
-    #p.sort_stats('cumulative').print_stats(20)
+        curvature_correction, refr_coeff, args)' \
+        , globals(), locals(), 'stats')
+    p = pstats.Stats('stats')
+    p.sort_stats("time").print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
 
     os.remove(I_uri)
     os.remove(J_uri)
@@ -219,12 +219,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
     height = 0.0 # Per viewpoint height offset--updated as we read file info
-
-    #input_raster = gdal.Open(in_dem_uri)
-    #input_band = input_raster.GetRasterBand(1)
-    #input_array = input_band.ReadAsArray()
-    #input_band = None
-    #input_raster = None
 
     # Setup valuation function
     a = args["a_coefficient"]
