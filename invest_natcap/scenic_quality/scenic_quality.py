@@ -277,7 +277,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                 f = a + b*np.log(x)
                 current[x <= max_valuation_radius] = f[x <= max_valuation_radius]
 
-#                f = a + b*np.log(1000) - (b/1000)*(1000-x)
                 f = C1 - C2*(1000-x)
                 current[x < 1000] = f[x < 1000]
                 current[mask <= 0.] = 0.
@@ -295,13 +294,16 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     d = args["d_coefficient"]
 
     valuation_function = None
+    cython_valuation_function = None
     max_valuation_radius = args['max_valuation_radius']
     if "polynomial" in args["valuation_function"]:
         print("Polynomial")
         valuation_function = polynomial(a, b, c, d, max_valuation_radius)
+        cython_valuation_function = scenic_quality_cython_core.polynomial
     elif "logarithmic" in args['valuation_function']:
         print("logarithmic")
         valuation_function = logarithmic(a, b, max_valuation_radius)
+        cython_valuation_function = scenic_quality_cython_core.logarithmic
 
     assert valuation_function is not None
     
@@ -520,11 +522,17 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 #        vectorized_raster = None
         
         # Invoke the polynomial valuation function:
-#        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
-#        visibility_band = visibility_raster.GetRasterBand(1)
-#        visibility_array = visibility_band.ReadAsArray()
-#        visibility_band = None
-#        visibility_raster = None
+        visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_array = visibility_band.ReadAsArray()
+        visibility_band = None
+        visibility_raster = None
+
+        cython_valuation_function(a, b, c, d, \
+            max_valuation_radius, i, j, cell_size, \
+            coefficient , \
+            distances_array , \
+            visibility_array, accum_visibility)
 
 #        scenic_quality_cython_core.polynomial(a, b, c, d, \
 #            max_valuation_radius, i, j, cell_size, \

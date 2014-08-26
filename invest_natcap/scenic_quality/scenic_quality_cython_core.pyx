@@ -215,10 +215,14 @@ def polynomial(double a, double b, double c, double d, \
                     accum[row, col] += C1 - C2 * (1000 - x)
                 elif x <= max_valuation_radius:
                     accum[row, col] += a + b*x + c*x**2 + d*x**3
-            #    else:
-            #        accum[row, col] = 0.
-            #else:
-            #    accum[row, col] = 0.
+
+def logarithmic(double a, double b, double c, double d, \
+    int max_valuation_radius, int vi, int vj, double cell_size, \
+    double coeff, \
+    np.ndarray[np.float64_t, ndim = 2] X, \
+    np.ndarray[np.float64_t, ndim = 2] mask, \
+    np.ndarray[np.float64_t, ndim = 2] accum):
+    pass
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
