@@ -432,7 +432,7 @@ def new_raster_from_base(
             #just do 256x256 blocks
             dataset_options = [
                 'TILED=YES',
-                'BLOCKXSIZE=256'
+                'BLOCKXSIZE=256',
                 'BLOCKYSIZE=256',
                 'BIGTIFF=IF_SAFER']
     LOGGER.info('raster_cython_core.new_raster_from_base dataset_options=%s' % str(dataset_options))
