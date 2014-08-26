@@ -400,14 +400,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         coord = np.array([I, J])
 
         # Compute distances
-        scenic_quality_cython_core.compute_distances( \
-            i, j, cell_size, I_array, J_array, distances_array)
-
-        # distances
         distances = np.copy(I).astype(np.float64)
         distances_sq = np.copy(I).astype(np.float64)
 
-        scenic_quality_cython_core.compute_IJ_distances( \
+        scenic_quality_cython_core.compute_distances( \
             i, j, cell_size, I, J, distances_sq, distances)
 
         # Computation of the visibility:
@@ -441,7 +437,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         valuation_function(a, b, c, d, \
             max_valuation_radius, i, j, cell_size, \
             coefficient , I, J, distances, \
-            distances_array , \
             visibility_array, accum_visibility)
 
         last_dist = max_distances[f]

@@ -173,7 +173,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 
     return (min_angles, angles, max_angles, I, J)
 
-def compute_IJ_distances(int vi, int vj, double cell_size, \
+def compute_distances(int vi, int vj, double cell_size, \
     np.ndarray[np.int32_t, ndim = 1] I, \
     np.ndarray[np.int32_t, ndim = 1] J, \
     np.ndarray[np.float64_t, ndim = 1] distance_sq, \
@@ -189,23 +189,6 @@ def compute_IJ_distances(int vi, int vj, double cell_size, \
         distance[i] = sqrt(distance_sq[i])
  
 
-def compute_distances(int vi, int vj, double cell_size, \
-    np.ndarray[np.float32_t, ndim = 2] I, \
-    np.ndarray[np.float32_t, ndim = 2] J, \
-    np.ndarray[np.float64_t, ndim = 2] distance):
-
-    cdef:
-        int row_count = I.shape[0]
-        int col_count = J.shape[1]
-
-        double cell_size_sq = cell_size * cell_size
-
-    for row in range(row_count):
-        for col in range(col_count):
-            distance[row, col] = sqrt( \
-                ((vi - I[row, col])**2 + (vj - J[row, col])**2) * cell_size_sq)
- 
-
 # Function that computes the polynomial valuation function 
 def polynomial(double a, double b, double c, double d, \
     int max_valuation_radius, int vi, int vj, double cell_size, \
@@ -213,7 +196,6 @@ def polynomial(double a, double b, double c, double d, \
     np.ndarray[np.int32_t, ndim = 1] I, \
     np.ndarray[np.int32_t, ndim = 1] J, \
     np.ndarray[np.float64_t, ndim = 1] distance, \
-    np.ndarray[np.float64_t, ndim = 2] X, \
     np.ndarray[np.float64_t, ndim = 2] mask, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
@@ -225,29 +207,17 @@ def polynomial(double a, double b, double c, double d, \
     c *= coeff
     d *= coeff
  
-    row_count = accum.shape[0]
-    col_count = accum.shape[1]
+    index_count = I.shape[0]
 
-    for row in range(row_count):
-        for col in range(col_count):
-            x = X[row, col]
-            if mask[row, col] > 0.:
-                if x < 1000:
-                    accum[row, col] += C1 - C2 * (1000 - x)
-                elif x <= max_valuation_radius:
-                    accum[row, col] += a + b*x + c*x**2 + d*x**3
-
-#    index_count = I.shape[0]
-#
-#    for i in range(index_count):
-#        row = I[i]
-#        col = J[i]
-#        if mask[row, col] > 0.:
-#            x = X[row, col] #distance[i]
-#            if x < 1000:
-#                accum[row, col] += C1 - C2 * (1000 - x)
-#            elif x <= max_valuation_radius:
-#                accum[row, col] += a + b*x + c*x**2 + d*x**3
+    for i in range(index_count):
+        row = I[i]
+        col = J[i]
+        if mask[row, col] > 0.:
+            x = distance[i]
+            if x < 1000:
+                accum[row, col] += C1 - C2 * (1000 - x)
+            elif x <= max_valuation_radius:
+                accum[row, col] += a + b*x + c*x**2 + d*x**3
 
 def logarithmic(double a, double b, double c, double d, \
     int max_valuation_radius, int vi, int vj, double cell_size, \
@@ -255,7 +225,6 @@ def logarithmic(double a, double b, double c, double d, \
     np.ndarray[np.int32_t, ndim = 1] I, \
     np.ndarray[np.int32_t, ndim = 1] J, \
     np.ndarray[np.float64_t, ndim = 1] distance, \
-    np.ndarray[np.float64_t, ndim = 2] X, \
     np.ndarray[np.float64_t, ndim = 2] mask, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
@@ -267,30 +236,17 @@ def logarithmic(double a, double b, double c, double d, \
     c *= coeff
     d *= coeff
  
+    index_count = I.shape[0]
 
-    row_count = accum.shape[0]
-    col_count = accum.shape[1]
-
-    for row in range(row_count):
-        for col in range(col_count):
-            x = X[row, col]
-            if mask[row, col] > 0.:
-                if x < 1000:
-                    accum[row, col] += C1 - C2*(1000-x)
-                elif x <= max_valuation_radius:
-                    accum[row, col] += a + b*np.log(x)
-
-#    index_count = I.shape[0]
-#
-#    for i in range(index_count):
-#        row = I[i]
-#        col = J[i]
-#        if mask[row, col] > 0.:
-#            x = distance[i]
-#            if x < 1000:
-#                accum[row, col] += C1 - C2*(1000-x)
-#            elif x <= max_valuation_radius:
-#                accum[row, col] += a + b*np.log(x)
+    for i in range(index_count):
+        row = I[i]
+        col = J[i]
+        if mask[row, col] > 0.:
+            x = distance[i]
+            if x < 1000:
+                accum[row, col] += C1 - C2*(1000-x)
+            elif x <= max_valuation_radius:
+                accum[row, col] += a + b*np.log(x)
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
