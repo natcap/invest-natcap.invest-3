@@ -515,11 +515,11 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # Combined_visibility += scaled_viewshed
         shutil.copy(tmp_viewshed_uri, visibility_uri)
 
-#        vectorized_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
-#        vectorized_band = vectorized_raster.GetRasterBand(1)
-#        vectorized_array = vectorized_band.ReadAsArray()
-#        vectorized_band = None
-#        vectorized_raster = None
+        vectorized_raster = gdal.Open(tmp_viewshed_uri, gdal.GA_Update)
+        vectorized_band = vectorized_raster.GetRasterBand(1)
+        vectorized_array = vectorized_band.ReadAsArray()
+        vectorized_band = None
+        vectorized_raster = None
         
         # Invoke the polynomial valuation function:
         visibility_raster = gdal.Open(tmp_visibility_uri, gdal.GA_Update)
@@ -540,15 +540,15 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 #            distances_array , \
 #            visibility_array, accum_visibility)
 
-#        diff = np.sum(np.absolute(vectorized_array - accum_visibility))
-#        if diff:
-#            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-#            visibility_band = visibility_raster.GetRasterBand(1)
-#            accum_visibility = visibility_band.WriteArray(vectorized_array)
-#            visibility_band = None
-#            visibility_raster = None
-#        message = 'difference = ' + str(diff)    
-#        assert diff == 0.0, message
+        diff = np.sum(np.absolute(vectorized_array - accum_visibility))
+        if diff:
+            visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+            visibility_band = visibility_raster.GetRasterBand(1)
+            accum_visibility = visibility_band.WriteArray(vectorized_array - accum_visibility)
+            visibility_band = None
+            visibility_raster = None
+        message = 'difference = ' + str(diff)    
+        assert diff == 0.0, message
         
         # Clean up scaled_viewshed and visibility
         os.remove(tmp_viewshed_uri)
