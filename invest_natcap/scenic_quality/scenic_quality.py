@@ -264,15 +264,22 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         return distance
 
     def logarithmic(a, b, max_valuation_radius):
-        def distance(vi, vj, cell_size, coeff):
-            def compute(x, mask, previous):
+        C1 = a + b*np.log(1000)
+        C2 = (b/1000)
+        def distance(vi, vj, cell_size, coeff, C1=C1, C2=C2, a=a, b=b):
+            C1 *= coeff
+            C2 *= coeff
+            a *= coeff
+            b *= coeff
+            def compute(x, mask, previous, C1=C1, C2=C2, a=a, b=b):
                 current = np.zeros_like(x)
 
                 f = a + b*np.log(x)
-                current[x <= max_valuation_radius] = coeff * f[x <= max_valuation_radius]
+                current[x <= max_valuation_radius] = f[x <= max_valuation_radius]
 
-                f = a + b*np.log(1000) - (b/1000)*(1000-x)
-                current[x < 1000] = coeff * f[x < 1000]
+#                f = a + b*np.log(1000) - (b/1000)*(1000-x)
+                f = C1 - C2*(1000-x)
+                current[x < 1000] = f[x < 1000]
                 current[mask <= 0.] = 0.
 
                 current += previous
