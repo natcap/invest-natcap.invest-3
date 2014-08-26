@@ -7,6 +7,7 @@ import cython
 from cython.operator import dereference as deref
 from libc.math cimport atan2
 from libc.math cimport sin
+from libc.math cimport sqrt
 
 cdef extern from "stdlib.h":
     void* malloc(size_t size)
@@ -175,15 +176,20 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
 def compute_distances(int vi, int vj, double cell_size, \
     np.ndarray[np.float32_t, ndim = 2] I, \
     np.ndarray[np.float32_t, ndim = 2] J, \
+    np.ndarray[np.float64_t, ndim = 2] distance_sq, \
     np.ndarray[np.float64_t, ndim = 2] distance):
 
-    row_count = I.shape[0]
-    col_count = J.shape[1]
+    cdef:
+        int row_count = I.shape[0]
+        int col_count = J.shape[1]
+
+        double cell_size_sq = cell_size * cell_size
 
     for row in range(row_count):
         for col in range(col_count):
-            distance[row, col] = \
-                ((vi - I[row, col])**2 + (vj - J[row, col])**2)**.5 * cell_size
+            distance_sq[row, col] = \
+                ((vi - I[row, col])**2 + (vj - J[row, col])**2) * cell_size_sq
+            distance[row, col] = sqrt(distance_sq[row, col])
  
 
 # Function that computes the polynomial valuation function 

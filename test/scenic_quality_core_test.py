@@ -955,7 +955,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_polynomial_valuation_on_block_island(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_polynomial.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)

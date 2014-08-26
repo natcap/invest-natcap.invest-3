@@ -165,9 +165,6 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     base_uri = os.path.split(out_viewshed_uri)[0]
     I_uri = os.path.join(base_uri, 'I.tif')
     J_uri = os.path.join(base_uri, 'J.tif')
-    distances_uri = os.path.join(base_uri, 'distances.tif')
-    #I_uri = raster_utils.temporary_filename()
-    #J_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
@@ -182,13 +179,6 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     J_band.WriteArray(J)
     J_band = None
     J_raster = None
-    raster_utils.new_raster_from_base_uri(in_dem_uri, distances_uri, 'GTiff', \
-        -32768., gdal.GDT_Float64, fill_value = -1.)
-    #distances_raster = gdal.Open(distances_uri, gdal.GA_Update)
-    #distances_band = distances_raster.GetRasterBand(1)
-    #distances_band.WriteArray(distances)
-    #distances_band = None
-    #distances_raster = None
     # Extract the input raster geotransform
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
@@ -207,7 +197,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     # Call the non-uri version of viewshed.
     #cProfile.runctx('
     compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-        cell_size, rows, cols, nodata, GT, I_uri, J_uri, distances_uri, \
+        cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
         curvature_correction, refr_coeff, args)
     #', globals(), locals(), 'stats')
     #p = pstats.Stats('stats')
@@ -218,7 +208,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     os.remove(J_uri)
 
 def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-    cell_size, rows, cols, nodata, GT, I_uri, J_uri, distances_uri, curvature_correction, \
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
     refr_coeff, args):
     """ array-based function that computes the viewshed as is defined in ArcGIS
     """
@@ -351,6 +341,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Compute distances
     distances_array = np.copy(accum_visibility)
     distances_array[:] = 0.
+    distances_array_sq = np.copy(distances_array)
 
     last_dist = 0
     for dist in range(arg_dist.size-1, -1, -1):
@@ -407,6 +398,11 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # coord
         coord = np.array([I, J])
 
+        # Compute distances
+        scenic_quality_cython_core.compute_distances( \
+            i, j, cell_size, I_array, J_array, distances_array_sq, \
+            distances_array)
+
         # distances
         distances_sq = (i - I)**2 + (j - J)**2
         distances = np.sqrt(distances_sq)
@@ -429,15 +425,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         offset_visibility /= distances * cell_size
 
    
-        # Compute distances
-        scenic_quality_cython_core.compute_distances( \
-            i, j, cell_size, I_array, J_array, distances_array)
-        distances_raster = gdal.Open(distances_uri, gdal.GA_Update)
-        distances_band = distances_raster.GetRasterBand(1)
-        distances_band.WriteArray(distances_array)
-        distances_band = None
-        distances_raster = None
-
         visibility_array = scenic_quality_core.viewshed(
             input_array, cell_size, visibility_map, perimeter_cells, \
             (i,j), angles, v, viewshed_shape, row_min, col_min, \
