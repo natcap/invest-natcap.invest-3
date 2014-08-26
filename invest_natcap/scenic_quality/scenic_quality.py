@@ -341,7 +341,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     # Compute distances
     distances_array = np.copy(accum_visibility)
     distances_array[:] = 0.
-    distances_array_sq = np.copy(distances_array)
 
     last_dist = 0
     for dist in range(arg_dist.size-1, -1, -1):
@@ -355,8 +354,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         i = viewpoint_row[f]
         j = viewpoint_col[f]
 
-        # Compute arrays that can be cashed for identical max_dist
-
         # Create a visibility map
         # Visibility convention: 1 visible, \
         # <0 is additional height to become visible
@@ -367,17 +364,18 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # 1- get perimeter cells
         perimeter_cells = \
             scenic_quality_core.get_perimeter_cells(input_array.shape, (i,j), max_dist)
+
         # angles
-        # 2- compute cell angles
         # cell_angles + append the last element (2 PI) automatically
         angles = scenic_quality_core.cell_angles(perimeter_cells, (i,j))
         angles = np.append(angles, 2.0 * math.pi)
+
         # Viewshed information
-        # 3- compute information on raster cells
         row_max = np.amax(perimeter_cells[0])
         row_min = np.amin(perimeter_cells[0])
         col_max = np.amax(perimeter_cells[1])    
         col_min = np.amin(perimeter_cells[1])
+        
         # Shape of the viewshed
         viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
 
@@ -388,24 +386,30 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         add_events, center_events, remove_events, I, J = \
             scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
             v, max_dist)
+
         # arg_min, arg_center, arg_max
         arg_min = np.argsort(add_events).astype(np.int64)
         arg_max = np.argsort(remove_events).astype(np.int64)
         arg_center = np.argsort(center_events).astype(np.int64)
+
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
         J += col_min
+
         # coord
         coord = np.array([I, J])
 
         # Compute distances
         scenic_quality_cython_core.compute_distances( \
-            i, j, cell_size, I_array, J_array, distances_array_sq, \
-            distances_array)
+            i, j, cell_size, I_array, J_array, distances_array)
 
         # distances
-        distances_sq = (i - I)**2 + (j - J)**2
-        distances = np.sqrt(distances_sq)
+        distances = np.copy(I).astype(np.float64)
+        distances_sq = np.copy(I).astype(np.float64)
+
+        scenic_quality_cython_core.compute_IJ_distances( \
+            i, j, cell_size, I, J, distances_sq, distances)
+
         # Computation of the visibility:
         # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
         visibility = (input_array[(I, J)] - \
@@ -416,15 +420,15 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # From the equation on the ArcGIS website:
         # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
         D_earth = 12740000. # Diameter of the earth in meters
-        correction = (distances_sq*cell_size**2).astype(float) * \
+        correction = distances_sq.astype(float) * \
             (refr_coeff - 1.) / D_earth
         visibility += correction
         offset_visibility += correction
         # 3- Divide the height by the distance to get a visibility score
-        visibility /= distances * cell_size
-        offset_visibility /= distances * cell_size
+        visibility /= distances
+        offset_visibility /= distances
 
-   
+        # compute viewshed
         visibility_array = scenic_quality_core.viewshed(
             input_array, cell_size, visibility_map, perimeter_cells, \
             (i,j), angles, v, viewshed_shape, row_min, col_min, \
@@ -433,14 +437,16 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             coord, distances_sq, distances, visibility, offset_visibility, \
             obs_elev, tgt_elev, max_dist, refr_coeff)
         
+        # apply valuation function
         valuation_function(a, b, c, d, \
             max_valuation_radius, i, j, cell_size, \
-            coefficient , \
+            coefficient , I, J, distances, \
             distances_array , \
             visibility_array, accum_visibility)
 
         last_dist = max_distances[f]
 
+    # Write result on disk
     visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
     visibility_band = visibility_raster.GetRasterBand(1)
     visibility_band.WriteArray(accum_visibility)
