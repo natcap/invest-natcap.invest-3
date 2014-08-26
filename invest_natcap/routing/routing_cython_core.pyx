@@ -1441,36 +1441,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
 
 
-'''
-    while unresolved_cells_defer.size() > 0:
-        flat_index = unresolved_cells_defer.front()
-        unresolved_cells_defer.pop()
-    
-        global_row = flat_index / n_cols
-        global_col = flat_index % n_cols
-        #We load 3 rows at a time and we know unresolved directions can only
-        #occur in the middle of the raster
-        if global_row == 0 or global_row == n_rows - 1 or global_col == 0 or global_col == n_cols - 1:
-            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
-        if y_offset != row_index - 1:
-            if dirty_cache:
-                flow_band.WriteArray(flow_array, 0, y_offset)
-                dirty_cache = 0
-            local_y_offset = 1
-            y_offset = row_index - 1
-            flow_array = flow_band.ReadAsArray(
-                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-                
-            flow_array[1, col_index] = flow_nodata
-            dirty_cache = 1
-            
-    if dirty_cache:
-        flow_band.WriteArray(flow_array, 0, y_offset)
-        dirty_cache = 0
-'''
-
-
-
 def find_sinks(dem_uri):
     """Discover and return the sinks in the dem array
     
@@ -1485,6 +1455,10 @@ def find_sinks(dem_uri):
     dem_band = dem_ds.GetRasterBand(1)
     cdef int n_cols = dem_band.XSize
     cdef int n_rows = dem_band.YSize
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = dem_band.GetBlockSize()
+
     cdef double nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     
     LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
@@ -1492,59 +1466,86 @@ def find_sinks(dem_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
         numpy.zeros((3, n_cols), dtype=numpy.float32))
         
-    cdef int col_index, row_index
     cdef int sink_set_index = 0
-    cdef int y_offset, local_y_offset, neighbor_index
-    cdef int neighbor_row_index, neighbor_col_index
+    cdef int neighbor_index
     cdef int sink_set_size = 10
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] sink_set = (
         numpy.empty((sink_set_size,), dtype=numpy.int32))
     cdef numpy.ndarray[numpy.npy_int32, ndim=1] tmp_sink_set
-    for row_index in range(n_rows):
-        #the col index will be 0 since we go row by row
-        #We load 3 rows at a time
-        y_offset = row_index - 1
-        local_y_offset = 1
-        if y_offset < 0:
-            y_offset = 0
-            local_y_offset = 0
-        if y_offset >= n_rows - 2:
-            #could be 0 or 1
-            local_y_offset = 2
-            y_offset = n_rows - 3
-        
-        dem_band.ReadAsArray(
-            xoff=0, yoff=y_offset, win_xsize=n_cols,
-            win_ysize=3, buf_obj=dem_array)
-        
-        for col_index in range(n_cols):
-            if dem_array[local_y_offset, col_index] == nodata_value:
-                continue
-            for neighbor_index in range(8):
-                neighbor_row_index = local_y_offset + row_offsets[neighbor_index]
-                if neighbor_row_index < 0 or neighbor_row_index > 2:
-                    continue
-                neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-                    continue
 
-                if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
-                    continue
 
-                if (dem_array[neighbor_row_index, neighbor_col_index] < dem_array[local_y_offset, col_index]):
-                    #this cell can drain into another
-                    break
-            else: #else for the for loop
-                #every cell we encountered was nodata or higher than current
-                #cell, must be a sink
-                if sink_set_index >= sink_set_size:
-                    tmp_sink_set = numpy.empty(
-                        (sink_set_size * 2,), dtype=numpy.int32)
-                    tmp_sink_set[0:sink_set_size] = sink_set
-                    sink_set_size *= 2
-                    sink_set = tmp_sink_set
-                sink_set[sink_set_index] = row_index * n_cols + col_index
-                sink_set_index += 1
+    last_time = time.time()
+    #not flat on the edges of the raster, could be a sink
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+
+
+    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    cdef int n_block_rows = 3
+    cdef int n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    band_list = [dem_band]
+    block_list = [dem_block]
+    update_list = [False]
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
+    cdef float dem_value, neighbor_dem_value
+    for global_block_row in xrange(n_global_block_rows):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("find_sinks %.1f%% complete", (global_block_row + 1.0) / n_global_block_rows * 100)
+            last_time = current_time
+        for global_block_col in xrange(n_global_block_cols):
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
+
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    dem_value = dem_block[row_index, col_index, row_block_offset, col_block_offset]
+                    if dem_value == nodata_value:
+                        continue
+                    for neighbor_index in range(8):
+                        neighbor_row = global_row + row_offsets[neighbor_index]
+                        neighbor_col = global_col + col_offsets[neighbor_index]
+
+                        if neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0:
+                            continue
+                        block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+                        neighbor_dem_value = dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                        
+                        if neighbor_dem_value == nodata_value:
+                            continue
+
+                        if neighbor_dem_value < dem_value:
+                            #this cell can drain into another
+                            break
+                    else: #else for the for loop
+                        #every cell we encountered was nodata or higher than current
+                        #cell, must be a sink
+                        if sink_set_index >= sink_set_size:
+                            tmp_sink_set = numpy.empty(
+                                (sink_set_size * 2,), dtype=numpy.int32)
+                            tmp_sink_set[0:sink_set_size] = sink_set
+                            sink_set_size *= 2
+                            sink_set = tmp_sink_set
+                        sink_set[sink_set_index] = global_row * n_cols + global_col
+                        sink_set_index += 1
 
     tmp_sink_set = numpy.empty((sink_set_index,), dtype=numpy.int32)
     tmp_sink_set[0:sink_set_index] = sink_set[0:sink_set_index]
