@@ -7,6 +7,8 @@ import cython
 from cython.operator import dereference as deref
 from libc.math cimport atan2
 from libc.math cimport sin
+from libc.math cimport sqrt
+from libc.math cimport log
 
 cdef extern from "stdlib.h":
     void* malloc(size_t size)
@@ -173,52 +175,83 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     return (min_angles, angles, max_angles, I, J)
 
 def compute_distances(int vi, int vj, double cell_size, \
-    np.ndarray[np.float32_t, ndim = 2] I, \
-    np.ndarray[np.float32_t, ndim = 2] J, \
-    np.ndarray[np.float64_t, ndim = 2] distance):
+    np.ndarray[np.int32_t, ndim = 1] I, \
+    np.ndarray[np.int32_t, ndim = 1] J, \
+    np.ndarray[np.float64_t, ndim = 1] distance_sq, \
+    np.ndarray[np.float64_t, ndim = 1] distance):
 
-    row_count = I.shape[0]
-    col_count = J.shape[1]
+    cdef:
+        int index_count = I.shape[0]
 
-    for row in range(row_count):
-        for col in range(col_count):
-            distance[row, col] = \
-                ((vi - I[row, col])**2 + (vj - J[row, col])**2)**.5 * cell_size
+        double cell_size_sq = cell_size * cell_size
+
+    for i in range(index_count):
+        distance_sq[i] = ((vi - I[i])**2 + (vj - J[i])**2) * cell_size_sq
+        distance[i] = sqrt(distance_sq[i])
  
 
 # Function that computes the polynomial valuation function 
 def polynomial(double a, double b, double c, double d, \
     int max_valuation_radius, int vi, int vj, double cell_size, \
     double coeff, \
-    np.ndarray[np.float64_t, ndim = 2] X, \
+    np.ndarray[np.int32_t, ndim = 1] I, \
+    np.ndarray[np.int32_t, ndim = 1] J, \
+    np.ndarray[np.float64_t, ndim = 1] distance, \
     np.ndarray[np.float64_t, ndim = 2] mask, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
     cdef:
         double C1 = a+b*1000+c*1000**2+d*1000**3 * coeff
         double C2 = (b+2*c*1000+3*d*1000**2) * coeff
-        #double x = 0.
+        double x
+        int row, col
     a *= coeff
     b *= coeff
     c *= coeff
     d *= coeff
  
-    row_count = accum.shape[0]
-    col_count = accum.shape[1]
+    index_count = I.shape[0]
 
-    for row in range(row_count):
-        for col in range(col_count):
-            x = X[row, col]
-            #accum[row, col] = mask[row, col] #+= 1. if mask[row, col] >= 0. else 0.
-            if mask[row, col] > 0.:
-                if x < 1000:
-                    accum[row, col] += C1 - C2 * (1000 - x)
-                elif x <= max_valuation_radius:
-                    accum[row, col] += a + b*x + c*x**2 + d*x**3
-            #    else:
-            #        accum[row, col] = 0.
-            #else:
-            #    accum[row, col] = 0.
+    for i in range(index_count):
+        row = I[i]
+        col = J[i]
+        if mask[row, col] > 0.:
+            x = distance[i]
+            if x < 1000:
+                accum[row, col] += C1 - C2 * (1000 - x)
+            elif x <= max_valuation_radius:
+                accum[row, col] += a + b*x + c*x**2 + d*x**3
+
+def logarithmic(double a, double b, double c, double d, \
+    int max_valuation_radius, int vi, int vj, double cell_size, \
+    double coeff, \
+    np.ndarray[np.int32_t, ndim = 1] I, \
+    np.ndarray[np.int32_t, ndim = 1] J, \
+    np.ndarray[np.float64_t, ndim = 1] distance, \
+    np.ndarray[np.float64_t, ndim = 2] mask, \
+    np.ndarray[np.float64_t, ndim = 2] accum):
+
+    cdef:
+        double C1 = a + b*log(1000)
+        double C2 = (b/1000)
+        double x
+        int row, col
+    a *= coeff
+    b *= coeff
+    c *= coeff
+    d *= coeff
+ 
+    index_count = I.shape[0]
+
+    for i in range(index_count):
+        row = I[i]
+        col = J[i]
+        if mask[row, col] > 0.:
+            x = distance[i]
+            if x < 1000:
+                accum[row, col] += C1 - C2*(1000-x)
+            elif x <= max_valuation_radius:
+                accum[row, col] += a + b*log(x)
 
 # struct that mimics python's dictionary implementation
 cdef struct ActivePixel:
