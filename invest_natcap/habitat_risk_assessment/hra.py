@@ -254,22 +254,20 @@ def execute(args):
     #The local var stress_dir is the location that should be used for rasterized
     #stressor shapefiles.
     stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'],
-                    args['decay_eq'], hra_args['buffer_dict'], args['aoi_tables'])
+                    args['decay_eq'], hra_args['buffer_dict'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(
-            overlap_dir, hra_args['habitats'], stress_dict, hra_args['h_s_c'],
-            hra_args['h_s_e'], args['grid_size'], args['aoi_tables'])
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'],
+            stress_dict, hra_args['h_s_c'],hra_args['h_s_e'], args['grid_size'])
 
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
 
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'],
-                    hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'],
-                    args['aoi_tables'])
+                    hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
 
     #No reason to hold the directory paths in memory since all info is now
     #within dictionaries. Can remove them here before passing to core.
@@ -279,8 +277,7 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
-def make_add_overlap_rasters(
-        dir, habitats, stress_dict, h_s_c, h_s_e, grid_size, aoi):
+def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat
     and stressor raster, and return the overlap of the two. Should add that as
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
@@ -360,13 +357,13 @@ def make_add_overlap_rasters(
         raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=None,
-                        aoi_uri=aoi)
+                        aoi_uri=None)
 
         h_s_c[pair]['DS'] = out_uri
         h_s_e[pair]['DS'] = out_uri
 
 
-def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi):
+def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
     '''Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing
     stressor name, and the value will be the URI of the rasterized shapefile.
@@ -403,7 +400,6 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
-        tmp_out_uri = raster_utils.temporary_filename()
 
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
@@ -425,7 +421,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         p_height = int(np.ceil(height /grid_size))
 
         driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(tmp_out_uri, p_width, p_height, 1, gdal.GDT_Float32)
+        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
 
         #increase everything by buffer size
         transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
@@ -444,9 +440,6 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         raster = None
         layer = None
         datasource = None
-
-        # Clip the raster created above to the AOI
-        raster_utils.clip_dataset_uri(tmp_out_uri, aoi, out_uri) 
 
         # Burn polygon land values onto newly constructed raster
         raster_utils.rasterize_layer_uri(
@@ -467,9 +460,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         cell_size = raster_utils.get_cell_size_from_uri(out_uri)
         # Convert nodata values to 0 to prep for distance transform
         raster_utils.vectorize_datasets(
-            [out_uri], nodata_to_zero, nodata_to_zero_uri, gdal.GDT_Float32,
-            nodata, cell_size, "intersection", vectorize_op=False,
-            aoi_uri=aoi)
+            [out_uri], nodata_to_zero, nodata_to_zero_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
         dist_trans_uri = raster_utils.temporary_filename()
         raster_utils.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
@@ -477,13 +468,13 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         # Do buffering protocol specified
         if buff == 0:
-            make_zero_buff_decay_array(dist_trans_uri, new_buff_uri, nodata, aoi)
+            make_zero_buff_decay_array(dist_trans_uri, new_buff_uri, nodata)
         elif decay_eq == 'None':
-            make_no_decay_array(dist_trans_uri, new_buff_uri, buff, nodata, aoi)
+            make_no_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
         elif decay_eq == 'Exponential':
-            make_exp_decay_array(dist_trans_uri, new_buff_uri, buff, nodata, aoi)
+            make_exp_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
         elif decay_eq == 'Linear':
-            make_lin_decay_array(dist_trans_uri, new_buff_uri, buff, nodata, aoi)
+            make_lin_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
 
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
@@ -491,7 +482,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
 
     return stress_dict
 
-def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata, aoi):
+def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
     '''Creates a raster in the case of a zero buffer width, where we should
     have is land and nodata values.
 
@@ -518,11 +509,10 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata, aoi):
 
     cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], zero_buff_op, out_uri, gdal.GDT_Float32,
-            nodata, cell_size, "intersection", vectorize_op=False, aoi_uri=aoi)
+            [dist_trans_uri], zero_buff_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
-def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
+def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''Should create a raster where the area around land is a function of
     linear decay from the values representing the land.
 
@@ -554,11 +544,10 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], lin_decay_op, out_uri, gdal.GDT_Float32, nodata,
-            cell_size, "intersection", vectorize_op=False, aoi_uri=aoi)
+            [dist_trans_uri], lin_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
-def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
+def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''Should create a raster where the area around the land is a function of
     exponential decay from the land values.
 
@@ -595,11 +584,10 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
         return np.where(exp_decay_chunk < cutoff, nodata, exp_decay_chunk)
 
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata,
-            cell_size, "intersection", vectorize_op=False, aoi_uri=aoi)
+            [dist_trans_uri], exp_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
-def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
+def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''Should create a raster where the buffer zone surrounding the land is
     buffered with the same values as the land, essentially creating an equally
     weighted larger landmass.
@@ -631,8 +619,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata, aoi):
         return np.where(chunk_met <= buff, 1., nodata)
 
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], no_decay_op, out_uri, gdal.GDT_Float32, nodata,
-            cell_size, "intersection", vectorize_op=False, aoi_uri=aoi)
+            [dist_trans_uri], no_decay_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
 
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
@@ -716,7 +703,7 @@ def listdir(path):
 
     return uris
 
-def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size, aoi):
+def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
 
@@ -838,7 +825,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size, aoi):
             raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
                         overlap_hsc_spat_crit, out_uri, gdal.GDT_Float32, -1.,
                         grid_size, "union", resample_method_list=None,
-                        dataset_to_align_index=0, aoi_uri=aoi)
+                        dataset_to_align_index=0, aoi_uri=None)
 
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -905,7 +892,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size, aoi):
             raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
                         overlap_h_spat_crit, out_uri, gdal.GDT_Float32, -1.,
                         grid_size, "union", resample_method_list=None,
-                        dataset_to_align_index=0, aoi_uri=aoi)
+                        dataset_to_align_index=0, aoi_uri=None)
 
             if c_name in habitats[h]['Crit_Rasters']:
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -971,7 +958,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size, aoi):
             raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap],
                         overlap_hse_spat_crit, out_uri, gdal.GDT_Float32, -1.,
                         grid_size, "union", resample_method_list=None,
-                        dataset_to_align_index=0, aoi_uri=aoi)
+                        dataset_to_align_index=0, aoi_uri=None)
 
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri

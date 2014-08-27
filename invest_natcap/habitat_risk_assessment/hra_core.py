@@ -108,16 +108,14 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
    
     LOGGER.info('Applying CSV criteria to rasters.')
-    crit_lists, denoms = pre_calc_denoms_and_criteria(
-            inter_dir, args['h_s_c'], args['habitats'], args['h_s_e'],
-            args['aoi_tables'])
+    crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h_s_c'],
+                                    args['habitats'], args['h_s_e'])
 
     LOGGER.info('Calculating risk rasters for individual overlaps.')
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
     risk_dict = make_risk_rasters(args['h_s_c'], args['habitats'],
-        inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'],
-        args['aoi_tables'])
+        inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
     #So we can go ahead and make the maps directory without worrying that
@@ -129,8 +127,7 @@ def execute(args):
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
-    h_risk_dict, h_s_risk_dict = make_hab_risk_raster(
-            maps_dir, risk_dict, args['aoi_tables'])
+    h_risk_dict, h_s_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
     LOGGER.info('Making risk shapefiles.')
     #Also want to output a polygonized version of high and low risk areas in 
@@ -138,17 +135,16 @@ def execute(args):
     #percentage of the total raster risk, or below that threshold. These can 
     #then be fed into different models.
     num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, 
-                h_s_risk_dict, args['max_risk'], args['max_stress'],
-                args['aoi_tables'])
+                h_s_risk_dict, args['max_risk'], args['max_stress'])
 
     LOGGER.info('Calculating ecosystem risk rasters.')
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
-    make_ecosys_risk_raster(maps_dir, h_risk_dict, args['aoi_tables'])
+    make_ecosys_risk_raster(maps_dir, h_risk_dict)
 
     #Recovery potential will use the 'Recovery' subdictionary from the
     #crit_lists and denoms dictionaries
-    make_recov_potent_raster(maps_dir, crit_lists, denoms, args['aoi_tables'])
+    make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
     if 'aoi_tables' in args:
         
@@ -755,7 +751,7 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
                         layer_overlap_info[aoi_pix][layer_name][1] += layer_pix
 '''   
 
-def make_recov_potent_raster(dir, crit_lists, denoms, aoi):
+def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same h-s calculation as used for the individual E/C 
     calculations, but instead will use r/dq as the equation for each criteria.
     The full equation will be:
@@ -884,9 +880,9 @@ def make_recov_potent_raster(dir, crit_lists, denoms, aoi):
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, -1., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=aoi, vectorize_op=False)
+                    aoi_uri=None, vectorize_op=False)
 
-def make_ecosys_risk_raster(dir, h_dict, aoi):
+def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
     The ecosystem raster will be a direct sum of each of the included habitat
     rasters.
@@ -953,10 +949,9 @@ def make_ecosys_risk_raster(dir, h_dict, aoi):
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
                 gdal.GDT_Float32, -1., pixel_size, "union", 
                 resample_method_list=None, dataset_to_align_index=0,
-                aoi_uri=aoi, vectorize_op=False)
+                aoi_uri=None, vectorize_op=False)
 
-def make_risk_shapes(
-        dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress, aoi):
+def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     '''This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
@@ -1172,7 +1167,7 @@ def make_risk_shapes(
         raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
         #Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
@@ -1180,7 +1175,7 @@ def make_risk_shapes(
         raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
         #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
@@ -1188,7 +1183,7 @@ def make_risk_shapes(
         raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
         #Want to do another vectorize in order to create a single shapefile
         #with high, medium, low values.
@@ -1198,7 +1193,7 @@ def make_risk_shapes(
         raster_utils.vectorize_datasets([l_out_uri_r, m_out_uri_r, h_out_uri_r], 
                         combo_risk_raster, single_raster_uri_r, gdal.GDT_Float32, 
                         -1., grid_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=aoi,
+                        dataset_to_align_index=0, aoi_uri=None,
                         vectorize_op=False)
        
         raster_to_polygon(single_raster_uri_r, single_raster_uri,
@@ -1270,7 +1265,7 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     layer = None
     ds.SyncToDisk()
 
-def make_hab_risk_raster(dir, risk_dict, aoi):
+def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
     within one habitat. It should return a list of open rasters that correspond
     to all habitats within the model.
@@ -1377,15 +1372,14 @@ def make_hab_risk_raster(dir, risk_dict, aoi):
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
                         gdal.GDT_Float32, -1., pixel_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
         h_rasters[h] = out_uri 
         h_s_rasters[h] = ds_list
 
     return h_rasters, h_s_rasters
 
-def make_risk_rasters(
-        h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warnings, aoi):
+def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
@@ -1492,12 +1486,11 @@ def make_risk_rasters(
             #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
                         denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'],
-                        habs[h]['DS'], aoi)
+                        habs[h]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
-                    denoms['Risk']['h'][h], habs[h]['DS'], h_s_c[pair]['DS'],
-                    aoi)
+                    denoms['Risk']['h'][h], habs[h]['DS'], h_s_c[pair]['DS'])
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
@@ -1508,17 +1501,17 @@ def make_risk_rasters(
 
         if risk_eq == 'Multiplicative':
             
-            make_risk_mult(base_ds_uri, e_out_uri, c_out_uri, risk_uri, aoi)
+            make_risk_mult(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
         
         elif risk_eq == 'Euclidean':
             
-            make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri, aoi)
+            make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
 
         risk_rasters[pair] = risk_uri
 
     return risk_rasters
 
-def make_risk_mult(base_uri, e_uri, c_uri, risk_uri, aoi):
+def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
@@ -1565,9 +1558,9 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri, aoi):
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult,
                     risk_uri, gdal.GDT_Float32, -1., grid_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
-                    aoi_uri=aoi, vectorize_op=False)
+                    aoi_uri=None, vectorize_op=False)
 
-def make_risk_euc(base_uri, e_uri, c_uri, risk_uri, aoi):
+def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
     equation.
 
@@ -1647,10 +1640,10 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri, aoi):
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., 
                     grid_size, "union", resample_method_list=None, 
-                    dataset_to_align_index=0, aoi_uri=aoi,
+                    dataset_to_align_index=0, aoi_uri=None,
                     vectorize_op=False)
 
-def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri, aoi):
+def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1738,11 +1731,9 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri, aoi):
     raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
-def calc_C_raster(
-        out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri,
-        aoi):
+def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri):
     '''Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1863,7 +1854,7 @@ def calc_C_raster(
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
-                        aoi_uri=aoi, vectorize_op=False)
+                        aoi_uri=None, vectorize_op=False)
 
 def copy_raster(in_uri, out_uri):
     '''Quick function that will copy the raster in in_raster, and put it
@@ -1873,7 +1864,7 @@ def copy_raster(in_uri, out_uri):
     drv = gdal.GetDriverByName('GTiff')
     drv.CreateCopy(out_uri, raster)
 
-def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
+def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
     '''Want to return two dictionaries in the format of the following:
     (Note: the individual num raster comes from the crit_ratings
     subdictionary and should be pre-summed together to get the numerator
@@ -2034,7 +2025,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_C_uri, gdal.GDT_Float32, -1., 
                         base_pixel_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -2069,7 +2060,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
             crit_lists['Risk']['h_s_c'][pair].append(crit_C_uri)
 
@@ -2123,7 +2114,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
                             burn_numerator_risk_single, single_crit_C_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=aoi,
+                            dataset_to_align_index=0, aoi_uri=None,
                             vectorize_op=False)
 
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
@@ -2146,7 +2137,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
                             burn_numerator_rec_single, single_crit_rec_uri, 
                             gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                            dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         crit_lists['Recovery'][h].append(single_crit_rec_uri)
         
@@ -2180,7 +2171,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
                                 crit_C_uri, gdal.GDT_Float32, -1., 
                                 base_pixel_size, "union", 
                                 resample_method_list=None, 
-                                dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                                dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
             
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
@@ -2202,7 +2193,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
                                 crit_recov_uri, gdal.GDT_Float32, -1., 
                                 base_pixel_size, "union", 
                                 resample_method_list=None, 
-                                dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                                dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
 
@@ -2265,7 +2256,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_E_uri, gdal.GDT_Float32, -1., 
                         base_pixel_size, "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -2300,7 +2291,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e, aoi):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=0, aoi_uri=aoi, vectorize_op=False)
+                        dataset_to_align_index=0, aoi_uri=None, vectorize_op=False)
 
             crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
    
