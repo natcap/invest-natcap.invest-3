@@ -403,6 +403,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
+        tmp_out_uri = raster_utils.temporary_filename()
 
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
@@ -424,7 +425,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         p_height = int(np.ceil(height /grid_size))
 
         driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
+        raster = driver.Create(tmp_out_uri, p_width, p_height, 1, gdal.GDT_Float32)
 
         #increase everything by buffer size
         transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
@@ -443,6 +444,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, aoi)
         raster = None
         layer = None
         datasource = None
+
+        # Clip the raster created above to the AOI
+        raster_utils.clip_dataset_uri(tmp_out_uri, aoi, out_uri) 
 
         # Burn polygon land values onto newly constructed raster
         raster_utils.rasterize_layer_uri(
