@@ -251,28 +251,28 @@ def execute(args):
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
+    
     LOGGER.info('calculate WS factor')
-    ws_factor_inverse_uri = os.path.join(
-        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
+    ws_factor_uri = os.path.join(
+        intermediate_dir, 'ws_factor%s.tif' % file_suffix)
     ws_nodata = -1.0
     slope_nodata = raster_utils.get_nodata_from_uri(
         preprocessed_data['thresholded_slope_uri'])
     
     def ws_op(w_factor, s_factor):
-        #calculating the inverse so we can use the distance to stream factor function
         return numpy.where(
             (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), ws_nodata)
+            w_factor * s_factor, ws_nodata)
             
     raster_utils.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_uri, 
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    routing_cython_core.distance_to_stream(
-        flow_direction_uri, stream_uri, d_dn_uri, ws_factor_inverse_uri)
+    routing_cython_core.calculate_d_dn(
+        flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
     
     LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)

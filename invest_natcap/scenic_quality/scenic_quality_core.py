@@ -367,7 +367,7 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     add_events, center_events, remove_events, I, J, \
     arg_min, arg_max, arg_center, \
     coord, distances_sq, distances, visibility, offset_visibility, \
-    output_uri, obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
+    obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
     refraction_coeff=None, alg_version='cython'):
     """Compute the viewshed for a single observer. 
         Inputs: 
@@ -403,12 +403,6 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1
-
-    # Save the output in the output URI
-    output_raster = gdal.Open(output_uri, gdal.GA_Update)
-    message = 'Cannot open file ' + output_uri
-    assert output_raster is not None, message
-    output_raster.GetRasterBand(1).WriteArray(visibility_map)
 
     # Return the output to save computation
     return visibility_map
