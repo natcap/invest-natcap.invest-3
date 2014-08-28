@@ -534,7 +534,7 @@ def _prepare(**args):
                 inputs
     """
     
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['dem_uri'])
     intermediate_dir = os.path.join(args['workspace_dir'], 'prepared_data')
     
     if not os.path.exists(intermediate_dir):
