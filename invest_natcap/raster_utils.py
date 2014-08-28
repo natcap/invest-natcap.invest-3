@@ -1089,6 +1089,7 @@ def clip_dataset_uri(
     band, nodata = extract_band_and_nodata(source_dataset)
     datatype = band.DataType
 
+    LOGGER.info("raw clip_dataset nodata value is %s", nodata)
     if nodata is None:
         nodata = calculate_value_not_in_dataset(source_dataset)
 
@@ -1117,6 +1118,10 @@ def extract_band_and_nodata(dataset, get_array=False):
 
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
+
+    #gdal has strange behaviors with nodata and byte rasters, this packs it into the right space
+    if band.DataType == gdal.GDT_Byte:
+        nodata = nodata % 256
 
     if get_array:
         array = band.ReadAsArray()
