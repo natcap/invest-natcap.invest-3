@@ -201,7 +201,7 @@ def polynomial(double a, double b, double c, double d, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
     cdef:
-        double C1 = a+b*1000+c*1000**2+d*1000**3 * coeff
+        double C1 = (a+b*1000+c*1000**2+d*1000**3) * coeff
         double C2 = (b+2*c*1000+3*d*1000**2) * coeff
         double x
         int row, col
@@ -232,8 +232,8 @@ def logarithmic(double a, double b, double c, double d, \
     np.ndarray[np.float64_t, ndim = 2] accum):
 
     cdef:
-        double C1 = a + b*log(1000)
-        double C2 = (b/1000)
+        double C1 = (a + b*log(1000)) * coeff
+        double C2 = (b/1000) * coeff
         double x
         int row, col
     a *= coeff

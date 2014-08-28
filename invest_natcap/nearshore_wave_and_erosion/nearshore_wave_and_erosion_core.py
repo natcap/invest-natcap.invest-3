@@ -31,6 +31,7 @@ def execute(args):
             args['landmass_raster_uri'], args['aoi_raster_uri'], \
             args['shore_raster_uri'])
 
+
 # TODO: improve this docstring!
 def detect_shore_uri(landmass_raster_uri, aoi_raster_uri, output_uri):
     """ Extract the boundary between land and sea from a raster.
