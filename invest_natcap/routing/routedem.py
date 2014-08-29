@@ -30,8 +30,10 @@ def execute(args):
     LOGGER.info('resolving filling pits')
     
     prefix, suffix = os.path.splitext(args['pit_filled_filename'])
+    dem_tiled_uri = os.path.join(output_directory, 'dem_tiled' + file_suffix + '.tif')
+    raster_utils.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
     dem_pit_filled_uri =  os.path.join(output_directory, prefix + file_suffix + suffix)  
-    routing_utils.fill_pits(dem_uri, dem_pit_filled_uri)
+    routing_utils.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
     dem_uri = dem_pit_filled_uri
     
     LOGGER.info('resolving plateaus')

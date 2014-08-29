@@ -540,6 +540,8 @@ def _prepare(**args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
     
+    tiled_dem_uri = os.path.join(intermediate_dir, 'tiled_dem.tif')
+    raster_utils.tile_dataset_uri(args['dem_uri'], tiled_dem_uri, 256)
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
     aligned_erosivity_uri = os.path.join(
@@ -547,7 +549,7 @@ def _prepare(**args):
     aligned_erodibility_uri = os.path.join(
         intermediate_dir, 'aligned_erodibility.tif')
     
-    input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
+    input_list = [tiled_dem_uri, args['landuse_uri'], args['erosivity_uri'], 
         args['erodibility_uri']]
     dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
         aligned_erosivity_uri, aligned_erodibility_uri]
