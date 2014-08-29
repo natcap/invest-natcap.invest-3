@@ -52,6 +52,7 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
             args = contents['arguments']
             args['landmass_raster_uri'] = landmass_raster_uri
             args['shore_raster_uri'] = shore_raster_uri
+            args['bathymetry_raster_uri'] = bathymetry_raster_uri
             nearshore_wave_and_erosion_core.compute_transects(args)
 
     def tare_down(self):
