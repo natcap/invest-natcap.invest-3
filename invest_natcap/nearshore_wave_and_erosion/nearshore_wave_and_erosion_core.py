@@ -47,9 +47,11 @@ def compute_transects(args):
     message = 'Cannot open file ' + shore_raster_uri
     assert shore_raster is not None, message
     shore_band = shore_raster.GetRasterBand(1)
-    shore_array = shore_band.ReadAsArray()
+    shore = shore_band.ReadAsArray()
     shore_band = None
     shore_raster = None
+
+    shore_points = np.where(shore > 0)
 
     landmass_raster_uri = args['landmass_raster_uri']
 
@@ -57,11 +59,19 @@ def compute_transects(args):
     message = 'Cannot open file ' + landmass_raster_uri
     assert landmass_raster is not None, message
     landmass_band = landmass_raster.GetRasterBand(1)
-    landmass_array = landmass_band.ReadAsArray()
+    land = landmass_band.ReadAsArray()
     landmass_band = None
     landmass_raster = None
 
-    bathymetry_uri = args['bathymetry_raster_uri']
+    bathymetry_raster_uri = args['bathymetry_raster_uri']
+
+    bathymetry_raster = gdal.Open(bathymetry_raster_uri)
+    message = 'Cannot open file ' + bathymetry_raster_uri
+    assert bathymetry_raster is not None, message
+    bathymetry_band = bathymetry_raster.GetRasterBand(1)
+    bathymetry = bathymetry_band.ReadAsArray()
+    bathymetry_band = None
+    bathymetry_raster = None
 
     
     SECTOR_COUNT = 16 
@@ -78,6 +88,42 @@ def compute_transects(args):
     direction_vectors = fetch_vectors(directions_rad)
     unit_step_length = np.empty(direction_vectors.shape[0])
     
+    # Perform a bunch of tests to ensure the assumptions in the fetch algorithm
+    # are valid
+    # Check that bathy and landmass rasters are size-compatible
+    message = 'landmass and bathymetry rasters are not the same size:' + \
+    str(land.shape) + ' and ' + str(bathymetry.shape) + ' respectively.'
+    assert land.shape == bathymetry.shape, message
+    # Used to test if point fall within both land and bathy raster size limits
+    (i_count, j_count) = land.shape
+    # Check that shore points fall within the land raster limits
+    message = 'some shore points fall outside the land raster'
+    assert (np.amax(shore_points[0]) < i_count) and \
+        (np.amax(shore_points[1]) < j_count), message
+    # Check that shore points don't fall on nodata
+    shore_points_on_nodata = np.where(land[shore_points] < 0.)[0].size
+    message = 'There are ' + str(shore_points_on_nodata) + '/' + \
+    str(shore_points[0].size) + \
+    ' shore points on nodata areas in the land raster. There should be none.'
+    assert not shore_points_on_nodata, message
+    # Check that shore points don't fall on land
+    shore_points_on_land = np.where(land[shore_points] > 0)[0].size
+    if shore_points_on_land:
+        points = np.where(land[shore_points] > 0)
+        points = (shore_points[0][points[0]], shore_points[1][points[0]])
+    message = 'There are ' + str(shore_points_on_land) + \
+    ' shore points on land. There should be none.'
+    assert not shore_points_on_land, message
+    # Compute the ray paths in each direction to their full length (d_max).
+    # We'll clip them for each point in two steps (raster boundaries & land)
+    # The points returned by the cast function are relative to the origin (0,0)
+    ray_path = {}
+    valid_depths = 0 # used to determine if there are non-nodata depths
+    #for d in direction_range:
+    #    result = \
+    #        cast_ray_fast(direction_vectors[d], MAX_FETCH/cell_size)
+    #        ray_path[directions_rad[d]] = result[0]
+    #        unit_step_length[d] = result[1]
 
 def fetch_vectors(angles):
     """convert the angles passed as arguments to raster vector directions.
