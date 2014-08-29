@@ -1848,7 +1848,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
         pass#os.remove(dataset_uri)
 
-@cython.cdivision(True)    
+
 def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
     """This function calculates the flow downhill distance to the stream layers
     
@@ -2101,9 +2101,12 @@ def calculate_d_dn(flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri):
                         step_size = cell_size
 
                     if neighbor_d_dn != d_dn_nodata:
-                        d_dn_cache[cache_row_index, col_index] += (
-                            (neighbor_d_dn + step_size/ws_factor) * 
-                            outflow_weight)
+                        if ws_factor != 0:
+                            d_dn_cache[cache_row_index, col_index] += (
+                                (neighbor_d_dn + step_size/ws_factor) * 
+                                outflow_weight)
+                        else:
+                            d_dn_cache[cache_row_index, col_index] = numpy.inf
 
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
