@@ -31,6 +31,27 @@ def execute(args):
             args['landmass_raster_uri'], args['aoi_raster_uri'], \
             args['shore_raster_uri'])
 
+    transects_uri = compute_transects(args['shore_raster_uri'], \
+        args['landmass_raster_uri'])
+
+
+# Compute the shore transects
+def compute_transects(shore_raster_uri, landmass_raster_uri):
+    shore_raster = gdal.Open(shore_raster_uri)
+    message = 'Cannot open file ' + shore_raster_uri
+    assert shore_raster is not None, message
+    shore_band = shore_raster.GetRasterBand(1)
+    shore_array = shore_band.ReadAsArray()
+    shore_band = None
+    shore_raster = None
+
+    landmass_raster = gdal.Open(landmass_raster_uri)
+    message = 'Cannot open file ' + landmass_raster_uri
+    assert landmass_raster is not None, message
+    landmass_band = landmass_raster.GetRasterBand(1)
+    landmass_array = landmass_band.ReadAsArray()
+    landmass_band = None
+    landmass_raster = None
 
 # TODO: improve this docstring!
 def detect_shore_uri(landmass_raster_uri, aoi_raster_uri, output_uri):

@@ -33,14 +33,14 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
         """
         pass
 
-    def test_functionality(self):
-        """ test function docstring here.
-            
-            Inputs:
-
-            Outputs:
-        """
-        pass
+    def test_compute_transects(self):
+        """Compute transects algorithm"""
+        shore_raster_uri = '../../NearshoreWaveAndErosion/tests/shore.tif'
+        landmass_raster_uri = '../../NearshoreWaveAndErosion/tests/landmass.tif'
+        assert os.path.isfile(shore_raster_uri)
+        assert os.path.isfile(landmass_raster_uri)
+        nearshore_wave_and_erosion_core.compute_transects( \
+            shore_raster_uri, landmass_raster_uri)
 
     def tare_down(self):
         """ Clean up code."""
