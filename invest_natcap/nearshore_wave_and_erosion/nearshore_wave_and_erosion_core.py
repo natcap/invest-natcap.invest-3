@@ -119,11 +119,36 @@ def compute_transects(args):
     # The points returned by the cast function are relative to the origin (0,0)
     ray_path = {}
     valid_depths = 0 # used to determine if there are non-nodata depths
-    #for d in direction_range:
-    #    result = \
-    #        cast_ray_fast(direction_vectors[d], MAX_FETCH/cell_size)
-    #        ray_path[directions_rad[d]] = result[0]
-    #        unit_step_length[d] = result[1]
+    for d in direction_range:
+        result = \
+            cast_ray_fast(direction_vectors[d], d_max/cell_size)
+        ray_path[directions_rad[d]] = result[0]
+        unit_step_length[d] = result[1]
+
+def cast_ray_fast(direction, d_max):
+    """ March from the origin towards a direction until either land or a
+    maximum distance is met.
+    
+        Inputs:
+        - origin: algorithm's starting point -- has to be on sea
+        - direction: marching direction
+        - d_max: maximum distance to traverse
+        - raster: land mass raster
+        
+        Returns the distance to the origin."""
+    # Rescale the stepping vector so that its largest coordinate is 1
+    unit_step = direction / np.fabs(direction).max()
+    # Compute the length of the normalized vector
+    unit_step_length = np.sqrt(np.sum(unit_step**2))
+    # Compute the number of steps to take
+    # Use ceiling to make sure to include any cell that is within the range of
+    # max_fetch
+    step_count = int(math.ceil(d_max / unit_step_length))
+    I = np.array([i*unit_step[0] for i in range(step_count+1)])
+    J = np.array([j*unit_step[1] for j in range(step_count+1)])
+
+    return ((I, J), unit_step_length)
+ 
 
 def fetch_vectors(angles):
     """convert the angles passed as arguments to raster vector directions.
