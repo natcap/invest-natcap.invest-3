@@ -707,7 +707,7 @@ cdef _build_flat_set(
     for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            LOGGER.info("_build_flat_set %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
         for global_block_col in xrange(int(ceil(float(n_cols) / block_col_size))):
             for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
@@ -2472,13 +2472,15 @@ def percent_to_sink(
     cdef int flat_index
     cdef queue[int] process_queue
     #Queue the sinks
-    for global_row in xrange(n_rows):
-        for global_col in xrange(n_cols):
-            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-            if sink_pixels_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-                effect_block[row_index, col_index, row_block_offset, col_block_offset] = 1.0
-                cache_dirty[row_index, col_index] = 1
-                process_queue.push(global_row * n_cols + global_col)
+    for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+        for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    if sink_pixels_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
+                        effect_block[row_index, col_index, row_block_offset, col_block_offset] = 1.0
+                        cache_dirty[row_index, col_index] = 1
+                        process_queue.push(global_row * n_cols + global_col)
 
     while process_queue.size() > 0:
         flat_index = process_queue.front()
