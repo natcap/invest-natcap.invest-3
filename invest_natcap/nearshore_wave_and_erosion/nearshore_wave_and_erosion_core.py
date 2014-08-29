@@ -36,7 +36,14 @@ def execute(args):
 
 
 # Compute the shore transects
-def compute_transects(shore_raster_uri, landmass_raster_uri):
+def compute_transects(args):
+    print('arguments:')
+    for key in args:
+        print('entry', key, args[key])
+
+    landmass_raster_uri = args['landmass_raster_uri']
+    shore_raster_uri = args['shore_raster_uri']
+
     shore_raster = gdal.Open(shore_raster_uri)
     message = 'Cannot open file ' + shore_raster_uri
     assert shore_raster is not None, message
@@ -52,6 +59,8 @@ def compute_transects(shore_raster_uri, landmass_raster_uri):
     landmass_array = landmass_band.ReadAsArray()
     landmass_band = None
     landmass_raster = None
+
+    
 
 # TODO: improve this docstring!
 def detect_shore_uri(landmass_raster_uri, aoi_raster_uri, output_uri):
