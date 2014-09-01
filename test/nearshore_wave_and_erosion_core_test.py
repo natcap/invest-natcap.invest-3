@@ -8,6 +8,7 @@ import numpy as np
 import random
 import csv
 import shutil
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -33,14 +34,26 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
         """
         pass
 
-    def test_functionality(self):
-        """ test function docstring here.
-            
-            Inputs:
+    def test_compute_transects(self):
+        """Compute transects algorithm"""
+        shore_raster_uri = '../../NearshoreWaveAndErosion/tests/shore.tif'
+        assert os.path.isfile(shore_raster_uri)
 
-            Outputs:
-        """
-        pass
+        landmass_raster_uri = '../../NearshoreWaveAndErosion/tests/landmass.tif'
+        assert os.path.isfile(landmass_raster_uri)
+
+        bathymetry_raster_uri = '../../NearshoreWaveAndErosion/tests/bathymetry.tif'
+        assert os.path.isfile(bathymetry_raster_uri)
+
+        args_uri = '../../NearshoreWaveAndErosion/tests/nearshore_wave_and_erosion_test_archive.json'    
+
+        with open(args_uri) as args_file:
+            contents = json.load(args_file)
+            args = contents['arguments']
+            args['landmass_raster_uri'] = landmass_raster_uri
+            args['shore_raster_uri'] = shore_raster_uri
+            args['bathymetry_raster_uri'] = bathymetry_raster_uri
+            nearshore_wave_and_erosion_core.compute_transects(args)
 
     def tare_down(self):
         """ Clean up code."""

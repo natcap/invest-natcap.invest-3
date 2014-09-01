@@ -896,6 +896,8 @@ class TestScenicQuality(unittest.TestCase):
     def test_cython_vs_python_on_block_island(self):
         return
         #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_10m_1pt.json"
+        #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_10m.json"
+        #args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_50m_year_round_houses.json"
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -955,7 +957,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_polynomial_valuation_on_block_island(self):
-        return
+        #return
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_polynomial.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -975,15 +977,15 @@ class TestScenicQuality(unittest.TestCase):
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
         difference = np.sum(np.absolute(reference_array - computed_array))
-        if difference:
-            computed_band.WriteArray(reference_array - computed_array)
+        #if difference:
+        #    computed_band.WriteArray(reference_array - computed_array)
         message = "Computed viewshed " + computed_uri + \
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)
         assert difference == 0.0, message
 
     def test_logarithmic_valuation_on_block_island(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_log.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)

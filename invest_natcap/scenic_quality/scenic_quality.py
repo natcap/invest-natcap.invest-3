@@ -292,7 +292,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                 max_distances[f] = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
                 coefficients[f] = float(feature.GetField(field))
-                #coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
             if field_name.lower() == 'offseta':
                 obs_elevations[f] = float(feature.GetField(field))
@@ -310,6 +309,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         y = geometry.GetY()
         viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+
+    layer = None
+    shapefile = None
 
     arg_dist = np.argsort(max_distances)
 
@@ -334,7 +336,6 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     # Compute distances
     distances_array = np.copy(accum_visibility)
-    distances_array[:] = 0.
 
     last_dist = 0
     for dist in range(arg_dist.size-1, -1, -1):
@@ -425,7 +426,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             add_events, center_events, remove_events, I, J, \
             arg_min, arg_max, arg_center, \
             coord, distances_sq, distances, visibility, offset_visibility, \
-            obs_elev, tgt_elev, max_dist, refr_coeff)
+            obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython')
         
         # apply valuation function
         valuation_function(a, b, c, d, \
@@ -433,6 +434,23 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             coefficient , I, J, distances, \
             visibility_array, accum_visibility)
 
+        # Write temporary result on disk
+        tmp_uri = os.path.join(base_uri, 'viewshed_' + str(dist) + '_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, tmp_uri, 'GTiff', \
+            0., gdal.GDT_Float32, fill_value = 0)
+        tmp_raster = gdal.Open(tmp_uri, gdal.GA_Update)
+        tmp_band = tmp_raster.GetRasterBand(1)
+        tmp_band.WriteArray(visibility_array)
+        tmp_band = None
+        tmp_raster = None
+        raster_utils.calculate_raster_stats_uri(tmp_uri)
+        visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_band.WriteArray(accum_visibility)
+        visibility_band = None
+        visibility_raster = None
+        raster_utils.calculate_raster_stats_uri(visibility_uri)
+        
         last_dist = max_distances[f]
 
     # Write result on disk
@@ -441,9 +459,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     visibility_band.WriteArray(accum_visibility)
     visibility_band = None
     visibility_raster = None
-
-    layer = None
-    shapefile = None
+    raster_utils.calculate_raster_stats_uri(visibility_uri)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
