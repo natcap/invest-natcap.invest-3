@@ -11,8 +11,15 @@ import scipy as sp
 
 from osgeo import ogr
 from osgeo import gdal
+import logging
 
 from invest_natcap import raster_utils
+
+logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+LOGGER = logging.getLogger('coastal_vulnerability_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     """Executes the coastal protection model 
@@ -37,10 +44,12 @@ def execute(args):
 
 # Compute the shore transects
 def compute_transects(args):
+    LOGGER.debug('Computing transects...')
     print('arguments:')
     for key in args:
         print('entry', key, args[key])
 
+    # Extract shore
     shore_raster_uri = args['shore_raster_uri']
 
     shore_raster = gdal.Open(shore_raster_uri)
@@ -52,7 +61,9 @@ def compute_transects(args):
     shore_raster = None
 
     shore_points = np.where(shore > 0)
+    LOGGER.debug('found %i shore segments.' % shore_points[0].size)
 
+    # Extract landmass
     landmass_raster_uri = args['landmass_raster_uri']
 
     landmass_raster = gdal.Open(landmass_raster_uri)
@@ -63,6 +74,7 @@ def compute_transects(args):
     landmass_band = None
     landmass_raster = None
 
+    # Extract bathymetry
     bathymetry_raster_uri = args['bathymetry_raster_uri']
 
     bathymetry_raster = gdal.Open(bathymetry_raster_uri)
@@ -74,13 +86,13 @@ def compute_transects(args):
     bathymetry_raster = None
 
     
+    # precompute directions
     SECTOR_COUNT = 16 
     rays_per_sector = 1
     d_max = args['max_profile_length'] * 1000 # convert in meters
     model_resolution = args['model_resolution'] # in meters already
     cell_size = model_resolution
     
-    # precompute directions
     direction_count = SECTOR_COUNT * rays_per_sector
     direction_range = range(direction_count)
     direction_step = 2.0 * math.pi / direction_count
@@ -88,8 +100,7 @@ def compute_transects(args):
     direction_vectors = fetch_vectors(directions_rad)
     unit_step_length = np.empty(direction_vectors.shape[0])
     
-    # Perform a bunch of tests to ensure the assumptions in the fetch algorithm
-    # are valid
+    # Perform a bunch of tests beforehand
     # Check that bathy and landmass rasters are size-compatible
     message = 'landmass and bathymetry rasters are not the same size:' + \
     str(land.shape) + ' and ' + str(bathymetry.shape) + ' respectively.'
@@ -114,16 +125,64 @@ def compute_transects(args):
     message = 'There are ' + str(shore_points_on_land) + \
     ' shore points on land. There should be none.'
     assert not shore_points_on_land, message
+
     # Compute the ray paths in each direction to their full length (d_max).
     # We'll clip them for each point in two steps (raster boundaries & land)
     # The points returned by the cast function are relative to the origin (0,0)
-    ray_path = {}
-    valid_depths = 0 # used to determine if there are non-nodata depths
-    for d in direction_range:
-        result = \
-            cast_ray_fast(direction_vectors[d], d_max/cell_size)
-        ray_path[directions_rad[d]] = result[0]
-        unit_step_length[d] = result[1]
+    for p in zip(direction_vectors[0], direction_vectors[1]):
+        result = cast_ray_fast(p, d_max/cell_size)
+
+    # Identify valid transect directions
+    valid_transect_count, valid_transects, valid_transect_map = \
+        find_valid_transects(shore_points, land, direction_vectors)
+ 
+    basename = os.path.splitext(args['shore_raster_uri'])[0]
+    output_uri = basename + '_valid_sectors.tif'
+    raster_utils.new_raster_from_base_uri( \
+        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
+    raster = gdal.Open(output_uri, gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    shore_array = band.ReadAsArray()
+    shore_array[shore_points] = valid_transect_map
+    band.FlushCache()
+    band.WriteArray(shore_array)
+
+def find_valid_transects(shore_points, land, direction_vectors):
+    """ Compute valid transect directions and store them in an array 
+        where a row lists the index of valid sectors, with -1 as the
+        list terminator."""
+    LOGGER.debug('Counting valid transects...')
+    # debug purposes, should be removed ASAP
+    valid_transect_map = np.zeros_like(shore_points[0]) * -1
+
+    # Precompute data about the angular sectors
+    L = np.array(np.abs(direction_vectors[1]) > \
+        np.abs(direction_vectors[0])).astype(np.int32)
+    S = np.logical_not(L).astype(np.int32)
+    I = np.array(range(L.size)).astype(np.int32)
+
+    L_val = direction_vectors[(L,I)]
+    directions = np.array([direction_vectors[0]/L_val,direction_vectors[1]/L_val])
+
+    # Check for each shore point which sector is valid
+    valid_transects = \
+        np.ones((shore_points[0].size, direction_vectors[0].size)) * -1.
+    valid_transect_count = 0
+    for p in range(shore_points[0].size):
+        point = (shore_points[0][p], shore_points[1][p])
+        valid_sectors = 0
+        for sector in range(L.size):
+            i = round(point[0] + directions[0][sector])
+            j = round(point[1] + directions[1][sector])
+            if land[i, j] == 0:
+                valid_transects[p, valid_sectors] = sector
+                valid_sectors += 1
+            valid_transect_map[p] = valid_sectors
+        valid_transect_count += valid_sectors
+
+    LOGGER.debug('found %i valid transects.' % valid_transect_count)
+    
+    return (valid_transect_count, valid_transects, valid_transect_map)
 
 def cast_ray_fast(direction, d_max):
     """ March from the origin towards a direction until either land or a
@@ -179,12 +238,12 @@ def fetch_vectors(angles):
     #              270  
     #             (270)
     #            
-    directions = np.empty((len(angles), 2))
+    directions = np.empty((2, len(angles)))
 
     for a in range(len(angles)):
         pi = math.pi
-        directions[a] = (round(math.cos(pi - angles[a]), 10),\
-            round(math.sin(pi - angles[a]), 10))
+        directions[0, a] = round(math.cos(pi - angles[a]), 10)
+        directions[1, a] = round(math.sin(pi - angles[a]), 10)
     return directions
 
 
