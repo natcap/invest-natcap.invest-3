@@ -272,7 +272,7 @@ def execute(args):
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     routing_cython_core.distance_to_stream(
-        flow_direction_uri, stream_uri, d_dn_uri, ws_factor_inverse_uri)
+        flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
     
     LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
