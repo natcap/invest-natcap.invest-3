@@ -94,7 +94,6 @@ def execute(args):
     #Sets up the intermediate and output directory structure for the workspace
     raster_utils.create_directories([output_dir, intermediate_dir])
         
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
     
     #check if we've already prepared the DEM
     if '_prepare' in args:
@@ -111,6 +110,8 @@ def execute(args):
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
+
+    out_pixel_size = raster_utils.get_cell_size_from_uri(preprocessed_data['aligned_dem_uri'])
     
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")

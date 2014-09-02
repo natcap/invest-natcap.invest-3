@@ -1779,7 +1779,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
                         else:
                             factor = 1.0
                         distance_block[row_index, col_index, row_block_offset, col_block_offset] += (
-                            neighbor_distance * outflow_weight + step_size * factor)
+                            neighbor_distance + step_size * factor) * outflow_weight
                         cache_dirty[row_index, col_index] = 1
                         
         #push any upstream neighbors that inflow onto the stack
