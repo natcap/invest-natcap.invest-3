@@ -26,7 +26,6 @@
             operation."""
 
 import logging
-import tempfile
 import os
 
 from osgeo import gdal
