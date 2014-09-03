@@ -136,21 +136,22 @@ def compute_transects(args):
     valid_transect_count, valid_transects = \
         find_valid_transects(shore_points, land, direction_vectors)
  
-    # Save valid transect count
-    basename = os.path.splitext(args['shore_raster_uri'])[0]
-    output_uri = basename + '_valid_sectors.tif'
-    raster_utils.new_raster_from_base_uri( \
-        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
-    raster = gdal.Open(output_uri, gdal.GA_Update)
-    band = raster.GetRasterBand(1)
-    shore_array = band.ReadAsArray()
-    for s in range(shore_points[0].size):
-        shore_array[shore_points[0][s], shore_points[1][s]] = \
-            np.sum(valid_transects[s] > -1).astype(np.int32)
-    band.FlushCache()
-    band.WriteArray(shore_array)
-    band = None
-    raster = None
+    # Compute transect end points
+    transect_endpoints = compute_transect_endpoints(shore_points, \
+        valid_transects, bathymetry)
+
+    # Sample bathymetry along transects
+    shore_profiles = sample_bathymetry_along_transects(bathymetry, \
+        transect_endpoints, shore_points, direction_vectors)
+
+def compute_transect_endpoints(shore_points, valid_transects, bathymetry):
+    """ compute the transect endpoints that will be used to cut transects"""
+    pass
+
+def sample_bathymetry_along_transects(bathymetry, valid_transects, \
+    shore_points, direction_vectors):
+    """ Sample shore profile directly from the bathymetry layer."""
+    pass
 
 def find_valid_transects(shore_points, land, direction_vectors):
     """ Compute valid transect directions and store them in an array 
