@@ -356,7 +356,14 @@ def execute(args):
     original_datasource.Destroy()
     datasource_copy.Destroy()
 
-    
+    for ds_uri in [zero_absorption_source_uri, loss_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
+
+
 def calculate_ls_factor(
     flow_accumulation_uri, slope_uri, aspect_uri, ls_factor_uri, ls_nodata):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
