@@ -1,21 +1,15 @@
 # cython: profile=False
 
-import collections
-import tempfile
 import time
 import logging
-import sys
-import tables
 import os
 
 import numpy
 cimport numpy
 cimport cython
-import scipy.sparse
 import osgeo
 from osgeo import gdal
 from cython.operator cimport dereference as deref
-
 
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
@@ -1172,6 +1166,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         nodata_value, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
+    for ds_uri in [dem_sink_offset_uri, dem_edge_offset_uri, dem_tmp_fill_uri, ]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
+
     
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
@@ -1823,7 +1824,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
     for dataset in [outflow_weights_ds, outflow_direction_ds]:
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
-        pass#os.remove(dataset_uri)
+        os.remove(dataset_uri)
 
 
 cdef class BlockCache:
