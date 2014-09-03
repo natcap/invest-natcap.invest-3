@@ -138,15 +138,23 @@ def compute_transects(args):
  
     # Compute transect end points
     transect_endpoints = compute_transect_endpoints(shore_points, \
-        valid_transects, bathymetry)
+        valid_transects, direction_vectors, bathymetry)
 
     # Sample bathymetry along transects
     shore_profiles = sample_bathymetry_along_transects(bathymetry, \
         transect_endpoints, shore_points, direction_vectors)
 
-def compute_transect_endpoints(shore_points, valid_transects, bathymetry):
+def compute_transect_endpoints(shore_points, valid_transects, \
+    direction_vectors, bathymetry):
     """ compute the transect endpoints that will be used to cut transects"""
-    pass
+    for p in range(shore_points[0].size):
+        d = 0
+        while valid_transects[p][d] > -1:
+            point = [shore_points[0], shore_points[1]]
+            ind = valid_transects[p][d]
+            i = direction_vectors[0][ind]
+            j = direction_vectors[1][ind]
+            d += 1
 
 def sample_bathymetry_along_transects(bathymetry, valid_transects, \
     shore_points, direction_vectors):
