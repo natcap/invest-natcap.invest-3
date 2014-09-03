@@ -94,7 +94,6 @@ def execute(args):
     #Sets up the intermediate and output directory structure for the workspace
     raster_utils.create_directories([output_dir, intermediate_dir])
         
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
     
     #check if we've already prepared the DEM
     if '_prepare' in args:
@@ -111,6 +110,8 @@ def execute(args):
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
+
+    out_pixel_size = raster_utils.get_cell_size_from_uri(preprocessed_data['aligned_dem_uri'])
     
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
@@ -251,28 +252,28 @@ def execute(args):
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
-    
     LOGGER.info('calculate WS factor')
-    ws_factor_uri = os.path.join(
-        intermediate_dir, 'ws_factor%s.tif' % file_suffix)
+    ws_factor_inverse_uri = os.path.join(
+        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
     ws_nodata = -1.0
     slope_nodata = raster_utils.get_nodata_from_uri(
         preprocessed_data['thresholded_slope_uri'])
     
     def ws_op(w_factor, s_factor):
+        #calculating the inverse so we can use the distance to stream factor function
         return numpy.where(
             (w_factor != w_nodata) & (s_factor != slope_nodata),
-            w_factor * s_factor, ws_nodata)
+            1.0 / (w_factor * s_factor), ws_nodata)
             
     raster_utils.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_uri, 
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    routing_cython_core.calculate_d_dn(
-        flow_direction_uri, stream_uri, ws_factor_uri, d_dn_uri)
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
     
     LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
@@ -355,7 +356,14 @@ def execute(args):
     original_datasource.Destroy()
     datasource_copy.Destroy()
 
-    
+    for ds_uri in [zero_absorption_source_uri, loss_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
+
+
 def calculate_ls_factor(
     flow_accumulation_uri, slope_uri, aspect_uri, ls_factor_uri, ls_nodata):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
@@ -540,6 +548,8 @@ def _prepare(**args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
     
+    tiled_dem_uri = os.path.join(intermediate_dir, 'tiled_dem.tif')
+    raster_utils.tile_dataset_uri(args['dem_uri'], tiled_dem_uri, 256)
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
     aligned_erosivity_uri = os.path.join(
@@ -547,7 +557,7 @@ def _prepare(**args):
     aligned_erodibility_uri = os.path.join(
         intermediate_dir, 'aligned_erodibility.tif')
     
-    input_list = [args['dem_uri'], args['landuse_uri'], args['erosivity_uri'], 
+    input_list = [tiled_dem_uri, args['landuse_uri'], args['erosivity_uri'], 
         args['erodibility_uri']]
     dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
         aligned_erosivity_uri, aligned_erodibility_uri]

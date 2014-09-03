@@ -26,7 +26,7 @@
             operation."""
 
 import logging
-import tempfile
+import os
 
 from osgeo import gdal
 import numpy
@@ -104,6 +104,13 @@ def route_flux(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri)
 
+    for ds_uri in [dem_uri, flow_direction_uri, source_uri, absorption_rate_uri, outflow_weights_uri, outflow_direction_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
+
 
 def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
     """A helper function to calculate flow accumulation, also returns
@@ -133,6 +140,13 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
         flow_direction_uri, dem_uri, constant_flux_source_uri,
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
         aoi_uri=aoi_uri)
+
+    for ds_uri in [constant_flux_source_uri, zero_absorption_source_uri, loss_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
 
 
 def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
@@ -271,6 +285,15 @@ def pixel_amount_exported(
         gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
+    for ds_uri in [dem_uri, stream_uri, retention_rate_uri, source_uri, 
+        flow_direction_uri, export_rate_uri, outflow_weights_uri,
+        outflow_direction_uri, effect_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
+
 
 def calculate_stream(dem_uri, flow_threshold, stream_uri):
     """A wrapper to calculate streams given a dem and a flow threshold.
@@ -296,6 +319,13 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
     flow_accumulation(
         flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
     stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
+
+    for ds_uri in [flow_accumulation_uri, flow_direction_uri, dem_offset_uri]:
+        try:
+            os.remove(ds_uri)
+        except OSError as e:
+            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
+            LOGGER.warn(e)
 
 
 def flow_direction_inf(dem_uri, flow_direction_uri):
@@ -345,7 +375,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_out_uri)
 
 
-def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
+def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
     
         flow_direction_uri - a raster with d-infinity flow directions
@@ -359,4 +389,4 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri):
         returns nothing"""
         
     routing_cython_core.distance_to_stream(
-        flow_direction_uri, stream_uri, distance_uri)
+        flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
