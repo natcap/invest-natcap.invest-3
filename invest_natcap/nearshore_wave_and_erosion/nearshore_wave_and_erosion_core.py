@@ -177,7 +177,7 @@ def find_valid_transects(shore_points, land, direction_vectors):
     S = np.logical_not(L).astype(np.int32)
     I = np.array(range(L.size)).astype(np.int32)
 
-    L_val = direction_vectors[(L,I)]
+    L_val = np.absolute(direction_vectors[(L,I)])
     directions = np.array([direction_vectors[0]/L_val,direction_vectors[1]/L_val])
 
     # Check for each shore point which sector is valid
@@ -187,16 +187,13 @@ def find_valid_transects(shore_points, land, direction_vectors):
     for p in range(shore_points[0].size):
         point = (shore_points[0][p], shore_points[1][p])
         valid_sectors = 0
-        print 'segment', p, ':',
         for sector in range(L.size):
             i = round(point[0] + directions[0][sector])
             j = round(point[1] + directions[1][sector])
             if land[i, j] == 0:
                 valid_transects[p, valid_sectors] = sector
                 valid_sectors += 1
-                print sector,
             valid_transect_map[p] = valid_sectors
-        print('')
         valid_transect_count += valid_sectors
 
     LOGGER.debug('found %i valid transects.' % valid_transect_count)
