@@ -136,6 +136,7 @@ def compute_transects(args):
     valid_transect_count, valid_transects, valid_transect_map = \
         find_valid_transects(shore_points, land, direction_vectors)
  
+    # Save valid transect count
     basename = os.path.splitext(args['shore_raster_uri'])[0]
     output_uri = basename + '_valid_sectors.tif'
     raster_utils.new_raster_from_base_uri( \
@@ -143,6 +144,21 @@ def compute_transects(args):
     raster = gdal.Open(output_uri, gdal.GA_Update)
     band = raster.GetRasterBand(1)
     shore_array = band.ReadAsArray()
+    shore_array[shore_points] = valid_transect_map
+    band.FlushCache()
+    band.WriteArray(shore_array)
+    band = None
+    raster = None
+
+    basename = os.path.splitext(args['shore_raster_uri'])[0]
+    output_uri = basename + '_sector_id.tif'
+    raster_utils.new_raster_from_base_uri( \
+        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
+    raster = gdal.Open(output_uri, gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    shore_array = band.ReadAsArray()
+    for i in range(valid_transect_map.size):
+        valid_transect_map[i] = i
     shore_array[shore_points] = valid_transect_map
     band.FlushCache()
     band.WriteArray(shore_array)
@@ -171,13 +187,16 @@ def find_valid_transects(shore_points, land, direction_vectors):
     for p in range(shore_points[0].size):
         point = (shore_points[0][p], shore_points[1][p])
         valid_sectors = 0
+        print 'segment', p, ':',
         for sector in range(L.size):
             i = round(point[0] + directions[0][sector])
             j = round(point[1] + directions[1][sector])
             if land[i, j] == 0:
                 valid_transects[p, valid_sectors] = sector
                 valid_sectors += 1
+                print sector,
             valid_transect_map[p] = valid_sectors
+        print('')
         valid_transect_count += valid_sectors
 
     LOGGER.debug('found %i valid transects.' % valid_transect_count)
