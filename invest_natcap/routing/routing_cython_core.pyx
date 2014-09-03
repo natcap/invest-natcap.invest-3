@@ -33,6 +33,9 @@ cdef double PI = 3.141592653589793238462643383279502884
 cdef int MAX_WINDOW_SIZE = 2**12
 cdef double INF = numpy.inf
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri=None):
@@ -296,6 +299,9 @@ def calculate_transport(
                 (time.clock() - start))
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def calculate_flow_weights(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
     """This function calculates the flow weights from a d-infinity based
@@ -650,7 +656,10 @@ cdef struct Row_Col_Weight_Tuple:
     int col_index
     int weight
 
-    
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 cdef _build_flat_set(
     char *dem_uri, float nodata_value, c_set[int] &flat_set):
     
@@ -802,7 +811,11 @@ def fill_pits(dem_uri, dem_out_uri):
         dem_out_band.WriteArray(
             dem_array[1, :].reshape((1,n_cols)), xoff=0, yoff=row_index)
     LOGGER.info("%d pits were filled." % (pit_count,))
-        
+   
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)     
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
@@ -1173,7 +1186,10 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
             LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
             LOGGER.warn(e)
 
-    
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)  
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
@@ -1471,7 +1487,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 '''
 
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def find_sinks(dem_uri):
     """Discover and return the sinks in the dem array
     
@@ -1551,7 +1569,10 @@ def find_sinks(dem_uri):
     tmp_sink_set[0:sink_set_index] = sink_set[0:sink_set_index]
     return tmp_sink_set
 
-    
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True) 
 def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
     
@@ -2027,6 +2048,9 @@ def cache_block_experiment(ds_uri, out_uri):
     block_cache.flush_cache()
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,
     outflow_weights_uri, effect_uri):
