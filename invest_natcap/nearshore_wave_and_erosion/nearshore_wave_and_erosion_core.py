@@ -133,43 +133,14 @@ def compute_transects(args):
         result = cast_ray_fast(p, d_max/cell_size)
 
     # Identify valid transect directions
-    valid_transect_count, valid_transects, valid_transect_map = \
+    valid_transect_count, valid_transects = \
         find_valid_transects(shore_points, land, direction_vectors)
  
-    # Save valid transect count
-    basename = os.path.splitext(args['shore_raster_uri'])[0]
-    output_uri = basename + '_valid_sectors.tif'
-    raster_utils.new_raster_from_base_uri( \
-        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
-    raster = gdal.Open(output_uri, gdal.GA_Update)
-    band = raster.GetRasterBand(1)
-    shore_array = band.ReadAsArray()
-    shore_array[shore_points] = valid_transect_map
-    band.FlushCache()
-    band.WriteArray(shore_array)
-    band = None
-    raster = None
-
-    basename = os.path.splitext(args['shore_raster_uri'])[0]
-    output_uri = basename + '_sector_id.tif'
-    raster_utils.new_raster_from_base_uri( \
-        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
-    raster = gdal.Open(output_uri, gdal.GA_Update)
-    band = raster.GetRasterBand(1)
-    shore_array = band.ReadAsArray()
-    for i in range(valid_transect_map.size):
-        valid_transect_map[i] = i
-    shore_array[shore_points] = valid_transect_map
-    band.FlushCache()
-    band.WriteArray(shore_array)
-
 def find_valid_transects(shore_points, land, direction_vectors):
     """ Compute valid transect directions and store them in an array 
         where a row lists the index of valid sectors, with -1 as the
         list terminator."""
     LOGGER.debug('Counting valid transects...')
-    # debug purposes, should be removed ASAP
-    valid_transect_map = np.zeros_like(shore_points[0]) * -1
 
     # Precompute data about the angular sectors
     L = np.array(np.abs(direction_vectors[1]) > \
@@ -180,6 +151,7 @@ def find_valid_transects(shore_points, land, direction_vectors):
     L_val = np.absolute(direction_vectors[(L,I)])
     directions = np.array([direction_vectors[0]/L_val,direction_vectors[1]/L_val])
 
+    print('directions', zip(directions[0], directions[1]))
     # Check for each shore point which sector is valid
     valid_transects = \
         np.ones((shore_points[0].size, direction_vectors[0].size)) * -1.
@@ -193,12 +165,11 @@ def find_valid_transects(shore_points, land, direction_vectors):
             if land[i, j] == 0:
                 valid_transects[p, valid_sectors] = sector
                 valid_sectors += 1
-            valid_transect_map[p] = valid_sectors
-        valid_transect_count += valid_sectors
+	valid_transect_count += valid_sectors
 
     LOGGER.debug('found %i valid transects.' % valid_transect_count)
     
-    return (valid_transect_count, valid_transects, valid_transect_map)
+    return (valid_transect_count, valid_transects)
 
 def cast_ray_fast(direction, d_max):
     """ March from the origin towards a direction until either land or a
@@ -258,8 +229,8 @@ def fetch_vectors(angles):
 
     for a in range(len(angles)):
         pi = math.pi
-        directions[0, a] = round(math.cos(pi - angles[a]), 10)
-        directions[1, a] = round(math.sin(pi - angles[a]), 10)
+        directions[0, a] = round(math.cos(.5 * pi - angles[a]), 10)
+        directions[1, a] = round(math.sin(.5 * pi - angles[a]), 10)
     return directions
 
 
