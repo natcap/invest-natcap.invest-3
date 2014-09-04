@@ -38,8 +38,7 @@ def execute(args):
             args['landmass_raster_uri'], args['aoi_raster_uri'], \
             args['shore_raster_uri'])
 
-    transects_uri = compute_transects(args['shore_raster_uri'], \
-        args['landmass_raster_uri'])
+    transects_uri = compute_transects(args)
 
 
 # Compute the shore transects

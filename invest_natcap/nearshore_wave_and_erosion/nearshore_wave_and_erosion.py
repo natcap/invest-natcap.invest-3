@@ -303,7 +303,7 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
     # Create the raster that will contain the new data
     raster = \
         raster_utils.create_raster_from_vector_extents(cell_size, 
-        cell_size, datatype, raster_utils.gdal_cast(nodata, datatype), \
+        cell_size, datatype, nodata, \
         output_uri, aoi)
     layer = shapefile.GetLayer(0)
     # Add the all_touched option
