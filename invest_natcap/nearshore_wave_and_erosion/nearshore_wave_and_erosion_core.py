@@ -135,6 +135,9 @@ def compute_transects(args):
     valid_transect_count, valid_transects = \
         find_valid_transects(shore_points, land, direction_vectors)
  
+    # Save valid transect directions
+
+
     # Compute transect end points
     transect_endpoints = compute_transect_endpoints(shore_points, \
         valid_transects, direction_vectors, bathymetry)
@@ -146,6 +149,7 @@ def compute_transects(args):
 def compute_transect_endpoints(shore_points, valid_transects, \
     direction_vectors, bathymetry):
     """ compute the transect endpoints that will be used to cut transects"""
+    LOGGER.debug('Computing transect endpoints...')
     for p in range(shore_points[0].size):
         d = 0
         while valid_transects[p][d] > -1:
