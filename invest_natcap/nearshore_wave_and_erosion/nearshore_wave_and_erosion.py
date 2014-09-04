@@ -389,9 +389,10 @@ def execute(args):
     """
 
     # Add the Output directory onto the given workspace
-    workspace_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(workspace_dir):
-        os.makedirs(workspace_dir)
+    args['output_dir'] = \
+        os.path.join(args['workspace_dir'], 'output')
+    if not os.path.isdir(args['output_dir']):
+        os.makedirs(args['output_dir'])
     # Add the intermediate directory as well
     args['intermediate_dir'] = \
         os.path.join(args['workspace_dir'], 'intermediate')

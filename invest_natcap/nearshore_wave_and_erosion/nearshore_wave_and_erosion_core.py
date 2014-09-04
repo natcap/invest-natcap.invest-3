@@ -136,6 +136,19 @@ def compute_transects(args):
         find_valid_transects(shore_points, land, direction_vectors)
  
     # Save valid transect directions
+    output_uri = os.path.join(args['intermediate_dir'], 'valid_transects.tif')
+    raster_utils.new_raster_from_base_uri( \
+        args['shore_raster_uri'], output_uri, 'GTiff', 0., gdal.GDT_Float32)
+    raster = gdal.Open(output_uri, gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    shore_array = band.ReadAsArray()
+    for s in range(shore_points[0].size):
+        shore_array[shore_points[0][s], shore_points[1][s]] = \
+            np.sum(valid_transects[s] > -1).astype(np.int32)
+    band.FlushCache()
+    band.WriteArray(shore_array)
+    band = None
+    raster = None
 
 
     # Compute transect end points
