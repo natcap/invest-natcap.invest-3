@@ -83,11 +83,11 @@ def execute(args):
     #build up the interpolation functions for the habitat
     biophysical_to_table = {
         'salinity_biophysical_uri': 
-            ('oyster_habitat_suitability_salinity_table_uri', 'Salinity'),
+            ('oyster_habitat_suitability_salinity_table_uri', 'salinity'),
         'temperature_biophysical_uri': 
-            ('oyster_habitat_suitability_temperature_table_uri', 'Temperature'),
+            ('oyster_habitat_suitability_temperature_table_uri', 'temperature'),
         'depth_biophysical_uri': 
-            ('oyster_habitat_suitability_depth_table_uri', 'Depth'),
+            ('oyster_habitat_suitability_depth_table_uri', 'depth'),
         }
     biophysical_to_interp = {}
     for biophysical_uri_key, (habitat_suitability_table_uri, key) in \
@@ -97,7 +97,9 @@ def execute(args):
         suitability_list = []
         value_list = []
         for row in csv_dict_reader:
-            suitability_list.append(float(row['Suitability']))
+            #convert keys to lowercase
+            row = {k.lower().rstrip():v for k, v in row.items()}
+            suitability_list.append(float(row['suitability']))
             value_list.append(float(row[key]))
         biophysical_to_interp[biophysical_uri_key] = scipy.interpolate.interp1d(
             value_list, suitability_list, kind='linear',
