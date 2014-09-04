@@ -400,8 +400,7 @@ def execute(args):
         os.makedirs(args['intermediate_dir'])
 
     # Initializations
-    args['cell_size'] = \
-        raster_utils.get_cell_size_from_uri(args['bathymetry_uri'])
+    args['cell_size'] = args['model_resolution']
 
     # Preprocess the landmass
     print('Pre-processing landmass...')
