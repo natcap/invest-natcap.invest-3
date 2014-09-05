@@ -811,6 +811,11 @@ def aggregate_raster_values_uri(
     minimal_polygon_sets = calculate_disjoint_polygon_set(
         shapefile_uri)
 
+    clipped_band = clipped_raster.GetRasterBand(1)
+    n_rows = clipped_band.YSize
+    n_cols = clipped_band.XSize
+    block_col_size, block_row_size = clipped_band.GetBlockSize()
+
     for polygon_set in minimal_polygon_sets:
         #add polygons to subset_layer
         LOGGER.info('processing polygon_set %s' % (str(polygon_set)))
@@ -853,58 +858,61 @@ def aggregate_raster_values_uri(
 
         mask_dataset.FlushCache()
         mask_band = mask_dataset.GetRasterBand(1)
-
-        #Loop over each row in out_band
-        clipped_band = clipped_raster.GetRasterBand(1)
         current_iteration_attribute_ids = set()
-        for row_index in range(clipped_band.YSize):
-            mask_array = mask_band.ReadAsArray(
-                0, row_index, mask_band.XSize, 1)
-            clipped_array = clipped_band.ReadAsArray(
-                0, row_index, clipped_band.XSize, 1)
 
-            unique_ids = numpy.unique(mask_array)
-            current_iteration_attribute_ids = (
-                current_iteration_attribute_ids.union(unique_ids))
-            for attribute_id in unique_ids:
-                #ignore masked values
-                if attribute_id == mask_nodata:
-                    continue
+        for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+            for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+                global_col = global_block_col*block_col_size
+                global_row = global_block_row*block_row_size
+                global_col_size = min((global_block_col+1)*block_col_size, n_cols) - global_col
+                global_row_size = min((global_block_row+1)*block_row_size, n_rows) - global_row
+                mask_array = mask_band.ReadAsArray(
+                    global_col, global_row, global_col_size, global_row_size)
+                clipped_array = clipped_band.ReadAsArray(
+                    global_col, global_row, global_col_size, global_row_size)
 
-                #Only consider values which lie in the polygon for attribute_id
-                masked_values = clipped_array[
-                    (mask_array == attribute_id) &
-                    (~numpy.isnan(clipped_array))]
-                #Remove the nodata and ignore values for later processing
-                masked_values_nodata_removed = (
-                    masked_values[~numpy.in1d(
-                        masked_values, [raster_nodata] + ignore_value_list).
-                        reshape(masked_values.shape)])
+                unique_ids = numpy.unique(mask_array)
+                current_iteration_attribute_ids = (
+                    current_iteration_attribute_ids.union(unique_ids))
+                for attribute_id in unique_ids:
+                    #ignore masked values
+                    if attribute_id == mask_nodata:
+                        continue
 
-                #Find the min and max which might not yet be calculated
-                if masked_values_nodata_removed.size > 0:
-                    if pixel_min_dict[attribute_id] is None:
-                        pixel_min_dict[attribute_id] = numpy.min(
-                            masked_values_nodata_removed)
-                        pixel_max_dict[attribute_id] = numpy.max(
-                            masked_values_nodata_removed)
+                    #Only consider values which lie in the polygon for attribute_id
+                    masked_values = clipped_array[
+                        (mask_array == attribute_id) &
+                        (~numpy.isnan(clipped_array))]
+                    #Remove the nodata and ignore values for later processing
+                    masked_values_nodata_removed = (
+                        masked_values[~numpy.in1d(
+                            masked_values, [raster_nodata] + ignore_value_list).
+                            reshape(masked_values.shape)])
+
+                    #Find the min and max which might not yet be calculated
+                    if masked_values_nodata_removed.size > 0:
+                        if pixel_min_dict[attribute_id] is None:
+                            pixel_min_dict[attribute_id] = numpy.min(
+                                masked_values_nodata_removed)
+                            pixel_max_dict[attribute_id] = numpy.max(
+                                masked_values_nodata_removed)
+                        else:
+                            pixel_min_dict[attribute_id] = min(
+                                pixel_min_dict[attribute_id],
+                                numpy.min(masked_values_nodata_removed))
+                            pixel_max_dict[attribute_id] = max(
+                                pixel_max_dict[attribute_id],
+                                numpy.max(masked_values_nodata_removed))
+
+                    if ignore_nodata:
+                        #Only consider values which are not nodata values
+                        aggregate_dict_counts[attribute_id] += (
+                            masked_values_nodata_removed.size)
                     else:
-                        pixel_min_dict[attribute_id] = min(
-                            pixel_min_dict[attribute_id],
-                            numpy.min(masked_values_nodata_removed))
-                        pixel_max_dict[attribute_id] = max(
-                            pixel_max_dict[attribute_id],
-                            numpy.max(masked_values_nodata_removed))
+                        aggregate_dict_counts[attribute_id] += masked_values.size
 
-                if ignore_nodata:
-                    #Only consider values which are not nodata values
-                    aggregate_dict_counts[attribute_id] += (
-                        masked_values_nodata_removed.size)
-                else:
-                    aggregate_dict_counts[attribute_id] += masked_values.size
-
-                aggregate_dict_values[attribute_id] += numpy.sum(
-                    masked_values_nodata_removed)
+                    aggregate_dict_values[attribute_id] += numpy.sum(
+                        masked_values_nodata_removed)
 
         #Initialize the dictionary to have an n_pixels field that contains the
         #counts of all the pixels used in the calculation.
@@ -974,6 +982,7 @@ def aggregate_raster_values_uri(
     except OSError:
         LOGGER.warn("couldn't remove directory %s" % layer_dir)
 
+    LOGGER.info('done aggregating polygons')
     return result_tuple
 
 
