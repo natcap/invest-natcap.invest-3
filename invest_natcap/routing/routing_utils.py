@@ -80,7 +80,6 @@ def route_flux(
     source_uri = raster_utils.temporary_filename(suffix='.tif')
     absorption_rate_uri = raster_utils.temporary_filename(suffix='.tif')
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_flow_direction)
-    LOGGER.info('starting route_flux by aligning datasets')
     
     raster_utils.align_dataset_list(
         [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
@@ -91,15 +90,10 @@ def route_flux(
     outflow_weights_uri = raster_utils.temporary_filename(suffix='.tif')
     outflow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
 
-    LOGGER.info("finding sinks")
     sink_cell_set = routing_cython_core.find_sinks(dem_uri)
-    LOGGER.info("calculating flow_graph")
     routing_cython_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
-    LOGGER.debug('sinks: %s' % str(sink_cell_set))
-    LOGGER.info("calculating transport")
-    LOGGER.debug('absorption_rate_uri %s' % absorption_rate_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri)
@@ -124,18 +118,15 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
             accumulation
         aoi_uri - (optional) uri to a datasource to mask out the dem"""
 
-    LOGGER.debug("starting flow_accumulation")
     constant_flux_source_uri = raster_utils.temporary_filename(suffix='.tif')
     zero_absorption_source_uri = raster_utils.temporary_filename(suffix='.tif')
     loss_uri = raster_utils.temporary_filename(suffix='.tif')
 
-    LOGGER.debug("creating constant rasters")
     raster_utils.make_constant_raster_from_base_uri(
         dem_uri, 1.0, constant_flux_source_uri)
     raster_utils.make_constant_raster_from_base_uri(
         dem_uri, 0.0, zero_absorption_source_uri)
 
-    LOGGER.debug("routing flux")
     route_flux(
         flow_direction_uri, dem_uri, constant_flux_source_uri,
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',

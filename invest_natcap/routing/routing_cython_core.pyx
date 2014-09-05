@@ -78,7 +78,6 @@ def calculate_transport(
     #Calculate flow graph
 
     #Pass transport
-    LOGGER.info('Processing transport through grid')
     start = time.clock()
 
     #Create output arrays for loss and flux
@@ -197,7 +196,7 @@ def calculate_transport(
     while cells_to_process.size() > 0:
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info('Steps cells_to_process.size() = %d' % (cells_to_process.size()))
+            LOGGER.info('calculate transport cells_to_process.size() = %d' % (cells_to_process.size()))
             last_time = current_time
     
         current_index = cells_to_process.top()
@@ -293,11 +292,8 @@ def calculate_transport(
                 cell_neighbor_to_process.push(0)
                 break
 
-    LOGGER.info('Flushing remaining dirty cache to disk')
     block_cache.flush_cache()
-    LOGGER.info('Done processing transport elapsed time %ss' %
-                (time.clock() - start))
-
+    
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -322,7 +318,6 @@ def calculate_flow_weights(
 
         returns nothing"""
 
-    LOGGER.info('Calculating flow graph')
     start = time.clock()
 
     flow_direction_dataset = gdal.Open(flow_direction_uri)
@@ -447,13 +442,10 @@ def calculate_flow_weights(
                             #we found the outflow direction
                             break
                     if not found:
-                        LOGGER.debug('no flow direction found for %s %s' % \
+                        LOGGER.warn('no flow direction found for %s %s' % \
                                          (row_index, col_index))
     block_cache.flush_cache()
         
-    LOGGER.info('Done calculating flow weights elapsed time %ss' % \
-                    (time.clock()-start))
-
 
 '''def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,
@@ -663,8 +655,6 @@ cdef struct Row_Col_Weight_Tuple:
 cdef _build_flat_set(
     char *dem_uri, float nodata_value, c_set[int] &flat_set):
     
-    LOGGER.debug('in _build_flat_set')
-    
     cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
     
@@ -756,7 +746,6 @@ def fill_pits(dem_uri, dem_out_uri):
     cdef int n_cols = dem_ds.RasterXSize
         
     dem_band = dem_ds.GetRasterBand(1)
-    LOGGER.info('in fill pits input dem blocksize %s, dem_uri = %s' % (str(dem_band.GetBlockSize()), dem_uri))
         
     #copy the dem to a different dataset so we know the type
     dem_band = dem_ds.GetRasterBand(1)
@@ -810,8 +799,7 @@ def fill_pits(dem_uri, dem_out_uri):
             
         dem_out_band.WriteArray(
             dem_array[1, :].reshape((1,n_cols)), xoff=0, yoff=row_index)
-    LOGGER.info("%d pits were filled." % (pit_count,))
-   
+    
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -865,8 +853,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
     cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
 
-    LOGGER.info('identify flat cells')
-    
     #search for flat cells
     #search for flat areas, iterate through the array 3 rows at a time
     cdef c_set[int] flat_set
@@ -874,7 +860,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     _build_flat_set(dem_tmp_fill_uri, nodata_value, flat_set)
-    LOGGER.debug("flat_set size %d" % (flat_set.size()))
     
     dem_out_ds = gdal.Open(dem_tmp_fill_uri, gdal.GA_Update)
     dem_out_band = dem_out_ds.GetRasterBand(1)
@@ -884,8 +869,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     #keep the old one for rapid testing of flat cells
     for flat_index in flat_set:
         flat_set_for_looping.insert(flat_set_for_looping.end(), flat_index)
-
-    LOGGER.info('finished flat cell detection, now identify plateaus')
 
     dem_sink_offset_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(
@@ -901,7 +884,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_ds = gdal.Open(dem_edge_offset_uri, gdal.GA_Update)
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
-    LOGGER.info('identify sink cells')
     cdef int sink_cell_hits = 0, edge_cell_hits = 0
 
     cdef queue[int] flat_region_queue
@@ -1114,7 +1096,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 edge_queue.push(t)
                 
     #Find max distance
-    LOGGER.debug('calculating max distance')
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] block
     cdef int max_distance = -1
 
@@ -1140,8 +1121,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 #no non-infinity elements, that's normal
                 pass
 
-    LOGGER.debug("max_distance %s" % (str(max_distance)))
-    
     #Add the final offsets to the dem array
     def offset_dem(dem_sink_offset_array, dem_edge_offset_array, dem_array):
         mask_array = ((dem_sink_offset_array != INF) &
@@ -1163,7 +1142,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         return dem_array
 
     
-    LOGGER.info('saving back the dirty cache')
     block_cache.flush_cache()
     
     dem_out_band = None
@@ -1304,8 +1282,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef BlockCache block_cache = BlockCache(
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
-    LOGGER.info("calculating d-inf per pixel flows")
-    
     cdef int row_offset, col_offset
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
@@ -1506,8 +1482,6 @@ def find_sinks(dem_uri):
     cdef int n_rows = dem_band.YSize
     cdef double nodata_value = raster_utils.get_nodata_from_uri(dem_uri)
     
-    LOGGER.debug("n_cols, n_rows %d %d" % (n_cols, n_rows))
-
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = (
         numpy.zeros((3, n_cols), dtype=numpy.float32))
         
@@ -1690,8 +1664,6 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
                         #it's a stream, remember that
                         visit_stack.push(global_row * n_cols + global_col)
 
-    LOGGER.info('number of stream pixels %d' % (visit_stack.size()))
-    
     cdef int flat_index
     cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
@@ -1728,7 +1700,6 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
             #it's a stream, set distance to zero
             distance_block[row_index, col_index, row_block_offset, col_block_offset] = 0
             cache_dirty[row_index, col_index] = 1
-            #LOGGER.debug('distance block 0 on stream')
         else:
             #check to see if downstream neighbors are processed
             downstream_uncalculated = False
@@ -1765,7 +1736,6 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
             block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
             distance_block[row_index, col_index, row_block_offset, col_block_offset] = 0
             cache_dirty[row_index, col_index] = 1
-            #LOGGER.debug('initializing distance block to 0')
             outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
             outflow_direction = outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset]
             for downstream_index in range(2):
