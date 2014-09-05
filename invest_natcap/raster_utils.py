@@ -2026,13 +2026,15 @@ def resize_and_resample_dataset_uri(
         try:
             current_time = time.time()
             if ((current_time - reproject_callback.last_time) > 5.0 or
-                    df_complete == 1.0):
+                    (df_complete == 1.0 and reproject_callback.total_time >= 5.0)):
                 LOGGER.info(
                     "ReprojectImage %.1f%% complete %s, psz_message %s",
                     df_complete * 100, p_progress_arg[0], psz_message)
                 reproject_callback.last_time = current_time
+                reproject_callback.total_time += current_time
         except AttributeError:
             reproject_callback.last_time = time.time()
+            reproject_callback.total_time = 0.0
 
     # Perform the projection/resampling
     gdal.ReprojectImage(
