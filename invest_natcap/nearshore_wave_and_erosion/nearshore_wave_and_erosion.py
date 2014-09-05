@@ -401,6 +401,8 @@ def execute(args):
 
     # Initializations
     args['cell_size'] = args['model_resolution']
+    args['max_land_profile_len'] = 200
+    args['max_land_profile_height'] = 20
 
     # Preprocess the landmass
     print('Pre-processing landmass...')

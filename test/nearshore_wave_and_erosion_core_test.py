@@ -82,7 +82,8 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
             contents = json.load(args_file)
             args = contents['arguments']
             self.add_intermediate_output_directories(args)
-
+            args['max_land_profile_len'] = 200
+            args['max_land_profile_height'] = 20
         # precompute directions
         SECTOR_COUNT = 16 
         rays_per_sector = 1
@@ -156,6 +157,8 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
             args['shore_raster_uri'] = shore_raster_uri
             args['bathymetry_raster_uri'] = bathymetry_raster_uri
             self.add_intermediate_output_directories(args)
+            args['max_land_profile_len'] = 200
+            args['max_land_profile_height'] = 20
         nearshore_wave_and_erosion_core.compute_transects(args)
 
     def tare_down(self):

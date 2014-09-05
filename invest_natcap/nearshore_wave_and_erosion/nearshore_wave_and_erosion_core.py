@@ -153,7 +153,9 @@ def compute_transects(args):
 
     # Compute transect end points
     transect_endpoints = compute_transect_endpoints(shore_points, \
-        valid_transects, direction_vectors, bathymetry, land)
+        valid_transects, direction_vectors, bathymetry, land, \
+        args['model_resolution'], args['max_land_profile_len'], \
+        args['max_land_profile_height'], args['max_profile_length'])
 
     # Save transect end points
 
@@ -164,9 +166,16 @@ def compute_transects(args):
     # Save bathymetry samples along transects
 
 def compute_transect_endpoints(shore_points, valid_transects, \
-    direction_vectors, bathymetry, landmass):
+    direction_vectors, bathymetry, landmass, cell_size, \
+    max_land_profile_len, max_land_profile_height, \
+    max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
     LOGGER.debug('Computing transect endpoints...')
+
+    # Maximum transect extents
+    max_land_len = max_land_profile_len / cell_size
+    max_sea_len = max_sea_profile_len / cell_size    
+
     # Repeat for each shore segment
     for segment in range(shore_points[0].size):
         transect = 0
@@ -178,18 +187,40 @@ def compute_transect_endpoints(shore_points, valid_transects, \
             d_i = direction_vectors[0][direction]
             d_j = direction_vectors[1][direction]
 
+            # For each point along the transect
             start_i = p_i - d_i
             start_j = p_j - d_j
-            assert landmass[int(start_i)][int(start_j)] == 1
-            # For each point along the transect
-            inland = 1
-            start_i -= d_i
-            start_j -= d_j
+            highest_index = 0
 
-            while landmass[int(start_i), int(start_j)] == 1:
-                start_i -= d_i
-                start_j -= d_j
-                inland += 1
+            # If no land behind the piece of land, stop there and report 0
+            if not landmass[int(start_i), int(start_j)]:
+                inland = 0
+            # Else, count from 1
+            else:
+                highest_point = max(0, bathymetry[int(start_i), int(start_j)])
+                highest_index = 0
+                # Stop when maximum inland distance is reached
+                for inland in range(1, max_land_len + 1):
+                    elevation = bathymetry[int(start_i), int(start_j)]
+                    # Hit either nodata, or some bad data
+                    if elevation < -11000:
+                        inland -= 1
+                        break
+                    # Keep track of highest point so far
+                    if elevation >= highest_point:
+                        highest_point = elevation
+                        highest_index = inland
+                    # Stop at maximum elevation
+                    if elevation > 20:
+                        break
+                    # Stop if shore is reached
+                    if not landmass[int(start_i), int(start_j)]:
+                        break
+                    start_i -= d_i
+                    start_j -= d_j
+            # Adjust to highest point if necessary
+            if bathymetry[int(start_i), int(start_j)] < highest_point:
+                inland = highest_index
             transect += 1
             print('segment', segment, 'transect', transect, 'inland', inland)
 
