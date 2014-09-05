@@ -185,8 +185,6 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef int n_cols = input_mask_ds.RasterXSize
     cdef int n_rows = input_mask_ds.RasterYSize
     cdef int block_size = input_mask_band.GetBlockSize()[0]
-    LOGGER.info("input mask block_size %d" % (block_size))
-
     cdef int input_nodata = input_mask_band.GetNoDataValue()
 
     #create a transposed g function
@@ -221,7 +219,6 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
     cdef int numerical_inf = n_cols + n_rows
 
     LOGGER.info('Distance Transform Phase 1')
-    
     output_blocksize = output_band.GetBlockSize()
     if output_blocksize[0] != block_size or output_blocksize[1] != block_size:
         raise Exception(
@@ -380,7 +377,6 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     gdal.Dataset.__swig_destroy__(base_raster)
     new_raster = None
     base_raster = None
-    LOGGER.info('Finished creating new raster from base')
 
 
 def new_raster_from_base(
@@ -435,7 +431,6 @@ def new_raster_from_base(
                 'BLOCKXSIZE=256',
                 'BLOCKYSIZE=256',
                 'BIGTIFF=IF_SAFER']
-    LOGGER.info('raster_cython_core.new_raster_from_base dataset_options=%s' % str(dataset_options))
     new_raster = driver.Create(
         output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype,
         options=dataset_options)
@@ -443,13 +438,10 @@ def new_raster_from_base(
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
 
-    LOGGER.info('Setting nodata value=%s', nodata)
     band.SetNoDataValue(nodata)
     if fill_value != None:
-        LOGGER.info('Filling band with %s', fill_value)
         band.Fill(fill_value)
     else:
-        LOGGER.info('Filling band with nodata=%s', nodata)
         band.Fill(nodata)
     band = None
 
