@@ -153,24 +153,45 @@ def compute_transects(args):
 
     # Compute transect end points
     transect_endpoints = compute_transect_endpoints(shore_points, \
-        valid_transects, direction_vectors, bathymetry)
+        valid_transects, direction_vectors, bathymetry, land)
+
+    # Save transect end points
 
     # Sample bathymetry along transects
     shore_profiles = sample_bathymetry_along_transects(bathymetry, \
         transect_endpoints, shore_points, direction_vectors)
 
+    # Save bathymetry samples along transects
+
 def compute_transect_endpoints(shore_points, valid_transects, \
-    direction_vectors, bathymetry):
+    direction_vectors, bathymetry, landmass):
     """ compute the transect endpoints that will be used to cut transects"""
     LOGGER.debug('Computing transect endpoints...')
-    for p in range(shore_points[0].size):
-        d = 0
-        while valid_transects[p][d] > -1:
-            point = [shore_points[0], shore_points[1]]
-            ind = valid_transects[p][d]
-            i = direction_vectors[0][ind]
-            j = direction_vectors[1][ind]
-            d += 1
+    # Repeat for each shore segment
+    for segment in range(shore_points[0].size):
+        transect = 0
+        # For each valid transect
+        while valid_transects[segment][transect] > -1:
+            p_i = shore_points[0][segment]
+            p_j = shore_points[1][segment]
+            direction = valid_transects[segment][transect]
+            d_i = direction_vectors[0][direction]
+            d_j = direction_vectors[1][direction]
+
+            start_i = p_i - d_i
+            start_j = p_j - d_j
+            assert landmass[int(start_i)][int(start_j)] == 1
+            # For each point along the transect
+            inland = 1
+            start_i -= d_i
+            start_j -= d_j
+
+            while landmass[int(start_i), int(start_j)] == 1:
+                start_i -= d_i
+                start_j -= d_j
+                inland += 1
+            transect += 1
+            print('segment', segment, 'transect', transect, 'inland', inland)
 
 def sample_bathymetry_along_transects(bathymetry, valid_transects, \
     shore_points, direction_vectors):
@@ -269,7 +290,7 @@ def fetch_vectors(angles):
 
     for a in range(len(angles)):
         pi = math.pi
-        directions[0, a] = round(math.cos(.5 * pi - angles[a]), 10)
+        directions[0, a] = round(-math.cos(.5 * pi - angles[a]), 10)
         directions[1, a] = round(math.sin(.5 * pi - angles[a]), 10)
     return directions
 
