@@ -303,7 +303,7 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
     # Create the raster that will contain the new data
     raster = \
         raster_utils.create_raster_from_vector_extents(cell_size, 
-        cell_size, datatype, raster_utils.gdal_cast(nodata, datatype), \
+        cell_size, datatype, nodata, \
         output_uri, aoi)
     layer = shapefile.GetLayer(0)
     # Add the all_touched option
@@ -389,9 +389,10 @@ def execute(args):
     """
 
     # Add the Output directory onto the given workspace
-    workspace_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(workspace_dir):
-        os.makedirs(workspace_dir)
+    args['output_dir'] = \
+        os.path.join(args['workspace_dir'], 'output')
+    if not os.path.isdir(args['output_dir']):
+        os.makedirs(args['output_dir'])
     # Add the intermediate directory as well
     args['intermediate_dir'] = \
         os.path.join(args['workspace_dir'], 'intermediate')
@@ -399,8 +400,7 @@ def execute(args):
         os.makedirs(args['intermediate_dir'])
 
     # Initializations
-    args['cell_size'] = \
-        raster_utils.get_cell_size_from_uri(args['bathymetry_uri'])
+    args['cell_size'] = args['model_resolution']
 
     # Preprocess the landmass
     print('Pre-processing landmass...')
@@ -409,7 +409,7 @@ def execute(args):
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
-    # Preprocessing the AIO
+    # Preprocessing the AOI
     args['aoi_raster_uri'] = \
         preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
@@ -420,6 +420,38 @@ def execute(args):
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
+    # Uniformize the size of shore, land, and bathymetry rasters
+    in_raster_list = [args['landmass_raster_uri'], \
+        args['bathymetry_raster_uri']]
+
+    tmp_landmass_raster = raster_utils.temporary_filename()
+    (head, tail) = os.path.split(args['landmass_raster_uri'])
+    tmp_bathy_raster = raster_utils.temporary_filename()
+
+    out_raster_list = [tmp_landmass_raster, tmp_bathy_raster]
+
+    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
+    resample_method_list = ['bilinear'] * len(out_raster_list)
+    out_pixel_size = cell_size
+    mode = 'dataset'
+    dataset_to_align_index = 0
+    dataset_to_bound_index = 0
+
+    raster_utils.align_dataset_list( \
+        in_raster_list, out_raster_list, resample_method_list,
+        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+
+    shutil.copy(tmp_landmass_raster, args['landmass_raster_uri'])
+    shutil.copy(tmp_bathy_raster, args['bathymetry_raster_uri'])
+
+    landmass_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
+    bathymetry_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
+
+    assert landmass_raster_shape == bathymetry_raster_shape
+    
 
     nearshore_wave_and_erosion_core.execute(args)
 

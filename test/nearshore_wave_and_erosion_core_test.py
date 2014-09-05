@@ -34,6 +34,18 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
         """
         pass
 
+    def add_intermediate_output_directories(self, args):
+        # Add the Output directory onto the given workspace
+        args['output_dir'] = \
+            os.path.join(args['workspace_dir'], 'output')
+        if not os.path.isdir(args['output_dir']):
+            os.makedirs(args['output_dir'])
+        # Add the intermediate directory as well
+        args['intermediate_dir'] = \
+            os.path.join(args['workspace_dir'], 'intermediate')
+        if not os.path.isdir(args['intermediate_dir']):
+            os.makedirs(args['intermediate_dir'])
+
     def test_find_valid_transects(self):
         """Test if number of valid transects is ok"""
         # Extract shore
@@ -69,6 +81,7 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
         with open(args_uri) as args_file:
             contents = json.load(args_file)
             args = contents['arguments']
+            self.add_intermediate_output_directories(args)
 
         # precompute directions
         SECTOR_COUNT = 16 
@@ -142,7 +155,8 @@ class TestNearshoreWaveAndErosionCore(unittest.TestCase):
             args['landmass_raster_uri'] = landmass_raster_uri
             args['shore_raster_uri'] = shore_raster_uri
             args['bathymetry_raster_uri'] = bathymetry_raster_uri
-            nearshore_wave_and_erosion_core.compute_transects(args)
+            self.add_intermediate_output_directories(args)
+        nearshore_wave_and_erosion_core.compute_transects(args)
 
     def tare_down(self):
         """ Clean up code."""
