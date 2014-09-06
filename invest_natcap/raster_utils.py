@@ -298,15 +298,9 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     pixel_size_y = geo_tran[5]
     top_left_x = point[0]
     top_left_y = point[1]
-    LOGGER.debug('pixel_size_x: %s', pixel_size_x)
-    LOGGER.debug('pixel_size_x: %s', pixel_size_y)
-    LOGGER.debug('top_left_x : %s', top_left_x)
-    LOGGER.debug('top_left_y : %s', top_left_y)
     #Create the second point by adding the pixel width/height
     new_x = top_left_x + pixel_size_x
     new_y = top_left_y + pixel_size_y
-    LOGGER.debug('top_left_x : %s', new_x)
-    LOGGER.debug('top_left_y : %s', new_y)
     #Transform two points into meters
     point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
     point_2 = coord_trans.TransformPoint(new_x, new_y)
@@ -316,10 +310,6 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     #increases to the right (right handed coordinate system).
     pixel_diff_x = abs(point_2[0] - point_1[0])
     pixel_diff_y = abs(point_2[1] - point_1[1])
-    LOGGER.debug('point1 : %s', point_1)
-    LOGGER.debug('point2 : %s', point_2)
-    LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
-    LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
     return (pixel_diff_x, pixel_diff_y)
 
 
@@ -694,11 +684,7 @@ def aggregate_raster_values_uri(
            calculation.  hectare_mean is None if raster_uri is unprojected.
         """
 
-    LOGGER.debug('Collecting raster stats from %s', raster_uri)
-    LOGGER.debug('Aggregating values by vector %s', shapefile_uri)
-
     raster_nodata = get_nodata_from_uri(raster_uri)
-
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
@@ -712,14 +698,11 @@ def aggregate_raster_values_uri(
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
     mask_uri = temporary_filename(suffix='.tif')
-    LOGGER.info('Creating the mask raster at %s', mask_uri)
     new_raster_from_base_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
 
-    LOGGER.info('Opening mask dataset %s', mask_uri)
     mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
-    LOGGER.info('Opening shapefile %s', shapefile_uri)
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
@@ -730,7 +713,6 @@ def aggregate_raster_values_uri(
         rasterize_layer_args['options'].append('ALL_TOUCHED=TRUE')
 
     if shapefile_field is not None:
-        LOGGER.info('User provided shapefile field %s', shapefile_field)
         #Make sure that the layer name refers to an integer
         layer_d = shapefile_layer.GetLayerDefn()
         fd = layer_d.GetFieldDefn(layer_d.GetFieldIndex(shapefile_field))
@@ -750,8 +732,7 @@ def aggregate_raster_values_uri(
         #9999 is a classic unknown value
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
-    LOGGER.info('Rasterize options: %s', rasterize_layer_args['options'])
-
+    
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}
     aggregate_dict_counts = {}
@@ -767,7 +748,6 @@ def aggregate_raster_values_uri(
         pixel_max={})
 
     #make a shapefile that non-overlapping layers can be added to
-    LOGGER.info('Creating new temp vector for non-overlapping layers')
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
     subset_layer_datasouce = driver.CreateDataSource(
@@ -779,7 +759,6 @@ def aggregate_raster_values_uri(
 
     #For every field, create a duplicate field and add it to the new
     #subset_layer layer
-    LOGGER.info('Creating new fields in temp vector')
     defn.GetFieldCount()
     for fld_index in range(defn.GetFieldCount()):
         original_field = defn.GetFieldDefn(fld_index)
@@ -811,9 +790,13 @@ def aggregate_raster_values_uri(
     minimal_polygon_sets = calculate_disjoint_polygon_set(
         shapefile_uri)
 
+    clipped_band = clipped_raster.GetRasterBand(1)
+    n_rows = clipped_band.YSize
+    n_cols = clipped_band.XSize
+    block_col_size, block_row_size = clipped_band.GetBlockSize()
+
     for polygon_set in minimal_polygon_sets:
         #add polygons to subset_layer
-        LOGGER.info('processing polygon_set %s' % (str(polygon_set)))
         for poly_fid in polygon_set:
             poly_feat = shapefile_layer.GetFeature(poly_fid)
             subset_layer.CreateFeature(poly_feat)
@@ -853,58 +836,61 @@ def aggregate_raster_values_uri(
 
         mask_dataset.FlushCache()
         mask_band = mask_dataset.GetRasterBand(1)
-
-        #Loop over each row in out_band
-        clipped_band = clipped_raster.GetRasterBand(1)
         current_iteration_attribute_ids = set()
-        for row_index in range(clipped_band.YSize):
-            mask_array = mask_band.ReadAsArray(
-                0, row_index, mask_band.XSize, 1)
-            clipped_array = clipped_band.ReadAsArray(
-                0, row_index, clipped_band.XSize, 1)
 
-            unique_ids = numpy.unique(mask_array)
-            current_iteration_attribute_ids = (
-                current_iteration_attribute_ids.union(unique_ids))
-            for attribute_id in unique_ids:
-                #ignore masked values
-                if attribute_id == mask_nodata:
-                    continue
+        for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
+            for global_block_col in xrange(int(numpy.ceil(float(n_cols) / block_col_size))):
+                global_col = global_block_col*block_col_size
+                global_row = global_block_row*block_row_size
+                global_col_size = min((global_block_col+1)*block_col_size, n_cols) - global_col
+                global_row_size = min((global_block_row+1)*block_row_size, n_rows) - global_row
+                mask_array = mask_band.ReadAsArray(
+                    global_col, global_row, global_col_size, global_row_size)
+                clipped_array = clipped_band.ReadAsArray(
+                    global_col, global_row, global_col_size, global_row_size)
 
-                #Only consider values which lie in the polygon for attribute_id
-                masked_values = clipped_array[
-                    (mask_array == attribute_id) &
-                    (~numpy.isnan(clipped_array))]
-                #Remove the nodata and ignore values for later processing
-                masked_values_nodata_removed = (
-                    masked_values[~numpy.in1d(
-                        masked_values, [raster_nodata] + ignore_value_list).
-                        reshape(masked_values.shape)])
+                unique_ids = numpy.unique(mask_array)
+                current_iteration_attribute_ids = (
+                    current_iteration_attribute_ids.union(unique_ids))
+                for attribute_id in unique_ids:
+                    #ignore masked values
+                    if attribute_id == mask_nodata:
+                        continue
 
-                #Find the min and max which might not yet be calculated
-                if masked_values_nodata_removed.size > 0:
-                    if pixel_min_dict[attribute_id] is None:
-                        pixel_min_dict[attribute_id] = numpy.min(
-                            masked_values_nodata_removed)
-                        pixel_max_dict[attribute_id] = numpy.max(
-                            masked_values_nodata_removed)
+                    #Only consider values which lie in the polygon for attribute_id
+                    masked_values = clipped_array[
+                        (mask_array == attribute_id) &
+                        (~numpy.isnan(clipped_array))]
+                    #Remove the nodata and ignore values for later processing
+                    masked_values_nodata_removed = (
+                        masked_values[~numpy.in1d(
+                            masked_values, [raster_nodata] + ignore_value_list).
+                            reshape(masked_values.shape)])
+
+                    #Find the min and max which might not yet be calculated
+                    if masked_values_nodata_removed.size > 0:
+                        if pixel_min_dict[attribute_id] is None:
+                            pixel_min_dict[attribute_id] = numpy.min(
+                                masked_values_nodata_removed)
+                            pixel_max_dict[attribute_id] = numpy.max(
+                                masked_values_nodata_removed)
+                        else:
+                            pixel_min_dict[attribute_id] = min(
+                                pixel_min_dict[attribute_id],
+                                numpy.min(masked_values_nodata_removed))
+                            pixel_max_dict[attribute_id] = max(
+                                pixel_max_dict[attribute_id],
+                                numpy.max(masked_values_nodata_removed))
+
+                    if ignore_nodata:
+                        #Only consider values which are not nodata values
+                        aggregate_dict_counts[attribute_id] += (
+                            masked_values_nodata_removed.size)
                     else:
-                        pixel_min_dict[attribute_id] = min(
-                            pixel_min_dict[attribute_id],
-                            numpy.min(masked_values_nodata_removed))
-                        pixel_max_dict[attribute_id] = max(
-                            pixel_max_dict[attribute_id],
-                            numpy.max(masked_values_nodata_removed))
+                        aggregate_dict_counts[attribute_id] += masked_values.size
 
-                if ignore_nodata:
-                    #Only consider values which are not nodata values
-                    aggregate_dict_counts[attribute_id] += (
-                        masked_values_nodata_removed.size)
-                else:
-                    aggregate_dict_counts[attribute_id] += masked_values.size
-
-                aggregate_dict_values[attribute_id] += numpy.sum(
-                    masked_values_nodata_removed)
+                    aggregate_dict_values[attribute_id] += numpy.sum(
+                        masked_values_nodata_removed)
 
         #Initialize the dictionary to have an n_pixels field that contains the
         #counts of all the pixels used in the calculation.
@@ -1020,15 +1006,12 @@ def reclassify_by_dictionary(
             in_nodata = dataset.GetRasterBand(1).GetNoDataValue()
             rules[in_nodata] = nodata
 
-    LOGGER.info('Creating a new raster for reclassification')
     output_dataset = new_raster_from_base(
         dataset, output_uri, format, nodata, datatype)
-    LOGGER.info('Starting cythonized reclassification')
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype,
         output_dataset,)
     calculate_raster_stats_uri(output_uri)
-    LOGGER.info('Finished reclassification')
     return output_dataset
 
 
@@ -1044,7 +1027,6 @@ def calculate_slope(
 
         returns nothing"""
 
-    LOGGER.info('calculate slope on %s', dem_dataset_uri)
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     dem_nodata = get_nodata_from_uri(dem_dataset_uri)
 
@@ -1057,8 +1039,6 @@ def calculate_slope(
         gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=aoi_uri, process_pool=process_pool,
         vectorize_op=False)
-
-    LOGGER.debug("calculate slope")
 
     slope_nodata = -9999.0
     new_raster_from_base_uri(
@@ -1098,17 +1078,14 @@ def clip_dataset_uri(
     band, nodata = extract_band_and_nodata(source_dataset)
     datatype = band.DataType
 
-    LOGGER.info("raw clip_dataset nodata value is %s", nodata)
     if nodata is None:
         nodata = calculate_value_not_in_dataset(source_dataset)
 
-    LOGGER.info("clip_dataset nodata value is %s", nodata)
     gdal.Dataset.__swig_destroy__(source_dataset)
     source_dataset = None
 
     pixel_size = get_cell_size_from_uri(source_dataset_uri)
 
-    LOGGER.info("clipping dataset %s", source_dataset_uri)
     vectorize_datasets(
         [source_dataset_uri], lambda x: x, out_dataset_uri, datatype, nodata,
         pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
@@ -1286,7 +1263,6 @@ def get_raster_properties(dataset):
     dataset_dict['height'] = float(geo_transform[5])
     dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize
-    LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
 
 
@@ -1341,8 +1317,6 @@ def warp_reproject_dataset_uri(
     # to properly set the resampled size for the output dataset
     (ulx, uly) = (geo_t[0], geo_t[3])
     (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
-
-    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s", ulx, uly, lrx, lry)
 
     gdal_driver = gdal.GetDriverByName('GTiff')
 
@@ -1614,8 +1588,6 @@ def gaussian_filter_dataset(
 
        returns the filtered dataset created at out_uri"""
 
-    LOGGER.info('setting up files in gaussian_filter_dataset')
-
     #Create a system temporary directory if one doesn't exist.
     #If the parameter temp_dir is None, the default tempfile location is used.
     #If the parameter temp_dir is a folder, a temp folder is created inside of
@@ -1633,19 +1605,13 @@ def gaussian_filter_dataset(
     out_band, out_nodata = extract_band_and_nodata(out_dataset)
 
     shape = (source_band.YSize, source_band.XSize)
-    LOGGER.info('shape %s', str(shape))
-
-    LOGGER.info('make the source memmap at %s', source_filename)
     source_array = numpy.memmap(
         source_filename, dtype='float32', mode='w+', shape=shape)
-    LOGGER.info('make the mask memmap at %s', mask_filename)
     mask_array = numpy.memmap(
         mask_filename, dtype='bool', mode='w+', shape=shape)
-    LOGGER.info('make the dest memmap at %s', dest_filename)
     dest_array = numpy.memmap(
         dest_filename, dtype='float32', mode='w+', shape=shape)
 
-    LOGGER.info('load dataset into source array')
     for row_index in xrange(source_band.YSize):
         #Load a row so we can mask
         row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
@@ -1657,19 +1623,15 @@ def gaussian_filter_dataset(
         #remember the mask in the memory mapped array
         mask_array[row_index, :] = mask_row
 
-    LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
         source_array, sigma=sigma, output=dest_array)
 
-    LOGGER.info('mask the result back to nodata where originally nodata')
     dest_array[mask_array] = out_nodata
 
-    LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
 
     calculate_raster_stats_uri(out_uri)
 
-    LOGGER.info('deleting %s', temp_dir)
     dest_array = None
     mask_array = None
     source_array = None
@@ -1761,7 +1723,6 @@ def reclassify_dataset(
            if exception_flag == 'values_required' and the value from
            'key_raster' is not a key in 'attr_dict'"""
 
-    LOGGER.info('Reclassifying')
     out_dataset = new_raster_from_base(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
@@ -1774,7 +1735,6 @@ def reclassify_dataset(
     #Make an array the same size as the max entry in the dictionary of the same
     #type as the output type.  The +2 adds an extra entry for the nodata values
     #The dataset max ensures that there are enough values in the array
-    LOGGER.info('Creating lookup numpy array')
     valid_set = set(value_map.keys())
     map_array_size = max(dataset_max, max(valid_set)) + 2
     valid_set.add(map_array_size - 1) #add the index for nodata
@@ -1784,8 +1744,6 @@ def reclassify_dataset(
 
     for key, value in value_map.iteritems():
         map_array[0, key] = value
-
-    LOGGER.info('Looping through rows in the input data')
 
     for row_index in xrange(in_band.YSize):
         row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
@@ -1807,7 +1765,6 @@ def reclassify_dataset(
         row_array = map_array[numpy.ix_([0], row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
 
-    LOGGER.info('Flushing the cache and exiting reclassification')
     out_dataset.FlushCache()
     return out_dataset
 
@@ -2033,8 +1990,6 @@ def resize_and_resample_dataset_uri(
 
     #create the new x and y size
     block_size = original_band.GetBlockSize()
-    LOGGER.info(
-        'resize_and_resample_dataset_uri %s band size: %s', original_dataset_uri, block_size)
     #If the original band is tiled, then its x blocksize will be different than
     #the number of columns
     if block_size[0] != original_band.XSize and original_band.XSize > 256 and original_band.YSize > 256:
@@ -2050,7 +2005,6 @@ def resize_and_resample_dataset_uri(
             'BLOCKYSIZE=%d' % block_size[1]]
 
     create_directories([os.path.dirname(output_uri)])
-    LOGGER.debug('resize_and_resample_dataset_uri gtiff_creation_options %s' % (gtiff_creation_options))
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
@@ -2072,13 +2026,15 @@ def resize_and_resample_dataset_uri(
         try:
             current_time = time.time()
             if ((current_time - reproject_callback.last_time) > 5.0 or
-                    df_complete == 1.0):
+                    (df_complete == 1.0 and reproject_callback.total_time >= 5.0)):
                 LOGGER.info(
                     "ReprojectImage %.1f%% complete %s, psz_message %s",
                     df_complete * 100, p_progress_arg[0], psz_message)
                 reproject_callback.last_time = current_time
+                reproject_callback.total_time += current_time
         except AttributeError:
             reproject_callback.last_time = time.time()
+            reproject_callback.total_time = 0.0
 
     # Perform the projection/resampling
     gdal.ReprojectImage(
@@ -2235,7 +2191,6 @@ def align_dataset_list(
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
-        LOGGER.info('building aoi mask')
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
@@ -2247,18 +2202,12 @@ def align_dataset_list(
             gdal.GDT_Byte, fill_value=0)
 
         mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
-        LOGGER.debug('Mask dataset projection: %s',
-            mask_dataset.GetProjection())
         mask_band = mask_dataset.GetRasterBand(1)
-        LOGGER.info('Opening AOI layer %s', aoi_uri)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
-        LOGGER.info('Rasterizing the AOI to %s', mask_uri)
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
-
         mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
-        LOGGER.info('masking out each output dataset')
         out_dataset_list = [
             gdal.Open(uri, gdal.GA_Update) for uri in dataset_out_uri_list]
         out_band_list = [
@@ -2276,7 +2225,6 @@ def align_dataset_list(
                     numpy.where(mask_row, nodata_out, dataset_row),
                     xoff=0, yoff=row_index)
 
-        LOGGER.info('Cleaning up mask dataset')
         #Remove the mask aoi if necessary
         mask_band = None
         gdal.Dataset.__swig_destroy__(mask_dataset)
@@ -2284,7 +2232,6 @@ def align_dataset_list(
         #Make sure the dataset is closed and cleaned up
         os.remove(mask_uri)
 
-        LOGGER.info('Cleaning up AOI')
         aoi_layer = None
         ogr.DataSource.__swig_destroy__(aoi_datasource)
         aoi_datasource = None
@@ -2439,7 +2386,6 @@ def vectorize_datasets(
         dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
     block_size = output_band.GetBlockSize()
-    LOGGER.info('vectorize_datasets %s blocksize %d %d' % (dataset_out_uri, block_size[0], block_size[1]))
     #makes sense to get the largest block size possible to reduce the number
     #of expensive readasarray calls
     for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
@@ -2477,9 +2423,6 @@ def vectorize_datasets(
         LOGGER.warn("this call is vectorizing which is deprecated and slow")
         dataset_pixel_op = numpy.vectorize(dataset_pixel_op)
 
-    LOGGER.info(
-        "reading by rows_per_block, cols_per_block, %d, %d", rows_per_block,
-        cols_per_block)
     dataset_blocks = [
         numpy.zeros(
             (rows_per_block, cols_per_block),
@@ -2597,7 +2540,6 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             return unicode(string, 'utf-8')
         return string
 
-    LOGGER.debug('Getting lookup from %s, key=%s', csv_table_uri, key_field)
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
         header_row = map(lambda s: u(s), csv_reader.next())
@@ -2761,8 +2703,6 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
         return - Nothing"""
 
-    LOGGER.debug('Entering dictionary_to_shapefile')
-
     # If the output_uri exists delete it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
@@ -2770,14 +2710,12 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
         shutil.rmtree(output_uri)
 
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    LOGGER.debug('Create New Datasource')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    LOGGER.debug('Create New Layer')
     output_layer = output_datasource.CreateLayer(
         layer_name, source_sr, ogr.wkbPoint)
 
@@ -2786,8 +2724,7 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[outer_keys[0]].keys()
-    LOGGER.debug('field_list : %s', field_list)
-
+    
     # Create a dictionary to store what variable types the fields are
     type_dict = {}
     for field in field_list:
@@ -2800,7 +2737,6 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
         else:
             type_dict[field] = 'number'
 
-    LOGGER.debug('Creating fields for the datasource')
     for field in field_list:
         field_type = None
         # Distinguish if the field type is of type String or other. If Other, we
@@ -2813,7 +2749,6 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
         output_field = ogr.FieldDefn(field, field_type)
         output_layer.CreateField(output_field)
 
-    LOGGER.debug('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point and set its
     # fields
     for point_dict in dict_data.itervalues():
@@ -3005,8 +2940,6 @@ def calculate_disjoint_polygon_set(shapefile_uri):
     shapefile_layer = shapefile.GetLayer()
 
     poly_intersect_lookup = {}
-    LOGGER.info(
-        'Converting OGR polygons to Shapely polygons for fast intersection')
     for poly_feat in shapefile_layer:
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
         shapely_polygon = shapely.wkt.loads(poly_wkt)
@@ -3018,7 +2951,6 @@ def calculate_disjoint_polygon_set(shapefile_uri):
         }
     shapefile_layer.ResetReading()
 
-    LOGGER.info('Building intersection list')
     for poly_fid in poly_intersect_lookup:
         for intersect_poly_fid in poly_intersect_lookup:
             polygon = poly_intersect_lookup[poly_fid]['prepared']
@@ -3081,9 +3013,7 @@ def distance_transform_edt(
         """converts vector to 1, 0, or nodata value to fit in a byte raster"""
         return numpy.where(
             input_vector == nodata_mask, nodata_out, input_vector != 0)
-    LOGGER.info('converting input mask to byte dataset')
-
-
+    
     #64 seems like a reasonable blocksize
     blocksize = 64
     vectorize_datasets(
@@ -3189,7 +3119,6 @@ def tile_dataset_uri(in_uri, out_uri, blocksize):
     dataset_options=[
         'TILED=YES', 'BLOCKXSIZE=%d' % blocksize, 'BLOCKYSIZE=%d' % blocksize,
         'BIGTIFF=IF_SAFER']
-    LOGGER.info('tiling dataset with options %s' % (str(dataset_options)))
     vectorize_datasets(
         [in_uri], lambda x: x, out_uri, datatype_out,
         nodata_out, pixel_size_out, 'intersection',
