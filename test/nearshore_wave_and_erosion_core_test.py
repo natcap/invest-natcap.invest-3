@@ -22,7 +22,7 @@ from invest_natcap.nearshore_wave_and_erosion \
     import nearshore_wave_and_erosion_core
 
 
-LOGGER = logging.getLogger('nearshore_wave_and_eroasion_test')
+LOGGER = logging.getLogger('nearshore_wave_and_erosion_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

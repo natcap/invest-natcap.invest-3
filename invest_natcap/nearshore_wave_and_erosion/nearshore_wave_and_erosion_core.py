@@ -8,6 +8,7 @@ import logging
 
 import numpy as np
 import scipy as sp
+import h5py as h5
 
 from osgeo import ogr
 from osgeo import gdal
@@ -151,21 +152,27 @@ def compute_transects(args):
     raster = None
 
 
-    # Compute transect end points
-    transect_endpoints = compute_transect_endpoints(shore_points, \
+    # Compute raw transect depths
+    raw_depths = compute_raw_transect_depths(shore_points, \
         valid_transects, valid_transect_count, direction_vectors, bathymetry, \
         land, args['model_resolution'], args['max_land_profile_len'], \
         args['max_land_profile_height'], args['max_profile_length'])
 
-    # Save transect end points
+    # Save raw transect depths
+    raw_transect_depths_uri = \
+        os.path.join(args['intermediate_dir'], 'raw_transect_depths.h5')
+    f = h5.File(raw_transect_depths_uri, 'w')
+    h5_dataset = f.create_dataset('raw_transect_depths', raw_depths.shape)
+    h5_dataset[...] = raw_depths
+    f.close()
 
     # Sample bathymetry along transects
     shore_profiles = sample_bathymetry_along_transects(bathymetry, \
-        transect_endpoints, shore_points, direction_vectors)
+        raw_depths, shore_points, direction_vectors)
 
     # Save bathymetry samples along transects
 
-def compute_transect_endpoints(shore_points, valid_transects, \
+def compute_raw_transect_depths(shore_points, valid_transects, \
     valid_transect_count, \
     direction_vectors, bathymetry, landmass, cell_size, \
     max_land_profile_len, max_land_profile_height, \
