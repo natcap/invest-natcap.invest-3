@@ -400,7 +400,7 @@ def execute(args):
         os.makedirs(args['intermediate_dir'])
 
     # Initializations
-    args['cell_size'] = args['model_resolution']
+    args['cell_size'] = args['transect_spacing']
     args['max_land_profile_len'] = 200
     args['max_land_profile_height'] = 20
 

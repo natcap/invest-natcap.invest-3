@@ -174,15 +174,15 @@ def compute_transects(args):
 
 def compute_raw_transect_depths(shore_points, valid_transects, \
     valid_transect_count, \
-    direction_vectors, bathymetry, landmass, cell_size, \
+    direction_vectors, bathymetry, landmass, model_resolution, \
     max_land_profile_len, max_land_profile_height, \
     max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
     LOGGER.debug('Computing transect endpoints...')
 
     # Maximum transect extents
-    max_land_len = max_land_profile_len / cell_size
-    max_sea_len = 1000 * max_sea_profile_len / cell_size    
+    max_land_len = max_land_profile_len / model_resolution
+    max_sea_len = 1000 * max_sea_profile_len / model_resolution
 
     LOGGER.debug('Creating a %ix%i transect matrix' % \
         (valid_transect_count, max_land_len + max_sea_len))
@@ -252,7 +252,7 @@ def compute_raw_transect_depths(shore_points, valid_transects, \
             lowest_index = 0
 
             # Stop when maximum offshore distance is reached
-            for offshore_steps in range(max_sea_len + 1):
+            for offshore_steps in range(max_sea_len):
                 # Stop if shore is reached
                 if landmass[int(start_i), int(start_j)]:
                     offshore_steps -= 1
@@ -263,7 +263,7 @@ def compute_raw_transect_depths(shore_points, valid_transects, \
                     offshore_steps -= 1
                     break
                 # We can store the depth at this point
-                depths[transect, max_sea_profile_len + offshore_steps] = \
+                depths[transect, max_land_len + offshore_steps] = \
                     elevation
                 # Keep track of lowest point so far
                 if elevation <= lowest_point:
@@ -274,7 +274,7 @@ def compute_raw_transect_depths(shore_points, valid_transects, \
             # Adjust to lowest point if necessary
             if bathymetry[int(start_i), int(start_j)] > lowest_point:
                 offshore_steps = lowest_index
-                depths[transect, max_sea_profile_len + offshore_steps] = \
+                depths[transect, max_land_len + offshore_steps] = \
                     elevation
             # If shore borders nodata, offshore_step is -1, set it to 0
             offshore_steps = max(0, offshore_steps)
