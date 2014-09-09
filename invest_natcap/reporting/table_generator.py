@@ -168,7 +168,7 @@ def generate_table(table_dict, attributes=None):
                 col_headers, total_cols, 'Total', False, tdata_tuples)
 
     if not footer_string == '':
-        table_string += '<tfoot>%s</tfoot>' % footer_string
+        table_string += '<tfoot>%s</tfoot>' % u(footer_string)
 
     # Add the start tag for the table body
     table_string += '<tbody>'
@@ -183,7 +183,7 @@ def generate_table(table_dict, attributes=None):
             if total_cols[row_index]:
                 class_str = 'rowDataSd '
                 if tdata_tuples[row_index][0]:
-                    class_str += tdata_tuples[row_index][1]
+                    class_str += u(tdata_tuples[row_index][1])
                 # Add row data
                 table_string += ('<td class="%s">%s</td>' %
                                     (class_str, row[row_index]))
@@ -191,9 +191,9 @@ def generate_table(table_dict, attributes=None):
                 if tdata_tuples[row_index][0]:
                     class_str = tdata_tuples[row_index][1]
                     table_string += ('<td class="%s">%s</td>' %
-                                        (class_str, row[row_index]))
+                                        (u(class_str), u(row[row_index])))
                 else:
-                    table_string += '<td>%s</td>' % row[row_index]
+                    table_string += '<td>%s</td>' % u(row[row_index])
 
         table_string += '</tr>'
 
