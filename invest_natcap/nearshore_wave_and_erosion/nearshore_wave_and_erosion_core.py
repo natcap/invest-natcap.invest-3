@@ -204,6 +204,8 @@ def compute_raw_transect_depths(shore_points, valid_transects, \
             # Compute the landward part of the transect
             start_i = p_i - d_i
             start_j = p_j - d_j
+
+            highest_point = max(0, bathymetry[int(start_i), int(start_j)])
             highest_index = 0
 
             # If no land behind the piece of land, stop there and report 0
@@ -211,8 +213,6 @@ def compute_raw_transect_depths(shore_points, valid_transects, \
                 inland_steps = 0
             # Else, count from 1
             else:
-                highest_point = max(0, bathymetry[int(start_i), int(start_j)])
-                highest_index = 0
                 # Stop when maximum inland distance is reached
                 for inland_steps in range(1, max_land_len + 1):
                     elevation = bathymetry[int(start_i), int(start_j)]
