@@ -272,6 +272,8 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef int index = -1
     cdef int pixel_id
 
+    print('calling update_pixel_fast on index', a)
+
     for pixel_id in range(2, pixel_count):
         p = active_pixel_array[pixel_id]
         # Inactive pixel: either we skip or we exit
@@ -458,6 +460,7 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        print('a')
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
@@ -499,6 +502,7 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        print('b')
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             i = arg_min[add_event_id]
@@ -528,6 +532,7 @@ def sweep_through_angles( \
             arg_min[add_event_id] = 0
             add_event_id += 1
         # The sweep line is current, now compute pixel visibility
+        print('calling update_visible_pixels_fast')
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map, a+1) 
