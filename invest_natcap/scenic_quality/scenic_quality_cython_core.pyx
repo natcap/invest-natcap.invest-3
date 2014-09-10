@@ -272,7 +272,7 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef int index = -1
     cdef int pixel_id
 
-    print('calling update_pixel_fast on index', a)
+    print('calling update_pixel_fast on index', a, pixel_count)
 
     for pixel_id in range(2, pixel_count):
         p = active_pixel_array[pixel_id]
@@ -294,9 +294,10 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
             max_visibility = p.visibility
 
         # Update the visibility map for this pixel
+        print('    iteration', pixel_id, 'visibility_map at', (I[index], J[index]), visibility_map[I[index], J[index]])
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
-            print('writing', visibility, 'at', (I[index], J[index]))
+            #print('writing', visibility, 'at', (I[index], J[index]))
             visibility_map[I[index], J[index]] = visibility
     visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
