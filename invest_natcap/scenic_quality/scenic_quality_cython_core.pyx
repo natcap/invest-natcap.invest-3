@@ -296,6 +296,7 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         # Update the visibility map for this pixel
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
+            print('writing', visibility, 'at', (I[index], J[index]))
             visibility_map[I[index], J[index]] = visibility
     visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
