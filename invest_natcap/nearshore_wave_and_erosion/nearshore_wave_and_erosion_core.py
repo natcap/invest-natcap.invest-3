@@ -172,6 +172,13 @@ def compute_transects(args):
 
     # Save bathymetry samples along transects
 
+def compute_shore_location(bathymetry, distance_between_transects, model_resolution):
+    """Compute the location of the shore piecewise at much higher resolution
+       than coastal vulnerability.
+       
+    """
+    pass
+
 def compute_raw_transect_depths(shore_points, valid_transects, \
     valid_transect_count, \
     direction_vectors, bathymetry, landmass, model_resolution, \

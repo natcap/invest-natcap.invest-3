@@ -264,7 +264,7 @@ cdef struct ActivePixel:
 cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     np.ndarray[np.int32_t, ndim = 1] I, \
     np.ndarray[np.int32_t, ndim = 1] J, \
-    int pixel_count, np.ndarray[np.float64_t, ndim = 2] visibility_map):
+    int pixel_count, np.ndarray[np.float64_t, ndim = 2] visibility_map, int a):
         
     cdef ActivePixel p
     cdef double max_visibility = -1000000.
@@ -295,6 +295,7 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
             visibility_map[I[index], J[index]] = visibility
+    visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
 def _active_pixel_index(O, P, E):
     O = [float(O[0]), float(O[1])]
@@ -430,10 +431,12 @@ def sweep_through_angles( \
     # The sweep line is current, now compute pixel visibility
     update_visible_pixels_fast( \
         active_pixel_array, coord[0], coord[1], \
-        max_line_length, visibility_map)
+        max_line_length, visibility_map, 1)
 
     # 2- loop through line sweep angles:
+    print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
+        print('angle', a, angles[a])
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -527,7 +530,7 @@ def sweep_through_angles( \
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
-            max_line_length, visibility_map) 
+            max_line_length, visibility_map, a+1) 
 
     # clean up
     free(active_pixel_array)
