@@ -272,7 +272,8 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef int index = -1
     cdef int pixel_id
 
-    print('calling update_pixel_fast on index', a, pixel_count)
+    # Debug!!!!
+    cdef int active_pixel_count = 0
 
     for pixel_id in range(2, pixel_count):
         p = active_pixel_array[pixel_id]
@@ -294,11 +295,13 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
             max_visibility = p.visibility
 
         # Update the visibility map for this pixel
-        print('    iteration', pixel_id, 'visibility_map at', (I[index], J[index]), visibility_map[I[index], J[index]])
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
-            #print('writing', visibility, 'at', (I[index], J[index]))
             visibility_map[I[index], J[index]] = visibility
+        # Debug!!!!
+        active_pixel_count += 1
+    print('    line length:', active_pixel_count, 'up to', pixel_id)
+    
     visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
 def _active_pixel_index(O, P, E):
@@ -411,6 +414,10 @@ def sweep_through_angles( \
     cdef np.int32_t [:] coordL = coord[l]
     cdef np.int32_t [:] coordS = coord[s]
 
+    # Debug!!!
+    cdef int added_pixels
+    cdef int removed_pixels
+
     # 1- add cells at angle 0
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
@@ -462,7 +469,8 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        print('a')
+        # DEBUG!!!
+        removed_pixels = 0
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
@@ -483,6 +491,9 @@ def sweep_through_angles( \
 
             arg_max[remove_event_id] = 0
             remove_event_id += 1
+            # Debug!!!
+            removed_pixels += 1
+        print('    Pixels removed:', removed_pixels, 'total', remove_event_id)
         # 2.1- add cells
         if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -503,8 +514,8 @@ def sweep_through_angles( \
         Ss = -1 if Os>Es else 1
 
         slope = (Es-Os)/(El-Ol)
-
-        print('b')
+        # DEBUG!!!
+        added_pixels = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             i = arg_min[add_event_id]
@@ -533,8 +544,10 @@ def sweep_through_angles( \
 
             arg_min[add_event_id] = 0
             add_event_id += 1
+            # Debug!!!
+            added_pixels += 1
+        print('    Pixels added:', added_pixels, 'total', add_event_id)
         # The sweep line is current, now compute pixel visibility
-        print('calling update_visible_pixels_fast')
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map, a+1) 

@@ -15,6 +15,7 @@ from osgeo import gdal
 import logging
 
 from invest_natcap import raster_utils
+import nearshore_wave_and_erosion_core as core
 
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
@@ -172,12 +173,15 @@ def compute_transects(args):
 
     # Save bathymetry samples along transects
 
-def compute_shore_location(bathymetry, distance_between_transects, model_resolution):
+def compute_shore_location(bathymetry, transect_spacing, model_resolution):
     """Compute the location of the shore piecewise at much higher resolution
        than coastal vulnerability.
        
     """
-    pass
+    # Clip and resample bathymetry to the AOI
+    #nearshore_wave_and_erosion.raster_from_shapefile_uri(shapefile_uri, aoi_uri, \
+    #    cell_size, output_uri, field=None, all_touched=False, nodata = 0., \
+    #    datatype = gdal.GDT_Float32)
 
 def compute_raw_transect_depths(shore_points, valid_transects, \
     valid_transect_count, \
