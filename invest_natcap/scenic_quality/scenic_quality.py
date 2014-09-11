@@ -364,7 +364,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         # cell_angles + append the last element (2 PI) automatically
         angles = scenic_quality_core.cell_angles(perimeter_cells, (i,j))
         angles = np.append(angles, 2.0 * math.pi)
-
+        
         # Viewshed information
         row_max = np.amax(perimeter_cells[0])
         row_min = np.amin(perimeter_cells[0])
