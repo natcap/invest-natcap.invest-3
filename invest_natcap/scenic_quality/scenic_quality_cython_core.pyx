@@ -272,20 +272,21 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef int index = -1
     cdef int pixel_id
 
-    # Debug!!!!
-    cdef int active_pixel_count = 0
-
-    for pixel_id in range(2, pixel_count):
+    for pixel_id in range(3, pixel_count):
         p = active_pixel_array[pixel_id]
         # Inactive pixel: either we skip or we exit
         if not p.is_active:
             # No more pixels to check if 2nd inactive pixel beyond position 2
             if not active_pixel_array[pixel_id-1].is_active and \
-                not active_pixel_array[pixel_id-2].is_active:
+                not active_pixel_array[pixel_id-2].is_active and \
+                not active_pixel_array[pixel_id-3].is_active:
+                #print('end of active line', active_pixel_count, pixel_id)
                 break
             # Just an inactive pixel, skip it
             else:
+                #print('  inactive pixel', pixel_id)
                 continue
+        #print('  active pixel', active_pixel_count, pixel_id)
         # Pixel is visible
         if p.offset > max_visibility:
             visibility = p.offset - max_visibility
@@ -298,9 +299,6 @@ cdef void update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         index = p.index
         if visibility_map[I[index], J[index]] == 0:
             visibility_map[I[index], J[index]] = visibility
-        # Debug!!!!
-        active_pixel_count += 1
-    print('    line length:', active_pixel_count, 'up to', pixel_id)
     
     visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
@@ -414,10 +412,6 @@ def sweep_through_angles( \
     cdef np.int32_t [:] coordL = coord[l]
     cdef np.int32_t [:] coordS = coord[s]
 
-    # Debug!!!
-    cdef int added_pixels
-    cdef int removed_pixels
-
     # 1- add cells at angle 0
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
@@ -447,7 +441,6 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
-        print('angle', a, angles[a])
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -469,8 +462,19 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        # DEBUG!!!
-        removed_pixels = 0
+        # Debug!!!!
+        previous_pixel_count = 0
+        for pixel_id in range(2, max_line_length):
+            # Inactive pixel: either we skip or we exit
+            if not active_pixel_array[pixel_id].is_active:
+                # No more pixels to check if 2nd inactive pixel beyond position 2
+                if not active_pixel_array[pixel_id-1].is_active and \
+                    not active_pixel_array[pixel_id-2].is_active:
+                    break
+                # Just an inactive pixel, skip it
+                else:
+                    continue
+            previous_pixel_count += 1
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             i = arg_max[remove_event_id]
@@ -491,9 +495,6 @@ def sweep_through_angles( \
 
             arg_max[remove_event_id] = 0
             remove_event_id += 1
-            # Debug!!!
-            removed_pixels += 1
-        print('    Pixels removed:', removed_pixels, 'total', remove_event_id)
         # 2.1- add cells
         if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -514,8 +515,6 @@ def sweep_through_angles( \
         Ss = -1 if Os>Es else 1
 
         slope = (Es-Os)/(El-Ol)
-        # DEBUG!!!
-        added_pixels = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             i = arg_min[add_event_id]
@@ -544,9 +543,6 @@ def sweep_through_angles( \
 
             arg_min[add_event_id] = 0
             add_event_id += 1
-            # Debug!!!
-            added_pixels += 1
-        print('    Pixels added:', added_pixels, 'total', add_event_id)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
