@@ -504,8 +504,22 @@ def sweep_through_angles( \
             # Move other pixel over otherwise
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
+                alternate_ID = ID # DEBUG!!!! Remove ASAP
                 ID = ID+1 if (ID/2)*2 == ID else ID-1
-            #assert ID>=0 and ID<max_line_length
+            assert ID>=0 and ID<max_line_length
+            if not active_pixel_array[ID].is_active:
+                print 'Active pixels'
+                totat_active_pixel_count = 0
+                last_active_pixel = 0
+                for pixel_id in range(max_line_length):
+                    # Inactive pixel: either we skip or we exit
+                    if active_pixel_array[pixel_id].is_active:
+                        totat_active_pixel_count += 1
+                        print (pixel_id, pixel_id - last_active_pixel),
+                        last_active_pixel = pixel_id
+                print('count', totat_active_pixel_count, active_pixel_count)
+                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
+                assert active_pixel_array[ID].is_active, message
             active_pixel_array[ID].is_active = False
 
             arg_max[remove_event_id] = 0
@@ -549,6 +563,20 @@ def sweep_through_angles( \
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
                 alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1
+                if active_pixel_array[alternate_ID].is_active:
+                    print 'Active pixels'
+                    totat_active_pixel_count = 0
+                    last_active_pixel = 0
+                    for pixel_id in range(max_line_length):
+                        # Inactive pixel: either we skip or we exit
+                        if active_pixel_array[pixel_id].is_active:
+                            totat_active_pixel_count += 1
+                            print (pixel_id, pixel_id - last_active_pixel),
+                            last_active_pixel = pixel_id
+                    print('count', totat_active_pixel_count, active_pixel_count)
+                    message = 'Overwriting active pixel ' + \
+                        str(alternate_ID) + ' changed from ' + str(ID)
+                    assert not active_pixel_array[alternate_ID].is_active
                 # Move existing pixel over
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
             # Add new pixel
