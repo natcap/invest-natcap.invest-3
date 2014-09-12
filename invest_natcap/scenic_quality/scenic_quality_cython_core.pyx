@@ -278,8 +278,8 @@ cdef int update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         p = active_pixel_array[pixel_id]
         # Inactive pixel: either we skip or we exit
         if not p.is_active:
-            # More than 1 pixel gap? -> end of active pixels, exit loop
-            if pixel_id - last_active_pixel > 2:
+            # More than 2 pixels gap? -> end of active pixels, exit loop
+            if pixel_id - last_active_pixel > 3:
                 break
             # Just an inactive pixel, skip it
             continue
@@ -467,7 +467,7 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
-        #print('angle', a, angles[a])
+        print('angle', a, angles[a])
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
