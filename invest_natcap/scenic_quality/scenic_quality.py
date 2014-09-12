@@ -338,7 +338,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     distances_array = np.copy(accum_visibility)
 
     last_dist = 0
-    for dist in range(1): #arg_dist.size-1, -1, -1):
+    for dist in range(arg_dist.size-1, -1, -1):
         f = arg_dist[dist]
         print("Iteration " + str(dist) + ", processing viewpoint " + str(f))
 
