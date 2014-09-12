@@ -518,6 +518,9 @@ def sweep_through_angles( \
                         print (pixel_id, pixel_id - last_active_pixel),
                         last_active_pixel = pixel_id
                 print('count', totat_active_pixel_count, active_pixel_count)
+                print('was active', active_pixel_array[alternate_ID].is_active, \
+                    'distance', active_pixel_array[alternate_ID].distance, \
+                    'difference', active_pixel_array[alternate_ID].distance - distances[i])
                 message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
                 assert active_pixel_array[ID].is_active, message
             active_pixel_array[ID].is_active = False
