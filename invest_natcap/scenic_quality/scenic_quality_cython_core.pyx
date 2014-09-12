@@ -418,6 +418,7 @@ def sweep_through_angles( \
     cdef int add_pixel_count = 0
     cdef int remove_pixel_count = 0
     cdef int totat_active_pixel_count = 0
+    cdef int last_active_pixel = 0
 
     # 1- add cells at angle 0
     # Collect cell_center events
@@ -570,11 +571,13 @@ def sweep_through_angles( \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:
             print 'Active pixels'
             totat_active_pixel_count = 0
-            for pixel_id in range(2, max_line_length):
+            last_active_pixel = 0
+            for pixel_id in range(max_line_length):
                 # Inactive pixel: either we skip or we exit
                 if active_pixel_array[pixel_id].is_active:
                     totat_active_pixel_count += 1
-                    print pixel_id, 
+                    print (pixel_id, pixel_id - last_active_pixel),
+                    last_active_pixel = pixel_id
             print('count', totat_active_pixel_count)
 
         message = str(active_pixel_count) + ' = ' + \
