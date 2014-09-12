@@ -565,7 +565,10 @@ def sweep_through_angles( \
         # The sweep line is current, now compute pixel visibility
         active_pixel_count = update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
-            max_line_length, visibility_map, a+1) 
+            max_line_length, visibility_map, a+1)
+
+        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
+            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
 
         if active_pixel_count != \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:
@@ -578,7 +581,7 @@ def sweep_through_angles( \
                     totat_active_pixel_count += 1
                     print (pixel_id, pixel_id - last_active_pixel),
                     last_active_pixel = pixel_id
-            print('count', totat_active_pixel_count)
+            print('count', totat_active_pixel_count, active_pixel_count)
 
         message = str(active_pixel_count) + ' = ' + \
             str(previous_pixel_count) + ' + ' + \
