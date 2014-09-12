@@ -566,23 +566,23 @@ def sweep_through_angles( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map, a+1) 
 
-        #if active_pixel_count != \
-        #        previous_pixel_count + add_pixel_count - remove_pixel_count:
-        #    print 'Active pixels'
-        #    totat_active_pixel_count = 0
-        #    for pixel_id in range(2, max_line_length):
-        #        # Inactive pixel: either we skip or we exit
-        #        if active_pixel_array[pixel_id].is_active:
-        #            totat_active_pixel_count += 1
-        #            print pixel_id, 
-        #    print('count', totat_active_pixel_count)
+        if active_pixel_count != \
+                previous_pixel_count + add_pixel_count - remove_pixel_count:
+            print 'Active pixels'
+            totat_active_pixel_count = 0
+            for pixel_id in range(2, max_line_length):
+                # Inactive pixel: either we skip or we exit
+                if active_pixel_array[pixel_id].is_active:
+                    totat_active_pixel_count += 1
+                    print pixel_id, 
+            print('count', totat_active_pixel_count)
 
-        #message = str(active_pixel_count) + ' = ' + \
-        #    str(previous_pixel_count) + ' + ' + \
-        #    str(add_pixel_count) + ' - ' + str(remove_pixel_count)
+        message = str(active_pixel_count) + ' = ' + \
+            str(previous_pixel_count) + ' + ' + \
+            str(add_pixel_count) + ' - ' + str(remove_pixel_count)
 
         assert active_pixel_count == \
-            previous_pixel_count + add_pixel_count - remove_pixel_count#, message
+            previous_pixel_count + add_pixel_count - remove_pixel_count, message
 
         previous_pixel_count = active_pixel_count
 
