@@ -156,6 +156,17 @@
 				    "helpText": "Enter a percentage value for how much you wish to smooth the profile created or fed through the model. A value of \"0\" means no smoothing."
 				},
 				{
+				    "label": "Space between transects (m)",
+				    "id": "transect_spacing",
+				    "args_id": "transect_spacing",
+				    "type": "text",
+				    "required": true,
+				    "dataType": "int",
+				    "validText": "[0-9]*",
+				    "defaultValue": "250",
+				    "helpText": "Between transect space dictates how many transects are going to be generated along the shore. The more trnsects, the more accurate is the shore. Keep in mind that a smaller resolution yields longer computing time."
+				},
+				{
 				    "label": "Model Spatial Resolution (m) (dx)",
 				    "id": "model_resolution",
 				    "args_id": "model_resolution",

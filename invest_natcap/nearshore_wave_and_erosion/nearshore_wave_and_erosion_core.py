@@ -8,12 +8,14 @@ import logging
 
 import numpy as np
 import scipy as sp
+import h5py as h5
 
 from osgeo import ogr
 from osgeo import gdal
 import logging
 
 from invest_natcap import raster_utils
+import nearshore_wave_and_erosion_core as core
 
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
@@ -151,22 +153,52 @@ def compute_transects(args):
     raster = None
 
 
-    # Compute transect end points
-    transect_endpoints = compute_transect_endpoints(shore_points, \
-        valid_transects, direction_vectors, bathymetry, land)
+    # Compute raw transect depths
+    raw_depths = compute_raw_transect_depths(shore_points, \
+        valid_transects, valid_transect_count, direction_vectors, bathymetry, \
+        land, args['model_resolution'], args['max_land_profile_len'], \
+        args['max_land_profile_height'], args['max_profile_length'])
 
-    # Save transect end points
+    # Save raw transect depths
+    raw_transect_depths_uri = \
+        os.path.join(args['intermediate_dir'], 'raw_transect_depths.h5')
+    f = h5.File(raw_transect_depths_uri, 'w')
+    h5_dataset = f.create_dataset('raw_transect_depths', raw_depths.shape)
+    h5_dataset[...] = raw_depths
+    f.close()
 
     # Sample bathymetry along transects
     shore_profiles = sample_bathymetry_along_transects(bathymetry, \
-        transect_endpoints, shore_points, direction_vectors)
+        raw_depths, shore_points, direction_vectors)
 
     # Save bathymetry samples along transects
 
-def compute_transect_endpoints(shore_points, valid_transects, \
-    direction_vectors, bathymetry, landmass):
+def compute_shore_location(bathymetry, transect_spacing, model_resolution):
+    """Compute the location of the shore piecewise at much higher resolution
+       than coastal vulnerability.
+       
+    """
+    # Clip and resample bathymetry to the AOI
+    #nearshore_wave_and_erosion.raster_from_shapefile_uri(shapefile_uri, aoi_uri, \
+    #    cell_size, output_uri, field=None, all_touched=False, nodata = 0., \
+    #    datatype = gdal.GDT_Float32)
+
+def compute_raw_transect_depths(shore_points, valid_transects, \
+    valid_transect_count, \
+    direction_vectors, bathymetry, landmass, model_resolution, \
+    max_land_profile_len, max_land_profile_height, \
+    max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
     LOGGER.debug('Computing transect endpoints...')
+
+    # Maximum transect extents
+    max_land_len = max_land_profile_len / model_resolution
+    max_sea_len = 1000 * max_sea_profile_len / model_resolution
+
+    LOGGER.debug('Creating a %ix%i transect matrix' % \
+        (valid_transect_count, max_land_len + max_sea_len))
+    depths = np.ones((valid_transect_count, max_land_len + max_sea_len))*-20000
+
     # Repeat for each shore segment
     for segment in range(shore_points[0].size):
         transect = 0
@@ -178,20 +210,90 @@ def compute_transect_endpoints(shore_points, valid_transects, \
             d_i = direction_vectors[0][direction]
             d_j = direction_vectors[1][direction]
 
+            depths[transect, max_sea_profile_len] = bathymetry[p_i, p_j]
+
+            # Compute the landward part of the transect
             start_i = p_i - d_i
             start_j = p_j - d_j
-            assert landmass[int(start_i)][int(start_j)] == 1
-            # For each point along the transect
-            inland = 1
-            start_i -= d_i
-            start_j -= d_j
 
-            while landmass[int(start_i), int(start_j)] == 1:
+            highest_point = max(0, bathymetry[int(start_i), int(start_j)])
+            highest_index = 0
+
+            # If no land behind the piece of land, stop there and report 0
+            if not landmass[int(start_i), int(start_j)]:
+                inland_steps = 0
+            # Else, count from 1
+            else:
+                # Stop when maximum inland distance is reached
+                for inland_steps in range(1, max_land_len + 1):
+                    elevation = bathymetry[int(start_i), int(start_j)]
+                    # Hit either nodata, or some bad data
+                    if elevation <= -12000:
+                        inland_steps -= 1
+                        break
+                    # Stop if shore is reached
+                    if not landmass[int(start_i), int(start_j)]:
+                        inland_steps -= 1
+                        break
+                    # We can store the depth at this point
+                    depths[transect, max_land_len - inland_steps] = \
+                        elevation
+                    # Stop at maximum elevation
+                    if elevation > 20:
+                        break
+                    # Keep track of highest point so far
+                    if elevation >= highest_point:
+                        highest_point = elevation
+                        highest_index = inland_steps
+                        
+                    start_i -= d_i
+                    start_j -= d_j
+            # Adjust to highest point if necessary and put nodata after it
+            if bathymetry[int(start_i), int(start_j)] < highest_point:
+                inland_steps = highest_index
+                depths[transect, max_land_len - inland_steps - 1] = \
+                    -20000
+            transect += 1
+
+            # Compute the seaward part of the transect
+            start_i = p_i
+            start_j = p_j
+            lowest_index = 0
+            lowest_point = min(0, bathymetry[int(start_i), int(start_j)])
+            lowest_index = 0
+
+            # Stop when maximum offshore distance is reached
+            for offshore_steps in range(max_sea_len):
+                # Stop if shore is reached
+                if landmass[int(start_i), int(start_j)]:
+                    offshore_steps -= 1
+                    break
+                elevation = bathymetry[int(start_i), int(start_j)]
+                # Hit either nodata, or some bad data
+                if elevation <= -12000:
+                    offshore_steps -= 1
+                    break
+                # We can store the depth at this point
+                depths[transect, max_land_len + offshore_steps] = \
+                    elevation
+                # Keep track of lowest point so far
+                if elevation <= lowest_point:
+                    lowest_point = elevation
+                    lowest_index = offshore_steps
                 start_i -= d_i
                 start_j -= d_j
-                inland += 1
+            # Adjust to lowest point if necessary
+            if bathymetry[int(start_i), int(start_j)] > lowest_point:
+                offshore_steps = lowest_index
+                depths[transect, max_land_len + offshore_steps] = \
+                    elevation
+            # If shore borders nodata, offshore_step is -1, set it to 0
+            offshore_steps = max(0, offshore_steps)
+
+            # Done for this transect, moving on to the next
             transect += 1
-            print('segment', segment, 'transect', transect, 'inland', inland)
+
+    return depths
 
 def sample_bathymetry_along_transects(bathymetry, valid_transects, \
     shore_points, direction_vectors):

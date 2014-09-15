@@ -400,7 +400,9 @@ def execute(args):
         os.makedirs(args['intermediate_dir'])
 
     # Initializations
-    args['cell_size'] = args['model_resolution']
+    args['cell_size'] = args['transect_spacing']
+    args['max_land_profile_len'] = 200
+    args['max_land_profile_height'] = 20
 
     # Preprocess the landmass
     print('Pre-processing landmass...')
@@ -420,6 +422,11 @@ def execute(args):
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
+    args['bathymetry_raster_uri'] = \
+        preprocess_dataset(args['bathymetry_uri'], \
+            args['aoi_uri'], args['transect_spacing'], \
+            os.path.join(args['intermediate_dir'], 'bathymetry_coarse.tif'))
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \
