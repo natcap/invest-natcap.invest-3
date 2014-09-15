@@ -535,8 +535,6 @@ def _prepare(**args):
         that is unlikely to change when running a batch process.
         
         args['dem_uri'] - dem layer
-        args['landuse_uri'] - landuse layer that will be used to align the
-            output datasets
         args['erosivity_uri'] - erosivity data that will be used to align and
             precalculate rkls
         args['erodibility_uri'] - erodibility data that will be used to align
@@ -545,7 +543,6 @@ def _prepare(**args):
         
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
-            'aligned_lulc_uri' - input lulc aligned with the rest of the inputs
             'aligned_erosivity_uri' - input erosivity aligned with the inputs
             'aligned_erodibility_uri' - input erodability aligned with the
                 inputs
