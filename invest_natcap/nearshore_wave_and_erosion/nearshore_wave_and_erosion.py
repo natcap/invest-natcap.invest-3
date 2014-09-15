@@ -423,10 +423,10 @@ def execute(args):
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
 
-    args['bathymetry_raster_uri'] = \
+    args['transect_bathymetry_raster_uri'] = \
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['transect_spacing'], \
-            os.path.join(args['intermediate_dir'], 'bathymetry_coarse.tif'))
+            os.path.join(args['intermediate_dir'], 'bathymetry_transect_resolution.tif'))
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \
