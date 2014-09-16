@@ -240,22 +240,27 @@ def _execute_nutrient(args):
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[result == lucode] = (
+                    result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] * cell_area_ha)
             return result
-            #if lucode == nodata_landuse:
-            #    return nodata_load
-            #return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
-        def map_load(lucode, stream):
+        def map_load(lucode_array, stream_array):
             """maps efficiencies from lulcs, handles nodata, and is aware that
                 streams have no retention"""
-            if lucode == nodata_landuse or stream == nodata_stream:
-                return nodata_load
-            #Retention efficiency is 0 when there's a stream.
-            return lucode_to_parameters[lucode][load_type] * (1 - stream)
+            result = numpy.empty(lucode_array.shape)
+            result[:] = nodata_load
+
+            no_stream_mask = (stream_array == 0)
+
+            for lucode in numpy.unique(lucode_array):
+                if lucode == nodata_landuse:
+                    continue
+                mask = (lucode == lucode_array) & no_stream_mask
+                result[mask] = lucode_to_parameters[lucode][load_type]
+            
+            return result
         return map_load
 
     #Build up the load and efficiency rasters from the landcover map
@@ -273,7 +278,7 @@ def _execute_nutrient(args):
         raster_utils.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection")
+            "intersection", vectorize_op=False)
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
