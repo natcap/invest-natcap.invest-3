@@ -184,7 +184,27 @@
 				   "fieldsExist": ["ws_id"]
 				  },
 		    "helpText": "A table containing annual nutrient load threshold information.  Must have a ws_id index and thres_n (or p) field depending if nitrogen and/or phosphorous is simulated."
-		}
+		},
+        {
+            "id" : "k_param",
+            "args_id" : "k_param",
+            "type": "text",
+            "label": "Borselli k parameter",
+            "defaultValue": "2",
+            "required": true,
+            "validText": "^[0-9]+\\.?[0-9]*$",
+            "helpText": "Borselli k parameter."
+        },
+        {
+            "id" : "ic_0_param",
+            "args_id" : "ic_0_param",
+            "type": "text",
+            "label": "Borselli IC0 parameter",
+            "defaultValue": "0.5",
+            "required": true,
+            "validText": "^[0-9]+\\.?[0-9]*$",
+            "helpText": "Borselli IC0 parameter."
+        },
 	    ]
 	},
 	{
