@@ -342,6 +342,152 @@ def _execute_nutrient(args):
     export_uri = {}
     field_summaries = {}
     pts_uri = {}  # percent_to_stream uri
+    
+    #Calculate the W factor
+    LOGGER.info('calculate per pixel W')
+    original_w_factor_uri = os.path.join(
+        intermediate_dir, 'w_factor%s.tif' % file_suffix)
+    thresholded_w_factor_uri = os.path.join(
+        intermediate_dir, 'thresholded_w_factor%s.tif' % file_suffix)
+
+    #map lulc to biophysical table
+    lulc_to_c = dict(
+        [(lulc_code, float(table['usle_c'])) for 
+        (lulc_code, table) in lucode_to_parameters.items()])
+    lulc_nodata = raster_utils.get_nodata_from_uri(lulc_uri)
+    w_nodata = -1.0
+    
+    raster_utils.reclassify_dataset_uri(
+        lulc_uri, lulc_to_c, original_w_factor_uri, gdal.GDT_Float64,
+        w_nodata, exception_flag='values_required')
+    def threshold_w(w_val):
+        '''Threshold w to 0.001'''
+        w_val_copy = w_val.copy()
+        nodata_mask = w_val == w_nodata
+        w_val_copy[w_val < 0.001] = 0.001
+        w_val_copy[nodata_mask] = w_nodata
+        return w_val_copy
+    raster_utils.vectorize_datasets(
+        [original_w_factor_uri], threshold_w, thresholded_w_factor_uri,
+        gdal.GDT_Float64, w_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+
+
+    #calculate W_bar
+    zero_absorption_source_uri = raster_utils.temporary_filename()
+    loss_uri = raster_utils.temporary_filename()
+    #need this for low level route_flux function
+    raster_utils.make_constant_raster_from_base_uri(
+        dem_offset_uri, 0.0, zero_absorption_source_uri)
+    
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
+        flow_accumulation_uri)
+
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
+    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
+    def threshold_slope(slope):
+        '''Threshold slope between 0.001 and 1.0'''
+        slope_copy = slope.copy()
+        nodata_mask = slope == slope_nodata
+        slope_copy[slope < 0.001] = 0.001
+        slope_copy[slope > 1.0] = 1.0
+        slope_copy[nodata_mask] = slope_nodata
+        return slope_copy
+    raster_utils.vectorize_datasets(
+        [original_slope_uri], threshold_slope, thresholded_slope_uri,
+        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    
+    w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
+    s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+    for factor_uri, accumulation_uri in [
+        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        routing_utils.route_flux(
+            flow_direction_uri, dem_offset_uri, factor_uri,
+            zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
+            aoi_uri=args['watersheds_uri'])
+
+    LOGGER.info("calculating w_bar")
+    
+    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
+    w_bar_nodata = raster_utils.get_nodata_from_uri(w_accumulation_uri)
+    s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
+    s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
+    for bar_nodata, accumulation_uri, bar_uri in [
+        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        def bar_op(base_accumulation, flow_accumulation):
+            return numpy.where(
+                (base_accumulation != bar_nodata) & (flow_accumulation != flow_accumulation_nodata), 
+                base_accumulation / flow_accumulation, bar_nodata)
+        raster_utils.vectorize_datasets(
+            [accumulation_uri, flow_accumulation_uri], bar_op, bar_uri, 
+            gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
+            dataset_to_align_index=0, vectorize_op=False)
+
+    LOGGER.info('calculating d_up')
+    d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
+    cell_area = out_pixel_size ** 2
+    d_up_nodata = -1.0
+    def d_up(w_bar, s_bar, flow_accumulation):
+        """Calculate the d_up index
+            w_bar * s_bar * sqrt(upstream area) """
+        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        return numpy.where(
+            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) & 
+            (flow_accumulation != flow_accumulation_nodata), d_up_array,
+            d_up_nodata)
+    raster_utils.vectorize_datasets(
+        [w_bar_uri, s_bar_uri, flow_accumulation_uri], d_up, d_up_uri, 
+        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+    LOGGER.info('calculate WS factor')
+    ws_factor_inverse_uri = os.path.join(
+        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
+    ws_nodata = -1.0
+    slope_nodata = raster_utils.get_nodata_from_uri(
+        thresholded_slope_uri)
+    
+    def ws_op(w_factor, s_factor):
+        #calculating the inverse so we can use the distance to stream factor function
+        return numpy.where(
+            (w_factor != w_nodata) & (s_factor != slope_nodata),
+            1.0 / (w_factor * s_factor), ws_nodata)
+            
+    raster_utils.vectorize_datasets(
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
+        gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+    LOGGER.info('calculating d_dn')
+    d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
+
+    LOGGER.info('calculate ic')
+    ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
+    ic_nodata = -9999.0
+    d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
+    d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
+    def ic_op(d_up, d_dn):
+        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
+        return numpy.where(
+            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+    raster_utils.vectorize_datasets(
+        [d_up_uri, d_dn_uri], ic_op, ic_factor_uri, 
+        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
@@ -355,6 +501,8 @@ def _execute_nutrient(args):
         retention_uri[nutrient] = os.path.join(
             intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
         tmp_flux_uri = raster_utils.temporary_filename()
+
+        ####### we're going to replace eff_uri with NDR here
         routing_utils.route_flux(
             flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],
             retention_uri[nutrient], tmp_flux_uri, 'flux_only',

@@ -204,7 +204,7 @@
             "required": true,
             "validText": "^[0-9]+\\.?[0-9]*$",
             "helpText": "Borselli IC0 parameter."
-        },
+        }
 	    ]
 	},
 	{
