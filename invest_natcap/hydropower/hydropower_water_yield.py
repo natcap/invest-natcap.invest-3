@@ -507,18 +507,18 @@ def execute(args):
     demand_table_file.close()
 
     # Open/read in the calibration csv file into a dictionary
-    calib_dict = {}
-    hydro_cal_table_file = open(args['hydro_calibration_table_uri'], 'rU')
-    reader = csv.DictReader(hydro_cal_table_file)
-    for row in reader:
-        calib_dict[int(row['ws_id'])] = float(row['calib'])
+    ##calib_dict = {}
+    ##hydro_cal_table_file = open(args['hydro_calibration_table_uri'], 'rU')
+    ##reader = csv.DictReader(hydro_cal_table_file)
+    ##for row in reader:
+    ##    calib_dict[int(row['ws_id'])] = float(row['calib'])
 
-    LOGGER.debug('Calib_Dict : %s', calib_dict)
-    hydro_cal_table_file.close()
+    ##LOGGER.debug('Calib_Dict : %s', calib_dict)
+    ##hydro_cal_table_file.close()
 
     # Calculate the calibrated water yield for sheds
-    LOGGER.debug('Calculating CYIELD')
-    calculate_cyield_vol(watershed_results_uri, calib_dict)
+    ##LOGGER.debug('Calculating CYIELD')
+    ##calculate_cyield_vol(watershed_results_uri, calib_dict)
 
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
@@ -549,8 +549,11 @@ def execute(args):
     compute_rsupply_volume(watershed_results_uri)
 
     # List of wanted fields to output in the watershed CSV table
+    ##scarcity_field_list_ws = [
+    ##        'ws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 'rsupply_vl',
+    ##        'rsupply_mn']
     scarcity_field_list_ws = [
-            'ws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 'rsupply_vl',
+            'ws_id', 'consum_vol', 'consum_mn', 'rsupply_vl',
             'rsupply_mn']
 
     # Aggregate water yield and water scarcity fields, where we exclude the
@@ -708,15 +711,18 @@ def compute_rsupply_volume(watershed_results_uri):
         wyield_mn = ws_feat.GetField(wyield_mn_id)
 
         # Get water demand/consumption values
-        cyield_id = ws_feat.GetFieldIndex('cyield_vol')
-        cyield = ws_feat.GetField(cyield_id)
+        ##cyield_id = ws_feat.GetFieldIndex('cyield_vol')
+        ##cyield = ws_feat.GetField(cyield_id)
+        wyield_id = ws_feat.GetFieldIndex('wyield_vol')
+        wyield = ws_feat.GetField(wyield_id)
+
         consump_vol_id = ws_feat.GetFieldIndex('consum_vol')
         consump_vol = ws_feat.GetField(consump_vol_id)
         consump_mn_id = ws_feat.GetFieldIndex('consum_mn')
         consump_mn = ws_feat.GetField(consump_mn_id)
 
         # Calculate realized supply
-        rsupply_vol = cyield - consump_vol
+        rsupply_vol = wyield - consump_vol
         rsupply_mn = wyield_mn - consump_mn
 
         # Get the indices for the output fields and set their values
