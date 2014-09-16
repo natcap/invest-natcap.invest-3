@@ -333,10 +333,16 @@ def _execute_nutrient(args):
 
     def alv_calculation(load, runoff_index, mean_runoff_index, stream):
         """Calculates the adjusted loading value index"""
-        if nodata_load in [load, runoff_index, mean_runoff_index] or \
-                stream == nodata_stream or mean_runoff_index == 0.0:
-            return nodata_load
-        return load * runoff_index / mean_runoff_index * (1 - stream)
+        result = load * runoff_index / mean_runoff_index * (1 - stream)
+        return numpy.where(
+            (load == nodata_load) | (runoff_index == nodata_load) |
+            (mean_runoff_index == nodata_load) | (stream == nodata_stream) |
+            (mean_runoff_index == 0.0), nodata_load, result)
+
+#        if nodata_load in [load, runoff_index, mean_runoff_index] or \
+#                stream == nodata_stream or mean_runoff_index == 0.0:
+#            return nodata_load
+#        return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
     retention_uri = {}
     export_uri = {}
@@ -494,7 +500,7 @@ def _execute_nutrient(args):
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
              stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
-            nodata_load, out_pixel_size, "intersection")
+            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
         #The retention calculation is only interesting to see where nutrient
         # retains on the landscape
