@@ -234,11 +234,18 @@ def _execute_nutrient(args):
 
     def map_load_function(load_type):
         """Function generator to map arbitrary nutrient type"""
-        def map_load(lucode):
+        def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
-            if lucode == nodata_landuse:
-                return nodata_load
-            return lucode_to_parameters[lucode][load_type] * cell_area_ha
+            result = numpy.empty(lucode_array.shape)
+            result[:] = nodata_load
+            for lucode in numpy.unique(lucode_array):
+                if lucode != nodata_landuse:
+                    result[result == lucode] = (
+                        lucode_to_parameters[lucode][load_type] * cell_area_ha)
+            return result
+            #if lucode == nodata_landuse:
+            #    return nodata_load
+            #return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
@@ -260,7 +267,7 @@ def _execute_nutrient(args):
         raster_utils.vectorize_datasets(
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection")
+            "intersection", vectorize_op=False)
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
@@ -339,10 +346,6 @@ def _execute_nutrient(args):
             (mean_runoff_index == nodata_load) | (stream == nodata_stream) |
             (mean_runoff_index == 0.0), nodata_load, result)
 
-#        if nodata_load in [load, runoff_index, mean_runoff_index] or \
-#                stream == nodata_stream or mean_runoff_index == 0.0:
-#            return nodata_load
-#        return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
     retention_uri = {}
     export_uri = {}
