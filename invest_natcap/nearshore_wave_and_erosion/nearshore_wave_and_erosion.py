@@ -400,7 +400,9 @@ def execute(args):
         os.makedirs(args['intermediate_dir'])
 
     # Initializations
-    args['cell_size'] = args['transect_spacing']
+    # This is the finest useful scale at which the model can extract bathy data
+    args['cell_size'] = max(args['model_resolution'], \
+        raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
     args['max_land_profile_len'] = 200
     args['max_land_profile_height'] = 20
 
@@ -411,10 +413,21 @@ def execute(args):
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
+    args['coarse_landmass_uri'] = \
+        preprocess_polygon_datasource(args['landmass_uri'], \
+            args['aoi_uri'], args['transect_spacing'], \
+            os.path.join(args['intermediate_dir'], 'coarse_landmass.tif'), \
+            all_touched = True)
+
     # Preprocessing the AOI
     args['aoi_raster_uri'] = \
         preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
+
+    args['coarse_aoi_uri'] = \
+        preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
+        args['transect_spacing'], \
+        os.path.join(args['intermediate_dir'], 'coarse_aoi.tif'))
 
     # Preprocess bathymetry
     print('Pre-processing bathymetry...')
@@ -422,11 +435,6 @@ def execute(args):
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
-
-    args['transect_bathymetry_raster_uri'] = \
-        preprocess_dataset(args['bathymetry_uri'], \
-            args['aoi_uri'], args['transect_spacing'], \
-            os.path.join(args['intermediate_dir'], 'bathymetry_transect_resolution.tif'))
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \

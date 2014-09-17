@@ -34,11 +34,11 @@ def execute(args):
     # Can we compute the shore?
     if ('aoi_raster_uri' in args) and ('landmass_raster_uri' in args):
         print('detecting shore...')
-        args['shore_raster_uri'] = os.path.join(\
-            args['intermediate_dir'], 'shore.tif')
+        args['coarse_shore_uri'] = os.path.join(\
+            args['intermediate_dir'], 'coarse_shore.tif')
         detect_shore_uri( \
-            args['landmass_raster_uri'], args['aoi_raster_uri'], \
-            args['shore_raster_uri'])
+            args['coarse_landmass_uri'], args['coarse_aoi_uri'], \
+            args['coarse_shore_uri'])
 
     transects_uri = compute_transects(args)
 
@@ -51,7 +51,7 @@ def compute_transects(args):
         print('entry', key, args[key])
 
     # Extract shore
-    shore_raster_uri = args['shore_raster_uri']
+    shore_raster_uri = args['coarse_shore_uri']
 
     shore_raster = gdal.Open(shore_raster_uri)
     message = 'Cannot open file ' + shore_raster_uri
@@ -62,8 +62,10 @@ def compute_transects(args):
     shore_raster = None
 
     shore_points = np.where(shore > 0)
-    LOGGER.debug('found %i shore segments.' % shore_points[0].size)
+    #LOGGER.debug('found %i shore segments.' % shore_points[0].size)
+    LOGGER.debug('found %i tiles.' % shore_points[0].size)
 
+    return
     # Extract landmass
     landmass_raster_uri = args['landmass_raster_uri']
 
@@ -92,7 +94,7 @@ def compute_transects(args):
     rays_per_sector = 1
     d_max = args['max_profile_length'] * 1000 # convert in meters
     model_resolution = args['model_resolution'] # in meters already
-    cell_size = model_resolution
+    cell_size = args['cell_size']
     
     direction_count = SECTOR_COUNT * rays_per_sector
     direction_range = range(direction_count)
@@ -443,19 +445,19 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata):
         LOGGER.warning('There is no shore to detect: sea area = 0')
         return np.zeros_like(land_sea_array)
     else:
-        kernel = np.array([[ 0, -1,  0],
-                           [-1,  4, -1],
-                           [ 0, -1,  0]])
+        kernel = np.array([[-1, -1, -1],
+                           [-1,  8, -1],
+                           [-1, -1, -1]])
         # Generate the nodata shore artifacts
         aoi_array = np.ones_like(land_sea_array)
         aoi_array[land_sea_array == nodata] = nodata
         aoi_borders = (sp.signal.convolve2d(aoi_array, \
                                                 kernel, \
-                                                mode='same') <0 ).astype('int')
+                                                mode='same') >0 ).astype('int')
         # Generate all the borders (including data artifacts)
         borders = (sp.signal.convolve2d(land_sea_array, \
                                      kernel, \
-                                     mode='same') <0 ).astype('int')
+                                     mode='same') >0 ).astype('int')
         # Real shore = all borders - shore artifacts
         borders = ((borders - aoi_borders) >0 ).astype('int') * 1.
 
