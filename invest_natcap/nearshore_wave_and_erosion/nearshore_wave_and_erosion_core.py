@@ -53,18 +53,53 @@ def compute_transects(args):
     # Extract shore
     shore_raster_uri = args['coarse_shore_uri']
 
-    shore_raster = gdal.Open(shore_raster_uri)
+    raster = gdal.Open(shore_raster_uri)
     message = 'Cannot open file ' + shore_raster_uri
-    assert shore_raster is not None, message
-    shore_band = shore_raster.GetRasterBand(1)
-    shore = shore_band.ReadAsArray()
-    shore_band = None
-    shore_raster = None
+    assert raster is not None, message
+    coarse_geotransform = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    coarse_shore = band.ReadAsArray()
+    band = None
+    raster = None
 
-    shore_points = np.where(shore > 0)
+    tiles = np.where(coarse_shore > 0)
     #LOGGER.debug('found %i shore segments.' % shore_points[0].size)
-    LOGGER.debug('found %i tiles.' % shore_points[0].size)
+    LOGGER.debug('found %i tiles.' % tiles[0].size)
 
+
+    # Put a dot at the center of each cell in the finer landmass raster
+    raster = gdal.Open(args['landmass_raster_uri'], gdal.GA_Update)
+    fine_geotransform = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    fine_shore = band.ReadAsArray()
+
+    assert coarse_geotransform[0] == fine_geotransform[0], \
+        str(coarse_geotransform[0] - fine_geotransform[0])
+    assert coarse_geotransform[3] == fine_geotransform[3], \
+        str(coarse_geotransform[3] - fine_geotransform[3])
+
+    i_side_fine = fine_geotransform[1]
+    j_side_fine = fine_geotransform[5]
+    i_side_coarse = coarse_geotransform[1]
+    j_side_coarse = coarse_geotransform[5]
+
+    print('fine', (i_side_fine, j_side_fine), 'coarse', (i_side_coarse, j_side_coarse))
+
+    for tile in range(tiles[0].size):
+        i_tile = tiles[0][tile]
+        j_tile = tiles[1][tile]
+        i_meters = i_side_coarse * i_tile + i_side_coarse / 2
+        j_meters = j_side_coarse * j_tile + j_side_coarse / 2
+        i_fine = i_meters / i_side_fine
+        j_fine = j_meters / j_side_fine
+        
+        print((i_tile, j_tile), '->', (i_meters, j_meters), '->', (i_fine, j_fine))
+        fine_shore[i_fine, j_fine] = 2
+
+    band.WriteArray(fine_shore)
+    band = None
+    raster = None
+        
     return
     # Extract landmass
     landmass_raster_uri = args['landmass_raster_uri']
@@ -445,6 +480,7 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata):
         LOGGER.warning('There is no shore to detect: sea area = 0')
         return np.zeros_like(land_sea_array)
     else:
+        # Shore points are inland (>0), and detected using 8-connectedness
         kernel = np.array([[-1, -1, -1],
                            [-1,  8, -1],
                            [-1, -1, -1]])
