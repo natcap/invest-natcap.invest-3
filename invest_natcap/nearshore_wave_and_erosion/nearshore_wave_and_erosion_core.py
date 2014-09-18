@@ -85,16 +85,38 @@ def compute_transects(args):
 
     print('fine', (i_side_fine, j_side_fine), 'coarse', (i_side_coarse, j_side_coarse))
 
-    for tile in range(tiles[0].size):
+    i_offset = i_side_coarse/i_side_fine + 4
+    j_offset = j_side_coarse/j_side_fine + 4
+    mask = np.ones((i_offset, j_offset))
+    tile_count = tiles[0].size
+    for tile in range(tile_count):
+        LOGGER.debug('Processing tile ' + str(tile_count - tile))
         i_tile = tiles[0][tile]
         j_tile = tiles[1][tile]
+
+        i_base = int((i_side_coarse * i_tile)/i_side_fine) - 3
+        j_base = int((j_side_coarse * j_tile)/j_side_fine) - 3
+
+        tile = fine_shore[i_base:i_base+i_offset, j_base:j_base+j_offset]
+        tile2 = np.zeros_like(tile)
+        tile2[tile>0] = 1
+
+        shore = detect_shore(tile2, mask, 0, connectedness = 4)
+        shore_points = np.where(shore == 1)
+        #print('shore from tile', shore_points[0])
+        
+        shore_points = (shore_points[0] + i_base, shore_points[1] + j_base)
+        #print('offsetted shore', shore_points[0])
+
         i_meters = i_side_coarse * i_tile + i_side_coarse / 2
         j_meters = j_side_coarse * j_tile + j_side_coarse / 2
         i_fine = i_meters / i_side_fine
         j_fine = j_meters / j_side_fine
         
-        print((i_tile, j_tile), '->', (i_meters, j_meters), '->', (i_fine, j_fine))
-        fine_shore[i_fine, j_fine] = 2
+        #print((i_tile, j_tile), '->', (i_meters, j_meters), '->', (i_fine, j_fine))
+        #fine_shore[i_base:i_base+i_offset, j_base:j_base+j_offset] += 1
+        #fine_shore[i_fine, j_fine] = 1
+        fine_shore[shore_points] = 10
 
     band.WriteArray(fine_shore)
     band = None
@@ -460,7 +482,7 @@ def detect_shore_uri(landmass_raster_uri, aoi_raster_uri, output_uri):
     band.WriteArray(shore_array)
 
 # improve this docstring!
-def detect_shore(land_sea_array, aoi_array, aoi_nodata):
+def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
     """ Extract the boundary between land and sea from a raster.
     
         - raster: numpy array with sea, land and nodata values.
@@ -481,9 +503,14 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata):
         return np.zeros_like(land_sea_array)
     else:
         # Shore points are inland (>0), and detected using 8-connectedness
-        kernel = np.array([[-1, -1, -1],
-                           [-1,  8, -1],
-                           [-1, -1, -1]])
+        if connectedness is 8:
+            kernel = np.array([[-1, -1, -1],
+                               [-1,  8, -1],
+                               [-1, -1, -1]])
+        else:
+            kernel = np.array([[ 0, -1,  0],
+                               [-1,  4, -1],
+                               [ 0, -1,  0]])
         # Generate the nodata shore artifacts
         aoi_array = np.ones_like(land_sea_array)
         aoi_array[land_sea_array == nodata] = nodata
