@@ -68,59 +68,79 @@ def compute_transects(args):
 
 
     # Put a dot at the center of each cell in the finer landmass raster
+    args['shore_uri'] = os.path.join( \
+        os.path.split(args['landmass_raster_uri'])[0], 'shore.tif')
+    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+        args['shore_uri'], 'GTIFF', 0, gdal.GDT_Int32)
+    shore_raster = gdal.Open(args['shore_uri'], gdal.GA_Update)
+    shore_band = shore_raster.GetRasterBand(1)
+    fine_shore = shore_band.ReadAsArray()
+
     raster = gdal.Open(args['landmass_raster_uri'], gdal.GA_Update)
     fine_geotransform = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    fine_shore = band.ReadAsArray()
+    landmass = band.ReadAsArray()
+    band = None
+    raster = None
 
     assert coarse_geotransform[0] == fine_geotransform[0], \
         str(coarse_geotransform[0] - fine_geotransform[0])
     assert coarse_geotransform[3] == fine_geotransform[3], \
         str(coarse_geotransform[3] - fine_geotransform[3])
 
-    i_side_fine = fine_geotransform[1]
-    j_side_fine = fine_geotransform[5]
-    i_side_coarse = coarse_geotransform[1]
-    j_side_coarse = coarse_geotransform[5]
+    row_count, col_count = landmass.shape
+
+    i_side_fine = int(round(fine_geotransform[1]))
+    j_side_fine = int(round(fine_geotransform[5]))
+    i_side_coarse = int(round(coarse_geotransform[1]))
+    j_side_coarse = int(round(coarse_geotransform[5]))
+
+    i_start = int(round(fine_geotransform[3]))
+    j_start = int(round(fine_geotransform[0]))
+    i_end = int(round(i_start + i_side_fine * row_count))
+    j_end = int(round(j_start + j_side_fine * col_count))
+    
 
     print('fine', (i_side_fine, j_side_fine), 'coarse', (i_side_coarse, j_side_coarse))
+    print('iterations:', (len(range(i_start, i_end, i_side_coarse)), \
+                          len(range(j_start, j_end, j_side_coarse))))
+
+    for i in range(i_start, i_end, i_side_coarse):
+        for j in range(j_start, j_end, j_side_coarse):
+            i_fine = (i - i_start) / i_side_fine
+            j_fine = (j - j_start) / j_side_fine
+            i_coarse = round((i - i_start) / i_side_coarse)
+            j_coarse = round((j - j_start) / j_side_coarse)
+            print((i_fine, j_fine), '->', (i, j), '->', (i_coarse, j_coarse))
 
     i_offset = i_side_coarse/i_side_fine + 4
     j_offset = j_side_coarse/j_side_fine + 4
     mask = np.ones((i_offset, j_offset))
     tile_count = tiles[0].size
+
+    step = args['transect_spacing']
     for tile in range(tile_count):
-        LOGGER.debug('Processing tile ' + str(tile_count - tile))
+        #LOGGER.debug('Processing tile ' + str(tile_count - tile))
         i_tile = tiles[0][tile]
         j_tile = tiles[1][tile]
 
-        i_base = int((i_side_coarse * i_tile)/i_side_fine) - 3
-        j_base = int((j_side_coarse * j_tile)/j_side_fine) - 3
+        i_base = int((i_side_coarse * i_tile)/i_side_fine) - 2
+        j_base = int((j_side_coarse * j_tile)/j_side_fine) - 2
 
-        tile = fine_shore[i_base:i_base+i_offset, j_base:j_base+j_offset]
+        tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
         tile2 = np.zeros_like(tile)
         tile2[tile>0] = 1
 
         shore = detect_shore(tile2, mask, 0, connectedness = 4)
         shore_points = np.where(shore == 1)
-        #print('shore from tile', shore_points[0])
         
         shore_points = (shore_points[0] + i_base, shore_points[1] + j_base)
-        #print('offsetted shore', shore_points[0])
 
-        i_meters = i_side_coarse * i_tile + i_side_coarse / 2
-        j_meters = j_side_coarse * j_tile + j_side_coarse / 2
-        i_fine = i_meters / i_side_fine
-        j_fine = j_meters / j_side_fine
-        
-        #print((i_tile, j_tile), '->', (i_meters, j_meters), '->', (i_fine, j_fine))
-        #fine_shore[i_base:i_base+i_offset, j_base:j_base+j_offset] += 1
-        #fine_shore[i_fine, j_fine] = 1
-        fine_shore[shore_points] = 10
+        fine_shore[shore_points] = 1
 
-    band.WriteArray(fine_shore)
-    band = None
-    raster = None
+    shore_band.WriteArray(fine_shore)
+    shore_band = None
+    shore_raster = None
         
     return
     # Extract landmass
