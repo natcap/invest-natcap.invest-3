@@ -243,9 +243,6 @@ def _execute_nutrient(args):
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] * cell_area_ha)
             return result
-            #if lucode == nodata_landuse:
-            #    return nodata_load
-            #return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
