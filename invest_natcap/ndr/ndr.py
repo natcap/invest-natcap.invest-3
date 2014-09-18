@@ -240,7 +240,7 @@ def _execute_nutrient(args):
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[result == lucode] = (
+                    result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] * cell_area_ha)
             return result
             #if lucode == nodata_landuse:
