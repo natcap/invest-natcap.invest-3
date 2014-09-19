@@ -246,14 +246,18 @@ def _execute_nutrient(args):
         return map_load
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
-        def map_load(lucode, stream):
+        def map_eff(lucode_array, stream_array):
             """maps efficiencies from lulcs, handles nodata, and is aware that
                 streams have no retention"""
-            if lucode == nodata_landuse or stream == nodata_stream:
-                return nodata_load
-            #Retention efficiency is 0 when there's a stream.
-            return lucode_to_parameters[lucode][load_type] * (1 - stream)
-        return map_load
+            result = numpy.empty(lucode_array.shape, dtype=numpy.float32)
+            result[:] = nodata_load
+            for lucode in numpy.unique(lucode_array):
+                if lucode == nodata_landuse:
+                    continue
+                mask = (lucode_array == lucode) & (stream_array != nodata_stream)
+                result[mask] = lucode_to_parameters[lucode][load_type] * (1 - stream_array[mask])
+            return result
+        return map_eff
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
@@ -270,7 +274,7 @@ def _execute_nutrient(args):
         raster_utils.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection")
+            "intersection", vectorize_op=False)
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
