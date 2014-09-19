@@ -122,7 +122,7 @@ def _execute_nutrient(args):
 
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_'],
+            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_uri']))
 
         threshold_row = threshold_lookup.values()[0]
@@ -539,9 +539,10 @@ def _execute_nutrient(args):
                 flow_direction_uri, stream_uri, current_l_lulc_uri,
                 factor_uri=lulc_mask_uri)
 
+            current_l_lulc_nodata = raster_utils.get_nodata_from_uri(current_l_lulc_uri)
             def add_to_l_lulc(current_l_lulc_array, lulc_mask_array, l_lulc_array):
                 result = l_lulc_array.copy()
-                mask = (lulc_mask_array == 1)
+                mask = (lulc_mask_array == 1) & (current_l_lulc_array != current_l_lulc_nodata)
                 result[mask] = current_l_lulc_array[mask]
                 return result
 
@@ -552,6 +553,31 @@ def _execute_nutrient(args):
                 add_to_l_lulc, l_lulc_uri, gdal.GDT_Float32,
                 l_lulc_nodata, out_pixel_size, 'intersection',
                 vectorize_op=False)
+
+        ndr_max_uri = os.path.join(
+            intermediate_dir, 'ndr_max_%s%s.tif' % (nutrient, file_suffix))
+        ndr_max_nodata = -1.0
+        
+        LOGGER.info(lucode_to_parameters)
+        def calculate_ndr_max(l_lulc_array, lulc_array):
+            critical_length_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+            critical_length_array[:] = 1
+            eff_lulc_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+            for lucode in numpy.unique(lulc_array):
+                if lucode == lulc_nodata:
+                    continue
+                mask = lulc_array == lucode
+                eff_lulc_array[mask] = lucode_to_parameters[lucode]['eff_%s' % nutrient]
+                critical_length_array[mask] = lucode_to_parameters[lucode]['crit_len_%s' % nutrient]
+            return numpy.where(
+                (lulc_array == lulc_nodata) & (l_lulc_array == l_lulc_nodata), ndr_max_nodata,
+                1 - eff_lulc_array * (1 - numpy.exp(-5.0 * l_lulc_array / critical_length_array)))
+
+        raster_utils.vectorize_datasets(
+            [l_lulc_uri, lulc_uri],
+            calculate_ndr_max, ndr_max_uri, gdal.GDT_Float32,
+            ndr_max_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
 
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
