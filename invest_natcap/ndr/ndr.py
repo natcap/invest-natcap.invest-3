@@ -504,7 +504,8 @@ def _execute_nutrient(args):
     for nutrient in nutrients_to_process:
         #calculate l for each lulc type
         LOGGER.info('calculating l lulc raster set')
-        l_lulc_uri = 'l_lulc.tif'  ##make this raster from base
+        l_lulc_uri = os.path.join(
+            intermediate_dir, 'l_lulc_%s%s.tif' % (nutrient, file_suffix))
         l_lulc_nodata = -1.0
         raster_utils.new_raster_from_base_uri(
             lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32,
@@ -514,9 +515,11 @@ def _execute_nutrient(args):
         current_l_lulc_uri = raster_utils.temporary_filename()
         l_lulc_temp_uri = raster_utils.temporary_filename()
 
-        ############################
         for lulc_code in get_unique_lulc_codes(lulc_uri):
-            LOGGER.info('processling lulc code %d for l_lulc' % lulc_code)
+            #no reason to process the nodata area, we already mask that out
+            if lulc_code == lulc_nodata:
+                continue
+            LOGGER.info('processing lulc code %d for l_lulc' % lulc_code)
             mask_nodata = 2
             def mask_lulc_type(lulc_array):
                 result = numpy.zeros(lulc_array.shape, dtype=numpy.int8)
@@ -538,15 +541,13 @@ def _execute_nutrient(args):
                 result[mask] = current_l_lulc_array[mask]
                 return result
 
-            #copy the file to avoid aliasting
+            #copy the file to avoid aliasing
             shutil.copyfile(l_lulc_uri, l_lulc_temp_uri)
             raster_utils.vectorize_datasets(
                 [current_l_lulc_uri, lulc_mask_uri, l_lulc_temp_uri],
                 add_to_l_lulc, l_lulc_uri, gdal.GDT_Float32,
-                mask_nodata, out_pixel_size, 'intersection',
+                l_lulc_nodata, out_pixel_size, 'intersection',
                 vectorize_op=False)
-            
-
 
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
