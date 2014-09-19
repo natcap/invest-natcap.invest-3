@@ -3,6 +3,8 @@ Deposition model."""
 
 import logging
 import os
+import shutil
+import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -508,20 +510,41 @@ def _execute_nutrient(args):
             lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32)
 
         lulc_mask_uri = raster_utils.temporary_filename()
+        current_l_lulc_uri = raster_utils.temporary_filename()
+        l_lulc_temp_uri = raster_utils.temporary_filename()
+
         ############################
         for lulc_code in get_unique_lulc_codes(lulc_uri):
+            LOGGER.info('processling lulc code %d for l_lulc' % lulc_code)
             mask_nodata = 2
             def mask_lulc_type(lulc_array):
                 result = numpy.zeros(lulc_array.shape, dtype=numpy.int8)
                 result[lulc_array == lulc_nodata] = mask_nodata
                 result[lulc_array == lulc_code] = 1
                 return result
+            
             raster_utils.vectorize_datasets(
                 [lulc_uri], mask_lulc_type, lulc_mask_uri, gdal.GDT_Byte,
                 mask_nodata, out_pixel_size, 'intersection', vectorize_op=False)
+            
             routing_cython_core.distance_to_stream(
-                flow_direction_uri, stream_uri, l_lulc_uri,
+                flow_direction_uri, stream_uri, current_l_lulc_uri,
                 factor_uri=lulc_mask_uri)
+
+            def add_to_l_lulc(current_l_lulc_array, lulc_mask_array, l_lulc_array):
+                result = l_lulc_array.copy()
+                mask = (lulc_mask_array == 1)
+                result[mask] = l_lulc_array[mask]
+                return result
+
+            #copy the file to avoid aliasting
+            shutil.copyfile(l_lulc_uri, l_lulc_temp_uri)
+            raster_utils.vectorize_datasets(
+                [current_l_lulc_uri, lulc_mask_uri, l_lulc_temp_uri],
+                add_to_l_lulc, l_lulc_uri, gdal.GDT_Float32,
+                mask_nodata, out_pixel_size, 'intersection',
+                vectorize_op=False)
+            
 
 
         alv_uri[nutrient] = os.path.join(
@@ -646,11 +669,39 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
         #Save back to datasource
         output_layer.SetFeature(feature)
 
-def get_unique_lulc_codes(lulc_uri):
+def get_unique_lulc_codes(dataset_uri):
     """Find all the values in the input raster and return a list of unique
         values in that raster
 
-        lulc_uri - uri to a land cover map that has integer values
+        dataset_uri - uri to a land cover map that has integer values
 
-        returns a unique list of codes in lulc_uri"""
-    return [54]
+        returns a unique list of codes in dataset_uri"""
+    
+    dataset = gdal.Open(dataset_uri)
+    dataset_band = dataset.GetRasterBand(1)
+    block_size = dataset_band.GetBlockSize()
+
+    n_rows, n_cols = dataset.RasterYSize, dataset.RasterXSize
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    unique_codes = set()
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+            result = dataset_band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset,
+                win_xsize=col_block_width,
+                win_ysize=row_block_width)
+            unique_codes.update(numpy.unique(result))
+
+    return unique_codes
