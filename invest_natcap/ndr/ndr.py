@@ -224,9 +224,6 @@ def _execute_nutrient(args):
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(output_dir, 'v_stream%s.tif' % file_suffix)
-
-    #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['accum_threshold']), stream_uri)
@@ -503,6 +500,30 @@ def _execute_nutrient(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     for nutrient in nutrients_to_process:
+        #calculate l for each lulc type
+        LOGGER.info('calculating l lulc raster set')
+        l_lulc_uri = 'l_lulc.tif'  ##make this raster from base
+        l_lulc_nodata = -1.0
+        raster_utils.new_raster_from_base_uri(
+            lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32)
+
+        lulc_mask_uri = raster_utils.temporary_filename()
+        ############################
+        for lulc_code in get_unique_lulc_codes(lulc_uri):
+            mask_nodata = 2
+            def mask_lulc_type(lulc_array):
+                result = numpy.zeros(lulc_array.shape, dtype=numpy.int8)
+                result[lulc_array == lulc_nodata] = mask_nodata
+                result[lulc_array == lulc_code] = 1
+                return result
+            raster_utils.vectorize_datasets(
+                [lulc_uri], mask_lulc_type, lulc_mask_uri, gdal.GDT_Byte,
+                mask_nodata, out_pixel_size, 'intersection', vectorize_op=False)
+            routing_cython_core.distance_to_stream(
+                flow_direction_uri, stream_uri, l_lulc_uri,
+                factor_uri=lulc_mask_uri)
+
+
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
@@ -624,3 +645,12 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
         output_layer.SetFeature(feature)
+
+def get_unique_lulc_codes(lulc_uri):
+    """Find all the values in the input raster and return a list of unique
+        values in that raster
+
+        lulc_uri - uri to a land cover map that has integer values
+
+        returns a unique list of codes in lulc_uri"""
+    return [54]
