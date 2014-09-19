@@ -102,7 +102,6 @@ def execute(args):
         preprocessed_data = _prepare(**args)
     
     aligned_dem_uri = preprocessed_data['aligned_dem_uri']
-    aligned_lulc_uri = preprocessed_data['aligned_lulc_uri']
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
     aligned_erodibility_uri = preprocessed_data['aligned_erodibility_uri']
     dem_offset_uri = preprocessed_data['dem_offset_uri']
@@ -111,8 +110,18 @@ def execute(args):
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
 
+    #this section is to align the lulc with the prepared data, we need to make a garbage
+    #tempoary dem to conform to the align_dataset_list API that requires as many outputs
+    #as inputs
+    aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
     out_pixel_size = raster_utils.get_cell_size_from_uri(preprocessed_data['aligned_dem_uri'])
-    
+    tmp_dem_uri = raster_utils.temporary_filename()
+    raster_utils.align_dataset_list(
+        [aligned_dem_uri, args['landuse_uri']], [tmp_dem_uri, aligned_lulc_uri],
+        ['nearest'] * 2, out_pixel_size, 'dataset',
+        0, dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
+    os.remove(tmp_dem_uri)
+
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
@@ -526,8 +535,6 @@ def _prepare(**args):
         that is unlikely to change when running a batch process.
         
         args['dem_uri'] - dem layer
-        args['landuse_uri'] - landuse layer that will be used to align the
-            output datasets
         args['erosivity_uri'] - erosivity data that will be used to align and
             precalculate rkls
         args['erodibility_uri'] - erodibility data that will be used to align
@@ -536,7 +543,6 @@ def _prepare(**args):
         
         return a dictionary with the keys:
             'aligned_dem_uri' - input dem aligned with the rest of the inputs
-            'aligned_lulc_uri' - input lulc aligned with the rest of the inputs
             'aligned_erosivity_uri' - input erosivity aligned with the inputs
             'aligned_erodibility_uri' - input erodability aligned with the
                 inputs
@@ -551,16 +557,13 @@ def _prepare(**args):
     tiled_dem_uri = os.path.join(intermediate_dir, 'tiled_dem.tif')
     raster_utils.tile_dataset_uri(args['dem_uri'], tiled_dem_uri, 256)
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
-    aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
     aligned_erosivity_uri = os.path.join(
         intermediate_dir, 'aligned_erosivity.tif')
     aligned_erodibility_uri = os.path.join(
         intermediate_dir, 'aligned_erodibility.tif')
     
-    input_list = [tiled_dem_uri, args['landuse_uri'], args['erosivity_uri'], 
-        args['erodibility_uri']]
-    dataset_out_uri_list = [aligned_dem_uri, aligned_lulc_uri,
-        aligned_erosivity_uri, aligned_erodibility_uri]
+    input_list = [tiled_dem_uri, args['erosivity_uri'], args['erodibility_uri']]
+    dataset_out_uri_list = [aligned_dem_uri, aligned_erosivity_uri, aligned_erodibility_uri]
     raster_utils.align_dataset_list(
         input_list, dataset_out_uri_list, 
         ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
@@ -611,7 +614,6 @@ def _prepare(**args):
     
     return {
         'aligned_dem_uri': aligned_dem_uri,
-        'aligned_lulc_uri': aligned_lulc_uri,
         'aligned_erosivity_uri': aligned_erosivity_uri,
         'aligned_erodibility_uri': aligned_erodibility_uri,
         'dem_offset_uri': dem_offset_uri,
