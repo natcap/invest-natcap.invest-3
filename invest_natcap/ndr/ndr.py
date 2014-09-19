@@ -501,6 +501,10 @@ def _execute_nutrient(args):
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
+    ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
+    ic_0_param = (ic_min + ic_max) / 2.0
+    k_param = (ic_max - ic_min) / 10.0
+
     for nutrient in nutrients_to_process:
         #calculate l for each lulc type
         LOGGER.info('calculating l lulc raster set')
