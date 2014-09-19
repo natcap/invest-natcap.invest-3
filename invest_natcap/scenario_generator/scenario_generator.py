@@ -11,6 +11,8 @@ from fractions import Fraction
 import numpy
 from scipy.linalg import eig
 import scipy.ndimage
+import cProfile
+import pstats
 
 from osgeo import gdal, ogr
 
@@ -372,13 +374,19 @@ def filter_fragments(input_uri, size, output_uri):
         suitability_values = suitability_values[1:]
 
     #8 connectedness preferred, 4 connectedness allowed
-    for value in suitability_values:
+    eight_connectedness = numpy.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]])
+    four_connectedness = numpy.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+
+    suitability_values_count = suitability_values.size
+    for v in range(1, suitability_values_count):
+        LOGGER.debug('Processing suitability value ' + \
+            str(suitability_values.size - v))
+        value = suitability_values[v]
         mask = src_array == value # You get a mask with the polygons only
         ones_in_mask = numpy.sum(mask)
-##        print('Processing value' + str(value) + ' (found ' + \
-##        str(ones_in_mask) + ' among ' + str(mask.size) + ')')
-        label_im, nb_labels = scipy.ndimage.label(mask)
-        src_array[mask] = 1
+
+        label_im, nb_labels = scipy.ndimage.label(mask, eight_connectedness)
+
         fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
         fragment_labels = numpy.array(range(nb_labels + 1))
 ##        print('Labels', nb_labels, fragment_sizes)
@@ -393,10 +401,15 @@ def filter_fragments(input_uri, size, output_uri):
 ##        print('small fragment labels', small_fragment_labels)
 ##        print('large_fragments', large_fragments.size, large_fragments)
         removed_pixels = 0
-        for label in small_fragment_labels[1:]:
+        small_fragment_labels_count = small_fragment_labels.size
+        print '  Removing small fragments:',
+        for l in range(1, small_fragment_labels_count):
+            print ' ' + str(small_fragment_labels.size - l), 
+            label = small_fragment_labels[l]
             pixels_to_remove = numpy.where(label_im == label)
             dst_array[pixels_to_remove] = 0
-            removed_pixels += pixels_to_remove[0].size
+##            removed_pixels += pixels_to_remove[0].size
+
 ##            print('removed ' + str(pixels_to_remove[0].size) + \
 ##            ' pixels with label ' + str(label) + ', total = ' + \
 ##            str(removed_pixels))
@@ -798,10 +811,17 @@ def execute(args):
     for cover_id in transition_dict:
         if (transition_dict[cover_id][args["patch_field"]] > 0) and (cover_id in suitability_dict):
             LOGGER.info("Filtering patches from %i.", cover_id)
-            size = int(math.ceil(transition_dict[cover_id][args["patch_field"]] / (cell_size ** 2)))
+            size = 10000 * int(math.ceil( \
+                transition_dict[cover_id][args["patch_field"]] / \
+                    (cell_size ** 2)))
 
             output_uri = os.path.join(workspace, filter_name % cover_id)
-            filter_fragments(suitability_dict[cover_id], size, output_uri)
+            cProfile.runctx( \
+                'filter_fragments(suitability_dict[cover_id], size, output_uri)', \
+                globals(), locals(), 'stats')
+            p = pstats.Stats('stats')
+            p.sort_stats('time').print_stats(20)
+            p.sort_stats('cumulative').print_stats(20)
             suitability_dict[cover_id] = output_uri
 
     ###
@@ -1062,10 +1082,12 @@ def execute(args):
             numpy.random.shuffle(patch_labels)
 
             #check patches for conversion
-            for label in patch_labels:
+            patch_label_count = patch_labels.size
+            for l in range(patch_label_count):
+                label = patch_labels[l]
                 patch = numpy.where(label_im == label)
                 if patch_sizes[label] + pixels_changed > count:
-                    LOGGER.debug("Converting part of patch %i.", label)
+                    LOGGER.debug("Converting part of patch %i.", patch_label_count - l)
 
                     #mask out everything except the current patch
                     patch_mask = numpy.zeros_like(scenario_array)
@@ -1096,7 +1118,7 @@ def execute(args):
                     break
 
                 else:
-                    LOGGER.debug("Converting patch %i.", label)
+                    LOGGER.debug("Converting patch %i.", patch_label_count - l)
                     #convert patch, increase count of changes
                     scenario_array[patch] = cover_id
                     pixels_changed += patch_sizes[label]
