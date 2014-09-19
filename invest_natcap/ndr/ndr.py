@@ -507,7 +507,8 @@ def _execute_nutrient(args):
         l_lulc_uri = 'l_lulc.tif'  ##make this raster from base
         l_lulc_nodata = -1.0
         raster_utils.new_raster_from_base_uri(
-            lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32)
+            lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32,
+            fill_value=l_lulc_nodata)
 
         lulc_mask_uri = raster_utils.temporary_filename()
         current_l_lulc_uri = raster_utils.temporary_filename()
@@ -534,7 +535,7 @@ def _execute_nutrient(args):
             def add_to_l_lulc(current_l_lulc_array, lulc_mask_array, l_lulc_array):
                 result = l_lulc_array.copy()
                 mask = (lulc_mask_array == 1)
-                result[mask] = l_lulc_array[mask]
+                result[mask] = current_l_lulc_array[mask]
                 return result
 
             #copy the file to avoid aliasting
