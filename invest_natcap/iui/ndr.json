@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "Nutrient Deposition Ratio Model",
+    "label": "Nutrient Delivery Ratio Model (NDR)",
     "targetScript" : "invest_natcap.ndr.ndr",
     "modelName" : "nutrient",
     "localDocURI": "../documentation/waterpurification.html",
