@@ -162,7 +162,6 @@ def _execute_nutrient(args):
 
     for folder in [workspace, output_dir, intermediate_dir]:
         if not os.path.exists(folder):
-            LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
 
     #Build up a list of nutrients to process based on what's checked on
@@ -502,7 +501,6 @@ def _execute_nutrient(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
-    LOGGER.debug('ic_min, ic_max %f, %f', ic_min, ic_max)
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = (ic_max - ic_min) / 10.0
 
@@ -592,7 +590,6 @@ def _execute_nutrient(args):
             [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
-        LOGGER.debug('ic_0_param %f', ic_0_param)
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
