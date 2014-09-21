@@ -493,7 +493,7 @@ def _execute_nutrient(args):
     d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
     d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
     def ic_op(d_up, d_dn):
-        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
+        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) | (d_dn == 0)
         return numpy.where(
             nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
     raster_utils.vectorize_datasets(
@@ -502,6 +502,7 @@ def _execute_nutrient(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
+    LOGGER.debug('ic_min, ic_max %f, %f', ic_min, ic_max)
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = (ic_max - ic_min) / 10.0
 
@@ -558,7 +559,6 @@ def _execute_nutrient(args):
             intermediate_dir, 'ndr_max_%s%s.tif' % (nutrient, file_suffix))
         ndr_max_nodata = -1.0
         
-        LOGGER.info(lucode_to_parameters)
         def calculate_ndr_max(l_lulc_array, lulc_array):
             critical_length_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
             critical_length_array[:] = 1
@@ -570,7 +570,7 @@ def _execute_nutrient(args):
                 eff_lulc_array[mask] = lucode_to_parameters[lucode]['eff_%s' % nutrient]
                 critical_length_array[mask] = lucode_to_parameters[lucode]['crit_len_%s' % nutrient]
             return numpy.where(
-                (lulc_array == lulc_nodata) & (l_lulc_array == l_lulc_nodata), ndr_max_nodata,
+                (lulc_array == lulc_nodata) | (l_lulc_array == l_lulc_nodata), ndr_max_nodata,
                 1 - eff_lulc_array * (1 - numpy.exp(-5.0 * l_lulc_array / critical_length_array)))
 
         raster_utils.vectorize_datasets(
@@ -579,11 +579,25 @@ def _execute_nutrient(args):
             ndr_max_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
+        LOGGER.info('calculate NDR')
+        ndr_uri = os.path.join(
+            intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
+        ndr_nodata = -1.0
+        def calculate_ndr(ndr_max_array, ic_array):
+            return numpy.where(
+                (ndr_max_array == ndr_nodata) | (ic_array == ic_nodata), ndr_nodata,
+                ndr_max_array * 1.0 / (1.0 + numpy.exp((ic_0_param - ic_array) / k_param)))
+
+        raster_utils.vectorize_datasets(
+            [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
+            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
+        LOGGER.debug('ic_0_param %f', ic_0_param)
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
-             stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
+            stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
             nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
         #The retention calculation is only interesting to see where nutrient
