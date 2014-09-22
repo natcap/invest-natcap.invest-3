@@ -173,19 +173,7 @@
 		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
 		},
-		{        
-		    "id" : "water_purification_threshold_table_uri",
-		    "args_id" : "water_purification_threshold_table_uri",
-		    "type": "file",
-		    "label": "Water Purification Threshold Table",
-		    "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_threshold.csv",
-		    "required": true,
-		    "validateAs": {"type": "CSV",
-				   "fieldsExist": ["ws_id"]
-				  },
-		    "helpText": "A table containing annual nutrient load threshold information.  Must have a ws_id index and thres_n (or p) field depending if nitrogen and/or phosphorous is simulated."
-		},
-        {
+		{
             "id" : "k_param",
             "args_id" : "k_param",
             "type": "text",
