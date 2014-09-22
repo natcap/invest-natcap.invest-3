@@ -109,8 +109,8 @@ def compute_transects(args):
         for j in range(j_start, j_end, j_side_coarse):
             i_fine = (i - i_start) / i_side_fine
             j_fine = (j - j_start) / j_side_fine
-            i_coarse = round((i - i_start) / i_side_coarse)
-            j_coarse = round((j - j_start) / j_side_coarse)
+            i_coarse = int(round((i - i_start) / i_side_coarse))
+            j_coarse = int(round((j - j_start) / j_side_coarse))
             print((i_fine, j_fine), '->', (i, j), '->', (i_coarse, j_coarse))
 
     i_offset = i_side_coarse/i_side_fine + 4
