@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "Nutrient Deposition Ratio Model",
+    "label": "Nutrient Delivery Ratio Model (NDR)",
     "targetScript" : "invest_natcap.ndr.ndr",
     "modelName" : "nutrient",
     "localDocURI": "../documentation/waterpurification.html",
@@ -165,7 +165,7 @@
 		},
 		{        
 		    "id" : "threshold_flow_accumulation",
-		    "args_id" : "accum_threshold",
+		    "args_id" : "threshold_flow_accumulation",
 		    "type": "text",
 		    "label": "Threshold Flow Accumluation",
 		    "defaultValue": "1000",
@@ -173,44 +173,16 @@
 		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
 		},
-		{        
-		    "id" : "water_purification_threshold_table_uri",
-		    "args_id" : "water_purification_threshold_table_uri",
-		    "type": "file",
-		    "label": "Water Purification Threshold Table",
-		    "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_threshold.csv",
-		    "required": true,
-		    "validateAs": {"type": "CSV",
-				   "fieldsExist": ["ws_id"]
-				  },
-		    "helpText": "A table containing annual nutrient load threshold information.  Must have a ws_id index and thres_n (or p) field depending if nitrogen and/or phosphorous is simulated."
-		}
-	    ]
-	},
-	{
-	    "id" : "valuation_container",
-	    "args_id" : "valuation_enabled",
-	    "type" : "container",
-	    "label" : "Valuation",
-	    "collapsible" : true,
-	    "defaultValue" : false,
-	    "elements" : [
 		{
-		    "id" : "valuation_list",
-		    "type" : "list",
-		    "elements" : [
-			{        
-			    "id" : "water_purification_valuation_table_uri",
-			    "args_id" : "water_purification_valuation_table_uri",
-			    "type": "file",
-			    "label": "Water Purification valuation table",
-			    "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_valuation.csv",
-			    "required": true,
-			    "validateAs": {"type": "CSV"},
-			    "helpText": "The table containing valuation information.  It must be indexed by ws_id and contain fields cost_n (or p), time_span_n (or p), discount_n (or p) depending on which nutrients are selected."
-			}
-		    ]
-		}
+            "id" : "k_param",
+            "args_id" : "k_param",
+            "type": "text",
+            "label": "Borselli k parameter",
+            "defaultValue": "2",
+            "required": true,
+            "validText": "^[0-9]+\\.?[0-9]*$",
+            "helpText": "Borselli k parameter."
+        }
 	    ]
 	}
     ]

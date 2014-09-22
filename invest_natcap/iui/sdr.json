@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "Sediment Delivery Model (SDR)",
+    "label": "Sediment Delivery Ratio Model (SDR)",
     "targetScript" : "invest_natcap.sdr.sdr",
     "modelName" : "sdr",
     "localDocURI": "../documentation/sediment_retention.html",
