@@ -87,24 +87,20 @@ def _execute_nutrient(args):
                 corresponding to the seasonal distribution of precipitation 
                 (required)
             'calc_p' - True if phosphorous is meant to be modeled, if True then
-                biophyscial table and threshold table and valuation table must
-                have p fields in them.
+                biophyscial table must have p fields in them.
             'calc_n' - True if nitrogen is meant to be modeled, if True then
-                biophyscial table and threshold table and valuation table must
-                have n fields in them.
+                biophyscial table must have n fields in them.
             'results_suffix' - (optional) a text field to append to all output files.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
-            'water_purification_valuation_table_uri' - (optional) a uri to a
-                csv used for valuation
+
 
         returns nothing.
     """
     def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters, threshold_lookup,
-        valuation_lookup):
+        nutrients_to_process, lucode_to_parameters, threshold_lookup):
         
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
@@ -129,12 +125,6 @@ def _execute_nutrient(args):
         row_header_table_list.append(
             (threshold_row, ['thresh_'],
              args['water_purification_threshold_table_uri']))
-
-        if valuation_lookup is not None:
-            valuation_row = valuation_lookup.values()[0]
-            row_header_table_list.append(
-                (valuation_row, ['cost_', 'time_span_', 'discount_'],
-                 args['biophysical_table_uri']))
 
         missing_headers = []
         for row, header_prefixes, table_type in row_header_table_list:
@@ -174,12 +164,8 @@ def _execute_nutrient(args):
 
     threshold_table = raster_utils.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
-    valuation_lookup = None
-    if args['valuation_enabled']:
-        valuation_lookup = raster_utils.get_lookup_from_csv(
-            args['water_purification_valuation_table_uri'], 'ws_id')
     _validate_inputs(nutrients_to_process, lucode_to_parameters,
-                     threshold_table, valuation_lookup)
+                     threshold_table)
 
     #This one is tricky, we want to make a dictionary that indexes by nutrient
     #id and yields a dicitonary indexed by ws_id to the threshold amount of
