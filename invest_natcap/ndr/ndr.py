@@ -91,8 +91,6 @@ def _execute_nutrient(args):
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table must have n fields in them.
             'results_suffix' - (optional) a text field to append to all output files.
-            'water_purification_threshold_table_uri' - a string uri to a
-                csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
 
@@ -100,7 +98,7 @@ def _execute_nutrient(args):
         returns nothing.
     """
     def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters, threshold_lookup):
+        nutrients_to_process, lucode_to_parameters):
         
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
@@ -120,11 +118,6 @@ def _execute_nutrient(args):
         row_header_table_list.append(
             (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_uri']))
-
-        threshold_row = threshold_lookup.values()[0]
-        row_header_table_list.append(
-            (threshold_row, ['thresh_'],
-             args['water_purification_threshold_table_uri']))
 
         missing_headers = []
         for row, header_prefixes, table_type in row_header_table_list:
@@ -162,21 +155,7 @@ def _execute_nutrient(args):
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
 
-    threshold_table = raster_utils.get_lookup_from_csv(
-        args['water_purification_threshold_table_uri'], 'ws_id')
-    _validate_inputs(nutrients_to_process, lucode_to_parameters,
-                     threshold_table)
-
-    #This one is tricky, we want to make a dictionary that indexes by nutrient
-    #id and yields a dicitonary indexed by ws_id to the threshold amount of
-    #that type.  The get_lookup_from_csv only gives us a flat table, so this
-    #processing is working around that.
-    threshold_lookup = {}
-    for nutrient_id in nutrients_to_process:
-        threshold_lookup[nutrient_id] = {}
-        for ws_id, value in threshold_table.iteritems():
-            threshold_lookup[nutrient_id][ws_id] = (
-                value['thresh_%s' % (nutrient_id)])
+    _validate_inputs(nutrients_to_process, lucode_to_parameters)
 
     dem_pixel_size = raster_utils.get_cell_size_from_uri(
         args['dem_uri'])
