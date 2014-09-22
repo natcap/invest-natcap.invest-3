@@ -618,6 +618,19 @@ def _execute_nutrient(args):
             export_uri[nutrient], aoi_uri=args['watersheds_uri'],
             percent_to_stream_uri=pts_uri[nutrient])
 
+        alv_nodata = raster_utils.get_nodata_from_uri(alv_uri[nutrient])
+        export_nodata = -1.0
+        def calculate_export(alv_array, ndr_array):
+            return numpy.where(
+                (alv_array == alv_nodata) | (ndr_array == ndr_nodata),
+                export_nodata,
+                alv_array * ndr_array)
+
+        raster_utils.vectorize_datasets(
+            [alv_uri[nutrient], ndr_uri],  calculate_export,
+            export_uri[nutrient], gdal.GDT_Float32,
+            export_nodata, out_pixel_size, "intersection", vectorize_op=False)
+
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
         alv_tot = raster_utils.aggregate_raster_values_uri(
