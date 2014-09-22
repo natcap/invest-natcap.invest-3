@@ -1089,7 +1089,7 @@ def execute(args):
             label_im, nb_labels = scipy.ndimage.label(mask)
             
             #get patch sizes
-            patch_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+            patch_sizes = scipy.ndimage.sum(mask, label_im, range(1, nb_labels + 1))
             patch_labels = numpy.array(range(1, nb_labels + 1))
             patch_locations = scipy.ndimage.find_objects(label_im, nb_labels)
 
@@ -1098,13 +1098,13 @@ def execute(args):
 
             #check patches for conversion
             patch_label_count = patch_labels.size
-            for l in range(10): #patch_label_count):
+            for l in range(patch_label_count):
                 label = patch_labels[l]
-                patch = numpy.where(label_im == label)
-                if patch_sizes[label] + pixels_changed > count:
+                if patch_sizes[label-1] + pixels_changed > count:
                     LOGGER.debug("Converting part of patch %i.", patch_label_count - l)
 
                     #mask out everything except the current patch
+                    patch = numpy.where(label_im == label)
                     patch_mask = numpy.zeros_like(scenario_array)
                     patch_mask[patch] = 1
 
@@ -1128,19 +1128,31 @@ def execute(args):
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
+                        
                         update_arrays[update_id][pixels_to_change] = 0
 
                     break
 
                 else:
                     LOGGER.debug("Converting patch %i.", patch_label_count - l)
+                    #print('label', label)
+                    source = label_im[patch_locations[label-1]]
+                    #print('source', source)
+                    #print('size', patch_sizes[label-1])
+                    target = scenario_array[patch_locations[label-1]]
+                    #print('target before', target)
+                    pixels_to_change = numpy.where(source == label)
+                    assert pixels_to_change[0].size == patch_sizes[label-1]
                     #convert patch, increase count of changes
-                    scenario_array[patch] = cover_id
-                    pixels_changed += patch_sizes[label]
+                    #print('new cover id', cover_id)
+                    target[pixels_to_change] = cover_id
+                    #print('target after', target)
+                    pixels_changed += patch_sizes[label-1]
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
-                        update_arrays[update_id][patch] = 0
+                        target = update_arrays[update_id][patch_locations[label-1]]
+                        target[pixels_to_change] = 0
 
         #report and record unchanged pixels
         if pixels_changed < count:
