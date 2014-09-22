@@ -1100,49 +1100,57 @@ def execute(args):
             patch_label_count = patch_labels.size
             for l in range(patch_label_count):
                 label = patch_labels[l]
+                #print('label', label)
+                source = label_im[patch_locations[label-1]]
+                #print('source', source)
+                #print('size', patch_sizes[label-1])
+                target = scenario_array[patch_locations[label-1]]
+                #print('target before', target)
+                pixels_to_change = numpy.where(source == label)
+                assert pixels_to_change[0].size == patch_sizes[label-1]
+
                 if patch_sizes[label-1] + pixels_changed > count:
                     LOGGER.debug("Converting part of patch %i.", patch_label_count - l)
 
                     #mask out everything except the current patch
-                    patch = numpy.where(label_im == label)
-                    patch_mask = numpy.zeros_like(scenario_array)
-                    patch_mask[patch] = 1
+                    #patch = numpy.where(label_im == label)
+                    #patch_mask = numpy.zeros_like(scenario_array)
+                    patch_mask = numpy.zeros_like(target)
+                    #patch_mask[patch] = 1
+                    patch_mask[pixels_to_change] = 1
 
                     #calculate the distance to exit the patch
+                    #tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
                     tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
-                    tmp_array = tmp_array[patch]
+                    #tmp_array = tmp_array[patch]
+                    tmp_array = tmp_array[pixels_to_change]
 
                     #select the number of pixels that need to be converted
                     tmp_index = numpy.argsort(tmp_array)
                     tmp_index = tmp_index[:count - pixels_changed]
 
                     #convert the selected pixels into coordinates
-                    pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    #pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    pixels_to_change = numpy.array(zip(pixels_to_change[0], pixels_to_change[1]))
                     pixels_to_change = pixels_to_change[tmp_index]
                     pixels_to_change = apply(zip, pixels_to_change)
 
                     #change the pixels in the scenario
-                    scenario_array[pixels_to_change] = cover_id
+                    #scenario_array[pixels_to_change] = cover_id
+                    target[pixels_to_change] = cover_id
 
                     pixels_changed = count                                        
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
-                        
-                        update_arrays[update_id][pixels_to_change] = 0
+                        #update_arrays[update_id][pixels_to_change] = 0
+                        target = update_arrays[update_id][patch_locations[label-1]]
+                        target[pixels_to_change] = 0
 
                     break
 
                 else:
                     LOGGER.debug("Converting patch %i.", patch_label_count - l)
-                    #print('label', label)
-                    source = label_im[patch_locations[label-1]]
-                    #print('source', source)
-                    #print('size', patch_sizes[label-1])
-                    target = scenario_array[patch_locations[label-1]]
-                    #print('target before', target)
-                    pixels_to_change = numpy.where(source == label)
-                    assert pixels_to_change[0].size == patch_sizes[label-1]
                     #convert patch, increase count of changes
                     #print('new cover id', cover_id)
                     target[pixels_to_change] = cover_id
