@@ -352,7 +352,6 @@ def _execute_nutrient(args):
     alv_uri = {}
     export_uri = {}
     field_summaries = {}
-    pts_uri = {}  # percent_to_stream uri
     
     #Calculate the W factor
     LOGGER.info('calculate per pixel W')
@@ -598,13 +597,7 @@ def _execute_nutrient(args):
 
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
-        pts_uri[nutrient] = os.path.join(intermediate_dir,
-            '%s_percent_to_stream%s.tif' % (nutrient, file_suffix))
-        routing_utils.pixel_amount_exported(
-            flow_direction_uri, dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
-            export_uri[nutrient], aoi_uri=args['watersheds_uri'],
-            percent_to_stream_uri=pts_uri[nutrient])
-
+        
         alv_nodata = raster_utils.get_nodata_from_uri(alv_uri[nutrient])
         export_nodata = -1.0
         def calculate_export(alv_array, ndr_array):
