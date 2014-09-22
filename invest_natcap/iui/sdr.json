@@ -63,8 +63,8 @@
 		    "helpText": "This is a GIS raster dataset, with a soil erodibility value for each cell which is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
 		},
 		{        
-		    "id" : "landuse_uri",
-		    "args_id" : "landuse_uri",
+		    "id" : "lulc_uri",
+		    "args_id" : "lulc_uri",
 		    "type": "file",
 		    "label": "LULC Raster",
 		    "defaultValue": "../Base_Data/Freshwater/landuse_90",

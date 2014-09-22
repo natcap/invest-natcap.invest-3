@@ -32,7 +32,7 @@ def execute(args):
             rainfall eroisivity index (required)
         args['erodibility_uri'] - a uri to an input raster describing soil
             erodibility (required)
-        args['landuse_uri'] - a uri to a land use/land cover raster whose
+        args['lulc_uri'] - a uri to a land use/land cover raster whose
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical
             properties of the landscape.  (required)
@@ -117,7 +117,7 @@ def execute(args):
     out_pixel_size = raster_utils.get_cell_size_from_uri(preprocessed_data['aligned_dem_uri'])
     tmp_dem_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
-        [aligned_dem_uri, args['landuse_uri']], [tmp_dem_uri, aligned_lulc_uri],
+        [aligned_dem_uri, args['lulc_uri']], [tmp_dem_uri, aligned_lulc_uri],
         ['nearest'] * 2, out_pixel_size, 'dataset',
         0, dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
     os.remove(tmp_dem_uri)
