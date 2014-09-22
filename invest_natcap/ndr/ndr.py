@@ -3,6 +3,8 @@ Deposition model."""
 
 import logging
 import os
+import shutil
+import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -85,24 +87,18 @@ def _execute_nutrient(args):
                 corresponding to the seasonal distribution of precipitation 
                 (required)
             'calc_p' - True if phosphorous is meant to be modeled, if True then
-                biophyscial table and threshold table and valuation table must
-                have p fields in them.
+                biophyscial table must have p fields in them.
             'calc_n' - True if nitrogen is meant to be modeled, if True then
-                biophyscial table and threshold table and valuation table must
-                have n fields in them.
+                biophyscial table must have n fields in them.
             'results_suffix' - (optional) a text field to append to all output files.
-            'water_purification_threshold_table_uri' - a string uri to a
-                csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
-            'water_purification_valuation_table_uri' - (optional) a uri to a
-                csv used for valuation
+
 
         returns nothing.
     """
     def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters, threshold_lookup,
-        valuation_lookup):
+        nutrients_to_process, lucode_to_parameters):
         
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
@@ -120,19 +116,8 @@ def _execute_nutrient(args):
 
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_'],
+            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_uri']))
-
-        threshold_row = threshold_lookup.values()[0]
-        row_header_table_list.append(
-            (threshold_row, ['thresh_'],
-             args['water_purification_threshold_table_uri']))
-
-        if valuation_lookup is not None:
-            valuation_row = valuation_lookup.values()[0]
-            row_header_table_list.append(
-                (valuation_row, ['cost_', 'time_span_', 'discount_'],
-                 args['biophysical_table_uri']))
 
         missing_headers = []
         for row, header_prefixes, table_type in row_header_table_list:
@@ -160,7 +145,6 @@ def _execute_nutrient(args):
 
     for folder in [workspace, output_dir, intermediate_dir]:
         if not os.path.exists(folder):
-            LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
 
     #Build up a list of nutrients to process based on what's checked on
@@ -171,25 +155,7 @@ def _execute_nutrient(args):
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
 
-    threshold_table = raster_utils.get_lookup_from_csv(
-        args['water_purification_threshold_table_uri'], 'ws_id')
-    valuation_lookup = None
-    if args['valuation_enabled']:
-        valuation_lookup = raster_utils.get_lookup_from_csv(
-            args['water_purification_valuation_table_uri'], 'ws_id')
-    _validate_inputs(nutrients_to_process, lucode_to_parameters,
-                     threshold_table, valuation_lookup)
-
-    #This one is tricky, we want to make a dictionary that indexes by nutrient
-    #id and yields a dicitonary indexed by ws_id to the threshold amount of
-    #that type.  The get_lookup_from_csv only gives us a flat table, so this
-    #processing is working around that.
-    threshold_lookup = {}
-    for nutrient_id in nutrients_to_process:
-        threshold_lookup[nutrient_id] = {}
-        for ws_id, value in threshold_table.iteritems():
-            threshold_lookup[nutrient_id][ws_id] = (
-                value['thresh_%s' % (nutrient_id)])
+    _validate_inputs(nutrients_to_process, lucode_to_parameters)
 
     dem_pixel_size = raster_utils.get_cell_size_from_uri(
         args['dem_uri'])
@@ -224,9 +190,6 @@ def _execute_nutrient(args):
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(output_dir, 'v_stream%s.tif' % file_suffix)
-
-    #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['accum_threshold']), stream_uri)
@@ -234,22 +197,30 @@ def _execute_nutrient(args):
 
     def map_load_function(load_type):
         """Function generator to map arbitrary nutrient type"""
-        def map_load(lucode):
+        def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
-            if lucode == nodata_landuse:
-                return nodata_load
-            return lucode_to_parameters[lucode][load_type] * cell_area_ha
+            result = numpy.empty(lucode_array.shape)
+            result[:] = nodata_load
+            for lucode in numpy.unique(lucode_array):
+                if lucode != nodata_landuse:
+                    result[lucode_array == lucode] = (
+                        lucode_to_parameters[lucode][load_type] * cell_area_ha)
+            return result
         return map_load
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
-        def map_load(lucode, stream):
+        def map_eff(lucode_array, stream_array):
             """maps efficiencies from lulcs, handles nodata, and is aware that
                 streams have no retention"""
-            if lucode == nodata_landuse or stream == nodata_stream:
-                return nodata_load
-            #Retention efficiency is 0 when there's a stream.
-            return lucode_to_parameters[lucode][load_type] * (1 - stream)
-        return map_load
+            result = numpy.empty(lucode_array.shape, dtype=numpy.float32)
+            result[:] = nodata_load
+            for lucode in numpy.unique(lucode_array):
+                if lucode == nodata_landuse:
+                    continue
+                mask = (lucode_array == lucode) & (stream_array != nodata_stream)
+                result[mask] = lucode_to_parameters[lucode][load_type] * (1 - stream_array[mask])
+            return result
+        return map_eff
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
@@ -260,13 +231,13 @@ def _execute_nutrient(args):
         raster_utils.vectorize_datasets(
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection")
+            "intersection", vectorize_op=False)
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection")
+            "intersection", vectorize_op=False)
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
@@ -287,15 +258,19 @@ def _execute_nutrient(args):
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         """Calculates the log value whiel handling nodata values correctly"""
-        if value == nodata_upstream:
-            return nodata_upstream
-        if value == 0.0:
-            return 0.0
-        return numpy.log(value)
+        result = numpy.log(value)
+        result[value == 0.0] = 0.0
+        return numpy.where(value == nodata_upstream, nodata_upstream, result)
+        #if value == nodata_upstream:
+        #    return nodata_upstream
+        #if value == 0.0:
+        #    return 0.0
+        #return numpy.log(value)
 
     raster_utils.vectorize_datasets(
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
-        gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
+        gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection",
+        vectorize_op=False)
 
     field_summaries = {
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
@@ -333,41 +308,273 @@ def _execute_nutrient(args):
 
     def alv_calculation(load, runoff_index, mean_runoff_index, stream):
         """Calculates the adjusted loading value index"""
-        if nodata_load in [load, runoff_index, mean_runoff_index] or \
-                stream == nodata_stream or mean_runoff_index == 0.0:
-            return nodata_load
-        return load * runoff_index / mean_runoff_index * (1 - stream)
+        result = load * runoff_index / mean_runoff_index * (1 - stream)
+        return numpy.where(
+            (load == nodata_load) | (runoff_index == nodata_load) |
+            (mean_runoff_index == nodata_load) | (stream == nodata_stream) |
+            (mean_runoff_index == 0.0), nodata_load, result)
+
     alv_uri = {}
-    retention_uri = {}
     export_uri = {}
     field_summaries = {}
-    pts_uri = {}  # percent_to_stream uri
+    
+    #Calculate the W factor
+    LOGGER.info('calculate per pixel W')
+    original_w_factor_uri = os.path.join(
+        intermediate_dir, 'w_factor%s.tif' % file_suffix)
+    thresholded_w_factor_uri = os.path.join(
+        intermediate_dir, 'thresholded_w_factor%s.tif' % file_suffix)
+
+    #map lulc to biophysical table
+    lulc_to_c = dict(
+        [(lulc_code, float(table['usle_c'])) for 
+        (lulc_code, table) in lucode_to_parameters.items()])
+    lulc_nodata = raster_utils.get_nodata_from_uri(lulc_uri)
+    w_nodata = -1.0
+    
+    raster_utils.reclassify_dataset_uri(
+        lulc_uri, lulc_to_c, original_w_factor_uri, gdal.GDT_Float64,
+        w_nodata, exception_flag='values_required')
+    def threshold_w(w_val):
+        '''Threshold w to 0.001'''
+        w_val_copy = w_val.copy()
+        nodata_mask = w_val == w_nodata
+        w_val_copy[w_val < 0.001] = 0.001
+        w_val_copy[nodata_mask] = w_nodata
+        return w_val_copy
+    raster_utils.vectorize_datasets(
+        [original_w_factor_uri], threshold_w, thresholded_w_factor_uri,
+        gdal.GDT_Float64, w_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+
+
+    #calculate W_bar
+    zero_absorption_source_uri = raster_utils.temporary_filename()
+    loss_uri = raster_utils.temporary_filename()
+    #need this for low level route_flux function
+    raster_utils.make_constant_raster_from_base_uri(
+        dem_offset_uri, 0.0, zero_absorption_source_uri)
+    
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
+        flow_accumulation_uri)
+
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
+    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
+    def threshold_slope(slope):
+        '''Threshold slope between 0.001 and 1.0'''
+        slope_copy = slope.copy()
+        nodata_mask = slope == slope_nodata
+        slope_copy[slope < 0.001] = 0.001
+        slope_copy[slope > 1.0] = 1.0
+        slope_copy[nodata_mask] = slope_nodata
+        return slope_copy
+    raster_utils.vectorize_datasets(
+        [original_slope_uri], threshold_slope, thresholded_slope_uri,
+        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    
+    w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
+    s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+    for factor_uri, accumulation_uri in [
+        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        routing_utils.route_flux(
+            flow_direction_uri, dem_offset_uri, factor_uri,
+            zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
+            aoi_uri=args['watersheds_uri'])
+
+    LOGGER.info("calculating w_bar")
+    
+    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
+    w_bar_nodata = raster_utils.get_nodata_from_uri(w_accumulation_uri)
+    s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
+    s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
+    for bar_nodata, accumulation_uri, bar_uri in [
+        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+        LOGGER.info("calculating %s" % (accumulation_uri))
+        def bar_op(base_accumulation, flow_accumulation):
+            return numpy.where(
+                (base_accumulation != bar_nodata) & (flow_accumulation != flow_accumulation_nodata), 
+                base_accumulation / flow_accumulation, bar_nodata)
+        raster_utils.vectorize_datasets(
+            [accumulation_uri, flow_accumulation_uri], bar_op, bar_uri, 
+            gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
+            dataset_to_align_index=0, vectorize_op=False)
+
+    LOGGER.info('calculating d_up')
+    d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
+    cell_area = out_pixel_size ** 2
+    d_up_nodata = -1.0
+    def d_up(w_bar, s_bar, flow_accumulation):
+        """Calculate the d_up index
+            w_bar * s_bar * sqrt(upstream area) """
+        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        return numpy.where(
+            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) & 
+            (flow_accumulation != flow_accumulation_nodata), d_up_array,
+            d_up_nodata)
+    raster_utils.vectorize_datasets(
+        [w_bar_uri, s_bar_uri, flow_accumulation_uri], d_up, d_up_uri, 
+        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    
+    LOGGER.info('calculate WS factor')
+    ws_factor_inverse_uri = os.path.join(
+        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
+    ws_nodata = -1.0
+    slope_nodata = raster_utils.get_nodata_from_uri(
+        thresholded_slope_uri)
+    
+    def ws_op(w_factor, s_factor):
+        #calculating the inverse so we can use the distance to stream factor function
+        return numpy.where(
+            (w_factor != w_nodata) & (s_factor != slope_nodata),
+            1.0 / (w_factor * s_factor), ws_nodata)
+            
+    raster_utils.vectorize_datasets(
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
+        gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+    LOGGER.info('calculating d_dn')
+    d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
+
+    LOGGER.info('calculate ic')
+    ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
+    ic_nodata = -9999.0
+    d_up_nodata = raster_utils.get_nodata_from_uri(d_up_uri)
+    d_dn_nodata = raster_utils.get_nodata_from_uri(d_dn_uri)
+    def ic_op(d_up, d_dn):
+        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) | (d_dn == 0)
+        return numpy.where(
+            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+    raster_utils.vectorize_datasets(
+        [d_up_uri, d_dn_uri], ic_op, ic_factor_uri, 
+        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
+    ic_0_param = (ic_min + ic_max) / 2.0
+    k_param = float(args['k_param'])
+
     for nutrient in nutrients_to_process:
+        #calculate l for each lulc type
+        LOGGER.info('calculating l lulc raster set')
+        l_lulc_uri = os.path.join(
+            intermediate_dir, 'l_lulc_%s%s.tif' % (nutrient, file_suffix))
+        l_lulc_nodata = -1.0
+        raster_utils.new_raster_from_base_uri(
+            lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32,
+            fill_value=l_lulc_nodata)
+
+        lulc_mask_uri = raster_utils.temporary_filename()
+        current_l_lulc_uri = raster_utils.temporary_filename()
+        l_lulc_temp_uri = raster_utils.temporary_filename()
+
+        for lulc_code in get_unique_lulc_codes(lulc_uri):
+            #no reason to process the nodata area, we already mask that out
+            if lulc_code == lulc_nodata:
+                continue
+            LOGGER.info('processing lulc code %d for l_lulc' % lulc_code)
+            mask_nodata = 2
+            def mask_lulc_type(lulc_array):
+                result = numpy.zeros(lulc_array.shape, dtype=numpy.int8)
+                result[lulc_array == lulc_nodata] = mask_nodata
+                result[lulc_array == lulc_code] = 1
+                return result
+            
+            raster_utils.vectorize_datasets(
+                [lulc_uri], mask_lulc_type, lulc_mask_uri, gdal.GDT_Byte,
+                mask_nodata, out_pixel_size, 'intersection', vectorize_op=False)
+            
+            routing_cython_core.distance_to_stream(
+                flow_direction_uri, stream_uri, current_l_lulc_uri,
+                factor_uri=lulc_mask_uri)
+
+            current_l_lulc_nodata = raster_utils.get_nodata_from_uri(current_l_lulc_uri)
+            def add_to_l_lulc(current_l_lulc_array, lulc_mask_array, l_lulc_array):
+                result = l_lulc_array.copy()
+                mask = (lulc_mask_array == 1) & (current_l_lulc_array != current_l_lulc_nodata)
+                result[mask] = current_l_lulc_array[mask]
+                return result
+
+            #copy the file to avoid aliasing
+            shutil.copyfile(l_lulc_uri, l_lulc_temp_uri)
+            raster_utils.vectorize_datasets(
+                [current_l_lulc_uri, lulc_mask_uri, l_lulc_temp_uri],
+                add_to_l_lulc, l_lulc_uri, gdal.GDT_Float32,
+                l_lulc_nodata, out_pixel_size, 'intersection',
+                vectorize_op=False)
+
+        ndr_max_uri = os.path.join(
+            intermediate_dir, 'ndr_max_%s%s.tif' % (nutrient, file_suffix))
+        ndr_max_nodata = -1.0
+        
+        def calculate_ndr_max(l_lulc_array, lulc_array):
+            critical_length_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+            critical_length_array[:] = 1
+            eff_lulc_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+            for lucode in numpy.unique(lulc_array):
+                if lucode == lulc_nodata:
+                    continue
+                mask = lulc_array == lucode
+                eff_lulc_array[mask] = lucode_to_parameters[lucode]['eff_%s' % nutrient]
+                critical_length_array[mask] = lucode_to_parameters[lucode]['crit_len_%s' % nutrient]
+            return numpy.where(
+                (lulc_array == lulc_nodata) | (l_lulc_array == l_lulc_nodata), ndr_max_nodata,
+                1 - eff_lulc_array * (1 - numpy.exp(-5.0 * l_lulc_array / critical_length_array)))
+
+        raster_utils.vectorize_datasets(
+            [l_lulc_uri, lulc_uri],
+            calculate_ndr_max, ndr_max_uri, gdal.GDT_Float32,
+            ndr_max_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
+
+        LOGGER.info('calculate NDR')
+        ndr_uri = os.path.join(
+            intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
+        ndr_nodata = -1.0
+        def calculate_ndr(ndr_max_array, ic_array):
+            return numpy.where(
+                (ndr_max_array == ndr_nodata) | (ic_array == ic_nodata), ndr_nodata,
+                ndr_max_array * 1.0 / (1.0 + numpy.exp((ic_0_param - ic_array) / k_param)))
+
+        raster_utils.vectorize_datasets(
+            [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
+            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
-             stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
-            nodata_load, out_pixel_size, "intersection")
-
-        #The retention calculation is only interesting to see where nutrient
-        # retains on the landscape
-        retention_uri[nutrient] = os.path.join(
-            intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
-        tmp_flux_uri = raster_utils.temporary_filename()
-        routing_utils.route_flux(
-            flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],
-            retention_uri[nutrient], tmp_flux_uri, 'flux_only',
-            aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
+            stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
+            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
-        pts_uri[nutrient] = os.path.join(intermediate_dir,
-            '%s_percent_to_stream%s.tif' % (nutrient, file_suffix))
-        routing_utils.pixel_amount_exported(
-            flow_direction_uri, dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
-            export_uri[nutrient], aoi_uri=args['watersheds_uri'],
-            percent_to_stream_uri=pts_uri[nutrient])
+        
+        alv_nodata = raster_utils.get_nodata_from_uri(alv_uri[nutrient])
+        export_nodata = -1.0
+        def calculate_export(alv_array, ndr_array):
+            return numpy.where(
+                (alv_array == alv_nodata) | (ndr_array == ndr_nodata),
+                export_nodata,
+                alv_array * ndr_array)
+
+        raster_utils.vectorize_datasets(
+            [alv_uri[nutrient], ndr_uri],  calculate_export,
+            export_uri[nutrient], gdal.GDT_Float32,
+            export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
@@ -376,52 +583,13 @@ def _execute_nutrient(args):
         export_tot = raster_utils.aggregate_raster_values_uri(
             export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         
-        #Retention is alv-export
-        retention_tot = {}
-        for ws_id in alv_tot:
-            retention_tot[ws_id] = alv_tot[ws_id] - export_tot[ws_id]
-
-        #Threshold export is export - threshold
-        threshold_retention_tot = {}
-        for ws_id in alv_tot:
-            threshold_retention_tot[ws_id] = (
-                retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
-
         field_summaries['%s_avl_tot' % nutrient] = alv_tot
-        field_summaries['%s_ret_tot' % nutrient] = retention_tot
-        field_summaries['%s_ret_adj' % nutrient] = threshold_retention_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_ret_tot', '%s_ret_adj', '%s_exp_tot']) + field_header_order)
-        #Do valuation if necessary
-        if valuation_lookup is not None:
-            field_summaries['value_%s' % nutrient] = {}
-            for ws_id, value in \
-                    field_summaries['%s_ret_tot' % nutrient].iteritems():
-                discount = disc(
-                    valuation_lookup[ws_id]['time_span_%s' % nutrient],
-                    valuation_lookup[ws_id]['discount_%s' % nutrient])
-                field_summaries['value_%s' % nutrient][ws_id] = (
-                    field_summaries['%s_ret_tot' % nutrient][ws_id] *
-                    valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
-            field_header_order.append('value_%s' % nutrient)
+            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_exp_tot']) + field_header_order)
+
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
-
-
-def disc(years, percent_rate):
-    """Calculate discount rate for a given number of years
-    
-        years - an integer number of years
-        percent_rate - a discount rate in percent
-
-        returns the discount rate for the number of years to use in 
-            a calculation like yearly_cost * disc(years, percent_rate)"""
-
-    discount = 0.0
-    for time_index in range(int(years) - 1):
-        discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
-    return discount
 
 
 def add_fields_to_shapefile(key_field, field_summaries, output_layer,
@@ -462,3 +630,40 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
         output_layer.SetFeature(feature)
+
+def get_unique_lulc_codes(dataset_uri):
+    """Find all the values in the input raster and return a list of unique
+        values in that raster
+
+        dataset_uri - uri to a land cover map that has integer values
+
+        returns a unique list of codes in dataset_uri"""
+    
+    dataset = gdal.Open(dataset_uri)
+    dataset_band = dataset.GetRasterBand(1)
+    block_size = dataset_band.GetBlockSize()
+
+    n_rows, n_cols = dataset.RasterYSize, dataset.RasterXSize
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    unique_codes = set()
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+            result = dataset_band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset,
+                win_xsize=col_block_width,
+                win_ysize=row_block_width)
+            unique_codes.update(numpy.unique(result))
+
+    return unique_codes
