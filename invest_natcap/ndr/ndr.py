@@ -350,7 +350,6 @@ def _execute_nutrient(args):
             (mean_runoff_index == 0.0), nodata_load, result)
 
     alv_uri = {}
-    retention_uri = {}
     export_uri = {}
     field_summaries = {}
     pts_uri = {}  # percent_to_stream uri
@@ -597,18 +596,6 @@ def _execute_nutrient(args):
             stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
             nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
-        #The retention calculation is only interesting to see where nutrient
-        # retains on the landscape
-        retention_uri[nutrient] = os.path.join(
-            intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
-        tmp_flux_uri = raster_utils.temporary_filename()
-
-        ####### we're going to replace eff_uri with NDR here
-        routing_utils.route_flux(
-            flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],
-            retention_uri[nutrient], tmp_flux_uri, 'flux_only',
-            aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
-
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         pts_uri[nutrient] = os.path.join(intermediate_dir,
@@ -638,52 +625,13 @@ def _execute_nutrient(args):
         export_tot = raster_utils.aggregate_raster_values_uri(
             export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         
-        #Retention is alv-export
-        retention_tot = {}
-        for ws_id in alv_tot:
-            retention_tot[ws_id] = alv_tot[ws_id] - export_tot[ws_id]
-
-        #Threshold export is export - threshold
-        threshold_retention_tot = {}
-        for ws_id in alv_tot:
-            threshold_retention_tot[ws_id] = (
-                retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
-
         field_summaries['%s_avl_tot' % nutrient] = alv_tot
-        field_summaries['%s_ret_tot' % nutrient] = retention_tot
-        field_summaries['%s_ret_adj' % nutrient] = threshold_retention_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_ret_tot', '%s_ret_adj', '%s_exp_tot']) + field_header_order)
-        #Do valuation if necessary
-        if valuation_lookup is not None:
-            field_summaries['value_%s' % nutrient] = {}
-            for ws_id, value in \
-                    field_summaries['%s_ret_tot' % nutrient].iteritems():
-                discount = disc(
-                    valuation_lookup[ws_id]['time_span_%s' % nutrient],
-                    valuation_lookup[ws_id]['discount_%s' % nutrient])
-                field_summaries['value_%s' % nutrient][ws_id] = (
-                    field_summaries['%s_ret_tot' % nutrient][ws_id] *
-                    valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
-            field_header_order.append('value_%s' % nutrient)
+            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_exp_tot']) + field_header_order)
+
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
-
-
-def disc(years, percent_rate):
-    """Calculate discount rate for a given number of years
-    
-        years - an integer number of years
-        percent_rate - a discount rate in percent
-
-        returns the discount rate for the number of years to use in 
-            a calculation like yearly_cost * disc(years, percent_rate)"""
-
-    discount = 0.0
-    for time_index in range(int(years) - 1):
-        discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
-    return discount
 
 
 def add_fields_to_shapefile(key_field, field_summaries, output_layer,
