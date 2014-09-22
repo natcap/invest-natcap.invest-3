@@ -34,11 +34,11 @@ def execute(args):
     # Can we compute the shore?
     if ('aoi_raster_uri' in args) and ('landmass_raster_uri' in args):
         print('detecting shore...')
-        args['shore_raster_uri'] = os.path.join(\
-            args['intermediate_dir'], 'shore.tif')
+        args['coarse_shore_uri'] = os.path.join(\
+            args['intermediate_dir'], 'coarse_shore.tif')
         detect_shore_uri( \
-            args['landmass_raster_uri'], args['aoi_raster_uri'], \
-            args['shore_raster_uri'])
+            args['coarse_landmass_uri'], args['coarse_aoi_uri'], \
+            args['coarse_shore_uri'])
 
     transects_uri = compute_transects(args)
 
@@ -51,19 +51,98 @@ def compute_transects(args):
         print('entry', key, args[key])
 
     # Extract shore
-    shore_raster_uri = args['shore_raster_uri']
+    shore_raster_uri = args['coarse_shore_uri']
 
-    shore_raster = gdal.Open(shore_raster_uri)
+    raster = gdal.Open(shore_raster_uri)
     message = 'Cannot open file ' + shore_raster_uri
-    assert shore_raster is not None, message
+    assert raster is not None, message
+    coarse_geotransform = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    coarse_shore = band.ReadAsArray()
+    band = None
+    raster = None
+
+    tiles = np.where(coarse_shore > 0)
+    #LOGGER.debug('found %i shore segments.' % shore_points[0].size)
+    LOGGER.debug('found %i tiles.' % tiles[0].size)
+
+
+    # Put a dot at the center of each cell in the finer landmass raster
+    args['shore_uri'] = os.path.join( \
+        os.path.split(args['landmass_raster_uri'])[0], 'shore.tif')
+    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+        args['shore_uri'], 'GTIFF', 0, gdal.GDT_Int32)
+    shore_raster = gdal.Open(args['shore_uri'], gdal.GA_Update)
     shore_band = shore_raster.GetRasterBand(1)
-    shore = shore_band.ReadAsArray()
+    fine_shore = shore_band.ReadAsArray()
+
+    raster = gdal.Open(args['landmass_raster_uri'], gdal.GA_Update)
+    fine_geotransform = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    landmass = band.ReadAsArray()
+    band = None
+    raster = None
+
+    assert coarse_geotransform[0] == fine_geotransform[0], \
+        str(coarse_geotransform[0] - fine_geotransform[0])
+    assert coarse_geotransform[3] == fine_geotransform[3], \
+        str(coarse_geotransform[3] - fine_geotransform[3])
+
+    row_count, col_count = landmass.shape
+
+    i_side_fine = int(round(fine_geotransform[1]))
+    j_side_fine = int(round(fine_geotransform[5]))
+    i_side_coarse = int(round(coarse_geotransform[1]))
+    j_side_coarse = int(round(coarse_geotransform[5]))
+
+    i_start = int(round(fine_geotransform[3]))
+    j_start = int(round(fine_geotransform[0]))
+    i_end = int(round(i_start + i_side_fine * row_count))
+    j_end = int(round(j_start + j_side_fine * col_count))
+    
+
+    print('fine', (i_side_fine, j_side_fine), 'coarse', (i_side_coarse, j_side_coarse))
+    print('iterations:', (len(range(i_start, i_end, i_side_coarse)), \
+                          len(range(j_start, j_end, j_side_coarse))))
+
+    for i in range(i_start, i_end, i_side_coarse):
+        for j in range(j_start, j_end, j_side_coarse):
+            i_fine = (i - i_start) / i_side_fine
+            j_fine = (j - j_start) / j_side_fine
+            i_coarse = round((i - i_start) / i_side_coarse)
+            j_coarse = round((j - j_start) / j_side_coarse)
+            print((i_fine, j_fine), '->', (i, j), '->', (i_coarse, j_coarse))
+
+    i_offset = i_side_coarse/i_side_fine + 4
+    j_offset = j_side_coarse/j_side_fine + 4
+    mask = np.ones((i_offset, j_offset))
+    tile_count = tiles[0].size
+
+    step = args['transect_spacing']
+    for tile in range(tile_count):
+        #LOGGER.debug('Processing tile ' + str(tile_count - tile))
+        i_tile = tiles[0][tile]
+        j_tile = tiles[1][tile]
+
+        i_base = int((i_side_coarse * i_tile)/i_side_fine) - 2
+        j_base = int((j_side_coarse * j_tile)/j_side_fine) - 2
+
+        tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
+        tile2 = np.zeros_like(tile)
+        tile2[tile>0] = 1
+
+        shore = detect_shore(tile2, mask, 0, connectedness = 4)
+        shore_points = np.where(shore == 1)
+        
+        shore_points = (shore_points[0] + i_base, shore_points[1] + j_base)
+
+        fine_shore[shore_points] = 1
+
+    shore_band.WriteArray(fine_shore)
     shore_band = None
     shore_raster = None
-
-    shore_points = np.where(shore > 0)
-    LOGGER.debug('found %i shore segments.' % shore_points[0].size)
-
+        
+    return
     # Extract landmass
     landmass_raster_uri = args['landmass_raster_uri']
 
@@ -92,7 +171,7 @@ def compute_transects(args):
     rays_per_sector = 1
     d_max = args['max_profile_length'] * 1000 # convert in meters
     model_resolution = args['model_resolution'] # in meters already
-    cell_size = model_resolution
+    cell_size = args['cell_size']
     
     direction_count = SECTOR_COUNT * rays_per_sector
     direction_range = range(direction_count)
@@ -423,7 +502,7 @@ def detect_shore_uri(landmass_raster_uri, aoi_raster_uri, output_uri):
     band.WriteArray(shore_array)
 
 # improve this docstring!
-def detect_shore(land_sea_array, aoi_array, aoi_nodata):
+def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
     """ Extract the boundary between land and sea from a raster.
     
         - raster: numpy array with sea, land and nodata values.
@@ -443,19 +522,25 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata):
         LOGGER.warning('There is no shore to detect: sea area = 0')
         return np.zeros_like(land_sea_array)
     else:
-        kernel = np.array([[ 0, -1,  0],
-                           [-1,  4, -1],
-                           [ 0, -1,  0]])
+        # Shore points are inland (>0), and detected using 8-connectedness
+        if connectedness is 8:
+            kernel = np.array([[-1, -1, -1],
+                               [-1,  8, -1],
+                               [-1, -1, -1]])
+        else:
+            kernel = np.array([[ 0, -1,  0],
+                               [-1,  4, -1],
+                               [ 0, -1,  0]])
         # Generate the nodata shore artifacts
         aoi_array = np.ones_like(land_sea_array)
         aoi_array[land_sea_array == nodata] = nodata
         aoi_borders = (sp.signal.convolve2d(aoi_array, \
                                                 kernel, \
-                                                mode='same') <0 ).astype('int')
+                                                mode='same') >0 ).astype('int')
         # Generate all the borders (including data artifacts)
         borders = (sp.signal.convolve2d(land_sea_array, \
                                      kernel, \
-                                     mode='same') <0 ).astype('int')
+                                     mode='same') >0 ).astype('int')
         # Real shore = all borders - shore artifacts
         borders = ((borders - aoi_borders) >0 ).astype('int') * 1.
 

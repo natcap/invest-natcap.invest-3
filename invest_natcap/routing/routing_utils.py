@@ -279,6 +279,8 @@ def pixel_amount_exported(
     for ds_uri in [dem_uri, stream_uri, retention_rate_uri, source_uri, 
         flow_direction_uri, export_rate_uri, outflow_weights_uri,
         outflow_direction_uri, effect_uri]:
+        if effect_uri == percent_to_stream_uri:
+            continue
         try:
             os.remove(ds_uri)
         except OSError as e:
