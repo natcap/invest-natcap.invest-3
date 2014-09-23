@@ -1,3 +1,4 @@
+import sys
 import os
 import math
 import shutil
@@ -382,16 +383,22 @@ def filter_fragments(input_uri, size, output_uri):
         LOGGER.debug('Processing suitability value ' + \
             str(suitability_values.size - v))
         value = suitability_values[v]
-        mask = src_array == value # You get a mask with the polygons only
+        # Pixels of interest set to 1, 0 otherwise
+        mask = src_array == value
+        # Number of pixels to process
         ones_in_mask = numpy.sum(mask)
-
-        label_im, nb_labels = scipy.ndimage.label(mask, eight_connectedness)
-
-        fragment_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+        # Label and count disconnected components (fragments)
+        label_im, nb_labels = scipy.ndimage.label(mask, four_connectedness)
+        # Compute fragment sizes
+        fragment_sizes = \
+            scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+        # List fragments
         fragment_labels = numpy.array(range(nb_labels + 1))
 ##        print('Labels', nb_labels, fragment_sizes)
 ##        assert fragment_sizes.size == len(fragment_labels)
+        # Discard large fragments
         small_fragment_mask = numpy.where(fragment_sizes <= size)
+        # Gather small fragment information
         small_fragment_sizes = fragment_sizes[small_fragment_mask]
         small_fragment_labels = fragment_labels[small_fragment_mask]
 ##        print('small fragment count', small_fragment_sizes.size)
@@ -399,15 +406,21 @@ def filter_fragments(input_uri, size, output_uri):
 ##        print('fragments to remove', combined_small_fragment_size)
 ##        print('small fragment sizes', small_fragment_sizes)
 ##        print('small fragment labels', small_fragment_labels)
-##        print('large_fragments', large_fragments.size, large_fragments)
+        # Find each fragment
+        fragments_location = scipy.ndimage.find_objects(label_im, nb_labels)
         removed_pixels = 0
         small_fragment_labels_count = small_fragment_labels.size
         print '  Removing small fragments:',
-        for l in range(1, small_fragment_labels_count):
+        for l in range(small_fragment_labels_count-1):
             print ' ' + str(small_fragment_labels.size - l), 
-            label = small_fragment_labels[l]
-            pixels_to_remove = numpy.where(label_im == label)
-            dst_array[pixels_to_remove] = 0
+            label = small_fragment_labels[l+1]
+            last_label = small_fragment_labels[l]
+            size = small_fragment_sizes[l+1]
+            source = label_im[fragments_location[last_label]]
+            target = dst_array[fragments_location[last_label]]
+            pixels_to_remove = numpy.where(source == label)
+            target[pixels_to_remove] = 0
+            #print('label ', label, 'size', size, 'label_im[s]', label_im[s])
 ##            removed_pixels += pixels_to_remove[0].size
 
 ##            print('removed ' + str(pixels_to_remove[0].size) + \
@@ -816,12 +829,13 @@ def execute(args):
                     (cell_size ** 2)))
 
             output_uri = os.path.join(workspace, filter_name % cover_id)
-            cProfile.runctx( \
-                'filter_fragments(suitability_dict[cover_id], size, output_uri)', \
-                globals(), locals(), 'stats')
-            p = pstats.Stats('stats')
-            p.sort_stats('time').print_stats(20)
-            p.sort_stats('cumulative').print_stats(20)
+            filter_fragments(suitability_dict[cover_id], size, output_uri)
+            #cProfile.runctx( \
+            #    'filter_fragments(suitability_dict[cover_id], \
+            #        size, output_uri)', globals(), locals(), 'stats')
+            #p = pstats.Stats('stats')
+            #p.sort_stats('time').print_stats(20)
+            #p.sort_stats('cumulative').print_stats(20)
             suitability_dict[cover_id] = output_uri
 
     ###
@@ -1075,8 +1089,9 @@ def execute(args):
             label_im, nb_labels = scipy.ndimage.label(mask)
             
             #get patch sizes
-            patch_sizes = scipy.ndimage.sum(mask, label_im, range(nb_labels + 1))
+            patch_sizes = scipy.ndimage.sum(mask, label_im, range(1, nb_labels + 1))
             patch_labels = numpy.array(range(1, nb_labels + 1))
+            patch_locations = scipy.ndimage.find_objects(label_im, nb_labels)
 
             #randomize patch order
             numpy.random.shuffle(patch_labels)
@@ -1085,47 +1100,67 @@ def execute(args):
             patch_label_count = patch_labels.size
             for l in range(patch_label_count):
                 label = patch_labels[l]
-                patch = numpy.where(label_im == label)
-                if patch_sizes[label] + pixels_changed > count:
+                #print('label', label)
+                source = label_im[patch_locations[label-1]]
+                #print('source', source)
+                #print('size', patch_sizes[label-1])
+                target = scenario_array[patch_locations[label-1]]
+                #print('target before', target)
+                pixels_to_change = numpy.where(source == label)
+                assert pixels_to_change[0].size == patch_sizes[label-1]
+
+                if patch_sizes[label-1] + pixels_changed > count:
                     LOGGER.debug("Converting part of patch %i.", patch_label_count - l)
 
                     #mask out everything except the current patch
-                    patch_mask = numpy.zeros_like(scenario_array)
-                    patch_mask[patch] = 1
+                    #patch = numpy.where(label_im == label)
+                    #patch_mask = numpy.zeros_like(scenario_array)
+                    patch_mask = numpy.zeros_like(target)
+                    #patch_mask[patch] = 1
+                    patch_mask[pixels_to_change] = 1
 
                     #calculate the distance to exit the patch
+                    #tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
                     tmp_array = scipy.ndimage.morphology.distance_transform_edt(patch_mask)
-                    tmp_array = tmp_array[patch]
+                    #tmp_array = tmp_array[patch]
+                    tmp_array = tmp_array[pixels_to_change]
 
                     #select the number of pixels that need to be converted
                     tmp_index = numpy.argsort(tmp_array)
                     tmp_index = tmp_index[:count - pixels_changed]
 
                     #convert the selected pixels into coordinates
-                    pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    #pixels_to_change = numpy.array(zip(patch[0], patch[1]))
+                    pixels_to_change = numpy.array(zip(pixels_to_change[0], pixels_to_change[1]))
                     pixels_to_change = pixels_to_change[tmp_index]
                     pixels_to_change = apply(zip, pixels_to_change)
 
                     #change the pixels in the scenario
-                    scenario_array[pixels_to_change] = cover_id
+                    #scenario_array[pixels_to_change] = cover_id
+                    target[pixels_to_change] = cover_id
 
                     pixels_changed = count                                        
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
-                        update_arrays[update_id][pixels_to_change] = 0
+                        #update_arrays[update_id][pixels_to_change] = 0
+                        target = update_arrays[update_id][patch_locations[label-1]]
+                        target[pixels_to_change] = 0
 
                     break
 
                 else:
                     LOGGER.debug("Converting patch %i.", patch_label_count - l)
                     #convert patch, increase count of changes
-                    scenario_array[patch] = cover_id
-                    pixels_changed += patch_sizes[label]
+                    #print('new cover id', cover_id)
+                    target[pixels_to_change] = cover_id
+                    #print('target after', target)
+                    pixels_changed += patch_sizes[label-1]
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
-                        update_arrays[update_id][patch] = 0
+                        target = update_arrays[update_id][patch_locations[label-1]]
+                        target[pixels_to_change] = 0
 
         #report and record unchanged pixels
         if pixels_changed < count:
