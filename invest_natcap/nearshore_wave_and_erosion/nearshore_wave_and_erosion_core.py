@@ -31,14 +31,14 @@ def execute(args):
         returns nothing"""
     logging.info('executing coastal_protection_core')
     logging.info('Detecting shore...')
-    # Can we compute the shore?
-    if ('aoi_raster_uri' in args) and ('landmass_raster_uri' in args):
-        print('detecting shore...')
-        args['coarse_shore_uri'] = os.path.join(\
-            args['intermediate_dir'], 'coarse_shore.tif')
-        detect_shore_uri( \
-            args['coarse_landmass_uri'], args['coarse_aoi_uri'], \
-            args['coarse_shore_uri'])
+    ## Can we compute the shore?
+    #if ('aoi_raster_uri' in args) and ('landmass_raster_uri' in args):
+    #    print('detecting shore...')
+    #    args['coarse_shore_uri'] = os.path.join(\
+    #        args['intermediate_dir'], 'coarse_shore.tif')
+    #    detect_shore_uri( \
+    #        args['coarse_landmass_uri'], args['coarse_aoi_uri'], \
+    #        args['coarse_shore_uri'])
 
     transects_uri = compute_transects(args)
 
@@ -50,21 +50,20 @@ def compute_transects(args):
     for key in args:
         print('entry', key, args[key])
 
-    # Extract shore
-    shore_raster_uri = args['coarse_shore_uri']
+    ## Extract shore
+    #shore_raster_uri = args['coarse_shore_uri']
 
-    raster = gdal.Open(shore_raster_uri)
-    message = 'Cannot open file ' + shore_raster_uri
-    assert raster is not None, message
-    coarse_geotransform = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    coarse_shore = band.ReadAsArray()
-    band = None
-    raster = None
+    #raster = gdal.Open(shore_raster_uri)
+    #message = 'Cannot open file ' + shore_raster_uri
+    #assert raster is not None, message
+    #coarse_geotransform = raster.GetGeoTransform()
+    #band = raster.GetRasterBand(1)
+    #coarse_shore = band.ReadAsArray()
+    #band = None
+    #raster = None
 
-    tiles = np.where(coarse_shore > 0)
+    #tiles = np.where(coarse_shore > 0)
     #LOGGER.debug('found %i shore segments.' % shore_points[0].size)
-    LOGGER.debug('found %i tiles.' % tiles[0].size)
 
 
     # Put a dot at the center of each cell in the finer landmass raster
@@ -88,17 +87,12 @@ def compute_transects(args):
     band = None
     raster = None
 
-    assert coarse_geotransform[0] == fine_geotransform[0], \
-        str(coarse_geotransform[0] - fine_geotransform[0])
-    assert coarse_geotransform[3] == fine_geotransform[3], \
-        str(coarse_geotransform[3] - fine_geotransform[3])
-
     row_count, col_count = landmass.shape
 
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
-    i_side_coarse = int(round(coarse_geotransform[1]))
-    j_side_coarse = int(round(coarse_geotransform[5]))
+    i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
+    j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
 
     i_start = int(round(fine_geotransform[3]))
     j_start = int(round(fine_geotransform[0]))
@@ -115,6 +109,7 @@ def compute_transects(args):
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
+    tiles = 0
     for i in range(i_start, i_end, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + str(i_end - i))
         for j in range(j_start, j_end, j_side_coarse):
@@ -134,7 +129,9 @@ def compute_transects(args):
                     shore_pts = (shore_pts[0] + i_base, shore_pts[1] + j_base)
 
                     fine_shore[shore_pts] = 1
+                    tiles += 1
 
+    LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
     shore_band = None
     shore_raster = None
