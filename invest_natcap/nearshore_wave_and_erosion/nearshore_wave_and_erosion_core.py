@@ -82,6 +82,11 @@ def compute_transects(args):
     landmass = band.ReadAsArray()
     band = None
     raster = None
+    raster = gdal.Open(args['aoi_raster_uri'], gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    aoi = band.ReadAsArray()
+    band = None
+    raster = None
 
     assert coarse_geotransform[0] == fine_geotransform[0], \
         str(coarse_geotransform[0] - fine_geotransform[0])
@@ -105,38 +110,30 @@ def compute_transects(args):
     print('iterations:', (len(range(i_start, i_end, i_side_coarse)), \
                           len(range(j_start, j_end, j_side_coarse))))
 
-    for i in range(i_start, i_end, i_side_coarse):
-        for j in range(j_start, j_end, j_side_coarse):
-            i_fine = (i - i_start) / i_side_fine
-            j_fine = (j - j_start) / j_side_fine
-            i_coarse = int(round((i - i_start) / i_side_coarse))
-            j_coarse = int(round((j - j_start) / j_side_coarse))
-            print((i_fine, j_fine), '->', (i, j), '->', (i_coarse, j_coarse))
-
     i_offset = i_side_coarse/i_side_fine + 4
     j_offset = j_side_coarse/j_side_fine + 4
     mask = np.ones((i_offset, j_offset))
-    tile_count = tiles[0].size
+    tile_size = np.sum(mask)
 
-    step = args['transect_spacing']
-    for tile in range(tile_count):
-        #LOGGER.debug('Processing tile ' + str(tile_count - tile))
-        i_tile = tiles[0][tile]
-        j_tile = tiles[1][tile]
+    for i in range(i_start, i_end, i_side_coarse):
+        LOGGER.debug(' Detecting shore along line ' + str(i_end - i))
+        for j in range(j_start, j_end, j_side_coarse):
+            i_base = (i - i_start) / i_side_fine - 2
+            j_base = (j - j_start) / j_side_fine - 2
 
-        i_base = int((i_side_coarse * i_tile)/i_side_fine) - 2
-        j_base = int((j_side_coarse * j_tile)/j_side_fine) - 2
+            data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+            # Avoid nodata on tile
+            if np.sum(data) == tile_size:
+                # Look for landmass cover on tile
+                tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
+                land = np.sum(tile)
+                # If land and sea, we have a shore: detect it and store
+                if land and land < tile_size:
+                    shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
+                    shore_pts = np.where(shore_patch == 1)
+                    shore_pts = (shore_pts[0] + i_base, shore_pts[1] + j_base)
 
-        tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
-        tile2 = np.zeros_like(tile)
-        tile2[tile>0] = 1
-
-        shore = detect_shore(tile2, mask, 0, connectedness = 4)
-        shore_points = np.where(shore == 1)
-        
-        shore_points = (shore_points[0] + i_base, shore_points[1] + j_base)
-
-        fine_shore[shore_points] = 1
+                    fine_shore[shore_pts] = 1
 
     shore_band.WriteArray(fine_shore)
     shore_band = None
