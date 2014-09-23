@@ -26,11 +26,9 @@ def execute(args):
         through to the InVEST water yield function.  This is a historical
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
-
-        
+    
     if not args['calc_p'] and not args['calc_n']:
         raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
-    
     
     #Set up the water yield arguments that might be a little different than
     #nutrient retention
@@ -94,11 +92,9 @@ def _execute_nutrient(args):
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
 
-
         returns nothing.
     """
-    def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters):
+    def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
@@ -261,11 +257,6 @@ def _execute_nutrient(args):
         result = numpy.log(value)
         result[value == 0.0] = 0.0
         return numpy.where(value == nodata_upstream, nodata_upstream, result)
-        #if value == nodata_upstream:
-        #    return nodata_upstream
-        #if value == 0.0:
-        #    return 0.0
-        #return numpy.log(value)
 
     raster_utils.vectorize_datasets(
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
@@ -346,8 +337,6 @@ def _execute_nutrient(args):
         [original_w_factor_uri], threshold_w, thresholded_w_factor_uri,
         gdal.GDT_Float64, w_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-    
-
 
     #calculate W_bar
     zero_absorption_source_uri = raster_utils.temporary_filename()
@@ -361,8 +350,8 @@ def _execute_nutrient(args):
 
     #Calculate slope
     LOGGER.info("Calculating slope")
-    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
+    original_slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
+    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
@@ -377,7 +366,6 @@ def _execute_nutrient(args):
         [original_slope_uri], threshold_slope, thresholded_slope_uri,
         gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-
     
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
@@ -467,6 +455,10 @@ def _execute_nutrient(args):
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
 
+    lulc_mask_uri = raster_utils.temporary_filename()
+    current_l_lulc_uri = raster_utils.temporary_filename()
+    l_lulc_temp_uri = raster_utils.temporary_filename()
+
     for nutrient in nutrients_to_process:
         #calculate l for each lulc type
         LOGGER.info('calculating l lulc raster set')
@@ -476,10 +468,6 @@ def _execute_nutrient(args):
         raster_utils.new_raster_from_base_uri(
             lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32,
             fill_value=l_lulc_nodata)
-
-        lulc_mask_uri = raster_utils.temporary_filename()
-        current_l_lulc_uri = raster_utils.temporary_filename()
-        l_lulc_temp_uri = raster_utils.temporary_filename()
 
         for lulc_code in get_unique_lulc_codes(lulc_uri):
             #no reason to process the nodata area, we already mask that out
