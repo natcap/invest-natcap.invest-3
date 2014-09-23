@@ -579,6 +579,13 @@ def _execute_nutrient(args):
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
 
+    LOGGER.info('cleaning up temp files')
+    for uri in [
+            water_loss_uri, zero_raster_uri, zero_absorption_source_uri,
+            loss_uri, lulc_mask_uri, current_l_lulc_uri, l_lulc_temp_uri]:
+        os.remove(uri)
+
+
 
 def add_fields_to_shapefile(key_field, field_summaries, output_layer,
     field_header_order=None):
