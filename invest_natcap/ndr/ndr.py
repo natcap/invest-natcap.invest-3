@@ -560,7 +560,7 @@ def _execute_nutrient(args):
                 alv_array * ndr_array)
 
         raster_utils.vectorize_datasets(
-            [alv_uri[nutrient], ndr_uri],  calculate_export,
+            [load_uri[nutrient], ndr_uri],  calculate_export,
             export_uri[nutrient], gdal.GDT_Float32,
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
