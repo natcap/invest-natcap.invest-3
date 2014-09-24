@@ -13,7 +13,6 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
 import routing_cython_core
-import invest_natcap.hydropower.hydropower_water_yield
 
 
 LOGGER = logging.getLogger('nutrient')
@@ -22,39 +21,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    """A high level wrapper for the InVEST nutrient model that first calls
-        through to the InVEST water yield function.  This is a historical
-        separation that used to make sense when we manually required users
-        to pass the water yield pixel raster to the nutrient output."""
-    
-    if not args['calc_p'] and not args['calc_n']:
-        raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
-    
-    #Set up the water yield arguments that might be a little different than
-    #nutrient retention
-    water_yield_args = args.copy()
-    water_yield_args['workspace_dir'] = os.path.join(
-        args['workspace_dir'], 'water_yield_workspace')
-    if 'results_suffix' in args:
-        water_yield_args['results_suffix'] = args['results_suffix']
-    invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
-
-    #Get the pixel output of hydropower to plug into nutrient retention.
-    #Tricky because the water yield output might have a different suffix.
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-    args['pixel_yield_uri'] = os.path.join(
-        water_yield_args['workspace_dir'], 'output', 'per_pixel',
-        'wyield%s.tif' % file_suffix)
-    _execute_nutrient(args)
-
-
-def _execute_nutrient(args):
-    """File opening layer for the InVEST nutrient retention model.
+    """
+        Nutrient delivery ratio model:
 
         args - a python dictionary with the following entries:
             'workspace_dir' - a string uri pointing to the current workspace.
@@ -94,8 +62,8 @@ def _execute_nutrient(args):
 
         returns nothing.
     """
+
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
-        
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
             the user"""
@@ -126,6 +94,10 @@ def _execute_nutrient(args):
 
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
+
+
+    if not args['calc_p'] and not args['calc_n']:
+        raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')    
 
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
@@ -161,11 +133,10 @@ def _execute_nutrient(args):
 
     #Align all the input rasters
     dem_uri = raster_utils.temporary_filename()
-    water_yield_uri = raster_utils.temporary_filename()
     lulc_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
-        [args['dem_uri'], args['pixel_yield_uri'], args['lulc_uri']],
-        [dem_uri, water_yield_uri, lulc_uri], ['nearest'] * 3,
+        [args['dem_uri'], args['lulc_uri']],
+        [dem_uri, lulc_uri], ['nearest'] * 2,
         out_pixel_size, 'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
@@ -235,39 +206,9 @@ def _execute_nutrient(args):
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
-    #Calcualte the sum of water yield pixels
-    upstream_water_yield_uri = os.path.join(
-        intermediate_dir, 'upstream_water_yield%s.tif' % file_suffix)
-    water_loss_uri = raster_utils.temporary_filename()
-    zero_raster_uri = raster_utils.temporary_filename()
-    raster_utils.make_constant_raster_from_base_uri(
-        dem_uri, 0.0, zero_raster_uri)
 
-    routing_utils.route_flux(
-        flow_direction_uri, dem_uri, water_yield_uri, zero_raster_uri,
-        water_loss_uri, upstream_water_yield_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
-
-    #Calculate the 'log' of the upstream_water_yield raster
-    runoff_index_uri = os.path.join(
-        intermediate_dir, 'runoff_index%s.tif' % file_suffix)
-    nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
-    def nodata_log(value):
-        """Calculates the log value whiel handling nodata values correctly"""
-        result = numpy.log(value)
-        result[value == 0.0] = 0.0
-        return numpy.where(value == nodata_upstream, nodata_upstream, result)
-
-    raster_utils.vectorize_datasets(
-        [upstream_water_yield_uri], nodata_log, runoff_index_uri,
-        gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection",
-        vectorize_op=False)
-
-    field_summaries = {
-        'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
-        }
-    field_header_order = ['mn_run_ind']
+    field_summaries = {}
+    field_header_order = []
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_outputs%s.shp' % file_suffix)
@@ -284,28 +225,6 @@ def _execute_nutrient(args):
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
     field_header_order = []
 
-    #Burn the mean runoff values to a raster that matches the watersheds
-    upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
-    mean_runoff_index_uri = os.path.join(
-        intermediate_dir, 'mean_runoff_index%s.tif' % file_suffix)
-    mean_runoff_dataset = raster_utils.new_raster_from_base(
-        upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
-        gdal.GDT_Float32, -1.0)
-    upstream_water_yield_dataset = None
-    gdal.RasterizeLayer(
-        mean_runoff_dataset, [1], output_layer,
-        options=['ATTRIBUTE=mn_run_ind'])
-    mean_runoff_dataset = None
-
-    def alv_calculation(load, runoff_index, mean_runoff_index, stream):
-        """Calculates the adjusted loading value index"""
-        result = load * runoff_index / mean_runoff_index * (1 - stream)
-        return numpy.where(
-            (load == nodata_load) | (runoff_index == nodata_load) |
-            (mean_runoff_index == nodata_load) | (stream == nodata_stream) |
-            (mean_runoff_index == 0.0), nodata_load, result)
-
-    alv_uri = {}
     export_uri = {}
     field_summaries = {}
     
@@ -431,7 +350,6 @@ def _execute_nutrient(args):
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     routing_cython_core.distance_to_stream(
@@ -541,23 +459,16 @@ def _execute_nutrient(args):
             [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
-        alv_uri[nutrient] = os.path.join(
-            intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
-        raster_utils.vectorize_datasets(
-            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
-            stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
-            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         
-        alv_nodata = raster_utils.get_nodata_from_uri(alv_uri[nutrient])
+        load_nodata = raster_utils.get_nodata_from_uri(load_uri[nutrient])
         export_nodata = -1.0
-        def calculate_export(alv_array, ndr_array):
+        def calculate_export(load_array, ndr_array):
             return numpy.where(
-                (alv_array == alv_nodata) | (ndr_array == ndr_nodata),
-                export_nodata,
-                alv_array * ndr_array)
+                (load_array == load_nodata) | (ndr_array == ndr_nodata),
+                export_nodata, load_array * ndr_array)
 
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], ndr_uri],  calculate_export,
@@ -566,23 +477,22 @@ def _execute_nutrient(args):
 
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
-        alv_tot = raster_utils.aggregate_raster_values_uri(
-            alv_uri[nutrient], args['watersheds_uri'], 'ws_id').total
+        load_tot = raster_utils.aggregate_raster_values_uri(
+            load_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         export_tot = raster_utils.aggregate_raster_values_uri(
             export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         
-        field_summaries['%s_avl_tot' % nutrient] = alv_tot
+        field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_exp_tot']) + field_header_order)
+            map(lambda(x): x % nutrient, ['%s_load_tot', '%s_exp_tot']) + field_header_order)
 
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
 
     LOGGER.info('cleaning up temp files')
     for uri in [
-            water_loss_uri, zero_raster_uri, zero_absorption_source_uri,
-            loss_uri, lulc_mask_uri, current_l_lulc_uri, l_lulc_temp_uri]:
+            zero_absorption_source_uri, loss_uri, lulc_mask_uri, current_l_lulc_uri, l_lulc_temp_uri]:
         os.remove(uri)
 
 
