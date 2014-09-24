@@ -474,7 +474,8 @@ def execute(args):
 
     LOGGER.info('cleaning up temp files')
     for uri in [
-            zero_absorption_source_uri, loss_uri, lulc_mask_uri, current_l_lulc_uri, l_lulc_temp_uri]:
+            zero_absorption_source_uri, loss_uri, lulc_mask_uri,
+            current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
 
 
