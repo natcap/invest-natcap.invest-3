@@ -413,21 +413,10 @@ def execute(args):
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
-    args['coarse_landmass_uri'] = \
-        preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['transect_spacing'], \
-            os.path.join(args['intermediate_dir'], 'coarse_landmass.tif'), \
-            all_touched = True)
-
     # Preprocessing the AOI
     args['aoi_raster_uri'] = \
         preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
-
-    args['coarse_aoi_uri'] = \
-        preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
-        args['transect_spacing'], \
-        os.path.join(args['intermediate_dir'], 'coarse_aoi.tif'))
 
     # Preprocess bathymetry
     print('Pre-processing bathymetry...')
