@@ -100,7 +100,6 @@ def compute_transects(args):
     j_end = int(round(j_start + j_side_fine * col_count))
     
 
-    print('fine', (i_side_fine, j_side_fine), 'coarse', (i_side_coarse, j_side_coarse))
     print('iterations:', (len(range(i_start, i_end, i_side_coarse)), \
                           len(range(j_start, j_end, j_side_coarse))))
 
@@ -111,7 +110,8 @@ def compute_transects(args):
 
     tiles = 0
     for i in range(i_start, i_end, i_side_coarse):
-        LOGGER.debug(' Detecting shore along line ' + str(i_end - i))
+        LOGGER.debug(' Detecting shore along line ' + \
+            str((i_end - i)/i_side_coarse))
         for j in range(j_start, j_end, j_side_coarse):
             i_base = (i - i_start) / i_side_fine - 2
             j_base = (j - j_start) / j_side_fine - 2
@@ -130,6 +130,8 @@ def compute_transects(args):
 
                     fine_shore[shore_pts] = 1
                     tiles += 1
+                    
+                    
 
     LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
@@ -245,6 +247,37 @@ def compute_transects(args):
         raw_depths, shore_points, direction_vectors)
 
     # Save bathymetry samples along transects
+
+def compute_shore_orientation(tile, shore_pts):
+    tile = np.copy(tile) # Creating a copy in-place
+    max_i, max_j = tile.shape
+    mask = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
+    I = []
+    J = []
+    Di = []
+    Dj = []
+    D2i = []
+    D2j = []
+    for row in shore_pts[0]:
+        if not row or row >= max_i -1:
+            continue
+
+        for col in shore_pts[1]:
+            if not col or col >= max_j -1:
+                continue
+
+            neighborhood = np.copy(tile[row-1:row+2, col-1:col+2])
+            neighborhood[1, 1] = 0
+            neighbors = np.sum(neighborhood)
+             
+            if neighbors != 2:
+                continue
+
+            neighbors = np.where(neighborhood == 1)
+            Di.append(neighbors[0][1] - neighbors[0][0])
+            Dj.append(neighbors[1][1] - neighbors[1][0])
+            I.append(row)
+            J.append(col)
 
 def compute_shore_location(bathymetry, transect_spacing, model_resolution):
     """Compute the location of the shore piecewise at much higher resolution
