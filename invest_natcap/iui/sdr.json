@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.sdr.sdr",
     "modelName" : "sdr",
     "localDocURI": "../documentation/sediment_retention.html",
-    "height": 700,
+    "height": 575,
     "width" : 700,
     "elements": [
         {
