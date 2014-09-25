@@ -105,5 +105,5 @@
         "grid_column_name" : "cell"
     },
     "min_cell_size" : 250,
-    "max_grid_size" : 400000000000
+    "max_grid_size" : 800000000000
 }
