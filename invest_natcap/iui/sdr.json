@@ -25,7 +25,6 @@
                     "args_id" : "suffix",
                     "type": "text",
                     "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
