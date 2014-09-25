@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.ndr.ndr",
     "modelName" : "nutrient",
     "localDocURI": "../documentation/waterpurification.html",
-    "height": 900,
+    "height": 500,
     "width" : 900,
     "elements": [
         {
@@ -20,19 +20,19 @@
 		    "required": true,
                     "helpText":"This is the directory in which the output and intermediate files will be saved."
 		},
-                {
-                    "id" : "results_suffix",
-                    "args_id" : "results_suffix",
-                    "type": "text",
-                    "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
-                    "label": "Results Suffix (optional)",
-                    "defaultValue": "",
-                    "returns": {"ifEmpty": "pass"},
-                    "required": false,
-                    "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
-                },
-		{
+        {
+            "id" : "results_suffix",
+            "args_id" : "results_suffix",
+            "type": "text",
+            "dataType": "string",
+            "validText": "[a-zA-Z0-9]*",
+            "label": "Results Suffix (optional)",
+            "defaultValue": "",
+            "returns": {"ifEmpty": "pass"},
+            "required": false,
+            "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
+        },
+    	{
 		    "id" : "dem_uri",
 		    "args_id" : "dem_uri",
 		    "type": "file",
@@ -42,66 +42,16 @@
 		    "validateAs": {"type": "GDAL"},
 		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the Working with the DEM section of the InVEST user's guide for more information."
 		},
-		{
-                    "id" : "precipitation",
-                    "args_id" : "precipitation_uri",
-                    "type": "file",
-                    "label": "Precipitation",
-                    "defaultValue": "../Base_Data/Freshwater/precip",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "A GIS raster dataset with a non-zero value for average annual precipitation for each cell. The precipitation units should be in millimeters."
-                },
-                {
-                    "id" : "potential_evapotranspiration",
-                    "args_id" : "eto_uri",
-                    "type": "file",
-                    "label": "Reference Evapotranspiration",
-                    "defaultValue": "../Base_Data/Freshwater/eto",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "A GIS raster dataset, with an annual average evapotranspiration value for each cell. Potential evapotranspiration is the potential loss of water from soil by both evaporation from the soil and transpiration by healthy Alfalfa (or grass) if sufficient water is available. The evapotranspiration values should be in millimeters."
-                },
-                {
-                    "id" : "soil_depth",
-                    "args_id" : "depth_to_root_rest_layer_uri",
-                    "type": "file",
-                    "label": "Depth To Root Restricting Layer",
-                    "defaultValue": "../Base_Data/Freshwater/depth_to_root_rest_layer",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "GIS raster dataset with an average root restricting layer depth value for each cell. Root restricting layer depth is the soil depth at which root penetration is strongly inhibited because of physical or chemical characteristics. The root restricting layer depth values should be in millimeters."
-                },
-                {
-                    "id" : "plant_available_water_fraction",
-                    "args_id" : "pawc_uri",
-                    "type": "file",
-                    "label": "Plant Available Water Fraction",
-                    "defaultValue": "../Base_Data/Freshwater/pawc",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "A GIS raster dataset with a plant available water content value for each cell. Plant Available Water Content fraction (PAWC) is the fraction of water that can be stored in the soil profile that is available for plants' use."
-                },
-                {
-                    "id" : "land_use",
-                    "args_id" : "lulc_uri",
-                    "type": "file",
-                    "label": "Land Use",
-                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "A GIS raster dataset, with an integer LULC code for each cell. The LULC code should be an integer."
-                },
-                {
-                    "id" : "seasonality_constant",
-                    "args_id" : "seasonality_constant",
-                    "type": "text",
-                    "label": "Seasonality Constant",
-                    "defaultValue": "5",
-                    "required": true,
-                    "validText": "^[0-9]+\\.?[0-9]+$",
-                    "helpText": "Floating point value on the order of 1 to 20 corresponding to the seasonal distribution of precipitation. See the user's guide for a detailed explanation."
-                },
+        {
+            "id" : "land_use",
+            "args_id" : "lulc_uri",
+            "type": "file",
+            "label": "Land Use",
+            "defaultValue": "../Base_Data/Freshwater/landuse_90",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GIS raster dataset, with an integer LULC code for each cell. The LULC code should be an integer."
+        },      
 		{
 		    "id" : "watersheds_uri",
 		    "args_id" : "watersheds_uri",
