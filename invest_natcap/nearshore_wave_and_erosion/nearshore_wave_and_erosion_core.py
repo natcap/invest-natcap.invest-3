@@ -109,30 +109,40 @@ def compute_transects(args):
     tile_size = np.sum(mask)
 
     tiles = 0
-    for i in range(i_start, i_end, i_side_coarse):
+    #for i in range(i_start, i_end, i_side_coarse):
+    for i in range(i_start, i_start + 100 * i_side_coarse, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
+
+        i_base = (i - i_start) / i_side_fine - 2
+
         for j in range(j_start, j_end, j_side_coarse):
-            i_base = (i - i_start) / i_side_fine - 2
+#            print ' ', str(j),
             j_base = (j - j_start) / j_side_fine - 2
 
             data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
             # Avoid nodata on tile
             if np.sum(data) == tile_size:
+#                print('Found potential shore')
                 # Look for landmass cover on tile
                 tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
                 land = np.sum(tile)
+#                print('land = ', land, 'vs', tile_size)
                 # If land and sea, we have a shore: detect it and store
                 if land and land < tile_size:
                     shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
                     shore_pts = np.where(shore_patch == 1)
-                    shore_pts = (shore_pts[0] + i_base, shore_pts[1] + j_base)
+                    if shore_pts[0].size:
+                        print (i_base, j_base), ' ',
 
-                    fine_shore[shore_pts] = 1
-                    tiles += 1
-                    
-                    
+                        compute_shore_orientation(shore_patch, shore_pts)
 
+                        shore_pts = \
+                            (shore_pts[0] + i_base, shore_pts[1] + j_base)
+
+                        fine_shore[shore_pts] = 1
+                        tiles += 1
+                    
     LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
     shore_band = None
@@ -248,37 +258,102 @@ def compute_transects(args):
 
     # Save bathymetry samples along transects
 
-def compute_shore_orientation(tile, shore_pts):
-    tile = np.copy(tile) # Creating a copy in-place
-    max_i, max_j = tile.shape
+def compute_shore_orientation(shore, shore_pts):
+    shore = np.copy(shore) # Creating a copy in-place
+    max_i, max_j = shore.shape
     mask = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-    I = []
-    J = []
-    Di = []
-    Dj = []
-    D2i = []
-    D2j = []
-    for row in shore_pts[0]:
+
+    updated_shore = shore.astype(int)
+#    updated_shore[shore_pts] = np.array(range(shore_pts[0].size))
+#    print('shore before', updated_shore)
+#    updated_shore = shore.astype(int)
+
+    # Compute orientations
+#    print('orientations')
+    orientations = {}
+    for coord in zip(shore_pts[0], shore_pts[1]):
+        row, col = coord
+#        print('focal point', coord)
         if not row or row >= max_i -1:
+#            print((row, col), 'row outside >', max_i - 1)
+            updated_shore[row, col] = 0
             continue
 
-        for col in shore_pts[1]:
-            if not col or col >= max_j -1:
-                continue
+        if not col or col >= max_j -1:
+#            print((row, col), 'col outside >', max_j - 1)
+            updated_shore[row, col] = 0
+            continue
 
-            neighborhood = np.copy(tile[row-1:row+2, col-1:col+2])
-            neighborhood[1, 1] = 0
-            neighbors = np.sum(neighborhood)
+        neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        neighborhood[1, 1] = 0
+#        print('neighborhood', neighborhood)
+        neighbor_count = np.sum(neighborhood)
+#        print 'neighbor count', neighbor_count,
+ 
+        if neighbor_count != 2:
+#            print (row, col), 'wrong number of neighbors',
+#            neighbors = np.where(neighborhood == 1)
+#            print 'neighbors', zip(neighbors[0]+row-1, neighbors[1]+col-1), 
+            updated_shore[row, col] = 0
+            continue
+
+        neighbors = np.where(neighborhood == 1)
+#        print 'neighbors', zip(neighbors[0]+row-1, neighbors[1]+col-1), 
+
+        orientations[coord] = \
+            (neighbors[0][1] - neighbors[0][0], \
+            neighbors[1][1] - neighbors[1][0])
+#        print('orientations', orientations[coord])
+#    print('all orientations', orientations.keys())
+
+    # Compute average orientations
+#    print('average orientations')
+    shore = np.copy(updated_shore)
+#    print('shore left', shore)
+    average_orientations = {}
+    for coord in orientations.keys():
+        row, col = coord
+#        print('focal point', coord)        
+        neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        neighborhood[1, 1] = 0
+        neighbor_count = np.sum(neighborhood)
              
-            if neighbors != 2:
-                continue
+        if neighbor_count != 2:
+#            print('neighbors', (row,col), '=', neighbor_count)
+#            updated_shore[row, col] = 0
+            del orientations[coord]
+            continue
 
-            neighbors = np.where(neighborhood == 1)
-            Di.append(neighbors[0][1] - neighbors[0][0])
-            Dj.append(neighbors[1][1] - neighbors[1][0])
-            I.append(row)
-            J.append(col)
+        neighbors = np.where(neighborhood == 1)
+        neighbors = (neighbors[0] + row - 1, neighbors[1] + col - 1)
+#        print('neighbors', zip(neighbors[0], neighbors[1]))
 
+        first = (neighbors[0][0], neighbors[1][0])
+        second = (neighbors[0][1], neighbors[1][1])
+#        print('first', first, 'second', second)
+        if (first not in orientations) or (second not in orientations):
+#            print('first', first, 'second', second, (row, col), '= 0')
+#            updated_shore[row, col] = 0
+            del orientations[coord]
+#            print('orientations left', orientations)
+            continue
+
+        average_orientation = \
+            ((orientations[first][0] + orientations[second][0]) / 2,
+            (orientations[first][1] + orientations[second][1]) / 2)
+            
+        average_orientations[coord] = average_orientation
+#        print('average orientation', average_orientation)
+    shore_orientation = {}
+    for segment in orientations.keys():
+        O = orientations[segment]
+        A = average_orientations[segment]
+        shore_orientation[segment] = \
+            (float(2*O[0]+1*A[0])/3., float(2*O[1]+1*A[1])/3.)
+        print('O', O, 'A', A, 'composite', shore_orientation[segment])
+
+    return shore_orientation
+ 
 def compute_shore_location(bathymetry, transect_spacing, model_resolution):
     """Compute the location of the shore piecewise at much higher resolution
        than coastal vulnerability.

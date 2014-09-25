@@ -830,12 +830,6 @@ def execute(args):
 
             output_uri = os.path.join(workspace, filter_name % cover_id)
             filter_fragments(suitability_dict[cover_id], size, output_uri)
-            #cProfile.runctx( \
-            #    'filter_fragments(suitability_dict[cover_id], \
-            #        size, output_uri)', globals(), locals(), 'stats')
-            #p = pstats.Stats('stats')
-            #p.sort_stats('time').print_stats(20)
-            #p.sort_stats('cumulative').print_stats(20)
             suitability_dict[cover_id] = output_uri
 
     ###
