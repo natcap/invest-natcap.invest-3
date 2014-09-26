@@ -139,15 +139,19 @@ def compute_transects(args):
                             compute_shore_orientation(shore_patch, \
                                 shore_pts, i_base, j_base)
 
-                        shore_pts = \
-                            (shore_pts[0] + i_base, shore_pts[1] + j_base)
+                        shore_pts = shore_orientations.keys()
 
-                        fine_shore[shore_pts] = 1
-                        tiles += 1
+                        for p in shore_pts:
+                            fine_shore[p] = 1
                     
-                        #transect_orientation = \
-                        #    compute_transect_orientation(shore_orientations, \
-                        #        landmass)
+                        transect = select_transect(shore_pts)
+
+                        if not transect:
+                            continue
+
+                        transect_orientation = \
+                            compute_transect_orientation(transect, \
+                                shore_orientations[transect], landmass)
 
                         #transect_position = \
                         #    compute_transect_position(transect_orientation, \
@@ -156,6 +160,8 @@ def compute_transects(args):
                         #transect_profile = \
                         #    sample_transect_profile(transect_position, \
                         #        transect_orientation, bathymetry)
+
+                        tiles += 1
 
     LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
@@ -272,7 +278,7 @@ def compute_transects(args):
 
     # Save bathymetry samples along transects
 
-def compute_shore_orientation(shore, shore_pts):
+def compute_shore_orientation(shore, shore_pts, i_base, j_base):
     """Compute an estimate of the shore orientation. 
        Inputs:
            -shore: 2D numpy shore array (1 for shore, 0 otherwise)
@@ -342,11 +348,41 @@ def compute_shore_orientation(shore, shore_pts):
     for segment in orientations.keys():
         O = orientations[segment]
         A = average_orientations[segment]
-        shore_orientation[segment] = \
-            (float(2*O[0]+1*A[0])/3., float(2*O[1]+1*A[1])/3.)
+        shore_orientation[(segment[0] + i_base, segment[1] + j_base)] = \
+            (float(2 * O[0] + A[0]) / 3., float(2 * O[1] + A[1]) / 3.)
 
     return shore_orientation
  
+def compute_transect_orientation(position, orientation, landmass):
+    """Resolves transect orientation"""
+    l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
+    s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
+
+    orientation = [orientation[0], orientation[1]]
+
+    orientation[s] = float(orientation[s]) / orientation[l]
+    orientation[l] = 1.
+
+    if landmass[position[0] + orientation[0], position[1] + orientation[1]]:
+        return orientation
+    else:
+        assert landmass[position[0] + orientation[0] * -1, \
+            position[1] + orientation[1]]
+        return (orientation[0] * -1, orientation[1])
+
+def select_transect(shore_pts):
+    """Select transect postion among shore points"""
+    if not len(shore_pts):
+        return None
+    
+    # Return the transect with the smallest i first, and j second
+    sorted_points = sorted(shore_pts, key = lambda p: p[1])
+    sorted_points = sorted(sorted_points, key = lambda p: p[0])
+    
+    print('sorted points', sorted_points)
+
+    return sorted_points[0]
+
 def compute_shore_location(bathymetry, transect_spacing, model_resolution):
     """Compute the location of the shore piecewise at much higher resolution
        than coastal vulnerability.
