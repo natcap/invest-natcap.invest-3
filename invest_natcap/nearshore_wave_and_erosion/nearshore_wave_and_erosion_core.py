@@ -133,7 +133,7 @@ def compute_transects(args):
                     shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
                     shore_pts = np.where(shore_patch == 1)
                     if shore_pts[0].size:
-                        print (i_base, j_base), ' ',
+#                        print (i_base, j_base), ' ',
 
                         shore_orientations = \
                             compute_shore_orientation(shore_patch, \
@@ -149,6 +149,9 @@ def compute_transects(args):
                         if not transect:
                             continue
 
+                        tile2 = np.copy(tile).astype(int)
+                        tile2[transect[0]-i_base, transect[1]-j_base] = 8
+#                        print(tile2)
                         transect_orientation = \
                             compute_transect_orientation(transect, \
                                 shore_orientations[transect], landmass)
@@ -355,20 +358,60 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
  
 def compute_transect_orientation(position, orientation, landmass):
     """Resolves transect orientation"""
+#    print('shore orientation', orientation)
+    # orientation is perpendicular to the shore
+    shore_orientation = np.copy(orientation)
+    orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
+    transect_orientation = np.copy(orientation)
+
     l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
     s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
 
-    orientation = [orientation[0], orientation[1]]
+    # Normalize orientation and extend to 3 pixels to minimize roundoff
+    orientation[s] = round(3 * float(orientation[s]) / orientation[l])
+    orientation[l] = 3.
 
-    orientation[s] = float(orientation[s]) / orientation[l]
-    orientation[l] = 1.
+    normalized_orientation = [orientation[0], orientation[1]]
 
-    if landmass[position[0] + orientation[0], position[1] + orientation[1]]:
+    # If orientation points to water, return vector as is
+    if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
         return orientation
+    # Otherwise, check the opposite direction
     else:
-        assert landmass[position[0] + orientation[0] * -1, \
-            position[1] + orientation[1]]
-        return (orientation[0] * -1, orientation[1])
+        orientation *= -1
+
+        # If the other direction does not work, maybe the vector is too long
+        if landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+            # Reduce the vector length
+            step = np.array([round(orientation[0]/3), round(orientation[1]/3)])
+
+            # If orientation points to water, return vector as is
+            if not landmass[position[0] + step[0], position[1] + step[1]]:
+                return orientation
+            # If not, check the other direction
+            else:
+                step *= -1
+                # If it doesn't work, break.
+                if landmass[position[0] +step[0], position[1] +step[1]]:
+                    print('position', position)
+                    print('shore orientation', shore_orientation)
+                    print('transect orientation', transect_orientation)
+                    patch = np.copy(landmass[position[0]-5:position[0]+5, \
+                        position[1]-5:position[1]+5]).astype(int)
+                    patch[5, 5] = 2
+                    patch[5 + normalized_orientation[0], \
+                        5 + normalized_orientation[1]] += 5
+                    print('normalized orientation', normalized_orientation, \
+                        (round(5 + normalized_orientation[0]), \
+                            round(5 + normalized_orientation[1])))
+                    patch[5 + orientation[0], 5 + orientation[1]] += 3
+                    print('corrected orientation', orientation, \
+                        (5 + orientation[0], 5 + orientation[1]))
+                    print(patch)
+                    assert False
+
+                return orientation * -1
+
 
 def select_transect(shore_pts):
     """Select transect postion among shore points"""
@@ -379,7 +422,7 @@ def select_transect(shore_pts):
     sorted_points = sorted(shore_pts, key = lambda p: p[1])
     sorted_points = sorted(sorted_points, key = lambda p: p[0])
     
-    print('sorted points', sorted_points)
+#    print('sorted points', sorted_points)
 
     return sorted_points[0]
 
