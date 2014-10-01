@@ -135,30 +135,28 @@ def compute_transects(args):
                     if shore_pts[0].size:
 #                        print (i_base, j_base), ' ',
 
+                        # Estimate shore orientation
                         shore_orientations = \
                             compute_shore_orientation(shore_patch, \
                                 shore_pts, i_base, j_base)
-
+                        # Keep shore segments with valid orientations only
                         shore_pts = shore_orientations.keys()
-
-                        for p in shore_pts:
-                            fine_shore[p] = 1
-                    
+                        # Pick transect position among valid shore points
                         transect = select_transect(shore_pts)
-
+                        # Skip tile if no valid shore points
                         if not transect:
                             continue
-
-                        tile2 = np.copy(tile).astype(int)
-                        tile2[transect[0]-i_base, transect[1]-j_base] = 8
-#                        print(tile2)
+                        # Compute transect orientation
                         transect_orientation = \
                             compute_transect_orientation(transect, \
                                 shore_orientations[transect], landmass)
-
-                        #transect_position = \
-                        #    compute_transect_position(transect_orientation, \
-                        #        bathymetry)
+                        # Skip tile if can't compute valid orientation
+                        if not transect_orientation:
+                            continue
+                        # Adjust transect position to bathymetry
+                        transect_position = \
+                            adjust_transect_position(transect_orientation, \
+                                bathymetry)
 
                         #transect_profile = \
                         #    sample_transect_profile(transect_position, \
@@ -357,7 +355,7 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
     return shore_orientation
  
 def compute_transect_orientation(position, orientation, landmass):
-    """Resolves transect orientation"""
+    """Returns transect orientation towards the ocean."""
 #    print('shore orientation', orientation)
     # orientation is perpendicular to the shore
     shore_orientation = np.copy(orientation)
@@ -393,22 +391,24 @@ def compute_transect_orientation(position, orientation, landmass):
                 step *= -1
                 # If it doesn't work, break.
                 if landmass[position[0] +step[0], position[1] +step[1]]:
-                    print('position', position)
-                    print('shore orientation', shore_orientation)
-                    print('transect orientation', transect_orientation)
-                    patch = np.copy(landmass[position[0]-5:position[0]+5, \
-                        position[1]-5:position[1]+5]).astype(int)
-                    patch[5, 5] = 2
-                    patch[5 + normalized_orientation[0], \
-                        5 + normalized_orientation[1]] += 5
-                    print('normalized orientation', normalized_orientation, \
-                        (round(5 + normalized_orientation[0]), \
-                            round(5 + normalized_orientation[1])))
-                    patch[5 + orientation[0], 5 + orientation[1]] += 3
-                    print('corrected orientation', orientation, \
-                        (5 + orientation[0], 5 + orientation[1]))
-                    print(patch)
-                    assert False
+                    LOGGER.debug('invalid transect ' + str(position))
+                    return None
+                    #print('position', position)
+                    #print('shore orientation', shore_orientation)
+                    #print('transect orientation', transect_orientation)
+                    #patch = np.copy(landmass[position[0]-5:position[0]+5, \
+                    #    position[1]-5:position[1]+5]).astype(int)
+                    #patch[5, 5] = 2
+                    #patch[5 + normalized_orientation[0], \
+                    #    5 + normalized_orientation[1]] += 5
+                    #print('normalized orientation', normalized_orientation, \
+                    #    (round(5 + normalized_orientation[0]), \
+                    #        round(5 + normalized_orientation[1])))
+                    #patch[5 + orientation[0], 5 + orientation[1]] += 3
+                    #print('corrected orientation', orientation, \
+                    #    (5 + orientation[0], 5 + orientation[1]))
+                    #print(patch)
+                    #assert False
 
                 return orientation * -1
 
