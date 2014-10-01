@@ -40,16 +40,6 @@
                     "helpText": "The landuse landcover raster."
                 },
                 {
-                    "id": "resolution",
-                    "args_id": "resolution",
-                    "label" : "Downsampling",
-                    "type": "hiddenElement",
-                    "validText": "[0-9]*(\\.[0-9]*)?",
-                    "dataType": "float",
-                    "required": false,
-                    "helpText": "The spatial resolution of the model run."
-                },
-                {
                     "id": "transition",
                     "args_id": "transition",
                     "type": "file",
