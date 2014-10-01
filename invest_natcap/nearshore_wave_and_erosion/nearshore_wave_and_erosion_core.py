@@ -109,29 +109,62 @@ def compute_transects(args):
     tile_size = np.sum(mask)
 
     tiles = 0
-    for i in range(i_start, i_end, i_side_coarse):
+    #for i in range(i_start, i_end, i_side_coarse):
+    for i in range(i_start, i_start + 100 * i_side_coarse, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
+
+        i_base = (i - i_start) / i_side_fine - 2
+
         for j in range(j_start, j_end, j_side_coarse):
-            i_base = (i - i_start) / i_side_fine - 2
+#            print ' ', str(j),
             j_base = (j - j_start) / j_side_fine - 2
 
             data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
             # Avoid nodata on tile
             if np.sum(data) == tile_size:
+#                print('Found potential shore')
                 # Look for landmass cover on tile
                 tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
                 land = np.sum(tile)
+#                print('land = ', land, 'vs', tile_size)
                 # If land and sea, we have a shore: detect it and store
                 if land and land < tile_size:
                     shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
                     shore_pts = np.where(shore_patch == 1)
-                    shore_pts = (shore_pts[0] + i_base, shore_pts[1] + j_base)
+                    if shore_pts[0].size:
+#                        print (i_base, j_base), ' ',
 
-                    fine_shore[shore_pts] = 1
-                    tiles += 1
+                        shore_orientations = \
+                            compute_shore_orientation(shore_patch, \
+                                shore_pts, i_base, j_base)
+
+                        shore_pts = shore_orientations.keys()
+
+                        for p in shore_pts:
+                            fine_shore[p] = 1
                     
-                    
+                        transect = select_transect(shore_pts)
+
+                        if not transect:
+                            continue
+
+                        tile2 = np.copy(tile).astype(int)
+                        tile2[transect[0]-i_base, transect[1]-j_base] = 8
+#                        print(tile2)
+                        transect_orientation = \
+                            compute_transect_orientation(transect, \
+                                shore_orientations[transect], landmass)
+
+                        #transect_position = \
+                        #    compute_transect_position(transect_orientation, \
+                        #        bathymetry)
+
+                        #transect_profile = \
+                        #    sample_transect_profile(transect_position, \
+                        #        transect_orientation, bathymetry)
+
+                        tiles += 1
 
     LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
@@ -248,36 +281,150 @@ def compute_transects(args):
 
     # Save bathymetry samples along transects
 
-def compute_shore_orientation(tile, shore_pts):
-    tile = np.copy(tile) # Creating a copy in-place
-    max_i, max_j = tile.shape
+def compute_shore_orientation(shore, shore_pts, i_base, j_base):
+    """Compute an estimate of the shore orientation. 
+       Inputs:
+           -shore: 2D numpy shore array (1 for shore, 0 otherwise)
+           -shore_pts: shore ij coordinates in shore array coordinates
+
+        Returns a dictionary of {(shore ij):(orientation vector ij)} pairs"""
+    shore = np.copy(shore) # Creating a copy in-place
+    max_i, max_j = shore.shape
     mask = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-    I = []
-    J = []
-    Di = []
-    Dj = []
-    D2i = []
-    D2j = []
-    for row in shore_pts[0]:
+
+    updated_shore = shore.astype(int)
+
+    # Compute orientations
+    orientations = {}
+    for coord in zip(shore_pts[0], shore_pts[1]):
+        row, col = coord
         if not row or row >= max_i -1:
+            updated_shore[row, col] = 0
             continue
 
-        for col in shore_pts[1]:
-            if not col or col >= max_j -1:
-                continue
+        if not col or col >= max_j -1:
+            updated_shore[row, col] = 0
+            continue
 
-            neighborhood = np.copy(tile[row-1:row+2, col-1:col+2])
-            neighborhood[1, 1] = 0
-            neighbors = np.sum(neighborhood)
+        neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        neighborhood[1, 1] = 0
+        neighbor_count = np.sum(neighborhood)
+ 
+        if neighbor_count != 2:
+            updated_shore[row, col] = 0
+            continue
+
+        neighbors = np.where(neighborhood == 1)
+
+        orientations[coord] = \
+            (neighbors[0][1] - neighbors[0][0], \
+            neighbors[1][1] - neighbors[1][0])
+
+    # Compute average orientations
+    shore = np.copy(updated_shore)
+    average_orientations = {}
+    for coord in orientations.keys():
+        row, col = coord
+        neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        neighborhood[1, 1] = 0
+        neighbor_count = np.sum(neighborhood)
              
-            if neighbors != 2:
-                continue
+        if neighbor_count != 2:
+            del orientations[coord]
+            continue
 
-            neighbors = np.where(neighborhood == 1)
-            Di.append(neighbors[0][1] - neighbors[0][0])
-            Dj.append(neighbors[1][1] - neighbors[1][0])
-            I.append(row)
-            J.append(col)
+        neighbors = np.where(neighborhood == 1)
+        neighbors = (neighbors[0] + row - 1, neighbors[1] + col - 1)
+
+        first = (neighbors[0][0], neighbors[1][0])
+        second = (neighbors[0][1], neighbors[1][1])
+        if (first not in orientations) or (second not in orientations):
+            del orientations[coord]
+            continue
+
+        average_orientation = \
+            ((orientations[first][0] + orientations[second][0]) / 2,
+            (orientations[first][1] + orientations[second][1]) / 2)
+            
+        average_orientations[coord] = average_orientation
+    shore_orientation = {}
+    for segment in orientations.keys():
+        O = orientations[segment]
+        A = average_orientations[segment]
+        shore_orientation[(segment[0] + i_base, segment[1] + j_base)] = \
+            (float(2 * O[0] + A[0]) / 3., float(2 * O[1] + A[1]) / 3.)
+
+    return shore_orientation
+ 
+def compute_transect_orientation(position, orientation, landmass):
+    """Resolves transect orientation"""
+#    print('shore orientation', orientation)
+    # orientation is perpendicular to the shore
+    shore_orientation = np.copy(orientation)
+    orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
+    transect_orientation = np.copy(orientation)
+
+    l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
+    s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
+
+    # Normalize orientation and extend to 3 pixels to minimize roundoff
+    orientation[s] = round(3 * float(orientation[s]) / orientation[l])
+    orientation[l] = 3.
+
+    normalized_orientation = [orientation[0], orientation[1]]
+
+    # If orientation points to water, return vector as is
+    if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+        return orientation
+    # Otherwise, check the opposite direction
+    else:
+        orientation *= -1
+
+        # If the other direction does not work, maybe the vector is too long
+        if landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+            # Reduce the vector length
+            step = np.array([round(orientation[0]/3), round(orientation[1]/3)])
+
+            # If orientation points to water, return vector as is
+            if not landmass[position[0] + step[0], position[1] + step[1]]:
+                return orientation
+            # If not, check the other direction
+            else:
+                step *= -1
+                # If it doesn't work, break.
+                if landmass[position[0] +step[0], position[1] +step[1]]:
+                    print('position', position)
+                    print('shore orientation', shore_orientation)
+                    print('transect orientation', transect_orientation)
+                    patch = np.copy(landmass[position[0]-5:position[0]+5, \
+                        position[1]-5:position[1]+5]).astype(int)
+                    patch[5, 5] = 2
+                    patch[5 + normalized_orientation[0], \
+                        5 + normalized_orientation[1]] += 5
+                    print('normalized orientation', normalized_orientation, \
+                        (round(5 + normalized_orientation[0]), \
+                            round(5 + normalized_orientation[1])))
+                    patch[5 + orientation[0], 5 + orientation[1]] += 3
+                    print('corrected orientation', orientation, \
+                        (5 + orientation[0], 5 + orientation[1]))
+                    print(patch)
+                    assert False
+
+                return orientation * -1
+
+
+def select_transect(shore_pts):
+    """Select transect postion among shore points"""
+    if not len(shore_pts):
+        return None
+    
+    # Return the transect with the smallest i first, and j second
+    sorted_points = sorted(shore_pts, key = lambda p: p[1])
+    sorted_points = sorted(sorted_points, key = lambda p: p[0])
+    
+#    print('sorted points', sorted_points)
+
+    return sorted_points[0]
 
 def compute_shore_location(bathymetry, transect_spacing, model_resolution):
     """Compute the location of the shore piecewise at much higher resolution
