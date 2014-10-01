@@ -716,7 +716,7 @@ cdef _build_flat_set(
                         neighbor_row = neighbor_row_offset[neighbor_index] + global_row
                         neighbor_col = neighbor_col_offset[neighbor_index] + global_col
                         
-                        if (neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0):
+                        if neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0:
                             continue
                         block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                         neighbor_dem_value = dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
@@ -884,8 +884,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_ds = gdal.Open(dem_edge_offset_uri, gdal.GA_Update)
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
-    cdef int sink_cell_hits = 0, edge_cell_hits = 0
-
     cdef queue[int] flat_region_queue
     
     #no path in the raster will will be greater than this
@@ -922,6 +920,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef Row_Col_Weight_Tuple t
     cdef int weight, region_count = 0
     last_time = time.time()
+
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
         flat_index = deref(flat_set_for_looping.begin())
@@ -930,7 +929,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-        
+
         if dem_block[row_index, col_index, row_block_offset, col_block_offset] == nodata_value:
             continue
 
@@ -973,17 +972,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     if dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == nodata_value:
                         continue
 
-                    #if we don't abut a higher pixel then skip
-                    if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] <=
-                        dem_block[row_index, col_index, row_block_offset, col_block_offset]):
-                        continue
-
-                    #otherwise we're next to an uphill pixel, that means we're an edge
-                    t = Row_Col_Weight_Tuple(global_row, global_col, 0)
-                    edge_queue.push(t)
-                    dem_edge_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
-                    cache_dirty[row_index, col_index] = 1
-                    break
+                    #if we don't abut a higher pixel then it's an edge
+                    if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] >
+                            dem_block[row_index, col_index, row_block_offset, col_block_offset]):
+                        
+                        t = Row_Col_Weight_Tuple(global_row, global_col, 0)
+                        edge_queue.push(t)
+                        dem_edge_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
+                        cache_dirty[row_index, col_index] = 1
+                        break
             else:
                 #it's been pushed onto the plateau queue, so we know it's in the same
                 #region, but it's not flat, so it must be a sink
@@ -1016,7 +1013,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         #process sink offsets for region
         while sink_queue.size() > 0:
-            sink_cell_hits += 1
             current_cell_tuple = sink_queue.front()
             sink_queue.pop()
             
@@ -1058,7 +1054,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         #process edge offsets for region
         while edge_queue.size() > 0:
-            edge_cell_hits += 1
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
             
@@ -1075,11 +1070,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     continue
                 block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                 
-                #If the neighbor is not at the same height, skip
-                if (dem_block[row_index, col_index, row_block_offset, col_block_offset] != 
-                    dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]):
-                    continue
-
                 flat_index = neighbor_row * n_cols + neighbor_col
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
