@@ -2676,6 +2676,10 @@ class ExecRoot(Root):
         try:
             return self.allElements[element_id]
         except KeyError:
+            if not hasattr(self, 'embedded_uis'):
+                raise RuntimeError(('Tried to locate element %s, but it does '
+                    'exist in any known UIs') % element_id)
+
             if self.embedded_uis == []:
                 self.embedded_uis = self.find_embedded_elements()
 
