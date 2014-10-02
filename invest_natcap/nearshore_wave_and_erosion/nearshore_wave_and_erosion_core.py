@@ -30,15 +30,7 @@ def execute(args):
         
         returns nothing"""
     logging.info('executing coastal_protection_core')
-    logging.info('Detecting shore...')
-    ## Can we compute the shore?
-    #if ('aoi_raster_uri' in args) and ('landmass_raster_uri' in args):
-    #    print('detecting shore...')
-    #    args['coarse_shore_uri'] = os.path.join(\
-    #        args['intermediate_dir'], 'coarse_shore.tif')
-    #    detect_shore_uri( \
-    #        args['coarse_landmass_uri'], args['coarse_aoi_uri'], \
-    #        args['coarse_shore_uri'])
+    logging.info('Computing transects...')
 
     transects_uri = compute_transects(args)
 
@@ -75,15 +67,20 @@ def compute_transects(args):
     shore_band = shore_raster.GetRasterBand(1)
     fine_shore = shore_band.ReadAsArray()
 
-    raster = gdal.Open(args['landmass_raster_uri'], gdal.GA_Update)
+    raster = gdal.Open(args['landmass_raster_uri'])
     fine_geotransform = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     landmass = band.ReadAsArray()
     band = None
     raster = None
-    raster = gdal.Open(args['aoi_raster_uri'], gdal.GA_Update)
+    raster = gdal.Open(args['aoi_raster_uri'])
     band = raster.GetRasterBand(1)
     aoi = band.ReadAsArray()
+    band = None
+    raster = None
+    raster = gdal.Open(args['bathymetry_raster_uri'])
+    band = raster.GetRasterBand(1)
+    bathymetry = band.ReadAsArray()
     band = None
     raster = None
 
@@ -109,25 +106,25 @@ def compute_transects(args):
     tile_size = np.sum(mask)
 
     tiles = 0
-    #for i in range(i_start, i_end, i_side_coarse):
-    for i in range(i_start, i_start + 100 * i_side_coarse, i_side_coarse):
+
+    for i in range(i_start, i_start + 40 * i_side_coarse, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
 
         i_base = (i - i_start) / i_side_fine - 2
 
         for j in range(j_start, j_end, j_side_coarse):
-#            print ' ', str(j),
             j_base = (j - j_start) / j_side_fine - 2
 
             data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+
             # Avoid nodata on tile
             if np.sum(data) == tile_size:
-#                print('Found potential shore')
+
                 # Look for landmass cover on tile
                 tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
                 land = np.sum(tile)
-#                print('land = ', land, 'vs', tile_size)
+
                 # If land and sea, we have a shore: detect it and store
                 if land and land < tile_size:
                     shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
@@ -139,27 +136,43 @@ def compute_transects(args):
                         shore_orientations = \
                             compute_shore_orientation(shore_patch, \
                                 shore_pts, i_base, j_base)
+                        
                         # Keep shore segments with valid orientations only
                         shore_pts = shore_orientations.keys()
+                        
                         # Pick transect position among valid shore points
-                        transect = select_transect(shore_pts)
+                        transect_position = select_transect(shore_pts)
+                        
                         # Skip tile if no valid shore points
-                        if not transect:
+                        if not transect_position:
                             continue
+
                         # Compute transect orientation
                         transect_orientation = \
-                            compute_transect_orientation(transect, \
-                                shore_orientations[transect], landmass)
-                        # Skip tile if can't compute valid orientation
-                        if not transect_orientation:
-                            continue
-                        # Adjust transect position to bathymetry
-                        transect_position = \
-                            adjust_transect_position(transect_orientation, \
-                                bathymetry)
+                            compute_transect_orientation(transect_position, \
+                                shore_orientations[transect_position],landmass)
 
-                        #transect_profile = \
-                        #    sample_transect_profile(transect_position, \
+                        # Skip tile if can't compute valid orientation
+                        if transect_orientation is None:
+                            continue
+                        # Compute raw transect depths
+                        raw_depths = compute_raw_transect_depths(transect_position, \
+                            transect_orientation, bathymetry, \
+                            landmass, args['model_resolution'], args['max_land_profile_len'], \
+                            args['max_land_profile_height'], args['max_profile_length'])
+
+                        print('raw_depths:')
+                        for depth in range(raw_depths.size):
+                            if raw_depths[depth] > -20000.:
+                                print(depth, raw_depths[depth])
+                        # Sample depth along transect orientation directly from bathymetry
+                        #raw_transect_profile = \
+                        #    sample_bathymetry_along_transect(transect_position, \
+                        #        transect_orientation, bathymetry)
+
+                        # Adjust transect position to bathymetry
+                        #transect_position = \
+                        #    adjust_transect_bathymetry(transect, \
                         #        transect_orientation, bathymetry)
 
                         tiles += 1
@@ -354,13 +367,24 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
 
     return shore_orientation
  
+def select_transect(shore_pts):
+    """Select transect postion among shore points"""
+    if not len(shore_pts):
+        return None
+    
+    # Return the transect with the smallest i first, and j second
+    sorted_points = sorted(shore_pts, key = lambda p: p[1])
+    sorted_points = sorted(sorted_points, key = lambda p: p[0])
+    
+#    print('sorted points', sorted_points)
+
+    return sorted_points[0]
+
 def compute_transect_orientation(position, orientation, landmass):
     """Returns transect orientation towards the ocean."""
-#    print('shore orientation', orientation)
+    print('tile', landmass[position[0]-5:position[0]+6, position[1]-5:position[1]+6].astype(np.int32))
     # orientation is perpendicular to the shore
-    shore_orientation = np.copy(orientation)
     orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
-    transect_orientation = np.copy(orientation)
 
     l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
     s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
@@ -369,27 +393,32 @@ def compute_transect_orientation(position, orientation, landmass):
     orientation[s] = round(3 * float(orientation[s]) / orientation[l])
     orientation[l] = 3.
 
-    normalized_orientation = [orientation[0], orientation[1]]
-
-    # If orientation points to water, return vector as is
+    # Orientation points to water: return rescaled vector
     if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
-        return orientation
+        return orientation / 3.
+
     # Otherwise, check the opposite direction
     else:
-        orientation *= -1
-
-        # If the other direction does not work, maybe the vector is too long
-        if landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+        orientation *= -1.
+        
+        # Other direction works, return rescaled orientation
+        if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+            return orientation / 3.
+        
+        # Other direction does not work: possible overshoot, shorten vector
+        else:
             # Reduce the vector length
-            step = np.array([round(orientation[0]/3), round(orientation[1]/3)])
+            step = np.array([round(orientation[0]/3.), round(orientation[1]/3.)])
 
-            # If orientation points to water, return vector as is
+            # Orientation points to water: return vector as is
             if not landmass[position[0] + step[0], position[1] + step[1]]:
                 return orientation
-            # If not, check the other direction
+        
+            # Orientation points to land: check the other direction
             else:
-                step *= -1
-                # If it doesn't work, break.
+                step *= -1 # step in the other direction
+        
+                # Orientation doesn't work, return invalid transect.
                 if landmass[position[0] +step[0], position[1] +step[1]]:
                     LOGGER.debug('invalid transect ' + str(position))
                     return None
@@ -409,147 +438,135 @@ def compute_transect_orientation(position, orientation, landmass):
                     #    (5 + orientation[0], 5 + orientation[1]))
                     #print(patch)
                     #assert False
-
+        
+                # Other direction worked, return orientation
                 return orientation * -1
 
 
-def select_transect(shore_pts):
-    """Select transect postion among shore points"""
-    if not len(shore_pts):
-        return None
-    
-    # Return the transect with the smallest i first, and j second
-    sorted_points = sorted(shore_pts, key = lambda p: p[1])
-    sorted_points = sorted(sorted_points, key = lambda p: p[0])
-    
-#    print('sorted points', sorted_points)
-
-    return sorted_points[0]
-
-def compute_shore_location(bathymetry, transect_spacing, model_resolution):
-    """Compute the location of the shore piecewise at much higher resolution
-       than coastal vulnerability.
+def adjust_transect_bathymetry(position, orientation, bathymetry):
+    """Given a transect, adjust the bathymetry so the shore's edge corresponds 
+        to the landmass.
        
     """
-    # Clip and resample bathymetry to the AOI
-    #nearshore_wave_and_erosion.raster_from_shapefile_uri(shapefile_uri, aoi_uri, \
-    #    cell_size, output_uri, field=None, all_touched=False, nodata = 0., \
-    #    datatype = gdal.GDT_Float32)
+    # Shore can't be modified. Bathymetry could be off on purpose. 
+    # Adjust bathy to match shore.
+    # Sample depth at the transect location
+    elevation = bathymetry[position]
 
-def compute_raw_transect_depths(shore_points, valid_transects, \
-    valid_transect_count, \
-    direction_vectors, bathymetry, landmass, model_resolution, \
+
+def compute_raw_transect_depths(shore_point, \
+    direction_vector, bathymetry, landmass, model_resolution, \
     max_land_profile_len, max_land_profile_height, \
     max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
-    LOGGER.debug('Computing transect endpoints...')
+    LOGGER.debug('Sampling transect depths...')
 
     # Maximum transect extents
     max_land_len = max_land_profile_len / model_resolution
     max_sea_len = 1000 * max_sea_profile_len / model_resolution
 
-    LOGGER.debug('Creating a %ix%i transect matrix' % \
-        (valid_transect_count, max_land_len + max_sea_len))
-    depths = np.ones((valid_transect_count, max_land_len + max_sea_len))*-20000
+    LOGGER.debug('Creating a %i depth matrix' % (max_land_len + max_sea_len))
+    depths = np.ones((max_land_len + max_sea_len))*-20000
 
-    # Repeat for each shore segment
-    for segment in range(shore_points[0].size):
-        transect = 0
-        # For each valid transect
-        while valid_transects[segment][transect] > -1:
-            p_i = shore_points[0][segment]
-            p_j = shore_points[1][segment]
-            direction = valid_transects[segment][transect]
-            d_i = direction_vectors[0][direction]
-            d_j = direction_vectors[1][direction]
+    p_i = shore_point[0]
+    p_j = shore_point[1]
+    d_i = direction_vector[0]
+    d_j = direction_vector[1]
 
-            depths[transect, max_sea_profile_len] = bathymetry[p_i, p_j]
+    depths[max_land_len] = bathymetry[p_i, p_j]
 
-            # Compute the landward part of the transect
-            start_i = p_i - d_i
-            start_j = p_j - d_j
+    # Compute the landward part of the transect (go backward)
+    start_i = p_i - d_i
+    start_j = p_j - d_j
 
-            highest_point = max(0, bathymetry[int(start_i), int(start_j)])
-            highest_index = 0
+    # Initialize highest point at position 0
+    highest_point = max(0, bathymetry[int(round(start_i)), int(round(start_j))])
+    highest_index = 0
 
-            # If no land behind the piece of land, stop there and report 0
-            if not landmass[int(start_i), int(start_j)]:
-                inland_steps = 0
-            # Else, count from 1
-            else:
-                # Stop when maximum inland distance is reached
-                for inland_steps in range(1, max_land_len + 1):
-                    elevation = bathymetry[int(start_i), int(start_j)]
-                    # Hit either nodata, or some bad data
-                    if elevation <= -12000:
-                        inland_steps -= 1
-                        break
-                    # Stop if shore is reached
-                    if not landmass[int(start_i), int(start_j)]:
-                        inland_steps -= 1
-                        break
-                    # We can store the depth at this point
-                    depths[transect, max_land_len - inland_steps] = \
-                        elevation
-                    # Stop at maximum elevation
-                    if elevation > 20:
-                        break
-                    # Keep track of highest point so far
-                    if elevation >= highest_point:
-                        highest_point = elevation
-                        highest_index = inland_steps
-                        
-                    start_i -= d_i
-                    start_j -= d_j
-            # Adjust to highest point if necessary and put nodata after it
-            if bathymetry[int(start_i), int(start_j)] < highest_point:
-                inland_steps = highest_index
-                depths[transect, max_land_len - inland_steps - 1] = \
-                    -20000
-            transect += 1
+    # If no land behind the piece of land, stop there and report 0
+    if not landmass[int(round(start_i)), int(round(start_j))]:
+        inland_steps = 0
+    # Else, count from 1
+    else:
+        # Stop when maximum inland distance is reached
+        for inland_steps in range(1, max_land_len):
+            elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+            # Hit either nodata, or some bad data
+            if elevation <= -12000:
+                inland_steps -= 1
+                break
+            # Stop if shore is reached
+            if not landmass[int(round(start_i)), int(round(start_j))]:
+                inland_steps -= 1
+                break
+            # We can store the depth at this point
+            depths[max_land_len - inland_steps] = elevation
+            # Stop at maximum elevation
+            if elevation > 20:
+                break
+            # Keep track of highest point so far
+            if elevation >= highest_point:
+                highest_point = elevation
+                highest_index = inland_steps
+                
+            start_i -= d_i
+            start_j -= d_j
 
-            # Compute the seaward part of the transect
-            start_i = p_i
-            start_j = p_j
-            lowest_index = 0
-            lowest_point = min(0, bathymetry[int(start_i), int(start_j)])
-            lowest_index = 0
+    # Adjust to highest point if necessary and put nodata after it
+    if bathymetry[int(round(start_i)), int(round(start_j))] < highest_point:
+        inland_steps = highest_index
+        depths[max_land_len - inland_steps - 1] = -20000
 
-            # Stop when maximum offshore distance is reached
-            for offshore_steps in range(max_sea_len):
-                # Stop if shore is reached
-                if landmass[int(start_i), int(start_j)]:
-                    offshore_steps -= 1
-                    break
-                elevation = bathymetry[int(start_i), int(start_j)]
-                # Hit either nodata, or some bad data
-                if elevation <= -12000:
-                    offshore_steps -= 1
-                    break
-                # We can store the depth at this point
-                depths[transect, max_land_len + offshore_steps] = \
-                    elevation
-                # Keep track of lowest point so far
-                if elevation <= lowest_point:
-                    lowest_point = elevation
-                    lowest_index = offshore_steps
-                start_i -= d_i
-                start_j -= d_j
-            # Adjust to lowest point if necessary
-            if bathymetry[int(start_i), int(start_j)] > lowest_point:
-                offshore_steps = lowest_index
-                depths[transect, max_land_len + offshore_steps] = \
-                    elevation
-            # If shore borders nodata, offshore_step is -1, set it to 0
-            offshore_steps = max(0, offshore_steps)
+    # Compute the seaward part of the transect
+    start_i = p_i + d_i
+    start_j = p_j + d_j
 
-            # Done for this transect, moving on to the next
-            transect += 1
+    # Initialize lowest point at position 0
+    lowest_point = min(0, bathymetry[int(round(start_i)), int(round(start_j))])
+    lowest_index = 0
+
+    # Stop when maximum offshore distance is reached
+    for offshore_steps in range(1, max_sea_len):
+        # Stop if shore is reached
+        if landmass[int(round(start_i)), int(round(start_j))]:
+            offshore_steps -= 1
+            break
+        elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+        # Hit either nodata, or some bad data
+        if elevation <= -12000:
+            offshore_steps -= 1
+            break
+        # We can store the depth at this point
+        depths[max_land_len + offshore_steps] = elevation
+        # Keep track of lowest point so far
+        if elevation <= lowest_point:
+            lowest_point = elevation
+            lowest_index = offshore_steps
+        start_i += d_i
+        start_j += d_j
+
+    # Adjust to lowest point if necessary
+    if bathymetry[int(round(start_i)), int(round(start_j))] > lowest_point:
+        offshore_steps = lowest_index
+        #depths[max_land_len + offshore_steps] = elevation
+    # If shore borders nodata, offshore_step is -1, set it to 0
+    offshore_steps = max(0, offshore_steps)
+
+    print('inland', inland_steps, 'offshore', offshore_steps)
+
+    if not inland_steps and not offshore_steps:
+        print('shore_point', shore_point, 'direction_vector', direction_vector)
+        tile = np.copy(landmass[shore_point[0]-5:shore_point[0]+6, shore_point[1]-5:shore_point[1]+6]).astype(np.int32)
+        tile[5, 5] = 2
+        tile[int(round(5 + direction_vector[0])), int(round(5 + direction_vector[1]))] += 4
+        tile[int(round(5 + 3. * direction_vector[0])), int(round(5 + 3. * direction_vector[1]))] += 6
+        print('tile', tile)
+
 
     return depths
 
-def sample_bathymetry_along_transects(bathymetry, valid_transects, \
-    shore_points, direction_vectors):
+
+def sample_bathymetry_along_transect(transect, orientation, bathymetry):
     """ Sample shore profile directly from the bathymetry layer."""
     pass
 
