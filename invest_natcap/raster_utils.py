@@ -1984,9 +1984,9 @@ def resize_and_resample_dataset_uri(
         bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0,
         -out_pixel_size]
     new_x_size = abs(
-        int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
+        int(numpy.round((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
     new_y_size = abs(
-        int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
+        int(numpy.round((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
 
     #create the new x and y size
     block_size = original_band.GetBlockSize()

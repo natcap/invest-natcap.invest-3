@@ -215,7 +215,6 @@
                     "args_id": "results_suffix",
                     "required": false,
                     "width": 120,
-                    "validText": "[0-9a-zA-Z]*",
                     "dataType": "string",
                     "helpText": "Optional.  If provided, it must be alphanumeric.  The results suffix will be appended to the end of all output filenames."
                 }

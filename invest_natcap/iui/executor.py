@@ -13,6 +13,7 @@ import shutil
 import codecs
 import errno
 import tempfile
+from types import StringType
 
 import invest_natcap
 import invest_natcap.iui
@@ -225,6 +226,13 @@ class Executor(threading.Thread):
         encoding = sys.getfilesystemencoding()
         if self.log_file != None:
             if not self.log_file.closed:
+                if type(string) is StringType:
+                    string = string.decode('utf-8')
+                else:
+                    # assume UnicodeType.  If it's a UnicodeType string, then
+                    # we should be able to re-encode it to UTF-8 from whatever
+                    # the encoding might happen to be.
+                    string = string.encode('utf-8')
                 self.log_file.write(string)
 
     def hasMessages(self):
