@@ -1,0 +1,56 @@
+{
+    "id" : "window",
+    "label": "Modeled Crop Production",
+    "targetScript" : "invest_natcap.crop_production.crop_production_modeled",
+    "modelName" : "crop_production_modeled",
+    "localDocURI": "../documentation/crop_production.html#modeled",
+    "condenseElements" : true,
+    "height": 800,
+    "width" : 700,
+    "elements": [
+                    {
+                        "id": "objectiveTabGroup",
+                        "type": "tabbedGroup",
+                        "elements": [
+                                        {
+                                            "id": "main_tab",
+                                            "label": "Inputs",
+                                            "type": "tab",
+                                            "elements": [
+                                                            {
+                                                                "id":"alpha_only",
+                                                                "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
+                                                                "type": "label",
+                                                                "helpText": "Alpha tools are considered unstable."
+                                                            },
+                                                            {
+                                                                "id" : "main_tab_list",
+                                                                "type" : "list",
+                                                                "elements" :
+                                                                [
+                                                                    {
+                                                                        "id" : "workspace_dir",
+                                                                        "args_id" : "workspace_dir",
+                                                                        "type": "folder",
+                                                                        "label": "Workspace",
+                                                                        "defaultValue": "../CropProduction/output",
+                                                                        "required": true,
+                                                                        "helpText": "Select a folder to be used as your workspace."
+                                                                    },
+                                                                    {
+                                                                        "id" : "crop_file_name",
+                                                                        "args_id" : "crop_file_name",
+                                                                        "type": "file",
+                                                                        "label": "Crop Map",
+                                                                        "defaultValue": "../CropProduction/input/lulc_samp_cur.tif",
+                                                                        "validateAs": {"type": "GDAL"},
+                                                                        "required": true
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                        }
+                                    ]
+                    }
+                ]
+}
