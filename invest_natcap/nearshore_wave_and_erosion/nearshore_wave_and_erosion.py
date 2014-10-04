@@ -407,11 +407,11 @@ def execute(args):
     args['max_land_profile_height'] = 20
 
     # Preprocess the landmass
-    print('Pre-processing landmass...')
-    args['landmass_raster_uri'] = \
-        preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['cell_size'], \
-            os.path.join(args['intermediate_dir'], 'landmass.tif'))
+    print('STOPPED Pre-processing landmass...')
+    args['landmass_raster_uri'] = os.path.join(args['intermediate_dir'], 'landmass.tif') #\
+    #    preprocess_polygon_datasource(args['landmass_uri'], \
+    #        args['aoi_uri'], args['cell_size'], \
+    #        os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
     # Preprocessing the AOI
     args['aoi_raster_uri'] = \
@@ -419,11 +419,11 @@ def execute(args):
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
 
     # Preprocess bathymetry
-    print('Pre-processing bathymetry...')
-    args['bathymetry_raster_uri'] = \
-        preprocess_dataset(args['bathymetry_uri'], \
-            args['aoi_uri'], args['cell_size'], \
-            os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+    print('STOPPED Pre-processing bathymetry...')
+    args['bathymetry_raster_uri'] = os.path.join(args['intermediate_dir'], 'bathymetry.tif') #\
+    #    preprocess_dataset(args['bathymetry_uri'], \
+    #        args['aoi_uri'], args['cell_size'], \
+    #        os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \
