@@ -299,7 +299,7 @@
                                                                                             "id" : "nitrogen_price_uri",
                                                                                             "args_id": "nitrogen_price_uri",
                                                                                             "type": "file",
-                                                                                            "label" : "Nitrogen quantity raster",
+                                                                                            "label" : "Nitrogen price raster",
                                                                                             "defaultValue" : "",
                                                                                             "validateAs": {"type": "GDAL"},
                                                                                             "required": false
@@ -308,7 +308,7 @@
                                                                                             "id" : "phosphorus_price_uri",
                                                                                             "args_id": "phosphorus_price_uri",
                                                                                             "type": "file",
-                                                                                            "label" : "Phosphorus quantity raster",
+                                                                                            "label" : "Phosphorus price raster",
                                                                                             "defaultValue" : "",
                                                                                             "validateAs": {"type": "GDAL"},
                                                                                             "required": false
@@ -317,7 +317,7 @@
                                                                                             "id" : "potasssium_price_uri",
                                                                                             "args_id": "potassium_price_uri",
                                                                                             "type": "file",
-                                                                                            "label" : "Potassium quantity raster",
+                                                                                            "label" : "Potassium price raster",
                                                                                             "defaultValue" : "",
                                                                                             "validateAs": {"type": "GDAL"},
                                                                                             "required": false
@@ -336,6 +336,12 @@
                                 "type" : "tab",
                                 "enabledBy" : "calculate_nutrition",
                                 "elements" : [
+                                                {                                  
+                                                    "id":"nutrition_rasters",
+                                                    "label": "<b>Enable the nutrients of study and provided spatially explicit data if desired.</b>",
+                                                    "type": "label",
+                                                    "helpText": ""
+                                                },
 						{
 					            "id" : "hideableFileEntry_list",
 						    "args_id" : "hideableFileEntry_list",
