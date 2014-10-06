@@ -1216,10 +1216,10 @@ def execute(args):
     
 
 
-    LOGGER.debug("Creating income raster.")
-    income_uri = os.path.join(intermediate_uri, "income.tif")
-
-    clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
+##    LOGGER.debug("Creating income raster.")
+##    income_uri = os.path.join(intermediate_uri, "income.tif")
+##
+##    clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
 
     def percentile_yield_closer(reclass_crop_cover_uri,
                                 climate_uri,
@@ -1280,35 +1280,35 @@ def execute(args):
 
         return percentile_yield_op
 
-    for percentile in [25, 50, 75, 95]:
-        LOGGER.debug("Creating yield using %i percent.", percentile)
-        yield_uri = os.path.join(intermediate_uri, yield_percentile_name % percentile)
-
-        percentile_yield_op = percentile_yield_closer(reclass_crop_cover_uri,
-                                                      climate_uri,
-                                                      income_uri,
-                                                      raster_table_uri,
-                                                      raster_path,
-                                                      raster_table_field_key,
-                                                      "CBI_yield",
-                                                      "ClimateBin",
-                                                      percentile,
-                                                      default_value = 0,
-                                                      nodata = -1,
-                                                      ignore_crop = 0)
-
-        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-                                         climate_uri,
-                                         income_uri],
-                                        percentile_yield_op,
-                                        yield_uri,
-                                        gdal_type_float,
-                                        nodata_float,
-                                        cell_size,
-                                        "dataset",
-                                        dataset_to_bound_index=0,
-                                        dataset_to_align_index=0)                                        
-                                                      
+##    for percentile in [25, 50, 75, 95]:
+##        LOGGER.debug("Creating yield using %i percent.", percentile)
+##        yield_uri = os.path.join(intermediate_uri, yield_percentile_name % percentile)
+##
+##        percentile_yield_op = percentile_yield_closer(reclass_crop_cover_uri,
+##                                                      climate_uri,
+##                                                      income_uri,
+##                                                      raster_table_uri,
+##                                                      raster_path,
+##                                                      raster_table_field_key,
+##                                                      "CBI_yield",
+##                                                      "ClimateBin",
+##                                                      percentile,
+##                                                      default_value = 0,
+##                                                      nodata = -1,
+##                                                      ignore_crop = 0)
+##
+##        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+##                                         climate_uri,
+##                                         income_uri],
+##                                        percentile_yield_op,
+##                                        yield_uri,
+##                                        gdal_type_float,
+##                                        nodata_float,
+##                                        cell_size,
+##                                        "dataset",
+##                                        dataset_to_bound_index=0,
+##                                        dataset_to_align_index=0)                                        
+##                                                      
 
 
 ##    if args["enable_tab_modeled"]:
