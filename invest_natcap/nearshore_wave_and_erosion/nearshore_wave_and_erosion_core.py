@@ -8,6 +8,7 @@ import logging
 
 import numpy as np
 import scipy as sp
+from scipy import interpolate
 import h5py as h5
 
 from osgeo import ogr
@@ -176,6 +177,21 @@ def compute_transects(args):
                             args['max_land_profile_height'], args['max_profile_length'])
 
                         fine_shore[raw_positions] = raw_depths
+
+                        # Interpolate transect to the model resolution
+                        interpolated_depths = \
+                            interpolate_transect(raw_depths, i_side_fine, \
+                                args['model_resolution'])
+
+                        # Not enough values for interpolation
+                        if interpolated_depths is None:
+                            continue
+
+                        # Smooth transect
+
+                        # Clip transect
+
+                        # Save transect in file
                         
                         tiles += 1
 
@@ -595,6 +611,21 @@ def compute_raw_transect_depths(shore_point, \
     
 
     return (depths[I >= 0], (I[I >= 0].astype(int), J[J >= 0].astype(int)))
+
+
+def interpolate_transect(depths, old_resolution, new_resolution):
+    """Interpolate transect at a higher resolution"""
+    # Minimum entries required for interpolation
+    if depths.size < 3:
+        return None
+
+    assert new_resolution < old_resolution, 'new resolution is not finer.'
+    x = np.arange(0, depths.size) * old_resolution
+    f = interpolate.interp1d(x, depths, kind='linear')
+    x_new = \
+        np.arange(0, (depths.size-1) * old_resolution / new_resolution) * \
+            new_resolution
+    return f(x_new)
 
 
 def sample_bathymetry_along_transect(transect, orientation, bathymetry):
