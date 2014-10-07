@@ -1021,7 +1021,7 @@ def calculate_slope(
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works
 
         dem_dataset_uri - (input) a URI to a  single band raster of z values.
-        slope_uri - (input) a path to the output slope uri
+        slope_uri - (input) a path to the output slope uri in percent.
         aoi_uri - (optional) a uri to an AOI input
         process_pool - (optional) a process pool for multiprocessing
 
