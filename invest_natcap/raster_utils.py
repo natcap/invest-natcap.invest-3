@@ -685,10 +685,11 @@ def aggregate_raster_values_uri(
         """
 
     raster_nodata = get_nodata_from_uri(raster_uri)
+    
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
-        [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
+        [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float64,
         raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False, process_pool=process_pool,
@@ -780,7 +781,9 @@ def aggregate_raster_values_uri(
         (shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
-
+    #Populate the pixel mean dictionary with something, -9999 seems to make sense
+    for shapefile_id in shapefile_table:
+        result_tuple.pixel_mean[shapefile_id] = -9999
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()
@@ -2000,10 +2003,9 @@ def resize_and_resample_dataset_uri(
             'TILED=YES', 'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]]
     else:
-        gtiff_creation_options = [
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]]
-
+        #this thing is so small or strangely aligned, use the default creation options
+        gtiff_creation_options = []
+        
     create_directories([os.path.dirname(output_uri)])
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
@@ -2185,6 +2187,7 @@ def align_dataset_list(
             resize_and_resample_dataset_uri(
                 original_dataset_uri, bounding_box, out_pixel_size,
                 out_dataset_uri, resample_method)
+            
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)

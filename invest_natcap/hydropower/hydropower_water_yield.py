@@ -166,7 +166,7 @@ def execute(args):
     tmp_Kc_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Create root raster from table values to use in future calculations
@@ -174,7 +174,7 @@ def execute(args):
     tmp_root_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Create veg raster from table values to use in future calculations
@@ -183,7 +183,7 @@ def execute(args):
     tmp_veg_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Get out_nodata values so that we can avoid any issues when running
@@ -229,7 +229,7 @@ def execute(args):
 
     LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
-            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
+            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float64,
             out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
             vectorize_op=False)
 
@@ -314,7 +314,7 @@ def execute(args):
     # Create clipped fractp_clipped raster
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
-        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
+        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float64,
         out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
         vectorize_op=False)
 
@@ -333,7 +333,7 @@ def execute(args):
     # Create clipped wyield_clipped raster
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri, vectorize_op=False)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
@@ -369,7 +369,7 @@ def execute(args):
     # Create clipped aet raster
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri, vectorize_op=False)
 
     # Get the area of the pixel to use in later calculations for volume
@@ -507,7 +507,7 @@ def execute(args):
     LOGGER.info("Reclassifying demand raster")
     tmp_demand_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Aggregate the consumption volume over sheds using the
