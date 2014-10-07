@@ -196,6 +196,10 @@ def compute_transects(args):
                         # Clip transect
                         clipped_transect = clip_transect(smoothed_depths, raw_depths, interpolated_depths)
 
+                        # Transect could be invalid, skip it
+                        if clipped_transect is None:
+                            continue
+                            
                         # Save transect in file
                         
                         tiles += 1
@@ -517,7 +521,7 @@ def compute_raw_transect_depths(shore_point, \
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
 #            print('position', (int(round(start_i)) - shore_point[0] + 5, int(round(start_j)) - shore_point[1] + 5))
-            elevation = bathymetry[int(round(start_i)), int(round(start_j))] - initial_elevation
+            elevation = bathymetry[int(round(start_i)), int(round(start_j))]
 #            print('position', \
 #                (int(round(start_i)) - shore_point[0] + 5, int(round(start_j)) - shore_point[1] + 5), \
 #                'landmass', landmass[int(round(start_i)), int(round(start_j))],'elevation', elevation)
@@ -556,7 +560,7 @@ def compute_raw_transect_depths(shore_point, \
         if landmass[int(round(start_i)), int(round(start_j))]:
             offshore_steps -= 1
             break
-        elevation = bathymetry[int(round(start_i)), int(round(start_j))] - initial_elevation
+        elevation = bathymetry[int(round(start_i)), int(round(start_j))]
         # Hit either nodata, or some bad data
         if elevation <= -12000:
             offshore_steps -= 1
@@ -639,9 +643,6 @@ def smooth_transect(transect, window_size_pct):
     window_length += int(int(window_length/2) * 2 == window_length)
 
  
-#    print 'signal size', transect.size, 'window size', window_length, 'processing...',
-
-
     if window_length<3:
         return transect
 
@@ -658,30 +659,39 @@ def smooth_transect(transect, window_size_pct):
 
 def clip_transect(transect, raw_depths, interpolated_depths):
     """Clip transect using maximum and minimum heights"""
+    # Return if transect size is 1
+    if transect.size == 1:
+        return transect
+
     # Return if transect is full of zeros, otherwise break
     uniques = np.unique(transect)
     if uniques.size == 1:
         assert uniques[0] == 0.0
         return transect
 
-    # Remove non-contiguous stretches of land
-    land = (transect >= 0.0).astype(int)
-    land = ndimage.label(land)[0]
-    land[land > 1] = 0
+    # If higher point is negative: can't do anything
+    if transect[0] < 0:
+        return None
 
-    # Remove non-contiguous stretches of water
-    water = (transect < 0.0).astype(int)
-    water = ndimage.label(water)[0]
-    land[water > 1] = 0
-    
-    # Portion of interest is first stretches of land and water
-    old_transect = np.copy(transect)
-    both = (land + water).astype(bool)
-    transect = transect[both]
-    
+    # Go along the transect to find the shore
+    shore = 1
+    while transect[shore] > 0:
+        shore += 1
+        # End of transect: can't find the shore (first segment in water)
+        if shore == transect.size:
+            return None
+
+    # Find water extent
+    water_extent = 1
+    while transect[shore - 1 + water_extent] <= 0:
+        water_extent += 1
+        # Stop if reached the end of the transect
+        if shore + water_extent == transect.size:
+            break
+
     # Compute the extremes on the valid portion only
-    highest_point = np.argmax(transect)
-    lowest_point = np.argmin(transect)
+    highest_point = np.argmax(transect[:shore])
+    lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
 
     print('highest', highest_point, 'lowest', lowest_point, 'change', transect.size, lowest_point-highest_point)
 
