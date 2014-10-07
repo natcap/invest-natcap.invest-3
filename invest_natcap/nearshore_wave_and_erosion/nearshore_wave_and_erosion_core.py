@@ -109,7 +109,12 @@ def compute_transects(args):
 
     tiles = 0
 
-#    for i in range(i_start, i_start + 40 * i_side_coarse, i_side_coarse):
+    # Creating HDF5 file that will store the transect data
+    transect_data_uri = \
+        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    f = h5.File(transect_data_uri, 'w')
+    h5_group = f.create_group('transect_data')
+
     for i in range(i_start, i_end, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
@@ -199,10 +204,19 @@ def compute_transects(args):
                         # Transect could be invalid, skip it
                         if clipped_transect is None:
                             continue
-                            
+
                         # Save transect in file
+                        path = str(i) + '/' + str(j)
+                        h5_subgroup = h5_group.create_group(path)
+                        h5_subgroup[path] = clipped_transect
                         
                         tiles += 1
+
+    # Add size and model resolution to the attributes
+    h5_group.attrs.create('size', tiles)
+    h5_group.attrs.create('model_resolution', args['model_resolution'])
+    # We're done, we close the file
+    f.close()
 
     LOGGER.debug('found %i tiles.' % tiles)
     shore_band.WriteArray(fine_shore)
@@ -445,22 +459,6 @@ def compute_transect_orientation(position, orientation, landmass):
                 if landmass[position[0] +step[0], position[1] +step[1]]:
                     LOGGER.debug('invalid transect ' + str(position))
                     return None
-                    #print('position', position)
-                    #print('shore orientation', shore_orientation)
-                    #print('transect orientation', transect_orientation)
-                    #patch = np.copy(landmass[position[0]-5:position[0]+5, \
-                    #    position[1]-5:position[1]+5]).astype(int)
-                    #patch[5, 5] = 2
-                    #patch[5 + normalized_orientation[0], \
-                    #    5 + normalized_orientation[1]] += 5
-                    #print('normalized orientation', normalized_orientation, \
-                    #    (round(5 + normalized_orientation[0]), \
-                    #        round(5 + normalized_orientation[1])))
-                    #patch[5 + orientation[0], 5 + orientation[1]] += 3
-                    #print('corrected orientation', orientation, \
-                    #    (5 + orientation[0], 5 + orientation[1]))
-                    #print(patch)
-                    #assert False
         
                 # Other direction worked, return orientation
                 return orientation * -1
@@ -693,7 +691,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
     highest_point = np.argmax(transect[:shore])
     lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
 
-    print('highest', highest_point, 'lowest', lowest_point, 'change', transect.size, lowest_point-highest_point)
+#    print('highest', highest_point, 'lowest', lowest_point, 'change', transect.size, lowest_point-highest_point)
 
     if highest_point >= lowest_point:
         print('raw_depths:')
