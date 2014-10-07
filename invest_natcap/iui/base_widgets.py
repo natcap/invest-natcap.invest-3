@@ -2425,6 +2425,12 @@ class Root(DynamicElement):
                         outputDict = self.set_dict_value(outputDict, args_id,
                             element_value)
 
+        if self.attributes['include_meta'] is True:
+            outputDict['_iui_meta'] = {
+                'ui_state': self.get_element_state(),
+                'lastrun_uri': self.last_run_handler.uri,
+            }
+
         return outputDict
 
     def set_dict_value(self, dictionary, key_list, element_value):
@@ -2598,6 +2604,9 @@ class ExecRoot(Root):
         self.error_dialog = ErrorDialog()
         self.warning_dialog = WarningDialog()
         self.initElements()
+
+        if 'include_meta' not in self.attributes:
+            self.attributes['include_meta'] = False
 
     def save_to_json(self):
         """Save the current state of the UI to a python file after checking that
