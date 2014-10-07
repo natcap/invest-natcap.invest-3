@@ -300,6 +300,9 @@ class Executor(threading.Thread):
         max_key_width = max(map(lambda x:len(x[0]), sorted_args))
         format_str = "%-" + str(max_key_width) + "s %s\n"
         for name, value in sorted_args:
+            if name == '_iui_meta':
+                continue  # skip over the meta tag if provided.
+
             self.write(format_str % (name, value))
         self.write("\n\n")
 
