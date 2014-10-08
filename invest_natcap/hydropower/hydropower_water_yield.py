@@ -89,17 +89,30 @@ def execute(args):
     raster_utils.create_directories([
         workspace, output_dir, per_pixel_output_dir])
 
-    # Get inputs from the args dictionary
     clipped_lulc_uri = raster_utils.temporary_filename()
-    raster_utils.clip_dataset_uri(
-        args['lulc_uri'], args['watersheds_uri'], clipped_lulc_uri, True)
-
-    eto_uri = args['eto_uri']
-    precip_uri = args['precipitation_uri']
-    depth_to_root_rest_layer_uri = args['depth_to_root_rest_layer_uri']
-    pawc_uri = args['pawc_uri']
-    seasonality_constant = float(args['seasonality_constant'])
+    eto_uri = raster_utils.temporary_filename()
+    precip_uri = raster_utils.temporary_filename()
+    depth_to_root_rest_layer_uri = raster_utils.temporary_filename()
+    pawc_uri = raster_utils.temporary_filename()
+    
     sheds_uri = args['watersheds_uri']
+    seasonality_constant = float(args['seasonality_constant'])
+
+    original_raster_uris = [
+        args['eto_uri'], args['precipitation_uri'],
+        args['depth_to_root_rest_layer_uri'], args['pawc_uri'],
+        args['lulc_uri']]
+
+    aligned_raster_uris = [
+        eto_uri, precip_uri, depth_to_root_rest_layer_uri, pawc_uri,
+        clipped_lulc_uri]
+
+    pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_uri'])
+    raster_utils.align_dataset_list(
+        original_raster_uris, aligned_raster_uris,
+        ['nearest'] * len(original_raster_uris),
+        pixel_size_out, 'intersection', 4,
+        aoi_uri=sheds_uri)
 
     sub_sheds_uri = None
     # If subwatersheds was input get the URI
@@ -549,6 +562,14 @@ def execute(args):
     #Don't need this anymore
     os.remove(tmp_demand_uri)
     os.remove(clipped_lulc_uri)
+
+    for raster_uri in aligned_raster_uris:
+        try:
+            os.remove(raster_uri)
+        except OSError:
+            #might have deleted earlier
+            pass
+
 
     # Check to see if Valuation was selected to run
     valuation_checked = args.pop('valuation_container', False)
