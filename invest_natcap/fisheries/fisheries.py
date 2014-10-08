@@ -5,7 +5,6 @@ import logging
 import os
 import shutil
 import csv
-import sys
 
 from osgeo import ogr
 from invest_natcap.fisheries import fisheries_core
@@ -15,72 +14,80 @@ LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+
 class ImproperStageParameter(Exception):
-    '''This exception will occur if the stage-specific headings in the main 
+    '''This exception will occur if the stage-specific headings in the main
     parameter CSV are not included in the set of known parameters.'''
     pass
+
+
 class ImproperAreaParameter(Exception):
-    '''This exception will occur if the area-specific headings in the main 
+    '''This exception will occur if the area-specific headings in the main
     parameter CSV are not included in the set of known parameters.'''
     pass
+
+
 class MissingParameter(Exception):
-    '''This is a broad exception which can be raised if the any of the parameters
-    required for a specific model run type are missing. This can include
-    recruitment parameters, vulnerability, exploitation fraction, maturity,
-    weight, or duration.
+    '''This is a broad exception which can be raised if the any of the
+    parameters required for a specific model run type are missing. This
+    can include recruitment parameters, vulnerability, exploitation fraction,
+    maturity, weight, or duration.
     '''
     pass
+
 
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
-    
+
     Inputs:
-        workspace_dir- Location into which all intermediate and output files
-            should be placed.
-        aoi_uri- Location of shapefile which will be used as subregions for
-            calculation. Each region must conatin a 'name' attribute which will
-            be used for any parameters that vary by area.
-        class_params_uri- Location of the parameters csv. This will contain all
-            age and stage specific parameters.
-        maturity_type- String specifying whether the model is age-specific or
-            stage-specific. Options will be either "Age Specific" or
-            "Stage Specific" and will change which equation is used in modeling
-            growth.
-        hrv_type- String specifiying how the user wants to get the harvest
-            data. Options are either "Numbers" or "Weight", and will change the
-            harvest equation used in core.
-        num_classes- The number of maturity classes that the user will be
-            providing within the main parameter csv.
-        is_gendered- Boolean for whether or not the age and stage classes are
-            separated by gender.
-        rec_eq- The equation to be used in calculation of recruitment. Choices
-            are strings, and will be one of "Beverton-Holt", "Ricker", 
-            "Fecundity", or "Fixed."
-        alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
+        :param string workspace_dir: location into which all intermediate and
+            output files should be placed.
+        :param string aoi_uri: location of shapefile which will be used as
+            subregions for calculation. Each region must conatin a 'name'
+            attribute which will
+        :param string class_params_uri: location of the parameters csv. This
+            will contain all age and stage specific parameters.
+        :param string maturity_type: string specifying whether the model
+            is age-specific or stage-specific. Options will be either "Age
+            Specific" or "Stage Specific" and will change which equation is
+            used in modeling growth.
+        :param string hrv_type: string specifiying how the user wants to get
+            the harvest data. Options are either "Numbers" or "Weight", and
+            will change the harvest equation used in core.
+        :param int num_classes: the number of maturity classes that the user
+            will be providing within the main parameter csv.
+        :param boolean is_gendered: boolean for whether or not the age and
+            stage classes are separated by gender.
+        :param string rec_eq: boolean for whether or not the age and stage
+            classes are separated by gender.
+        :param int alpha: must exist within args if rec_eq == "Beverton-Holt"
+            or "Ricker" . Parameter that will be used in calculation of
             recruitment.
-        beta(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
-            "Ricker" . Parameter that will be used in calculation of
+        :param int beta: must exist within args if rec_eq == "Beverton-Holt"
+            or "Ricker" . Parameter that will be used in calculation of
             recruitment.
-        fec_params_uri(*)- Must exist within args if rec_eq == "Fecundity".
-            Location of the csv conatining parameters to be used in calculation
-            of recruitment.
-        fix_param(*)- Must exist within args if rec_eq == "Fixed". Parameter
-            that will be used in calculation of recruitment. 
-        init_recruits- Int which represents the initial number of recruits that
-            will be used in calculation of population on a per area basis. 
-        mig_params_uri(*)- If this parameter exists, it means migration is
-            desired. This is  the location of the parameters folder containing
-            files for migration. There should be one for every age class which
-            migrates.
-        frac_post_process(*)- This will exist only if valuation is desired for
-            the particular species. A double representing the fraction of the
-            animal remaining after processing of the whole carcass is complete.
-        unit_price(*)- This will exist only if valuation is desired. Double 
-            which represents the price for a single unit of that animal.
-        duration- Int representing the number of time steps that the user
-            desires the model to run.
+        :param string fec_params_uri: must exist within args if rec_eq ==
+            "Fecundity". Location of the csv conatining parameters to be used
+            in calculation of recruitment.
+        :param float fix_param: must exist within args if rec_eq == "Fixed".
+            Parameter that will be used in calculation of recruitment.
+        :param int init_recruits: int which represents the initial number of
+            recruits that will be used in calculation of population on a per
+            area basis.
+        :param string mig_params_uri: if this parameter exists, it means
+            migration is desired. This is  the location of the parameters
+            folder containing files for migration. There should be one for
+            every age class which migrates.
+        :param float frac_post_process: this will exist only if valuation is
+            desired for the particular species. A double representing the
+            fraction of the animal remaining after processing of the whole
+            carcass is complete.
+        :param float unit_price: this will exist only if valuation is desired.
+            Double which represents the price for a single unit of that animal.
+        :param int duration: int representing the number of time steps that
+            the user desires the model to run.
+
     '''
     core_args = {}
 
@@ -93,7 +100,7 @@ def execute(args):
             shutil.rmtree(folder)
 
         os.makedirs(folder)
-    
+
     #Do all error checking for the different recruitment equations, since
     #we can't continue if we don't have data.
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
@@ -101,8 +108,9 @@ def execute(args):
             raise MissingParameter("For the recruitment equation \
                         chosen, there are missing parameters. Both an alpha \
                         and a beta parameter are necessary. Please look at \
-                        the help text provided next to the recruitment equation\
-                        selection, and add the necessary additional information.")
+                        the help text provided next to the recruitment \
+                        equation selection, and add the necessary additional \
+                        information.")
     if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
         raise MissingParameter("For the recruitment equation \
                     chosen, there are missing parameters.  A CSV for fecundity\
@@ -120,12 +128,13 @@ def execute(args):
     #parameter as a lower case. This will be used in core when we write harvest
     #and valuation results to it.
     aoi_basename = os.path.splitext(os.path.basename(args['aoi_uri']))[0]
-    cp_aoi_uri = os.path.join(args['workspace_dir'], 'output', aoi_basename + '_Results.shp')
+    cp_aoi_uri = os.path.join(
+        args['workspace_dir'], 'output', aoi_basename + '_Results.shp')
     raster_utils.copy_datasource_uri(args['aoi_uri'], cp_aoi_uri)
 
     #pop the first feature to determine what the 'name' attribute is called,
     #since GetFieldIndex is case insensitive
-    aoi_ds = ogr.Open(cp_aoi_uri, update =1)
+    aoi_ds = ogr.Open(cp_aoi_uri, update=1)
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
@@ -137,8 +146,9 @@ def execute(args):
 
     #Calculate the classes main param info, and add it to the core args dict
     do_weight = True if args['hrv_type'] == 'Weight' else False
-    classes_dict, ordered_stages = parse_main_csv(args['class_params_uri'], area_count,
-                                args['rec_eq'], do_weight, args['maturity_type'])
+    classes_dict, ordered_stages = parse_main_csv(
+        args['class_params_uri'], area_count,
+        args['rec_eq'], do_weight, args['maturity_type'])
     core_args['do_weight'] = do_weight
     core_args['params_dict'] = classes_dict
     core_args['ordered_stages'] = ordered_stages
@@ -155,7 +165,7 @@ def execute(args):
         {'Ricker': {'alpha': 0.02, 'beta': 3}}
         {'Fecundity': {'stage1': 0.02, 'stage2': 0.03, ...}}
         {'Fixed': 0.5}
-   ''' 
+   '''
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         key = 'Ricker' if args['rec_eq'] == 'Ricker' else 'Beverton-Holt'
         rec_dict = {key: {'alpha': args['alpha'], 'beta': args['beta']}}
@@ -163,7 +173,7 @@ def execute(args):
         rec_dict = {'Fecundity': parse_fec_csv(args['fec_params_uri'])}
     else:
         rec_dict = {'Fixed': args['fix_param']}
-    
+
     core_args['rec_dict'] = rec_dict
 
     #Direct pass all these variables
@@ -181,17 +191,19 @@ def execute(args):
 
     fisheries_core.execute(core_args)
 
+
 def parse_fec_csv(fec_uri):
-    '''This function will be used if the recruitment equation of choice is 
+    '''This function will be used if the recruitment equation of choice is
     fecundity. The CSV passed in will contain all parameters relevant to
     fecundity.
-    
+
     Input:
-        fec_uri- The location of the CSV file containing all pertinent
-            information for fecundity.
+        :param string fec_uri: The location of the CSV file containing all
+            pertinent information for fecundity.
     Returns:
-        fec_dict- Dictionary that associates a single fecundity parameter with
-            each age/stage class.
+        :return: fec_dict- Dictionary that associates a single fecundity
+            parameter with each age/stage class.
+        :rtype: dictionary
 
             {'stage1': 0.02, 'stage2': 0.3, ...}
     '''
@@ -206,40 +218,43 @@ def parse_fec_csv(fec_uri):
         while True:
             try:
                 line = csv_reader.next()
-                
+
                 #Should only be two parts to line- line[0] will be the stage
                 #name, and line[1] should be the corresponding fec param.
                 fec_dict[line[0]] = line[1]
             except StopIteration:
                 break
-    
+
     return fec_dict
+
 
 def parse_migration_tables(mig_folder_uri):
     '''Want to take all of the files within the migration parameter folder, and
     glean relavant information from them. Should return a single dictionary
     containing all migration data for all applicable age/stages.
-    
+
     Input:
-        mig_folder_uri- The location of the outer folder containing all
+        :param mig_folder_uri- The location of the outer folder containing all
             source/sink migration information for any age/stages which migrate.
 
     Returns:
-        mig_dict- Migration dictionary which will contain all source/sink
-            percentage information for each age/stage which is capable of
-            migration. The outermost numerical key is the source, and the
-            keys of the dictionary that points to are the sinks.
+        :return: mig_dict- Migration dictionary which will contain all
+            source/sink percentage information for each age/stage which is
+            capable of migration. The outermost numerical key is the source,
+            and the keys of the dictionary that points to are the sinks.
 
             {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
                     '2': {'1': 0.13, '2': 98.06, ...}
             }
+
+        :rtype: dictionary
     '''
     mig_dict = {}
 
     mig_files = listdir(mig_folder_uri)
 
     for mig_table_uri in mig_files:
-        
+
         basename = os.path.splitext(os.path.basename(mig_table_uri))[0]
         stage_name = basename.split('migration_').pop()
         mig_dict[stage_name] = {}
@@ -260,40 +275,43 @@ def parse_migration_tables(mig_folder_uri):
                 try:
                     line = csv_reader.next()
                     sink = line.pop(0)
-                    
+
                     for i, source in enumerate(headers):
                         percent = float(line[i].strip('%'))
                         mig_dict[stage_name][source][sink] = percent
-                
+
                 except StopIteration:
                     break
 
     return mig_dict
+
 
 def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
     Input:
-        params_uri- Contains a string location of the main parameter csv file.
-        area_count- The expected number of subregions in the AOI.
-        rec_eq- The recruitment equation being used for this run of the model.
-        do_weight- If spawners and harvesting will be done by number of
-            individuals (False) or by weight (True)
-        mat_type- The maturity type being used. String which will either be
-            'Age Specific' or 'Stage Specific'.
-    
+        :param string params_uri: Contains a string location of the main
+            parameter csv file.
+        :param int area_count: The expected number of subregions in the AOI.
+        :param string rec_eq:- The recruitment equation being used for this
+            run of the model.
+        :param boolean do_weight: If spawners and harvesting will be done by
+            number of individuals (False) or by weight (True)
+        :param string mat_type: The maturity type being used. String which
+            will either be 'Age Specific' or 'Stage Specific'.
+
     Returns:
-        params_dict- Dictionary containing all information from the csv file.
-            Should have age/stage specific information, as well as area-specific
-            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
-            present are determined by what equations/additional information the
-            user is trying to model.
+        :return: params_dict - Dictionary containing all information from the
+            csv file. Should have age/stage specific information, as well as
+            area-specific information. NOT ALL KEYS ARE REQUIRED TO EXIST.
+            The keys which are present are determined by what equations/
+            additional information the user is trying to model.
 
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'maturity': 0.0007, 'vuln_fishing': 0.993,
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -303,11 +321,16 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
                     ...
                 }
             }
-        ordered_stages- A list containing all the ages/stages that are being
-            used within the model, in the order they were listed in the CSV,
-            which is presumed to be the order in which they occur.
-        do_weight- A boolean indication whether the harvest type is 'Weight'
-            and thus requires a weight parameter for each age/stage.
+        :rtype: dictionary
+
+        :return: ordered_stages - A list containing all the ages/stages that
+            are being used within the model, in the order they were listed
+            in the CSV, which is presumed to be the order in which they occur.
+        :rtype: list
+
+        :return: do_weight- A boolean indication whether the harvest type is
+            'Weight' and thus requires a weight parameter for each age/stage.
+        :rtype: boolean
    '''
     #Create a container list to hold all the line lists
     hybrid_lines = []
@@ -319,23 +342,23 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
 
         #First line is the place name and stuff.
 
-        #In some cases, line[0] may contain the name of the model 
+        #In some cases, line[0] may contain the name of the model
         #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
         line = csv_reader.next()
         #LOGGER.debug(line)
         while line[0] == '' or line[1] == '':
             #LOGGER.debug(line)
             line = csv_reader.next()
-        
+
         #Once we get here, know that we're into the area/age vars.
         #Should continue until we hit a blank line, which is the cue
         #to switch over to area specific stuff.
-        
+
         while line[0] != '':
             #LOGGER.debug(line)
             hybrid_lines.append(line)
             line = csv_reader.next()
-        
+
         #Once we get here, know that we've hit the space between hybrid vars
         #and area specific vars. Run until we hit the end.
         while True:
@@ -344,12 +367,12 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
             except StopIteration:
                 break
 
-    main_dict = {'Stage_Params':{}, 'Area_Params':{}}
+    main_dict = {'Stage_Params': {}, 'Area_Params': {}}
 
     headers = hybrid_lines.pop(0)
 
-    #Know that for headers, the first is actually just a notation that areas are
-    #on top, and stages are below. Want to ignore.
+    #Know that for headers, the first is actually just a notation that areas
+    #are on top, and stages are below. Want to ignore.
     headers.pop(0)
 
     #Since these are lists, they should be in the same order as in the line
@@ -359,11 +382,11 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
 
     #Sometimes, people do weird capitalizations. So lower everything.
     age_params = map(lambda x: x.lower(), age_params)
-    
+
     #Want to make sure that the headers are in the acceptable set.
     #LOGGER.debug("AGE PARAMS: %s" % age_params)
     for param in age_params:
-    
+
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
             raise ImproperStageParameter("Improper parameter name given. \
                     Acceptable age/stage-specific parameters include \
@@ -374,14 +397,14 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
 
     #Want to make sure that all required parameters exist
     #Looks like 'VulnFishing' is really the only required one from this set.
-    
+
     if 'vulnfishing' not in age_params:
         raise MissingParameter("The main parameter CSV for this \
                 species is missing a VulnFishing parameter. Please make sure \
                 that each age/stage for the species has a corresponding \
                 proportion that is vulnerable to fishing.")
     if 'maturity' not in age_params and \
-                        rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
+            rec_eq in ['Beverton-Holt', 'Ricker', 'Fecundity']:
         raise MissingParameter("The main parameter CSV for this \
                 species is missing a Maturity parameter. Please make sure \
                 that each age/stage for the species is assigned a proportion \
@@ -406,27 +429,27 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
         ordered_stages.append(stage_name)
 
         #Initialize stage subdictionary with survival subdictionary inside
-        main_dict['Stage_Params'][stage_name] = {'survival':{}}
-        
+        main_dict['Stage_Params'][stage_name] = {'survival': {}}
+
         #Do the survival params first
         for j in range(len(area_names)):
-           
             curr_area_name = area_names[j]
             area_surv = line[j]
 
-            main_dict['Stage_Params'][stage_name]['survival'][curr_area_name] = float(area_surv)
+            main_dict['Stage_Params'][stage_name][
+                'survival'][curr_area_name] = float(area_surv)
 
         #The rest of the age-specific params.
         for k in range(len(age_params)):
-            
             param_name = age_params[k]
             #The first part of line will contain the area names. Want index
             #relative to the end of that set.
-            param_value = line[k+len(area_names)] 
+            param_value = line[k+len(area_names)]
 
-            main_dict['Stage_Params'][stage_name][param_name] = float(param_value)
+            main_dict['Stage_Params'][stage_name][
+                param_name] = float(param_value)
 
-    area_param_short = {'exploitationfraction': 'exploit_frac', 
+    area_param_short = {'exploitationfraction': 'exploit_frac',
                         'larvaldispersal': 'larv_disp'}
     #pre-populate with area names
     for area_name in area_names:
@@ -438,26 +461,27 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
     for m in range(len(area_lines)):
         line = area_lines[m]
         param_name = line.pop(0).lower()
-        
+
         if param_name == 'exploitationfraction':
             exp_frac_exists = True
 
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
-            raise ImproperAreaParameter("Improper area-specific parameter name.\
-                    Acceptable parameters include 'ExploitationFraction', and \
-                    'LarvalDispersal'.")
+            raise ImproperAreaParameter("Improper area-specific parameter \
+                name. Acceptable parameters include 'ExploitationFraction',\
+                 and 'LarvalDispersal'.")
 
         for n in range(len(area_names)):
             curr_area_name = area_names[n]
             param_value = line[n]
-       
-            main_dict['Area_Params'][curr_area_name][short_param_name] = float(param_value)
+
+            main_dict['Area_Params'][curr_area_name][
+                short_param_name] = float(param_value)
 
     LOGGER.debug("uri: %s" % params_uri)
     LOGGER.debug("Exp_Frac: %s" % exp_frac_exists)
-    
+
     if not exp_frac_exists:
         raise MissingParameter("The main parameter CSV for this species \
                 is missing an ExplotationFraction parameter. Please make sure \
@@ -466,16 +490,19 @@ def parse_main_csv(params_uri, area_count, rec_eq, do_weight, mat_type):
 
     return main_dict, ordered_stages
 
+
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
 
     Input:
-        path- The location container from which we want to gather all files.
+        :param string path: the location container from which we want to
+            gather all files
 
     Returns:
-        A list of full URIs contained within 'path'.
+        :return: A list of full URIs contained within 'path'.
+        :rtype: list
     '''
     file_names = os.listdir(path)
     uris = map(lambda x: os.path.join(path, x), file_names)
