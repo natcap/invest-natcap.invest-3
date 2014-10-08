@@ -6,7 +6,9 @@ import os
 from osgeo import gdal, ogr, osr
 #gdal.UseExceptions()
 
+import invest_natcap
 from invest_natcap import raster_utils
+from invest_natcap import reporting
 
 import json
 
@@ -19,6 +21,9 @@ import sys
 import random
 
 import math
+
+import datetime
+import time
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -794,7 +799,129 @@ def execute(args):
 ##                                        cell_size,
 ##                                        "dataset",
 ##                                        dataset_to_bound_index=0,
-##                                        dataset_to_align_index=0)
+##                                        dataset_to_align_index=0)    
+
+    #reporting
+    LOGGER.info("Generating report.")
+        
+    summary_dict = [{'Yield':'100', 'Area':'60', 'Crop Id':'1'},
+                   {'Yield':'50', 'Area':'50','Crop Id':'2'},
+                   {'Yield':'70', 'Area':'70','Crop Id':'3'},
+                   {'Yield':'85', 'Area':'80','Crop Id':'4'}]
+
+    summary_columns = [{'name': 'Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'},
+               {'name': 'Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+
+    columns_pop = [
+            {'name': 'municipalities', 'total':False},
+            {'name': 'pop', 'total':False},
+            {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+            {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+            {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
+            {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
+            {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
+            {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
+            {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
+            {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
+            {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
+
+    start_time = datetime.datetime.strptime(args["_iui_meta"]["logfile"]["timestamp"], "%Y-%m-%d--%H_%M_%S")
+    finish_time = datetime.datetime.fromtimestamp(int(math.floor(time.time())))
+
+
+    collapsible_script="""
+    function ExpandCollapse(theDiv){
+        el = document.getElementById(theDiv);
+        if(el.style.display == 'none'){
+            el.style.display = '';
+        }
+        else {
+            el.style.display = 'none';
+        }
+        return false;
+    } 
+    """
+
+    parameters_report = '<input type=\"checkbox\" onClick=\" ExpandCollapse(\'json\');\" checked>Display model parameters<br><div id=\"json\"><pre>%s</pre></div>'
+    parameters_report = parameters_report % json.dumps(args["_iui_meta"]["ui_state"], indent = 4)
+
+    report_args = {
+            'title': 'Crop Production',
+            'sortable' : True,
+            'totals' : True,
+            'elements': [
+                {
+                    'type' : 'head',
+                    'section' : 'head',
+                    'format' : 'script',
+                    'input_type' : 'text',
+                    'data_src' : collapsible_script},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h1>Crop Production Report</h1>'},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Metadata</h2>'},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<p>InVEST Version %s</p>' % invest_natcap.__version__},
+
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<p>Model Started: %s</p>' % start_time.strftime("%Y-%m-%d %H:%M:%S")},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<p>Model Finished: %s</p>' % finish_time.strftime("%Y-%m-%d %H:%M:%S")},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<p>Model Duration: %s</p>' % str(finish_time-start_time)},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<p>Log file: %s</p>' % args["_iui_meta"]["logfile"]["uri"]},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': parameters_report},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Summary</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': True,
+                    'total':True,
+                    'data_type':'dictionary',
+                    'columns':summary_columns,
+                    'key':'Crop Id',
+                    'data': summary_dict,
+                    'attributes': {'id':'Crop Id'}},                
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Production</h2>'},                
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Nutrition Value</h2>'},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Economic Value</h2>'}                
+                ],
+            'out_uri': report_uri}
+    
+    reporting.generate_report(report_args)
 
     return
 
