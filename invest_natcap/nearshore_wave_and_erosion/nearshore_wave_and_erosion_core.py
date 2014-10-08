@@ -44,15 +44,26 @@ def compute_transects(args):
     for key in args:
         print('entry', key, args[key])
 
-    # Put a dot at the center of each cell in the finer landmass raster
-    args['shore_uri'] = os.path.join( \
-        os.path.split(args['landmass_raster_uri'])[0], 'shore.tif')
+    # Store shore and transect information
+    shore_nodata = -20000.0
+    args['transects_uri'] = os.path.join( \
+        os.path.split(args['landmass_raster_uri'])[0], 'transects.tif')
     raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
-        args['shore_uri'], 'GTIFF', -20000, gdal.GDT_Float64)
-    shore_raster = gdal.Open(args['shore_uri'], gdal.GA_Update)
-    shore_band = shore_raster.GetRasterBand(1)
-    fine_shore = shore_band.ReadAsArray()
+        args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+    transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
+    transect_band = transect_raster.GetRasterBand(1)
+    transects = transect_band.ReadAsArray()
 
+    # Store transect profiles to reconstruct shore profile
+    args['shore_profile_uri'] = os.path.join( \
+        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
+    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
+    shore_band = shore_raster.GetRasterBand(1)
+    shore_profile = shore_band.ReadAsArray()
+
+    # Landmass
     raster = gdal.Open(args['landmass_raster_uri'])
     message = 'Cannot open file ' + args['landmass_raster_uri']
     assert raster is not None, message
@@ -61,6 +72,8 @@ def compute_transects(args):
     landmass = band.ReadAsArray()
     band = None
     raster = None
+    
+    # AOI
     raster = gdal.Open(args['aoi_raster_uri'])
     message = 'Cannot open file ' + args['aoi_raster_uri']
     assert raster is not None, message
@@ -68,6 +81,8 @@ def compute_transects(args):
     aoi = band.ReadAsArray()
     band = None
     raster = None
+    
+    # Bathymetry
     raster = gdal.Open(args['bathymetry_raster_uri'])
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
     assert raster is not None, message
@@ -90,10 +105,6 @@ def compute_transects(args):
     i_end = int(round(i_start + i_side_fine * row_count))
     j_end = int(round(j_start + j_side_fine * col_count))
     
-
-    print('iterations:', (len(range(i_start, i_end, i_side_coarse)), \
-                          len(range(j_start, j_end, j_side_coarse))))
-
     # Size of a tile. The + 4 at the end ensure the tiles overlap, 
     # leaving no gap in the shoreline
     i_offset = i_side_coarse/i_side_fine + 4
@@ -101,7 +112,7 @@ def compute_transects(args):
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
-    tiles = 0 # Number of tiles detected
+    tiles = 0 # Number of valid tiles
 
     # Creating HDF5 file that will store the transect data
     transect_data_uri = \
@@ -138,7 +149,7 @@ def compute_transects(args):
                     if shore_pts[0].size:
 
                         # Store shore position
-                        fine_shore[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = 2
+                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = 2
 
                         # Estimate shore orientation
                         shore_orientations = \
@@ -159,7 +170,7 @@ def compute_transects(args):
 
                         # Store every transect position at this point 
                         # so we know what transects are discarded later on
-                        fine_shore[transect_position] = -10
+                        transects[transect_position] = -10
 
                         # Compute transect orientation
                         transect_orientation = \
@@ -209,16 +220,19 @@ def compute_transects(args):
                         h5_subgroup[path] = clipped_transect
 
                         # Store transect information
-                        fine_shore[transect_position] = 4
+                        transects[transect_position] = 4
                         position1 = \
                             (transect_position + \
                                 transect_orientation).astype(int)
                         position3 = \
                             (transect_position + \
                                 transect_orientation * 3).astype(int)
-                        fine_shore[position1[0], position1[1]] = 6
-                        fine_shore[position3[0], position3[1]] = 8
-                        fine_shore[raw_positions] += 1 #raw_depths
+                        transects[position1[0], position1[1]] = 6
+                        transects[position3[0], position3[1]] = 8
+                        transects[raw_positions] = raw_depths
+
+                        # Will reconstruct the shore from this information
+                        shore_profile[raw_positions] = raw_depths
                         
                         tiles += 1
 
@@ -231,7 +245,19 @@ def compute_transects(args):
     LOGGER.debug('found %i tiles.' % tiles)
 
     # Store shore information gathered during the computation
-    shore_band.WriteArray(fine_shore)
+    transect_band.WriteArray(transects)
+    transect_band = None
+    transect_raster = None
+
+    # Interpolate the shoreline using transect sections
+    LOGGER.debug('interpolating...')
+    points = np.where(shore_profile != shore_nodata)
+    values = shore_profile[points]
+    grid_i, grid_j = np.mgrid[0:row_count, 0:col_count]
+
+    shore_profile = interpolate.griddata(points, values, (grid_i, grid_j), method='nearest')
+
+    shore_band.WriteArray(shore_profile)
     shore_band = None
     shore_raster = None
         
@@ -322,13 +348,10 @@ def select_transect(shore_pts):
     sorted_points = sorted(shore_pts, key = lambda p: p[1])
     sorted_points = sorted(sorted_points, key = lambda p: p[0])
     
-#    print('sorted points', sorted_points)
-
     return sorted_points[0]
 
 def compute_transect_orientation(position, orientation, landmass):
     """Returns transect orientation towards the ocean."""
-#    print('tile', landmass[position[0]-5:position[0]+6, position[1]-5:position[1]+6].astype(np.int32))
     # orientation is perpendicular to the shore
     orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
 
@@ -366,22 +389,10 @@ def compute_transect_orientation(position, orientation, landmass):
         
                 # Orientation doesn't work, return invalid transect.
                 if landmass[position[0] +step[0], position[1] +step[1]]:
-                    LOGGER.debug('invalid transect ' + str(position))
                     return None
         
                 # Other direction worked, return orientation
                 return orientation * -1
-
-
-def adjust_transect_bathymetry(position, orientation, bathymetry):
-    """Given a transect, adjust the bathymetry so the shore's edge corresponds 
-        to the landmass.
-       
-    """
-    # Shore can't be modified. Bathymetry could be off on purpose. 
-    # Adjust bathy to match shore.
-    # Sample depth at the transect location
-    elevation = bathymetry[position]
 
 
 def compute_raw_transect_depths(shore_point, \
@@ -389,8 +400,6 @@ def compute_raw_transect_depths(shore_point, \
     max_land_profile_len, max_land_profile_height, \
     max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
-    #LOGGER.debug('Sampling transect depths...')
-
     # Maximum transect extents
     max_land_len = max_land_profile_len / model_resolution
     max_sea_len = 1000 * max_sea_profile_len / model_resolution
@@ -398,7 +407,6 @@ def compute_raw_transect_depths(shore_point, \
     # Limits on maximum coordinates
     bathymetry_shape = bathymetry.shape
 
-    #LOGGER.debug('Creating a %i depth matrix' % (max_land_len + max_sea_len))
     depths = np.ones((max_land_len + max_sea_len + 1))*-20000
 
     I = np.ones(depths.size) * -1
@@ -427,11 +435,7 @@ def compute_raw_transect_depths(shore_point, \
     else:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
-#            print('position', (int(round(start_i)) - shore_point[0] + 5, int(round(start_j)) - shore_point[1] + 5))
             elevation = bathymetry[int(round(start_i)), int(round(start_j))]
-#            print('position', \
-#                (int(round(start_i)) - shore_point[0] + 5, int(round(start_j)) - shore_point[1] + 5), \
-#                'landmass', landmass[int(round(start_i)), int(round(start_j))],'elevation', elevation)
             # Hit either nodata, or some bad data
             if elevation <= -12000:
                 inland_steps -= 1
@@ -448,6 +452,7 @@ def compute_raw_transect_depths(shore_point, \
             I[max_land_len - inland_steps] = start_i
             J[max_land_len - inland_steps] = start_j
 
+            # Move backward (inland)
             start_i -= d_i
             start_j -= d_j
 
@@ -477,6 +482,7 @@ def compute_raw_transect_depths(shore_point, \
         I[max_land_len + offshore_steps] = start_i
         J[max_land_len + offshore_steps] = start_j
 
+        # Move forward (offshore)
         start_i += d_i
         start_j += d_j
 
