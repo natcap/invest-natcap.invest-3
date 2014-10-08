@@ -614,24 +614,24 @@ def execute(args):
 
     #check geographic extents, projections
 
-    #validate resampling size
-    if args["resolution"] != "":
-        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
-            msg = "The analysis resolution cannot be smaller than the input."
-            LOGGER.error(msg)
-            raise ValueError, msg
-
-        else:
-            LOGGER.info("Resampling land cover.")
-            #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
-            bounding_box = raster_utils.get_bounding_box(landcover_uri)
-            raster_utils.resize_and_resample_dataset_uri(landcover_uri,
-                                                         bounding_box,
-                                                         args["resolution"],
-                                                         landcover_resample_uri,
-                                                         "nearest")
-            LOGGER.debug("Changing landcover uri to resampled uri.")
-            landcover_uri = landcover_resample_uri
+##    #validate resampling size
+##    if args["resolution"] != "":
+##        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
+##            msg = "The analysis resolution cannot be smaller than the input."
+##            LOGGER.error(msg)
+##            raise ValueError, msg
+##
+##        else:
+##            LOGGER.info("Resampling land cover.")
+##            #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
+##            bounding_box = raster_utils.get_bounding_box(landcover_uri)
+##            raster_utils.resize_and_resample_dataset_uri(landcover_uri,
+##                                                         bounding_box,
+##                                                         args["resolution"],
+##                                                         landcover_resample_uri,
+##                                                         "nearest")
+##            LOGGER.debug("Changing landcover uri to resampled uri.")
+##            landcover_uri = landcover_resample_uri
 
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
 
