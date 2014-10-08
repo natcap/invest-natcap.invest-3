@@ -529,18 +529,6 @@ def smooth_transect(transect, window_size_pct):
 
     output:
         the smoothed signal
-        
-    example:
-
-    t=linspace(-2,2,0.1)
-    x=sin(t)+randn(len(t))*0.1
-    y=smooth(x, 10.0)
-    
-    see also: 
-    
-    np.convolve, scipy.signal.lfilter
- 
-    TODO: the window parameter could be the window itself if an array instead of a string   
     """
 
     if transect.ndim != 1:
@@ -606,137 +594,9 @@ def clip_transect(transect, raw_depths, interpolated_depths):
     highest_point = np.argmax(transect[:shore])
     lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
 
-#    print('highest', highest_point, 'lowest', lowest_point, 'change', transect.size, lowest_point-highest_point)
-
-    if highest_point >= lowest_point:
-        print('raw_depths:')
-        for entry in raw_depths:
-            print entry, ' ',
-        print('')
-        print('transect:')
-        for entry in old_transect:
-            print entry, ' ',
-        print('')
-        print('land:')
-        for entry in land:
-            print entry, ' ',
-        print('')
-        print('water:')
-        for entry in water:
-            print entry, ' ',
-        print('')
-        print('both:')
-        for entry in both:
-            print entry, ' ',
-        print('')
-        print('transect:')
-        for entry in transect:
-            print entry, ' ',
-
     assert highest_point < lowest_point
 
     return transect[highest_point:lowest_point+1]
-
-
-def sample_bathymetry_along_transect(transect, orientation, bathymetry):
-    """ Sample shore profile directly from the bathymetry layer."""
-    pass
-
-def find_valid_transects(shore_points, land, direction_vectors):
-    """ Compute valid transect directions and store them in an array 
-        where a row lists the index of valid sectors, with -1 as the
-        list terminator."""
-    LOGGER.debug('Counting valid transects...')
-
-    # Precompute data about the angular sectors
-    L = np.array(np.abs(direction_vectors[1]) > \
-        np.abs(direction_vectors[0])).astype(np.int32)
-    S = np.logical_not(L).astype(np.int32)
-    I = np.array(range(L.size)).astype(np.int32)
-
-    L_val = np.absolute(direction_vectors[(L,I)])
-    directions = np.array([direction_vectors[0]/L_val,direction_vectors[1]/L_val])
-
-    # Check for each shore point which sector is valid
-    valid_transects = \
-        np.ones((shore_points[0].size, direction_vectors[0].size)) * -1.
-    valid_transect_count = 0
-    for p in range(shore_points[0].size):
-        point = (shore_points[0][p], shore_points[1][p])
-        valid_sectors = 0
-        for sector in range(L.size):
-            i = round(point[0] + directions[0][sector])
-            j = round(point[1] + directions[1][sector])
-            if land[i, j] == 0:
-                valid_transects[p, valid_sectors] = sector
-                valid_sectors += 1
-	valid_transect_count += valid_sectors
-
-    LOGGER.debug('found %i valid transects.' % valid_transect_count)
-    
-    return (valid_transect_count, valid_transects)
-
-def cast_ray_fast(direction, d_max):
-    """ March from the origin towards a direction until either land or a
-    maximum distance is met.
-    
-        Inputs:
-        - origin: algorithm's starting point -- has to be on sea
-        - direction: marching direction
-        - d_max: maximum distance to traverse
-        - raster: land mass raster
-        
-        Returns the distance to the origin."""
-    # Rescale the stepping vector so that its largest coordinate is 1
-    unit_step = direction / np.fabs(direction).max()
-    # Compute the length of the normalized vector
-    unit_step_length = np.sqrt(np.sum(unit_step**2))
-    # Compute the number of steps to take
-    # Use ceiling to make sure to include any cell that is within the range of
-    # max_fetch
-    step_count = int(math.ceil(d_max / unit_step_length))
-    I = np.array([i*unit_step[0] for i in range(step_count+1)])
-    J = np.array([j*unit_step[1] for j in range(step_count+1)])
-
-    return ((I, J), unit_step_length)
- 
-
-def fetch_vectors(angles):
-    """convert the angles passed as arguments to raster vector directions.
-    
-        Input:
-            -angles: list of angles in radians
-            
-        Outputs:
-            -directions: vector directions numpy array of size (len(angles), 2)
-    """
-    # Raster convention: Up is north, i.e. decreasing 'i' is towards north.
-    # Wind convention: Wind is defined as blowing FROM and not TOWARDS. This
-    #                  means that fetch rays are going where the winds are
-    #                  blowing from:
-    # top angle: cartesian convention (x axis: J, y axis: negative I)
-    # parentheses: (oceanographic   
-    #               convention)    Angle   direction   ray's I  ray's J
-    #                                                  coord.   coord. 
-    #              90                  0      north       -1        0
-    #             (90)                90       east        0        1
-    #               |                180      south        1        0
-    #               |                270       west        0       -1
-    #     0         |         180 
-    #   (180)-------+-------->(0)  Cartesian to oceanographic
-    #               |              angle transformation: a' = 180 - a  
-    #               |              
-    #               |              so that: [x, y] -> [I, J]
-    #              270  
-    #             (270)
-    #            
-    directions = np.empty((2, len(angles)))
-
-    for a in range(len(angles)):
-        pi = math.pi
-        directions[0, a] = round(-math.cos(.5 * pi - angles[a]), 10)
-        directions[1, a] = round(math.sin(.5 * pi - angles[a]), 10)
-    return directions
 
 
 # improve this docstring!

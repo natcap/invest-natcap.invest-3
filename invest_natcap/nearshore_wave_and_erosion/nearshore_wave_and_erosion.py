@@ -403,11 +403,11 @@ def execute(args):
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
         raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
-    args['max_land_profile_len'] = 200
-    args['max_land_profile_height'] = 20
+    args['max_land_profile_len'] = 200  # Maximum inland distance
+    args['max_land_profile_height'] = 20 # Maximum inland elevation
 
     # Preprocess the landmass
-    print('STOPPED Pre-processing landmass...')
+    LOGGER.debug('STOPPED Pre-processing landmass...')
     args['landmass_raster_uri'] = os.path.join(args['intermediate_dir'], 'landmass.tif') #\
     #    preprocess_polygon_datasource(args['landmass_uri'], \
     #        args['aoi_uri'], args['cell_size'], \
@@ -419,11 +419,12 @@ def execute(args):
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
 
     # Preprocess bathymetry
-    print('STOPPED Pre-processing bathymetry...')
+    LOGGER.debug('STOPPED Pre-processing bathymetry...')
     args['bathymetry_raster_uri'] = os.path.join(args['intermediate_dir'], 'bathymetry.tif') #\
     #    preprocess_dataset(args['bathymetry_uri'], \
     #        args['aoi_uri'], args['cell_size'], \
     #        os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \
