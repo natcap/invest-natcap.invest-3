@@ -300,6 +300,9 @@ class Executor(threading.Thread):
         max_key_width = max(map(lambda x:len(x[0]), sorted_args))
         format_str = "%-" + str(max_key_width) + "s %s\n"
         for name, value in sorted_args:
+            if name == '_iui_meta':
+                continue  # skip over the meta tag if provided.
+
             self.write(format_str % (name, value))
         self.write("\n\n")
 
@@ -436,6 +439,7 @@ class Executor(threading.Thread):
         LOGGER.info('Parameters saved to disk')
 
     def runModel(self, module, args):
+        args = args.copy()
         try:
             workspace = args['workspace_dir']
         except KeyError:
@@ -537,6 +541,15 @@ class Executor(threading.Thread):
             args['_process_pool'] = None
 #            process_pool = raster_utils.PoolNoDaemon()
 #            args['_process_pool'] = process_pool
+
+            # If we're including metadata, add per-run metadata here.
+            if '_iui_meta' in args:
+                logfile_data = {
+                    'uri': log_file_uri,
+                    'timestamp': timestamp,
+                }
+                args['_iui_meta']['logfile'] = logfile_data
+
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
