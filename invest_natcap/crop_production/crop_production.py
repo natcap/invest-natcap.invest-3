@@ -25,6 +25,8 @@ import math
 import datetime
 import time
 
+import copy
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -33,6 +35,9 @@ LOGGER = logging.getLogger('crop_production')
 logging.getLogger("root").setLevel(logging.WARNING)
 logging.getLogger("raster_utils").setLevel(logging.ERROR)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+logging.getLogger("invest_natcap.table_generator").setLevel(logging.WARNING)
+logging.getLogger("invest_natcap.reporting").setLevel(logging.WARNING)
+logging.getLogger("crop_production_core").setLevel(logging.INFO)
 
         
 def execute(args):
@@ -167,6 +172,8 @@ def execute(args):
     raster_table_csv_dict[0] = {raster_table_field_short_name: raster_table_other_short_name}
 
     #reclass crop cover
+    reclass_field_invest_desc = "InVEST Description"
+    reclass_field_user_desc = "DESCRIPTION"
     reclass_table_csv_dict = raster_utils.get_lookup_from_csv(reclass_table_uri,
                                                               reclass_table_field_key)
 
@@ -175,6 +182,14 @@ def execute(args):
         reclass_table[crop] = reclass_table_csv_dict[crop][reclass_table_field_invest]
 
     reclass_table[0] = 0
+
+    user_to_invest_crop = copy.copy(reclass_table)
+    invest_to_user_crop = {}
+    for k in reclass_table.keys():
+        if reclass_table[k] in invest_to_user_crop.keys():
+            invest_to_user_crop[reclass_table[k]].append(k)
+        else:
+            invest_to_user_crop[reclass_table[k]] = [k]
 
     raster_utils.reclassify_dataset_uri(crop_cover_uri,
                                         reclass_table,
@@ -829,19 +844,32 @@ def execute(args):
     #summary table        
     summary_data = []
 
-    summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-                       {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'},
+    summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Name', 'total':False, 'td_class' : '\" align=\"center\"'},
                {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'}]
 
     for crop in invest_crop_counts.keys():
-        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : "", 'Area' : invest_crop_counts[crop]}
+        try:
+            invest_description = reclass_table_csv_dict[invest_to_user_crop[crop][0]][reclass_field_invest_desc]
+        except KeyError:
+            LOGGER.debug("No reclass table entry for %s.", invest_to_user_crop[crop][0])
+            invest_description = ""
+
+        user_crops = invest_to_user_crop[crop]
+        user_crops.sort()
+        user_crops = ", ".join([str(c) for c in user_crops])
+        
+        record = {'User Crop Id': user_crops,
+                  'InVEST Crop Id': crop,
+                  'InVEST Name' : invest_description,
+                  'Area' : invest_crop_counts[crop]}
 
         summary_data.append(record)
         
 
     #production table
-    production_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+    production_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right', 'width': '25%'}, 'td_class' : '\" align=\"right\"'},
                        {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
                        {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'},
                {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
@@ -886,7 +914,7 @@ def execute(args):
                                 'columns':nutrition_existing_production_columns,
                                 'key':'Crop Id',
                                 'data': nutrition_existing_production_data,
-                                'attributes': {'id':'User Crop Id'}})      
+                                'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}})      
     
     #reporting parameters
     report_args = {
@@ -942,12 +970,13 @@ def execute(args):
                     'section': 'body',
                     'sortable': True,
                     'checkbox': True,
+                    'checkbox_pos': 0,
                     'total':True,
                     'data_type':'dictionary',
                     'columns':summary_columns,
                     'key':'Crop Id',
                     'data': summary_data,
-                    'attributes': {'id':'User Crop Id'}},                
+                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},                
                 {
                     'type': 'text',
                     'section': 'body',
@@ -957,12 +986,13 @@ def execute(args):
                     'section': 'body',
                     'sortable': True,
                     'checkbox': True,
+                    'checkbox_pos': 0,
                     'total':True,
                     'data_type':'dictionary',
                     'columns':production_columns,
                     'key':'Crop Id',
                     'data': production_data,
-                    'attributes': {'id':'User Crop Id'}},                
+                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},                
                 {
                     'type': 'text',
                     'section': 'body',
