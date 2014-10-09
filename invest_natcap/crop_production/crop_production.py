@@ -31,7 +31,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('crop_production')
 
 logging.getLogger("root").setLevel(logging.WARNING)
-logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_utils").setLevel(logging.ERROR)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
 
         
@@ -801,31 +801,10 @@ def execute(args):
 ##                                        dataset_to_bound_index=0,
 ##                                        dataset_to_align_index=0)    
 
-    #reporting
+    ##reporting
     LOGGER.info("Generating report.")
-        
-    summary_dict = [{'Yield':'100', 'Area':'60', 'Crop Id':'1'},
-                   {'Yield':'50', 'Area':'50','Crop Id':'2'},
-                   {'Yield':'70', 'Area':'70','Crop Id':'3'},
-                   {'Yield':'85', 'Area':'80','Crop Id':'4'}]
 
-    summary_columns = [{'name': 'Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'},
-               {'name': 'Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
-
-
-    columns_pop = [
-            {'name': 'municipalities', 'total':False},
-            {'name': 'pop', 'total':False},
-            {'name': 'Sediment_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
-            {'name': 'Nitrogen_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
-            {'name': 'Phosphorous_impact', 'total':False, 'attr':{'class':'impacts'}, 'td_class':'impacts'},
-            {'name': 'Sediment_offset', 'total':False, 'attr':{'class':'offsets'}},
-            {'name': 'Nitrogen_offset', 'total':False, 'attr':{'class':'offsets'}},
-            {'name': 'Phosphorous_offset', 'total':False, 'attr':{'class':'offsets'}},
-            {'name': 'Sediment_net', 'total':False, 'attr':{'class':'net'}},
-            {'name': 'Nitrogen_net', 'total':False, 'attr':{'class':'net'}},
-            {'name': 'Phosphorous_net', 'total':False, 'attr':{'class':'net'}}]
+    #metadata
 
     start_time = datetime.datetime.strptime(args["_iui_meta"]["logfile"]["timestamp"], "%Y-%m-%d--%H_%M_%S")
     finish_time = datetime.datetime.fromtimestamp(int(math.floor(time.time())))
@@ -847,6 +826,69 @@ def execute(args):
     parameters_report = '<input type=\"checkbox\" onClick=\" ExpandCollapse(\'json\');\" checked>Display model parameters<br><div id=\"json\"><pre>%s</pre></div>'
     parameters_report = parameters_report % json.dumps(args["_iui_meta"]["ui_state"], indent = 4)
 
+    #summary table        
+    summary_data = []
+
+    summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'},
+               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+    for crop in invest_crop_counts.keys():
+        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : "", 'Area' : invest_crop_counts[crop]}
+
+        summary_data.append(record)
+        
+
+    #production table
+    production_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'},
+               {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+    if args["enable_tab_percentile"] == True:
+        for percentile in [25, 50, 75, 95]:
+            production_columns.append({'name': '%i%% Yield' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
+
+    production_data = []
+
+    for crop in invest_crop_counts.keys():
+        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : "", 'Existing Yield' : ""}
+
+        if args["enable_tab_percentile"] == True:
+            for percentile in [25, 50, 75, 95]:
+                record['%i%% Yield' % percentile] = ""
+
+        production_data.append(record)
+
+    #nutrition table(s)
+    nutrition_sections = [{'type': 'text',
+                           'section': 'body',
+                           'text': '<h3>Existing Production</h3>'}]
+
+    nutrition_existing_production_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                                             {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                                             {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'}]
+
+    nutrition_existing_production_data = []
+
+    for crop in invest_crop_counts.keys():
+        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : ""}
+
+        nutrition_existing_production_data.append(record)
+
+    nutrition_sections.append({'type': 'table',
+                               'section': 'body',
+                                'sortable': True,
+                                'checkbox': True,
+                                'total':True,
+                                'data_type':'dictionary',
+                                'columns':nutrition_existing_production_columns,
+                                'key':'Crop Id',
+                                'data': nutrition_existing_production_data,
+                                'attributes': {'id':'User Crop Id'}})      
+    
+    #reporting parameters
     report_args = {
             'title': 'Crop Production',
             'sortable' : True,
@@ -904,17 +946,29 @@ def execute(args):
                     'data_type':'dictionary',
                     'columns':summary_columns,
                     'key':'Crop Id',
-                    'data': summary_dict,
-                    'attributes': {'id':'Crop Id'}},                
+                    'data': summary_data,
+                    'attributes': {'id':'User Crop Id'}},                
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Production</h2>'},                
+                    'text': '<h2>Production</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': True,
+                    'total':True,
+                    'data_type':'dictionary',
+                    'columns':production_columns,
+                    'key':'Crop Id',
+                    'data': production_data,
+                    'attributes': {'id':'User Crop Id'}},                
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Nutrition Value</h2>'},
-                {
+                    'text': '<h2>Nutrition Value</h2>'}] + \
+                nutrition_sections + \
+                [{
                     'type': 'text',
                     'section': 'body',
                     'text': '<h2>Economic Value</h2>'}                
