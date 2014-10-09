@@ -37,6 +37,10 @@ def generate_table(table_dict, attributes=None):
                 to the bottom of the table that will show the total of the
                 columns selected (optional)
 
+            'checkbox_pos' - an integer value for in which column
+                position the the checkbox column should appear
+                (optional)
+
             'total'- a boolean value for whether there should be a constant
                 total row at the bottom of the table that sums the column
                 values (optional)
@@ -70,13 +74,20 @@ def generate_table(table_dict, attributes=None):
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
+        # Set default checkbox column position to 1
+        checkbox_pos = 1
+        if 'checkbox_pos' in table_dict:
+            # If user specified checkbox position, update here
+            checkbox_pos = table_dict['checkbox_pos']
+
         # Get a copy of the column and row lists of dictionaries
         # to pass into checkbox function
         cols_copy = list(table_dict['cols'])
         rows_copy = list(table_dict['rows'])
         # Get the updated column and row data after adding a
         # checkbox column
-        table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
+        table_cols, table_rows = add_checkbox_column(
+            cols_copy, rows_copy, checkbox_pos)
         add_checkbox_total = True
     else:
         # The column and row lists of dictionaries need to update,
@@ -300,7 +311,7 @@ def get_dictionary_values_ordered(dict_list, key_name):
 
     return ordered_value_list
 
-def add_checkbox_column(col_list, row_list):
+def add_checkbox_column(col_list, row_list, checkbox_pos):
     """Insert a new column into the list of column dictionaries so that it
         is the second column dictionary found in the list. Also add the
         checkbox column header to the list of row dictionaries and
@@ -322,12 +333,15 @@ def add_checkbox_column(col_list, row_list):
              {col_name_1: value, col_name_2: value, ...},
              ...]
 
+        checkbox_pos - an integer for the position of the checkbox
+            column
+
         returns - a tuple of the updated column and rows list of dictionaries
             in that order"""
 
     LOGGER.debug('Adding a checkbox column to the column structure')
     # Insert a new column dictionary in the list in the second spot
-    col_list.insert(1, {'name':'Select', 'total':False,
+    col_list.insert(checkbox_pos, {'name':'Select', 'total':False,
                         'attr':{'class':'checkbox'}, 'td_class':'checkbox'})
 
     # For each dictionary in the row list add a 'Select' key which
