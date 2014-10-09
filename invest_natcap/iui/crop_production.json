@@ -7,6 +7,7 @@
     "condenseElements" : true,
     "height": 800,
     "width" : 700,
+    "include_meta": true,
     "elements": [
                     {
                         "id": "objectiveTabGroup",
