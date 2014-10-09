@@ -230,7 +230,7 @@
                             "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
                             "defaultValue": 0,
                             "required": true,
-                            "enabledBy": "override_field",
+                            "enabledBy": "calculate_factors",
                             "helpText": ""
                         }
                     ]
