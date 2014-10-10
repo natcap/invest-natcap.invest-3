@@ -43,7 +43,7 @@ def execute(args):
                 for nitrogen
             'subsurface_critical_length_p' - the subsurface flow critical length
                 for phosphorous
-            'subsurface_eff_n' - the maximum retention efficiency that soil can 
+            'subsurface_eff_n' - the maximum retention efficiency that soil can
                 reach for nitrogen
             'subsurface_eff_p' - the maximum retention efficiency that soil can
                 reach for phosphorous
@@ -270,7 +270,8 @@ def execute(args):
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
-        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
+            (thresholded_w_factor_uri, w_accumulation_uri),
+            (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         routing_utils.route_flux(
             flow_direction_uri, dem_offset_uri, factor_uri,
@@ -284,8 +285,8 @@ def execute(args):
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
     for bar_nodata, accumulation_uri, bar_uri in [
-        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
-        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+            (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+            (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         def bar_op(base_accumulation, flow_accumulation):
             return numpy.where(
@@ -452,7 +453,7 @@ def execute(args):
         LOGGER.info('calculate subsurface NDR')
         ndr_subsurface_uri = os.path.join(
             intermediate_dir, 'ndr_subsurface_%s%s.tif' % (nutrient, file_suffix))
-        
+
         subsurface_eff = float(args['subsurface_eff_' + nutrient])
         crit_subsurface_len = float(args['subsurface_critical_length_' + nutrient])
 
@@ -484,7 +485,7 @@ def execute(args):
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
         #Summarize the results in terms of watershed:
-        LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
+        LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_tot = raster_utils.aggregate_raster_values_uri(
             load_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         export_tot = raster_utils.aggregate_raster_values_uri(
@@ -493,7 +494,7 @@ def execute(args):
         field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_load_tot', '%s_exp_tot']) + field_header_order)
+            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] + field_header_order)
 
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
@@ -505,9 +506,8 @@ def execute(args):
         os.remove(uri)
 
 
-
-def add_fields_to_shapefile(key_field, field_summaries, output_layer,
-    field_header_order=None):
+def add_fields_to_shapefile(
+        key_field, field_summaries, output_layer, field_header_order=None):
     """Adds fields and their values indexed by key fields to an OGR
         layer open for writing.
 
@@ -540,7 +540,7 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
                 feature.SetField(
                     field_name, float(field_summaries[field_name][ws_id]))
             except KeyError:
-                LOGGER.warning('unknown field %s' % field_name)
+                LOGGER.warning('unknown field %s', field_name)
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
         output_layer.SetFeature(feature)
