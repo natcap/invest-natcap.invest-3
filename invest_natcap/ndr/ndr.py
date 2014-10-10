@@ -197,7 +197,7 @@ def execute(args):
             intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
-            load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            load_subsurface_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
         eff_uri[nutrient] = os.path.join(
@@ -350,7 +350,7 @@ def execute(args):
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-    ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
+    ic_min, ic_max, _, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
 
@@ -438,6 +438,22 @@ def execute(args):
 
         raster_utils.vectorize_datasets(
             [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
+            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
+
+        LOGGER.info('calculate subsurface NDR')
+        ndr_subsurface_uri = os.path.join(
+            intermediate_dir, 'ndr_subsurface_%s%s.tif' % (nutrient, file_suffix))
+        
+        subsurface_eff = float(args['subsurface_eff_' + nutrient])
+        crit_subsurface_len = float(args['subsurface_critical_length_' + nutrient])
+
+        def calculate_subsurface_ndr(d_dn):
+            return numpy.where(
+                (d_dn == d_dn_nodata), ndr_nodata,
+                1 - subsurface_eff * (1.0 - numpy.exp(-5 * d_dn / crit_subsurface_len)))
+        raster_utils.vectorize_datasets(
+            [d_dn_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
