@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.ndr.ndr",
     "modelName" : "nutrient",
     "localDocURI": "../documentation/waterpurification.html",
-    "height": 500,
+    "height": 600,
     "width" : 900,
     "elements": [
         {
@@ -131,6 +131,46 @@
             "required": true,
             "validText": "^[0-9]+\\.?[0-9]*$",
             "helpText": "Borselli k parameter."
+        },
+        {        
+            "id" : "subsurface_critical_length_n",
+            "args_id" : "subsurface_critical_length_n",
+            "type": "text",
+            "label": "Subsurface Critical Length (nitrogen)",
+            "defaultValue": "150",
+            "required": true,
+            "validText": "^[0-9]+$",
+            "helpText": ""
+        },
+        {        
+            "id" : "subsurface_critical_length_p",
+            "args_id" : "subsurface_critical_length_p",
+            "type": "text",
+            "label": "Subsurface Critical Length (phosphorous)",
+            "defaultValue": "150",
+            "required": true,
+            "validText": "^[0-9]+$",
+            "helpText": ""
+        },
+        {        
+            "id" : "subsurface_eff_n",
+            "args_id" : "subsurface_eff_n",
+            "type": "text",
+            "label": "Subsurface Maximum Retention Efficiency (nitrogen)",
+            "defaultValue": "0.8",
+            "required": true,
+            "validText": "^[0-9]\\.?[0-9]*$",
+            "helpText": ""
+        },
+        {        
+            "id" : "subsurface_eff_p",
+            "args_id" : "subsurface_eff_p",
+            "type": "text",
+            "label": "Subsurface Maximum Retention Efficiency (phosphorous)",
+            "defaultValue": "0.8",
+            "required": true,
+            "validText": "^[0-9]\\.?[0-9]*$",
+            "helpText": ""
         }
 	    ]
 	}
