@@ -1,7 +1,9 @@
 """InVEST Nearshore Wave and Erosion model non-core."""
 
+import sys
 import os
 import shutil
+import logging
 
 from osgeo import gdal
 from osgeo import ogr
@@ -9,6 +11,12 @@ from osgeo import osr
 
 from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core
+
+logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+LOGGER = logging.getLogger('coastal_vulnerability_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 # TODO: Get rid of this function!!!! (in CV too)
 def clip_datasource(aoi_ds, orig_ds, output_uri):
@@ -403,11 +411,11 @@ def execute(args):
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
         raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
-    args['max_land_profile_len'] = 200
-    args['max_land_profile_height'] = 20
+    args['max_land_profile_len'] = 200  # Maximum inland distance
+    args['max_land_profile_height'] = 20 # Maximum inland elevation
 
     # Preprocess the landmass
-    print('STOPPED Pre-processing landmass...')
+    LOGGER.debug('STOPPED Pre-processing landmass...')
     args['landmass_raster_uri'] = os.path.join(args['intermediate_dir'], 'landmass.tif') #\
     #    preprocess_polygon_datasource(args['landmass_uri'], \
     #        args['aoi_uri'], args['cell_size'], \
@@ -419,11 +427,29 @@ def execute(args):
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
 
     # Preprocess bathymetry
-    print('STOPPED Pre-processing bathymetry...')
+    LOGGER.debug('STOPPED Pre-processing bathymetry...')
     args['bathymetry_raster_uri'] = os.path.join(args['intermediate_dir'], 'bathymetry.tif') #\
     #    preprocess_dataset(args['bathymetry_uri'], \
     #        args['aoi_uri'], args['cell_size'], \
     #        os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
+
+    # List all shapefiles in the habitats directory
+    files = os.listdir(args['habitats_directory_uri'])
+    args['habitats'] = {}
+
+    shapefile_uris = []
+    for f in files:
+        basename, ext = os.path.splitext(f)
+        if ext == '.shp':
+            shapefile_uris.append(os.path.join(args['habitats_directory_uri'], f))
+            habitat_name = basename[:basename.rfind('_')] # Remove suffix with #
+            args['habitats'][habitat_name] = \
+                os.path.join(args['habitats_directory_uri'], \
+                    habitat_name + '_raster_uri.tif')
+            print('Adding', args['habitats'][habitat_name], 'to', habitat_name)
+
+    sys.exit(0)
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \

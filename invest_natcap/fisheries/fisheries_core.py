@@ -13,32 +13,35 @@ LOGGER = logging.getLogger('FISHERIES_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+
 def execute(args):
     '''
     Input:
-        workspace_dir- Location into which all intermediate and output files
-            should be placed.
-        aoi_uri- Location of the AOI containing all areas the user is
-            interested in using for this model run.
-        maturity_type- String specifying whether the model is age-specific or
-            stage-specific. Options will be either "Age Specific" or
-            "Stage Specific" and will change which equation is used in modeling
-            growth.
-        is_gendered- Boolean for whether or not the age and stage classes are
-            separated by gender.
-        do_weight- Boolean for whether harvesting and biomass should be done by
-            weight or not. If weight is desired, there will be a 'weight' 
-            parameter in the params_dict['Stage_Params'] subdictionary.
-        params_dict- Dictionary containing all information from the csv file.
-            Should have age/stage specific information, as well as area-specific
-            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
-            present are determined by what equations/additional information the
-            user is trying to model.
+        :param string workspace_dir: location into which all intermediate and
+            output files should be placed.
+        :param string aoi_uri: location of shapefile which will be used as
+            subregions for calculation. Each region must conatin a 'name'
+            attribute which will
+        :param string maturity_type: string specifying whether the model
+            is age-specific or stage-specific. Options will be either "Age
+            Specific" or "Stage Specific" and will change which equation is
+            used in modeling growth.
+        :param boolean is_gendered: boolean for whether or not the age and
+            stage classes are separated by gender.
+        :param boolean do_weight: boolean for whether harvesting and biomass
+            should be done by weight or not. If weight is desired, there will
+            be a 'weight' parameter in the params_dict['Stage_Params']
+            subdictionary.
+        :param dictionary params_dict: dictionary containing all information
+            from the csv file. Should have age/stage specific information,
+            as well as area-specific information. NOT ALL KEYS ARE REQUIRED TO
+            EXIST. The keys which are present are determined by what equations/
+            additional information the user is trying to model.
 
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vulnfishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993,
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -48,33 +51,40 @@ def execute(args):
                     ...
                 }
             }
-        ordered_stages- A list containing all the ages/stages that are being
-            used within this run of the model, in the order in which they
-            should occur naturally.
-        rec_dict- A dictionary containing the chosen recruitment equation and
-            the parameters that are needed to use that equation. Dictionary will
-            look like one of the following:
+
+        :param list ordered_stages: a list containing all the ages/stages that
+            are being used within this run of the model, in the order in which
+            they should occur naturally.
+        :param dictionary rec_dict: a dictionary containing the chosen
+            recruitment equation and the parameters that are needed to use
+            that equation. Dictionary will look like one of the following:
+
             {'Beverton-Holt': {'alpha': 0.02, 'beta': 3}}
             {'Ricker': {'alpha': 0.02, 'beta': 3}}
             {'Fecundity': {FECUNDITY DICT}}
             {'Fixed': 0.5}
-        init_recruits- Int which represents the initial number of recruits that
-            will be used in calculation of population on a per area basis. 
-        migration_dict(*)- Migration dictionary which will contain all source/sink
-            percentage information for each age/stage which is capable of
-            migration. The outermost numerical key is the source, and the
-            keys of the dictionary that points to are the sinks.
+
+        :param int init_recruits: int which represents the initial number of
+            recruits that will be used in calculation of population on a per
+            area basis.
+        :param dictionary migration_dict: migration dictionary which will
+            contain all source/sink percentage information for each age/stage
+            which is capable of migration. The outermost numerical key is the
+            source, and the keys of the dictionary that points to are the
+            sinks.
 
             {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
                     '2': {'1': 0.13, '2': 98.06, ...}
             }
-        frac_post_process(*)- This will exist only if valuation is desired for
-            the particular species. A double representing the fraction of the
-            animal remaining after processing of the whole carcass is complete.
-        unit_price(*)- This will exist only if valuation is desired. Double 
-            which represents the price for a single unit of that animal.
-        duration- Int representing the number of time steps that the user
-            desires the model to run.
+
+        :param float frac_post_process: this will exist only if valuation is
+            desired for the particular species. A double representing the
+            fraction of the animal remaining after processing of the whole
+            carcass is complete.
+        :param float unit_price: this will exist only if valuation is desired.
+            Double which represents the price for a single unit of that animal.
+        :param int duration: int representing the number of time steps that
+            the user desires the model to run.
     '''
     output_dir = os.path.join(args['workspace_dir'], 'output')
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -83,33 +93,53 @@ def execute(args):
     #Initialize the first cycle, since we know we will start at least one.
     cycle_dict = {}
 
-    initialize_pop(args['maturity_type'], args['params_dict'], 
-        args['ordered_stages'], args['is_gendered'], args['init_recruits'], 
+    initialize_pop(
+        args['maturity_type'],
+        args['params_dict'],
+        args['ordered_stages'],
+        args['is_gendered'],
+        args['init_recruits'],
         cycle_dict)
 
     migration_dict = args['migrate_dict'] if 'migrate_dict' in args else None
     #LOGGER.debug("MIGRATION: %s" % migration_dict)
 
     if args['maturity_type'] == "Age Specific":
-        age_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['ordered_stages'], args['rec_dict'], cycle_dict, 
-                    migration_dict, args['duration'], args['do_weight'])
+        age_structured_cycle(
+            args['params_dict'],
+            args['is_gendered'],
+            args['ordered_stages'],
+            args['rec_dict'],
+            cycle_dict,
+            migration_dict,
+            args['duration'],
+            args['do_weight'])
     else:
-        stage_structured_cycle(args['params_dict'], args['is_gendered'],
-                    args['ordered_stages'], args['rec_dict'], cycle_dict, 
-                    migration_dict, args['duration'], args['do_weight'])
+        stage_structured_cycle(
+            args['params_dict'],
+            args['is_gendered'],
+            args['ordered_stages'],
+            args['rec_dict'],
+            cycle_dict,
+            migration_dict,
+            args['duration'],
+            args['do_weight'])
 
-    hrv_dict, equil_pt = calc_harvest(cycle_dict, args['params_dict'], args['do_weight'])
-  
+    hrv_dict, equil_pt = calc_harvest(
+        cycle_dict, args['params_dict'], args['do_weight'])
+
     inter_csv_uri = os.path.join(inter_dir, 'Cycle_Breakdown.csv')
     create_inter_cycle_csv(inter_csv_uri, cycle_dict, args['ordered_stages'])
 
-    #If either of the two valuation variables exist, know that valuation is desired
+    #If either of the two valuation variables exist, know that valuation
+    #is desired
     if 'unit_price' in args:
-        #passing a subdictionary that is only the equilibrated final cycle 
+        #passing a subdictionary that is only the equilibrated final cycle
         #to get the value
-        val_dict = calc_valuation(hrv_dict[len(hrv_dict)-1], args['unit_price'], 
-                                                    args['frac_post_process'])
+        val_dict = calc_valuation(
+            hrv_dict[len(hrv_dict)-1],
+            args['unit_price'],
+            args['frac_post_process'])
 
     #Here be outputs
     val_var = val_dict if 'unit_price' in args else None
@@ -120,24 +150,29 @@ def execute(args):
     csv_page_uri = os.path.join(output_dir, 'Results_Table.csv')
     create_results_csv(csv_page_uri, hrv_dict, equil_pt, val_var)
 
+
 def create_inter_cycle_csv(uri, cycle_dict, order):
     '''Want to create an intermediate output that gives the number of
     individuals within each area for each cycle for each age/stage.
-    cycle_dict- Contains all counts of individuals for each combination of 
-            cycle, age/stage, and area.
-            
-            {Cycle_#:
-                {'Area_1':
-                    {'Age_A': 1000}
-                }
+
+    :param string uri:
+    :param dictionary cycle_dict: Contains all counts of individuals for
+        each combination of cycle, age/stage, and area.
+
+        {Cycle_#:
+            {'Area_1':
+                {'Age_A': 1000}
             }
-    '''    
+        }
+
+    :param list order:
+    '''
     with open(uri, 'wb') as c_file:
         c_writer = csv.writer(c_file)
 
         arb_subdict = cycle_dict.itervalues().next()
         area_names = arb_subdict.keys()
-        area_line = ['Area'] 
+        area_line = ['Area']
         stage_line = ['Age/Stage']
 
         for area in area_names:
@@ -152,9 +187,9 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
 
         for cycle in range(len(cycle_dict)):
             line = [cycle]
-            
+
             for i, area in enumerate(area_line[1::]):
-                #Want to skip the heading at the beginning of stage_line, so 
+                #Want to skip the heading at the beginning of stage_line, so
                 #using i+1, since area_line won't count it.
                 stage = stage_line[i+1]
                 line.append("%.2f" % cycle_dict[cycle][area][stage])
@@ -164,31 +199,39 @@ def create_inter_cycle_csv(uri, cycle_dict, order):
 
 def create_results_csv(uri, hrv_dict, equil_pt, val_var):
     '''Want to give a CSV output that is the same information as the HTML,
-    but in an easier-to-use-for-calculation form.'''
+    but in an easier-to-use-for-calculation form.
+
+    :param string uri:
+    :param dictionary hrv_dict:
+    :param int equil_pt:
+    :param dictionary val_var:
+
+    '''
 
     with open(uri, 'wb') as c_file:
         c_writer = csv.writer(c_file)
-   
+
         num_cycles = len(hrv_dict.keys())
-        
+
         #Header for final results table
-        c_writer.writerow(['Final Harvest by Subregion after ' + str(num_cycles) + ' Cycles'])
+        c_writer.writerow(
+            ['Final Harvest by Subregion after ' + str(num_cycles) +
+                ' Cycles'])
         c_writer.writerow([])
         sum_headers_row = ['Subregion', 'Harvest']
         if val_var is not None:
             sum_headers_row.append('Value')
         c_writer.writerow(sum_headers_row)
-        
+
         final_cycle = hrv_dict[num_cycles-1]
         for area in final_cycle:
             if area != 'Cycle_Total':
                 line = [area, "%.2f" % final_cycle[area]]
                 if val_var is not None:
                     line.append("%.2f" % val_var[area])
-                
+
                     c_writer.writerow(line)
-                    
-        
+
         #Starting on the second table, summed harvest by cycle
         c_writer.writerow([])
         c_writer.writerow(['Cycle Breakdown'])
@@ -196,37 +239,40 @@ def create_results_csv(uri, hrv_dict, equil_pt, val_var):
         c_writer.writerow(['Cycle', 'Harvest', 'Equilibrated?'])
 
         for cycle, inner_dict in hrv_dict.items():
-            
             line = [cycle]
             line.append("%.2f" % inner_dict['Cycle_Total'])
 
-            if cycle == equil_pt: 
+            if cycle == equil_pt:
                 line.append('Y')
             else:
                 line.append('N')
 
             c_writer.writerow(line)
-        
+
 
 def create_results_page(uri, hrv_dict, equil_pt, val_var):
     '''Will output an HTML file that contains a summary of all harvest totals
     for each subregion.
-    
+
     Inputs:
-        uri- Location at which the HTML file shoudl be saved. 
-        val_var*- Dictionary which maps each area to the total value returned
-            from all harvesting.
-            {'Area_1': 300000.50,
-            'Area_2': 40000.62}
-        hrv_dict- Dictionary containing all harvest information on a per area
-            per cycle basis. This will have the following structure.
+        :param string uri: Location at which the HTML file shoudl be saved.
+        :param dictionary hrv_dict: Dictionary containing all harvest
+            information on a per area per cycle basis. This will have the
+            following structure.
+
             {Cycle #:
                 {'Area_1': 3001},
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
-        equil_pt- The cycle on which the harvest was equilibrated. If it never
-            equilibrated, this will be -1.
+
+        :param int equil_pt: The cycle on which the harvest was equilibrated.
+            If it never equilibrated, this will be -1.
+        :param dictionary val_var: Dictionary which maps each area to the
+            total value returned from all harvesting.
+
+            {'Area_1': 300000.50,
+            'Area_2': 40000.62}
     '''
     rep_args = {}
     rep_args['title'] = "Fishieries Results Page"
@@ -236,7 +282,7 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
     rep_args['totals'] = True
 
     num_cycles = len(hrv_dict.keys())
-    
+
     t_body = []
 
     final_cycle = hrv_dict[num_cycles-1]
@@ -247,23 +293,22 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
             inner_dict['Subregion'] = area
             inner_dict['Harvest'] = "%.2f" % final_cycle[area]
             inner_dict['Value'] = '-' if val_var is None else "%.2f" % val_var[area]
-    
+
             t_body.append(inner_dict)
 
-    css = """body { background-color: #EFECCA; color: #002F2F; }        
-         h1 { text-align: center }       
-         h1, h2, h3, h4, strong, th { color: #046380 }       
-         h2 { border-bottom: 1px solid #A7A37E }     
-         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }        
-         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }       
-         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }     
-         td { border-top: 5px solid #EFECCA }        
+    css = """body { background-color: #EFECCA; color: #002F2F; }
+         h1 { text-align: center }
+         h1, h2, h3, h4, strong, th { color: #046380 }
+         h2 { border-bottom: 1px solid #A7A37E }
+         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }
+         td { border-top: 5px solid #EFECCA }
          img { margin: 20px }"""
 
-
-    t_columns =  [{'name': 'Subregion', 'total': False},
-                {'name': 'Harvest', 'total': True},
-                {'name': 'Value', 'total': True}]
+    t_columns = [{'name': 'Subregion', 'total': False},
+                 {'name': 'Harvest', 'total': True},
+                 {'name': 'Value', 'total': True}]
 
     c_body = []
     for cycle in hrv_dict:
@@ -271,70 +316,78 @@ def create_results_page(uri, hrv_dict, equil_pt, val_var):
         inner_dict['Cycle'] = cycle
         inner_dict['Harvest'] = "%.2f" % hrv_dict[cycle]['Cycle_Total']
 
-        if cycle == equil_pt: 
+        if cycle == equil_pt:
             inner_dict['Equilibrated?'] = 'Y'
         else:
             inner_dict['Equilibrated?'] = 'N'
-        
+
         c_body.append(inner_dict)
 
     c_columns = [{'name': 'Cycle', 'total': False},
-                {'name': 'Harvest', 'total': True},
-                {'name': 'Equilibrated?', 'total': False}]
+                 {'name': 'Harvest', 'total': True},
+                 {'name': 'Equilibrated?', 'total': False}]
 
     #LOGGER.debug("I AM IN : %s" % os.getcwd())
 
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Final Harvest by Subregion After ' + str(num_cycles-1) + ' Cycles</h2>'},
+                'text': '<h2>Final Harvest by Subregion After ' +
+                        str(num_cycles-1) + ' Cycles</h2>'},
                 {
-                'type': 'table',
-                'section': 'body',
-                'sortable': True,
-                'checkbox': False,
-                'total': True,
-                'data_type': 'dictionary',
-                'columns': t_columns,
-                'data': t_body},
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': True,
+                    'data_type': 'dictionary',
+                    'columns': t_columns,
+                    'data': t_body},
                 {
-                'type': 'text',
-                'section': 'body',
-                'text': '<h2>Cycle Breakdown</h2>'},
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Cycle Breakdown</h2>'},
                 {
-                'type': 'table',
-                'section': 'body',
-                'sortable': True,
-                'checkbox': False,
-                'total': False,
-                'data_type': 'dictionary',
-                'columns': c_columns,
-                'data': c_body},
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type': 'dictionary',
+                    'columns': c_columns,
+                    'data': c_body},
                 {
-                'type':'head',
-                'section':'head',
-                'format': 'style',
-                'data_src': css,
-                'input_type': 'Text'}
+                    'type': 'head',
+                    'section': 'head',
+                    'format': 'style',
+                    'data_src': css,
+                    'input_type': 'Text'}
                 ]
 
     rep_args['elements'] = elements
 
     reporting.generate_report(rep_args)
 
+
 def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
-    '''Want to add the relevant data to the correct AOI as attributes.'''
+    '''Want to add the relevant data to the correct AOI as attributes.
+
+    :param string aoi_uri:
+    :param dictionary final_cycle:
+    :param dictionary val_dict:
+
+    '''
 
     ds = ogr.Open(aoi_uri, update=1)
     layer = ds.GetLayer()
 
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
     layer.CreateField(harvest_field)
-    
+
     if val_dict is not None:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
         layer.CreateField(val_field)
-   
+
     for feature in layer:
 
         #Since we now know for sure there will be a name attribute lower case,
@@ -349,21 +402,30 @@ def append_results_to_aoi(aoi_uri, final_cycle, val_dict):
 
     layer.ResetReading()
 
+
 def calc_valuation(final_cycle, price, frac):
     '''If the user wants valuation, want to output a dictionary that maps area
     to total value of harvest across all areas.
-    
+
+    Inputs:
+        :param dictionary final_cycle:
+        :param float price:
+        :param float frac:
+
     Returns:
-        val_dict- Dictionary which maps each area to the total value returned
-            from all harvesting.
+        :return: val_dict - Dictionary which maps each area to the
+            total value returned from all harvesting.
+
             {'Area_1': 300000.50,
             'Area_2': 40000.62}
+
+        :rtype: dictionary
     '''
-    
+
     value_dict = {}
 
     for area, totals in final_cycle.items():
-        
+
         #There's an extra key that's a running total. Don't get a value for it
         if area != 'Cycle_Total':
             val = totals * price * frac
@@ -371,32 +433,40 @@ def calc_valuation(final_cycle, price, frac):
 
     return value_dict
 
+
 def calc_harvest(cycle_dict, params_dict, do_weight):
     '''Function to calculate harvest of an area on a cycle basis. If do_weight
     is True, then this will be done on the basis of biomass, otherwise the
     results represent the number of individuals.
-    
+
+    Inputs:
+        :param dictionary cycle_dict:
+        :param dictionary params_dict:
+        :param boolean do_weight:
+
     Returns:
-        hrv_dict- Dictionary containing all harvest information on a per area
-            per cycle basis. This will have the following structure.
+        :return: hrv_dict - Dictionary containing all harvest
+            information on a per area per cycle basis. This will have the
+            following structure.
+
             {Cycle #:
                 {'Area_1': 3001,
                 'Area_2': ...,
                 'Cycle_Total: SUM(Area_1, Area_2, ...)}
             }
+        :rtype: dictionary
             '''
     hrv_dict = {}
-    #Want to set this to negative so that it won't get used as "has equilibrated"
-    #if it's not true.
-    equil_pt = -1 
+    #Want to set this to negative so that it won't get used as "has
+    #equilibrated" if it's not true.
+    equil_pt = -1
     mov_tot = 0
 
     #Want to be sure that we're looking at the harvests in order so that all
     #prior harvest information will exist.
     for cycle in range(0, len(cycle_dict)):
-        
         areas_dict = cycle_dict[cycle]
-        
+
         hrv_dict[cycle] = {}
         hrv_dict[cycle]['Cycle_Total'] = 0
 
@@ -405,7 +475,6 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
 
             hrv_total = 0
             for stage, indivs in stages_dict.items():
-                
                 vuln = params_dict['Stage_Params'][stage]['vulnfishing']
                 curr_ax_hrv = indivs * exploit_frac * vuln
 
@@ -418,14 +487,13 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
 
             hrv_dict[cycle][area] = hrv_total
             hrv_dict[cycle]['Cycle_Total'] += hrv_total
-        
+
         mov_tot += hrv_dict[cycle]['Cycle_Total']
 
         #Equilibration checks.
         if cycle >= 9:
             mov_avg = mov_tot / 10
             frac = mov_avg / hrv_dict[cycle]['Cycle_Total']
-
 
             #LOGGER.debug("For cycle %s, FRAC IS: %s" % (cycle, frac))
             #If we reach equilibrium before the total duration, record what
@@ -434,32 +502,28 @@ def calc_harvest(cycle_dict, params_dict, do_weight):
                 equil_pt = cycle
                 break
 
-            #Want to make sure the moving total always includes the current cycle,
-            #and removes the one that will be 10 back in the next step.
+            #Want to make sure the moving total always includes the current
+            #cycle, and removes the one that will be 10 back in the next step.
             mov_tot -= hrv_dict[cycle-9]['Cycle_Total']
 
     return hrv_dict, equil_pt
-    
+
+
 def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
-                    migration_dict, duration, do_weight):
-    '''cycle_dict- Contains all counts of individuals for each combination of 
-            cycle, age/stage, and area.
-            
-            {Cycle_#:
-                {'Area_1':
-                    {'Age_A': 1000}
-                }
-            }
-        params_dict- Dictionary containing all information from the csv file.
-            Should have age/stage specific information, as well as area-specific
-            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
-            present are determined by what equations/additional information the
-            user is trying to model.
+                         migration_dict, duration, do_weight):
+    '''
+
+    Inputs:
+        :param dictionary params_dict: Dictionary containing all information
+            from the csv file. Should have age/stage specific information,
+            as well as area-specific information. NOT ALL KEYS ARE REQUIRED
+            TO EXIST. The keys which are present are determined by what
+            equations/additional information the user is trying to model.
 
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vulnfishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993,
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -469,6 +533,23 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
                     ...
                 }
             }
+
+        :param boolean is_gendered:
+        :param list order:
+        :param dictionary rec_dict:
+        :param dictionary cycle_dict: Contains all counts of individuals
+            for each combination of cycle, age/stage, and area.
+
+            {Cycle_#:
+                {'Area_1':
+                    {'Age_A': 1000}
+                }
+            }
+
+        :param dictionary migration_dict:
+        :param int duration:
+        :param boolean do_weight:
+
     '''
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
@@ -479,20 +560,26 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
     else:
         first_age = [order[0]]
         final_age = [order[len(order)-1]]
-   
+
     gender_var = 2 if is_gendered else 1
 
     #Want to pre-run it for extra cycles, on the off-chance that it does not
-    #equilibrate within the given time. 
+    #equilibrate within the given time.
     for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
 
-        #This will be used for each 0 age in the cycle. 
-        rec_sans_disp = area_indifferent_rec(cycle_dict, params_dict,
-                                            rec_dict, gender_var, cycle, do_weight)
-        LOGGER.debug("C: %s, R: %s" % (cycle, rec_sans_disp))                    
+        #This will be used for each 0 age in the cycle.
+        rec_sans_disp = area_indifferent_rec(
+            cycle_dict,
+            params_dict,
+            rec_dict,
+            gender_var,
+            cycle,
+            do_weight)
+
+        LOGGER.debug("C: %s, R: %s" % (cycle, rec_sans_disp))
         for area in params_dict['Area_Params'].keys():
 
             #Initialize current area within cycle.
@@ -502,67 +589,92 @@ def age_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
             larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
             for i, age in enumerate(order):
-    
                 #If a = 0
                 if age in first_age:
-                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (cycle, area, rec_sans_disp, larval_disp))
+                    LOGGER.debug("(%s, %s) Rec=%s, Larval_Disp=%s" % (
+                        cycle, area, rec_sans_disp, larval_disp))
                     cycle_dict[cycle][area][age] = rec_sans_disp * larval_disp
                 #If a = maxAge
                 elif age in final_age:
-                    prev_age = order[i-1] 
-                
-                    prev_survival = calc_survival_mortal(params_dict, area, prev_age)
+                    prev_age = order[i-1]
+
+                    prev_survival = calc_survival_mortal(
+                        params_dict,
+                        area,
+                        prev_age)
                     prev_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, 
-                                                prev_age, cycle)
+                        calc_indiv_count(cycle_dict, migration_dict, area,
+                                         prev_age, cycle)
 
                     survival = calc_survival_mortal(params_dict, area, age)
                     num_indivs = \
                         calc_indiv_count(cycle_dict, migration_dict, area, age,
-                                            cycle)
-                    cycle_dict[cycle][area][age] = (prev_num_indivs * prev_survival) + \
-                                            (num_indivs * survival)
+                                         cycle)
+                    cycle_dict[cycle][area][age] = (
+                        prev_num_indivs * prev_survival) + \
+                        (num_indivs * survival)
                 else:
-                    prev_age = order[i-1] 
-                
-                    prev_survival = calc_survival_mortal(params_dict, area, prev_age)
+                    prev_age = order[i-1]
+
+                    prev_survival = calc_survival_mortal(
+                        params_dict, area, prev_age)
                     prev_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, 
-                                                prev_age, cycle)
+                        calc_indiv_count(
+                            cycle_dict, migration_dict, area,
+                            prev_age, cycle)
                     if area == '1' and age == '3' and cycle == 1:
-                        #LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (prev_num_indivs, prev_survival))
+                        #LOGGER.debug("INSIDE CYCLE, INDIVS: %s, SURV: %s" % (
+                            #prev_num_indivs, prev_survival))
                         pass
-                        
-                    cycle_dict[cycle][area][age] = prev_num_indivs * prev_survival
+
+                    cycle_dict[cycle][area][
+                        age] = prev_num_indivs * prev_survival
 
     for cycle in cycle_dict:
         for area in cycle_dict[cycle]:
             if area == '1':
                 for age in cycle_dict[cycle][area]:
-                    #LOGGER.debug("Cycle %s: Age %s: %s" % (cycle, age, cycle_dict[cycle][area][age]))
+                    #LOGGER.debug("Cycle %s: Age %s: %s" % (
+                        #cycle, age, cycle_dict[cycle][area][age]))
                     pass
 
-def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict,
-                    migration_dict, duration, do_weight):
-    
+
+def stage_structured_cycle(params_dict, is_gendered, order, rec_dict,
+                           cycle_dict, migration_dict, duration, do_weight):
+    '''
+
+    Inputs:
+        :param dictionary params_dict:
+        :param boolean is_gendered:
+        :param list order:
+        :param dictionary rec_dict:
+        :param dictionary cycle_dict:
+        :param dictionary migration_dict:
+        :param int duration:
+        :param boolean do_weight:
+
+    Returns:
+        :return: cycle_dict
+        :rtype: dictionary
+    '''
     gender_var = 2 if is_gendered else 1
-    
+
     if is_gendered:
         first_stage = [order[0], order[len(order)/2]]
     else:
         first_stage = [order[0]]
-    
+
     #Want to pre-run it for extra cycles, on the off-chance that it does not
-    #equilibrate within the given time. 
+    #equilibrate within the given time.
     for cycle in range(1, duration+100):
 
         #Initialize this current cycle
         cycle_dict[cycle] = {}
 
-        #This will be used for each 0 stage in the cycle. 
-        total_recruits = area_indifferent_rec(cycle_dict, params_dict,
-                                            rec_dict, gender_var, cycle, do_weight)
-   
+        #This will be used for each 0 stage in the cycle.
+        total_recruits = area_indifferent_rec(
+            cycle_dict, params_dict, rec_dict, gender_var, cycle, do_weight)
+
         for area in params_dict['Area_Params'].keys():
 
             #Initialize current area within cycle.
@@ -572,54 +684,63 @@ def stage_structured_cycle(params_dict, is_gendered, order, rec_dict, cycle_dict
             larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
 
             for i, stage in enumerate(order):
-               
                 #a = 0
                 if stage in first_stage:
-                    area_rec = larval_disp * total_recruits 
-                    
-                    num_indivs = calc_indiv_count(cycle_dict, migration_dict, area, stage, cycle)
-                    prob_surv_stay = calc_prob_surv_stay(params_dict, stage, area) 
-               
-                    cycle_dict[cycle][area][stage] = (num_indivs * prob_surv_stay) + area_rec
+                    area_rec = larval_disp * total_recruits
+
+                    num_indivs = calc_indiv_count(
+                        cycle_dict, migration_dict, area, stage, cycle)
+                    prob_surv_stay = calc_prob_surv_stay(
+                        params_dict, stage, area)
+
+                    cycle_dict[cycle][area][
+                        stage] = (num_indivs * prob_surv_stay) + area_rec
 
                 # 1 <= a
                 else:
-                    prev_stage = order[i-1] 
-                    
-                    prev_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, 
-                                                prev_stage, cycle)
-                    curr_num_indivs = \
-                        calc_indiv_count(cycle_dict, migration_dict, area, stage,
-                                            cycle)
-                    prob_surv_stay = calc_prob_surv_stay(params_dict, stage, area) 
-                    prob_surv_grow = calc_prob_surv_grow(params_dict, prev_stage, area)
+                    prev_stage = order[i-1]
 
-                    cycle_dict[cycle][area][stage] = (prev_num_indivs * prob_surv_grow) + \
-                                                    (curr_num_indivs * prob_surv_stay)
+                    prev_num_indivs = calc_indiv_count(
+                        cycle_dict, migration_dict, area, prev_stage, cycle)
+                    curr_num_indivs = calc_indiv_count(
+                        cycle_dict, migration_dict, area, stage, cycle)
+                    prob_surv_stay = calc_prob_surv_stay(
+                        params_dict, stage, area)
+                    prob_surv_grow = calc_prob_surv_grow(
+                        params_dict, prev_stage, area)
+
+                    cycle_dict[cycle][area][
+                        stage] = (prev_num_indivs * prob_surv_grow) + \
+                                 (curr_num_indivs * prob_surv_stay)
 
     print cycle_dict
 
+
 def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
-    '''Want to get the indiviual count for the previous cycle, including the 
+    '''Want to get the indiviual count for the previous cycle, including the
     amount of incoming migration.
-    
-    N{a} = (N{a-1,x,t} * Mig{stays X} + SUM{x!=x'}(N{a-1, x'} * Mig{a-1, x->x'})
-    
-    migration_dict(*)- Contains source/sink info for each age/stage
-        capable of migration. Outer key is source, inner is sink.
+
+    N{a} = (N{a-1,x,t} * Mig{stays X} +
+        SUM{x!=x'}(N{a-1, x'} * Mig{a-1, x->x'})
+
+    :param dictionary cycle_dict: contains all counts of individuals for
+        each combination of cycle, age/stage, and area.
+
+        {Cycle_#:
+            {'Area_1':
+                {'Age_A': 1000}
+            }
+        }
+
+    :param dictionary migration_dict:(*) contains source/sink info for each
+        age/stage capable of migration. Outer key is source, inner is sink.
 
         {'egg': {'1': {'1': 98.66, '2': 1.31, ...},
                 '2': {'1': 0.13, '2': 98.06, ...}
         }
-    cycle_dict- Contains all counts of individuals for each combination of 
-            cycle, age/stage, and area.
-            
-            {Cycle_#:
-                {'Area_1':
-                    {'Age_A': 1000}
-                }
-            }
+
+    :param string area:
+    :param string cycle:
     '''
     prev_indiv_in_area = cycle_dict[cycle-1][area][age]
     prev_mig_in_area = 1 if mig_dict == None or age not in mig_dict else mig_dict[age][area][area]
@@ -635,7 +756,7 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
     #Couldn't think of anything better to call this. Refers to x != x'
     for area_prime in cycle_dict[cycle].keys():
         if area_prime is not area:
-            prev_indivs_prime =  cycle_dict[cycle-1][area_prime][age]
+            prev_indivs_prime = cycle_dict[cycle-1][area_prime][age]
 
             if mig_dict is not None and age in mig_dict:
                 mig_prime_to_area = mig_dict[age][area_prime][area]
@@ -644,16 +765,33 @@ def calc_indiv_count(cycle_dict, mig_dict, area, age, cycle):
 
             inc_prime = prev_indivs_prime * mig_prime_to_area
             incoming_pop += inc_prime
-    
-    LOGGER.debug("Cycle: %s, Area: %s, Age: %s, Orig: %s, New: %s" % (cycle, area, age, indivs_in_area, incoming_pop)) 
+
+    LOGGER.debug("Cycle: %s, Area: %s, Age: %s, Orig: %s, New: %s" % (
+        cycle, area, age, indivs_in_area, incoming_pop))
     return indivs_in_area + incoming_pop
 
-def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, do_weight):
-    '''This is is the portion of the recruitment equiation which does not include
-    the larval dispersal. Since L_D is multiplied against everything else for
-    all recruitment equations, we can calculate a location independent portion
-    of recruitment first, then just multiply it against larval dispersal for
-    each area with the cycle.'''
+
+def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var,
+                         cycle, do_weight):
+    '''This is is the portion of the recruitment equiation which does not
+    include the larval dispersal. Since L_D is multiplied against everything
+    else for all recruitment equations, we can calculate a location
+    independent portion of recruitment first, then just multiply it against
+    larval dispersal for each area with the cycle.
+
+    Inputs:
+        :param dictionary cycle_dict:
+        :param dictionary params_dict:
+        :param dictionary rec_dict:
+        :param int gender_var: 1 if gender neutral, 2 if gender specific
+        :param int cycle:
+        :param boolean do_weight:
+
+    Returns:
+        :return: rec
+        :rtype: float?
+
+    '''
 
     #We know there's only the one key, value pair within the dictionary.
     rec_eq, add_info = next(rec_dict.iteritems())
@@ -666,12 +804,13 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
     #Now, run equation for each of the recruitment equation possibilities.
     if rec_eq == 'Beverton-Holt':
         rec = add_info['alpha'] * spawners / \
-                    (add_info['beta'] + spawners) / gender_var
+            (add_info['beta'] + spawners) / gender_var
     elif rec_eq == 'Ricker':
         rec = add_info['alpha'] * spawners * \
-                    (cmath.e ** (-add_info['beta']*spawners)) / gender_var
+            (cmath.e ** (-add_info['beta']*spawners)) / gender_var
     elif rec_eq == 'Fecundity':
-        summed_fec = calc_fecundity_value(cycle_dict, params_dict, add_info, cycle-1)
+        summed_fec = calc_fecundity_value(
+            cycle_dict, params_dict, add_info, cycle-1)
         rec = summed_fec / gender_var
     elif rec_eq == 'Fixed':
         #In this case, add_info is a fixed recruitment
@@ -679,19 +818,30 @@ def area_indifferent_rec(cycle_dict, params_dict, rec_dict, gender_var, cycle, d
 
     return rec
 
+
 def calc_fecundity_value(cycle_dict, params_dict, fec_dict, prev_cycle):
-    '''Want to get the sum of the previous indivual numbers, multiplied
-    against the maturity, and the fecundity. The equation should be 
+    '''Want to get the sum of the previous individual numbers, multiplied
+    against the maturity, and the fecundity. The equation should be
     SUM( N{a,s,x,t-1} * Maturity{a,s} * Fec{a,s} )
-    
-    cycle_dict- Contains all counts of individuals for each combination of 
-                cycle, age/stage, and area.
-                
-                {Cycle_#:
+
+    Inputs:
+        :param dictionary cycle_dict: contains all counts of individuals for
+            each combination of cycle, age/stage, and area.
+
+            {Cycle_#:
                     {'Area_1':
                         {'Age_A': 1000}
                     }
             }
+
+        :param dictionary params_dict:
+        :param dictionary fec_dict:
+        :param int prev_cycle:
+
+    Outputs:
+        :return: summed_fec
+        :rtype: int?
+
     '''
     summed_fec = 0
 
@@ -705,9 +855,21 @@ def calc_fecundity_value(cycle_dict, params_dict, fec_dict, prev_cycle):
 
     return summed_fec
 
+
 def spawner_count(cycle_dict, params_dict, cycle, do_weight):
     '''For a given cycle, does a SUMPRODUCT of the individuals and the maturity
-    for a given pairing of age, area.'''
+    for a given pairing of age, area.
+
+    Inputs:
+        :param dictionary cycle_dict:
+        :param dictionary params_dict:
+        :param int cycle:
+        :param boolean do_weight:
+
+    Outputs:
+        :return: spawner_sum
+        :rtype: int?
+    '''
 
     spawner_sum = 0
 
@@ -722,34 +884,38 @@ def spawner_count(cycle_dict, params_dict, cycle, do_weight):
 
     return spawner_sum
 
-def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits, 
-                    cycle_dict):
+
+def initialize_pop(maturity_type, params_dict, order, is_gendered,
+                   init_recruits, cycle_dict):
     '''Set the initial population numbers within cycling dictionary.
 
     Input:
-        maturity_type- String specifying whether the model is age-specific or
-            stage-specific. Options will be either "Age Specific" or
-            "Stage Specific" and will change which equation is used in modeling
-            growth.
-        params_dict- Dictionary containing all information from the csv file.
-            Contains  age/stage specific information, as well as area-specific
-            information.
-        ordered_stages- A list containing all the ages/stages that are being
-            used within this run of the model, in the order in which they
-            should occur naturally.
-        init_recruits- Int which represents the initial number of recruits that
-            will be used in calculation of population on a per area basis. 
-        cycle_dict- Contains all counts of individuals for each combination of 
-            cycle, age/stage, and area.
-            
+        :param string maturity_type: String specifying whether the model is
+            age-specific or stage-specific. Options will be either "Age
+            Specific" or "Stage Specific" and will change which equation is
+            used in modeling growth.
+        :param dictionary params_dict: Dictionary containing all information
+            from the csv file. Contains  age/stage specific information, as
+            well as area-specific information.
+        :param list ordered_stages: A list containing all the ages/stages that
+            are being used within this run of the model, in the order in which
+            they should occur naturally.
+        :param int init_recruits: Int which represents the initial number of
+            recruits that will be used in calculation of population on a per
+            area basis.
+        :param dictionary cycle_dict: Contains all counts of individuals for
+            each combination of cycle, age/stage, and area.
+
             {Cycle_#:
                 {'Area_1':
                     {'Age_A': 1000}
                 }
             }
-        Returns:
-            Modified version of cycle_dict which contains initial pop counts by
-            area and age group.
+
+    Returns:
+        :return: cycle_dict - modified version of cycle_dict which contains
+            initial pop counts by area and age group.
+        :rtype: dictionary
     '''
     #Since we know this is the initialization cycle.
     cycle_dict[0] = {}
@@ -758,7 +924,7 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     #Need to know if we're using gendered ages, b/c it changes the age
     #specific initialization equation. We need to know the two last stages
     #that we have to look out for to switch the EQ that we use.
-    if is_gendered == True:
+    if is_gendered is True:
         first_stage = [order[0], order[len(order)/2]]
         final_stage = [order[len(order)/2-1], order[len(order)-1]]
         #Want to make sure that the order we will use for later iteration does
@@ -768,22 +934,23 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
     else:
         first_stage = [order[0]]
         final_stage = [order[len(order)-1]]
-        #Want to remove the first age from the order through which we will cycle
+        #Want to remove the first age from the order through which we will
+        #cycle
         revised_order.pop(0)
 
     gender_var = 2 if is_gendered else 1
 
     if maturity_type == 'Stage Specific':
-        
+
         for area in params_dict['Area_Params'].keys():
 
             cycle_dict[0][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
-            
-            #The first stage should be set to the initial recruits equation, the
-            #rest should be 1.
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1
+
+            #The first stage should be set to the initial recruits equation,
+            #the rest should be 1.
             for stage in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
                 cycle_dict[0][area][stage] = initial_pop
@@ -792,39 +959,50 @@ def initialize_pop(maturity_type, params_dict, order, is_gendered, init_recruits
                 cycle_dict[0][area][stage] = 1
 
     elif maturity_type == 'Age Specific':
-       
         for area in params_dict['Area_Params'].keys():
 
             cycle_dict[0][area] = {}
 
             area_params = params_dict['Area_Params'][area]
-            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1 
+            larval_disp = area_params['larv_disp'] if 'larv_disp' in area_params else 1
 
             #For age = 0, count = init_recruits
             for age in first_stage:
                 initial_pop = init_recruits * larval_disp / gender_var
                 cycle_dict[0][area][age] = initial_pop
-            
+
             #For age = maxAge, count = (count{A-1} * SURV) / (1- SURV)
             for age in revised_order:
                 #Can use order to check previous, since we know we will not be
                 #getting the first of any age group.
                 prev_age = order[order.index(age)-1]
                 prev_count = cycle_dict[0][area][prev_age]
-                
+
                 prev_surv = calc_survival_mortal(params_dict, area, prev_age)
                 surv = calc_survival_mortal(params_dict, area, age)
 
                 if age in final_stage:
-                    count = (prev_count * prev_surv)/ (1- surv)
+                    count = (prev_count * prev_surv) / (1 - surv)
                 else:
                     count = prev_count * prev_surv
-                    #LOGGER.debug("For %s,%s we're using N=%s, Surv=%s" % (area, age, prev_count, prev_surv))
+                    #LOGGER.debug("For %s,%s we're using N=%s, Surv=%s" % (
+                        #area, age, prev_count, prev_surv))
 
                 cycle_dict[0][area][age] = count
 
+
 def calc_prob_surv_stay(params_dict, stage, area):
-    
+    '''
+
+    Inputs:
+        :param dictionary params_dict:
+        :param string stage:
+        :param string area:
+
+    Returns:
+        :return: prob
+        :rtype: float
+    '''
     surv = calc_survival_mortal(params_dict, area, stage)
     duration = params_dict['Stage_Params'][stage]['duration']
 
@@ -833,8 +1011,18 @@ def calc_prob_surv_stay(params_dict, stage, area):
 
     return numerator / denom
 
-def calc_prob_surv_grow(params_dict, stage, area):
 
+def calc_prob_surv_grow(params_dict, stage, area):
+    '''
+
+    Inputs:
+        :param dictionary params_dict:
+        :param string stage:
+        :param string area:
+    Returns:
+        :return: prob
+        :rtype: float
+    '''
     surv = calc_survival_mortal(params_dict, area, stage)
     duration = params_dict['Stage_Params'][stage]['duration']
 
@@ -843,17 +1031,19 @@ def calc_prob_surv_grow(params_dict, stage, area):
 
     return numerator / denom
 
+
 def calc_survival_mortal(params_dict, area, stage):
     '''Calculate survival from natural and fishing mortality
 
     Input:
-        params_dict- Dictionary which we will use to get survival values,
-            exploitation fraction, and vulnerability to fishing.
+        :param dictionary params_dict: Dictionary which we will use to get
+            survival values, exploitation fraction, and vulnerability to
+            fishing.
 
             {'Stage_Params':
                 {'Age_A':
                     {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
-                     'maturity': 0.0007, 'vulnfishing': 0.993, 
+                     'maturity': 0.0007, 'vulnfishing': 0.993,
                      'weight': 4.42, 'duration': 16},
                      ...
                 }
@@ -863,14 +1053,16 @@ def calc_survival_mortal(params_dict, area, stage):
                     ...
                 }
             }
-        area- A string that can be used to index into params_dict describing
-            the area that we are calculating for.
-        stage- A string that can be used to index into params_dict describing
-            the age/stage that we're calculating for.
+
+        :param string area: A string that can be used to index into
+            params_dict describing the area that we are calculating for.
+        :param string stage: A string that can be used to index into
+            params_dict describing the age/stage that we're calculating for.
 
     Returns:
-        The survival fraction, which is described by the equation
-        S = surv{a,s,x} * (1-exp{x} * vuln{a,s})
+        :return: surv_mort - The survival fraction, which is described by the
+            equation S = surv{a,s,x} * (1-exp{x} * vuln{a,s})
+        :rtype: float
     '''
 
     surv_frac = params_dict['Stage_Params'][stage]['survival'][area]
