@@ -39,6 +39,14 @@ def execute(args):
                 biophyscial table must have p fields in them.
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table must have n fields in them.
+            'subsurface_critical_length_n' - the subsurface flow critical length
+                for nitrogen
+            'subsurface_critical_length_p' - the subsurface flow critical length
+                for phosphorous
+            'subsurface_eff_n' - the maximum retention efficiency that soil can 
+                reach for nitrogen
+            'subsurface_eff_p' - the maximum retention efficiency that soil can
+                reach for phosphorous
             'results_suffix' - (optional) a text field to append to all output files.
             'accum_threshold' - a number representing the flow accumulation.
             '_prepare' - (optional) The preprocessed set of data created by the
