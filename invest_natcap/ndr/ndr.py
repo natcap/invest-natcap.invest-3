@@ -470,13 +470,16 @@ def execute(args):
 
         load_nodata = raster_utils.get_nodata_from_uri(load_uri[nutrient])
         export_nodata = -1.0
-        def calculate_export(load_array, ndr_array):
+        def calculate_export(load_array, ndr_array, load_subsurface_array, ndr_subsurface_array):
             return numpy.where(
-                (load_array == load_nodata) | (ndr_array == ndr_nodata),
-                export_nodata, load_array * ndr_array)
+                (load_array == load_nodata) | (ndr_array == ndr_nodata) |
+                (load_subsurface_array == load_nodata) | (ndr_subsurface_array == ndr_nodata),
+                export_nodata, load_array * ndr_array +
+                load_subsurface_array * ndr_subsurface_array)
 
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri],  calculate_export,
+            [load_uri[nutrient], ndr_uri, load_subsurface_uri[nutrient], ndr_subsurface_uri],
+            calculate_export,
             export_uri[nutrient], gdal.GDT_Float32,
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
