@@ -336,6 +336,14 @@ def execute(args):
     routing_cython_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
 
+    LOGGER.info('calculating downstream distance')
+    downstream_distance_uri = os.path.join(
+        intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, downstream_distance_uri)
+    downstream_distance_nodata = raster_utils.get_nodata_from_uri(
+        downstream_distance_uri)
+
     LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
     ic_nodata = -9999.0
@@ -448,12 +456,12 @@ def execute(args):
         subsurface_eff = float(args['subsurface_eff_' + nutrient])
         crit_subsurface_len = float(args['subsurface_critical_length_' + nutrient])
 
-        def calculate_subsurface_ndr(d_dn):
+        def calculate_subsurface_ndr(downstream_distance):
             return numpy.where(
-                (d_dn == d_dn_nodata), ndr_nodata,
-                1 - subsurface_eff * (1.0 - numpy.exp(-5 * d_dn / crit_subsurface_len)))
+                (downstream_distance == downstream_distance_nodata), ndr_nodata,
+                1 - subsurface_eff * (1.0 - numpy.exp(-5 * downstream_distance / crit_subsurface_len)))
         raster_utils.vectorize_datasets(
-            [d_dn_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
+            [downstream_distance_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
