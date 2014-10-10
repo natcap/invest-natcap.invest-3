@@ -70,6 +70,7 @@ def calculate_priority(table_uri):
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
     raster_utils.distance_transform_edt(dataset_in_uri, dataset_out_uri)
+    raster_utils.calculate_raster_stats_uri(dataset_out_uri)
 
 ##def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
 ##    if cell_size == None:
@@ -671,7 +672,7 @@ def execute(args):
         factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
 
-        if args["factor_inclusion"]:
+        if not args["factor_inclusion"]:
             option_list=["ALL_TOUCHED=TRUE"]
         else:
             option_list = ["ALL_TOUCHED=FALSE"]
@@ -710,10 +711,15 @@ def execute(args):
                     factor_uri_dict[(factor_stem, suitability_field_name, distance)] = ds_uri
 
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
+                    # For features with no area, it's (almost) impossible to
+                    # hit the center pixel, so we use ALL_TOUCHED=TRUE
+                    option_list=["ALL_TOUCHED=TRUE"]
                     distance = int(distance)
 
-                    ds_uri = raster_utils.temporary_filename()
-                    distance_uri = raster_utils.temporary_filename()
+                    #ds_uri = raster_utils.temporary_filename()
+                    #distance_uri = raster_utils.temporary_filename()
+                    ds_uri = os.path.join(workspace, suitability_name % (factor_stem, str(distance) + '_raw_raster'))
+                    distance_uri = os.path.join(workspace, suitability_name % (factor_stem, str(distance) + '_raw_distance'))
                     fdistance_uri = os.path.join(workspace, suitability_name % (factor_stem, distance))
                     normalized_uri = os.path.join(workspace, normalized_name % (factor_stem, distance))
 
