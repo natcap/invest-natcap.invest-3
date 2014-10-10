@@ -74,7 +74,7 @@ def execute(args):
 
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
+            (lu_parameter_row, ['load_', 'eff_', 'crit_len_', 'load_subsurface_'],
              args['biophysical_table_uri']))
 
         missing_headers = []
@@ -183,6 +183,7 @@ def execute(args):
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
+    load_subsurface_uri = {}
     eff_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
@@ -191,13 +192,20 @@ def execute(args):
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
+
+        load_subsurface_uri[nutrient] = os.path.join(
+            intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
+        raster_utils.vectorize_datasets(
+            [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
+            load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection", vectorize_op=False)
+
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
-
 
     field_summaries = {}
     field_header_order = []
