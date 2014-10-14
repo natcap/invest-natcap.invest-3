@@ -75,7 +75,7 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
     # Convert to meters
     def pixel_to_meters_op(x):
         x[x != nodata] *= cell_size
-        
+
         return x
 
     cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
@@ -761,9 +761,7 @@ def execute(args):
                     calculate_distance_raster_uri(ds_uri, distance_uri)
 
                     def threshold(value):
-                        if value > distance:
-                            return transition_nodata
-                        return value
+                        return numpy.where(value > distance, transition_nodata, value)
 
                     raster_utils.vectorize_datasets([distance_uri],
                                                     threshold,
@@ -771,20 +769,20 @@ def execute(args):
                                                     raster_utils.get_datatype_from_uri(distance_uri),
                                                     transition_nodata,
                                                     cell_size,
-                                                    "union")
+                                                    "union",
+                                                    vectorize_op = False)
 
                     raster_utils.calculate_raster_stats_uri(fdistance_uri)
                     minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
 
                     def normalize_op(value):
-                        if value == transition_nodata:
-                            return suitability_nodata
-                        else:
-                            return ((distance_scale - 1) \
-                                   - (((value - minimum) \
-                                       / float(maximum - minimum)) \
-                                      * (distance_scale - 1))) \
-                                      + 1
+                        diff = float(maximum - minimum)
+
+                        return numpy.where(
+                            value == transition_nodata, 
+                            suitability_nodata,
+                            ((distance_scale - 1) - (((value - minimum) / \
+                                diff) * (distance_scale - 1))) + 1)
 
                     raster_utils.vectorize_datasets([fdistance_uri],
                                                     normalize_op,
@@ -792,7 +790,8 @@ def execute(args):
                                                     transition_type,
                                                     transition_nodata,
                                                     cell_size,
-                                                    "union")
+                                                    "union",
+                                                    vectorize_op = False)
 
                     factor_uri_dict[(factor_stem, suitability_field_name, distance)] = normalized_uri
 
@@ -819,7 +818,12 @@ def execute(args):
                 weights_list = [weight / total for weight in weights_list]
 
                 def weighted_op(*values):
-                    return sum([ v * w for v, w in zip(values, weights_list)])
+                    result = values[0] * weights_list[0]
+
+                    for v, w in zip(values[1:], weights_list[1:]):
+                        result += v * w
+
+                    return result
 
                 raster_utils.vectorize_datasets(list(uri_list),
                                                 weighted_op,
@@ -827,7 +831,8 @@ def execute(args):
                                                 suitability_type,
                                                 transition_nodata,
                                                 cell_size,
-                                                "union")
+                                                "union",
+                                                vectorize_op = False)
 
                 suitability_factors_dict[cover_id] = ds_uri
             else:
@@ -1135,7 +1140,6 @@ def execute(args):
                 assert pixels_to_change[0].size == patch_sizes[label-1]
 
                 if patch_sizes[label-1] + pixels_changed > count:
-                    LOGGER.debug("Converting part of patch %i.", patch_label_count - l)
 
                     #mask out everything except the current patch
                     #patch = numpy.where(label_im == label)
@@ -1175,7 +1179,6 @@ def execute(args):
                     break
 
                 else:
-                    LOGGER.debug("Converting patch %i.", patch_label_count - l)
                     #convert patch, increase count of changes
                     target[pixels_to_change] = cover_id
                     pixels_changed += patch_sizes[label-1]
