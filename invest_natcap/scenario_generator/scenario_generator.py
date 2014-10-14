@@ -69,7 +69,42 @@ def calculate_priority(table_uri):
     return dict(zip(cover_id_list, calculate_weights(matrix, 4)))
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
+    # Compute pixel distance
     raster_utils.distance_transform_edt(dataset_in_uri, dataset_out_uri)
+    
+    # Convert to meters
+    def pixel_to_meters_op(x):
+        x[x != nodata] *= cell_size
+        
+        return x
+
+    cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+    nodata = raster_utils.get_nodata_from_uri(dataset_out_uri)
+    tmp = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+        [dataset_out_uri], \
+        pixel_to_meters_op, \
+        tmp, \
+        gdal.GDT_Float64, \
+        nodata, \
+        cell_size, \
+        'union', \
+        vectorize_op = False)
+    
+    def identity_op(x):
+        return x
+
+    raster_utils.vectorize_datasets(
+        [tmp], \
+        identity_op, \
+        dataset_out_uri, \
+        gdal.GDT_Float64, \
+        nodata, \
+        cell_size, \
+        'union', \
+        vectorize_op = False)
+
+    # Compute raster stats so the raster is viewable in QGIS and Arc
     raster_utils.calculate_raster_stats_uri(dataset_out_uri)
 
 ##def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
