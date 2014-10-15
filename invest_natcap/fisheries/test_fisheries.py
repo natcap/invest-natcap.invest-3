@@ -4,6 +4,7 @@ import os
 from numpy import testing
 
 import fisheries
+import fisheries_io
 
 data_directory = '../../test/invest-data/Fisheries/'
 

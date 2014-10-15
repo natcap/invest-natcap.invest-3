@@ -32,14 +32,14 @@
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
-                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘name’ attribute. The 'name' attribute can be numeric or alphabetic, but must be unique within the given file.<br><br>[ May be cleaner to force numbered ages/stages ]"
+                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘name’ attribute. The 'name' attribute can be numeric or alphabetic, but must be unique within the given file."
                 },
                 {
                     "id" : "total_timesteps",
                     "args_id" : "total_timesteps",
                     "type": "text",
                     "dataType": "int",
-                    "label": "Number of Simulation Timesteps",
+                    "label": "Number of Timesteps for Model Run",
                     "validateAs": {"type": "number"},
                     "defaultValue": "100",
                     "required": true,
@@ -135,7 +135,7 @@
                             "options" : ["Individuals", "Weight"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Parameters CSV file. The alpha and beta parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+                            "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Parameters CSV file. The 'Alpha' and 'Beta' parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
                         },
                         {
                             "id" : "alpha",
@@ -219,7 +219,7 @@
                             "options" : ["Individuals", "Weight"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
+                            "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
                         },
                         {
                             "id" : "frac_post_process",
