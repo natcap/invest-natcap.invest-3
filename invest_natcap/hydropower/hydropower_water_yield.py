@@ -72,9 +72,6 @@ def execute(args):
             showing consumptive water use for each landuse / land-cover type
             (cubic meters per year) (required for water scarcity)
 
-        args['hydro_calibration_table_uri'] - a  uri to an input CSV table of
-            hydropower stations with associated calibration values (required)
-
         args['valuation_table_uri'] - a uri to an input CSV table of
             hydropower stations with the following fields (required for
             valuation):
@@ -92,17 +89,30 @@ def execute(args):
     raster_utils.create_directories([
         workspace, output_dir, per_pixel_output_dir])
 
-    # Get inputs from the args dictionary
     clipped_lulc_uri = raster_utils.temporary_filename()
-    raster_utils.clip_dataset_uri(
-        args['lulc_uri'], args['watersheds_uri'], clipped_lulc_uri, True)
-
-    eto_uri = args['eto_uri']
-    precip_uri = args['precipitation_uri']
-    depth_to_root_rest_layer_uri = args['depth_to_root_rest_layer_uri']
-    pawc_uri = args['pawc_uri']
-    seasonality_constant = float(args['seasonality_constant'])
+    eto_uri = raster_utils.temporary_filename()
+    precip_uri = raster_utils.temporary_filename()
+    depth_to_root_rest_layer_uri = raster_utils.temporary_filename()
+    pawc_uri = raster_utils.temporary_filename()
+    
     sheds_uri = args['watersheds_uri']
+    seasonality_constant = float(args['seasonality_constant'])
+
+    original_raster_uris = [
+        args['eto_uri'], args['precipitation_uri'],
+        args['depth_to_root_rest_layer_uri'], args['pawc_uri'],
+        args['lulc_uri']]
+
+    aligned_raster_uris = [
+        eto_uri, precip_uri, depth_to_root_rest_layer_uri, pawc_uri,
+        clipped_lulc_uri]
+
+    pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_uri'])
+    raster_utils.align_dataset_list(
+        original_raster_uris, aligned_raster_uris,
+        ['nearest'] * len(original_raster_uris),
+        pixel_size_out, 'intersection', 4,
+        aoi_uri=sheds_uri)
 
     sub_sheds_uri = None
     # If subwatersheds was input get the URI
@@ -169,7 +179,7 @@ def execute(args):
     tmp_Kc_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Create root raster from table values to use in future calculations
@@ -177,7 +187,7 @@ def execute(args):
     tmp_root_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Create veg raster from table values to use in future calculations
@@ -186,7 +196,7 @@ def execute(args):
     tmp_veg_raster_uri = raster_utils.temporary_filename()
 
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Get out_nodata values so that we can avoid any issues when running
@@ -232,7 +242,7 @@ def execute(args):
 
     LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
-            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
+            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float64,
             out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
             vectorize_op=False)
 
@@ -317,7 +327,7 @@ def execute(args):
     # Create clipped fractp_clipped raster
     LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
-        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float32,
+        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float64,
         out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
         vectorize_op=False)
 
@@ -336,7 +346,7 @@ def execute(args):
     # Create clipped wyield_clipped raster
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri, vectorize_op=False)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
@@ -372,7 +382,7 @@ def execute(args):
     # Create clipped aet raster
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
+            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri, vectorize_op=False)
 
     # Get the area of the pixel to use in later calculations for volume
@@ -506,25 +516,11 @@ def execute(args):
     LOGGER.debug('Demand_Dict : %s', demand_dict)
     demand_table_file.close()
 
-    # Open/read in the calibration csv file into a dictionary
-    calib_dict = {}
-    hydro_cal_table_file = open(args['hydro_calibration_table_uri'], 'rU')
-    reader = csv.DictReader(hydro_cal_table_file)
-    for row in reader:
-        calib_dict[int(row['ws_id'])] = float(row['calib'])
-
-    LOGGER.debug('Calib_Dict : %s', calib_dict)
-    hydro_cal_table_file.close()
-
-    # Calculate the calibrated water yield for sheds
-    LOGGER.debug('Calculating CYIELD')
-    calculate_cyield_vol(watershed_results_uri, calib_dict)
-
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
     tmp_demand_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset_uri(
-            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float64,
             out_nodata)
 
     # Aggregate the consumption volume over sheds using the
@@ -550,7 +546,7 @@ def execute(args):
 
     # List of wanted fields to output in the watershed CSV table
     scarcity_field_list_ws = [
-            'ws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 'rsupply_vl',
+            'ws_id', 'consum_vol', 'consum_mn', 'rsupply_vl',
             'rsupply_mn']
 
     # Aggregate water yield and water scarcity fields, where we exclude the
@@ -566,6 +562,14 @@ def execute(args):
     #Don't need this anymore
     os.remove(tmp_demand_uri)
     os.remove(clipped_lulc_uri)
+
+    for raster_uri in aligned_raster_uris:
+        try:
+            os.remove(raster_uri)
+        except OSError:
+            #might have deleted earlier
+            pass
+
 
     # Check to see if Valuation was selected to run
     valuation_checked = args.pop('valuation_container', False)
@@ -708,15 +712,16 @@ def compute_rsupply_volume(watershed_results_uri):
         wyield_mn = ws_feat.GetField(wyield_mn_id)
 
         # Get water demand/consumption values
-        cyield_id = ws_feat.GetFieldIndex('cyield_vol')
-        cyield = ws_feat.GetField(cyield_id)
+        wyield_id = ws_feat.GetFieldIndex('wyield_vol')
+        wyield = ws_feat.GetField(wyield_id)
+
         consump_vol_id = ws_feat.GetFieldIndex('consum_vol')
         consump_vol = ws_feat.GetField(consump_vol_id)
         consump_mn_id = ws_feat.GetFieldIndex('consum_mn')
         consump_mn = ws_feat.GetField(consump_mn_id)
 
         # Calculate realized supply
-        rsupply_vol = cyield - consump_vol
+        rsupply_vol = wyield - consump_vol
         rsupply_mn = wyield_mn - consump_mn
 
         # Get the indices for the output fields and set their values
@@ -724,48 +729,6 @@ def compute_rsupply_volume(watershed_results_uri):
         ws_feat.SetField(rsupply_vol_index, rsupply_vol)
         rsupply_mn_index = ws_feat.GetFieldIndex(rsupply_mn_name)
         ws_feat.SetField(rsupply_mn_index, rsupply_mn)
-
-        ws_layer.SetFeature(ws_feat)
-
-def calculate_cyield_vol(watershed_uri, calib_dict):
-    """Calculate the calibrated water yield volume for per watershed
-
-        watershed_uri - a URI path to an OGR shapefile that has water yield
-            values
-
-        calib_dict - a python dictionary that has the calibrated values for the
-            sheds
-
-        returns nothing"""
-
-    ws_ds = ogr.Open(watershed_uri, 1)
-    ws_layer = ws_ds.GetLayer()
-
-    # The field names for the new attributes
-    cyield_name = 'cyield_vol'
-
-    # Add the new fields to the shapefile
-    field_defn = ogr.FieldDefn(cyield_name, ogr.OFTReal)
-    ws_layer.CreateField(field_defn)
-
-    num_features = ws_layer.GetFeatureCount()
-    # Iterate over the number of features (polygons)
-    for feat_id in xrange(num_features):
-        ws_feat = ws_layer.GetFeature(feat_id)
-        # Get the water yield volume
-        wyield_vol_id = ws_feat.GetFieldIndex('wyield_vol')
-        wyield_vol = ws_feat.GetField(wyield_vol_id)
-
-        # Get the watershed ID
-        ws_id_index = ws_feat.GetFieldIndex('ws_id')
-        ws_id = ws_feat.GetField(ws_id_index)
-
-        # Calculate calibrated water yield
-        cyield_vol = wyield_vol * calib_dict[ws_id]
-
-        # Add calibrated water yield to feature
-        cyield_id = ws_feat.GetFieldIndex('cyield_vol')
-        ws_feat.SetField(cyield_id, cyield_vol)
 
         ws_layer.SetFeature(ws_feat)
 

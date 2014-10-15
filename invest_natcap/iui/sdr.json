@@ -1,10 +1,10 @@
 {
     "id" : "window",
-    "label": "Sediment Delivery Model (SDR)",
+    "label": "Sediment Delivery Ratio Model (SDR)",
     "targetScript" : "invest_natcap.sdr.sdr",
     "modelName" : "sdr",
     "localDocURI": "../documentation/sediment_retention.html",
-    "height": 700,
+    "height": 575,
     "width" : 700,
     "elements": [
         {
@@ -25,7 +25,6 @@
                     "args_id" : "suffix",
                     "type": "text",
                     "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
@@ -104,7 +103,7 @@
 		    "id" : "threshold_flow_accumulation",
 		    "args_id" : "threshold_flow_accumulation",
 		    "type": "text",
-		    "label": "Threshold Flow Accumluation",
+		    "label": "Threshold Flow Accumulation",
 		    "defaultValue": "1000",
 		    "required": true,
 		    "validText": "^[0-9]+$",

@@ -7,6 +7,7 @@
     "condenseElements" : true,
     "height": 800,
     "width" : 700,
+    "include_meta": true,
     "elements": [
                     {
                         "id": "objectiveTabGroup",
@@ -38,43 +39,13 @@
                                                                         "helpText": "Select a folder to be used as your workspace."
                                                                     },
                                                                     {
-                                                                        "id" : "use_crop_map",
-                                                                        "args_id": "use_crop_map",
-                                                                        "type" : "checkbox",
-                                                                        "label" : "Use crop map",
-                                                                        "defaultValue" : true,
-                                                                        "required" : false
-                                                                    },
-                                                                    {
-                                                                        "id" : "area_of_interest",
-                                                                        "args_id" : "area_of_interest",
-                                                                        "type": "file",
-                                                                        "label": "Area of interest",
-                                                                        "defaultValue": "",
-                                                                        "validateAs": {"type": "OGR"},
-                                                                        "required": true,
-                                                                        "disabledBy" : "use_crop_map"
-                                                                    },
-                                                                    {
-                                                                        "id" : "cell_size",
-                                                                        "args_id" : "cell_size",
-                                                                        "type": "text",
-                                                                        "label": "Cell size",
-                                                                        "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                                                        "dataType": "float",
-                                                                        "required": true,
-                                                                        "disabledBy" : "use_crop_map",
-                                                                        "helpText": ""
-                                                                    },
-                                                                    {
                                                                         "id" : "crop_file_name",
                                                                         "args_id" : "crop_file_name",
                                                                         "type": "file",
                                                                         "label": "Crop Map",
-                                                                        "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/w001001.adf",
+                                                                        "defaultValue": "../CropProduction/input/lulc_samp_cur.tif",
                                                                         "validateAs": {"type": "GDAL"},
-                                                                        "required": true,
-                                                                        "enabledBy" : "use_crop_map"
+                                                                        "required": true
                                                                     },
                                                                     {
                                                                         "id" : "reclass_table",
@@ -83,8 +54,7 @@
                                                                         "label": "Crop Reclass Table",
                                                                         "defaultValue": "../CropProduction/input/reclass_table.csv",
                                                                         "validateAs": {"type": "CSV"},
-                                                                        "required": true,
-                                                                        "enabledBy" : "use_crop_map"
+                                                                        "required": true
                                                                     },
                                                                     {
                                                                         "id": "enable_tab_existing",
@@ -174,7 +144,7 @@
                                                                                 "id": "valuation_table",
                                                                                 "args_id" : "valuation_table",
                                                                                 "type": "file",
-                                                                                "label": "Valuation CSV",
+                                                                                "label": "Economic value",
                                                                                 "defaultValue" : "../CropProduction/input/Agcost_data_Data.csv",
                                                                                 "validateAs": {"type": "CSV"},
                                                                                 "required" : true,
@@ -184,7 +154,7 @@
                                                                                 "id" : "field_machine",
                                                                                 "args_id" : "field_machine",
                                                                                 "type" : "dropdown",
-                                                                                "label" : "Machine field",
+                                                                                "label" : "Machine cost",
                                                                                 "options" : ["low_mach",
                                                                                              "actual_mach",
                                                                                              "high_mach"],
@@ -196,7 +166,7 @@
                                                                                 "id" : "field_seed",
                                                                                 "args_id" : "field_seed",
                                                                                 "type" : "dropdown",
-                                                                                "label" : "Seed field",
+                                                                                "label" : "Seed cost",
                                                                                 "options" : ["low_seed",
                                                                                              "actual_seed",
                                                                                              "high_seed"],
@@ -229,14 +199,14 @@
                                             },
             			    {
                 				"id" : "valuation_tab",
-				                "label" : "Valuation",
+				                "label" : "Economic Value",
 				                "type" : "tab",
 				                "enabledBy" : "calculate_valuation",
 				                "elements" : [
                                                                     {
                                                                         "id" : "valuation_override_quantities",
                                                                         "args_id" : "valuation_override_quantities",
-                                                                        "label" : "Override quantities",
+                                                                        "label" : "Use spatially explicit quantities",
                                                                         "type" : "container",
                                                                         "collapsible" : true,
                                                                         "helpText" : "",
@@ -288,7 +258,7 @@
                                                 {
                                                     "id" : "valuation_override_prices",
                                                     "args_id" : "valuation_override_prices",
-                                                    "label" : "Override prices",
+                                                    "label" : "Use spatially explicit prices",
                                                     "type" : "container",
                                                     "collapsible" : true,
                                                     "helpText" : "",
@@ -325,7 +295,34 @@
                                                                                             "defaultValue" : "",
                                                                                             "validateAs": {"type": "GDAL"},
                                                                                             "required": false
-                                                                                        }
+                                                                                        },
+                                                                                        {
+                                                                                            "id" : "nitrogen_price_uri",
+                                                                                            "args_id": "nitrogen_price_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Nitrogen price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        },
+                                                                                        {
+                                                                                            "id" : "phosphorus_price_uri",
+                                                                                            "args_id": "phosphorus_price_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Phosphorus price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        },
+                                                                                        {
+                                                                                            "id" : "potasssium_price_uri",
+                                                                                            "args_id": "potassium_price_uri",
+                                                                                            "type": "file",
+                                                                                            "label" : "Potassium price raster",
+                                                                                            "defaultValue" : "",
+                                                                                            "validateAs": {"type": "GDAL"},
+                                                                                            "required": false
+                                                                                        }                                                                                        
                                                                                 ]
                                                                             }
                                                                         ]
@@ -336,10 +333,16 @@
 
                             {
                                 "id": "nutrition_tab",
-                                "label" : "Nutrition",
+                                "label" : "Nutrition Value",
                                 "type" : "tab",
                                 "enabledBy" : "calculate_nutrition",
                                 "elements" : [
+                                                {                                  
+                                                    "id":"nutrition_rasters",
+                                                    "label": "<b>Enable the nutrients of study and provided spatially explicit data if desired.</b>",
+                                                    "type": "label",
+                                                    "helpText": ""
+                                                },
 						{
 					            "id" : "hideableFileEntry_list",
 						    "args_id" : "hideableFileEntry_list",
