@@ -39,6 +39,14 @@ def execute(args):
                 biophyscial table must have p fields in them.
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table must have n fields in them.
+            'subsurface_critical_length_n' - the subsurface flow critical length
+                for nitrogen
+            'subsurface_critical_length_p' - the subsurface flow critical length
+                for phosphorous
+            'subsurface_eff_n' - the maximum retention efficiency that soil can
+                reach for nitrogen
+            'subsurface_eff_p' - the maximum retention efficiency that soil can
+                reach for phosphorous
             'results_suffix' - (optional) a text field to append to all output files.
             'accum_threshold' - a number representing the flow accumulation.
             '_prepare' - (optional) The preprocessed set of data created by the
@@ -66,7 +74,7 @@ def execute(args):
 
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
+            (lu_parameter_row, ['load_', 'eff_', 'crit_len_', 'load_subsurface_'],
              args['biophysical_table_uri']))
 
         missing_headers = []
@@ -175,6 +183,7 @@ def execute(args):
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
+    load_subsurface_uri = {}
     eff_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
@@ -183,13 +192,20 @@ def execute(args):
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
+
+        load_subsurface_uri[nutrient] = os.path.join(
+            intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
+        raster_utils.vectorize_datasets(
+            [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
+            load_subsurface_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection", vectorize_op=False)
+
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
-
 
     field_summaries = {}
     field_header_order = []
@@ -254,7 +270,8 @@ def execute(args):
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
-        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
+            (thresholded_w_factor_uri, w_accumulation_uri),
+            (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         routing_utils.route_flux(
             flow_direction_uri, dem_offset_uri, factor_uri,
@@ -268,8 +285,8 @@ def execute(args):
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
     for bar_nodata, accumulation_uri, bar_uri in [
-        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
-        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+            (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+            (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         def bar_op(base_accumulation, flow_accumulation):
             return numpy.where(
@@ -320,6 +337,14 @@ def execute(args):
     routing_cython_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
 
+    LOGGER.info('calculating downstream distance')
+    downstream_distance_uri = os.path.join(
+        intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, downstream_distance_uri)
+    downstream_distance_nodata = raster_utils.get_nodata_from_uri(
+        downstream_distance_uri)
+
     LOGGER.info('calculate ic')
     ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
     ic_nodata = -9999.0
@@ -334,7 +359,7 @@ def execute(args):
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-    ic_min, ic_max, ic_mean, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
+    ic_min, ic_max, _, _ = raster_utils.get_statistics_from_uri(ic_factor_uri)
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
 
@@ -425,23 +450,42 @@ def execute(args):
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
+        LOGGER.info('calculate subsurface NDR')
+        ndr_subsurface_uri = os.path.join(
+            intermediate_dir, 'ndr_subsurface_%s%s.tif' % (nutrient, file_suffix))
+
+        subsurface_eff = float(args['subsurface_eff_' + nutrient])
+        crit_subsurface_len = float(args['subsurface_critical_length_' + nutrient])
+
+        def calculate_subsurface_ndr(downstream_distance):
+            return numpy.where(
+                (downstream_distance == downstream_distance_nodata), ndr_nodata,
+                1 - subsurface_eff * (1.0 - numpy.exp(-5 * downstream_distance / crit_subsurface_len)))
+        raster_utils.vectorize_datasets(
+            [downstream_distance_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
+            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
+
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
 
         load_nodata = raster_utils.get_nodata_from_uri(load_uri[nutrient])
         export_nodata = -1.0
-        def calculate_export(load_array, ndr_array):
+        def calculate_export(load_array, ndr_array, load_subsurface_array, ndr_subsurface_array):
             return numpy.where(
-                (load_array == load_nodata) | (ndr_array == ndr_nodata),
-                export_nodata, load_array * ndr_array)
+                (load_array == load_nodata) | (ndr_array == ndr_nodata) |
+                (load_subsurface_array == load_nodata) | (ndr_subsurface_array == ndr_nodata),
+                export_nodata, load_array * ndr_array +
+                load_subsurface_array * ndr_subsurface_array)
 
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri],  calculate_export,
+            [load_uri[nutrient], ndr_uri, load_subsurface_uri[nutrient], ndr_subsurface_uri],
+            calculate_export,
             export_uri[nutrient], gdal.GDT_Float32,
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
         #Summarize the results in terms of watershed:
-        LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
+        LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_tot = raster_utils.aggregate_raster_values_uri(
             load_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         export_tot = raster_utils.aggregate_raster_values_uri(
@@ -450,7 +494,7 @@ def execute(args):
         field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_load_tot', '%s_exp_tot']) + field_header_order)
+            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] + field_header_order)
 
     LOGGER.info('Writing summaries to output shapefile')
     add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
@@ -462,9 +506,8 @@ def execute(args):
         os.remove(uri)
 
 
-
-def add_fields_to_shapefile(key_field, field_summaries, output_layer,
-    field_header_order=None):
+def add_fields_to_shapefile(
+        key_field, field_summaries, output_layer, field_header_order=None):
     """Adds fields and their values indexed by key fields to an OGR
         layer open for writing.
 
@@ -497,7 +540,7 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
                 feature.SetField(
                     field_name, float(field_summaries[field_name][ws_id]))
             except KeyError:
-                LOGGER.warning('unknown field %s' % field_name)
+                LOGGER.warning('unknown field %s', field_name)
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
         output_layer.SetFeature(feature)
