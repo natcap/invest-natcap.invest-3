@@ -12,211 +12,225 @@
             "type": "list",
             "elements":[
                 {
-                    "id" : "workspace",
+                    "id" : "workspace_dir",
                     "args_id" : "workspace_dir",
                     "type": "folder",
-                    "label": "Workspace",
+                    "label": "Workspace Folder",
                     "defaultValue": "../Fisheries",
                     "required": true,
                     "validateAs": {"type": "folder"},
-                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                    "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {
                     "id" : "aoi",
                     "args_id" : "aoi_uri",
                     "type": "file",
-                    "label": "Area(s) of Interest",
+                    "label": "Area(s) of Interest (SHP)",
                     "required": true,
                     "defaultValue": "../Fisheries/Input/Lob_Belize_Subregions.shp",
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
-                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. The name can be numeric or alphabetic, but must be unique within the file."
+                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘name’ attribute. The 'name' attribute can be numeric or alphabetic, but must be unique within the given file.<br><br>[ May be cleaner to force numbered ages/stages ]"
                 },
                 {
-                    "id" : "param_csv",
-                    "args_id" : "class_params_uri",
-                    "type": "file",
-                    "label": "Parameters for Age Classes and Area(s)",
-                    "defaultValue": "../Fisheries/Input/caribbean_spiny_lobster_main_params.csv",
-                    "required": true,
-                    "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
-                },
-                {
-                    "id" : "maturity_type",
-                    "args_id" : "maturity_type",
-                    "type": "dropdown",
-                    "label": "Maturity Type",
-                    "defaultValue": "Age Specific",
-                    "required": true,
-                    "options" : ["Age Specific", "Stage Specific"],
-                    "returns": "strings",
-                    "dataType": "string",
-                    "helpText": "This dropdown specifies whether the classes being input within the parameters CSV is classified into maturity classes by age or stage. Age specific models (ex: lobster, Dungeness crab) are separated by age in years in uniform time steps. Stage specific models (ex: shrimp) can have variable length time steps. Should Stage Specific time steps be chosen, there should be a column in the parameters CSV titled 'Duration' which will contain the number of time steps that each stage will last."
-                },
-                {
-                    "id" : "do_gender",
-                    "args_id" : "is_gendered",
-                    "type": "checkbox",
-                    "label": "Classes Are Sex-Specific?",
-                    "defaultValue": false,
-                    "required": true,
-                    "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
-                },
-                {
-                    "id" : "harvest_type",
-                    "args_id" : "hrv_type",
-                    "type": "dropdown",
-                    "label": "Biomass and Harvest by Weight or Numbers?",
-                    "defaultValue": "Weight",
-                    "required": true,
-                    "options" : ["Numbers", "Weight"],
-                    "returns": "strings",
-                    "dataType": "string",
-                    "helpText": "This dropdown specifies whether the harvest numbers returned should be given in number of individuals harvested, or by the weight being harvested. If using the weight, there must be a corresponding 'weight' column in the CSV, with information about the weight of each maturity class."
-                },
-                {
-                    "id" : "sim_dur",
-                    "args_id" : "duration",
+                    "id" : "total_timesteps",
+                    "args_id" : "total_timesteps",
                     "type": "text",
                     "dataType": "int",
-                    "label": "Duration of Simulation (time steps)",
+                    "label": "Number of Simulation Timesteps",
                     "validateAs": {"type": "number"},
                     "defaultValue": "100",
                     "required": true,
-                    "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
-                } 
+                    "helpText": "The number of timesteps the simulation shall execute before completion.<br><br>Must be a positive integer."
+                }
             ]
         },
         {
-            "id": "p_cont",
-            "label": "Recruitment Parameters",
+            "id": "popu_cont",
+            "label": "Population Parameters",
             "type": "container",
             "elements":[
                 {
-                    "id": "params_list",
+                    "id": "popu_list",
                     "type": "list",
                     "elements": [
-                    {
-                        "id" : "rec_eq",
-                        "args_id" : "rec_eq",
-                        "type": "dropdown",
-                        "label": "Recruitment Equation",
-                        "defaultValue": "Beverton-Holt",
-                        "required": true,
-                        "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
-                        "returns": "strings",
-                        "dataType": "string",
-                        "helpText": "This equation will be used in order to model recruitment within each of the zones provided in the AOI URI shapefile. Each will require a different set of parameters. Beverton-Holt requires alpha and beta. Ricker requires alpha and beta. Fecundity requires one fecundity parameter for each age/stage being provided (within the input CSV). For fecundity, upload a CSV which correlates offspring produced for each age. (See sample data example.) Fixed requires only a single parameter representing a single number of recruits which will be applied to each area."
-                    },
-                    {
-                        "id" : "alpha",
-                        "args_id" : "alpha",
-                        "type": "text",
-                        "dataType": "float",
-                        "label": "Alpha (Beverton-Holt/Ricker)",
-                        "defaultValue": "5770000",
-                        "required": false,
-                        "validateAs": {"type": "number"},
-                        "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An alpha parameter should be entered here if you selected either of those two equations in the dropdown menu above."
-                    },
-                    {
-                        "id" : "beta",
-                        "args_id" : "beta",
-                        "type": "text",
-                        "dataType": "float",
-                        "label": "Beta (Beverton-Holt/Ricker)",
-                        "defaultValue": "2885000",
-                        "required": false,
-                        "validateAs": {"type": "number"},
-                        "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An beta parameter should be entered here if you selected either of those two equations in the dropdown menu above."
-                    },
-                    {
-                        "id" : "fec_csv",
-                        "args_id" : "fec_params_uri",
-                        "type": "file",
-                        "label": "Offspring per Age Class (Fecundity)",
-                        "required": false,
-                        "helpText": "This CSV file is required if the chosen recruitment equation is 'Fecundity.' It should contain numbers of potential offspring for each age class being included in the main parameters CSV."
-                    },
-                    {
-                        "id" : "fix_param",
-                        "args_id" : "fix_param",
-                        "type": "text",
-                        "dataType": "float",
-                        "label": "Number of Recruits (Fixed)",
-                        "required": false,
-                        "validateAs": {"type": "number"},
-                        "helpText": "This parameter is required if the recruitment equation is 'Fixed'. This number representes a single number of recruits that will be brought into all areas at each time step."
-                    }
+                        {
+                            "id" : "population_type",
+                            "args_id" : "population_type",
+                            "type": "dropdown",
+                            "label": "Population Model Type",
+                            "defaultValue": "Age-Based",
+                            "required": true,
+                            "options" : ["Age-Based", "Stage-Based"],
+                            "returns": "strings",
+                            "dataType": "string",
+                            "helpText": "Specifies whether the classes provided in the Population Parameters CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length timesteps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided timestep.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+                        },
+                        {
+                            "id" : "sexsp",
+                            "args_id" : "sexsp",
+                            "type": "dropdown",
+                            "label": "Population Classes are Sex-Specific",
+                            "defaultValue": "No",
+                            "required": true,
+                            "options": ["No", "Yes"],
+                            "returns": "strings",
+                            "dataType": "string",
+                            "helpText": "Specifies whether or not the population classes provided in the Populaton Parameters CSV file are distinguished by sex."
+                        },
+                        {
+                            "id" : "population_csv_uri",
+                            "args_id" : "population_csv_uri",
+                            "type": "file",
+                            "label": "Population Parameters File (CSV)",
+                            "defaultValue": "../Fisheries/Input/caribbean_spiny_lobster_main_params.csv",
+                            "required": true,
+                            "helpText": "The provided CSV file should contain all necessary parameters for population classes based on age/stage, sex, and area - excluding possible migration parameters.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+                        }
                     ]
                 }
             ]
         },
-        {    
-            "id" : "parameters_list",
-            "type": "list",
+        {
+            "id": "recr_cont",
+            "label": "Recruitment Parameters",
+            "type": "container",
             "elements":[
                 {
-                    "id" : "recruit_num",
-                    "args_id" : "init_recruits",
-                    "type": "text",
-                    "dataType": "float",
-                    "label": "Initial Number of Recruits",
-                    "required": true,
-                    "defaultValue": "4686959.42894736",
-                    "validateAs": {"type":"number"},
-                    "helpText": "The initial number of recruits that will be placed into the model. If there are multiple AOI zones, this initial number will be split equally amongst them."
+                    "id": "recr_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id" : "total_init_recruits",
+                            "args_id" : "total_init_recruits",
+                            "type": "text",
+                            "dataType": "float",
+                            "label": "Total Initial Recruits",
+                            "required": true,
+                            "defaultValue": "4686959.42894736",
+                            "validateAs": {"type":"number"},
+                            "helpText": "The initial number of recruits in the population model at time equal to zero.<br><br>If the model contains multiple regions of interest or is distinguished by sex, this value will be evenly divided and distributed into each sub-population."
+                        },
+                        {
+                            "id" : "recruitment_type",
+                            "args_id" : "recruitment_type",
+                            "type": "dropdown",
+                            "label": "Recruitment Function Type",
+                            "defaultValue": "Beverton-Holt",
+                            "required": true,
+                            "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
+                            "returns": "strings",
+                            "dataType": "string",
+                            "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each timestep. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Parameters CSV File indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Timestep’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
+                        },
+                        {
+                            "id" : "spawn_units",
+                            "args_id" : "spawn_units",
+                            "type": "dropdown",
+                            "label": "Spawners by Individuals or Weight",
+                            "defaultValue": "Weight",
+                            "required": true,
+                            "options" : ["Individuals", "Weight"],
+                            "returns": "strings",
+                            "dataType": "string",
+                            "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Parameters CSV file. The alpha and beta parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+                        },
+                        {
+                            "id" : "alpha",
+                            "args_id" : "alpha",
+                            "type": "text",
+                            "dataType": "float",
+                            "label": "Alpha (Beverton-Holt / Ricker)",
+                            "defaultValue": "5770000",
+                            "required": false,
+                            "validateAs": {"type": "number"},
+                            "helpText": "Specifies the maximum recruits per spawner at low spawner levels (i.e. the initial slope of the stock-recruit curve).<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+                        },
+                        {
+                            "id" : "beta",
+                            "args_id" : "beta",
+                            "type": "text",
+                            "dataType": "float",
+                            "label": "Beta (Beverton-Holt / Ricker)",
+                            "defaultValue": "2885000",
+                            "required": false,
+                            "validateAs": {"type": "number"},
+                            "helpText": "Specifies the rate of decline in recruits as there are more spawners (i.e. the degree to which the curve bends downwards as spawner abundance increases).<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+                        },
+                        {
+                            "id" : "total_recur_recruits",
+                            "args_id" : "total_recur_recruits",
+                            "type": "text",
+                            "dataType": "float",
+                            "label": "Total Recruits per Timestep (Fixed)",
+                            "required": false,
+                            "validateAs": {"type": "number"},
+                            "helpText": "Specifies the total number of recruits that come into the population at each time step (a fixed number).<br><br>Used only for the Fixed recruitment function."
+                        }
+                    ]
                 }
             ]
         },
         {
-            "id": "do_migration",
-            "label": "Migration",
+            "id": "migr_cont",
+            "label": "Migration Parameters",
             "type": "container",
             "defaultValue": true,
             "collapsible": true,
             "elements":[
                 {
-                    "id": "mig_list",
+                    "id": "migr_list",
                     "type": "list",
                     "elements": [
                         {
-                            "id" : "mig_csv",
-                            "args_id" : "mig_params_uri",
+                            "id" : "migration_dir",
+                            "args_id" : "migration_dir",
                             "type": "folder",
                             "label": "Migration Matrix CSV Folder",
                             "defaultValue": "../Fisheries/Input/Caribbean_Spiny_Lobster_migration",
                             "required": false,
                             "validateAs": {"type": "folder"},
-                            "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
+                            "helpText": "The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an age/stage that migrates.  The folder should contain one CSV file for each age/stage that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
                         }
                     ]
                 }
-             ]
+            ]
         },
         {
-            "id": "do_val",
-            "label": "Valuation",
+            "id": "harv_cont",
+            "label": "Harvest Parameters",
             "type": "container",
             "defaultValue": true,
             "collapsible": true,
             "elements":[
                 {
-                    "id": "params_list",
+                    "id": "harv_list",
                     "type": "list",
                     "elements": [
                         {
-                            "id" : "f_post_proc",
+                            "id" : "harvest_units",
+                            "args_id" : "harvest_units",
+                            "type": "dropdown",
+                            "label": "Harvest by Individuals or Weight",
+                            "defaultValue": "Weight",
+                            "required": true,
+                            "options" : ["Individuals", "Weight"],
+                            "returns": "strings",
+                            "dataType": "string",
+                            "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
+                        },
+                        {
+                            "id" : "frac_post_process",
                             "args_id" : "frac_post_process",
                             "type": "text",
-                            "label": "Fraction After Processing",
+                            "label": "Fraction of Harvest Kept After Processing",
                             "defaultValue": "0.286332579995172",
                             "required": true,
                             "dataType": "float",
                             "validateAs": {"type":"number"},
-                            "helpText": "This is the fraction of the meat left over from the animal after processing is complete."
+                            "helpText": "Decimal fraction indicating the percentage of harvested catch remaining after post-harvest processing is complete."
                         },
                         {
                             "id" : "unit_price",
@@ -227,11 +241,12 @@
                             "required": true,
                             "dataType": "float",
                             "validateAs": {"type": "number"},
-                            "helpText": "Price for the desired measurable unit of the animal."
+                            "helpText": "Specifies the price per harvest unit.<br><br>If ‘Harvest by Individuals or Weight’ was set to ‘Individuals’, this should be the price per individual.  If set to ‘Weight’, this should be the price per unit weight."
                         }
                     ]
                 }
             ]
         }
+
     ]
 }
