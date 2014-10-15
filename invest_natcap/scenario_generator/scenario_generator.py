@@ -440,9 +440,7 @@ def filter_fragments(input_uri, size, output_uri):
         fragments_location = scipy.ndimage.find_objects(label_im, nb_labels)
         removed_pixels = 0
         small_fragment_labels_count = small_fragment_labels.size
-        print '  Removing small fragments:',
         for l in range(small_fragment_labels_count-1):
-            print ' ' + str(small_fragment_labels.size - l), 
             label = small_fragment_labels[l+1]
             last_label = small_fragment_labels[l]
             size = small_fragment_sizes[l+1]
@@ -1115,6 +1113,9 @@ def execute(args):
         if suitability_values[-1]==0:
             suitability_values.pop(-1)
         for suitability_score in suitability_values:
+            # Check if suitsbility is between 0 and 100 inclusive
+            assert abs(suitability_score - 50) <= 50, \
+                'Invalid suitability score: ' + str(suitability_score)
             if pixels_changed == count:
                 LOGGER.debug("All necessay pixels converted.")
                 break
