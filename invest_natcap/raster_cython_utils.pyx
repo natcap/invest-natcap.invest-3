@@ -516,6 +516,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         for col_index in xrange(kernel_size):
             kernel[row_index, col_index] = distance(
                 row_index, col_index, kernel_size, kernel_type_id, max_distance)
+    kernel /= numpy.sum(kernel)
     cdef double last_time = time.time()
     cdef double current_time, kernel_sum
     for row_index in xrange(n_rows):
@@ -542,7 +543,7 @@ def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
         weight_array = weight_band.ReadAsArray(
             xoff=0, yoff=weight_top_index, win_xsize=n_cols,
             win_ysize=weight_bottom_index-weight_top_index).astype(numpy.float)
-
+        
         for col_index in xrange(n_cols):
             #snip the window of the kernel over the window of the weight
             if col_index >= max_distance:
