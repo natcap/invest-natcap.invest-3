@@ -440,9 +440,7 @@ def filter_fragments(input_uri, size, output_uri):
         fragments_location = scipy.ndimage.find_objects(label_im, nb_labels)
         removed_pixels = 0
         small_fragment_labels_count = small_fragment_labels.size
-        print '  Removing small fragments:',
         for l in range(small_fragment_labels_count-1):
-            print ' ' + str(small_fragment_labels.size - l), 
             label = small_fragment_labels[l+1]
             last_label = small_fragment_labels[l]
             size = small_fragment_sizes[l+1]
@@ -823,13 +821,14 @@ def execute(args):
                 weights_list = [weight / total for weight in weights_list]
 
                 def weighted_op(*values):
-                    result = values[0] * weights_list[0]
+                    result = (values[0] * weights_list[0]).astype(float)
 
                     for v, w in zip(values[1:], weights_list[1:]):
                         result += v * w
 
                     return result
 
+#                print('------files:', uri_list, weights_list)
                 raster_utils.vectorize_datasets(list(uri_list),
                                                 weighted_op,
                                                 ds_uri,
@@ -851,6 +850,8 @@ def execute(args):
                 if cover_id in suitability_dict:
                     LOGGER.info("Combining suitability for cover %i.", cover_id)
                     ds_uri = os.path.join(workspace, factors_name % cover_id)
+
+                    
                     raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
                                                      suitability_factors_dict[cover_id]],
                                                     suitability_op,
@@ -893,7 +894,14 @@ def execute(args):
         gdal_format = gdal.GDT_Float64
         raster_utils.new_raster_from_base_uri(landcover_uri, constraints_ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
         raster_utils.rasterize_layer_uri(constraints_ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
-
+        # Check that the values make sense
+        raster = gdal.Open(constraints_ds_uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+        unique = numpy.unique(array)
+        assert (unique[0] >= 0.0) and (unique[-1] <= 1.0), \
+            'Invalid raster value in field ' + constraints_field_name + ' in ' \
+                + constraints_uri
     else:
         LOGGER.info("Constraints not included.")
 
@@ -999,6 +1007,7 @@ def execute(args):
                 LOGGER.info("Combining suitability and constraints for %i.", cover_id)
                 uri_list = [suitability_dict[cover_id],
                             constraints_ds_uri]
+#                print('------suitability and constraint files:', uri_list)
                 LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
                 raster_utils.vectorize_datasets(uri_list,
                                                 constraint_op,
@@ -1115,6 +1124,14 @@ def execute(args):
         if suitability_values[-1]==0:
             suitability_values.pop(-1)
         for suitability_score in suitability_values:
+            # Check if suitsbility is between 0 and 100 inclusive
+            if abs(suitability_score - 50) > 50:
+                print('suitability_values:', suitability_dict[cover_id])
+                for v in suitability_values:
+                    print v, ' ', 
+
+            assert abs(suitability_score - 50) <= 50, \
+                'Invalid suitability score ' + str(suitability_score)
             if pixels_changed == count:
                 LOGGER.debug("All necessay pixels converted.")
                 break
