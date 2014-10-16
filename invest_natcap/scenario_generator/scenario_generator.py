@@ -722,10 +722,10 @@ def execute(args):
                 LOGGER.debug("Processing %s.", shapeTypes[shape_type])
 
                 if shape_type in [5, 15, 25, 31]: #polygon
-                    LOGGER.info("Rasterizing %s using sutibility field %s.", factor_stem, suitability_field_name)
+                    LOGGER.info("Rasterizing %s using sutibality field %s.", factor_stem, suitability_field_name)
                     ds_uri = os.path.join(workspace, suitability_name % (factor_stem, suitability_field_name))
 
-                    burn_value = [0]
+                    burn_value = [1]
                     suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
                     gdal_format = gdal.GDT_Float64
                     raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
@@ -764,7 +764,8 @@ def execute(args):
                     calculate_distance_raster_uri(ds_uri, distance_uri)
 
                     def threshold(value):
-                        return numpy.where(value > distance, transition_nodata, value)
+                        result = numpy.where(value > distance, transition_nodata, value)
+                        return numpy.where(value == transition_nodata, transition_nodata, value)
 
                     raster_utils.vectorize_datasets([distance_uri],
                                                     threshold,
@@ -800,6 +801,36 @@ def execute(args):
 
                 else:
                     raise ValueError, "Invalid geometry type %i." % shape_type
+
+                # Apply nodata to the factors raster
+                landcover_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
+                temp_uri = raster_utils.temporary_filename()
+                def apply_nodata_op(landcover, value):
+                    return numpy.where(landcover == landcover_uri, 0, value)
+
+                raster_utils.vectorize_datasets( \
+                    [landcover_uri,
+                    factor_uri_dict[(factor_stem, suitability_field_name, distance)]],
+                    apply_nodata_op,
+                    temp_uri,
+                    transition_type,
+                    transition_nodata,
+                    cell_size,
+                    "union",
+                    vectorize_op = False)
+
+                def identity_op(x):
+                    return x
+
+                raster_utils.vectorize_datasets( \
+                    [temp_uri],
+                    identity_op,
+                    factor_uri_dict[(factor_stem, suitability_field_name, distance)],
+                    transition_type,
+                    transition_nodata,
+                    cell_size,
+                    "union",
+                    vectorize_op = False)
 
             else:
                 LOGGER.debug("Skipping already processed suitability layer.")
@@ -851,7 +882,7 @@ def execute(args):
                     LOGGER.info("Combining suitability for cover %i.", cover_id)
                     ds_uri = os.path.join(workspace, factors_name % cover_id)
 
-                    
+                    print('cover_ids', suitability_dict.keys())
                     raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
                                                      suitability_factors_dict[cover_id]],
                                                     suitability_op,
