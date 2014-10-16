@@ -54,22 +54,46 @@ def fetch_verify_args(args):
 
 
 def _verify_population_csv(args):
-
+    '''
+    '''
     population_csv_uri = args['population_csv_uri']
+    sexsp = args['sexsp']
     pop_dict = _parse_population_csv(population_csv_uri)
 
     # Check that required information exists
-
-
     pass
 
 
-def _parse_population_csv(uri):
+def _parse_population_csv(uri, sexsp):
+    '''Parses the given population parameters csv file and returns a dictionary
+    of matrices and vectors
+
+    **Example**
+    pop_dict = {{'SurvNaturalFrac': np.matrix}, {'VulnFishingFrac': np.matrix}, ...}
+    '''
+    csv_data = []
+
+    with open(sex_neutral_csv_uri, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            csv_data.append(line)
+    # Make use of get_cols, get_rows or use filter/map/reduce functions
+
+
+    # Parse SurvFrac
+
+    # Parse Class-based Parameters
+
+    # Parse Area-based Parameters
+
+
+
     pass
 
 
 def _verify_migration_tables(args):
-
+    '''
+    '''
     mig_dict = {}
 
     # If Migration:
@@ -83,8 +107,43 @@ def _verify_migration_tables(args):
 
 
 def _parse_migration_tables(uri):
-    # (Make use of Kathryn's listdir)
-    pass
+    '''Parses all files in the given directory as migration matrices
+    and returns a dictionary of stages and their corresponding migration
+    numpy matrix.
+
+    :param string uri: filepath to the directory of migration tables
+
+    :returns: mig_dict
+    :rtype: dictionary
+
+    **Example**
+    mig_dict = {{'stage1': np.matrix}, {'stage2': np.matrix}, ...}
+    '''
+    mig_dict = {}
+
+    for mig_csv in listdir(uri):
+        basename = os.path.splitext(os.path.basename(mig_csv))[0]
+        class_name = basename.split('_').pop().lower()
+
+        with open(mig_csv, 'rU') as param_file:
+            csv_reader = csv.reader(param_file)
+            lines = []
+            for row in csv_reader:
+                lines.append(row)
+            
+            matrix = []
+            for row in range(1, len(lines)):
+                if lines[row][0] == '': break
+                array = []
+                for entry in range (1, len(lines[row])):
+                    array.append(float(lines[row][entry]))
+                matrix.append(array)
+            
+            Migration = np.matrix(matrix)
+
+        mig_dict[class_name] = Migration
+    
+    return mig_dict
 
 
 def _verify_single_params(args, pop_dict, mig_dict):
