@@ -2666,8 +2666,8 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_parameters.py' % model_name, filter = QString('Python file' +
-                ' (*.py);;All files (*.* *)'))
+                '%s_parameters.py' % model_name, QString(), QString(),
+                QString('Python file (*.py);;All files (*.* *)'))
             try:
                 filename = unicode(filename)
             except TypeError:
@@ -2717,8 +2717,8 @@ class ExecRoot(Root):
         model_name = model.split('.')[-1]
 
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            '%s_parameters.json' % model_name, filter = QString('InVEST Parameter file' +
-            ' (*.json);;All files (*.* *)'))
+            '%s_parameters.json' % model_name, QString(),
+            QString('InVEST Parameter file (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
             save_handler = fileio.JSONHandler(filename)
