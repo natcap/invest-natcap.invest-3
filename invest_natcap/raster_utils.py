@@ -3081,14 +3081,17 @@ def convolve_2d(weight_uri, kernel, output_uri):
     weight_band = weight_ds.GetRasterBand(1)
     block_col_size, block_row_size = weight_band.GetBlockSize()
 
-    n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
-    n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+    n_rows = weight_band.YSize
+    n_cols = weight_band.XSize
+
+    n_global_block_rows = int(math.ceil(float(n_rows) / block_row_size))
+    n_global_block_cols = int(math.ceil(float(n_cols) / block_col_size))
 
     last_time = time.time()
     for global_block_row in xrange(n_global_block_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info("convert to float %.1f%% complete", (global_block_row) / int(numpy.ceil(float(n_rows) / block_row_size)) * 100)
+            LOGGER.info("convert to float %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
             last_time = current_time
         for global_block_col in xrange(n_global_block_cols):
             xoff = global_block_col * block_col_size
