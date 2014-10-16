@@ -13,7 +13,6 @@ import collections
 import exceptions
 import multiprocessing
 import multiprocessing.pool
-import tables
 import heapq
 import time
 import smtplib
@@ -2846,60 +2845,6 @@ def rasterize_layer_uri(
     shapefile = None
 
 
-def create_carray(h5file_uri, h5_type, shape):
-    """Creates an empty pytables chunked array given a file type and size.
-
-        h5file_uri - a uri to store the carray
-        h5_type - an h5file type
-        shape - a tuple indicating rows/columns"""
-
-    h5file = tables.openFile(h5file_uri, mode='w')
-    root = h5file.root
-    filters = tables.Filters(complevel=0)
-    return h5file.createCArray(
-        root, 'from_create_carray', h5_type, shape=shape, filters=filters)
-
-
-def load_dataset_to_carray(dataset_uri, h5file_uri, array_type=None):
-    """Loads a GDAL dataset into a h5file chunked array.
-
-        dataset_uri - uri to a GDAL dataset
-        h5file_uri - uri to a file that the chunked array will exist on disk
-        array_type - (optional) if specified is a GDAL type for what the output
-            array should be cast to
-
-        returns chunked array representing the original gdal dataset"""
-
-    dataset = gdal.Open(dataset_uri)
-    band = dataset.GetRasterBand(1)
-    if array_type is None:
-        array_type = band.DataType
-
-    map_gdal_type_to_atom = {
-        gdal.GDT_Int16: tables.Int16Atom(),
-        gdal.GDT_Int32: tables.Int32Atom(),
-        gdal.GDT_UInt16: tables.UInt16Atom(),
-        gdal.GDT_UInt32: tables.UInt32Atom(),
-        gdal.GDT_Byte: tables.Int8Atom(),
-        gdal.GDT_Float64: tables.Float64Atom(),
-        gdal.GDT_Float32: tables.Float32Atom()
-    }
-
-    carray = create_carray(
-        h5file_uri, map_gdal_type_to_atom[array_type],
-        (dataset.RasterYSize, dataset.RasterXSize))
-
-    for row_index in xrange(dataset.RasterYSize):
-        carray[row_index, :] = band.ReadAsArray(
-            0, row_index, dataset.RasterXSize, 1)[0]
-
-    band = None
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
-
-    return carray
-
-
 def make_constant_raster_from_base_uri(
         base_dataset_uri, constant_value, out_uri, nodata_value=None,
         dataset_type=gdal.GDT_Float32):
@@ -3072,7 +3017,57 @@ def convolve_2d(weight_uri, kernel, output_uri):
             weight_uri
 
         returns nothing"""
-    raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
+
+    output_nodata = -9999
+    new_raster_from_base_uri(
+        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32)
+
+    weight_ds = gdal.Open(weight_uri)
+    weight_band = weight_ds.GetRasterBand(1)
+    block_col_size, block_row_size = weight_band.GetBlockSize()
+
+    n_rows = weight_band.YSize
+    n_cols = weight_band.XSize
+
+    n_rows_kernel = kernel.shape[1]
+    n_cols_kernel = kernel.shape[0]
+
+    n_global_block_rows = int(math.ceil(float(n_rows) / block_row_size))
+    n_global_block_cols = int(math.ceil(float(n_cols) / block_col_size))
+
+    last_time = time.time()
+    for global_block_row in xrange(n_global_block_rows):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("convert to float %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
+            last_time = current_time
+        for global_block_col in xrange(n_global_block_cols):
+            xoff = global_block_col * block_col_size
+            yoff = global_block_row * block_row_size
+            win_xsize = min(block_col_size, n_cols - xoff)
+            win_ysize = min(block_row_size, n_rows - yoff)
+
+            weight_array = weight_band.ReadAsArray(
+                xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
+
+            result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
+
+            #shape of result is result shape + kernel_shape - 1
+            #map raster coordinates to result coordinates so we can read/write back (or clip)
+
+            left_index_raster = xoff - n_cols_kernel / 2 - 1 
+            right_index_raster = xoff + block_col_size + n_cols_kernel / 2 - 1
+            top_index_raster = yoff - n_rows_kernel / 2 - 1
+            bottom_index_raster = yoff + block_row_size + n_rows_kernel / 2 - 1
+
+            left_index_result = 0
+            right_index_result = 0
+
+
+
+    
+
+    #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""
