@@ -3063,31 +3063,16 @@ def email_report(message, email_address):
         LOGGER.warn("Can't connect to email server, no report will be sent.")
 
 
-def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
-    """Does a direct convolution on a predefined kernel
-
-
-        each output pixel at ij gets the value:
-            sum_xy(weight_uri_xy * decay_xy_ij)
-
-
-        define d(xy, ij) as the Euclidan distance between coordinates xy and ij
-        then, decay_xy_ij is
-
-            1 - d(xy, ij)/max_distance for 'linear'
-            exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
-
-            if d(xy, ij) < max_distance, else 0.0
+def convolve_2d(weight_uri, kernel, output_uri):
+    """Does a direct convolution on a predefined kernel with the values in weight_uri
 
         weight_uri - this is the source raster
-        kernel_type - 'linear' or 'exponential'
-        max_distance - defined in equation above (units are pixel size)
+        kernel - 2d numpy integrating kernel
         output_uri - the raster output of same size and projection of
             weight_uri
 
         returns nothing"""
-    raster_cython_utils.convolve_2d(
-        weight_uri, kernel_type, max_distance, output_uri)
+    raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""
