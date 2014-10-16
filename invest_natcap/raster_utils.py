@@ -3020,11 +3020,15 @@ def convolve_2d(weight_uri, kernel, output_uri):
 
     output_nodata = -9999
     new_raster_from_base_uri(
-        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32)
+        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32,
+        fill_value=0)
 
     weight_ds = gdal.Open(weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
     block_col_size, block_row_size = weight_band.GetBlockSize()
+
+    output_ds = gdal.Open(output_uri, gdal.GA_Update)
+    output_band = output_ds.GetRasterBand(1)
 
     n_rows = weight_band.YSize
     n_cols = weight_band.XSize
@@ -3055,16 +3059,46 @@ def convolve_2d(weight_uri, kernel, output_uri):
             #shape of result is result shape + kernel_shape - 1
             #map raster coordinates to result coordinates so we can read/write back (or clip)
 
-            left_index_raster = xoff - n_cols_kernel / 2 - 1 
-            right_index_raster = xoff + block_col_size + n_cols_kernel / 2 - 1
-            top_index_raster = yoff - n_rows_kernel / 2 - 1
-            bottom_index_raster = yoff + block_row_size + n_rows_kernel / 2 - 1
+            left_index_raster = xoff - n_cols_kernel / 2
+            right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
+            top_index_raster = yoff - n_rows_kernel / 2
+            bottom_index_raster = yoff + block_row_size + (n_rows_kernel - 1) / 2
 
             left_index_result = 0
-            right_index_result = 0
+            right_index_result = block_col_size + n_cols_kernel - 1
+            top_index_result = 0
+            bottom_index_result = block_row_size + n_rows_kernel - 1
 
+            if left_index_raster < 0:
+                left_index_result = -left_index_raster
+                left_index_raster = 0
+            if top_index_raster < 0:
+                top_index_result = -top_index_raster
+                top_index_raster = 0
 
+            if right_index_raster > n_cols:
+                right_index_result -= n_cols - right_index_raster
+                right_index_raster = n_cols
+            if bottom_index_raster > n_rows:
+                bottom_index_result -= n_rows - bottom_index_result
+                bottom_index_raster = n_rows
 
+            try:
+                output_band.WriteArray(
+                    result[left_index_result:right_index_result, top_index_result:bottom_index_result],
+                    xoff=left_index_raster, yoff=top_index_raster)
+            except ValueError as e:
+                LOGGER.debug("global_block_row, global_block_col: %d %d", global_block_row, global_block_col)
+                LOGGER.debug("block_row_size, block_col_size %d %d", block_row_size, block_col_size)
+                LOGGER.debug("n_rows, n_cols %d %d", n_rows, n_cols)
+                LOGGER.debug("n_rows_kernel, n_cols_kernel %d %d", n_rows_kernel, n_cols_kernel)
+                
+                LOGGER.debug("output_band.WriteArray(\n"
+                    "result[%d:%d, %d:%d],\n"
+                    "xoff=%d, yoff=%d)", left_index_result, right_index_result,
+                    top_index_result, bottom_index_result,
+                    left_index_raster, top_index_raster)
+                raise e
     
 
     #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
