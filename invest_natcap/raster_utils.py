@@ -3072,7 +3072,40 @@ def convolve_2d(weight_uri, kernel, output_uri):
             weight_uri
 
         returns nothing"""
-    raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
+
+    output_nodata = -9999
+    new_raster_from_base_uri(
+        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32)
+
+    weight_ds = gdal.Open(weight_uri)
+    weight_band = weight_ds.GetRasterBand(1)
+    block_col_size, block_row_size = weight_band.GetBlockSize()
+
+    n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+
+    last_time = time.time()
+    for global_block_row in xrange(n_global_block_rows):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("convert to float %.1f%% complete", (global_block_row) / int(numpy.ceil(float(n_rows) / block_row_size)) * 100)
+            last_time = current_time
+        for global_block_col in xrange(n_global_block_cols):
+            xoff = global_block_col * block_col_size
+            yoff = global_block_row * block_row_size
+            win_xsize = min(block_col_size, n_cols - xoff)
+            win_ysize = min(block_row_size, n_rows - yoff)
+
+            weight_array = weight_band.ReadAsArray(
+                xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
+
+            result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
+
+
+
+    
+
+    #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""
