@@ -2666,7 +2666,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_parameters.py' % model_name, QString(), QString(),
+                '%s_parameters.py' % model_name, QString(),
                 QString('Python file (*.py);;All files (*.* *)'))
             try:
                 filename = unicode(filename)
