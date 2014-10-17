@@ -3084,8 +3084,12 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 bottom_index_raster = n_rows
 
             try:
+                current_output = output_band.ReadAsArray(
+                    xoff=left_index_raster, yoff=top_index_raster,
+                    win_xsize=right_index_raster-left_index_raster,
+                    win_ysize=bottom_index_raster-top_index_raster)
                 output_band.WriteArray(
-                    result[top_index_result:bottom_index_result, left_index_result:right_index_result],
+                    result[top_index_result:bottom_index_result, left_index_result:right_index_result] + current_output,
                     xoff=left_index_raster, yoff=top_index_raster)
             except ValueError as e:
                 LOGGER.debug('result.shape %s', str(result.shape))
