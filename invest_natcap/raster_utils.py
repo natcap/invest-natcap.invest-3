@@ -3026,6 +3026,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
     weight_ds = gdal.Open(weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
     block_col_size, block_row_size = weight_band.GetBlockSize()
+    weight_nodata = weight_band.GetNoDataValue()
 
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
     output_band = output_ds.GetRasterBand(1)
@@ -3053,6 +3054,8 @@ def convolve_2d(weight_uri, kernel, output_uri):
 
             weight_array = weight_band.ReadAsArray(
                 xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
+            nodata_mask = weight_array == weight_nodata
+            weight_array[nodata_mask] = 0.0
 
             result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
 
@@ -3088,9 +3091,17 @@ def convolve_2d(weight_uri, kernel, output_uri):
                     xoff=left_index_raster, yoff=top_index_raster,
                     win_xsize=right_index_raster-left_index_raster,
                     win_ysize=bottom_index_raster-top_index_raster)
+                potential_nodata_weight_array = weight_band.ReadAsArray(
+                    xoff=left_index_raster, yoff=top_index_raster,
+                    win_xsize=right_index_raster-left_index_raster,
+                    win_ysize=bottom_index_raster-top_index_raster)
+                nodata_mask = potential_nodata_weight_array == weight_nodata
+            
+                output_array = result[top_index_result:bottom_index_result, left_index_result:right_index_result] + current_output
+                output_array[nodata_mask] = output_nodata
+
                 output_band.WriteArray(
-                    result[top_index_result:bottom_index_result, left_index_result:right_index_result] + current_output,
-                    xoff=left_index_raster, yoff=top_index_raster)
+                    output_array, xoff=left_index_raster, yoff=top_index_raster)
             except ValueError as e:
                 LOGGER.debug('result.shape %s', str(result.shape))
                 LOGGER.debug("global_block_row, global_block_col: %d %d", global_block_row, global_block_col)
