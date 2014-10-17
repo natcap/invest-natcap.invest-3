@@ -3054,13 +3054,10 @@ def convolve_2d(weight_uri, kernel, output_uri):
 
             weight_array = weight_band.ReadAsArray(
                 xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
-            nodata_mask = weight_array == weight_nodata
-            weight_array[nodata_mask] = 0.0
+            weight_nodata_mask = weight_array == weight_nodata
+            weight_array[weight_nodata_mask] = 0.0
 
             result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
-
-            #shape of result is result shape + kernel_shape - 1
-            #map raster coordinates to result coordinates so we can read/write back (or clip)
 
             left_index_raster = xoff - n_cols_kernel / 2
             right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
@@ -3072,6 +3069,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
             top_index_result = 0
             bottom_index_result = block_row_size + n_rows_kernel - 1
 
+            #we might abut the edge of the raster, clip if so
             if left_index_raster < 0:
                 left_index_result = -left_index_raster
                 left_index_raster = 0
@@ -3086,36 +3084,22 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 bottom_index_result -= bottom_index_raster - n_rows
                 bottom_index_raster = n_rows
 
-            try:
-                current_output = output_band.ReadAsArray(
-                    xoff=left_index_raster, yoff=top_index_raster,
-                    win_xsize=right_index_raster-left_index_raster,
-                    win_ysize=bottom_index_raster-top_index_raster)
-                potential_nodata_weight_array = weight_band.ReadAsArray(
-                    xoff=left_index_raster, yoff=top_index_raster,
-                    win_xsize=right_index_raster-left_index_raster,
-                    win_ysize=bottom_index_raster-top_index_raster)
-                nodata_mask = potential_nodata_weight_array == weight_nodata
-            
-                output_array = result[top_index_result:bottom_index_result, left_index_result:right_index_result] + current_output
-                output_array[nodata_mask] = output_nodata
+            current_output = output_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            potential_nodata_weight_array = weight_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            nodata_mask = potential_nodata_weight_array == weight_nodata
+        
+            output_array = result[top_index_result:bottom_index_result, 
+                left_index_result:right_index_result] + current_output
+            output_array[nodata_mask] = output_nodata
 
-                output_band.WriteArray(
-                    output_array, xoff=left_index_raster, yoff=top_index_raster)
-            except ValueError as e:
-                LOGGER.debug('result.shape %s', str(result.shape))
-                LOGGER.debug("global_block_row, global_block_col: %d %d", global_block_row, global_block_col)
-                LOGGER.debug("block_row_size, block_col_size %d %d", block_row_size, block_col_size)
-                LOGGER.debug("n_rows, n_cols %d %d", n_rows, n_cols)
-                LOGGER.debug("n_rows_kernel, n_cols_kernel %d %d", n_rows_kernel, n_cols_kernel)
-                
-                LOGGER.debug("output_band.WriteArray(\n"
-                    "result[%d:%d, %d:%d],\n"
-                    "xoff=%d, yoff=%d)", top_index_result, bottom_index_result, left_index_result, right_index_result,
-                    
-                    left_index_raster, top_index_raster)
-                raise e
-    
+            output_band.WriteArray(
+                output_array, xoff=left_index_raster, yoff=top_index_raster)    
 
     #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
 
