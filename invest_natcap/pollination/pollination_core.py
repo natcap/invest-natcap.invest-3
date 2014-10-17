@@ -147,13 +147,9 @@ def execute_model(args):
                 args['farm_value_sum'])
 
             LOGGER.info('Calculating service value for %s', species)
-            # Calculate sigma for the gaussian blur.  Sigma is based on the
-            # species alpha (from the guilds table) and twice the pixel size.
             guild_dict = args['guilds'].get_table_row('species', species)
             sample_raster = gdal.Open(args['farm_value_sum'])
             pixel_size = abs(sample_raster.GetGeoTransform()[1])
-            sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
-            LOGGER.debug('Pixel size: %s, sigma: %s')
             sample_raster = None
 
             calculate_service(
@@ -164,7 +160,7 @@ def execute_model(args):
                     'ag_map': args['ag_map']
                 },
                 nodata=-1.0,
-                sigma=sigma,
+                alpha=float(guild_dict['alpha']),
                 part_wild=args['wild_pollination_proportion'],
                 out_uris={
                     'species_value': species_dict['value_abundance_ratio'],
@@ -246,22 +242,19 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # Now that the per-pixel nesting and floral resources have been
     # calculated, the floral resources still need to factor in
     # neighborhoods.
-    # The sigma size is 2 times the pixel size, presumable since the
-    # raster's pixel width is a radius for the gaussian blur when we want
-    # the diameter of the blur.
     lulc_ds = gdal.Open(landuse)
     pixel_size = abs(lulc_ds.GetGeoTransform()[1])
     lulc_ds = None
-    sigma = float(guild['alpha'] / (2 * pixel_size))
-    LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
+    expected_distance = guild['alpha'] / pixel_size
+    kernel = make_exponential_kernel(expected_distance)
+    LOGGER.debug('expected distance: %s ', expected_distance)
 
     # Fetch the floral resources raster and matrix from the args dictionary
-    # apply a gaussian filter and save the floral resources raster to the
+    # apply an exponential convolution filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    raster_utils.gaussian_filter_dataset_uri(
-        floral_raster_temp_uri, sigma, uris['floral'], nodata, uris['temp'])
-
+    raster_utils.convolve_2d(floral_raster_temp_uri, kernel, uris['floral'])
+    
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
     # Rickett's reply to see if this is correct.
@@ -308,18 +301,14 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     species_abundance = gdal.Open(species_abundance_uri)
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
-    sigma = float(alpha / (2 * pixel_size))
-    LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
+    expected_distance = alpha / pixel_size
+    kernel = make_exponential_kernel(expected_distance)
+    
+    LOGGER.debug('Calculating foraging/farm abundance index')
+    raster_utils.convolve_2d(species_abundance_uri, kernel, farm_abundance_temp_uri)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
     LOGGER.debug('Using nodata value %s from species abundance raster', nodata)
-
-    # Calculate the foraging ('farm abundance') index by applying a
-    # gaussian filter to the foraging raster and then culling all pixels
-    # that are not agricultural before saving it to the output raster.
-    LOGGER.debug('Calculating foraging/farm abundance index')
-    raster_utils.gaussian_filter_dataset_uri(
-        species_abundance_uri, sigma, farm_abundance_temp_uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
@@ -411,7 +400,7 @@ def add_two_rasters(raster_1, raster_2, out_uri):
         LOGGER.debug('Moved temp sum to %s', old_out_uri)
 
 
-def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
+def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
     """Calculate the service raster.  The finished raster will be saved to
     out_uris['service_value'].
 
@@ -422,18 +411,16 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
             'ag_map' - a GDAL dataset.  Values are either nodata, 0 (if not an
                     ag pixel) or 1 (if an ag pixel).
         nodata - the nodata value for output rasters.
-        sigma - the sigma to be used for the gaussian filter portion of
-            calculating the service raster.
+        alpha - the expected distance
         part_wild - a number between 0 and 1 representing the proportion of all
             pollination that is done by wild pollinators.
         out_uris - a dictionary with these entries:
             'species_value' - a URI.  The raster created at this URI will
                 represent the part of the farm's value that is attributed to the
                 current species.
-            'species_value_blurred' - a URI.  The raster created at this URI
+            'species_value_blurred' - the raster created at this URI
                 will be a copy of the species_value raster that has had a
-                gaussian filter applied to it.  Sigma is used as the sigma input
-                to the gaussian filter.
+                exponential convolution filter applied to it.
             'service_value' - a URI.  The raster created at this URI will be the
                 calculated service value raster.
             'temp' - a folder in which to store temp files.
@@ -459,10 +446,12 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
         bounding_box_mode='intersection',
         vectorize_op=False)
 
-    LOGGER.debug('Applying a gaussian filter to the ratio raster.')
-    raster_utils.gaussian_filter_dataset_uri(
-        out_uris['species_value'], sigma, out_uris['species_value_blurred'],
-        nodata, out_uris['temp'])
+    expected_distance = alpha / min_pixel_size
+    kernel = make_exponential_kernel(expected_distance)
+    
+    LOGGER.debug('Exponetial decay on ratio raster')
+    raster_utils.convolve_2d(
+        out_uris['species_value'], kernel, out_uris['species_value_blurred'])
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
@@ -609,3 +598,21 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     # calls the cythonized functionality in raster_utils.
     raster_utils.reclassify_by_dictionary(gdal.Open(base_raster),
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
+
+
+def make_distance_kernel(max_distance):
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
+    for row_index in xrange(kernel_size):
+        for col_index in xrange(kernel_size):
+            distance_kernel[row_index, col_index] = numpy.sqrt(
+                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
+    return distance_kernel
+
+
+def make_exponential_kernel(expected_distance):
+    max_distance = expected_distance * 5
+    distance_kernel = make_distance_kernel(max_distance)
+    kernel = numpy.where(
+        distance_kernel > max_distance, 0.0, numpy.exp(-distance_kernel / expected_distance))
+    return kernel / numpy.sum(kernel)

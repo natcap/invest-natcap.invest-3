@@ -1,4 +1,6 @@
 import math
+import cProfile
+import pstats
 
 import gdal
 import numpy
@@ -32,11 +34,18 @@ def make_exponential_kernel(max_distance):
 
 
 if __name__ == '__main__':
-    weight_uri = "C:/Users/rich/Box Sync/Unilever/Input_MatoGrosso_global_Unilever_10_09_2014/Input_MatoGrosso_global_Unilever_10_09_2014/SRTM_90m_MatoGrosso_final_basins.tif"
+    weight_uri = "C:/Users/rsharp/Box Sync/Unilever/Input_MatoGrosso_global_Unilever_10_09_2014/Input_MatoGrosso_global_Unilever_10_09_2014/SRTM_90m_MatoGrosso_final_basins.tif"
     #weight_uri = "C:/InVEST_dev107_3_0_1 [61c19dc4b887]_x86/Base_Data/Freshwater/dem"
-    output_uri = "C:/Users/rich/Documents/convolution/result.tif"
+    output_uri = "C:/Users/rsharp/Documents/convolution/result.tif"
     max_distance = 100
     print 'make kernel'
     kernel = make_linear_kernel(max_distance)
     print 'convolve 2d'
-    raster_utils.convolve_2d(weight_uri, kernel, output_uri)
+
+    cProfile.run('raster_utils.convolve_2d(weight_uri, kernel, output_uri)', 'stats')
+    p = pstats.Stats('stats')
+    p.sort_stats('time').print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
+
+
+    
