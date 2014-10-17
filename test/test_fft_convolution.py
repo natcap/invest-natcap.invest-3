@@ -1,4 +1,6 @@
 import math
+import cProfile
+import pstats
 
 import gdal
 import numpy
@@ -39,4 +41,11 @@ if __name__ == '__main__':
     print 'make kernel'
     kernel = make_linear_kernel(max_distance)
     print 'convolve 2d'
-    raster_utils.convolve_2d(weight_uri, kernel, output_uri)
+
+    cProfile.run('raster_utils.convolve_2d(weight_uri, kernel, output_uri)', 'stats')
+    p = pstats.Stats('stats')
+    p.sort_stats('time').print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
+
+
+    

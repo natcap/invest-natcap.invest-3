@@ -3062,7 +3062,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
             weight_array[weight_nodata_mask] = 0.0
 
             result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
-
+            
             left_index_raster = xoff - n_cols_kernel / 2
             right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
             top_index_raster = yoff - n_rows_kernel / 2
