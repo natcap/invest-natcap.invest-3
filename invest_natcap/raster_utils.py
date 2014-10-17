@@ -1554,98 +1554,6 @@ def get_rat_as_dictionary(dataset):
     return rat_dictionary
 
 
-def gaussian_filter_dataset_uri(
-        dataset_uri, sigma, out_uri, out_nodata, temp_dir=None,
-        constant_factor=1.0):
-    """A callthrough to gaussian filter dataset"""
-
-    dataset = gdal.Open(dataset_uri)
-    gaussian_filter_dataset(
-        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir,
-        constant_factor=constant_factor)
-
-    #Make sure the dataset is closed and cleaned up
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
-
-
-def gaussian_filter_dataset(
-        dataset, sigma, out_uri, out_nodata, temp_dir=None,
-        constant_factor=1.0):
-    """A memory efficient gaussian filter function that operates on
-        the dataset level and creates a new dataset that's filtered.
-        It will treat any nodata value in dataset as 0, and re-nodata
-        that area after the filter.
-
-        dataset - a gdal dataset
-        sigma - the sigma value of a gaussian filter
-        out_uri - the uri output of the filtered dataset
-        out_nodata - the nodata value of dataset
-        temp_dir - (optional) the directory in which to store the memory
-            mapped arrays.  If left off will use the system temp
-            directory.  If defined the directory must exist on the
-            filesystem (a temporary folder will be created inside of temp_dir).
-        constant_factor - a factor to multiply the output by.  Helpful when
-            normalizing from the gaussian blur
-
-       returns the filtered dataset created at out_uri"""
-
-    #Create a system temporary directory if one doesn't exist.
-    #If the parameter temp_dir is None, the default tempfile location is used.
-    #If the parameter temp_dir is a folder, a temp folder is created inside of
-    #the defined folder.
-    temp_dir = tempfile.mkdtemp(dir=temp_dir)
-
-    source_filename = os.path.join(temp_dir, 'source.dat')
-    mask_filename = os.path.join(temp_dir, 'mask.dat')
-    dest_filename = os.path.join(temp_dir, 'dest.dat')
-
-    source_band, source_nodata = extract_band_and_nodata(dataset)
-
-    out_dataset = new_raster_from_base(
-        dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
-    out_band, out_nodata = extract_band_and_nodata(out_dataset)
-
-    shape = (source_band.YSize, source_band.XSize)
-    source_array = numpy.memmap(
-        source_filename, dtype='float32', mode='w+', shape=shape)
-    mask_array = numpy.memmap(
-        mask_filename, dtype='bool', mode='w+', shape=shape)
-    dest_array = numpy.memmap(
-        dest_filename, dtype='float32', mode='w+', shape=shape)
-
-    for row_index in xrange(source_band.YSize):
-        #Load a row so we can mask
-        row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
-        #Just the mask for this row
-        mask_row = row_array == source_nodata
-        row_array[mask_row] = 0.0
-        source_array[row_index, :] = row_array * constant_factor
-
-        #remember the mask in the memory mapped array
-        mask_array[row_index, :] = mask_row
-
-    scipy.ndimage.filters.gaussian_filter(
-        source_array, sigma=sigma, output=dest_array)
-
-    dest_array[mask_array] = out_nodata
-
-    out_band.WriteArray(dest_array)
-
-    calculate_raster_stats_uri(out_uri)
-
-    dest_array = None
-    mask_array = None
-    source_array = None
-    out_band = None
-    #Turning on ignore_errors = True in case we can't remove the
-    #the temporary directory
-    shutil.rmtree(temp_dir, ignore_errors=True)
-
-    out_dataset.FlushCache()
-    return out_dataset
-
-
 def reclassify_dataset_uri(
         dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
         exception_flag='none', assert_dataset_projected=True):
@@ -3019,13 +2927,18 @@ def convolve_2d(weight_uri, kernel, output_uri):
         returns nothing"""
 
     output_nodata = -9999
+
+    tmp_weight_uri = temporary_filename()
+    tile_dataset_uri(weight_uri, tmp_weight_uri, 256)
+
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32,
         fill_value=0)
 
-    weight_ds = gdal.Open(weight_uri)
+    weight_ds = gdal.Open(tmp_weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
     block_col_size, block_row_size = weight_band.GetBlockSize()
+    weight_nodata = weight_band.GetNoDataValue()
 
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
     output_band = output_ds.GetRasterBand(1)
@@ -3043,7 +2956,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
     for global_block_row in xrange(n_global_block_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info("convert to float %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
+            LOGGER.info("convolution %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
             last_time = current_time
         for global_block_col in xrange(n_global_block_cols):
             xoff = global_block_col * block_col_size
@@ -3053,12 +2966,11 @@ def convolve_2d(weight_uri, kernel, output_uri):
 
             weight_array = weight_band.ReadAsArray(
                 xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
+            weight_nodata_mask = weight_array == weight_nodata
+            weight_array[weight_nodata_mask] = 0.0
 
             result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
-
-            #shape of result is result shape + kernel_shape - 1
-            #map raster coordinates to result coordinates so we can read/write back (or clip)
-
+            
             left_index_raster = xoff - n_cols_kernel / 2
             right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
             top_index_raster = yoff - n_rows_kernel / 2
@@ -3069,6 +2981,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
             top_index_result = 0
             bottom_index_result = block_row_size + n_rows_kernel - 1
 
+            #we might abut the edge of the raster, clip if so
             if left_index_raster < 0:
                 left_index_result = -left_index_raster
                 left_index_raster = 0
@@ -3077,31 +2990,34 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 top_index_raster = 0
 
             if right_index_raster > n_cols:
-                right_index_result -= n_cols - right_index_raster
+                right_index_result -= right_index_raster - n_cols
                 right_index_raster = n_cols
             if bottom_index_raster > n_rows:
-                bottom_index_result -= n_rows - bottom_index_result
+                bottom_index_result -= bottom_index_raster - n_rows
                 bottom_index_raster = n_rows
 
-            try:
-                output_band.WriteArray(
-                    result[left_index_result:right_index_result, top_index_result:bottom_index_result],
-                    xoff=left_index_raster, yoff=top_index_raster)
-            except ValueError as e:
-                LOGGER.debug("global_block_row, global_block_col: %d %d", global_block_row, global_block_col)
-                LOGGER.debug("block_row_size, block_col_size %d %d", block_row_size, block_col_size)
-                LOGGER.debug("n_rows, n_cols %d %d", n_rows, n_cols)
-                LOGGER.debug("n_rows_kernel, n_cols_kernel %d %d", n_rows_kernel, n_cols_kernel)
-                
-                LOGGER.debug("output_band.WriteArray(\n"
-                    "result[%d:%d, %d:%d],\n"
-                    "xoff=%d, yoff=%d)", left_index_result, right_index_result,
-                    top_index_result, bottom_index_result,
-                    left_index_raster, top_index_raster)
-                raise e
-    
+            current_output = output_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            potential_nodata_weight_array = weight_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            nodata_mask = potential_nodata_weight_array == weight_nodata
+        
+            output_array = result[top_index_result:bottom_index_result, 
+                left_index_result:right_index_result] + current_output
+            output_array[nodata_mask] = output_nodata
 
-    #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
+            output_band.WriteArray(
+                output_array, xoff=left_index_raster, yoff=top_index_raster)
+
+    weight_band = None
+    gdal.Dataset.__swig_destroy__(weight_ds)
+    weight_ds = None
+    os.remove(tmp_weight_uri)
+
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""

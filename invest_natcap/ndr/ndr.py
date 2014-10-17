@@ -48,7 +48,7 @@ def execute(args):
             'subsurface_eff_p' - the maximum retention efficiency that soil can
                 reach for phosphorous
             'results_suffix' - (optional) a text field to append to all output files.
-            'accum_threshold' - a number representing the flow accumulation.
+            'threshold_flow_accumulation' - a number representing the flow accumulation.
             '_prepare' - (optional) The preprocessed set of data created by the
                 ndr._prepare call.  This argument could be used in cases where the
                 call to this function is scripted and can save a significant amount
@@ -151,7 +151,7 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
-        flow_accumulation_uri, float(args['accum_threshold']), stream_uri)
+        float(args['threshold_flow_accumulation']), stream_uri)
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):

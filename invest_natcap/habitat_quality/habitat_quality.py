@@ -2,6 +2,7 @@
 import math
 import os.path
 import logging
+import numpy
 import csv
 
 from osgeo import gdal
@@ -231,11 +232,8 @@ def execute(args):
 
             # blur the threat raster based on the effect of the threat over
             # distance
-            #raster_utils.gaussian_filter_dataset_uri(
-            #        threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
-            
-            raster_utils.convolve_2d(
-                threat_dataset_uri, 'exponential', dr_pixel, filtered_threat_uri)
+            kernel = make_exponential_kernel(dr_pixel)
+            raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
 
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
@@ -653,3 +651,26 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     raster_utils.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
+
+
+def make_distance_kernel(max_distance):
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
+    for row_index in xrange(kernel_size):
+        for col_index in xrange(kernel_size):
+            distance_kernel[row_index, col_index] = numpy.sqrt(
+                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
+    return distance_kernel
+
+def make_linear_kernel(max_distance):
+    distance_kernel = make_distance_kernel(max_distance)
+    kernel = numpy.where(
+        distance_kernel > max_distance, 0.0, 1 - distance_kernel / max_distance)
+    return kernel / numpy.sum(kernel)
+
+
+def make_exponential_kernel(max_distance):
+    distance_kernel = make_distance_kernel(max_distance)
+    kernel = numpy.where(
+        distance_kernel > max_distance, 0.0, numpy.exp(-2.99 / max_distance * distance_kernel))
+    return kernel / numpy.sum(kernel)
