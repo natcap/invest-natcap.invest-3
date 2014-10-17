@@ -26,7 +26,7 @@ def execute(args):
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['suffix'] - a string to append to any output file name (optional)
+        args['results_suffix'] - a string to append to any output file name (optional)
         args['dem_uri'] - a uri to a digital elevation raster file (required)
         args['erosivity_uri'] - a uri to an input raster describing the
             rainfall eroisivity index (required)
@@ -61,7 +61,7 @@ def execute(args):
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:
-        file_suffix = args['suffix']
+        file_suffix = args['results_suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
             file_suffix = '_' + file_suffix
     except KeyError:
