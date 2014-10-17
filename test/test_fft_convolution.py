@@ -32,9 +32,9 @@ def make_exponential_kernel(max_distance):
 
 
 if __name__ == '__main__':
-    weight_uri = "C:/Users/rpsharp/Box Sync/Unilever/Input_MatoGrosso_global_Unilever_10_09_2014/Input_MatoGrosso_global_Unilever_10_09_2014/SRTM_90m_MatoGrosso_final_basins.tif"
+    weight_uri = "C:/Users/rich/Box Sync/Unilever/Input_MatoGrosso_global_Unilever_10_09_2014/Input_MatoGrosso_global_Unilever_10_09_2014/SRTM_90m_MatoGrosso_final_basins.tif"
     #weight_uri = "C:/InVEST_dev107_3_0_1 [61c19dc4b887]_x86/Base_Data/Freshwater/dem"
-    output_uri = "C:/Users/rpsharp/Documents/convolution/result.tif"
+    output_uri = "C:/Users/rich/Documents/convolution/result.tif"
     max_distance = 100
     print 'make kernel'
     kernel = make_linear_kernel(max_distance)
