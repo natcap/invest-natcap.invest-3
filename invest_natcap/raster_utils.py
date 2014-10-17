@@ -3043,7 +3043,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
     for global_block_row in xrange(n_global_block_rows):
         current_time = time.time()
         if current_time - last_time > 5.0:
-            LOGGER.info("convert to float %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
+            LOGGER.info("convolution %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
             last_time = current_time
         for global_block_col in xrange(n_global_block_cols):
             xoff = global_block_col * block_col_size
@@ -3077,10 +3077,10 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 top_index_raster = 0
 
             if right_index_raster > n_cols:
-                right_index_result -= n_cols - right_index_raster
+                right_index_result -= right_index_raster - n_cols
                 right_index_raster = n_cols
             if bottom_index_raster > n_rows:
-                bottom_index_result -= n_rows - bottom_index_result
+                bottom_index_result -= bottom_index_raster - n_rows
                 bottom_index_raster = n_rows
 
             try:
@@ -3088,6 +3088,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
                     result[top_index_result:bottom_index_result, left_index_result:right_index_result],
                     xoff=left_index_raster, yoff=top_index_raster)
             except ValueError as e:
+                LOGGER.debug('result.shape %s', str(result.shape))
                 LOGGER.debug("global_block_row, global_block_col: %d %d", global_block_row, global_block_col)
                 LOGGER.debug("block_row_size, block_col_size %d %d", block_row_size, block_col_size)
                 LOGGER.debug("n_rows, n_cols %d %d", n_rows, n_cols)
@@ -3095,8 +3096,8 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 
                 LOGGER.debug("output_band.WriteArray(\n"
                     "result[%d:%d, %d:%d],\n"
-                    "xoff=%d, yoff=%d)", left_index_result, right_index_result,
-                    top_index_result, bottom_index_result,
+                    "xoff=%d, yoff=%d)", top_index_result, bottom_index_result, left_index_result, right_index_result,
+                    
                     left_index_raster, top_index_raster)
                 raise e
     
