@@ -3019,11 +3019,15 @@ def convolve_2d(weight_uri, kernel, output_uri):
         returns nothing"""
 
     output_nodata = -9999
+
+    tmp_weight_uri = temporary_filename()
+    tile_dataset_uri(weight_uri, tmp_weight_uri, 256)
+
     new_raster_from_base_uri(
         weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32,
         fill_value=0)
 
-    weight_ds = gdal.Open(weight_uri)
+    weight_ds = gdal.Open(tmp_weight_uri)
     weight_band = weight_ds.GetRasterBand(1)
     block_col_size, block_row_size = weight_band.GetBlockSize()
     weight_nodata = weight_band.GetNoDataValue()
@@ -3101,7 +3105,6 @@ def convolve_2d(weight_uri, kernel, output_uri):
             output_band.WriteArray(
                 output_array, xoff=left_index_raster, yoff=top_index_raster)    
 
-    #raster_cython_utils.convolve_2d(weight_uri, kernel, output_uri)
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""
