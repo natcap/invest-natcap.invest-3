@@ -3103,7 +3103,12 @@ def convolve_2d(weight_uri, kernel, output_uri):
             output_array[nodata_mask] = output_nodata
 
             output_band.WriteArray(
-                output_array, xoff=left_index_raster, yoff=top_index_raster)    
+                output_array, xoff=left_index_raster, yoff=top_index_raster)
+
+    weight_band = None
+    gdal.Dataset.__swig_destroy__(weight_ds)
+    weight_ds = None
+    os.remove(tmp_weight_uri)
 
 
 def _smart_cast(value):
