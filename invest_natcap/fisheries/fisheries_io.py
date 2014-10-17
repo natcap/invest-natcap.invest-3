@@ -69,26 +69,57 @@ def _parse_population_csv(uri, sexsp):
     of matrices and vectors
 
     **Example**
-    pop_dict = {{'SurvNaturalFrac': np.matrix}, {'VulnFishingFrac': np.matrix}, ...}
+    pop_dict = {{'SurvNaturalFrac': [np.ndarrays]},
+                {'VulnFishing': np.ndarray}, ...}
     '''
     csv_data = []
+    params_dict = {}
 
-    with open(sex_neutral_csv_uri, 'rb') as csvfile:
+    with open(uri, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
-    # Make use of get_cols, get_rows or use filter/map/reduce functions
 
+    start_rows = _get_table_row_start_indexes(csv_data)
+    start_cols = _get_table_col_start_indexes(csv_data, start_rows[0])
 
-    # Parse SurvFrac
+    classes = _get_col(
+        csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
+    params_dict["classes"] = classes[1:]
 
-    # Parse Class-based Parameters
+    regions = _get_row(
+        csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
+    params_dict["regions"] = regions[1:]
 
-    # Parse Area-based Parameters
+    surv_table = _get_table(csv_data, start_rows[0] + 1, start_cols[0] + 1)
+    class_attributes_table = _get_table(
+        csv_data, start_rows[0], start_cols[1])
+    region_attributes_table = _get_table(
+        csv_data, start_rows[1], start_cols[0])
 
+    if sexsp == 1:
+        # Sex Neutral
+        params_dict['SurvNaturalFrac'] = [np.array(surv_table, dtype=np.float_)]
 
+    elif sexsp == 2:
+        # Sex Specific
+        female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
+        male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
+        params_dict['SurvNaturalFrac'] = [female, male]
 
-    pass
+    else:
+        # Throw exception about sex-specific conflict or formatting issue
+        pass
+
+    for col in range(0, len(class_attributes_table[0])):
+        params_dict.update(_vectorize_attribute(
+            _get_col(class_attributes_table, col), sexsp))
+
+    for row in range(0, len(region_attributes_table)):
+        params_dict.update(_vectorize_attribute(
+            _get_row(region_attributes_table, row), 1))
+
+    return params_dict
 
 
 def _verify_migration_tables(args):
@@ -227,3 +258,64 @@ def listdir(path):
     uris = map(lambda x: os.path.join(path, x), file_names)
 
     return uris
+
+
+# Helper functions for navigating CSV files
+def _get_col(lsts, col):
+    l = []
+    for row in range(0, len(lsts)):
+        if lsts[row][col] != '':
+            l.append(lsts[row][col])
+    return l
+
+
+def _get_row(lsts, row):
+    l = []
+    for entry in range(0, len(lsts[row])):
+        if lsts[row][entry] != '':
+            l.append(lsts[row][entry])
+    return l
+
+
+def _get_table(lsts, row, col):
+    table = []
+
+    end_col = col
+    while end_col + 1 < len(lsts[0]) and lsts[0][end_col + 1] != '':
+        end_col += 1
+
+    end_row = row
+    while end_row + 1 < len(lsts) and lsts[end_row + 1][0] != '':
+        end_row += 1
+
+    for line in range(row, end_row + 1):
+        table.append(lsts[line][col:end_col + 1])
+    return table
+
+
+def _get_table_row_start_indexes(lsts):
+    indexes = []
+    if lsts[0][0] != '':
+        indexes.append(0)
+    for line in range(1, len(lsts)):
+        if lsts[line - 1][0] == '' and lsts[line][0] != '':
+            indexes.append(line)
+    return indexes
+
+
+def _get_table_col_start_indexes(lsts, top):
+    indexes = []
+    if lsts[top][0] != '':
+        indexes.append(0)
+    for col in range(1, len(lsts[top])):
+        if lsts[top][col - 1] == '' and lsts[top][col] != '':
+            indexes.append(col)
+    return indexes
+
+
+def _vectorize_attribute(lst, rows):
+    d = {}
+    a = np.array(lst[1:], dtype=np.float_)
+    a = np.reshape(a, (rows, a.shape[0] / rows))
+    d[lst[0]] = a
+    return d
