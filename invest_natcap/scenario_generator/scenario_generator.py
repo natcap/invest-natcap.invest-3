@@ -765,7 +765,7 @@ def execute(args):
 
                     def threshold(value):
                         result = numpy.where(value > distance, transition_nodata, value)
-                        return numpy.where(value == transition_nodata, transition_nodata, value)
+                        return numpy.where(value == transition_nodata, transition_nodata, result)
 
                     raster_utils.vectorize_datasets([distance_uri],
                                                     threshold,
