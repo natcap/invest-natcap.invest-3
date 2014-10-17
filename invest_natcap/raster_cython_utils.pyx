@@ -12,8 +12,7 @@ from libcpp.map cimport map
 
 from libc.math cimport sqrt
 from libc.math cimport exp
-
-
+from libc.math cimport ceil
 
 from osgeo import gdal
 
@@ -446,136 +445,117 @@ def new_raster_from_base(
     band = None
 
     return new_raster
+    
 
+cdef class BlockCache:
+    cdef numpy.int32_t[:,:] row_tag_cache
+    cdef numpy.int32_t[:,:] col_tag_cache
+    cdef numpy.int8_t[:,:] cache_dirty
+    cdef int n_block_rows
+    cdef int n_block_cols
+    cdef int block_col_size
+    cdef int block_row_size
+    cdef int n_rows
+    cdef int n_cols
+    band_list = []
+    block_list = []
+    update_list = []
 
-cdef float distance(int row_index, int col_index, int kernel_size, int kernel_type, float max_distance):
-    """closure for an euclidan distance calc"""
-    cdef float dist = sqrt(
-        (row_index - kernel_size - 1) ** 2 +
-        (col_index - kernel_size - 1) ** 2)
-    if dist > max_distance:
-        return 0.0
-    if kernel_type == 0: #'linear'
-        return 1 - dist/max_distance
-    elif kernel_type == 1: #'exponential'
-        return  exp(-(2.99/max_distance) * dist)
+    def __cinit__(
+        self, int n_block_rows, int n_block_cols, int n_rows, int n_cols, int block_row_size, int block_col_size, band_list, block_list, update_list, numpy.int8_t[:,:] cache_dirty):
+        self.n_block_rows = n_block_rows
+        self.n_block_cols = n_block_cols
+        self.block_col_size = block_col_size
+        self.block_row_size = block_row_size
+        self.n_rows = n_rows
+        self.n_cols = n_cols
+        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.cache_dirty = cache_dirty
+        self.row_tag_cache[:] = -1
+        self.col_tag_cache[:] = -1
+        self.band_list[:] = band_list
+        self.block_list[:] = block_list
+        self.update_list[:] = update_list
 
-        
-@cython.boundscheck(False)
-def convolve_2d(weight_uri, kernel_type, max_distance_in, output_uri):
-    """Does a direct convolution on a predefined kernel 
-    
-        
-        each output pixel at ij gets the value:
-            sum_xy(weight_uri_xy * decay_xy_ij)
-            
-            
-        define d(xy, ij) as the Euclidan distance between coordinates xy and ij
-        then, decay_xy_ij is
-            
-            1 - d(xy, ij)/max_distance for 'linear'
-            exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
+        cdef int cache_row_size, cache_col_size
+        cdef int global_row_offset, global_col_offset
+        cdef int row_tag, col_tag
 
-            if d(xy, ij) < max_distance, else 0.0
-            
-        weight_uri - this is the source raster
-        kernel_type - 'linear' or 'exponential'
-        max_distance - defined in equation above (units are pixel size)
-        output_uri - the raster output of same size and projection of
-            weight_uri
-            
-        returns nothing"""
-        
-    weight_ds = gdal.Open(weight_uri)
-    weight_band = weight_ds.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.float_t, ndim=2] weight_array
-    new_raster_from_base_uri(
-        weight_uri, output_uri, 'GTiff', -1, gdal.GDT_Float32)
-    
-    cdef int n_rows, n_cols, row_index, col_index, row_offset, col_offset
-    cdef int weight_left_index, weight_right_index, weight_top_index, weight_bottom_index
-    cdef int kernel_left_index, kernel_right_index, kernel_bottom_index, kernel_top_index
-    cdef int max_distance = max_distance_in
-    
-    n_rows, n_cols = weight_band.YSize, weight_band.XSize
-    
-    output_ds = gdal.Open(output_uri, gdal.GA_Update)
-    output_band = output_ds.GetRasterBand(1)
-    cdef numpy.ndarray[numpy.float_t, ndim=2] output_array = numpy.empty(
-        (1, n_cols), dtype=numpy.float)
-    
-    #build a kernel
-    cdef int kernel_size = max_distance * 2 + 1
-    cdef numpy.ndarray[numpy.float_t, ndim=2] kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
-    cdef int kernel_type_id
-    if kernel_type == 'linear':
-        kernel_type_id = 0
-    if kernel_type == 'exponential':
-        kernel_type_id = 1
-    for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            kernel[row_index, col_index] = distance(
-                row_index, col_index, kernel_size, kernel_type_id, max_distance)
-    cdef double last_time = time.time()
-    cdef double current_time, kernel_sum
-    for row_index in xrange(n_rows):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info('convolve 2d %.2f%% complete' % ((row_index * n_cols) / float(n_rows * n_cols) * 100.0))
-            last_time = current_time
-            
-        #snip the window of the kernel over the window of the weight
-        if row_index >= max_distance:
-            weight_top_index = row_index - max_distance
-            kernel_top_index = 0
-        else:
-            weight_top_index = 0
-            kernel_top_index = max_distance - row_index
-        
-        if row_index < n_rows - kernel_size / 2:
-            weight_bottom_index = row_index + kernel_size / 2 + 1
-            kernel_bottom_index = kernel_size
-        else:
-            weight_bottom_index = n_rows
-            kernel_bottom_index = max_distance + (n_rows - row_index)
-    
-        weight_array = weight_band.ReadAsArray(
-            xoff=0, yoff=weight_top_index, win_xsize=n_cols,
-            win_ysize=weight_bottom_index-weight_top_index).astype(numpy.float)
+        row_block_offset[0] = global_row % self.block_row_size
+        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
+        row_tag = (global_row // self.block_row_size) // self.n_block_rows
 
-        for col_index in xrange(n_cols):
-            #snip the window of the kernel over the window of the weight
-            if col_index >= max_distance:
-                weight_left_index = col_index - max_distance
-                kernel_left_index = 0
-            else:
-                weight_left_index = 0
-                kernel_left_index = max_distance - col_index
+        col_block_offset[0] = global_col % self.block_col_size
+        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
+        col_tag = (global_col // self.block_col_size) // self.n_block_cols
+
+        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
+        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
+
+        if current_row_tag != row_tag or current_col_tag != col_tag:
+            if self.cache_dirty[row_index[0], col_index[0]]:
+                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
+                cache_col_size = self.n_cols - global_col_offset
+                if cache_col_size > self.block_col_size:
+                    cache_col_size = self.block_col_size
+                
+                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
+                cache_row_size = self.n_rows - global_row_offset
+                if cache_row_size > self.block_row_size:
+                    cache_row_size = self.block_row_size
+                
+                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                    if update:
+                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
+                            yoff=global_row_offset, xoff=global_col_offset)
+                self.cache_dirty[row_index[0], col_index[0]] = 0
+            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
+            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
+                
+            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
+            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
+
+            cache_col_size = self.n_cols - global_col_offset
+            if cache_col_size > self.block_col_size:
+                cache_col_size = self.block_col_size
+            cache_row_size = self.n_rows - global_row_offset
+            if cache_row_size > self.block_row_size:
+                cache_row_size = self.block_row_size
             
-            if col_index < n_cols - max_distance - 1:
-                weight_right_index = col_index + max_distance + 1
-                kernel_right_index = kernel_size
-            else:
-                weight_right_index = n_cols
-                kernel_right_index = max_distance + (n_cols - col_index)
-            
-            kernel_sum = 0.0
-            for row_offset in xrange(kernel_bottom_index - kernel_top_index):
-                for col_offset in xrange(kernel_right_index - kernel_left_index):
-                        kernel_sum += (kernel[kernel_top_index+row_offset, kernel_left_index+col_offset] * 
-                            weight_array[row_offset, weight_left_index+col_offset])
-            output_array[0, col_index] = kernel_sum
-        
-        output_band.WriteArray(output_array, 0, row_index)
-    
-    LOGGER.info('convolve 2d 100% complete')
-    output_band = output_ds.GetRasterBand(1)
-    
-    weight_band = None
-    gdal.Dataset.__swig_destroy__(weight_ds)
-    weight_ds = None
-    
-    output_band = None
-    gdal.Dataset.__swig_destroy__(output_ds)
-    output_ds = None
-    
+            for band, block in zip(self.band_list, self.block_list):
+                band.ReadAsArray(
+                    xoff=global_col_offset, yoff=global_row_offset,
+                    win_xsize=cache_col_size, win_ysize=cache_row_size,
+                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
+
+    cdef void flush_cache(self):
+        cdef int global_row_offset, global_col_offset
+        cdef int cache_row_size, cache_col_size
+        cdef int row_index, col_index
+        for row_index in xrange(self.n_block_rows):
+            for col_index in xrange(self.n_block_cols):
+                row_tag = self.row_tag_cache[row_index, col_index]
+                col_tag = self.col_tag_cache[row_index, col_index]
+
+                if self.cache_dirty[row_index, col_index]:
+                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
+                    cache_col_size = self.n_cols - global_col_offset
+                    if cache_col_size > self.block_col_size:
+                        cache_col_size = self.block_col_size
+                    
+                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
+                    cache_row_size = self.n_rows - global_row_offset
+                    if cache_row_size > self.block_row_size:
+                        cache_row_size = self.block_row_size
+                    
+                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                        if update:
+                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
+                                yoff=global_row_offset, xoff=global_col_offset)
+        for band in self.band_list:
+            band.FlushCache()

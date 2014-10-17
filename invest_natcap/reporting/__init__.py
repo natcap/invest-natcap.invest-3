@@ -73,8 +73,12 @@ def generate_report(reporting_args):
                     added to the bottom of the table that will show the
                     total of the columns selected (optional)
 
+                'checkbox_pos' - an integer value for in which column
+                    position the the checkbox column should appear
+                    (optional)
+
                 'data_type' - one of the following string values:
-                    'shapefile'|'csv'|'dictionary'. Depicts the type of data
+                    'shapefile'|'hg csv'|'dictionary'. Depicts the type of data
                     structure to build the table from (required)
 
                 'data' - either a list of dictionaries if 'data_type' is
@@ -387,6 +391,8 @@ def build_table(param_args):
     # If a checkbox column is wanted pass in the table dictionary
     if 'checkbox' in param_args and param_args['checkbox']:
         table_dict['checkbox'] = True
+        if 'checkbox_pos' in param_args:
+            table_dict['checkbox_pos'] = param_args['checkbox_pos']
 
     LOGGER.debug('Calling table_generator')
     # Call generate table passing in the final dictionary and attribute

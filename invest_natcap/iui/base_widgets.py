@@ -2425,6 +2425,12 @@ class Root(DynamicElement):
                         outputDict = self.set_dict_value(outputDict, args_id,
                             element_value)
 
+        if self.attributes['include_meta'] is True:
+            outputDict['_iui_meta'] = {
+                'ui_state': self.get_element_state(),
+                'lastrun_uri': self.last_run_handler.uri,
+            }
+
         return outputDict
 
     def set_dict_value(self, dictionary, key_list, element_value):
@@ -2599,6 +2605,9 @@ class ExecRoot(Root):
         self.warning_dialog = WarningDialog()
         self.initElements()
 
+        if 'include_meta' not in self.attributes:
+            self.attributes['include_meta'] = False
+
     def save_to_json(self):
         """Save the current state of the UI to a python file after checking that
         there are no validation errors."""
@@ -2657,8 +2666,8 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s_parameters.py' % model_name, filter = QString('Python file' +
-                ' (*.py);;All files (*.* *)'))
+                '%s_parameters.py' % model_name, QString(),
+                QString('Python file (*.py);;All files (*.* *)'))
             try:
                 filename = unicode(filename)
             except TypeError:
@@ -2676,6 +2685,10 @@ class ExecRoot(Root):
         try:
             return self.allElements[element_id]
         except KeyError:
+            if not hasattr(self, 'embedded_uis'):
+                raise RuntimeError(('Tried to locate element %s, but it does '
+                    'exist in any known UIs') % element_id)
+
             if self.embedded_uis == []:
                 self.embedded_uis = self.find_embedded_elements()
 
@@ -2704,8 +2717,8 @@ class ExecRoot(Root):
         model_name = model.split('.')[-1]
 
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            '%s_parameters.json' % model_name, filter = QString('InVEST Parameter file' +
-            ' (*.json);;All files (*.* *)'))
+            '%s_parameters.json' % model_name, QString(),
+            QString('InVEST Parameter file (*.json);;All files (*.* *)'))
         filename = str(filename)
         if filename != '':
             save_handler = fileio.JSONHandler(filename)

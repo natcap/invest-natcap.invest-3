@@ -13,7 +13,6 @@ import collections
 import exceptions
 import multiprocessing
 import multiprocessing.pool
-import tables
 import heapq
 import time
 import smtplib
@@ -685,10 +684,11 @@ def aggregate_raster_values_uri(
         """
 
     raster_nodata = get_nodata_from_uri(raster_uri)
+    
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
-        [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
+        [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float64,
         raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False, process_pool=process_pool,
@@ -780,7 +780,9 @@ def aggregate_raster_values_uri(
         (shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
-
+    #Populate the pixel mean dictionary with something, -9999 seems to make sense
+    for shapefile_id in shapefile_table:
+        result_tuple.pixel_mean[shapefile_id] = -9999
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()
@@ -1021,7 +1023,7 @@ def calculate_slope(
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works
 
         dem_dataset_uri - (input) a URI to a  single band raster of z values.
-        slope_uri - (input) a path to the output slope uri
+        slope_uri - (input) a path to the output slope uri in percent.
         aoi_uri - (optional) a uri to an AOI input
         process_pool - (optional) a process pool for multiprocessing
 
@@ -1984,9 +1986,9 @@ def resize_and_resample_dataset_uri(
         bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0,
         -out_pixel_size]
     new_x_size = abs(
-        int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
+        int(numpy.round((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
     new_y_size = abs(
-        int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
+        int(numpy.round((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
 
     #create the new x and y size
     block_size = original_band.GetBlockSize()
@@ -2000,10 +2002,9 @@ def resize_and_resample_dataset_uri(
             'TILED=YES', 'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
             'BLOCKYSIZE=%d' % block_size[1]]
     else:
-        gtiff_creation_options = [
-            'BIGTIFF=IF_SAFER', 'BLOCKXSIZE=%d' % block_size[0],
-            'BLOCKYSIZE=%d' % block_size[1]]
-
+        #this thing is so small or strangely aligned, use the default creation options
+        gtiff_creation_options = []
+        
     create_directories([os.path.dirname(output_uri)])
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
@@ -2185,6 +2186,7 @@ def align_dataset_list(
             resize_and_resample_dataset_uri(
                 original_dataset_uri, bounding_box, out_pixel_size,
                 out_dataset_uri, resample_method)
+            
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
@@ -2843,60 +2845,6 @@ def rasterize_layer_uri(
     shapefile = None
 
 
-def create_carray(h5file_uri, h5_type, shape):
-    """Creates an empty pytables chunked array given a file type and size.
-
-        h5file_uri - a uri to store the carray
-        h5_type - an h5file type
-        shape - a tuple indicating rows/columns"""
-
-    h5file = tables.openFile(h5file_uri, mode='w')
-    root = h5file.root
-    filters = tables.Filters(complevel=0)
-    return h5file.createCArray(
-        root, 'from_create_carray', h5_type, shape=shape, filters=filters)
-
-
-def load_dataset_to_carray(dataset_uri, h5file_uri, array_type=None):
-    """Loads a GDAL dataset into a h5file chunked array.
-
-        dataset_uri - uri to a GDAL dataset
-        h5file_uri - uri to a file that the chunked array will exist on disk
-        array_type - (optional) if specified is a GDAL type for what the output
-            array should be cast to
-
-        returns chunked array representing the original gdal dataset"""
-
-    dataset = gdal.Open(dataset_uri)
-    band = dataset.GetRasterBand(1)
-    if array_type is None:
-        array_type = band.DataType
-
-    map_gdal_type_to_atom = {
-        gdal.GDT_Int16: tables.Int16Atom(),
-        gdal.GDT_Int32: tables.Int32Atom(),
-        gdal.GDT_UInt16: tables.UInt16Atom(),
-        gdal.GDT_UInt32: tables.UInt32Atom(),
-        gdal.GDT_Byte: tables.Int8Atom(),
-        gdal.GDT_Float64: tables.Float64Atom(),
-        gdal.GDT_Float32: tables.Float32Atom()
-    }
-
-    carray = create_carray(
-        h5file_uri, map_gdal_type_to_atom[array_type],
-        (dataset.RasterYSize, dataset.RasterXSize))
-
-    for row_index in xrange(dataset.RasterYSize):
-        carray[row_index, :] = band.ReadAsArray(
-            0, row_index, dataset.RasterXSize, 1)[0]
-
-    band = None
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
-
-    return carray
-
-
 def make_constant_raster_from_base_uri(
         base_dataset_uri, constant_value, out_uri, nodata_value=None,
         dataset_type=gdal.GDT_Float32):
@@ -3060,31 +3008,108 @@ def email_report(message, email_address):
         LOGGER.warn("Can't connect to email server, no report will be sent.")
 
 
-def convolve_2d(weight_uri, kernel_type, max_distance, output_uri):
-    """Does a direct convolution on a predefined kernel
-
-
-        each output pixel at ij gets the value:
-            sum_xy(weight_uri_xy * decay_xy_ij)
-
-
-        define d(xy, ij) as the Euclidan distance between coordinates xy and ij
-        then, decay_xy_ij is
-
-            1 - d(xy, ij)/max_distance for 'linear'
-            exp(-(2.99/max_distance)*d(xy,ij)) for 'exponential'
-
-            if d(xy, ij) < max_distance, else 0.0
+def convolve_2d(weight_uri, kernel, output_uri):
+    """Does a direct convolution on a predefined kernel with the values in weight_uri
 
         weight_uri - this is the source raster
-        kernel_type - 'linear' or 'exponential'
-        max_distance - defined in equation above (units are pixel size)
+        kernel - 2d numpy integrating kernel
         output_uri - the raster output of same size and projection of
             weight_uri
 
         returns nothing"""
-    raster_cython_utils.convolve_2d(
-        weight_uri, kernel_type, max_distance, output_uri)
+
+    output_nodata = -9999
+
+    tmp_weight_uri = temporary_filename()
+    tile_dataset_uri(weight_uri, tmp_weight_uri, 256)
+
+    new_raster_from_base_uri(
+        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32,
+        fill_value=0)
+
+    weight_ds = gdal.Open(tmp_weight_uri)
+    weight_band = weight_ds.GetRasterBand(1)
+    block_col_size, block_row_size = weight_band.GetBlockSize()
+    weight_nodata = weight_band.GetNoDataValue()
+
+    output_ds = gdal.Open(output_uri, gdal.GA_Update)
+    output_band = output_ds.GetRasterBand(1)
+
+    n_rows = weight_band.YSize
+    n_cols = weight_band.XSize
+
+    n_rows_kernel = kernel.shape[1]
+    n_cols_kernel = kernel.shape[0]
+
+    n_global_block_rows = int(math.ceil(float(n_rows) / block_row_size))
+    n_global_block_cols = int(math.ceil(float(n_cols) / block_col_size))
+
+    last_time = time.time()
+    for global_block_row in xrange(n_global_block_rows):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info("convolution %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
+            last_time = current_time
+        for global_block_col in xrange(n_global_block_cols):
+            xoff = global_block_col * block_col_size
+            yoff = global_block_row * block_row_size
+            win_xsize = min(block_col_size, n_cols - xoff)
+            win_ysize = min(block_row_size, n_rows - yoff)
+
+            weight_array = weight_band.ReadAsArray(
+                xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
+            weight_nodata_mask = weight_array == weight_nodata
+            weight_array[weight_nodata_mask] = 0.0
+
+            result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
+            
+            left_index_raster = xoff - n_cols_kernel / 2
+            right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
+            top_index_raster = yoff - n_rows_kernel / 2
+            bottom_index_raster = yoff + block_row_size + (n_rows_kernel - 1) / 2
+
+            left_index_result = 0
+            right_index_result = block_col_size + n_cols_kernel - 1
+            top_index_result = 0
+            bottom_index_result = block_row_size + n_rows_kernel - 1
+
+            #we might abut the edge of the raster, clip if so
+            if left_index_raster < 0:
+                left_index_result = -left_index_raster
+                left_index_raster = 0
+            if top_index_raster < 0:
+                top_index_result = -top_index_raster
+                top_index_raster = 0
+
+            if right_index_raster > n_cols:
+                right_index_result -= right_index_raster - n_cols
+                right_index_raster = n_cols
+            if bottom_index_raster > n_rows:
+                bottom_index_result -= bottom_index_raster - n_rows
+                bottom_index_raster = n_rows
+
+            current_output = output_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            potential_nodata_weight_array = weight_band.ReadAsArray(
+                xoff=left_index_raster, yoff=top_index_raster,
+                win_xsize=right_index_raster-left_index_raster,
+                win_ysize=bottom_index_raster-top_index_raster)
+            nodata_mask = potential_nodata_weight_array == weight_nodata
+        
+            output_array = result[top_index_result:bottom_index_result, 
+                left_index_result:right_index_result] + current_output
+            output_array[nodata_mask] = output_nodata
+
+            output_band.WriteArray(
+                output_array, xoff=left_index_raster, yoff=top_index_raster)
+
+    weight_band = None
+    gdal.Dataset.__swig_destroy__(weight_ds)
+    weight_ds = None
+    os.remove(tmp_weight_uri)
+
 
 def _smart_cast(value):
     """Attempts to cast value to a float, int, or leave it as string"""

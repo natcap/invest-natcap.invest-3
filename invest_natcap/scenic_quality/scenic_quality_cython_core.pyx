@@ -467,7 +467,7 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
-        print('angle', a, angles[a])
+#        print('angle', a, angles[a])
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -598,8 +598,8 @@ def sweep_through_angles( \
             active_pixel_array, coord[0], coord[1], \
             max_line_length, visibility_map, a+1)
 
-        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
-            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
+#        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
+#            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
 
         if active_pixel_count != \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:

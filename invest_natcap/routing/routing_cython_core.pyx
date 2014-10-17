@@ -716,7 +716,7 @@ cdef _build_flat_set(
                         neighbor_row = neighbor_row_offset[neighbor_index] + global_row
                         neighbor_col = neighbor_col_offset[neighbor_index] + global_col
                         
-                        if (neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0):
+                        if neighbor_row >= n_rows or neighbor_row < 0 or neighbor_col >= n_cols or neighbor_col < 0:
                             continue
                         block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                         neighbor_dem_value = dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
@@ -884,8 +884,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     dem_edge_offset_ds = gdal.Open(dem_edge_offset_uri, gdal.GA_Update)
     dem_edge_offset_band = dem_edge_offset_ds.GetRasterBand(1)
 
-    cdef int sink_cell_hits = 0, edge_cell_hits = 0
-
     cdef queue[int] flat_region_queue
     
     #no path in the raster will will be greater than this
@@ -922,6 +920,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     cdef Row_Col_Weight_Tuple t
     cdef int weight, region_count = 0
     last_time = time.time()
+
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
         flat_index = deref(flat_set_for_looping.begin())
@@ -930,7 +929,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-        
+
         if dem_block[row_index, col_index, row_block_offset, col_block_offset] == nodata_value:
             continue
 
@@ -973,17 +972,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     if dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == nodata_value:
                         continue
 
-                    #if we don't abut a higher pixel then skip
-                    if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] <=
-                        dem_block[row_index, col_index, row_block_offset, col_block_offset]):
-                        continue
-
-                    #otherwise we're next to an uphill pixel, that means we're an edge
-                    t = Row_Col_Weight_Tuple(global_row, global_col, 0)
-                    edge_queue.push(t)
-                    dem_edge_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
-                    cache_dirty[row_index, col_index] = 1
-                    break
+                    #if we don't abut a higher pixel then it's an edge
+                    if (dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] >
+                            dem_block[row_index, col_index, row_block_offset, col_block_offset]):
+                        
+                        t = Row_Col_Weight_Tuple(global_row, global_col, 0)
+                        edge_queue.push(t)
+                        dem_edge_offset_block[row_index, col_index, row_block_offset, col_block_offset] = 0
+                        cache_dirty[row_index, col_index] = 1
+                        break
             else:
                 #it's been pushed onto the plateau queue, so we know it's in the same
                 #region, but it's not flat, so it must be a sink
@@ -1016,7 +1013,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         #process sink offsets for region
         while sink_queue.size() > 0:
-            sink_cell_hits += 1
             current_cell_tuple = sink_queue.front()
             sink_queue.pop()
             
@@ -1058,7 +1054,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         #process edge offsets for region
         while edge_queue.size() > 0:
-            edge_cell_hits += 1
             current_cell_tuple = edge_queue.front()
             edge_queue.pop()
             
@@ -1075,11 +1070,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                     continue
                 block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                 
-                #If the neighbor is not at the same height, skip
-                if (dem_block[row_index, col_index, row_block_offset, col_block_offset] != 
-                    dem_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]):
-                    continue
-
                 flat_index = neighbor_row * n_cols + neighbor_col
                 #If the neighbor is not flat then skip
                 if flat_set.find(flat_index) == flat_set.end():
@@ -1818,119 +1808,6 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
         os.remove(dataset_uri)
 
 
-cdef class BlockCache:
-    cdef numpy.int32_t[:,:] row_tag_cache
-    cdef numpy.int32_t[:,:] col_tag_cache
-    cdef numpy.int8_t[:,:] cache_dirty
-    cdef int n_block_rows
-    cdef int n_block_cols
-    cdef int block_col_size
-    cdef int block_row_size
-    cdef int n_rows
-    cdef int n_cols
-    band_list = []
-    block_list = []
-    update_list = []
-
-    def __cinit__(
-        self, int n_block_rows, int n_block_cols, int n_rows, int n_cols, int block_row_size, int block_col_size, band_list, block_list, update_list, numpy.int8_t[:,:] cache_dirty):
-        self.n_block_rows = n_block_rows
-        self.n_block_cols = n_block_cols
-        self.block_col_size = block_col_size
-        self.block_row_size = block_row_size
-        self.n_rows = n_rows
-        self.n_cols = n_cols
-        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.cache_dirty = cache_dirty
-        self.row_tag_cache[:] = -1
-        self.col_tag_cache[:] = -1
-        self.band_list[:] = band_list
-        self.block_list[:] = block_list
-        self.update_list[:] = update_list
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.cdivision(True)
-    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
-        cdef int cache_row_size, cache_col_size
-        cdef int global_row_offset, global_col_offset
-        cdef int row_tag, col_tag
-
-        row_block_offset[0] = global_row % self.block_row_size
-        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
-        row_tag = (global_row // self.block_row_size) // self.n_block_rows
-
-        col_block_offset[0] = global_col % self.block_col_size
-        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
-        col_tag = (global_col // self.block_col_size) // self.n_block_cols
-
-        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
-        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
-
-        if current_row_tag != row_tag or current_col_tag != col_tag:
-            if self.cache_dirty[row_index[0], col_index[0]]:
-                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-                cache_col_size = self.n_cols - global_col_offset
-                if cache_col_size > self.block_col_size:
-                    cache_col_size = self.block_col_size
-                
-                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
-                cache_row_size = self.n_rows - global_row_offset
-                if cache_row_size > self.block_row_size:
-                    cache_row_size = self.block_row_size
-                
-                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                    if update:
-                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
-                            yoff=global_row_offset, xoff=global_col_offset)
-                self.cache_dirty[row_index[0], col_index[0]] = 0
-            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
-            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
-                
-            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
-
-            cache_col_size = self.n_cols - global_col_offset
-            if cache_col_size > self.block_col_size:
-                cache_col_size = self.block_col_size
-            cache_row_size = self.n_rows - global_row_offset
-            if cache_row_size > self.block_row_size:
-                cache_row_size = self.block_row_size
-            
-            for band, block in zip(self.band_list, self.block_list):
-                band.ReadAsArray(
-                    xoff=global_col_offset, yoff=global_row_offset,
-                    win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
-
-    cdef void flush_cache(self):
-        cdef int global_row_offset, global_col_offset
-        cdef int cache_row_size, cache_col_size
-        cdef int row_index, col_index
-        for row_index in xrange(self.n_block_rows):
-            for col_index in xrange(self.n_block_cols):
-                row_tag = self.row_tag_cache[row_index, col_index]
-                col_tag = self.col_tag_cache[row_index, col_index]
-
-                if self.cache_dirty[row_index, col_index]:
-                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
-                    cache_col_size = self.n_cols - global_col_offset
-                    if cache_col_size > self.block_col_size:
-                        cache_col_size = self.block_col_size
-                    
-                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
-                    cache_row_size = self.n_rows - global_row_offset
-                    if cache_row_size > self.block_row_size:
-                        cache_row_size = self.block_row_size
-                    
-                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                        if update:
-                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
-                                yoff=global_row_offset, xoff=global_col_offset)
-        for band in self.band_list:
-            band.FlushCache()
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -2214,3 +2091,117 @@ def percent_to_sink(
     block_cache.flush_cache()
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
                     (time.clock() - start_time))
+
+
+cdef class BlockCache:
+    cdef numpy.int32_t[:,:] row_tag_cache
+    cdef numpy.int32_t[:,:] col_tag_cache
+    cdef numpy.int8_t[:,:] cache_dirty
+    cdef int n_block_rows
+    cdef int n_block_cols
+    cdef int block_col_size
+    cdef int block_row_size
+    cdef int n_rows
+    cdef int n_cols
+    band_list = []
+    block_list = []
+    update_list = []
+
+    def __cinit__(
+        self, int n_block_rows, int n_block_cols, int n_rows, int n_cols, int block_row_size, int block_col_size, band_list, block_list, update_list, numpy.int8_t[:,:] cache_dirty):
+        self.n_block_rows = n_block_rows
+        self.n_block_cols = n_block_cols
+        self.block_col_size = block_col_size
+        self.block_row_size = block_row_size
+        self.n_rows = n_rows
+        self.n_cols = n_cols
+        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
+        self.cache_dirty = cache_dirty
+        self.row_tag_cache[:] = -1
+        self.col_tag_cache[:] = -1
+        self.band_list[:] = band_list
+        self.block_list[:] = block_list
+        self.update_list[:] = update_list
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
+        cdef int cache_row_size, cache_col_size
+        cdef int global_row_offset, global_col_offset
+        cdef int row_tag, col_tag
+
+        row_block_offset[0] = global_row % self.block_row_size
+        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
+        row_tag = (global_row // self.block_row_size) // self.n_block_rows
+
+        col_block_offset[0] = global_col % self.block_col_size
+        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
+        col_tag = (global_col // self.block_col_size) // self.n_block_cols
+
+        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
+        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
+
+        if current_row_tag != row_tag or current_col_tag != col_tag:
+            if self.cache_dirty[row_index[0], col_index[0]]:
+                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
+                cache_col_size = self.n_cols - global_col_offset
+                if cache_col_size > self.block_col_size:
+                    cache_col_size = self.block_col_size
+                
+                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
+                cache_row_size = self.n_rows - global_row_offset
+                if cache_row_size > self.block_row_size:
+                    cache_row_size = self.block_row_size
+                
+                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                    if update:
+                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
+                            yoff=global_row_offset, xoff=global_col_offset)
+                self.cache_dirty[row_index[0], col_index[0]] = 0
+            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
+            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
+                
+            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
+            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
+
+            cache_col_size = self.n_cols - global_col_offset
+            if cache_col_size > self.block_col_size:
+                cache_col_size = self.block_col_size
+            cache_row_size = self.n_rows - global_row_offset
+            if cache_row_size > self.block_row_size:
+                cache_row_size = self.block_row_size
+            
+            for band, block in zip(self.band_list, self.block_list):
+                band.ReadAsArray(
+                    xoff=global_col_offset, yoff=global_row_offset,
+                    win_xsize=cache_col_size, win_ysize=cache_row_size,
+                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
+
+    cdef void flush_cache(self):
+        cdef int global_row_offset, global_col_offset
+        cdef int cache_row_size, cache_col_size
+        cdef int row_index, col_index
+        for row_index in xrange(self.n_block_rows):
+            for col_index in xrange(self.n_block_cols):
+                row_tag = self.row_tag_cache[row_index, col_index]
+                col_tag = self.col_tag_cache[row_index, col_index]
+
+                if self.cache_dirty[row_index, col_index]:
+                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
+                    cache_col_size = self.n_cols - global_col_offset
+                    if cache_col_size > self.block_col_size:
+                        cache_col_size = self.block_col_size
+                    
+                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
+                    cache_row_size = self.n_rows - global_row_offset
+                    if cache_row_size > self.block_row_size:
+                        cache_row_size = self.block_row_size
+                    
+                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
+                        if update:
+                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
+                                yoff=global_row_offset, xoff=global_col_offset)
+        for band in self.band_list:
+            band.FlushCache()

@@ -334,7 +334,7 @@ def execute(args):
 
         clipped_wave_shape = ogr.Open(point_shape_uri, 1)
         dem_gt = raster_utils.get_geotransform_uri(dataset_uri)
-        dem_matrix = raster_utils.load_dataset_to_carray(
+        dem_matrix = raster_utils.load_memory_mapped_array(
             dataset_uri, tmp_dem_path, array_type=None)
 
         # Create a new field for the depth attribute

@@ -1,7 +1,9 @@
 """InVEST Nearshore Wave and Erosion model non-core."""
 
+import sys
 import os
 import shutil
+import logging
 
 from osgeo import gdal
 from osgeo import ogr
@@ -9,6 +11,12 @@ from osgeo import osr
 
 from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core
+
+logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
+LOGGER = logging.getLogger('coastal_vulnerability_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 # TODO: Get rid of this function!!!! (in CV too)
 def clip_datasource(aoi_ds, orig_ds, output_uri):
@@ -180,30 +188,35 @@ def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
 
         Returns:
             - out_dataset_uri"""
+
     # Split the path apart from the filename
     out_head, out_tail = os.path.split(out_dataset_uri)
     _, tail = os.path.split(in_dataset_uri)
+
     # Split the file basename from the file extension
     out_base, _ = os.path.splitext(out_tail)
     base, _ = os.path.splitext(tail)
+
     # Preliminary variable initialization
     aoi_wkt = shapefile_wkt(ogr.Open(aoi_datasource_uri))
     input_wkt = raster_wkt(gdal.Open(in_dataset_uri))
     message = "Cannot extract a Well Known Transformation (wkt) from " + \
         str(in_dataset_uri) + ". Please check the file has a valid WKT."
     assert input_wkt, message
+
     # Reproject AOI to input dataset projection
     reprojected_aoi_uri = os.path.join(out_head, base + '_reprojected_aoi.shp')
     raster_utils.reproject_datasource_uri(aoi_datasource_uri, input_wkt, \
-    reprojected_aoi_uri)
+        reprojected_aoi_uri)
+
     # Clip dataset with reprojected AOI
     clipped_dataset_uri = os.path.join(out_head, out_base + '_unprojected.tif')
     raster_utils.clip_dataset_uri(in_dataset_uri, reprojected_aoi_uri, \
-    clipped_dataset_uri, False)
+        clipped_dataset_uri, False)
+
     # Reproject clipped dataset to AOI's projection
-    #raster_utils.reproject_dataset_uri(clipped_dataset_uri, cell_size, \
     raster_utils.warp_reproject_dataset_uri(clipped_dataset_uri, \
-    cell_size, aoi_wkt, 'bilinear', out_dataset_uri)
+        cell_size, aoi_wkt, 'bilinear', out_dataset_uri)
     # Done, return the dataset uri
     return out_dataset_uri    
 
@@ -403,38 +416,101 @@ def execute(args):
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
         raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
-    args['max_land_profile_len'] = 200
-    args['max_land_profile_height'] = 20
+    args['max_land_profile_len'] = 200  # Maximum inland distance
+    args['max_land_profile_height'] = 20 # Maximum inland elevation
 
     # Preprocess the landmass
-    print('Pre-processing landmass...')
-    args['landmass_raster_uri'] = \
-        preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['cell_size'], \
-            os.path.join(args['intermediate_dir'], 'landmass.tif'))
-
-    args['coarse_landmass_uri'] = \
-        preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['transect_spacing'], \
-            os.path.join(args['intermediate_dir'], 'coarse_landmass.tif'), \
-            all_touched = True)
+    LOGGER.debug('STOPPED Pre-processing landmass...')
+    args['landmass_raster_uri'] = os.path.join(args['intermediate_dir'], 'landmass.tif') #\
+    #    preprocess_polygon_datasource(args['landmass_uri'], \
+    #        args['aoi_uri'], args['cell_size'], \
+    #        os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
     # Preprocessing the AOI
     args['aoi_raster_uri'] = \
         preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
         args['cell_size'], os.path.join(args['intermediate_dir'], 'aoi.tif'))
 
-    args['coarse_aoi_uri'] = \
-        preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
-        args['transect_spacing'], \
-        os.path.join(args['intermediate_dir'], 'coarse_aoi.tif'))
-
     # Preprocess bathymetry
-    print('Pre-processing bathymetry...')
-    args['bathymetry_raster_uri'] = \
-        preprocess_dataset(args['bathymetry_uri'], \
-            args['aoi_uri'], args['cell_size'], \
-            os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+    LOGGER.debug('STOPPED Pre-processing bathymetry...')
+    args['bathymetry_raster_uri'] = os.path.join(args['intermediate_dir'], 'bathymetry.tif') #\
+    #    preprocess_dataset(args['bathymetry_uri'], \
+    #        args['aoi_uri'], args['cell_size'], \
+    #        os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
+
+    # List all shapefiles in the habitats directory
+    files = os.listdir(args['habitats_directory_uri'])
+    args['habitats'] = {}
+
+    # Process each habitat
+    shapefile_required_fields = { \
+        'land polygon': ['MHHW', 'MSL', 'MLLW'],
+        'seagrass habitat':[ \
+            'StemHeight', \
+            'StemDiam', \
+            'StemDensty', \
+            'StemDrag']}
+
+    # Collect all the different fields and assign a weight to each
+    field_values = {}
+    shapefile_type_values = {}
+    power = 1
+    for shapefile_type in shapefile_required_fields:
+        required_fields = shapefile_required_fields[shapefile_type]
+        shapefile_fields = set()
+        field_signature = 0
+        for field in required_fields:
+            if field not in shapefile_fields:
+                shapefile_fields.add(field)
+                field_values[field] = power
+                field_signature += power
+                power *= 2
+        shapefile_type_values[field_signature] = shapefile_type
+#        print(shapefile_type, shapefile_type_values[shapefile_type], \
+#            shapefile_fields)
+
+    print('shapefile_type_values', shapefile_type_values)
+
+    # Assign a power to each field so their sum will create
+    shapefile_uris = []
+    for f in files:
+        basename, ext = os.path.splitext(f)
+        if ext == '.shp':
+            filename = os.path.join(args['habitats_directory_uri'], f)
+            shapefile_uris.append(filename)
+            # Find the number of fields in this shapefile
+            shapefile = ogr.Open(filename)
+            assert shapefile, "can't open " + filename
+            layer = shapefile.GetLayer(0)
+            layer_def = layer.GetLayerDefn()
+            field_count = layer_def.GetFieldCount()
+
+            field_signature = 0
+            print('file', f)
+
+            for field_id in range(field_count):
+                field = layer_def.GetFieldDefn(field_id)
+                name = field.GetName()
+                print('field name', name)
+
+                if name in field_values:
+                    field_signature += field_values[name]
+                    print('field value', field_values[name], 'field signature', field_signature)
+
+            if field_signature in shapefile_type_values:
+                print('file', f, 'is', shapefile_type_values[field_signature])
+
+            #habitat_name = basename[:basename.rfind('_')] # Remove suffix with #
+            #args['habitats'][habitat_name] = \
+            #    os.path.join(args['habitats_directory_uri'], \
+            #        habitat_name + '_raster_uri.tif')
+            #print('Adding', args['habitats'][habitat_name], 'to', habitat_name)
+            #preprocess_polygon_datasource(args['habitats'][habitat_name], \
+            #    args['aoi_uri'], args['cell_size'], \
+            #    os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
+
+    sys.exit(0)
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \

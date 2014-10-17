@@ -763,3 +763,29 @@ validating exists on disk.  If the path does not exist, we cannot validate its
 permission, so we instead validate the permissions of the parent folder of the
 specified URI.  It is up to the user to specify if the file or folder is required
 to exist, according to the needs of the model.
+
+
+
+IUI METADATA:
+===============================
+There may be circumstances when some metadata from the UI is useful to the
+operation of the model itself.  If this is the case for your model, then add
+the following to the root level of your JSON configuration object:
+
+   "include_meta": true
+
+This will then trigger a new entry to be added to the args dictionary before it
+is passed to your execute() function.  This new entry will have the key
+"_iui_meta" and will be a dictionary with the following structure:
+
+    "_iui_meta": {
+        "logfile": {
+            "uri": <uri to the logfile's temp location>,
+            "timestamp": <the logfile's timestamp>,
+        },
+        "ui_state": <dict representation of the element state.  This is
+            a python representation of the lastRun dictionary.  To use this as
+            a saved run or scenario file, be sure to serialize this to a JSON
+            object.>,
+        "lastrun_uri": <the URI to the lastrun file on disk>,
+    }
