@@ -140,6 +140,7 @@
             "defaultValue": "150",
             "required": true,
             "validText": "^[0-9]+$",
+            "enabledBy": "calc_n",
             "helpText": ""
         },
         {        
@@ -150,6 +151,7 @@
             "defaultValue": "150",
             "required": true,
             "validText": "^[0-9]+$",
+            "enabledBy": "calc_p",
             "helpText": ""
         },
         {        
@@ -160,6 +162,7 @@
             "defaultValue": "0.8",
             "required": true,
             "validText": "^[0-9]\\.?[0-9]*$",
+            "enabledBy": "calc_n",
             "helpText": ""
         },
         {        
@@ -170,6 +173,7 @@
             "defaultValue": "0.8",
             "required": true,
             "validText": "^[0-9]\\.?[0-9]*$",
+            "enabledBy": "calc_p", 
             "helpText": ""
         }
 	    ]
