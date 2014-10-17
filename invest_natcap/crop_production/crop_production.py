@@ -819,6 +819,10 @@ def execute(args):
     ##reporting
     LOGGER.info("Generating report.")
 
+    #aggregating arrays
+    print crop_production_core.unique_raster_mask_value_sum(reclass_crop_cover_uri,
+                                                      yield_uri)
+
     #metadata
 
     start_time = datetime.datetime.strptime(args["_iui_meta"]["logfile"]["timestamp"], "%Y-%m-%d--%H_%M_%S")
@@ -841,14 +845,8 @@ def execute(args):
     parameters_report = '<input type=\"checkbox\" onClick=\" ExpandCollapse(\'json\');\" checked>Display model parameters<br><div id=\"json\"><pre>%s</pre></div>'
     parameters_report = parameters_report % json.dumps(args["_iui_meta"]["ui_state"], indent = 4)
 
-    #summary table        
-    summary_data = []
-
-    summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
-                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
-                       {'name': 'InVEST Name', 'total':False, 'td_class' : '\" align=\"center\"'},
-               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'}]
-
+    #build label dictionary
+    crop_labels = {}
     for crop in invest_crop_counts.keys():
         try:
             invest_description = reclass_table_csv_dict[invest_to_user_crop[crop][0]][reclass_field_invest_desc]
@@ -859,10 +857,23 @@ def execute(args):
         user_crops = invest_to_user_crop[crop]
         user_crops.sort()
         user_crops = ", ".join([str(c) for c in user_crops])
-        
-        record = {'User Crop Id': user_crops,
+
+        crop_labels[crop] = {"user_crop" : user_crops,
+                             "description" : invest_description}
+    
+
+    #summary table        
+    summary_data = []
+
+    summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
+                       {'name': 'InVEST Name', 'total':False, 'td_class' : '\" align=\"center\"'},
+               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+    for crop in invest_crop_counts.keys():
+        record = {'User Crop Id': crop_labels[crop]["user_crop"],
                   'InVEST Crop Id': crop,
-                  'InVEST Name' : invest_description,
+                  'InVEST Name' : crop_labels[crop]["description"],
                   'Area' : invest_crop_counts[crop]}
 
         summary_data.append(record)
@@ -881,7 +892,10 @@ def execute(args):
     production_data = []
 
     for crop in invest_crop_counts.keys():
-        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : "", 'Existing Yield' : ""}
+        record = {'User Crop Id': crop_labels[crop]["user_crop"],
+                  'InVEST Crop Id': str(crop),
+                  'Name' : crop_labels[crop]["description"],
+                  'Existing Yield' : ""}
 
         if args["enable_tab_percentile"] == True:
             for percentile in [25, 50, 75, 95]:

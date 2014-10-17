@@ -5,6 +5,7 @@ import os
 import sys
 import numpy
 import operator
+import copy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -649,3 +650,33 @@ def clip_project_align_dataset_uri(unclipped_uri, reference_uri, clipped_uri, al
                                     "dataset",
                                     0,
                                     dataset_to_bound_index=0)
+
+
+def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignore_nodata=True):
+    #get unique counts
+    counts = raster_utils.unique_raster_values_count(reference_dataset_uri, ignore_nodata=False)
+
+    #tranform unique counts into values, counts, and cumulative counts
+    reference_values = counts.keys()
+    reference_values.sort()
+    reference_counts = [counts[k] for k in reference_values]
+    reference_cumulative_counts = [0]
+    for v in reference_counts[:-1]:
+        reference_cumulative_counts.append(reference_cumulative_counts[-1] + v)
+    
+    #arg sort refernce raster
+    reference_dataset = gdal.Open(reference_dataset_uri)
+    reference_band = reference_dataset.GetRasterBand(1)
+    reference_array = reference_band.ReadAsArray().flatten()
+    index = numpy.argsort(reference_array)
+
+    #sum up value raster    
+    value_dataset = gdal.Open(value_dataset_uri)
+    value_band = value_dataset.GetRasterBand(1)
+    value_array = value_band.ReadAsArray().flatten()
+
+    value_sums = copy.copy(counts)    
+    for v, n, i in zip(reference_values, reference_counts, reference_cumulative_counts):
+        value_sums[v] = numpy.sum(value_array[index[i:i+n]])
+
+    return value_sums
