@@ -286,6 +286,60 @@ def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
         assert out_feature_count > 0, message
     return output_uri
 
+def get_layer_and_index_from_field_name(field_name, shapefile):
+    """Given a field name, return its layer and field index.
+        Inputs:
+            - field_name: string to look for.
+            - shapefile: where to look for the field.
+
+        Output:
+            - A tuple (layer, field_index) if the field exist in 'shapefile'.
+            - (None, None) otherwise."""
+    # Look into every layer
+    layer_count = shapefile.GetLayerCount()
+    for l in range(layer_count):
+        layer = shapefile.GetLayer(l)
+        # Make sure the layer is not empty
+        feature_count = layer.GetFeatureCount()
+        if feature_count > 0:
+            feature = layer.GetFeature(0)
+            # Enumerate every field
+            field_count = feature.GetFieldCount()
+            for f in range(field_count):
+                field_defn = feature.GetFieldDefnRef(f)
+                if field_defn.GetNameRef() == field_name:
+                    return (l, f)
+    # Didn't find fields, enumerate their names and the feature counts
+    layer_count = shapefile.GetLayerCount()
+    for l in range(layer_count):
+        layer = shapefile.GetLayer(l)
+        feature_count = layer.GetFeatureCount()
+        print("Layer " + str(l) + " has " + str(feature_count) + " features.")
+        if feature_count > 0:
+            feature = layer.GetFeature(0)
+            # Enumerate every field
+            field_count = feature.GetFieldCount()
+            print('fields:')
+            for f in range(field_count):
+                field_defn = feature.GetFieldDefnRef(f)
+                print(field_defn.GetNameRef())
+    # Nothing found
+    return (None, None)
+
+def combined_rank(R_k):
+    """Compute the combined habitats ranks as described in equation (3)
+    
+        Inputs:
+            - R_k: the list of ranks
+            
+        Output:
+            - R_hab as decribed in the user guide's equation 3."""
+    R = 4.8 -0.5 *math.sqrt( (1.5 *max(5-R_k))**2 + \
+                    sum((5-R_k)**2) -(max(5-R_k))**2)
+    if R <=0:
+        print('rank', R, 'R_k', R_k)
+    return R
+
 # TODO: write a unit test for this function
 def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
     field=None, all_touched=False, nodata = 0., datatype = gdal.GDT_Float32):
@@ -453,53 +507,61 @@ def execute(args):
             'StemDrag']}
 
     # Collect all the different fields and assign a weight to each
-    field_values = {}
-    shapefile_type_values = {}
+    field_values = {} # weight for each field
+    shapefile_type_checksum = {} # checksum for each shapefile type
     power = 1
     for shapefile_type in shapefile_required_fields:
         required_fields = shapefile_required_fields[shapefile_type]
         shapefile_fields = set()
         field_signature = 0
-        for field in required_fields:
-            if field not in shapefile_fields:
-                shapefile_fields.add(field)
-                field_values[field] = power
+        for required_field in required_fields:
+            if required_field not in shapefile_fields:
+                shapefile_fields.add(required_field)
+                field_values[required_field] = power
                 field_signature += power
                 power *= 2
-        shapefile_type_values[field_signature] = shapefile_type
-#        print(shapefile_type, shapefile_type_values[shapefile_type], \
+        shapefile_type_checksum[field_signature] = shapefile_type
+#        print(shapefile_type, shapefile_type_checksum[shapefile_type], \
 #            shapefile_fields)
 
-    print('shapefile_type_values', shapefile_type_values)
+    print('shapefile_type_checksum', shapefile_type_checksum)
 
-    # Assign a power to each field so their sum will create
-    shapefile_uris = []
+    # Looking at fields in shapefiles and compute their checksum to see if 
+    # they're of a known type
+    known_shapefiles = set() # Set of known shapefiles that will be rasterized
     for f in files:
         basename, ext = os.path.splitext(f)
         if ext == '.shp':
-            filename = os.path.join(args['habitats_directory_uri'], f)
-            shapefile_uris.append(filename)
+            file_uri = os.path.join(args['habitats_directory_uri'], f)
             # Find the number of fields in this shapefile
-            shapefile = ogr.Open(filename)
-            assert shapefile, "can't open " + filename
+            shapefile = ogr.Open(file_uri)
+            assert shapefile, "can't open " + file_uri
             layer = shapefile.GetLayer(0)
             layer_def = layer.GetLayerDefn()
             field_count = layer_def.GetFieldCount()
 
-            field_signature = 0
-            print('file', f)
+            shapefile_checksum = 0
 
             for field_id in range(field_count):
-                field = layer_def.GetFieldDefn(field_id)
-                name = field.GetName()
-                print('field name', name)
+                field_defn = layer_def.GetFieldDefn(field_id)
+                field_name = field_defn.GetName()
 
-                if name in field_values:
-                    field_signature += field_values[name]
-                    print('field value', field_values[name], 'field signature', field_signature)
+                if field_name in field_values:
+                    shapefile_checksum += field_values[field_name]
 
-            if field_signature in shapefile_type_values:
-                print('file', f, 'is', shapefile_type_values[field_signature])
+            if shapefile_checksum in shapefile_type_checksum:
+                shapefile_type = shapefile_type_checksum[field_signature]
+                print('Detected that', f, 'is', shapefile_type)
+                
+                # Rasterize the known shapefile for each field name
+                for field_name in shapefile_required_fields[shapefile_type]:
+                    output_dir = os.path.join( \
+                                args['intermediate_dir'], \
+                                basename + '_' + field_name + '.tif')
+
+                    print('rasterizing field', field_name, 'to', output_dir)
+                    preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
+                        args['cell_size'], output_dir, field_name = field_name)
 
             #habitat_name = basename[:basename.rfind('_')] # Remove suffix with #
             #args['habitats'][habitat_name] = \
