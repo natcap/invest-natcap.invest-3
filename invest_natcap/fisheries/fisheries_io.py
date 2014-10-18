@@ -5,6 +5,7 @@ import csv
 
 from osgeo import ogr
 import numpy as np
+from numpy import testing as nptest
 
 from invest_natcap import raster_utils
 
@@ -44,7 +45,7 @@ def fetch_verify_args(args):
     '''
     pop_dict = _verify_population_csv(args)
 
-    mig_dict = _verify_migration_tables(args)
+    mig_dict = _verify_migration_tables(args, pop_dict['Classes'])
 
     params_dict = _verify_single_params(args, pop_dict, mig_dict)
 
@@ -61,19 +62,83 @@ def _verify_population_csv(args):
     pop_dict = _parse_population_csv(population_csv_uri)
 
     # Check that required information exists
+    Necessary_Params = ['Classes', 'Exploitationfraction', 'Maturity',
+                        'Regions', 'Survnaturalfrac', 'Vulnfishing']
+    Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
+    if len(Matching_Params) != len(Necessary_Params):
+        LOGGER.error("Population Parameters File does not contain all \
+            necessary parameters")
+        raise MissingParameter
+
+    if args['population_type'] == 'Stage-Based' and 'Duration' not in pop_dict.keys():
+        LOGGER.error("Population Parameters File must contain a 'Duration' \
+            vector when running Stage-Based models")
+        raise MissingParameter
+
+    if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker'])\
+        and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
+        LOGGER.error("Population Parameters File must contain a 'Weight' \
+            vector when using Beverton-Holt or Ricker recruitment functions")
+        raise MissingParameter
+
+    if (args['harvest_units'] == 'Weight' and 'Weight' not in pop_dict.keys()):
+        LOGGER.error("Population Parameters File must contain a 'Weight' \
+            vector when 'Harvest by Weight' is selected")
+        raise MissingParameter
+
+    if (args['recruitment_type'] == 'Fecundity' and 'Fecundity' not in pop_dict.keys()):
+        LOGGER.error("Population Parameters File must contain a 'Fecundity' \
+            vector when using the Fecundity recruitment function")
+        raise MissingParameter
+
+    # Check that similar vectors have same shapes (NOTE: checks region vectors)
+    if not (pop_dict['Larvaldispersal'].shape == pop_dict[
+            'Exploitationfraction'].shape):
+        LOGGER.error("Region vector shapes do not match")
+        raise ValueError
+
+    # Check that information is correct
+    if not np.allclose(pop_dict['Larvaldispersal'], 1):
+        LOGGER.warning("The LarvalDisperal vector does not sum exactly to one")
+
+    # Check that certain attributes have fraction elements
+    Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing', 'Maturity',
+                    'Exploitationfraction']
+    for attr in Frac_Vectors:
+        a = pop_dict[attr]
+        if np.any(a > 1) or np.any(a < 0):
+            LOGGER.warning("The %s vector has elements that are not \
+                decimal fractions", attr)
+
+    # Make sure parameters are initialized even when user does not enter data
+    if 'Larvaldispersal' not in pop_dict.keys():
+        num_regions = len(pop_dict['regions'])
+        pop_dict['Larvaldispersal'] = np.ones(num_regions) / num_regions
+
+    # Make duration of type integer
+    pop_dict['Larvaldispersal'] = np.array(
+        pop_dict['Larvaldispersal'], dtype=int)
+
     pass
 
 
 def _parse_population_csv(uri, sexsp):
     '''Parses the given population parameters csv file and returns a dictionary
-    of matrices and vectors
+    of lists, arrays, and matrices
+
+    **Notes**
+    Dictionary items containing lists, arrays or matrices are capitalized,
+    while single variables are lowercase.
+
+    Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
+            Exploitationfraction, Larvaldispersal, Classes, Regions
 
     **Example**
-    pop_dict = {{'SurvNaturalFrac': [np.ndarrays]},
-                {'VulnFishing': np.ndarray}, ...}
+    pop_dict = {{'Survnaturalfrac': [np.ndarrays]},
+                {'Vulnfishing': np.ndarray}, ...},
     '''
     csv_data = []
-    params_dict = {}
+    pop_dict = {}
 
     with open(uri, 'rb') as csvfile:
         reader = csv.reader(csvfile)
@@ -85,11 +150,11 @@ def _parse_population_csv(uri, sexsp):
 
     classes = _get_col(
         csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
-    params_dict["classes"] = classes[1:]
+    pop_dict["Classes"] = classes[1:]
 
     regions = _get_row(
         csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
-    params_dict["regions"] = regions[1:]
+    pop_dict["Regions"] = regions[1:]
 
     surv_table = _get_table(csv_data, start_rows[0] + 1, start_cols[0] + 1)
     class_attributes_table = _get_table(
@@ -99,30 +164,30 @@ def _parse_population_csv(uri, sexsp):
 
     if sexsp == 1:
         # Sex Neutral
-        params_dict['SurvNaturalFrac'] = [np.array(surv_table, dtype=np.float_)]
+        pop_dict['Survnaturalfrac'] = [np.array(surv_table, dtype=np.float_)]
 
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        params_dict['SurvNaturalFrac'] = [female, male]
+        pop_dict['Survnaturalfrac'] = [female, male]
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
         pass
 
     for col in range(0, len(class_attributes_table[0])):
-        params_dict.update(_vectorize_attribute(
+        pop_dict.update(_vectorize_attribute(
             _get_col(class_attributes_table, col), sexsp))
 
     for row in range(0, len(region_attributes_table)):
-        params_dict.update(_vectorize_attribute(
+        pop_dict.update(_vectorize_attribute(
             _get_row(region_attributes_table, row), 1))
 
-    return params_dict
+    return pop_dict
 
 
-def _verify_migration_tables(args):
+def _verify_migration_tables(args, class_list):
     '''
     '''
     mig_dict = {}
@@ -161,23 +226,26 @@ def _parse_migration_tables(uri):
             lines = []
             for row in csv_reader:
                 lines.append(row)
-            
+
             matrix = []
             for row in range(1, len(lines)):
-                if lines[row][0] == '': break
+                if lines[row][0] == '':
+                    break
                 array = []
-                for entry in range (1, len(lines[row])):
+                for entry in range(1, len(lines[row])):
                     array.append(float(lines[row][entry]))
                 matrix.append(array)
-            
+
             Migration = np.matrix(matrix)
 
         mig_dict[class_name] = Migration
-    
+
     return mig_dict
 
 
 def _verify_single_params(args, pop_dict, mig_dict):
+    '''
+    '''
     # Check that path exists and user has read/write permissions along path
     workspace_dir = args['workspace_dir']
 
@@ -228,6 +296,9 @@ def _verify_single_params(args, pop_dict, mig_dict):
 def initialize_vars(vars_dict):
     '''Initializes variables
     '''
+    # Initialize derived parameters
+        # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all,
+        # Harvest, Valuation
 
     pass
 
@@ -317,5 +388,5 @@ def _vectorize_attribute(lst, rows):
     d = {}
     a = np.array(lst[1:], dtype=np.float_)
     a = np.reshape(a, (rows, a.shape[0] / rows))
-    d[lst[0]] = a
+    d[lst[0].capitalize()] = a
     return d
