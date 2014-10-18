@@ -554,6 +554,7 @@ def execute(args):
                 print('Detected that', f, 'is', shapefile_type)
                 
                 # Rasterize the known shapefile for each field name
+                LOGGER.info('Rasterizing data from %s' % f)
                 for field_name in shapefile_required_fields[shapefile_type]:
                     output_dir = os.path.join( \
                                 args['intermediate_dir'], \
@@ -562,17 +563,6 @@ def execute(args):
                     print('rasterizing field', field_name, 'to', output_dir)
                     preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
                         args['cell_size'], output_dir, field_name = field_name)
-
-            #habitat_name = basename[:basename.rfind('_')] # Remove suffix with #
-            #args['habitats'][habitat_name] = \
-            #    os.path.join(args['habitats_directory_uri'], \
-            #        habitat_name + '_raster_uri.tif')
-            #print('Adding', args['habitats'][habitat_name], 'to', habitat_name)
-            #preprocess_polygon_datasource(args['habitats'][habitat_name], \
-            #    args['aoi_uri'], args['cell_size'], \
-            #    os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
-
-    sys.exit(0)
 
     # Uniformize the size of shore, land, and bathymetry rasters
     in_raster_list = [args['landmass_raster_uri'], \
