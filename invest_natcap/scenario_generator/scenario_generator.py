@@ -566,8 +566,8 @@ def execute(args):
     def suitability_op(trans, suit):
         if trans == 0:
             return 0
-        return ((1 - physical_suitability_weight) * trans)\
-               + (physical_suitability_weight * suit)
+        return round(((1 - physical_suitability_weight) * trans)\
+               + (physical_suitability_weight * suit))
 
     ds_type = "GTiff"
     driver = gdal.GetDriverByName(ds_type)
