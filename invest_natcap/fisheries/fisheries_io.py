@@ -32,7 +32,8 @@ class MissingParameter(Exception):
     can include recruitment parameters, vulnerability, exploitation fraction,
     maturity, weight, or duration.
     '''
-    pass
+    def __init__(self, msg):
+        self.msg = msg
 
 
 def fetch_verify_args(args):
@@ -45,9 +46,10 @@ def fetch_verify_args(args):
     '''
     pop_dict = _verify_population_csv(args)
 
-    mig_dict = _verify_migration_tables(args, pop_dict['Classes'])
+    mig_dict = _verify_migration_tables(
+        args, pop_dict['Classes'], pop_dict['Regions'])
 
-    params_dict = _verify_single_params(args, pop_dict, mig_dict)
+    params_dict = _verify_single_params(args)
 
     vars_dict = dict(pop_dict.items() + mig_dict.items() + params_dict.items())
 
@@ -55,41 +57,40 @@ def fetch_verify_args(args):
 
 
 def _verify_population_csv(args):
-    '''
+    '''Parses and verifies inputs from the population parameters csv file.
+    If not all necessary vectors are included, the function will raise a
+    MissingParameter exception
+
+    **Notes**
+    See _parse_population_csv function for notes for list of dictionary keys
+        in returned pop_dict
     '''
     population_csv_uri = args['population_csv_uri']
-    sexsp = args['sexsp']
-    pop_dict = _parse_population_csv(population_csv_uri)
+    pop_dict = _parse_population_csv(population_csv_uri, args['sexsp'])
 
     # Check that required information exists
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Maturity',
                         'Regions', 'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.error("Population Parameters File does not contain all \
-            necessary parameters")
-        raise MissingParameter
+        LOGGER.error("Population Parameters File does not contain all necessary parameters")
+        raise MissingParameter('')
 
-    if args['population_type'] == 'Stage-Based' and 'Duration' not in pop_dict.keys():
-        LOGGER.error("Population Parameters File must contain a 'Duration' \
-            vector when running Stage-Based models")
-        raise MissingParameter
+    if (args['population_type'] == 'Stage-Based') and ('Duration' not in pop_dict.keys()):
+        LOGGER.error("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
+        raise MissingParameter("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
 
-    if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker'])\
-        and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-            vector when using Beverton-Holt or Ricker recruitment functions")
-        raise MissingParameter
+    if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
+        LOGGER.error("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
+        raise MissingParameter('')
 
-    if (args['harvest_units'] == 'Weight' and 'Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-            vector when 'Harvest by Weight' is selected")
-        raise MissingParameter
+    if (args['harvest_units'] == 'Weight') and ('Weight' not in pop_dict.keys()):
+        LOGGER.error("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
+        raise MissingParameter('')
 
     if (args['recruitment_type'] == 'Fecundity' and 'Fecundity' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Fecundity' \
-            vector when using the Fecundity recruitment function")
-        raise MissingParameter
+        LOGGER.error("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+        raise MissingParameter('')
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
     if not (pop_dict['Larvaldispersal'].shape == pop_dict[
@@ -115,9 +116,9 @@ def _verify_population_csv(args):
         num_regions = len(pop_dict['regions'])
         pop_dict['Larvaldispersal'] = np.ones(num_regions) / num_regions
 
-    # Make duration of type integer
-    pop_dict['Larvaldispersal'] = np.array(
-        pop_dict['Larvaldispersal'], dtype=int)
+    # Make duration vector of type integer
+    pop_dict['Duration'] = np.array(
+        pop_dict['Duration'], dtype=int)
 
     pass
 
@@ -150,11 +151,11 @@ def _parse_population_csv(uri, sexsp):
 
     classes = _get_col(
         csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
-    pop_dict["Classes"] = classes[1:]
+    pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
 
     regions = _get_row(
         csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
-    pop_dict["Regions"] = regions[1:]
+    pop_dict["Regions"] = map(lambda x: x.lower(), regions[1:])
 
     surv_table = _get_table(csv_data, start_rows[0] + 1, start_cols[0] + 1)
     class_attributes_table = _get_table(
@@ -187,25 +188,55 @@ def _parse_population_csv(uri, sexsp):
     return pop_dict
 
 
-def _verify_migration_tables(args, class_list):
+def _verify_migration_tables(args, class_list, region_list):
+    '''Parses, verifies and orders list of migration matrices necessary for
+    program.
+
+    If migration matrices are not provided for all classes, the function will
+    generate identity matrices for missing classes
+
+    **Example**
+    mig_dict = {'Migration': [np.matrix, np.matrix, ...]}
     '''
-    '''
-    mig_dict = {}
+    migration_dict = {}
 
     # If Migration:
     migration_dir = args['migration_dir']
-    mig_dict = _parse_migration_tables(migration_dir)
+    mig_dict = _parse_migration_tables(migration_dir, class_list)
 
-    # Check migration CSV files match areas.
-    # Check columns approximately sum to one? (maybe throw warning rather than error)
+    # Create indexed list
+    matrix_list = map(lambda x: None, class_list)
 
-    pass
+    # Map np.matrices to indices in list
+    for i in range(0, len(class_list)):
+        if class_list[i] in mig_dict.keys():
+            matrix_list[i] = mig_dict[class_list[i]]
+
+    # Fill in rest with identity matrices
+    for i in range(0, len(matrix_list)):
+        if matrix_list[i] is None:
+            matrix_list[i] = np.matrix(np.identity(len(region_list)))
+
+    # Check migration regions are equal across matrices
+    if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
+        LOGGER.error("Shape of migration matrices are not equal across lifecycle classes")
+        raise ValueError
+
+    # Check that all migration vectors approximately sum to one
+    if not all([np.allclose(vector.sum(), 1) for matrix in matrix_list for vector in matrix]):
+        LOGGER.warning("Elements in at least one migration matrices source vector do not sum to one")
+
+    migration_dict['Migration'] = matrix_list
+    return migration_dict
 
 
-def _parse_migration_tables(uri):
+def _parse_migration_tables(uri, class_list):
     '''Parses all files in the given directory as migration matrices
     and returns a dictionary of stages and their corresponding migration
     numpy matrix.
+
+    If extra files are provided that do not match the class names, an exception
+    will be thrown
 
     :param string uri: filepath to the directory of migration tables
 
@@ -217,78 +248,96 @@ def _parse_migration_tables(uri):
     '''
     mig_dict = {}
 
-    for mig_csv in listdir(uri):
-        basename = os.path.splitext(os.path.basename(mig_csv))[0]
-        class_name = basename.split('_').pop().lower()
+    try:
+        for mig_csv in listdir(uri):
+            basename = os.path.splitext(os.path.basename(mig_csv))[0]
+            class_name = basename.split('_').pop().lower()
+            if class_name.lower() in class_list:
+                with open(mig_csv, 'rU') as param_file:
+                    csv_reader = csv.reader(param_file)
+                    lines = []
+                    for row in csv_reader:
+                        lines.append(row)
 
-        with open(mig_csv, 'rU') as param_file:
-            csv_reader = csv.reader(param_file)
-            lines = []
-            for row in csv_reader:
-                lines.append(row)
+                    matrix = []
+                    for row in range(1, len(lines)):
+                        if lines[row][0] == '':
+                            break
+                        array = []
+                        for entry in range(1, len(lines[row])):
+                            array.append(float(lines[row][entry]))
+                        matrix.append(array)
 
-            matrix = []
-            for row in range(1, len(lines)):
-                if lines[row][0] == '':
-                    break
-                array = []
-                for entry in range(1, len(lines[row])):
-                    array.append(float(lines[row][entry]))
-                matrix.append(array)
+                    Migration = np.matrix(matrix)
 
-            Migration = np.matrix(matrix)
+                mig_dict[class_name] = Migration
 
-        mig_dict[class_name] = Migration
+    except:
+        pass
 
     return mig_dict
 
 
-def _verify_single_params(args, pop_dict, mig_dict):
+def _verify_single_params(args):
     '''
     '''
-    # Check that path exists and user has read/write permissions along path
-    workspace_dir = args['workspace_dir']
+    # Check that directory exists, if not, try to create directory
+    if not os.path.isdir(args['workspace_dir']):
+        try:
+            os.makedirs(args['workspace_dir'])
+        except:
+            LOGGER.error("Cannot create Workspace Directory")
+            raise OSError
 
+    # Check that timesteps is positive integer
+    total_timesteps = args['total_timesteps']
+    if type(total_timesteps) != int or total_timesteps < 1:
+        LOGGER.error("Total Timesteps value must be positive integer")
+        raise ValueError
+
+    # Check total_init_recruits for non-negative float
+    total_init_recruits = args['total_init_recruits']
+    if type(total_init_recruits) != float or total_init_recruits < 0:
+        LOGGER.error("Total Initial Recruits value must be non-negative float")
+
+    # Check that corresponding recruitment parameters exist
+    recruitment_type = args['recruitment_type']
+    if recruitment_type in ['Beverton-Holt', 'Ricker']:
+        if args['alpha'] is None or args['beta'] is None:
+            LOGGER.error("Not all required recruitment parameters provided")
+            raise ValueError
+        if args['alpha'] <= 0 or args['beta'] <= 0:
+            LOGGER.error("Alpha and Beta parameters must be positive")
+            raise ValueError
+    if recruitment_type is 'Fixed':
+        if args['total_recur_recruits'] is None:
+            LOGGER.error("Not all required recruitment parameters provided")
+            raise ValueError
+        if args['total_recur_recruits'] < 0:
+            LOGGER.error(
+                "Total Recruits per Timestep must be non-negative float")
+            raise ValueError
+
+    # If Harvest:
+    if args['harvest_cont']:
+        frac_post_process = args['frac_post_process']
+        unit_price = args['unit_price']
+        if frac_post_process is None or unit_price is None:
+            LOGGER.error("Not all required harvest parameters are provided")
+            raise ValueError
+        # Check frac_post_process float between [0,1]
+        if frac_post_process < 0 or frac_post_process > 1:
+            LOGGER.error("The fraction of harvest kept after processing must be a float between 0 and 1 (inclusive)")
+            raise ValueError
+        # Check unit_price non-negative float
+        if unit_price < 0:
+            LOGGER.error("Unit price of harvest must be non-negative float")
+            raise ValueError
+
+    # If shapefile exists
     # Check file extension? (maybe try / except would be better)
     # Check shapefile subregions match regions in population parameters file
     aoi_uri = args['aoi_uri']
-
-    # Check positive number
-    total_timesteps = args['total_timesteps']
-
-    # If stage-based: Check that Duration vector exists in parameters file
-    population_type = args['population_type']
-
-    # If sex-specific: Check for male and female matrices in parameters file
-    sexsp = args['sexsp']
-
-    # Check for non-negative float
-    total_init_recruits = args['total_init_recruits']
-
-    # Check that corresponding parameters exist
-    recruitment_type = args['recruitment_type']
-
-    # If BH or Ricker and 'spawners by weight' selected: Check that Weight vector exists in parameters file
-    spawn_units = args['spawn_units']
-
-    # If BH or Ricker: Check positive number
-    alpha = args['alpha']
-
-    # Check positive float
-    beta = args['beta']
-
-    # If Fixed: Check non-negative number, check for sum approximately equal to one
-    # Special Case: 1 sub-region --> vector equals 1
-    total_recur_recruits = args['total_recur_recruits']
-
-    # If Harvest: Check that Weight vector exists in population parameters file
-    harvest_units = args['harvest_units']
-
-    # If Harvest: Check float between [0,1]
-    frac_post_process = args['frac_post_process']
-
-    # If Harvest: Check non-negative float
-    unit_price = args['unit_price']
 
     pass
 

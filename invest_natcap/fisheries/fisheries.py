@@ -59,6 +59,11 @@ def execute(args):
     :param float unit_price: represents the price for a single unit of
         harvest. Exists only if valuation is desired.
     '''
+    if args['sexsp'] == 'Yes':
+        args['sexsp'] = 2
+    else:
+        args['sexsp'] = 1
+
     vars_dict = fisheries_io.fetch_verify_args(args)
     vars_dict = fisheries_io.initialize_vars(vars_dict)
 

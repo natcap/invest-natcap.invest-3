@@ -22,12 +22,11 @@
                     "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {
-                    "id" : "aoi",
+                    "id" : "aoi_uri",
                     "args_id" : "aoi_uri",
                     "type": "file",
                     "label": "Area(s) of Interest (SHP)",
-                    "required": true,
-                    "defaultValue": "../Fisheries/Input/Lob_Belize_Subregions.shp",
+                    "required": false,
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
@@ -41,6 +40,7 @@
                     "dataType": "int",
                     "label": "Number of Timesteps for Model Run",
                     "validateAs": {"type": "number"},
+                    "validText": "[0-9]+",
                     "defaultValue": "100",
                     "required": true,
                     "helpText": "The number of timesteps the simulation shall execute before completion.<br><br>Must be a positive integer."
