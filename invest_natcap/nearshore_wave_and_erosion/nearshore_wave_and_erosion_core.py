@@ -16,6 +16,8 @@ from osgeo import ogr
 from osgeo import gdal
 import logging
 
+import cProfile, pstats
+
 from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core as core
 
@@ -34,7 +36,13 @@ def execute(args):
     logging.info('executing coastal_protection_core')
     logging.info('Computing transects...')
 
-    transects_uri = compute_transects(args)
+    #transects_uri = compute_transects(args)
+    #p = 
+    p = cProfile.Profile()
+    transects_uri = p.runctx('compute_transects(args)', globals(), locals())
+    print('transects_uri', transects_uri)
+    s = pstats.Stats(p)
+    s.sort_stats('time').print_stats(20)
 
 
 # Compute the shore transects
@@ -117,11 +125,11 @@ def compute_transects(args):
     # Creating HDF5 file that will store the transect data
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
-    f = h5.File(transect_data_uri, 'w')
-    h5_group = f.create_group('transect_data')
+    #f = h5.File(transect_data_uri, 'w')
+    #h5_group = f.create_group('transect_data')
 
     # Going through the bathymetry raster tile-by-tile.
-    for i in range(i_start, i_end, i_side_coarse):
+    for i in range(i_start, i_start + i_side_coarse * 50, i_side_coarse): #, i_end, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
 
@@ -206,7 +214,7 @@ def compute_transects(args):
                                 args['smoothing_percentage'])
 
                         # Clip transect
-                        clipped_transect = \
+                        (clipped_transect, (start, end)) = \
                             clip_transect(smoothed_depths, raw_depths, \
                                 interpolated_depths)
 
@@ -214,33 +222,56 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
 
+                        # At this point, the transect is valid: 
+                        # extract remaining information about it
+                        for shp_type in args['shapefiles']:
+                            for shp_name in args['shapefiles'][shp_type]:
+                                for field in args['shapefiles'][shp_type][shp_name]:
+                                    # Extract data from the current raster field
+                                    uri = args['shapefiles'][shp_type][shp_name][field]
+                                    raster = gdal.Open(uri)
+                                    band = raster.GetRasterBand(1)
+                                    array = band.ReadAsArray()
+                                    data = array[raw_positions]
+                                    band = None
+                                    raster = None                                    
+                                    array = None
+
+                                    # Generate the transect information
+                                    print('interpolating', data.size, data.size * i_side_fine / args['model_resolution'])
+                                    data = interpolate_transect(data, \
+                                        i_side_fine, \
+                                        args['model_resolution'], \
+                                        kind = 'nearest')
+                                    data = data[start:end]
+
                         # Save transect in file
-                        path = str(i) + '/' + str(j)
-                        h5_subgroup = h5_group.create_group(path)
-                        h5_subgroup[path] = clipped_transect
+                        #path = str(i) + '/' + str(j)
+                        #h5_subgroup = h5_group.create_group(path)
+                        #h5_subgroup[path] = clipped_transect
 
                         # Store transect information
-                        transects[transect_position] = 4
-                        position1 = \
-                            (transect_position + \
-                                transect_orientation).astype(int)
-                        position3 = \
-                            (transect_position + \
-                                transect_orientation * 3).astype(int)
-                        transects[position1[0], position1[1]] = 6
-                        transects[position3[0], position3[1]] = 8
-                        transects[raw_positions] = raw_depths
+                        #transects[transect_position] = 4
+                        #position1 = \
+                        #    (transect_position + \
+                        #        transect_orientation).astype(int)
+                        #position3 = \
+                        #    (transect_position + \
+                        #        transect_orientation * 3).astype(int)
+                        #transects[position1[0], position1[1]] = 6
+                        #transects[position3[0], position3[1]] = 8
+                        #transects[raw_positions] = raw_depths
 
                         # Will reconstruct the shore from this information
-                        shore_profile[raw_positions] = raw_depths
+                        #shore_profile[raw_positions] = raw_depths
                         
                         tiles += 1
 
-    # Add size and model resolution to the attributes
-    h5_group.attrs.create('size', tiles)
-    h5_group.attrs.create('model_resolution', args['model_resolution'])
-    # We're done, we close the file
-    f.close()
+    ## Add size and model resolution to the attributes
+    #h5_group.attrs.create('size', tiles)
+    #h5_group.attrs.create('model_resolution', args['model_resolution'])
+    ## We're done, we close the file
+    #f.close()
 
     LOGGER.debug('found %i tiles.' % tiles)
 
@@ -249,17 +280,17 @@ def compute_transects(args):
     transect_band = None
     transect_raster = None
 
-    # Interpolate the shoreline using transect sections
-    LOGGER.debug('interpolating...')
-    points = np.where(shore_profile != shore_nodata)
-    values = shore_profile[points]
-    grid_i, grid_j = np.mgrid[0:row_count, 0:col_count]
+    ## Interpolate the shoreline using transect sections
+    #LOGGER.debug('interpolating...')
+    #points = np.where(shore_profile != shore_nodata)
+    #values = shore_profile[points]
+    #grid_i, grid_j = np.mgrid[0:row_count, 0:col_count]
 
-    shore_profile = interpolate.griddata(points, values, (grid_i, grid_j), method='nearest')
-
-    shore_band.WriteArray(shore_profile)
-    shore_band = None
-    shore_raster = None
+    #shore_profile = interpolate.griddata(points, values, (grid_i, grid_j), method='nearest')
+    #LOGGER.debug('interpolation done.')
+    #shore_band.WriteArray(shore_profile)
+    #shore_band = None
+    #shore_raster = None
         
     return
 
@@ -498,7 +529,7 @@ def compute_raw_transect_depths(shore_point, \
     return (depths[I >= 0], (I[I >= 0].astype(int), J[J >= 0].astype(int)))
 
 
-def interpolate_transect(depths, old_resolution, new_resolution):
+def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'):
     """Interpolate transect at a higher resolution"""
     # Minimum entries required for interpolation
     if depths.size < 3:
@@ -506,7 +537,7 @@ def interpolate_transect(depths, old_resolution, new_resolution):
 
     assert new_resolution < old_resolution, 'New resolution should be finer.'
     x = np.arange(0, depths.size) * old_resolution
-    f = interpolate.interp1d(x, depths, kind='linear')
+    f = interpolate.interp1d(x, depths, kind)
     x_new = \
         np.arange(0, (depths.size-1) * old_resolution / new_resolution) * \
             new_resolution
@@ -562,17 +593,17 @@ def clip_transect(transect, raw_depths, interpolated_depths):
     """Clip transect using maximum and minimum heights"""
     # Return if transect size is 1
     if transect.size == 1:
-        return transect
+        return (transect, (0, 1))
 
     # Return if transect is full of zeros, otherwise break
     uniques = np.unique(transect)
     if uniques.size == 1:
         assert uniques[0] == 0.0
-        return transect
+        return (transect, 0, transect.size)
 
     # If higher point is negative: can't do anything
     if transect[0] < 0:
-        return None
+        return (None, (None, None))
 
     # Go along the transect to find the shore
     shore = 1
@@ -580,7 +611,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
         shore += 1
         # End of transect: can't find the shore (first segment in water)
         if shore == transect.size:
-            return None
+            return (None, (None, None))
 
     # Find water extent
     water_extent = 1
@@ -596,7 +627,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
 
     assert highest_point < lowest_point
 
-    return transect[highest_point:lowest_point+1]
+    return (transect[highest_point:lowest_point+1], (highest_point, lowest_point+1))
 
 
 # improve this docstring!
