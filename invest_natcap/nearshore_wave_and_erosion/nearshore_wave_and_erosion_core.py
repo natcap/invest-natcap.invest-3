@@ -122,14 +122,14 @@ def compute_transects(args):
 
     tiles = 0 # Number of valid tiles
 
-    # Creating HDF5 file that will store the transect data
-    transect_data_uri = \
-        os.path.join(args['intermediate_dir'], 'transect_data.h5')
-    #f = h5.File(transect_data_uri, 'w')
-    #h5_group = f.create_group('transect_data')
+    # Caching transect information for faster raster information processing:
+    # Each entry is a dictionary with the following information:
+    #   'raw_positions': numpy array
+    #   'clip_limits': tuple (first, last)
+    transect_info = []
 
     # Going through the bathymetry raster tile-by-tile.
-    for i in range(i_start, i_start + i_side_coarse * 50, i_side_coarse): #, i_end, i_side_coarse):
+    for i in range(i_start, i_end, i_side_coarse):
         LOGGER.debug(' Detecting shore along line ' + \
             str((i_end - i)/i_side_coarse))
 
@@ -222,35 +222,14 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
 
+                        
                         # At this point, the transect is valid: 
                         # extract remaining information about it
-                        for shp_type in args['shapefiles']:
-                            for shp_name in args['shapefiles'][shp_type]:
-                                for field in args['shapefiles'][shp_type][shp_name]:
-                                    # Extract data from the current raster field
-                                    uri = args['shapefiles'][shp_type][shp_name][field]
-                                    raster = gdal.Open(uri)
-                                    band = raster.GetRasterBand(1)
-                                    array = band.ReadAsArray()
-                                    data = array[raw_positions]
-                                    band = None
-                                    raster = None                                    
-                                    array = None
-
-                                    # Generate the transect information
-                                    print('interpolating', data.size, data.size * i_side_fine / args['model_resolution'])
-                                    data = interpolate_transect(data, \
-                                        i_side_fine, \
-                                        args['model_resolution'], \
-                                        kind = 'nearest')
-                                    data = data[start:end]
-
-                        # Save transect in file
-                        #path = str(i) + '/' + str(j)
-                        #h5_subgroup = h5_group.create_group(path)
-                        #h5_subgroup[path] = clipped_transect
-
-                        # Store transect information
+                        transect_info.append( \
+                            {'raw_positions':raw_positions, \
+                            'clip_limits':(start, end)})
+                        
+                        ## Store transect information
                         #transects[transect_position] = 4
                         #position1 = \
                         #    (transect_position + \
@@ -262,10 +241,69 @@ def compute_transects(args):
                         #transects[position3[0], position3[1]] = 8
                         #transects[raw_positions] = raw_depths
 
-                        # Will reconstruct the shore from this information
+                        ## Will reconstruct the shore from this information
                         #shore_profile[raw_positions] = raw_depths
                         
+                        ## Creating HDF5 file that will store the transect data
+                        #transect_data_uri = \
+                        #    os.path.join(args['intermediate_dir'], 'transect_data.h5')
+                        #f = h5.File(transect_data_uri, 'w')
+                        #h5_group = f.create_group('transect_data')
+
                         tiles += 1
+
+    print('transect_info size', len(transect_info))
+    for ID in range(len(transect_info)):
+        pass
+            
+    for shp_type in args['shapefiles']:
+        for shp_name in args['shapefiles'][shp_type]:
+            for field in args['shapefiles'][shp_type][shp_name]:
+
+                # Extract data from the current raster field
+                uri = args['shapefiles'][shp_type][shp_name][field]
+                raster = gdal.Open(uri)
+                band = raster.GetRasterBand(1)
+                array = band.ReadAsArray()
+
+                # Creating HDF5 file that will store the transect data
+                transect_data_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        shp_name + '_' + field + '.h5')
+                
+                f = h5.File(transect_data_uri, 'w')
+                group = f.create_group('transect_id')
+
+                for transect in range(len(transect_info)):
+                    # Save transect in file
+                    limits = transect_info[transect]['clip_limits']
+
+                    subgroup = group.create_group(str(transect))
+
+                    rows_dataset = \
+                        subgroup.create_dataset('rows', \
+                            data=transect_info[transect]['raw_positions'][0])
+
+                    cols_dataset = \
+                        subgroup.create_dataset('cols', \
+                            data=transect_info[transect]['raw_positions'][1])
+
+                    limits_dataset = \
+                        subgroup.create_dataset('clip_limits', \
+                            data=transect_info[transect]['clip_limits'])
+
+                # Close the raster before proceeding to the next one
+                band = None
+                raster = None                                    
+                array = None
+
+               ## Generate the transect information
+               #print('interpolating', data.size, data.size * i_side_fine / args['model_resolution'])
+               #data = interpolate_transect(data, \
+               #    i_side_fine, \
+               #    args['model_resolution'], \
+               #    kind = 'nearest')
+               # data = data[start:end]
 
     ## Add size and model resolution to the attributes
     #h5_group.attrs.create('size', tiles)
@@ -599,7 +637,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
     uniques = np.unique(transect)
     if uniques.size == 1:
         assert uniques[0] == 0.0
-        return (transect, 0, transect.size)
+        return (transect, (0, transect.size))
 
     # If higher point is negative: can't do anything
     if transect[0] < 0:
