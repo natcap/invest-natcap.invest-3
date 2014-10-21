@@ -275,22 +275,19 @@ def compute_transects(args):
                 group = f.create_group('transect_id')
 
                 for transect in range(len(transect_info)):
+                    data = array[transect_info[transect]['raw_positions']]
+                    start = transect_info[transect]['clip_limits'][0]
+                    end = transect_info[transect]['clip_limits'][1]
+
+                    data = interpolate_transect(data, \
+                        i_side_fine, \
+                        args['model_resolution'], \
+                        kind = 'nearest')
+                    
+                    data = data[start:end]
+
                     # Save transect in file
-                    limits = transect_info[transect]['clip_limits']
-
-                    subgroup = group.create_group(str(transect))
-
-                    rows_dataset = \
-                        subgroup.create_dataset('rows', \
-                            data=transect_info[transect]['raw_positions'][0])
-
-                    cols_dataset = \
-                        subgroup.create_dataset('cols', \
-                            data=transect_info[transect]['raw_positions'][1])
-
-                    limits_dataset = \
-                        subgroup.create_dataset('clip_limits', \
-                            data=transect_info[transect]['clip_limits'])
+                    dataset = group.create_dataset(str(transect), data=data)
 
                 # Close the raster before proceeding to the next one
                 band = None
