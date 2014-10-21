@@ -409,19 +409,45 @@ def calculate_valuation(crop_uri,
                                             dataset_to_bound_index=0)
 
 
-def mosaic_by_attribute_uri(crop_uri,
-                          crop_list,
-                          cell_size,
-                          output_wkt,
-                          raster_table,
-                          raster_field,
-                          raster_path,
-                          extent_uri,
-                          dataset_uri,
-                          gdal_type = gdal.GDT_Float32,
-                          unknown_crop = 0,
-                          place_holder = -2,
-                          nodata = -1.0):
+def mosaic_by_attribute_uri(key_uri,
+                            key_list,
+                            cell_size,
+                            output_wkt,
+                            raster_collection_dict,
+                            raster_collection_field,
+                            raster_path_prefix,
+                            extent_uri,
+                            dataset_uri,
+                            gdal_type = gdal.GDT_Float32,
+                            ignore_key = 0,
+                            ignore_key_value = -2,
+                            nodata = -1.0):
+    """Mosaics a collection of rasters according to an index raster.
+
+    Mosaics a collection of rasters listed in a dictionary using
+    another raster that contains a dictionary key for each pixel.
+
+    Args:
+        key_uri (str): The path to the raster that will be used to mask for mosaicing
+        key_list (list): The list of keys to process
+        cell_size (float): The cell size for the output raster
+        output_wkt (str): The projection Well-Known Text WKT string
+        raster_collection_dict (dict): The dictionary with a collection of raster dictionaries
+        raster_collection_field (str): The key for the raster collection for the mosaic
+        raster_path_prefix (str): The path prefix for the raster paths in a collection
+        extent_uri (str): The path to the extent of the area for the mosaic
+        dataset_uri (str): The path to the output raster that will contain the mosaic
+        gdal_type (int): The GDAL raster type
+        ignore_key (int): The key to ignore if present
+        ignore_key_value (int): The value that corresponds to the ignore_key
+        nodata (float): The nodata value for the output raster
+
+    Returns:
+        None
+
+    Notes:
+        Google Style comments supported in Sphinx through sphinxcontrib.napoleon
+    """
 
     def extract_closure(labeled_raster_uri, uri_dict):
         nodata = raster_utils.get_nodata_from_uri(labeled_raster_uri)
@@ -435,28 +461,28 @@ def mosaic_by_attribute_uri(crop_uri,
             array = numpy.ones(values[0].shape) * nodata
             for v in labels:
                 array = numpy.where(values[0] == v, values[raster_index[int(v)]+1], array)
-            array = numpy.where(array == place_holder, nodata, array)                    
+            array = numpy.where(array == ignore_key_value, nodata, array)                    
 
             return array
 
         return raster_list, extract_op
 
     nodata_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(crop_uri,
+    raster_utils.new_raster_from_base_uri(key_uri,
                                           nodata_uri,
                                           "GTiff",
                                           nodata,
                                           gdal.GDT_Int32,
-                                          fill_value=place_holder)
+                                          fill_value=ignore_key_value)
 
-    fertilizer_dict = {unknown_crop : nodata_uri}
-    for crop in crop_list:
-        if raster_table[crop][raster_field] == "":
-            fertilizer_dict[crop] = nodata_uri
+    raster_dict = {ignore_key : nodata_uri}
+    for key in key_list:
+        if raster_collection_dict[key][raster_collection_field] == "":
+            raster_dict[key] = nodata_uri
         else:
             try:
-                LOGGER.debug("Clipping global %s raster for InVEST crop %i.", raster_field, crop)
-                dataset_in_uri = os.path.join(raster_path, raster_table[crop][raster_field])
+                LOGGER.debug("Clipping %s for type %i.", raster_collection_field, key)
+                dataset_in_uri = os.path.join(raster_path_prefix, raster_collection_dict[key][raster_collection_field])
                 
                 clip_uri = raster_utils.temporary_filename()
 
@@ -465,7 +491,7 @@ def mosaic_by_attribute_uri(crop_uri,
                                               clip_uri,
                                               assert_projections=False)
                 
-                LOGGER.debug ("Projecting clipped %s raster for InVEST crop %i.", raster_field, crop)
+                LOGGER.debug ("Projecting %s for type %i.", raster_collection_field, key)
                 clip_prj_uri = raster_utils.temporary_filename()
 
 
@@ -475,20 +501,20 @@ def mosaic_by_attribute_uri(crop_uri,
                                                         "nearest",
                                                         clip_prj_uri)
 
-                fertilizer_dict[crop] = clip_prj_uri
+                raster_dict[key] = clip_prj_uri
 
             except:
                 e = sys.exc_info()[1]
 
                 if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
-                    LOGGER.warning("Nitrogen fertilizer data is not available for InVEST crop %i.", crop)                
-                    fertilizer_dict[crop] = nodata_uri
+                    LOGGER.warning("Data is not available for type %i.", key)                
+                    raster_dict[key] = nodata_uri
                     
                 else:
                     raise e
         
     LOGGER.info("Mosaicing raster.")
-    raster_list, extract_op = extract_closure(crop_uri, fertilizer_dict)
+    raster_list, extract_op = extract_closure(key_uri, raster_dict)
 
     raster_utils.vectorize_datasets(raster_list,
                                     extract_op,
@@ -500,6 +526,7 @@ def mosaic_by_attribute_uri(crop_uri,
                                     dataset_to_bound_index=0,
                                     dataset_to_align_index=0,
                                     vectorize_op=False)
+
 
 class ReclassLookup:
     def __init__ (self, d, field, nodata=-1):

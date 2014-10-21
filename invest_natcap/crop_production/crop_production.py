@@ -820,8 +820,9 @@ def execute(args):
     LOGGER.info("Generating report.")
 
     #aggregating arrays
-    print crop_production_core.unique_raster_mask_value_sum(reclass_crop_cover_uri,
-                                                      yield_uri)
+    aggregated_rasters = {}
+    aggregated_rasters[raster_table_field_yield] = crop_production_core.unique_raster_mask_value_sum(reclass_crop_cover_uri,
+                                                                                                     yield_uri)
 
     #metadata
 
@@ -868,13 +869,13 @@ def execute(args):
     summary_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
                        {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"right\"'},
                        {'name': 'InVEST Name', 'total':False, 'td_class' : '\" align=\"center\"'},
-               {'name': 'Area', 'total':True, 'td_class' : '\" align=\"right\"'}]
+               {'name': 'Area (m^2)', 'total':True, 'td_class' : '\" align=\"right\"'}]
 
     for crop in invest_crop_counts.keys():
         record = {'User Crop Id': crop_labels[crop]["user_crop"],
                   'InVEST Crop Id': crop,
                   'InVEST Name' : crop_labels[crop]["description"],
-                  'Area' : invest_crop_counts[crop]}
+                  'Area (m^2)' : int(invest_crop_counts[crop] * cell_size)}
 
         summary_data.append(record)
         
@@ -892,10 +893,15 @@ def execute(args):
     production_data = []
 
     for crop in invest_crop_counts.keys():
+        try:
+            crop_yield = str(aggregated_rasters[raster_table_field_yield][crop])
+        except KeyError:
+            crop_yield = "n/a"
+            
         record = {'User Crop Id': crop_labels[crop]["user_crop"],
                   'InVEST Crop Id': str(crop),
                   'Name' : crop_labels[crop]["description"],
-                  'Existing Yield' : ""}
+                  'Existing Yield' : crop_yield}
 
         if args["enable_tab_percentile"] == True:
             for percentile in [25, 50, 75, 95]:
