@@ -493,9 +493,15 @@ def execute(args):
     #        os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
 
 
+    # Habitats shouldn't overlap. If they do, pick the highest priority one:
+    habitat_priority = ['mangrove', 'marsh', 'seawall', 'beach', 'levee', \
+        'coral', 'underwater structures', 'seagrass', 'kelp']
+    habitat_priority = dict([(habitat_priority[i], len(habitat_priority) - i) \
+        for i in range(len(habitat_priority))])
+
     # List all shapefiles in the habitats directory
     files = os.listdir(args['habitats_directory_uri'])
-    args['habitats'] = {}
+    args['shapefiles'] = {}
 
     # Process each habitat
     shapefile_required_fields = { \
@@ -529,10 +535,12 @@ def execute(args):
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
     known_shapefiles = set() # Set of known shapefiles that will be rasterized
+    in_raster_list = [] # Rasters that will be aligned and clipped and resampled
     for f in files:
         basename, ext = os.path.splitext(f)
         if ext == '.shp':
             file_uri = os.path.join(args['habitats_directory_uri'], f)
+            
             # Find the number of fields in this shapefile
             shapefile = ogr.Open(file_uri)
             assert shapefile, "can't open " + file_uri
@@ -540,8 +548,8 @@ def execute(args):
             layer_def = layer.GetLayerDefn()
             field_count = layer_def.GetFieldCount()
 
+            # Extract field names and build checksum
             shapefile_checksum = 0
-
             for field_id in range(field_count):
                 field_defn = layer_def.GetFieldDefn(field_id)
                 field_name = field_defn.GetName()
@@ -549,53 +557,69 @@ def execute(args):
                 if field_name in field_values:
                     shapefile_checksum += field_values[field_name]
 
+            # If checksum corresponds to a known shapefile type, process it
             if shapefile_checksum in shapefile_type_checksum:
-                shapefile_type = shapefile_type_checksum[field_signature]
+                shapefile_type = shapefile_type_checksum[shapefile_checksum]
+
+                # If new shapefile type, add it to the dictionary
+                if shapefile_type not in args['shapefiles']:
+                    args['shapefiles'][shapefile_type] = {}
+                    args['shapefiles'][shapefile_type][basename] = {}
                 print('Detected that', f, 'is', shapefile_type)
                 
                 # Rasterize the known shapefile for each field name
                 LOGGER.info('Rasterizing data from %s' % f)
                 for field_name in shapefile_required_fields[shapefile_type]:
-                    output_dir = os.path.join( \
+                    output_uri = os.path.join( \
                                 args['intermediate_dir'], \
                                 basename + '_' + field_name + '.tif')
 
-                    print('rasterizing field', field_name, 'to', output_dir)
+                    print('rasterizing field', field_name, 'to', output_uri)
+                    
+                    # Rasterize the current shapefile field
                     preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
-                        args['cell_size'], output_dir, field_name = field_name)
+                        args['cell_size'], output_uri, \
+                        field_name = field_name, nodata = -99999.0)
+                    
+                    # Keep this raster uri
+                    args['shapefiles'][shapefile_type][basename][field_name] = \
+                        output_uri
+                    in_raster_list.append(output_uri)
 
-    # Uniformize the size of shore, land, and bathymetry rasters
-    in_raster_list = [args['landmass_raster_uri'], \
-        args['bathymetry_raster_uri']]
+    #print('habitat_priority', habitat_priority)
+    #sys.exit(0)
 
-    tmp_landmass_raster = raster_utils.temporary_filename()
-    (head, tail) = os.path.split(args['landmass_raster_uri'])
-    tmp_bathy_raster = raster_utils.temporary_filename()
+    # Need to uniformize the size of land and bathymetry rasters
+    in_raster_list.append(args['landmass_raster_uri'])
+    in_raster_list.append(args['bathymetry_raster_uri'])
 
-    out_raster_list = [tmp_landmass_raster, tmp_bathy_raster]
-
+    # For every input raster, create a corresponding output raster
+    out_raster_list = []
+    for uri in in_raster_list:
+        out_raster_list.append(raster_utils.temporary_filename())
+    # Gather info for aligning rasters properly
     cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
     resample_method_list = ['bilinear'] * len(out_raster_list)
     out_pixel_size = cell_size
     mode = 'dataset'
     dataset_to_align_index = 0
     dataset_to_bound_index = 0
-
+    # Invoke raster alignent function
     raster_utils.align_dataset_list( \
         in_raster_list, out_raster_list, resample_method_list,
         out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+    # Now copy the result back to the original files
+    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
+        shutil.copy(out_uri, in_uri)
 
-    shutil.copy(tmp_landmass_raster, args['landmass_raster_uri'])
-    shutil.copy(tmp_bathy_raster, args['bathymetry_raster_uri'])
-
+    # Quick sanity test with shape just to make sure
     landmass_raster_shape = \
         raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
     bathymetry_raster_shape = \
         raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
-
     assert landmass_raster_shape == bathymetry_raster_shape
     
-
+    # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 
 
