@@ -100,7 +100,7 @@ def _verify_population_csv(args):
 
     # Check that information is correct
     if not np.allclose(pop_dict['Larvaldispersal'], 1):
-        LOGGER.warning("The LarvalDisperal vector does not sum exactly to one")
+        LOGGER.warning("The Larvaldisperal vector does not sum exactly to one")
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing', 'Maturity',
@@ -108,8 +108,7 @@ def _verify_population_csv(args):
     for attr in Frac_Vectors:
         a = pop_dict[attr]
         if np.any(a > 1) or np.any(a < 0):
-            LOGGER.warning("The %s vector has elements that are not \
-                decimal fractions", attr)
+            LOGGER.warning("The %s vector has elements that are not decimal fractions", attr)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -120,7 +119,7 @@ def _verify_population_csv(args):
     pop_dict['Duration'] = np.array(
         pop_dict['Duration'], dtype=int)
 
-    pass
+    return pop_dict
 
 
 def _parse_population_csv(uri, sexsp):
@@ -165,13 +164,13 @@ def _parse_population_csv(uri, sexsp):
 
     if sexsp == 1:
         # Sex Neutral
-        pop_dict['Survnaturalfrac'] = [np.array(surv_table, dtype=np.float_)]
+        pop_dict['Survnaturalfrac'] = np.array(surv_table, dtype=np.float_)
 
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        pop_dict['Survnaturalfrac'] = [female, male]
+        pop_dict['Survnaturalfrac'] = np.array([female, male])
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
@@ -201,8 +200,7 @@ def _verify_migration_tables(args, class_list, region_list):
     migration_dict = {}
 
     # If Migration:
-    migration_dir = args['migration_dir']
-    mig_dict = _parse_migration_tables(migration_dir, class_list)
+    mig_dict = _parse_migration_tables(args, class_list)
 
     # Create indexed list
     matrix_list = map(lambda x: None, class_list)
@@ -230,7 +228,7 @@ def _verify_migration_tables(args, class_list, region_list):
     return migration_dict
 
 
-def _parse_migration_tables(uri, class_list):
+def _parse_migration_tables(args, class_list):
     '''Parses all files in the given directory as migration matrices
     and returns a dictionary of stages and their corresponding migration
     numpy matrix.
@@ -248,32 +246,40 @@ def _parse_migration_tables(uri, class_list):
     '''
     mig_dict = {}
 
-    try:
-        for mig_csv in listdir(uri):
-            basename = os.path.splitext(os.path.basename(mig_csv))[0]
-            class_name = basename.split('_').pop().lower()
-            if class_name.lower() in class_list:
-                with open(mig_csv, 'rU') as param_file:
-                    csv_reader = csv.reader(param_file)
-                    lines = []
-                    for row in csv_reader:
-                        lines.append(row)
+    if args['migr_cont']:
+        uri = args['migration_dir']
+        if not os.path.isdir(uri):
+            LOGGER.error("Migration directory does not exist")
+            raise OSError
+        try:
+            for mig_csv in listdir(uri):
+                basename = os.path.splitext(os.path.basename(mig_csv))[0]
+                class_name = basename.split('_').pop().lower()
+                if class_name.lower() in class_list:
+                    with open(mig_csv, 'rU') as param_file:
+                        csv_reader = csv.reader(param_file)
+                        lines = []
+                        for row in csv_reader:
+                            lines.append(row)
 
-                    matrix = []
-                    for row in range(1, len(lines)):
-                        if lines[row][0] == '':
-                            break
-                        array = []
-                        for entry in range(1, len(lines[row])):
-                            array.append(float(lines[row][entry]))
-                        matrix.append(array)
+                        matrix = []
+                        for row in range(1, len(lines)):
+                            if lines[row][0] == '':
+                                break
+                            array = []
+                            for entry in range(1, len(lines[row])):
+                                array.append(float(lines[row][entry]))
+                            matrix.append(array)
 
-                    Migration = np.matrix(matrix)
+                        Migration = np.matrix(matrix)
 
-                mig_dict[class_name] = Migration
+                    mig_dict[class_name] = Migration
+                else:
+                    # Warn user if possible mig matrix isn't being added
+                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Parameters File. This could result in no migration for a class with expected migration.", class_name.capitalize())
 
-    except:
-        pass
+        except:
+            LOGGER.warning("Issue parsing at least one migration table")
 
     return mig_dict
 
@@ -281,6 +287,10 @@ def _parse_migration_tables(uri, class_list):
 def _verify_single_params(args):
     '''
     '''
+    params_dict = {}
+    params_dict['migr_cont'] = args['migr_cont']
+    params_dict['harv_cont'] = args['harv_cont']
+
     # Check that directory exists, if not, try to create directory
     if not os.path.isdir(args['workspace_dir']):
         try:
@@ -288,17 +298,20 @@ def _verify_single_params(args):
         except:
             LOGGER.error("Cannot create Workspace Directory")
             raise OSError
+    params_dict['workspace_dir'] = args['workspace_dir']
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
         LOGGER.error("Total Timesteps value must be positive integer")
         raise ValueError
+    params_dict['total_timesteps'] = total_timesteps
 
     # Check total_init_recruits for non-negative float
     total_init_recruits = args['total_init_recruits']
     if type(total_init_recruits) != float or total_init_recruits < 0:
         LOGGER.error("Total Initial Recruits value must be non-negative float")
+    params_dict['total_init_recruits'] = total_init_recruits
 
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
@@ -317,9 +330,13 @@ def _verify_single_params(args):
             LOGGER.error(
                 "Total Recruits per Timestep must be non-negative float")
             raise ValueError
+    params_dict['recruitment_type'] = recruitment_type
+    params_dict['alpha'] = args['alpha']
+    params_dict['beta'] = args['beta']
+    params_dict['total_recur_recruits'] = args['total_recur_recruits']
 
     # If Harvest:
-    if args['harvest_cont']:
+    if args['harv_cont']:
         frac_post_process = args['frac_post_process']
         unit_price = args['unit_price']
         if frac_post_process is None or unit_price is None:
@@ -333,13 +350,16 @@ def _verify_single_params(args):
         if unit_price < 0:
             LOGGER.error("Unit price of harvest must be non-negative float")
             raise ValueError
+        params_dict['frac_post_process'] = args['frac_post_process']
+        params_dict['unit_price'] = args['unit_price']
 
-    # If shapefile exists
+    ############ If shapefile exists
     # Check file extension? (maybe try / except would be better)
     # Check shapefile subregions match regions in population parameters file
     aoi_uri = args['aoi_uri']
+    ############################################33
 
-    pass
+    return params_dict
 
 
 def initialize_vars(vars_dict):
@@ -348,6 +368,21 @@ def initialize_vars(vars_dict):
     # Initialize derived parameters
         # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all,
         # Harvest, Valuation
+    vars_dict['P_survtotalfrac'] = None
+    vars_dict['G_survtotalfrac'] = None
+    vars_dict['Harvest'] = None
+    vars_dict['Valuation'] = None
+
+    vars_dict['Survtotalfrac'] = _calc_survtotalfrac()
+
+    if vars_dict['population_type'] == 'Stage-Based':
+        vars_dict['P_survtotalfrac']
+        vars_dict['G_survtotalfrac']
+    if vars_dict['']:
+        vars_dict['Harvest']
+        vars_dict['Valuation']
+
+    vars_dict['N_all']
 
     pass
 
@@ -361,6 +396,7 @@ def generate_outputs(vars_dict):
     pass
 
 
+# Helper function for Migration directory
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
@@ -439,3 +475,41 @@ def _vectorize_attribute(lst, rows):
     a = np.reshape(a, (rows, a.shape[0] / rows))
     d[lst[0].capitalize()] = a
     return d
+
+
+# Helper functions for initializing derived variables
+def _calc_survtotalfrac(vars_dict):
+    '''Implements:
+    S_asx = surv_asx * (1 - Exploitationfraction_x * Vulnfishing_as)
+
+    :return: Survtotalfrac
+    :rtype: np.array
+    '''
+    S_nat = vars_dict['Survnaturalfrac']
+    E = vars_dict['Exploitationfraction']
+    V = vars_dict['Vulnfishing']
+
+    I = []
+    for a in V:
+        I.append(np.matrix(a).T * E)
+    I = np.array(I)
+
+    S_tot = S_nat * (1 - I)
+    return S_tot
+
+
+def _calc_p_g_survtotalfrac(vars_dict):
+    '''Implements:
+    G_asx = (S_asx ** D_a) * ((1 - S_asx) / (1 - S_asx ** D_a))
+
+    P_asx = S_asx * ((1 - S_asx ** (D_a - 1)) / (1 - S_asx ** D_a))
+    '''
+    S_tot = vars_dict['Survtotalfrac']
+    D_a = vars_dict['Duration']
+    I = (S_tot.T ** D_a.T).T
+    G = I * ((1 - S_tot) / (1 - I))
+
+    I_2 = (S_tot.T ** (D_a - 1).T).T
+    P = S_tot * ((1 - I_2) / (1 - I))
+
+    return G, P
