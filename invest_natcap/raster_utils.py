@@ -133,7 +133,7 @@ def get_nodata_from_uri(dataset_uri):
         LOGGER.warn("Warning the nodata value in %s is not set" % (dataset_uri))
 
     #cast to an unsigned
-    if band.DataType == gdal.GDT_Byte:
+    if band.DataType == gdal.GDT_Byte and nodata is not None:
         nodata = nodata % 256
 
     #Make sure the dataset is closed and cleaned up
