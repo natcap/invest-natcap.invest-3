@@ -1,29 +1,15 @@
 import logging
 import os
-import shutil
 import csv
 
 from osgeo import ogr
 import numpy as np
-from numpy import testing as nptest
 
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-
-class ImproperStageParameter(Exception):
-    '''This exception will occur if the stage-specific headings in the main
-    parameter CSV are not included in the set of known parameters.'''
-    pass
-
-
-class ImproperAreaParameter(Exception):
-    '''This exception will occur if the area-specific headings in the main
-    parameter CSV are not included in the set of known parameters.'''
-    pass
 
 
 class MissingParameter(Exception):
@@ -40,10 +26,55 @@ def fetch_verify_args(args):
     '''Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a dictionary of variables
 
+    This function receives an unmodified 'args' dictionary from the user
+
     :param dictionary args: arguments from the user
     :return: vars_dict
     :rtype: dictionary
+
+    **Example Output**
+    vars_dict = {
+        'workspace_dir': 'path/to/workspace_dir',
+        'aoi_uri': 'path/to/aoi_uri',
+        'total_timesteps': 100,
+        'population_type': 'Stage-Based',
+        'sexsp': 2,
+        'spawn_units': 'Weight',
+        'total_init_recruits': 100.0,
+        'recruitment_type': 'Ricker',
+        'alpha': 32.4,
+        'beta': 54.2,
+        'total_recur_recruits': 92.1,
+        'migr_cont': True,
+        'harv_cont': True,
+        'harvest_units': 'Individuals',
+        'frac_post_process': 0.5,
+        'unit_price': 5.0,
+
+        # Pop Params
+        'population_csv_uri': 'path/to/csv_uri',
+        'Survnaturalfrac': np.array([[[...], [...]], [[...], [...]], ...]),
+        'Classes': np.array([...]),
+        'Vulnfishing': np.array([...], [...]),
+        'Maturity': np.array([...], [...]),
+        'Duration': np.array([...], [...]),
+        'Weight': np.array([...], [...]),
+        'Fecundity': np.array([...], [...]),
+        'Regions': np.array([...]),
+        'Exploitationfraction': np.array([...]),
+        'Larvaldispersal': np.array([...]),
+
+        # Mig Params
+        'migration_dir': 'path/to/mig_dir',
+        'Migration': [np.matrix, np.matrix, ...]
+    }
+
     '''
+    if args['sexsp'] == 'Yes':
+        args['sexsp'] = 2
+    else:
+        args['sexsp'] = 1
+
     pop_dict = _verify_population_csv(args)
 
     mig_dict = _verify_migration_tables(
@@ -64,6 +95,30 @@ def _verify_population_csv(args):
     **Notes**
     See _parse_population_csv function for notes for list of dictionary keys
         in returned pop_dict
+
+    Survival matrix will be arranged by class-elements, 2nd dim: sex, and
+        3rd dim: region
+    Class vectors will be arranged by class-elements, 2nd dim: sex (depending
+        on whether model is sex-specific)
+    Region vectors will be arraged by region-elements, sex-agnostic
+
+    **Example Output**
+    pop_dict = {
+        'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...),
+
+        # Class Vectors
+        'Classes': np.array([...]),
+        'Vulnfishing': np.array([...], [...]),
+        'Maturity': np.array([...], [...]),
+        'Duration': np.array([...], [...]),
+        'Weight': np.array([...], [...]),
+        'Fecundity': np.array([...], [...]),
+
+        # Region Vectors
+        'Regions': np.array([...]),
+        'Exploitationfraction': np.array([...]),
+        'Larvaldispersal': np.array([...]),
+    }
     '''
     population_csv_uri = args['population_csv_uri']
     pop_dict = _parse_population_csv(population_csv_uri, args['sexsp'])
@@ -134,8 +189,8 @@ def _parse_population_csv(uri, sexsp):
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
     **Example**
-    pop_dict = {{'Survnaturalfrac': [np.ndarrays]},
-                {'Vulnfishing': np.ndarray}, ...},
+    pop_dict = {{'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...)},
+                {'Vulnfishing': np.array([...], [...]), ...},
     '''
     csv_data = []
     pop_dict = {}
@@ -150,7 +205,10 @@ def _parse_population_csv(uri, sexsp):
 
     classes = _get_col(
         csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
+
     pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
+    if sexsp == 2:
+        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
 
     regions = _get_row(
         csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
@@ -164,13 +222,15 @@ def _parse_population_csv(uri, sexsp):
 
     if sexsp == 1:
         # Sex Neutral
-        pop_dict['Survnaturalfrac'] = np.array(surv_table, dtype=np.float_)
+        pop_dict['Survnaturalfrac'] = np.array(
+            [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
 
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        pop_dict['Survnaturalfrac'] = np.array([female, male])
+        pop_dict['Survnaturalfrac'] = np.array(
+            [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
@@ -287,9 +347,7 @@ def _parse_migration_tables(args, class_list):
 def _verify_single_params(args):
     '''
     '''
-    params_dict = {}
-    params_dict['migr_cont'] = args['migr_cont']
-    params_dict['harv_cont'] = args['harv_cont']
+    params_dict = args
 
     # Check that directory exists, if not, try to create directory
     if not os.path.isdir(args['workspace_dir']):
@@ -298,20 +356,17 @@ def _verify_single_params(args):
         except:
             LOGGER.error("Cannot create Workspace Directory")
             raise OSError
-    params_dict['workspace_dir'] = args['workspace_dir']
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
         LOGGER.error("Total Timesteps value must be positive integer")
         raise ValueError
-    params_dict['total_timesteps'] = total_timesteps
 
     # Check total_init_recruits for non-negative float
     total_init_recruits = args['total_init_recruits']
     if type(total_init_recruits) != float or total_init_recruits < 0:
         LOGGER.error("Total Initial Recruits value must be non-negative float")
-    params_dict['total_init_recruits'] = total_init_recruits
 
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
@@ -330,10 +385,6 @@ def _verify_single_params(args):
             LOGGER.error(
                 "Total Recruits per Timestep must be non-negative float")
             raise ValueError
-    params_dict['recruitment_type'] = recruitment_type
-    params_dict['alpha'] = args['alpha']
-    params_dict['beta'] = args['beta']
-    params_dict['total_recur_recruits'] = args['total_recur_recruits']
 
     # If Harvest:
     if args['harv_cont']:
@@ -350,41 +401,15 @@ def _verify_single_params(args):
         if unit_price < 0:
             LOGGER.error("Unit price of harvest must be non-negative float")
             raise ValueError
-        params_dict['frac_post_process'] = args['frac_post_process']
-        params_dict['unit_price'] = args['unit_price']
 
-    ############ If shapefile exists
+    ############ IMPLEMENT LATER
+    # If shapefile exists:
     # Check file extension? (maybe try / except would be better)
     # Check shapefile subregions match regions in population parameters file
-    aoi_uri = args['aoi_uri']
+    # aoi_uri = args['aoi_uri']
     ############################################33
 
     return params_dict
-
-
-def initialize_vars(vars_dict):
-    '''Initializes variables
-    '''
-    # Initialize derived parameters
-        # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all,
-        # Harvest, Valuation
-    vars_dict['P_survtotalfrac'] = None
-    vars_dict['G_survtotalfrac'] = None
-    vars_dict['Harvest'] = None
-    vars_dict['Valuation'] = None
-
-    vars_dict['Survtotalfrac'] = _calc_survtotalfrac()
-
-    if vars_dict['population_type'] == 'Stage-Based':
-        vars_dict['P_survtotalfrac']
-        vars_dict['G_survtotalfrac']
-    if vars_dict['']:
-        vars_dict['Harvest']
-        vars_dict['Valuation']
-
-    vars_dict['N_all']
-
-    pass
 
 
 def generate_outputs(vars_dict):
@@ -475,41 +500,3 @@ def _vectorize_attribute(lst, rows):
     a = np.reshape(a, (rows, a.shape[0] / rows))
     d[lst[0].capitalize()] = a
     return d
-
-
-# Helper functions for initializing derived variables
-def _calc_survtotalfrac(vars_dict):
-    '''Implements:
-    S_asx = surv_asx * (1 - Exploitationfraction_x * Vulnfishing_as)
-
-    :return: Survtotalfrac
-    :rtype: np.array
-    '''
-    S_nat = vars_dict['Survnaturalfrac']
-    E = vars_dict['Exploitationfraction']
-    V = vars_dict['Vulnfishing']
-
-    I = []
-    for a in V:
-        I.append(np.matrix(a).T * E)
-    I = np.array(I)
-
-    S_tot = S_nat * (1 - I)
-    return S_tot
-
-
-def _calc_p_g_survtotalfrac(vars_dict):
-    '''Implements:
-    G_asx = (S_asx ** D_a) * ((1 - S_asx) / (1 - S_asx ** D_a))
-
-    P_asx = S_asx * ((1 - S_asx ** (D_a - 1)) / (1 - S_asx ** D_a))
-    '''
-    S_tot = vars_dict['Survtotalfrac']
-    D_a = vars_dict['Duration']
-    I = (S_tot.T ** D_a.T).T
-    G = I * ((1 - S_tot) / (1 - I))
-
-    I_2 = (S_tot.T ** (D_a - 1).T).T
-    P = S_tot * ((1 - I_2) / (1 - I))
-
-    return G, P

@@ -30,7 +30,7 @@ class TestPopulationParamsIO(unittest.TestCase):
         Matching_Keys = [i for i in pop_dict.keys() if i in All_Parameters]
         self.assertEqual(len(Matching_Keys), len(All_Parameters))
         # Check that sexsp handled correctly
-        self.assertEqual(len(pop_dict['Survnaturalfrac']), sexsp)
+        self.assertEqual(len(pop_dict['Survnaturalfrac'][0]), sexsp)
         # Check that Class attribute lengths match
         self.assertEqual(
             len(pop_dict['Vulnfishing']), len(pop_dict['Maturity']))
@@ -45,7 +45,7 @@ class TestPopulationParamsIO(unittest.TestCase):
         Matching_Params = [i for i in pop_dict.keys() if i in All_Parameters]
         self.assertEqual(len(Matching_Params), len(All_Parameters))
         # Check that sexsp handled correctly
-        self.assertEqual(len(pop_dict['Survnaturalfrac']), sexsp)
+        self.assertEqual(len(pop_dict['Survnaturalfrac'][0]), sexsp)
         # Check that Class attribute lengths match
         self.assertEqual(
             len(pop_dict['Vulnfishing']), len(pop_dict['Maturity']))
@@ -243,65 +243,8 @@ class TestFetchVerifyArgs(unittest.TestCase):
         #pp.pprint(vars_dict)
         #with self.assertRaises():
         #    fisheries_io.fetch_verify_args(args)
+        os.rmdir(args['workspace_dir'])
 
-
-class TestInitializeVars(unittest.TestCase):
-    def test_calc_survtotalfrac(self):
-        # Test very simple
-        vars_dict = {
-            'Survnaturalfrac': np.array([[
-                [1.0, 1.0], [1.0, 1.0]],
-                [[1.0, 1.0], [1.0, 1.0]]]),
-            'Exploitationfraction': np.array([1.0,  1.0]),
-            'Vulnfishing': np.array([[1.0,  1.0], [1.0,  1.0]]),
-        }
-
-        ans = fisheries_io._calc_survtotalfrac(vars_dict)
-        testing.assert_array_equal(ans, np.zeros([2, 2, 2]))
-
-        # Test simple
-        vars_dict = {
-            'Survnaturalfrac': np.array([[
-                [0.75, 0.25], [0.25, 0.75]],
-                [[0.5, 0.75], [0.75, 0.5]]]),
-            'Exploitationfraction': np.array([0.5, 0.25]),
-            'Vulnfishing': np.array([[0.1, 0.2], [0.3, 0.4]]),
-        }
-        check = np.array([[[0.7125, 0.24375], [0.225, 0.7125]], [[0.425, 0.69375], [0.6, 0.45]]])
-
-        ans = fisheries_io._calc_survtotalfrac(vars_dict)
-        testing.assert_array_almost_equal(ans, check)
-
-        # Test larger arrays
-        vars_dict = {
-            'Survnaturalfrac': np.ones([2, 3, 4]),
-            'Exploitationfraction': np.ones((1, 4)),
-            'Vulnfishing': np.ones((2, 3)),
-        }
-
-        ans = fisheries_io._calc_survtotalfrac(vars_dict)
-        print "Ans"
-        pp.pprint(ans)
-        testing.assert_array_almost_equal(ans, np.zeros([2, 3, 4]))
-
-    def test_p_g_survtotalfrac(self):
-        # Test simple
-        vars_dict = {
-            'Survtotalfrac': np.array([[
-                [1.0, 2.0], [3.0, 4.0]],
-                [[5.0, 6.0], [7.0, 8.0]]]),
-            'Duration': np.array([[1, 2], [3, 4]]),
-        }
-        G_check = np.array([[[1.0, 2.0], [9.0, 16.0]],[[125.0, 216.0], [2401.0, 4096.0]]])
-
-        G, P = fisheries_io._calc_p_g_survtotalfrac(vars_dict)
-        testing.assert_array_equal(G, G_check)
-
-        pass
-
-    def test_initialize_vars(self):
-        pass
-    pass
 
 if __name__ == '__main__':
     unittest.main()
