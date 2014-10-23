@@ -496,11 +496,27 @@ def execute(args):
             os.path.join(args['intermediate_dir'], 'bathymetry.tif'))
 
 
-    # Habitats shouldn't overlap. If they do, pick the highest priority one:
-    habitat_priority = ['mangrove', 'marsh', 'seawall', 'beach', 'levee', \
-        'coral', 'underwater structures', 'seagrass', 'kelp']
-    habitat_priority = dict([(habitat_priority[i], len(habitat_priority) - i) \
-        for i in range(len(habitat_priority))])
+    # Habitats shouldn't overlap. If they do, pick the highest priority one.
+    # Habitat informatio is an array of (habitat_name, habitat_info) tuples
+    # habitat_info is a distionary with all the information necessary to 
+    # resolve habitat_name:
+    #   -first entry: ('habitat':habitat_type)
+    #   -subsequent entries: ('field_name':field_value)
+    #
+    habitat_information = [\
+        ('mangrove',       {'habitat':'mangrove'}), \
+        ('marsh',          {'habitat':'marsh'}), \
+        ('seawall',        {'habitat':'man-made structure', 'type':'Seawall'}), \
+        ('beach',          {'habitat':'beach'}), \
+        ('levee',          {'habitat':'man-made structure', 'type':'levee'}), \
+        ('coral reef',     {'habitat':'coral reef'}), \
+        ('underwater structures', {'habitat':'underwater structures'}), \
+        ('seagrass',       {'habitat':'seagrass', 'type':'seagrass'}), \
+        ('kelp',           {'habitat':'seagrass', 'type':'kelp'})]
+
+    habitat_priority = dict([(habitat_information[i][0], \
+        len(habitat_information) - i) \
+        for i in range(len(habitat_information))])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -520,7 +536,7 @@ def execute(args):
     # Process each habitat
     shapefile_required_fields = { \
         'land polygon': ['MHHW', 'MSL', 'MLLW'],
-        'seagrass habitat':[ \
+        'seagrass':[ \
             'StemHeight', \
             'StemDiam', \
             'StemDensty', \
