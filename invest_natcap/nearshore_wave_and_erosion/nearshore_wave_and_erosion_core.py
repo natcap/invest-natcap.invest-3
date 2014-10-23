@@ -14,7 +14,6 @@ import h5py as h5
 
 from osgeo import ogr
 from osgeo import gdal
-import logging
 
 import cProfile, pstats
 
@@ -258,6 +257,8 @@ def compute_transects(args):
             
     for shp_type in args['shapefiles']:
         for shp_name in args['shapefiles'][shp_type]:
+            # Get rid of the path and the extension
+            basename = os.path.splitext(os.path.basename(shp_name))[0]
             for field in args['shapefiles'][shp_type][shp_name]:
 
                 # Extract data from the current raster field
@@ -269,10 +270,11 @@ def compute_transects(args):
                 # Creating HDF5 file that will store the transect data
                 transect_data_uri = \
                     os.path.join(args['intermediate_dir'], \
-                        shp_name + '_' + field + '.h5')
+                        basename + '_' + field + '.h5')
                 
+                print('----- HDF5:', transect_data_uri)
+                f = None
                 f = h5.File(transect_data_uri, 'w')
-                group = f.create_group('transect_id')
 
                 for transect in range(len(transect_info)):
                     data = array[transect_info[transect]['raw_positions']]
@@ -286,12 +288,12 @@ def compute_transects(args):
                     
                     data = data[start:end]
 
-                    # Save transect in file
-                    dataset = group.create_dataset(str(transect), data=data)
+                    # Save transect to file
+                    dataset = f.create_dataset(str(transect), data=data)
 
                 # Close the raster before proceeding to the next one
                 band = None
-                raster = None                                    
+                raster = None
                 array = None
 
                ## Generate the transect information
