@@ -98,8 +98,8 @@ class TestSetRecruitmentFunc(unittest.TestCase):
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
             'recruitment_type': 'Ricker',
-            'alpha': 32.4,
-            'beta': 54.2,
+            'alpha': 3.0,
+            'beta': 4.0,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
             'harv_cont': True,
@@ -108,21 +108,27 @@ class TestSetRecruitmentFunc(unittest.TestCase):
             'unit_price': 5.0,
 
             # Pop Params
-            #'population_csv_uri': 'path/to/csv_uri',
+            # 'population_csv_uri': 'path/to/csv_uri',
             'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
             'Classes': np.array(['larva', 'adult']),
             'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
             'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
             'Duration': np.array([[2, 3], [2, 3]]),
             'Weight': np.array([[0.1, 1.0], [0.1, 2.0]]),
-            'Fecundity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
             'Regions': np.array(['r1', 'r2']),
             'Exploitationfraction': np.array([0.25, 0.5]),
             'Larvaldispersal': np.array([0.75, 0.75]),
 
             # Mig Params
-            #'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)]
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'Survtotalfrac': np.ones([2, 2, 2]),  # Index Order: region, sex, class
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.zeros([100, 2, 2, 2]),  # Index Order: time, region, sex, class
         }
 
     def test_spawners(self):
@@ -141,9 +147,103 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         testing.assert_equal(guess, check)
 
     def test_set_recru_func(self):
-        ### IMPLEMENT THIS TOMORROW
+        vars_dict = self.sample_vars
+        N_prev = np.array(
+            [[[5.0, 10.0], [2.0, 4.0]], [[4.0, 8.0], [1.0, 2.0]]])
 
-        pass
+        # Test B-H
+        vars_dict['recruitment_type'] = 'Beverton-Holt'
+        rec_func = model.set_recru_func(vars_dict)
+        guess = rec_func(N_prev)
+        check = np.array([(270.0 / 272.0), (270.0 / 272.0)])
+        # print "Guess"
+        # pp.pprint(guess)
+        testing.assert_equal(guess, check)
+
+        # Test Ricker
+        vars_dict['recruitment_type'] = 'Ricker'
+        rec_func = model.set_recru_func(vars_dict)
+        guess = rec_func(N_prev)
+        check = np.array([0.75, 0.75]) * (45.0 * np.e**-120.0)
+        # print "Guess"
+        # pp.pprint(guess)
+        testing.assert_equal(guess, check)
+
+        # Test Fecundity
+        vars_dict['recruitment_type'] = 'Fecundity'
+        rec_func = model.set_recru_func(vars_dict)
+        guess = rec_func(N_prev)
+        check = np.array([11.25, 11.25])
+        # print "Guess"
+        # pp.pprint(guess)
+        testing.assert_equal(guess, check)
+
+        # Test Fixed
+        vars_dict['recruitment_type'] = 'Fixed'
+        rec_func = model.set_recru_func(vars_dict)
+        guess = rec_func(N_prev)
+        check = np.array([0.75, 0.75]) * 92.1 / 2
+        # print "Guess"
+        # pp.pprint(guess)
+        testing.assert_equal(guess, check)
+
+
+class TestSetHarvestFunc(unittest.TestCase):
+    def setUp(self):
+        self.sample_vars = {
+            #'workspace_dir': 'path/to/workspace_dir',
+            #'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Ricker',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 92.1,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.75, 0.75]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'Survtotalfrac': np.ones([2, 2, 2]),  # Index Order: region, sex, class
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, region, sex, class
+        }
+
+    def test_set_harv_func(self):
+        vars_dict = self.sample_vars
+        harv_func = model.set_harvest_func(vars_dict)
+        H_guess, V_guess = harv_func(vars_dict['N_all'])
+        H_check = np.ones([100]) * 1.5
+        # print "Harvest Guess"
+        # print H_guess
+        testing.assert_equal(H_guess, H_check)
+        V_check = np.ones([100]) * 3.75
+        # print "Valuation Guess"
+        # print V_guess
+        testing.assert_equal(V_guess, V_check)
 
 
 if __name__ == '__main__':
