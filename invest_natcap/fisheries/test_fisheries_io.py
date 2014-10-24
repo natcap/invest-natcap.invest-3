@@ -240,8 +240,8 @@ class TestFetchVerifyArgs(unittest.TestCase):
             'harv_cont': True,
         }
         vars_dict = fisheries_io.fetch_verify_args(args)
-        #pp.pprint(vars_dict)
-        #with self.assertRaises():
+        # pp.pprint(vars_dict)
+        # with self.assertRaises():
         #    fisheries_io.fetch_verify_args(args)
         os.rmdir(args['workspace_dir'])
 
