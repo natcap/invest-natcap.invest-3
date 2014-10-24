@@ -1,15 +1,9 @@
 '''This will be the entry point for the fisheries tier 1 model.'''
 
 import logging
-import os
-import shutil
-import csv
 
-from osgeo import ogr
-import numpy as np
-
-import fisheries_io
-from invest_natcap import raster_utils
+import fisheries_io as io
+import fisheries_model as model
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -19,6 +13,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 def execute(args):
     '''Main Function
 
+    The following parameters are passed into this function via an 'args'
+        dictionary:
+
+    **General Parameters**
     :param string workspace_dir: location into which all intermediate and
         output files should be placed.
     :param string aoi_uri: location of shapefile which will be used as
@@ -26,6 +24,8 @@ def execute(args):
         attribute which will
     :param int timesteps:represents the number of time steps that
         the user desires the model to run.
+
+    **Population Parameters**
     :param string population_type: specifies whether the model
         is age-specific or stage-specific. Options will be either "Age
         Specific" or "Stage Specific" and will change which equation is
@@ -35,6 +35,8 @@ def execute(args):
     :param string population_csv_uri: location of the population parameters
         csv. This will contain all age and stage specific parameters.
     :param string spawn_units:
+
+    **Recruitment Parameters**
     :param float total_init_recruits: represents the initial number of
         recruits that will be used in calculation of population on a per
         area basis.
@@ -45,10 +47,16 @@ def execute(args):
         Parameter that will be used in calculation of recruitment.
     :param float total_recur_recruits: must exist within args for Fixed.
         Parameter that will be used in calculation of recruitment.
+
+    **Migration Parameters**
+    :param bool migr_cont: if true, model uses migration
     :param string migration_dir: if this parameter exists, it means
         migration is desired. This is  the location of the parameters
         folder containing files for migration. There should be one file for
         every age class which migrates.
+
+    **Harvest Parameters**
+    :param bool harv_cont: if true, model runs harvest computations
     :param string harvest_units: specifies how the user wants to get
         the harvest data. Options are either "Individuals" or "Weight", and
         will change the harvest equation used in core.
@@ -58,75 +66,43 @@ def execute(args):
         species.
     :param float unit_price: represents the price for a single unit of
         harvest. Exists only if valuation is desired.
+
+    **Example Input**
+    args = {
+        'workspace_dir': 'path/to/workspace_dir',
+        'aoi_uri': 'path/to/aoi_uri',
+        'total_timesteps': 100,
+        'population_type': 'Stage-Based',
+        'sexsp': 'Yes',
+        'population_csv_uri': 'path/to/csv_uri',
+        'spawn_units': 'Weight',
+        'total_init_recruits': 100.0,
+        'recruitment_type': 'Ricker',
+        'alpha': 32.4,
+        'beta': 54.2,
+        'total_recur_recruits': 92.1,
+        'migr_cont': True,
+        'migration_dir': 'path/to/mig_dir',
+        'harv_cont': True,
+        'harvest_units': 'Individuals',
+        'frac_post_process': 0.5,
+        'unit_price': 5.0
+    }
     '''
-    if args['sexsp'] == 'Yes':
-        args['sexsp'] = 2
-    else:
-        args['sexsp'] = 1
+    # Parse Inputs
+    vars_dict = io.fetch_verify_args(args)
 
-    vars_dict = fisheries_io.fetch_verify_args(args)
-    vars_dict = fisheries_io.initialize_vars(vars_dict)
+    # Setup Model
+    vars_dict = model.initialize_vars(vars_dict)
+    recru_func = model.set_recru_func(vars_dict)
+    harvest_func = model.set_harvest_func(vars_dict)
+    init_cond_func = model.set_init_cond_func(vars_dict, recru_func)
+    cycle_func = model.set_cycle_func(
+        vars_dict, recru_func, harvest_func)
 
-    recru_func = set_recru_func(vars_dict)
-    harvest_func = set_harvest_func(vars_dict)
-    init_cond_func = set_init_cond_func(vars_dict, recru_func)
-    cycle_func = set_cycle_func(vars_dict, recru_func, harvest_func)
-
-    vars_dict = run_population_model(
+    # Run Model
+    vars_dict = model.run_population_model(
         vars_dict, init_cond_func, cycle_func)
 
-    fisheries_io.generate_outputs(vars_dict)
-
-
-def set_recru_func(vars_dict):
-    '''
-    Creates optimized recruitment function
-
-    rec_eq_str, Matu, Weight, Fec, fixed, alpha, beta, sexsp
-    '''
-    def create_Spawners(Matu, Weight):
-        return lambda N_prev: (N_prev * Matu * Weight)
-
-    def create_BH(alpha, beta, sexsp, Matu, Weight):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: ((alpha * spawners(
-            N_prev) / (beta + spawners(N_prev)))) / sexsp
-
-    def create_Ricker(alpha, beta, sexsp, Matu, Weight):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: (alpha * spawners(
-            N_prev) * (np.e ** (-beta * spawners(N_prev)))) / sexsp
-
-    def create_Fecundity(Fec, sexsp, Matu):
-        return lambda N_prev: (N_prev * Matu * Fec) / sexsp
-
-    def create_Fixed(fixed, sexsp):
-        return lambda N_prev: fixed / sexsp
-
-    pass
-
-
-def set_harvest_func(vars_dict):
-    '''
-    '''
-    # Calculate Harvest
-    # Calculate Valuation
-    pass
-
-
-def set_init_cond_func(vars_dict, recru_func):
-    '''
-    '''
-    pass
-
-
-def set_cycle_func(vars_dict, recru_func, harvest_func):
-    '''
-    '''
-    pass
-
-
-def run_population_model(vars_dict, init_cond_func, cycle_func):
-    '''
-    '''
-    pass
+    # Generate Outputs
+    io.generate_outputs(vars_dict)

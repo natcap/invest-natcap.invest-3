@@ -1,29 +1,15 @@
 import logging
 import os
-import shutil
 import csv
 
 from osgeo import ogr
 import numpy as np
-from numpy import testing as nptest
 
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-
-class ImproperStageParameter(Exception):
-    '''This exception will occur if the stage-specific headings in the main
-    parameter CSV are not included in the set of known parameters.'''
-    pass
-
-
-class ImproperAreaParameter(Exception):
-    '''This exception will occur if the area-specific headings in the main
-    parameter CSV are not included in the set of known parameters.'''
-    pass
 
 
 class MissingParameter(Exception):
@@ -40,10 +26,55 @@ def fetch_verify_args(args):
     '''Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a dictionary of variables
 
+    This function receives an unmodified 'args' dictionary from the user
+
     :param dictionary args: arguments from the user
     :return: vars_dict
     :rtype: dictionary
+
+    **Example Output**
+    vars_dict = {
+        'workspace_dir': 'path/to/workspace_dir',
+        'aoi_uri': 'path/to/aoi_uri',
+        'total_timesteps': 100,
+        'population_type': 'Stage-Based',
+        'sexsp': 2,
+        'spawn_units': 'Weight',
+        'total_init_recruits': 100.0,
+        'recruitment_type': 'Ricker',
+        'alpha': 32.4,
+        'beta': 54.2,
+        'total_recur_recruits': 92.1,
+        'migr_cont': True,
+        'harv_cont': True,
+        'harvest_units': 'Individuals',
+        'frac_post_process': 0.5,
+        'unit_price': 5.0,
+
+        # Pop Params
+        'population_csv_uri': 'path/to/csv_uri',
+        'Survnaturalfrac': np.array([[[...], [...]], [[...], [...]], ...]),
+        'Classes': np.array([...]),
+        'Vulnfishing': np.array([...], [...]),
+        'Maturity': np.array([...], [...]),
+        'Duration': np.array([...], [...]),
+        'Weight': np.array([...], [...]),
+        'Fecundity': np.array([...], [...]),
+        'Regions': np.array([...]),
+        'Exploitationfraction': np.array([...]),
+        'Larvaldispersal': np.array([...]),
+
+        # Mig Params
+        'migration_dir': 'path/to/mig_dir',
+        'Migration': [np.matrix, np.matrix, ...]
+    }
+
     '''
+    if args['sexsp'] == 'Yes':
+        args['sexsp'] = 2
+    else:
+        args['sexsp'] = 1
+
     pop_dict = _verify_population_csv(args)
 
     mig_dict = _verify_migration_tables(
@@ -64,6 +95,30 @@ def _verify_population_csv(args):
     **Notes**
     See _parse_population_csv function for notes for list of dictionary keys
         in returned pop_dict
+
+    Survival matrix will be arranged by class-elements, 2nd dim: sex, and
+        3rd dim: region
+    Class vectors will be arranged by class-elements, 2nd dim: sex (depending
+        on whether model is sex-specific)
+    Region vectors will be arraged by region-elements, sex-agnostic
+
+    **Example Output**
+    pop_dict = {
+        'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...),
+
+        # Class Vectors
+        'Classes': np.array([...]),
+        'Vulnfishing': np.array([...], [...]),
+        'Maturity': np.array([...], [...]),
+        'Duration': np.array([...], [...]),
+        'Weight': np.array([...], [...]),
+        'Fecundity': np.array([...], [...]),
+
+        # Region Vectors
+        'Regions': np.array([...]),
+        'Exploitationfraction': np.array([...]),
+        'Larvaldispersal': np.array([...]),
+    }
     '''
     population_csv_uri = args['population_csv_uri']
     pop_dict = _parse_population_csv(population_csv_uri, args['sexsp'])
@@ -100,7 +155,7 @@ def _verify_population_csv(args):
 
     # Check that information is correct
     if not np.allclose(pop_dict['Larvaldispersal'], 1):
-        LOGGER.warning("The LarvalDisperal vector does not sum exactly to one")
+        LOGGER.warning("The Larvaldisperal vector does not sum exactly to one")
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing', 'Maturity',
@@ -108,8 +163,7 @@ def _verify_population_csv(args):
     for attr in Frac_Vectors:
         a = pop_dict[attr]
         if np.any(a > 1) or np.any(a < 0):
-            LOGGER.warning("The %s vector has elements that are not \
-                decimal fractions", attr)
+            LOGGER.warning("The %s vector has elements that are not decimal fractions", attr)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -120,7 +174,7 @@ def _verify_population_csv(args):
     pop_dict['Duration'] = np.array(
         pop_dict['Duration'], dtype=int)
 
-    pass
+    return pop_dict
 
 
 def _parse_population_csv(uri, sexsp):
@@ -135,8 +189,8 @@ def _parse_population_csv(uri, sexsp):
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
     **Example**
-    pop_dict = {{'Survnaturalfrac': [np.ndarrays]},
-                {'Vulnfishing': np.ndarray}, ...},
+    pop_dict = {{'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...)},
+                {'Vulnfishing': np.array([...], [...]), ...},
     '''
     csv_data = []
     pop_dict = {}
@@ -151,7 +205,10 @@ def _parse_population_csv(uri, sexsp):
 
     classes = _get_col(
         csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
+
     pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
+    if sexsp == 2:
+        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
 
     regions = _get_row(
         csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
@@ -165,13 +222,15 @@ def _parse_population_csv(uri, sexsp):
 
     if sexsp == 1:
         # Sex Neutral
-        pop_dict['Survnaturalfrac'] = [np.array(surv_table, dtype=np.float_)]
+        pop_dict['Survnaturalfrac'] = np.array(
+            [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
 
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        pop_dict['Survnaturalfrac'] = [female, male]
+        pop_dict['Survnaturalfrac'] = np.array(
+            [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
@@ -201,8 +260,7 @@ def _verify_migration_tables(args, class_list, region_list):
     migration_dict = {}
 
     # If Migration:
-    migration_dir = args['migration_dir']
-    mig_dict = _parse_migration_tables(migration_dir, class_list)
+    mig_dict = _parse_migration_tables(args, class_list)
 
     # Create indexed list
     matrix_list = map(lambda x: None, class_list)
@@ -230,7 +288,7 @@ def _verify_migration_tables(args, class_list, region_list):
     return migration_dict
 
 
-def _parse_migration_tables(uri, class_list):
+def _parse_migration_tables(args, class_list):
     '''Parses all files in the given directory as migration matrices
     and returns a dictionary of stages and their corresponding migration
     numpy matrix.
@@ -248,32 +306,40 @@ def _parse_migration_tables(uri, class_list):
     '''
     mig_dict = {}
 
-    try:
-        for mig_csv in listdir(uri):
-            basename = os.path.splitext(os.path.basename(mig_csv))[0]
-            class_name = basename.split('_').pop().lower()
-            if class_name.lower() in class_list:
-                with open(mig_csv, 'rU') as param_file:
-                    csv_reader = csv.reader(param_file)
-                    lines = []
-                    for row in csv_reader:
-                        lines.append(row)
+    if args['migr_cont']:
+        uri = args['migration_dir']
+        if not os.path.isdir(uri):
+            LOGGER.error("Migration directory does not exist")
+            raise OSError
+        try:
+            for mig_csv in listdir(uri):
+                basename = os.path.splitext(os.path.basename(mig_csv))[0]
+                class_name = basename.split('_').pop().lower()
+                if class_name.lower() in class_list:
+                    with open(mig_csv, 'rU') as param_file:
+                        csv_reader = csv.reader(param_file)
+                        lines = []
+                        for row in csv_reader:
+                            lines.append(row)
 
-                    matrix = []
-                    for row in range(1, len(lines)):
-                        if lines[row][0] == '':
-                            break
-                        array = []
-                        for entry in range(1, len(lines[row])):
-                            array.append(float(lines[row][entry]))
-                        matrix.append(array)
+                        matrix = []
+                        for row in range(1, len(lines)):
+                            if lines[row][0] == '':
+                                break
+                            array = []
+                            for entry in range(1, len(lines[row])):
+                                array.append(float(lines[row][entry]))
+                            matrix.append(array)
 
-                    Migration = np.matrix(matrix)
+                        Migration = np.matrix(matrix)
 
-                mig_dict[class_name] = Migration
+                    mig_dict[class_name] = Migration
+                else:
+                    # Warn user if possible mig matrix isn't being added
+                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Parameters File. This could result in no migration for a class with expected migration.", class_name.capitalize())
 
-    except:
-        pass
+        except:
+            LOGGER.warning("Issue parsing at least one migration table")
 
     return mig_dict
 
@@ -281,6 +347,8 @@ def _parse_migration_tables(uri, class_list):
 def _verify_single_params(args):
     '''
     '''
+    params_dict = args
+
     # Check that directory exists, if not, try to create directory
     if not os.path.isdir(args['workspace_dir']):
         try:
@@ -319,7 +387,7 @@ def _verify_single_params(args):
             raise ValueError
 
     # If Harvest:
-    if args['harvest_cont']:
+    if args['harv_cont']:
         frac_post_process = args['frac_post_process']
         unit_price = args['unit_price']
         if frac_post_process is None or unit_price is None:
@@ -334,22 +402,14 @@ def _verify_single_params(args):
             LOGGER.error("Unit price of harvest must be non-negative float")
             raise ValueError
 
-    # If shapefile exists
+    ############ IMPLEMENT LATER
+    # If shapefile exists:
     # Check file extension? (maybe try / except would be better)
     # Check shapefile subregions match regions in population parameters file
-    aoi_uri = args['aoi_uri']
+    # aoi_uri = args['aoi_uri']
+    ############################################33
 
-    pass
-
-
-def initialize_vars(vars_dict):
-    '''Initializes variables
-    '''
-    # Initialize derived parameters
-        # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all,
-        # Harvest, Valuation
-
-    pass
+    return params_dict
 
 
 def generate_outputs(vars_dict):
@@ -361,6 +421,7 @@ def generate_outputs(vars_dict):
     pass
 
 
+# Helper function for Migration directory
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a

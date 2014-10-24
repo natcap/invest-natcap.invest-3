@@ -30,7 +30,7 @@ class TestPopulationParamsIO(unittest.TestCase):
         Matching_Keys = [i for i in pop_dict.keys() if i in All_Parameters]
         self.assertEqual(len(Matching_Keys), len(All_Parameters))
         # Check that sexsp handled correctly
-        self.assertEqual(len(pop_dict['Survnaturalfrac']), sexsp)
+        self.assertEqual(len(pop_dict['Survnaturalfrac'][0]), sexsp)
         # Check that Class attribute lengths match
         self.assertEqual(
             len(pop_dict['Vulnfishing']), len(pop_dict['Maturity']))
@@ -45,7 +45,7 @@ class TestPopulationParamsIO(unittest.TestCase):
         Matching_Params = [i for i in pop_dict.keys() if i in All_Parameters]
         self.assertEqual(len(Matching_Params), len(All_Parameters))
         # Check that sexsp handled correctly
-        self.assertEqual(len(pop_dict['Survnaturalfrac']), sexsp)
+        self.assertEqual(len(pop_dict['Survnaturalfrac'][0]), sexsp)
         # Check that Class attribute lengths match
         self.assertEqual(
             len(pop_dict['Vulnfishing']), len(pop_dict['Maturity']))
@@ -106,8 +106,12 @@ class TestPopulationParamsIO(unittest.TestCase):
 class TestMigrationIO(unittest.TestCase):
     def test_parse_migration(self):
         uri = os.path.join(data_directory, 'Migration/')
+        args = {
+            'migr_cont': True,
+            'migration_dir': uri
+        }
         class_list = ['larva', 'adult']
-        mig_dict = fisheries_io._parse_migration_tables(uri, class_list)
+        mig_dict = fisheries_io._parse_migration_tables(args, class_list)
         #pp.pprint(mig_dict)
         self.assertIsInstance(mig_dict['adult'], np.matrix)
         self.assertEqual(
@@ -115,12 +119,15 @@ class TestMigrationIO(unittest.TestCase):
 
     def test_verify_migration(self):
         uri = os.path.join(data_directory, 'Migration/')
-        args = {"migration_dir": uri}
+        args = {
+            "migration_dir": uri,
+            "migr_cont": True,
+            }
         class_list = ['larva', 'other', 'other2', 'adult']
         region_list = ['Region 1', 'Region 2', '...', 'Region N']
         mig_dict = fisheries_io._verify_migration_tables(
             args, class_list, region_list)
-        test_matrix_dict = fisheries_io._parse_migration_tables(uri, ['larva'])
+        test_matrix_dict = fisheries_io._parse_migration_tables(args, ['larva'])
         #pp.pprint(test_matrix_dict)
         #pp.pprint(mig_dict)
         testing.assert_array_equal(
@@ -143,10 +150,11 @@ class TestSingleParamsIO(unittest.TestCase):
             'alpha': None,
             'beta': None,
             'total_recur_recruits': None,
+            'migr_cont': True,
             'harvest_units': None,
             'frac_post_process': None,
             'unit_price': None,
-            'harvest_cont': True,
+            'harv_cont': True,
             }
 
         # Check that path exists and user has read/write permissions along path
@@ -205,10 +213,38 @@ class TestSingleParamsIO(unittest.TestCase):
         os.rmdir(args['workspace_dir'])
 
 
-class TestInitializeVars(unittest.TestCase):
-    def test(self):
-        pass
-    pass
+class TestFetchVerifyArgs(unittest.TestCase):
+    def test_fetch_verify(self):
+        csv_uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
+        mig_uri = os.path.join(data_directory, 'Migration/')
+        workspace_dir = os.path.join(os.getcwd(), 'test')
+        args = {
+            'population_csv_uri': csv_uri,
+            'migr_cont': True,
+            'migration_dir': mig_uri,
+            'workspace_dir': workspace_dir,
+            'aoi_uri': None,
+            'population_type': "Stage-Based",
+            'sexsp': 1,
+            'total_init_recruits': 1.2,
+            'total_timesteps': 100,
+            'recruitment_type': 'Ricker',
+            'spawn_units': 'Individuals',
+            'alpha': 1.0,
+            'beta': 1.2,
+            'total_recur_recruits': 100.0,
+            'migr_cont': True,
+            'harvest_units': "Weight",
+            'frac_post_process': 0.2,
+            'unit_price': 20.2,
+            'harv_cont': True,
+        }
+        vars_dict = fisheries_io.fetch_verify_args(args)
+        #pp.pprint(vars_dict)
+        #with self.assertRaises():
+        #    fisheries_io.fetch_verify_args(args)
+        os.rmdir(args['workspace_dir'])
+
 
 if __name__ == '__main__':
     unittest.main()
