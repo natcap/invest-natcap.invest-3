@@ -254,6 +254,8 @@ def compute_transects(args):
     print('transect_info size', len(transect_info))
     for ID in range(len(transect_info)):
         pass
+    
+    # Creating one HDF5 file that contains all the transect information
             
     for shp_type in args['shapefiles']:
         for shp_name in args['shapefiles'][shp_type]:

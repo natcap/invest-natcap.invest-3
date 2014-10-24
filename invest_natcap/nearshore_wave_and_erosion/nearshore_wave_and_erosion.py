@@ -565,7 +565,7 @@ def execute(args):
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
     known_shapefiles = set() # Set of known shapefiles that will be rasterized
-    in_raster_list = [] # Rasters that will be aligned and clipped and resampled
+    in_raster_list = {} # Rasters that will be aligned and clipped and resampled
     for file_uri in files:
  #       print('Processing', file_uri)
         basename = os.path.basename(file_uri)
@@ -603,6 +603,8 @@ def execute(args):
                     args['shapefiles'][shapefile_type] = {}
                     args['shapefiles'][shapefile_type][basename] = {}
                 print('Detected that', file_uri, 'is', shapefile_type)
+                #if :
+                #    pass
                 
                 # Rasterize the known shapefile for each field name
                 LOGGER.info('Rasterizing data from %s' % file_uri)
