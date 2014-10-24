@@ -503,20 +503,38 @@ def execute(args):
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
-    habitat_information = [\
-        ('mangrove',       {'habitat':'mangrove'}), \
-        ('marsh',          {'habitat':'marsh'}), \
-        ('seawall',        {'habitat':'man-made structure', 'type':'Seawall'}), \
-        ('beach',          {'habitat':'beach'}), \
-        ('levee',          {'habitat':'man-made structure', 'type':'levee'}), \
-        ('coral reef',     {'habitat':'coral reef'}), \
+    args['habitat_information'] = [\
+        ('mangrove',   {'habitat':'mangrove'}), \
+        ('marsh',      {'habitat':'marsh'}), \
+        ('seawall',    {'habitat':'man-made structure', 'type':'Seawall'}), \
+        ('beach',      {'habitat':'beach'}), \
+        ('levee',      {'habitat':'man-made structure', 'type':'Levee'}), \
+        ('coral reef', {'habitat':'coral reef'}), \
         ('underwater structures', {'habitat':'underwater structures'}), \
-        ('seagrass',       {'habitat':'seagrass', 'type':'seagrass'}), \
-        ('kelp',           {'habitat':'seagrass', 'type':'kelp'})]
+        ('seagrass',   {'habitat':'seagrass', 'type':'seagrass'}), \
+        ('kelp',       {'habitat':'seagrass', 'type':'kelp'})]
 
-    habitat_priority = dict([(habitat_information[i][0], \
-        len(habitat_information) - i) \
-        for i in range(len(habitat_information))])
+    # Build the habitats name--priority mapping
+    args['habitat_priority'] = dict([(args['habitat_information'][i][0], \
+        len(args['habitat_information']) - i - 1) \
+        for i in range(len(args['habitat_information']))])
+
+    # Build the habitats type + subtype -- habitats name mapping
+    args['habitat_name'] = {}
+    for information in args['habitat_information']:
+        
+        #habitat name == habitat type
+        if information[0] == information[1]['habitat']:
+            args['habitat_name'][information[0]] = [information[0]]
+        
+        # habitat name != habitat type: look at type field
+        else:
+            # Initialize list if nothing there already
+            if information[1]['type'] not in args['habitat_name']:
+                args['habitat_name'][information[0]] = [information[1]['type']]
+            # Append to existing list otherwise    
+            else:
+                args['habitat_name'][information[0]].append(information[1]['type'])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -565,7 +583,7 @@ def execute(args):
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
     known_shapefiles = set() # Set of known shapefiles that will be rasterized
-    in_raster_list = {} # Rasters that will be aligned and clipped and resampled
+    in_raster_list = [] # Rasters that will be aligned and clipped and resampled
     for file_uri in files:
  #       print('Processing', file_uri)
         basename = os.path.basename(file_uri)
@@ -603,9 +621,22 @@ def execute(args):
                     args['shapefiles'][shapefile_type] = {}
                     args['shapefiles'][shapefile_type][basename] = {}
                 print('Detected that', file_uri, 'is', shapefile_type)
-                #if :
-                #    pass
-                
+
+#                # Find habitat priority
+#                key = ''
+#                for information in args['habitat_information']:
+#                    if key == information[1]['habitat']:
+#                        break
+#                    else:
+#                        if key == information[1]['type']:
+#
+#
+#                shp_priority = args['habitat_priority'][shp_type]
+
+                # Use it to index habitat information
+                shp_information = args['habitat_information']
+
+
                 # Rasterize the known shapefile for each field name
                 LOGGER.info('Rasterizing data from %s' % file_uri)
                 for field_name in shapefile_required_fields[shapefile_type]:
