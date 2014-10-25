@@ -430,11 +430,14 @@ def execute(args):
             join_tables.append(predictor + results)
 
         #join
-        LOGGER.debug("New data for columns %s.",
+        LOGGER.info("New data for columns %s.",
                      loggify(repr(user_simple_predictors + model_split_predictors)))
+        if len(user_simple_predictors + model_split_predictors) == 0:
+            LOGGER.error("There will be no modified predictors in the scenario.")
+
         grid_predictors = set(grid_predictors)
         grid_predictors.difference_update(set(user_simple_predictors + model_split_predictors))
-        LOGGER.debug("Old data for columns %s.",
+        LOGGER.info("Old data for columns %s.",
                      loggify(repr(grid_predictors)))
 
         LOGGER.info("Preserving old columns.")

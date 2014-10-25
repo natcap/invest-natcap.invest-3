@@ -256,8 +256,9 @@ def compute_transects(args):
         pass
     
     # Creating one HDF5 file that contains all the transect information
-            
+
     for shp_type in args['shapefiles']:
+
         for shp_name in args['shapefiles'][shp_type]:
             # Get rid of the path and the extension
             basename = os.path.splitext(os.path.basename(shp_name))[0]
