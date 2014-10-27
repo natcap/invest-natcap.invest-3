@@ -469,9 +469,10 @@ def execute(args):
     ###
 
     # Preliminary tests
-    assert args['transition'] != args['suitability'], \
-        'Transition and suitability tables are the same: ' + \
-        args['transition'] + '. The model expects different tables.'
+    if 'suitability' in args:
+        assert args['transition'] != args['suitability'], \
+            'Transition and suitability tables are the same: ' + \
+            args['transition'] + '. The model expects different tables.'
 
     #transition table fields
     args["transition_id"] = "Id"
