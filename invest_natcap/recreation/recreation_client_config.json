@@ -1,5 +1,6 @@
 {
     "server": "http://ncp-skookum.stanford.edu/~recreation/",
+    "server_list": "http://invest-3.invest-natcap.googlecode.com/hg-history/ac6f6089a1c8c8a0e7c4e6c2313fe454dee00354/invest_natcap/recreation/server_list.json",    
     "paths": {
         "relative": {
             "data": "data/",
