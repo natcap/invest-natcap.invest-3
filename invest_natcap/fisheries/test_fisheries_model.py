@@ -236,15 +236,203 @@ class TestSetHarvestFunc(unittest.TestCase):
         vars_dict = self.sample_vars
         harv_func = model.set_harvest_func(vars_dict)
         H_guess, V_guess = harv_func(vars_dict['N_all'])
-        H_check = np.ones([100]) * 1.5
+        H_check = np.array([np.ones([100]) * 0.5, np.ones([100])]).swapaxes(0, 1)
         # print "Harvest Guess"
         # print H_guess
         testing.assert_equal(H_guess, H_check)
-        V_check = np.ones([100]) * 3.75
+        V_check = H_check * 2.5
         # print "Valuation Guess"
         # print V_guess
         testing.assert_equal(V_guess, V_check)
 
+
+class TestSetInitCondFunc(unittest.TestCase):
+    def setUp(self):
+        self.sample_vars = {
+            #'workspace_dir': 'path/to/workspace_dir',
+            #'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Ricker',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 10.0,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.75, 0.75]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+        }
+
+    def test_stage_based(self):
+        vars_dict = self.sample_vars
+        init_cond_func = model.set_init_cond_func(vars_dict)
+        N_0_guess = init_cond_func()
+        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[1.0, 1.0], [1.0, 1.0]]])
+        # print "N_0 Guess"
+        # print N_0_guess
+        testing.assert_equal(N_0_guess, N_0_check)
+
+    def test_age_based(self):
+        vars_dict = self.sample_vars
+        vars_dict['population_type'] = 'Age-Based'
+        init_cond_func = model.set_init_cond_func(vars_dict)
+        N_0_guess = init_cond_func()
+        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[-31.25, -30.0], [(25.0*7/-6), (25.0*8/-7)]]])
+        # print "N_0 Guess"
+        # print N_0_guess
+        testing.assert_equal(N_0_guess, N_0_check)
+
+    def test_age_based_2(self):
+        vars_dict = self.sample_vars
+        vars_dict['Classes'] = np.array(['larva', 'middle', 'adult'])
+        vars_dict['Survtotalfrac'] = np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]], [[9.0, 10.0], [11.0, 12.0]]])
+        vars_dict['population_type'] = 'Age-Based'
+
+        init_cond_func = model.set_init_cond_func(vars_dict)
+        N_0_guess = init_cond_func()
+        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[25.0*5, 25.0*6], [(25.0*7), (25.0*8)]], [[(25.0*5*9/-8), (25.0*6*10/-9)], [(25.0*7*11/-10), (25.0*8*12/-11)]]])
+        # print "N_0 Guess"
+        # print N_0_guess
+        # print "N_0 Check"
+        # print N_0_check
+        testing.assert_equal(N_0_guess, N_0_check)
+
+
+class TestSetCycleFunc(unittest.TestCase):
+    def setUp(self):
+        self.sample_vars = {
+            # 'workspace_dir': 'path/to/workspace_dir',
+            # 'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Fixed',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 1.0,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.5, 0.5]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+        }
+
+    def test_stage_based(self):
+        vars_dict = self.sample_vars
+        rec_func = model.set_recru_func(vars_dict)
+        cycle_func = model.set_cycle_func(vars_dict, rec_func)
+
+        N_prev = np.ones([2, 2, 2])
+        N_cur_guess = cycle_func(cycle_func(N_prev))
+        # N_cur_check = np.array([])
+        # print "N_cur Guess"
+        # print N_cur_guess
+        # print "N_cur Check"
+        # print N_cur_check
+        # testing.assert_equal(N_cur_guess, N_cur_check)
+
+    def test_age_based(self):
+        pass
+
+
+class TestRunPopulationModel(unittest.TestCase):
+    def setUp(self):
+        self.sample_vars = {
+            # 'workspace_dir': 'path/to/workspace_dir',
+            # 'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Fixed',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 1.0,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.5, 0.5]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+        }
+
+    def test_run_population_model(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

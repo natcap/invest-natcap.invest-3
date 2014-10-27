@@ -95,9 +95,8 @@ def execute(args):
     # Setup Model
     vars_dict = model.initialize_vars(vars_dict)
     recru_func = model.set_recru_func(vars_dict)
-    init_cond_func = model.set_init_cond_func(vars_dict, recru_func)
-    cycle_func = model.set_cycle_func(
-        vars_dict, recru_func)
+    init_cond_func = model.set_init_cond_func(vars_dict)
+    cycle_func = model.set_cycle_func(vars_dict, recru_func)
     harvest_func = model.set_harvest_func(vars_dict)
 
     # Run Model

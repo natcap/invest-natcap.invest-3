@@ -7,9 +7,19 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 '''
-Notes
+**Notes**
 
-Presumed Order or Axes for Given Functions:
+Notation:
+x, r: area/region
+a, c: age/class
+s: sex
+t: time
+
+    Example: N_asx (Three-dimensional Numbers matrix)
+        first index: class
+        last index (first degree): region
+
+Presumed Order of Axes for Given Functions:
 
     Recruitment
         N:              region, sex, class
@@ -45,8 +55,12 @@ def initialize_vars(vars_dict):
 
     if vars_dict['population_type'] == 'Stage-Based':
         G, P = _calc_p_g_survtotalfrac(vars_dict)
-        vars_dict['G_survtotalfrac'] = G
-        vars_dict['P_survtotalfrac'] = P
+        # Swap axes for easier class-based math in model run
+        vars_dict['G_survtotalfrac'] = G.swapaxes(0, 2)
+        vars_dict['P_survtotalfrac'] = P.swapaxes(0, 2)
+
+    # Swap axes for easier class-based math in model run
+    vars_dict['Survtotalfrac'] = vars_dict['Survtotalfrac'].swapaxes(0, 2)
 
     t = vars_dict['total_timesteps']
     x = len(vars_dict['Regions'])  # Region
@@ -124,14 +138,14 @@ def set_recru_func(vars_dict):
 def set_harvest_func(vars_dict):
     '''
     Creates harvest function that calculates the given harvest and valuation
-        of the fisheries population over each timestep. Returns None if harvest
-        isn't selected by user
+        of the fisheries population over each timestep for a given region.
+        Returns None if harvest isn't selected by user.
 
     **Example Outputs of Returned Harvest Function**
     H_tx, V_tx = harv_func(N_all)
 
-    H_tx = np.array([3.0, 4.5, 2.5, ...])  # AWAITING RESPONSE FROM LAUREN
-    V_tx = np.array([6.0, 9.0, 5.0 ...])   # AWAITING RESPONSE FROM LAUREN
+    H_tx = np.array([[3.0, 4.5, 2.5, ...], [...])
+    V_tx = np.array([[6.0, 9.0, 5.0, ...], [...])
 
     '''
     if vars_dict['harv_cont']:
@@ -140,7 +154,7 @@ def set_harvest_func(vars_dict):
         frac_post_process = vars_dict['frac_post_process']
         unit_price = vars_dict['unit_price']
 
-        # Initialize Weight vector according to spawn_units
+        # Initialize Weight vector according to harvest_units
         if vars_dict['harvest_units'] == "Weight":
             Weight = vars_dict['Weight']
         else:
@@ -156,7 +170,7 @@ def set_harvest_func(vars_dict):
 
         def harv_func(N_all):
             H = N_all * I * Weight
-            H = np.array(map(lambda x: x.sum(), H[:]))
+            H = np.array(map(lambda x: map(lambda y: y.sum(), x), H[:]))
             V = H * (frac_post_process * unit_price)
             return H, V
 
@@ -166,66 +180,139 @@ def set_harvest_func(vars_dict):
         return None
 
 
-def set_init_cond_func(vars_dict, rec_func):
+def set_init_cond_func(vars_dict):
     '''
     Creates a function to set the initial conditions of the model
 
-    **Example Output of Returned Harvest Function**
-    N_xsa = np.array([...])
+    **Example Output of Returned Initial Condition Function**
+    N_asx = np.ndarray([...])
     '''
-    ##### AXES CURRENTLY OUT OF ORDER
-    S = vars_dict['Survtotalfrac']
+    S = vars_dict['Survtotalfrac']  # S_asx
+    sexsp = vars_dict['sexsp']
+    total_init_recruits = vars_dict['total_init_recruits']
+    num_regions = len(vars_dict['Regions'])
+    num_classes = len(vars_dict['Classes'])
 
-    def age_based_init_cond(vars_dict):
+    def age_based_init_cond():
         '''
-        Returns N_0_csr
+        Returns N_0_asx
         '''
-        N_0 = np.zeros([len(vars_dict['Classes']), len(
-            vars_dict['sexsp']), len(vars_dict['Regions'])])
 
-        for i in range(1, len(vars_dict['Classes']) - 1):
-            N_0[i] = N_0[i - 1] * S
-            pass
+        N_0 = np.zeros([num_classes, sexsp, num_regions])
 
-        N_0[-1] = (N_0[-1] * S) / (1 - S)
+        N_0[0] = total_init_recruits / (sexsp * num_regions)
 
-        N_0[0] = rec_func(
-            N_0.swapaxes(0, 2)).swapaxes(0, 2)   # NOT RIGHT: NEEDS TO TAKE SEXSP INTO ACCOUNT
+        for i in range(1, num_classes - 1):
+            N_0[i] = N_0[i - 1] * S[i]
+
+        if len(N_0) > 1:
+            N_0[-1] = (N_0[-2] * S[-1]) / (1 - S[-1])
 
         return N_0
 
-    def stage_based_init_cond(vars_dict):
+    def stage_based_init_cond():
         '''
-        Returns N_0_csr
+        Returns N_0_asx
         '''
-        N_0 = np.zeros([len(vars_dict['Classes']), len(
-            vars_dict['sexsp']), len(vars_dict['Regions'])])
+        N_0 = np.zeros([num_classes, sexsp, num_regions])
 
+        N_0[0] = total_init_recruits / (sexsp * num_regions)
         N_0[1:] = 1
-        N_0[0] = rec_func(N_0.swapaxes(0, 2)).swapaxes(0, 2)  # NOT RIGHT: NEEDS TO TAKE SEXSP INTO ACCOUNT
 
         return N_0
 
-    if vars_dict['Age-Based'] == 'Age-Based':
+    if vars_dict['population_type'] == 'Age-Based':
         return age_based_init_cond
-
-    elif vars_dict['Stage-Based'] == 'Stage-Based':
+    elif vars_dict['population_type'] == 'Stage-Based':
         return stage_based_init_cond
-
     else:
-        LOGGER.error("Could not determine which initial_condition function to use")
+        LOGGER.error(
+            "Could not determine which initial_condition function to use")
 
 
-def set_cycle_func(vars_dict, rec_func, harvest_func):
+def set_cycle_func(vars_dict, rec_func):
     '''
+    Creates a function to run a single cycle in the model
+
+    **Example Output of Returned Cycle Function**
+    N_asx = np.ndarray([...])
     '''
-    pass
+    S = vars_dict['Survtotalfrac']  # S_asx
+    P = vars_dict['P_survtotalfrac']  # P_asx
+    G = vars_dict['G_survtotalfrac']  # G_asx
+    num_classes = len(vars_dict['Classes'])
+    Migration = vars_dict['Migration']
+
+    def age_based_cycle_func(N_prev):
+        '''Return N_asx (N_cur)
+        '''
+        N_cur = np.ndarray(N_prev.shape)
+
+        N_cur[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+
+        for i in range(1, num_classes):
+            N_cur[i] = np.array(map(
+                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * S[i-1]
+
+        if len(N_prev) > 1:
+            N_cur[-1] += np.array(map(
+                lambda x: Migration[-1].dot(x), N_prev[-1])) * S[-1]
+
+        return N_cur
+
+    def stage_based_cycle_func(N_prev):
+        '''Return N_asx (N_cur)
+        '''
+        N_cur = np.ndarray(N_prev.shape)
+
+        N_cur[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+        N_cur[0] += np.array(map(
+            lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
+
+        for i in range(1, num_classes):
+            G_comp = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1])) * G[i-1]
+            P_comp = np.array(map(lambda x: Migration[i].dot(x), N_prev[i])) * P[i]
+            N_cur[i] = G_comp + P_comp
+
+    if vars_dict['population_type'] == 'Age-Based':
+        return age_based_cycle_func
+    elif vars_dict['population_type'] == 'Stage-Based':
+        return stage_based_cycle_func
+    else:
+        LOGGER.error(
+            "Could not determine which initial_condition function to use")
 
 
-def run_population_model(vars_dict, init_cond_func, cycle_func):
+def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
+    '''Run model
+
+    **Example Output**
+    vars_dict = {
+        # (other items)
+        ...
+        'N_all': np.array([...]),  # Index Order: time, region, sex, class
+        'Harvest': np.array([...]),  # Index Order: time, region
+        'Valuation': np.array([...])  # Index Order: time, region
+    }
     '''
-    '''
-    pass
+    N_all = vars_dict['N_all']
+
+    # Set Initial Conditions
+    N_all[0] = init_cond_func()
+
+    # Run Cycles
+    for i in range(0, len(N_all) - 1):
+        N_all[i + 1] = cycle_func[N_all[i]]
+
+    vars_dict['N_all'] = N_all
+
+    # Compute Harvest
+    if harvest_func:
+        H, V = harvest_func(N_all)
+        vars_dict['Harvest'] = H
+        vars_dict['Valuation'] = V
+
+    return vars_dict
 
 
 # Helper functions for initializing derived variables
