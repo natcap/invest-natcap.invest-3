@@ -564,7 +564,7 @@ def execute(args):
             'StemDrag',
             'Type']}
 
-    args['max_field_count'] = \
+    args['maximum_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
             for shp in shapefile_required_fields])
 
