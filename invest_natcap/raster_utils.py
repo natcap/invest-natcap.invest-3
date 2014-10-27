@@ -133,7 +133,7 @@ def get_nodata_from_uri(dataset_uri):
         LOGGER.warn("Warning the nodata value in %s is not set" % (dataset_uri))
 
     #cast to an unsigned
-    if band.DataType == gdal.GDT_Byte:
+    if band.DataType == gdal.GDT_Byte and nodata is not None:
         nodata = nodata % 256
 
     #Make sure the dataset is closed and cleaned up
@@ -3030,6 +3030,12 @@ def _smart_cast(value):
             return cast_function(value)
         except ValueError:
             pass
+    for unicode_type in ['ascii', 'utf-8', 'latin-1']:
+        try:
+            return value.decode(unicode_type)
+        except UnicodeDecodeError:
+            pass
+    LOGGER.warn("unknown encoding type encountered in _smart_cast: %s" % value)
     return value
 
 
