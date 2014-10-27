@@ -469,7 +469,7 @@ def execute(args):
     ###
 
     # Preliminary tests
-    if 'suitability' in args:
+    if ('transition' in args) and ('suitability' in args):
         assert args['transition'] != args['suitability'], \
             'Transition and suitability tables are the same: ' + \
             args['transition'] + '. The model expects different tables.'

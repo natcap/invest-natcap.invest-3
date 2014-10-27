@@ -564,6 +564,10 @@ def execute(args):
             'StemDrag',
             'Type']}
 
+    args['max_field_count'] = \
+        max([len(shapefile_required_fields[shp]) \
+            for shp in shapefile_required_fields])
+
     # Collect all the different fields and assign a weight to each
     field_values = {} # weight for each field
     shapefile_type_checksum = {} # checksum for each shapefile type
