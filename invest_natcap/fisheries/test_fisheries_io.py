@@ -128,8 +128,8 @@ class TestMigrationIO(unittest.TestCase):
         mig_dict = fisheries_io._verify_migration_tables(
             args, class_list, region_list)
         test_matrix_dict = fisheries_io._parse_migration_tables(args, ['larva'])
-        #pp.pprint(test_matrix_dict)
-        #pp.pprint(mig_dict)
+        # pp.pprint(test_matrix_dict)
+        # pp.pprint(mig_dict)
         testing.assert_array_equal(
             mig_dict['Migration'][0], test_matrix_dict['larva'])
 

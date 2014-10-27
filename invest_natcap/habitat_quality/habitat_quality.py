@@ -232,7 +232,11 @@ def execute(args):
 
             # blur the threat raster based on the effect of the threat over
             # distance
-            kernel = make_exponential_kernel(dr_pixel)
+            decay_type = threat_data['DECAY']
+            if decay_type == 'linear':
+                kernel = make_linear_kernel(dr_pixel)
+            elif decay_type == 'exponential':
+                kernel = make_exponential_kernel(dr_pixel)
             raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
 
             # create sensitivity raster based on threat
