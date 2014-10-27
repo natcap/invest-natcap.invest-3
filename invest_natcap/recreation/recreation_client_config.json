@@ -1,5 +1,6 @@
 {
     "server": "http://ncp-skookum.stanford.edu/~recreation/",
+    "server_list": "http://ncp-dev.stanford.edu/~dataportal/recreation_config/server_list.json",
     "paths": {
         "relative": {
             "data": "data/",
