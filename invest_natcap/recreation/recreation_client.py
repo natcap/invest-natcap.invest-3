@@ -33,7 +33,7 @@ def urlopen(url, request, tries = 3, delay = 15, log = LOGGER):
         except urllib2.URLError, msg:
             log.warn("Encountered error: %s", msg)
             if attempt < tries-1:
-                log.info("Waiting %i for retry.", delay)
+                log.info("Waiting %i seconds for retry.", delay)
                 time.sleep(delay)
             else:
                 raise urllib2.URLError, msg
@@ -142,12 +142,58 @@ def execute(args):
     datagen, headers = multipart_encode(attachments)
     
     #constructing server side version
+    if args["mode"] == "scenario":
+        init = json.loads(open(args["json"], "r").read())
+        config["server"] = init["server"]
+
     url = config["server"] + config["files"]["PHP"]["version"]
     LOGGER.info("URL: %s.", url)
     request = urllib2.Request(url, datagen, headers)
     
     #opening request and comparing session id
-    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
+    try:
+        sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
+    except urllib2.URLError, msg:
+        if args["mode"] == "initial":
+            LOGGER.info("Attempting to retrieve list of alternative servers.")
+            try:
+                url = config["server_list"]
+                response = urllib2.urlopen(url)
+                server_list = json.load(response)
+                LOGGER.info("Retrieved list of alternative servers.")
+            except urllib2.URLError:
+                LOGGER.info("Alternative list of servers could not be retrieved.")
+                server_list_uri = os.path.join(os.path.dirname(config_file_name), "server_list.json")
+                LOGGER.info("Attempting to read local copy of alternative servers from %s.", server_list_uri)
+                server_list = json.loads(open(server_list_uri, 'r').read())
+    
+            success = False
+            for key in server_list.keys():
+                try:
+                    if server_list[key] != config["server"]:
+                        LOGGER.info("Attempting to use server %s.", key)
+                        config["server"] = server_list[key]
+
+                        url = config["server"] + config["files"]["PHP"]["version"]
+                        LOGGER.info("URL: %s.", url)
+                        request = urllib2.Request(url, datagen, headers)
+
+                        sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
+                        success = True
+                        break
+
+                except urllib2.URLError:
+                    LOGGER.warn("Failed to use server %s.", key)
+
+            if not success:        
+                LOGGER.error("No alternative servers available.")
+                raise urllib2.URLError, msg
+
+        else:
+            LOGGER.info("Scenario runs have to use the same server as the initial run.")
+            LOGGER.error("Please try again later or repeat the inital run on a new server.")
+            raise urllib2.URLError, msg
+        
 
     #saving session id to model parameters
     LOGGER.info("Assigned server session id %s.", sessid)
