@@ -230,8 +230,8 @@ def compute_transects(args):
                             'clip_limits':(start, end)})
 
                         # Update the logest transect length if necessary
-                        if raw_positions[0].size > max_transect_length:
-                            max_transect_length = raw_positions[0].size
+                        if (end - start) > max_transect_length:
+                            max_transect_length = end - start
                         
                         ## Store transect information
                         #transects[transect_position] = 4
@@ -264,7 +264,7 @@ def compute_transects(args):
     f = h5.File(transect_data_uri, 'w')
     transect_data = \
         f.create_dataset('transect_data', (tiles, max_transect_length), \
-            compression = 'gzip')
+            compression = 'gzip', fillvalue = -999999.0)
     habitat_data = \
         f.create_dataset('habitat_data', \
             (tiles, max_transect_length, field_count), compression = 'gzip')
@@ -287,9 +287,11 @@ def compute_transects(args):
                     os.path.join(args['intermediate_dir'], \
                         basename + '_' + field + '.h5')
                 
+                print ''
                 print('----- HDF5:', transect_data_uri)
 
-                for transect in range(len(transect_info)):
+                for transect in range(tiles):
+                    print '.',
                     data = array[transect_info[transect]['raw_positions']]
                     start = transect_info[transect]['clip_limits'][0]
                     end = transect_info[transect]['clip_limits'][1]
@@ -302,11 +304,8 @@ def compute_transects(args):
                     data = data[start:end]
 
                     # Save transect to file
-                    destination = transect_data[transect,:data.size]
-                    print('destination', destination.shape)
-                    print('data', data.shape)
                     transect_data[transect,:data.size] = data
-                    transect_data[transect,data.size:] = -999999.0 # nodata
+                    #transect_data[transect,data.size:] = -999999.0 # nodata
 
                 # Close the raster before proceeding to the next one
                 band = None
