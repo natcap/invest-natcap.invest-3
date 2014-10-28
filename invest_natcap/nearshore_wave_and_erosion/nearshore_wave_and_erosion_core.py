@@ -126,6 +126,7 @@ def compute_transects(args):
     #   'raw_positions': numpy array
     #   'clip_limits': tuple (first, last)
     transect_info = []
+    max_transect_length = 0
 
     # Going through the bathymetry raster tile-by-tile.
     for i in range(i_start, i_end, i_side_coarse):
@@ -227,6 +228,10 @@ def compute_transects(args):
                         transect_info.append( \
                             {'raw_positions':raw_positions, \
                             'clip_limits':(start, end)})
+
+                        # Update the logest transect length if necessary
+                        if raw_positions[0].size > max_transect_length:
+                            max_transect_length = raw_positions[0].size
                         
                         ## Store transect information
                         #transects[transect_position] = 4
@@ -244,10 +249,6 @@ def compute_transects(args):
                         #shore_profile[raw_positions] = raw_depths
                         
                         ## Creating HDF5 file that will store the transect data
-                        #transect_data_uri = \
-                        #    os.path.join(args['intermediate_dir'], 'transect_data.h5')
-                        #f = h5.File(transect_data_uri, 'w')
-                        #h5_group = f.create_group('transect_data')
 
                         tiles += 1
 
@@ -256,6 +257,17 @@ def compute_transects(args):
         pass
     
     # Creating one HDF5 file that contains all the transect information
+    transect_data_uri = os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    field_count = args['maximum_field_count']
+    transect_count = tiles
+
+    f = h5.File(transect_data_uri, 'w')
+    transect_data = \
+        f.create_dataset('transect_data', (tiles, max_transect_length), \
+            compression = 'gzip')
+    habitat_data = \
+        f.create_dataset('habitat_data', \
+            (tiles, max_transect_length, field_count), compression = 'gzip')
 
     for shp_type in args['shapefiles']:
 
@@ -276,8 +288,6 @@ def compute_transects(args):
                         basename + '_' + field + '.h5')
                 
                 print('----- HDF5:', transect_data_uri)
-                f = None
-                f = h5.File(transect_data_uri, 'w')
 
                 for transect in range(len(transect_info)):
                     data = array[transect_info[transect]['raw_positions']]
@@ -292,7 +302,11 @@ def compute_transects(args):
                     data = data[start:end]
 
                     # Save transect to file
-                    dataset = f.create_dataset(str(transect), data=data)
+                    destination = transect_data[transect,:data.size]
+                    print('destination', destination.shape)
+                    print('data', data.shape)
+                    transect_data[transect,:data.size] = data
+                    transect_data[transect,data.size:] = -999999.0 # nodata
 
                 # Close the raster before proceeding to the next one
                 band = None
