@@ -4,8 +4,10 @@ import csv
 
 from osgeo import ogr
 import numpy as np
+import pprint as pp
 
 from invest_natcap import raster_utils
+from invest_natcap import reporting
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -35,6 +37,7 @@ def fetch_verify_args(args):
     **Example Output**
     vars_dict = {
         'workspace_dir': 'path/to/workspace_dir',
+        'output_dir': 'path/to/output_dir',
         'aoi_uri': 'path/to/aoi_uri',
         'total_timesteps': 100,
         'population_type': 'Stage-Based',
@@ -137,15 +140,20 @@ def _verify_population_csv(args):
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
         LOGGER.error("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
-        raise MissingParameter('')
+        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
 
     if (args['harvest_units'] == 'Weight') and ('Weight' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
-        raise MissingParameter('')
+        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
 
     if (args['recruitment_type'] == 'Fecundity' and 'Fecundity' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
-        raise MissingParameter('')
+        raise MissingParameter("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+
+    # Make sure parameters are initialized even when user does not enter data
+    if 'Larvaldispersal' not in pop_dict.keys():
+        num_regions = len(pop_dict['Regions'])
+        pop_dict['Larvaldispersal'] = np.ndarray(np.ones(num_regions) / num_regions)
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
     if not (pop_dict['Larvaldispersal'].shape == pop_dict[
@@ -165,14 +173,18 @@ def _verify_population_csv(args):
         if np.any(a > 1) or np.any(a < 0):
             LOGGER.warning("The %s vector has elements that are not decimal fractions", attr)
 
-    # Make sure parameters are initialized even when user does not enter data
-    if 'Larvaldispersal' not in pop_dict.keys():
-        num_regions = len(pop_dict['regions'])
-        pop_dict['Larvaldispersal'] = np.ones(num_regions) / num_regions
-
     # Make duration vector of type integer
-    pop_dict['Duration'] = np.array(
-        pop_dict['Duration'], dtype=int)
+    if args['population_type'] == 'Stage-Based':
+        pop_dict['Duration'] = np.array(
+            pop_dict['Duration'], dtype=int)
+
+    # Fill in unused keys with null values
+    All_Parameters = ['Classes', 'Duration', 'Exploitationfraction',
+                      'Fecundity', 'Larvaldispersal', 'Maturity', 'Regions',
+                      'Survnaturalfrac', 'Weight', 'Vulnfishing']
+    for variable in All_Parameters:
+        if variable not in pop_dict.keys():
+            pop_dict[variable] = None
 
     return pop_dict
 
@@ -202,19 +214,21 @@ def _parse_population_csv(uri, sexsp):
 
     start_rows = _get_table_row_start_indexes(csv_data)
     start_cols = _get_table_col_start_indexes(csv_data, start_rows[0])
+    end_rows = _get_table_row_end_indexes(csv_data)
+    end_cols = _get_table_col_end_indexes(csv_data, start_rows[0])
 
     classes = _get_col(
-        csv_data, start_rows[0])[0:len(_get_col(csv_data, start_rows[1]))]
+        csv_data, start_rows[0])[0:end_rows[0]+1]
 
     pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
     if sexsp == 2:
         pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
 
-    regions = _get_row(
-        csv_data, start_cols[0])[0:len(_get_row(csv_data, start_rows[1]))]
+    regions = _get_row(csv_data, start_cols[0])[0: end_cols[0]+1]
+
     pop_dict["Regions"] = map(lambda x: x.lower(), regions[1:])
 
-    surv_table = _get_table(csv_data, start_rows[0] + 1, start_cols[0] + 1)
+    surv_table = _get_table(csv_data, start_rows[0]+1, start_cols[0]+1)
     class_attributes_table = _get_table(
         csv_data, start_rows[0], start_cols[1])
     region_attributes_table = _get_table(
@@ -234,15 +248,16 @@ def _parse_population_csv(uri, sexsp):
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
-        pass
+        LOGGER.error("Could not parse table given Sex-Specific inputs")
+        raise Exception
 
     for col in range(0, len(class_attributes_table[0])):
         pop_dict.update(_vectorize_attribute(
             _get_col(class_attributes_table, col), sexsp))
 
     for row in range(0, len(region_attributes_table)):
-        pop_dict.update(_vectorize_attribute(
-            _get_row(region_attributes_table, row), 1))
+        pop_dict.update(_vectorize_reg_attribute(
+            _get_row(region_attributes_table, row)))
 
     return pop_dict
 
@@ -312,7 +327,7 @@ def _parse_migration_tables(args, class_list):
             LOGGER.error("Migration directory does not exist")
             raise OSError
         try:
-            for mig_csv in listdir(uri):
+            for mig_csv in _listdir(uri):
                 basename = os.path.splitext(os.path.basename(mig_csv))[0]
                 class_name = basename.split('_').pop().lower()
                 if class_name.lower() in class_list:
@@ -346,16 +361,49 @@ def _parse_migration_tables(args, class_list):
 
 def _verify_single_params(args):
     '''
+    **Example**
+    params_dict = {
+        'workspace_dir': 'path/to/workspace_dir',
+        'population_csv_uri': 'path/to/csv_uri',
+        'migration_dir': 'path/to/mig_dir',
+        'aoi_uri': 'path/to/aoi_uri',
+        'total_timesteps': 100,
+        'population_type': 'Stage-Based',
+        'sexsp': 2,
+        'spawn_units': 'Weight',
+        'total_init_recruits': 100.0,
+        'recruitment_type': 'Ricker',
+        'alpha': 32.4,
+        'beta': 54.2,
+        'total_recur_recruits': 92.1,
+        'migr_cont': True,
+        'harv_cont': True,
+        'harvest_units': 'Individuals',
+        'frac_post_process': 0.5,
+        'unit_price': 5.0,
+        ...
+        'output_dir': 'path/to/output_dir',
+    }
     '''
     params_dict = args
 
-    # Check that directory exists, if not, try to create directory
+    # Check that workspace directory exists, if not, try to create directory
     if not os.path.isdir(args['workspace_dir']):
         try:
             os.makedirs(args['workspace_dir'])
         except:
             LOGGER.error("Cannot create Workspace Directory")
             raise OSError
+
+    # Create output directory
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    if not output_dir:
+        try:
+            os.makedirs(output_dir)
+        except:
+            LOGGER.error("Cannot create Output Directory")
+            raise OSError
+    params_dict['output_dir'] = output_dir
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
@@ -367,6 +415,7 @@ def _verify_single_params(args):
     total_init_recruits = args['total_init_recruits']
     if type(total_init_recruits) != float or total_init_recruits < 0:
         LOGGER.error("Total Initial Recruits value must be non-negative float")
+        raise ValueError
 
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
@@ -407,7 +456,7 @@ def _verify_single_params(args):
     # Check file extension? (maybe try / except would be better)
     # Check shapefile subregions match regions in population parameters file
     # aoi_uri = args['aoi_uri']
-    ############################################33
+    ############################################
 
     return params_dict
 
@@ -415,14 +464,165 @@ def _verify_single_params(args):
 def generate_outputs(vars_dict):
     '''
     '''
-    # Append Results to Shapefile
-    # HTML results page
     # CSV results page
+    _generate_csv(vars_dict)
+    # HTML results page
+    _generate_html(vars_dict)
+    # Append Results to Shapefile
+    pass
+
+
+def _generate_csv(vars_dict):
+    '''Generates a CSV file that contains a summary of all harvest totals
+    for each subregion.
+    '''
+    uri = os.path.join(vars_dict['output_dir'], 'Results_Table.csv')
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+    equilibrate_cycle = vars_dict['equilibrate_cycle']
+    Regions = vars_dict['Regions']
+
+    with open(uri, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+
+        num_cycles = vars_dict['total_timesteps']
+
+        #Header for final results table
+        csv_writer.writerow(
+            ['Final Harvest by Subregion after ' + str(num_cycles - 1) +
+                ' Cycles'])
+        csv_writer.writerow([])
+
+        # Breakdown Harvest and Valuation for each Region of Final Cycle
+        sum_headers_row = ['Subregion', 'Harvest', 'Value']
+        csv_writer.writerow(sum_headers_row)
+        for i in range(0, len(H_tx[-1])):  # i is a cycle
+            line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
+            csv_writer.writerow(line)
+        line = ['Total', "%.2f" % H_tx[-1].sum(), "%.2f" % V_tx[-1].sum()]
+        csv_writer.writerow(line)
+
+        # Give Total Harvest for Each Cycle
+        csv_writer.writerow([])
+        csv_writer.writerow(['Cycle Breakdown'])
+        csv_writer.writerow([])
+        csv_writer.writerow(['Cycle', 'Harvest', 'Equilibrated?'])
+
+        for i in range(0, len(H_tx)):  # i is a cycle
+            line = [i, "%.2f" % H_tx[i].sum()]
+            # This can be more rigorously checked
+            if i >= equilibrate_cycle:
+                line.append('Y')
+            else:
+                line.append('N')
+            csv_writer.writerow(line)
+
+
+def _generate_html(vars_dict):
+    '''Generates an HTML file that contains a summary of all harvest totals
+    for each subregion.
+    '''
+    uri = os.path.join(vars_dict['output_dir'], 'Results_Page.html')
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+    equilibrate_cycle = vars_dict['equilibrate_cycle']
+    Regions = vars_dict['Regions']
+
+    # Set Reporting Arguments
+    rep_args = {}
+    rep_args['title'] = "Fishieries Results Page"
+    rep_args['out_uri'] = uri
+    rep_args['sortable'] = True  # JS Functionality
+    rep_args['totals'] = True  # JS Functionality
+
+    total_timesteps = len(H_tx)
+
+    # Create Final Cycle Harvest Summary Table
+    final_cycle_columns = [{'name': 'Subregion', 'total': False},
+                           {'name': 'Harvest', 'total': True},
+                           {'name': 'Value', 'total': True}]
+    final_cycle_body = []
+    for i in range(0, len(H_tx[-1])):  # i is a cycle
+        sub_dict = {}
+        sub_dict['Subregion'] = Regions[i]
+        sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
+        sub_dict['Value'] = "%.2f" % V_tx[-1, i]
+        final_cycle_body.append(sub_dict)
+
+    # Create Harvest Cycle Breakdown Table
+    cycle_breakdown_columns = [{'name': 'Cycle', 'total': False},
+                               {'name': 'Harvest', 'total': True},
+                               {'name': 'Equilibrated?', 'total': False}]
+    cycle_breakdown_body = []
+    for i in range(0, len(H_tx)):  # i is a cycle
+        sub_dict = {}
+        sub_dict['Cycle'] = str(i)
+        sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
+        sub_dict['Equilibrated'] = None
+        # This can be more rigorously checked
+        if i >= equilibrate_cycle:
+            sub_dict['Equilibrated?'] = 'Y'
+        else:
+            sub_dict['Equilibrated?'] = 'N'
+        cycle_breakdown_body.append(sub_dict)
+
+    # Generate Report
+    css = """body { background-color: #EFECCA; color: #002F2F; }
+         h1 { text-align: center }
+         h1, h2, h3, h4, strong, th { color: #046380 }
+         h2 { border-bottom: 1px solid #A7A37E }
+         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }
+         td { border-top: 5px solid #EFECCA }
+         img { margin: 20px }"""
+
+    elements = [{
+                'type': 'text',
+                'section': 'body',
+                'text': '<h2>Final Harvest by Subregion After ' +
+                        str(total_timesteps - 1) + ' Cycles</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': True,
+                    'data_type': 'dictionary',
+                    'columns': final_cycle_columns,
+                    'data': final_cycle_body},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Cycle Breakdown</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type': 'dictionary',
+                    'columns': cycle_breakdown_columns,
+                    'data': cycle_breakdown_body},
+                {
+                    'type': 'head',
+                    'section': 'head',
+                    'format': 'style',
+                    'data_src': css,
+                    'input_type': 'Text'}
+                ]
+
+    rep_args['elements'] = elements
+
+    reporting.generate_report(rep_args)
+
+
+def _generate_aoi(vars_dict):
     pass
 
 
 # Helper function for Migration directory
-def listdir(path):
+def _listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
@@ -443,6 +643,9 @@ def listdir(path):
 
 # Helper functions for navigating CSV files
 def _get_col(lsts, col):
+    # print "LSTS"
+    # print lsts
+    # print "Column:", col
     l = []
     for row in range(0, len(lsts)):
         if lsts[row][col] != '':
@@ -494,9 +697,38 @@ def _get_table_col_start_indexes(lsts, top):
     return indexes
 
 
+def _get_table_row_end_indexes(lsts):
+    indexes = []
+    for i in range(1, len(lsts)):
+        if (lsts[i][0] == '' and lsts[i-1][0] != ''):
+            indexes.append(i-1)
+    if lsts[-1] != '':
+        indexes.append(len(lsts)-1)
+
+    return indexes
+
+
+def _get_table_col_end_indexes(lsts, top):
+    indexes = []
+    for i in range(1, len(lsts[top])):
+        if (lsts[top][i] == '' and lsts[top][i-1] != ''):
+            indexes.append(i-1)
+    if lsts[top][-1] != '':
+        indexes.append(len(lsts[top])-1)
+
+    return indexes
+
+
 def _vectorize_attribute(lst, rows):
     d = {}
     a = np.array(lst[1:], dtype=np.float_)
     a = np.reshape(a, (rows, a.shape[0] / rows))
+    d[lst[0].capitalize()] = a
+    return d
+
+
+def _vectorize_reg_attribute(lst):
+    d = {}
+    a = np.array(lst[1:], dtype=np.float_)
     d[lst[0].capitalize()] = a
     return d

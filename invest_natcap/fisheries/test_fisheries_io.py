@@ -5,7 +5,6 @@ import pprint
 from numpy import testing
 import numpy as np
 
-import fisheries
 import fisheries_io
 
 from fisheries_io import MissingParameter
@@ -22,6 +21,21 @@ Necessary_Params = ['Classes', 'Exploitationfraction', 'Maturity', 'Regions',
 
 
 class TestPopulationParamsIO(unittest.TestCase):
+    def test_parse_popu_params_blue_crab(self):
+        uri = os.path.join(data_directory, 'CSVs/New_Params.csv')
+        sexsp = 1
+        pop_dict = fisheries_io._parse_population_csv(uri, sexsp)
+        # Check that keys are correct
+        Matching_Keys = [i for i in pop_dict.keys() if i in Necessary_Params]
+        self.assertEqual(len(Matching_Keys), len(Necessary_Params))
+        # Check that sexsp handled correctly
+        self.assertEqual(len(pop_dict['Survnaturalfrac'][0]), sexsp)
+        # Check that Class attribute lengths match
+        self.assertEqual(
+            len(pop_dict['Vulnfishing']), len(pop_dict['Maturity']))
+        # Print Dictionary if debugging
+        #pp.pprint(pop_dict)
+
     def test_parse_popu_params_sn(self):
         uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
         sexsp = 1
@@ -244,6 +258,114 @@ class TestFetchVerifyArgs(unittest.TestCase):
         # with self.assertRaises():
         #    fisheries_io.fetch_verify_args(args)
         os.rmdir(args['workspace_dir'])
+
+
+class TestGenerateCSV(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = {
+            'workspace_dir': 'path/to/workspace_dir',
+            'output_dir': os.getcwd(),
+            # 'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 15,
+            'population_type': 'Age-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Fixed',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 1.0,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]) * 0.5,  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.1, 1.0], [0.1, 1.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.5, 0.5]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'equilibrate_cycle': 10,
+            'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'H_tx': np.ones([15, 2]),
+            'V_tx': np.ones([15, 2]) * 5.0,
+        }
+        pass
+
+    def test_generate_csv(self):
+        # fisheries_io._generate_csv(self.vars_dict)
+        pass
+
+
+class TestGenerateHTML(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = {
+            'workspace_dir': 'path/to/workspace_dir',
+            'output_dir': os.getcwd(),
+            # 'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 15,
+            'population_type': 'Age-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Fixed',
+            'alpha': 3.0,
+            'beta': 4.0,
+            'total_recur_recruits': 1.0,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            # 'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.ones([2, 2, 2]) * 0.5,  # Regions, Sexes, Classes
+            'Classes': np.array(['larva', 'adult']),
+            'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
+            'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Duration': np.array([[2, 3], [2, 3]]),
+            'Weight': np.array([[0.1, 1.0], [0.1, 1.0]]),
+            'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
+            'Regions': np.array(['r1', 'r2']),
+            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Larvaldispersal': np.array([0.5, 0.5]),
+
+            # Mig Params
+            # 'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.eye(2), np.eye(2)],
+
+            # Derived Params
+            'equilibrate_cycle': 10,
+            'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
+            'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
+            'N_all': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'H_tx': np.ones([15, 2]),
+            'V_tx': np.ones([15, 2]) * 5.0,
+        }
+        pass
+
+    def test_generate_html(self):
+        # fisheries_io._generate_html(self.vars_dict)
+        pass
 
 
 if __name__ == '__main__':

@@ -235,8 +235,8 @@ class TestSetHarvestFunc(unittest.TestCase):
     def test_set_harv_func(self):
         vars_dict = self.sample_vars
         harv_func = model.set_harvest_func(vars_dict)
-        H_guess, V_guess = harv_func(vars_dict['N_all'])
-        H_check = np.array([np.ones([100]) * 0.5, np.ones([100])]).swapaxes(0, 1)
+        H_guess, V_guess = harv_func(vars_dict['N_all'][0])
+        H_check = np.ones([2]) * 0.75
         # print "Harvest Guess"
         # print H_guess
         testing.assert_equal(H_guess, H_check)
@@ -393,7 +393,7 @@ class TestRunPopulationModel(unittest.TestCase):
             # 'workspace_dir': 'path/to/workspace_dir',
             # 'aoi_uri': 'path/to/aoi_uri',
             'total_timesteps': 100,
-            'population_type': 'Stage-Based',
+            'population_type': 'Age-Based',
             'sexsp': 2,
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
@@ -409,12 +409,12 @@ class TestRunPopulationModel(unittest.TestCase):
 
             # Pop Params
             # 'population_csv_uri': 'path/to/csv_uri',
-            'Survnaturalfrac': np.ones([2, 2, 2]),  # Regions, Sexes, Classes
+            'Survnaturalfrac': np.ones([2, 2, 2]) * 0.5,  # Regions, Sexes, Classes
             'Classes': np.array(['larva', 'adult']),
             'Vulnfishing': np.array([[0.5, 0.5], [0.5, 0.5]]),
             'Maturity': np.array([[0.0, 1.0], [0.0, 1.0]]),
             'Duration': np.array([[2, 3], [2, 3]]),
-            'Weight': np.array([[0.0, 1.0], [0.0, 1.0]]),
+            'Weight': np.array([[0.1, 1.0], [0.1, 1.0]]),
             'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
             'Regions': np.array(['r1', 'r2']),
             'Exploitationfraction': np.array([0.25, 0.5]),
@@ -425,14 +425,28 @@ class TestRunPopulationModel(unittest.TestCase):
             'Migration': [np.eye(2), np.eye(2)],
 
             # Derived Params
-            'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
+            'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'H_tx': np.ones([100, 2]),
+            'V_tx': np.ones([100, 2]) * 5.0,
         }
 
     def test_run_population_model(self):
-        pass
+        ## UNTESTED
+        vars_dict = self.sample_vars
+        recru_func = model.set_recru_func(vars_dict)
+        init_cond_func = model.set_init_cond_func(vars_dict)
+        cycle_func = model.set_cycle_func(vars_dict, recru_func)
+        harvest_func = model.set_harvest_func(vars_dict)
+
+        # Run Model
+        vars_dict = model.run_population_model(
+            vars_dict, init_cond_func, cycle_func, harvest_func)
+
+        pp.pprint(vars_dict['N_all'])
+
 
 if __name__ == '__main__':
     unittest.main()
