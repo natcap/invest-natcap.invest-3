@@ -189,7 +189,6 @@ def compute_transects(args):
                         if transect_orientation is None:
                             continue
 
-
                         # Compute raw transect depths
                         raw_depths, raw_positions = \
                             compute_raw_transect_depths(transect_position, \
@@ -214,20 +213,19 @@ def compute_transects(args):
                                 args['smoothing_percentage'])
 
                         # Clip transect
-                        (clipped_transect, (start, end)) = \
+                        (clipped_transect, (start, shore, end)) = \
                             clip_transect(smoothed_depths, raw_depths, \
                                 interpolated_depths)
 
                         # Transect could be invalid, skip it
                         if clipped_transect is None:
                             continue
-
-                        
+                       
                         # At this point, the transect is valid: 
                         # extract remaining information about it
                         transect_info.append( \
                             {'raw_positions':raw_positions, \
-                            'clip_limits':(start, end)})
+                            'clip_limits':(start, shore, end)})
 
                         # Update the logest transect length if necessary
                         if (end - start) > max_transect_length:
@@ -248,8 +246,6 @@ def compute_transects(args):
                         ## Will reconstruct the shore from this information
                         #shore_profile[raw_positions] = raw_depths
                         
-                        ## Creating HDF5 file that will store the transect data
-
                         tiles += 1
 
     print('transect_info size', len(transect_info))
@@ -269,6 +265,7 @@ def compute_transects(args):
         f.create_dataset('habitat_data', \
             (tiles, max_transect_length, field_count), compression = 'gzip')
 
+    # Iterate through shapefile types
     for shp_type in args['shapefiles']:
 
         for shp_name in args['shapefiles'][shp_type]:
@@ -287,14 +284,17 @@ def compute_transects(args):
                     os.path.join(args['intermediate_dir'], \
                         basename + '_' + field + '.h5')
                 
-                print ''
-                print('----- HDF5:', transect_data_uri)
+                LOGGER.info('Extracting transect information from ' + basename)
 
+                progress_step = tiles / 50
                 for transect in range(tiles):
-                    print '.',
+                    if transect % progress_step == 0:
+                        print '.',
+
                     data = array[transect_info[transect]['raw_positions']]
                     start = transect_info[transect]['clip_limits'][0]
-                    end = transect_info[transect]['clip_limits'][1]
+                    shore = transect_info[transect]['clip_limits'][1]
+                    end = transect_info[transect]['clip_limits'][2]
 
                     data = interpolate_transect(data, \
                         i_side_fine, \
@@ -305,26 +305,22 @@ def compute_transects(args):
 
                     # Save transect to file
                     transect_data[transect,:data.size] = data
-                    #transect_data[transect,data.size:] = -999999.0 # nodata
+                print('')
 
                 # Close the raster before proceeding to the next one
                 band = None
                 raster = None
                 array = None
 
-               ## Generate the transect information
-               #print('interpolating', data.size, data.size * i_side_fine / args['model_resolution'])
-               #data = interpolate_transect(data, \
-               #    i_side_fine, \
-               #    args['model_resolution'], \
-               #    kind = 'nearest')
-               # data = data[start:end]
+    # Add size and model resolution to the attributes
+    transect_data.attrs.create('transect_spacing', i_side_coarse)
+    transect_data.attrs.create('model_resolution', args['model_resolution'])
+    habitat_data.attrs.create('transect_spacing', i_side_coarse)
+    habitat_data.attrs.create('model_resolution', args['model_resolution'])
+    
+    # We're done, we close the file
+    f.close()
 
-    ## Add size and model resolution to the attributes
-    #h5_group.attrs.create('size', tiles)
-    #h5_group.attrs.create('model_resolution', args['model_resolution'])
-    ## We're done, we close the file
-    #f.close()
 
     LOGGER.debug('found %i tiles.' % tiles)
 
@@ -652,11 +648,11 @@ def clip_transect(transect, raw_depths, interpolated_depths):
     uniques = np.unique(transect)
     if uniques.size == 1:
         assert uniques[0] == 0.0
-        return (transect, (0, transect.size))
+        return (transect, (0, 0, transect.size))
 
     # If higher point is negative: can't do anything
     if transect[0] < 0:
-        return (None, (None, None))
+        return (None, (None, None, None))
 
     # Go along the transect to find the shore
     shore = 1
@@ -664,7 +660,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
         shore += 1
         # End of transect: can't find the shore (first segment in water)
         if shore == transect.size:
-            return (None, (None, None))
+            return (None, (None, None, None))
 
     # Find water extent
     water_extent = 1
@@ -680,7 +676,7 @@ def clip_transect(transect, raw_depths, interpolated_depths):
 
     assert highest_point < lowest_point
 
-    return (transect[highest_point:lowest_point+1], (highest_point, lowest_point+1))
+    return (transect[highest_point:lowest_point+1], (highest_point, shore, lowest_point+1))
 
 
 # improve this docstring!
