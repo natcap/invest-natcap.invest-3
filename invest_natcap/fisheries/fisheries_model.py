@@ -47,11 +47,15 @@ def initialize_vars(vars_dict):
         'G_survtotalfrac': np.array([...]),  # (same)
         'P_survtotalfrac': np.array([...]),  # (same)
         'N_all': np.array([...]),  # Index Order: time, region, sex, class
+        'H_tx': np.array([...]), # Time, Region
+        'V_tx': np.array([...]), # Time, Region
     }
     '''
     # Initialize derived parameters
     # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all
     vars_dict['Survtotalfrac'] = _calc_survtotalfrac(vars_dict)
+    vars_dict['G_survtotalfrac'] = None
+    vars_dict['P_survtotalfrac'] = None
 
     if vars_dict['population_type'] == 'Stage-Based':
         G, P = _calc_p_g_survtotalfrac(vars_dict)
@@ -66,7 +70,9 @@ def initialize_vars(vars_dict):
     x = len(vars_dict['Regions'])  # Region
     s = vars_dict['sexsp']  # Sex
     a = len(vars_dict['Classes'])  # Class
-    vars_dict['N_all'] = np.ndarray([t, x, s, a])
+    vars_dict['N_all'] = np.ndarray([t, a, s, x])
+    vars_dict['H_tx'] = np.ndarray([t, x])
+    vars_dict['V_tx'] = np.ndarray([t, x])
 
     return vars_dict
 
@@ -133,51 +139,7 @@ def set_recru_func(vars_dict):
         return create_Fixed(fixed, sexsp, LarvDisp)
     else:
         LOGGER.error("Could not determine correct recruitment function")
-
-
-def set_harvest_func(vars_dict):
-    '''
-    Creates harvest function that calculates the given harvest and valuation
-        of the fisheries population over each timestep for a given region.
-        Returns None if harvest isn't selected by user.
-
-    **Example Outputs of Returned Harvest Function**
-    H_tx, V_tx = harv_func(N_all)
-
-    H_tx = np.array([[3.0, 4.5, 2.5, ...], [...])
-    V_tx = np.array([[6.0, 9.0, 5.0, ...], [...])
-
-    '''
-    if vars_dict['harv_cont']:
-
-        sexsp = vars_dict['sexsp']
-        frac_post_process = vars_dict['frac_post_process']
-        unit_price = vars_dict['unit_price']
-
-        # Initialize Weight vector according to harvest_units
-        if vars_dict['harvest_units'] == "Weight":
-            Weight = vars_dict['Weight']
-        else:
-            Weight = np.ones([sexsp, len(vars_dict['Classes'])])
-
-        E = vars_dict['Exploitationfraction']
-        V = vars_dict['Vulnfishing']
-
-        I = []
-        for x in E:
-            I.append(x * V)
-        I = np.array(I)
-
-        def harv_func(N_all):
-            H = N_all * I * Weight
-            H = np.array(map(lambda x: map(lambda y: y.sum(), x), H[:]))
-            V = H * (frac_post_process * unit_price)
-            return H, V
-
-        return harv_func
-
-    else:
-        return None
+        raise ValueError
 
 
 def set_init_cond_func(vars_dict):
@@ -228,6 +190,7 @@ def set_init_cond_func(vars_dict):
     else:
         LOGGER.error(
             "Could not determine which initial_condition function to use")
+        raise ValueError
 
 
 def set_cycle_func(vars_dict, rec_func):
@@ -246,33 +209,38 @@ def set_cycle_func(vars_dict, rec_func):
     def age_based_cycle_func(N_prev):
         '''Return N_asx (N_cur)
         '''
-        N_cur = np.ndarray(N_prev.shape)
+        N_next = np.ndarray(N_prev.shape)
 
-        N_cur[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+        N_next[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
 
         for i in range(1, num_classes):
-            N_cur[i] = np.array(map(
+            N_next[i] = np.array(map(
                 lambda x: Migration[i-1].dot(x), N_prev[i-1])) * S[i-1]
 
         if len(N_prev) > 1:
-            N_cur[-1] += np.array(map(
+            N_next[-1] += np.array(map(
                 lambda x: Migration[-1].dot(x), N_prev[-1])) * S[-1]
 
-        return N_cur
+        return N_next
 
     def stage_based_cycle_func(N_prev):
         '''Return N_asx (N_cur)
         '''
-        N_cur = np.ndarray(N_prev.shape)
+        N_next = np.ndarray(N_prev.shape)
 
-        N_cur[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
-        N_cur[0] += np.array(map(
+        N_next[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+
+        N_next[0] += np.array(map(
             lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
-            G_comp = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1])) * G[i-1]
-            P_comp = np.array(map(lambda x: Migration[i].dot(x), N_prev[i])) * P[i]
-            N_cur[i] = G_comp + P_comp
+            G_comp = np.array(map(
+                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * G[i-1]
+            P_comp = np.array(map(
+                lambda x: Migration[i].dot(x), N_prev[i])) * P[i]
+            N_next[i] = G_comp + P_comp
+
+        return N_next
 
     if vars_dict['population_type'] == 'Age-Based':
         return age_based_cycle_func
@@ -281,6 +249,53 @@ def set_cycle_func(vars_dict, rec_func):
     else:
         LOGGER.error(
             "Could not determine which initial_condition function to use")
+        raise ValueError
+
+
+def set_harvest_func(vars_dict):
+    '''
+    Creates harvest function that calculates the given harvest and valuation
+        of the fisheries population over each timestep for a given region.
+        Returns None if harvest isn't selected by user.
+
+    **Example Outputs of Returned Harvest Function**
+    H_x, V_x = harv_func(N_all)
+
+    H_x = np.array([3.0, 4.5, 2.5, ...])
+    V_x = np.array([6.0, 9.0, 5.0, ...])
+
+    '''
+    if vars_dict['harv_cont']:
+
+        sexsp = vars_dict['sexsp']
+        frac_post_process = vars_dict['frac_post_process']
+        unit_price = vars_dict['unit_price']
+
+        # Initialize Weight vector according to harvest_units
+        if vars_dict['harvest_units'] == "Weight":
+            Weight = vars_dict['Weight']
+        else:
+            Weight = np.ones([sexsp, len(vars_dict['Classes'])])
+
+        E = vars_dict['Exploitationfraction']
+        V = vars_dict['Vulnfishing']
+
+        I = []
+        for x in E:
+            I.append(x * V)
+        I = np.array(I)
+
+        def harv_func(N_asx):
+            H_asx = N_asx * I * Weight
+            H_x = np.array(map(lambda x: x.sum(), H_asx.swapaxes(
+                0, 2)))  # Sum harvest along each region
+            V_x = H_x * (frac_post_process * unit_price)
+            return H_x, V_x
+
+        return harv_func
+
+    else:
+        return None
 
 
 def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
@@ -291,26 +306,48 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
         # (other items)
         ...
         'N_all': np.array([...]),  # Index Order: time, region, sex, class
-        'Harvest': np.array([...]),  # Index Order: time, region
-        'Valuation': np.array([...])  # Index Order: time, region
+        'H_tx': np.array([...]),  # Index Order: time, region
+        'V_tx': np.array([...]),  # Index Order: time, region
+        'equilibrate_cycle': <int>,
     }
     '''
     N_all = vars_dict['N_all']
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['H_tx']
+    equilibrate_cycle = False
 
-    # Set Initial Conditions
+    # Set Initial Conditions for Population
     N_all[0] = init_cond_func()
 
     # Run Cycles
     for i in range(0, len(N_all) - 1):
-        N_all[i + 1] = cycle_func[N_all[i]]
+        # Run Harvest and Check Equilibrium for Current Population
+        # Consider Wrapping this into a function
+        if harvest_func and i >= 10:
+            H_x, V_x = harvest_func(N_all[i])
+            H_tx[i] = H_x
+            V_tx[i] = V_x
+        if not equilibrate_cycle and _is_equilibrated(H_tx, i):
+            equilibrate_cycle = i
+            LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
+        # Find Numbers for Next Population
+        N_next = cycle_func(N_all[i])
+        N_all[i + 1] = N_next
 
-    vars_dict['N_all'] = N_all
-
-    # Compute Harvest
+    # Run Harvest and Check Equilibrium for Final Population
     if harvest_func:
-        H, V = harvest_func(N_all)
-        vars_dict['Harvest'] = H
-        vars_dict['Valuation'] = V
+        H_x, V_x = harvest_func(N_all[-1])
+        H_tx[-1] = H_x
+        V_tx[-1] = V_x
+    if not equilibrate_cycle and _is_equilibrated(H_tx, len(N_all)):
+        equilibrate_cycle = len(N_all)
+        LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
+
+    # Store Results in Variables Dictionary
+    vars_dict['N_all'] = N_all
+    vars_dict['H_tx'] = H_tx
+    vars_dict['V_tx'] = V_tx
+    vars_dict['equilibrate_cycle'] = equilibrate_cycle
 
     return vars_dict
 
@@ -360,3 +397,19 @@ def _calc_p_g_survtotalfrac(vars_dict):
             "Stage-based Survival Matrices Contain NaN Values")
 
     return G, P
+
+
+# Helper functions for run_population_model
+def _calc_moving_average(H):
+    mov_avg = H.sum() / len(H)
+    return mov_avg
+
+
+def _is_equilibrated(H_tx, i, tolerance=0.001, subset_size=10):
+    mov_avg = _calc_moving_average(H_tx[i-(subset_size-1): i+1])
+    cur = H_tx[i].sum()
+    diff = np.abs(cur - mov_avg)
+    if diff < tolerance:
+        return True
+    else:
+        return False

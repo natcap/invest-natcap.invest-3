@@ -456,11 +456,19 @@ def mosaic_by_attribute_uri(key_uri,
 
         raster_list = [labeled_raster_uri] + [uri_dict[l] for l in labels]
         raster_index = dict(zip(labels, range(len(labels))))
+        raster_nodata_list = [raster_utils.get_nodata_from_uri(uri) for uri in raster_list]
         
         def extract_op(*values):
             array = numpy.ones(values[0].shape) * nodata
             for v in labels:
-                array = numpy.where(values[0] == v, values[raster_index[int(v)]+1], array)
+                v_mask = values[0] == v
+                new_array_values = values[raster_index[int(v)]+1][v_mask]
+                nodata_mask = new_array_values == raster_nodata_list[raster_index[int(v)]+1]
+                new_array_values[nodata_mask] = nodata
+                array[v_mask] = new_array_values
+                               
+                #array = numpy.where(values[0] == v, values[raster_index[int(v)]+1], array)
+                #array = numpy.where(array == raster_nodata_list[raster_index[int(v)]+1], nodata, array)
             array = numpy.where(array == ignore_key_value, nodata, array)                    
 
             return array

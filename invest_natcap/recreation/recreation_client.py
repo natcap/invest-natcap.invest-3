@@ -243,6 +243,9 @@ def execute(args):
                                                    file_name)):
                     LOGGER.info("Found %s predictor.", file_name_stem)
                     predictors.append(file_name_stem)
+                    if len(file_name_stem) > 10:
+                        LOGGER.error("Due to shapefile limitations the predictor name must be no longer than 10 characters to be an attribure for the grid.")
+                        raise ValueError, "Predictor %s exceeds the maximum name length of 10." % file_name_stem
                 else:
                     LOGGER.error("Predictor %s is missing file(s).",
                                  file_name_stem)

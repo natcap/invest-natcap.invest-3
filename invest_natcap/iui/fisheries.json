@@ -175,6 +175,7 @@
         },
         {
             "id": "migr_cont",
+            "args_id" : "migr_cont",
             "label": "Migration Parameters",
             "type": "container",
             "defaultValue": true,
@@ -200,10 +201,10 @@
         },
         {
             "id": "harv_cont",
+            "args_id" : "harv_cont",
             "label": "Harvest Parameters",
             "type": "container",
             "defaultValue": true,
-            "collapsible": true,
             "elements":[
                 {
                     "id": "harv_list",
@@ -247,6 +248,5 @@
                 }
             ]
         }
-
     ]
 }
