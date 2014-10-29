@@ -225,12 +225,10 @@ def set_cycle_func(vars_dict, rec_func):
         N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
         for i in range(1, num_classes):
-            N_next[i] = np.array(map(
-                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * S[i-1]
+            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[:, 0, :] * S[i-1]
 
         if len(N_prev) > 1:
-            N_next[-1] = N_next[-1] + np.array(map(
-                lambda x: Migration[-1].dot(x), N_prev[-1])) * S[-1]
+            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(x), N_prev[-1]))[:, 0, :] * S[-1]
 
         return N_next, spawners
 
@@ -247,10 +245,8 @@ def set_cycle_func(vars_dict, rec_func):
             lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
-            G_comp = np.array(map(
-                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * G[i-1]
-            P_comp = np.array(map(
-                lambda x: Migration[i].dot(x), N_prev[i])) * P[i]
+            G_comp = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[:, 0, :] * G[i-1]
+            P_comp = np.array(map(lambda x: Migration[i].dot(x), N_prev[i]))[:, 0, :] * P[i]
             N_next[i] = G_comp + P_comp
 
         return N_next, spawners
