@@ -128,7 +128,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
             'Survtotalfrac': np.ones([2, 2, 2]),  # Index Order: region, sex, class
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.zeros([100, 2, 2, 2]),  # Index Order: time, region, sex, class
+            'N_tasx': np.zeros([100, 2, 2, 2]),  # Index Order: time, region, sex, class
         }
 
     def test_spawners(self):
@@ -154,7 +154,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         # Test B-H
         vars_dict['recruitment_type'] = 'Beverton-Holt'
         rec_func = model.set_recru_func(vars_dict)
-        guess = rec_func(N_prev)
+        guess, spawners = rec_func(N_prev)
         check = np.array([(270.0 / 272.0), (270.0 / 272.0)])
         # print "Guess"
         # pp.pprint(guess)
@@ -163,7 +163,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         # Test Ricker
         vars_dict['recruitment_type'] = 'Ricker'
         rec_func = model.set_recru_func(vars_dict)
-        guess = rec_func(N_prev)
+        guess, spawners = rec_func(N_prev)
         check = np.array([0.75, 0.75]) * (45.0 * np.e**-120.0)
         # print "Guess"
         # pp.pprint(guess)
@@ -172,7 +172,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         # Test Fecundity
         vars_dict['recruitment_type'] = 'Fecundity'
         rec_func = model.set_recru_func(vars_dict)
-        guess = rec_func(N_prev)
+        guess, spawners = rec_func(N_prev)
         check = np.array([11.25, 11.25])
         # print "Guess"
         # pp.pprint(guess)
@@ -181,7 +181,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         # Test Fixed
         vars_dict['recruitment_type'] = 'Fixed'
         rec_func = model.set_recru_func(vars_dict)
-        guess = rec_func(N_prev)
+        guess, spawners = rec_func(N_prev)
         check = np.array([0.75, 0.75]) * 92.1 / 2
         # print "Guess"
         # pp.pprint(guess)
@@ -218,7 +218,7 @@ class TestSetHarvestFunc(unittest.TestCase):
             'Weight': np.array([[0.1, 1.0], [0.1, 2.0]]),
             'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
             'Regions': np.array(['r1', 'r2']),
-            'Exploitationfraction': np.array([0.25, 0.5]),
+            'Exploitationfraction': np.array([0.5, 0.5]),
             'Larvaldispersal': np.array([0.75, 0.75]),
 
             # Mig Params
@@ -229,21 +229,21 @@ class TestSetHarvestFunc(unittest.TestCase):
             'Survtotalfrac': np.ones([2, 2, 2]),  # Index Order: region, sex, class
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, region, sex, class
+            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, region, sex, class
         }
 
     def test_set_harv_func(self):
         vars_dict = self.sample_vars
         harv_func = model.set_harvest_func(vars_dict)
-        H_guess, V_guess = harv_func(vars_dict['N_all'][0])
-        H_check = np.ones([2]) * 0.75
+        H_x_guess, V_x_guess = harv_func(vars_dict['N_tasx'][0])
+        H_check = np.ones([2])
         # print "Harvest Guess"
         # print H_guess
-        testing.assert_equal(H_guess, H_check)
+        testing.assert_equal(H_x_guess, H_check)
         V_check = H_check * 2.5
         # print "Valuation Guess"
         # print V_guess
-        testing.assert_equal(V_guess, V_check)
+        testing.assert_equal(V_x_guess, V_check)
 
 
 class TestSetInitCondFunc(unittest.TestCase):
@@ -287,7 +287,7 @@ class TestSetInitCondFunc(unittest.TestCase):
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
         }
 
     def test_stage_based(self):
@@ -304,7 +304,7 @@ class TestSetInitCondFunc(unittest.TestCase):
         vars_dict['population_type'] = 'Age-Based'
         init_cond_func = model.set_init_cond_func(vars_dict)
         N_0_guess = init_cond_func()
-        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[-31.25, -30.0], [(25.0*7/-6), (25.0*8/-7)]]])
+        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[25.0*1/-4, 25.0*2/-5], [(25.0*3/-6), (25.0*4/-7)]]])
         # print "N_0 Guess"
         # print N_0_guess
         testing.assert_equal(N_0_guess, N_0_check)
@@ -317,11 +317,11 @@ class TestSetInitCondFunc(unittest.TestCase):
 
         init_cond_func = model.set_init_cond_func(vars_dict)
         N_0_guess = init_cond_func()
-        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]], [[25.0*5, 25.0*6], [(25.0*7), (25.0*8)]], [[(25.0*5*9/-8), (25.0*6*10/-9)], [(25.0*7*11/-10), (25.0*8*12/-11)]]])
-        # print "N_0 Guess"
-        # print N_0_guess
-        # print "N_0 Check"
-        # print N_0_check
+        N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]],[[25.0*1, 25.0*2], [(25.0*3), (25.0*4)]],[[(25.0*1*5/-8), (25.0*2*6/-9)], [(25.0*3*7/-10), (25.0*4*8/-11)]]])
+        print "N_0 Guess"
+        print N_0_guess
+        print "N_0 Check"
+        print N_0_check
         testing.assert_equal(N_0_guess, N_0_check)
 
 
@@ -366,7 +366,7 @@ class TestSetCycleFunc(unittest.TestCase):
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
         }
 
     def test_stage_based(self):
@@ -375,7 +375,7 @@ class TestSetCycleFunc(unittest.TestCase):
         cycle_func = model.set_cycle_func(vars_dict, rec_func)
 
         N_prev = np.ones([2, 2, 2])
-        N_cur_guess = cycle_func(cycle_func(N_prev))
+        N_cur_guess, spawners = cycle_func(N_prev)
         # N_cur_check = np.array([])
         # print "N_cur Guess"
         # print N_cur_guess
@@ -428,9 +428,10 @@ class TestRunPopulationModel(unittest.TestCase):
             'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
             'H_tx': np.ones([100, 2]),
             'V_tx': np.ones([100, 2]) * 5.0,
+            'Spawners_t': np.zeros([100]),
         }
 
     def test_run_population_model(self):
@@ -445,7 +446,7 @@ class TestRunPopulationModel(unittest.TestCase):
         vars_dict = model.run_population_model(
             vars_dict, init_cond_func, cycle_func, harvest_func)
 
-        pp.pprint(vars_dict['N_all'])
+        pp.pprint(vars_dict['N_tasx'])
 
 
 if __name__ == '__main__':
