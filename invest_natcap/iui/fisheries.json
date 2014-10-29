@@ -25,7 +25,7 @@
                     "id" : "aoi_uri",
                     "args_id" : "aoi_uri",
                     "type": "file",
-                    "label": "Area(s) of Interest (SHP)",
+                    "label": "Area(s) of Interest (SHP) [Currently Unimplemented]",
                     "required": false,
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],

@@ -127,12 +127,16 @@ def _verify_population_csv(args):
     pop_dict = _parse_population_csv(population_csv_uri, args['sexsp'])
 
     # Check that required information exists
-    Necessary_Params = ['Classes', 'Exploitationfraction', 'Maturity',
-                        'Regions', 'Survnaturalfrac', 'Vulnfishing']
+    Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
+                        'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
         LOGGER.error("Population Parameters File does not contain all necessary parameters")
-        raise MissingParameter('')
+        raise MissingParameter("Population Parameters File does not contain all necessary parameters")
+
+    if (args['recruitment_type'] != 'Fixed') and ('Maturity' not in pop_dict.keys()):
+        LOGGER.error("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
+        raise MissingParameter("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
 
     if (args['population_type'] == 'Stage-Based') and ('Duration' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
@@ -166,8 +170,10 @@ def _verify_population_csv(args):
         LOGGER.warning("The Larvaldisperal vector does not sum exactly to one")
 
     # Check that certain attributes have fraction elements
-    Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing', 'Maturity',
+    Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
                     'Exploitationfraction']
+    if args['recruitment_type'] != 'Fixed':
+        Frac_Vectors.append('Maturity')
     for attr in Frac_Vectors:
         a = pop_dict[attr]
         if np.any(a > 1) or np.any(a < 0):
@@ -182,9 +188,9 @@ def _verify_population_csv(args):
     All_Parameters = ['Classes', 'Duration', 'Exploitationfraction',
                       'Fecundity', 'Larvaldispersal', 'Maturity', 'Regions',
                       'Survnaturalfrac', 'Weight', 'Vulnfishing']
-    for variable in All_Parameters:
-        if variable not in pop_dict.keys():
-            pop_dict[variable] = None
+    for parameter in All_Parameters:
+        if parameter not in pop_dict.keys():
+            pop_dict[parameter] = None
 
     return pop_dict
 
@@ -397,7 +403,7 @@ def _verify_single_params(args):
 
     # Create output directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not output_dir:
+    if not os.path.isdir(output_dir):
         try:
             os.makedirs(output_dir)
         except:
@@ -459,166 +465,6 @@ def _verify_single_params(args):
     ############################################
 
     return params_dict
-
-
-def generate_outputs(vars_dict):
-    '''
-    '''
-    # CSV results page
-    _generate_csv(vars_dict)
-    # HTML results page
-    _generate_html(vars_dict)
-    # Append Results to Shapefile
-    pass
-
-
-def _generate_csv(vars_dict):
-    '''Generates a CSV file that contains a summary of all harvest totals
-    for each subregion.
-    '''
-    uri = os.path.join(vars_dict['output_dir'], 'Results_Table.csv')
-    H_tx = vars_dict['H_tx']
-    V_tx = vars_dict['V_tx']
-    equilibrate_cycle = vars_dict['equilibrate_cycle']
-    Regions = vars_dict['Regions']
-
-    with open(uri, 'wb') as csv_file:
-        csv_writer = csv.writer(csv_file)
-
-        num_cycles = vars_dict['total_timesteps']
-
-        #Header for final results table
-        csv_writer.writerow(
-            ['Final Harvest by Subregion after ' + str(num_cycles - 1) +
-                ' Cycles'])
-        csv_writer.writerow([])
-
-        # Breakdown Harvest and Valuation for each Region of Final Cycle
-        sum_headers_row = ['Subregion', 'Harvest', 'Value']
-        csv_writer.writerow(sum_headers_row)
-        for i in range(0, len(H_tx[-1])):  # i is a cycle
-            line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
-            csv_writer.writerow(line)
-        line = ['Total', "%.2f" % H_tx[-1].sum(), "%.2f" % V_tx[-1].sum()]
-        csv_writer.writerow(line)
-
-        # Give Total Harvest for Each Cycle
-        csv_writer.writerow([])
-        csv_writer.writerow(['Cycle Breakdown'])
-        csv_writer.writerow([])
-        csv_writer.writerow(['Cycle', 'Harvest', 'Equilibrated?'])
-
-        for i in range(0, len(H_tx)):  # i is a cycle
-            line = [i, "%.2f" % H_tx[i].sum()]
-            # This can be more rigorously checked
-            if i >= equilibrate_cycle:
-                line.append('Y')
-            else:
-                line.append('N')
-            csv_writer.writerow(line)
-
-
-def _generate_html(vars_dict):
-    '''Generates an HTML file that contains a summary of all harvest totals
-    for each subregion.
-    '''
-    uri = os.path.join(vars_dict['output_dir'], 'Results_Page.html')
-    H_tx = vars_dict['H_tx']
-    V_tx = vars_dict['V_tx']
-    equilibrate_cycle = vars_dict['equilibrate_cycle']
-    Regions = vars_dict['Regions']
-
-    # Set Reporting Arguments
-    rep_args = {}
-    rep_args['title'] = "Fishieries Results Page"
-    rep_args['out_uri'] = uri
-    rep_args['sortable'] = True  # JS Functionality
-    rep_args['totals'] = True  # JS Functionality
-
-    total_timesteps = len(H_tx)
-
-    # Create Final Cycle Harvest Summary Table
-    final_cycle_columns = [{'name': 'Subregion', 'total': False},
-                           {'name': 'Harvest', 'total': True},
-                           {'name': 'Value', 'total': True}]
-    final_cycle_body = []
-    for i in range(0, len(H_tx[-1])):  # i is a cycle
-        sub_dict = {}
-        sub_dict['Subregion'] = Regions[i]
-        sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
-        sub_dict['Value'] = "%.2f" % V_tx[-1, i]
-        final_cycle_body.append(sub_dict)
-
-    # Create Harvest Cycle Breakdown Table
-    cycle_breakdown_columns = [{'name': 'Cycle', 'total': False},
-                               {'name': 'Harvest', 'total': True},
-                               {'name': 'Equilibrated?', 'total': False}]
-    cycle_breakdown_body = []
-    for i in range(0, len(H_tx)):  # i is a cycle
-        sub_dict = {}
-        sub_dict['Cycle'] = str(i)
-        sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
-        sub_dict['Equilibrated'] = None
-        # This can be more rigorously checked
-        if i >= equilibrate_cycle:
-            sub_dict['Equilibrated?'] = 'Y'
-        else:
-            sub_dict['Equilibrated?'] = 'N'
-        cycle_breakdown_body.append(sub_dict)
-
-    # Generate Report
-    css = """body { background-color: #EFECCA; color: #002F2F; }
-         h1 { text-align: center }
-         h1, h2, h3, h4, strong, th { color: #046380 }
-         h2 { border-bottom: 1px solid #A7A37E }
-         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
-         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
-         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }
-         td { border-top: 5px solid #EFECCA }
-         img { margin: 20px }"""
-
-    elements = [{
-                'type': 'text',
-                'section': 'body',
-                'text': '<h2>Final Harvest by Subregion After ' +
-                        str(total_timesteps - 1) + ' Cycles</h2>'},
-                {
-                    'type': 'table',
-                    'section': 'body',
-                    'sortable': True,
-                    'checkbox': False,
-                    'total': True,
-                    'data_type': 'dictionary',
-                    'columns': final_cycle_columns,
-                    'data': final_cycle_body},
-                {
-                    'type': 'text',
-                    'section': 'body',
-                    'text': '<h2>Cycle Breakdown</h2>'},
-                {
-                    'type': 'table',
-                    'section': 'body',
-                    'sortable': True,
-                    'checkbox': False,
-                    'total': False,
-                    'data_type': 'dictionary',
-                    'columns': cycle_breakdown_columns,
-                    'data': cycle_breakdown_body},
-                {
-                    'type': 'head',
-                    'section': 'head',
-                    'format': 'style',
-                    'data_src': css,
-                    'input_type': 'Text'}
-                ]
-
-    rep_args['elements'] = elements
-
-    reporting.generate_report(rep_args)
-
-
-def _generate_aoi(vars_dict):
-    pass
 
 
 # Helper function for Migration directory
@@ -723,12 +569,176 @@ def _vectorize_attribute(lst, rows):
     d = {}
     a = np.array(lst[1:], dtype=np.float_)
     a = np.reshape(a, (rows, a.shape[0] / rows))
-    d[lst[0].capitalize()] = a
+    d[lst[0].strip().capitalize()] = a
     return d
 
 
 def _vectorize_reg_attribute(lst):
     d = {}
     a = np.array(lst[1:], dtype=np.float_)
-    d[lst[0].capitalize()] = a
+    d[lst[0].strip().capitalize()] = a
     return d
+
+
+# Generate Outputs
+def generate_outputs(vars_dict):
+    '''
+    '''
+    # CSV results page
+    _generate_csv(vars_dict)
+    # HTML results page
+    _generate_html(vars_dict)
+    # Append Results to Shapefile
+    pass
+
+
+def _generate_csv(vars_dict):
+    '''Generates a CSV file that contains a summary of all harvest totals
+    for each subregion.
+    '''
+    uri = os.path.join(vars_dict['output_dir'], 'Results_Table.csv')
+    Spawners_t = vars_dict['Spawners_t']
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+    equilibrate_cycle = int(vars_dict['equilibrate_cycle'])
+    Regions = vars_dict['Regions']
+
+    with open(uri, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+
+        total_timesteps = vars_dict['total_timesteps']
+
+        #Header for final results table
+        csv_writer.writerow(
+            ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
+                ' Cycles'])
+        csv_writer.writerow([])
+
+        # Breakdown Harvest and Valuation for each Region of Final Cycle
+        sum_headers_row = ['Subregion', 'Harvest', 'Value']
+        csv_writer.writerow(sum_headers_row)
+        for i in range(0, len(H_tx[-1])):  # i is a cycle
+            line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
+            csv_writer.writerow(line)
+        line = ['Total', "%.2f" % H_tx[-1].sum(), "%.2f" % V_tx[-1].sum()]
+        csv_writer.writerow(line)
+
+        # Give Total Harvest for Each Cycle
+        csv_writer.writerow([])
+        csv_writer.writerow(['Cycle Breakdown'])
+        csv_writer.writerow([])
+        csv_writer.writerow(['Cycle', 'Spawners', 'Harvest', 'Equilibrated?'])
+
+        for i in range(0, len(H_tx)):  # i is a cycle
+            line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
+            # This can be more rigorously checked
+            if equilibrate_cycle and i >= equilibrate_cycle:
+                line.append('Y')
+            else:
+                line.append('N')
+            csv_writer.writerow(line)
+
+
+def _generate_html(vars_dict):
+    '''Generates an HTML file that contains a summary of all harvest totals
+    for each subregion.
+    '''
+    uri = os.path.join(vars_dict['output_dir'], 'Results_Page.html')
+    Spawners_t = vars_dict['Spawners_t']
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+    equilibrate_cycle = int(vars_dict['equilibrate_cycle'])
+    Regions = vars_dict['Regions']
+
+    # Set Reporting Arguments
+    rep_args = {}
+    rep_args['title'] = "Fishieries Results Page"
+    rep_args['out_uri'] = uri
+    rep_args['sortable'] = True  # JS Functionality
+    rep_args['totals'] = True  # JS Functionality
+
+    total_timesteps = len(H_tx)
+
+    # Create Final Cycle Harvest Summary Table
+    final_cycle_columns = [{'name': 'Subregion', 'total': False},
+                           {'name': 'Harvest', 'total': True},
+                           {'name': 'Value', 'total': True}]
+    final_cycle_body = []
+    for i in range(0, len(H_tx[-1])):  # i is a cycle
+        sub_dict = {}
+        sub_dict['Subregion'] = Regions[i]
+        sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
+        sub_dict['Value'] = "%.2f" % V_tx[-1, i]
+        final_cycle_body.append(sub_dict)
+
+    # Create Harvest Cycle Breakdown Table
+    cycle_breakdown_columns = [{'name': 'Cycle', 'total': False},
+                               {'name': 'Spawners', 'total': True},
+                               {'name': 'Harvest', 'total': True},
+                               {'name': 'Equilibrated?', 'total': False}]
+    cycle_breakdown_body = []
+    for i in range(0, total_timesteps):  # i is a cycle
+        sub_dict = {}
+        sub_dict['Cycle'] = str(i)
+        sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
+        sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
+        # This can be more rigorously checked
+        if equilibrate_cycle and i >= equilibrate_cycle:
+            sub_dict['Equilibrated?'] = 'Y'
+        else:
+            sub_dict['Equilibrated?'] = 'N'
+        cycle_breakdown_body.append(sub_dict)
+
+    # Generate Report
+    css = """body { background-color: #EFECCA; color: #002F2F; }
+         h1 { text-align: center }
+         h1, h2, h3, h4, strong, th { color: #046380 }
+         h2 { border-bottom: 1px solid #A7A37E }
+         table { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         table.sortable thead:hover { border: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E6E2AF; }
+         td, th { margin-left: 0px; margin-right: 0px; padding-left: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: 2px; text-align: left; }
+         td { border-top: 5px solid #EFECCA }
+         img { margin: 20px }"""
+
+    elements = [{
+                'type': 'text',
+                'section': 'body',
+                'text': '<h2>Final Harvest by Subregion After ' +
+                        str(total_timesteps - 1) + ' Cycles</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': True,
+                    'data_type': 'dictionary',
+                    'columns': final_cycle_columns,
+                    'data': final_cycle_body},
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Cycle Breakdown</h2>'},
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type': 'dictionary',
+                    'columns': cycle_breakdown_columns,
+                    'data': cycle_breakdown_body},
+                {
+                    'type': 'head',
+                    'section': 'head',
+                    'format': 'style',
+                    'data_src': css,
+                    'input_type': 'Text'}
+                ]
+
+    rep_args['elements'] = elements
+
+    reporting.generate_report(rep_args)
+
+
+def _generate_aoi(vars_dict):
+    pass
