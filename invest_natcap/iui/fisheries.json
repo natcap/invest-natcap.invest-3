@@ -6,7 +6,12 @@
     "localDocURI": "../documentation/habitat_risk_assessment.html",
     "height": 800,
     "width" : 700,
-    "elements": [
+    "elements": [{
+            "id":"alpha_only",
+            "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
+            "type": "label",
+            "helpText": "Alpha tools are considered unstable."
+        },
         {
             "id" : "workspace_list",
             "type": "list",
