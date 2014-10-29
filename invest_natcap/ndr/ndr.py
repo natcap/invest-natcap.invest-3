@@ -151,6 +151,7 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
+        flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
