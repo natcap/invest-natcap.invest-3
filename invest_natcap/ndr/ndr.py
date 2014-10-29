@@ -74,7 +74,7 @@ def execute(args):
 
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_', 'load_subsurface_'],
+            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_uri']))
 
         missing_headers = []
@@ -196,10 +196,10 @@ def execute(args):
 
         load_subsurface_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
-        raster_utils.vectorize_datasets(
-            [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
-            load_subsurface_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection", vectorize_op=False)
+        #raster_utils.vectorize_datasets(
+        #    [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
+        #    load_subsurface_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+        #    "intersection", vectorize_op=False)
 
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
@@ -462,25 +462,23 @@ def execute(args):
             return numpy.where(
                 (downstream_distance == downstream_distance_nodata), ndr_nodata,
                 1 - subsurface_eff * (1.0 - numpy.exp(-5 * downstream_distance / crit_subsurface_len)))
-        raster_utils.vectorize_datasets(
-            [downstream_distance_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
-            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
-            vectorize_op=False)
+        #raster_utils.vectorize_datasets(
+        #    [downstream_distance_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
+        #    gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+        #    vectorize_op=False)
 
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
 
         load_nodata = raster_utils.get_nodata_from_uri(load_uri[nutrient])
         export_nodata = -1.0
-        def calculate_export(load_array, ndr_array, load_subsurface_array, ndr_subsurface_array):
+        def calculate_export(load_array, ndr_array):
             return numpy.where(
-                (load_array == load_nodata) | (ndr_array == ndr_nodata) |
-                (load_subsurface_array == load_nodata) | (ndr_subsurface_array == ndr_nodata),
-                export_nodata, load_array * ndr_array +
-                load_subsurface_array * ndr_subsurface_array)
+                (load_array == load_nodata) | (ndr_array == ndr_nodata),
+                export_nodata, load_array * ndr_array)
 
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri, load_subsurface_uri[nutrient], ndr_subsurface_uri],
+            [load_uri[nutrient], ndr_uri],
             calculate_export,
             export_uri[nutrient], gdal.GDT_Float32,
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
