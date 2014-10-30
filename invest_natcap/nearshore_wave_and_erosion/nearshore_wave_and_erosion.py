@@ -632,27 +632,27 @@ def execute(args):
                 if shapefile_type not in args['shapefiles']:
                     args['shapefiles'][shapefile_type] = {}
                     args['shapefiles'][shapefile_type][basename] = {}
-                LOGGER.debug('Detected that', file_uri, 'is', shapefile_type)
+                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
 
                 # Rasterize the known shapefile for each field name
-                LOGGER.info('Processing %s...' % file_uri)
+                LOGGER.info('Processing %s...', file_uri)
                 for field_name in shapefile_required_fields[shapefile_type]:
                     # Rasterize the shapefile's field
                     # If this habitat has subtypes, then the field 'type' 
                     # is used to determine priority.
 #                    print('field_name', field_name)
                     output_uri = os.path.join(args['intermediate_dir'], \
-                        basename + '_' + field_name + '.tif')
+                        basename + '_' + field_name.lower() + '.tif')
 
                     if not os.path.isfile(output_uri):
                         # Rasterize the current shapefile field
-                        LOGGER.debug('rasterizing field', field_name, 'to', output_uri)
+                        LOGGER.debug('rasterizing field %s to %s', field_name, output_uri)
                         preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
                             args['cell_size'], output_uri, \
                             field_name = field_name, nodata = -99999.0)
                     
                     # Keep this raster uri
-                    args['shapefiles'][shapefile_type][basename][field_name] = \
+                    args['shapefiles'][shapefile_type][basename][field_name.lower()] = \
                         output_uri
                     in_raster_list.append(output_uri)
 
@@ -662,7 +662,7 @@ def execute(args):
                     output_uri = os.path.join(args['intermediate_dir'], \
                             basename + '_' + 'type' + '.tif')
                     if not os.path.isfile(output_uri):
-                        LOGGER.debug('Creating type raster to', output_uri)
+                        LOGGER.debug('Creating type raster to %s', output_uri)
                         # Copy data over from most recent raster
                         shutil.copy(in_raster_list[-1], output_uri)
                         # Extract array
@@ -672,13 +672,12 @@ def execute(args):
                         # Overwrite data with priority value
                         array[array >= 0] = args['habitat_priority'][(shapefile_type, None)]
                         band.WriteArray(array)
-                        # Add new uri to uri list
-                        args['shapefiles'][shapefile_type][basename]['type'] = \
-                            output_uri
-                        in_raster_list.append(output_uri)
                         # clean-up
                         band = None
                         raster = None
+                    # Add new uri to uri list
+                    args['shapefiles'][shapefile_type][basename]['type'] = output_uri
+                    in_raster_list.append(output_uri)
 
 #    print('habitat_name', args['habitat_name'])
 #    print('in_raster_list', in_raster_list)

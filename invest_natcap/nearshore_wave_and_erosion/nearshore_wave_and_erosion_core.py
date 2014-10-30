@@ -252,34 +252,84 @@ def compute_transects(args):
     for ID in range(len(transect_info)):
         pass
     
-    # Creating one HDF5 file that contains all the transect information
-    transect_data_uri = os.path.join(args['intermediate_dir'], 'transect_data.h5')
+
+    # Create a numpy array to store the habitat type
     field_count = args['maximum_field_count']
     transect_count = tiles
+
+    transect_data_array = np.ones((tiles, max_transect_length)) * -99999.0
+
+    # Creating one HDF5 file that contains all the transect information
+    transect_data_uri = os.path.join(args['intermediate_dir'], 'transect_data.h5')
 
     f = h5.File(transect_data_uri, 'w')
     transect_data = \
         f.create_dataset('transect_data', (tiles, max_transect_length), \
-            compression = 'gzip', fillvalue = -999999.0)
+            compression = 'gzip', fillvalue = -99999.0)
     habitat_data = \
         f.create_dataset('habitat_data', \
             (tiles, max_transect_length, field_count), compression = 'gzip')
 
-    print('----------shapefiles')
-    print(args['shapefiles'])
-    sys.exit(0)
+#    print('----------shapefiles')
+#    print(args['shapefiles'])
+#    sys.exit(0)
 
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
 
         for shp_name in args['shapefiles'][shp_type]:
+
             # Get rid of the path and the extension
+            basename = os.path.splitext(os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
 
-#            for field in args['shapefiles'][shp_type][shp_name]:
+
+            # Extract the type for this shapefile
+            type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
+
+            raster = gdal.Open(type_shapefile_uri)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+
+            LOGGER.info('Extracting priority information from ' + basename)
+            
+            progress_step = tiles / 50
+            for transect in range(tiles):
+                if transect % progress_step == 0:
+                    print '.',
+
+                source = array[transect_info[transect]['raw_positions']]
+                start = transect_info[transect]['clip_limits'][0]
+                shore = transect_info[transect]['clip_limits'][1]
+                end = transect_info[transect]['clip_limits'][2]
+
+                destination = transect_data_array[transect,:end-start]
+
+                source = interpolate_transect(source, i_side_fine, \
+                    args['model_resolution'], kind = 'nearest')
+                source = source[start:end,]
+                
+                # Compute the mask that will be used to update the values
+                mask = destination < source
+
+                # Save transect to file
+                destination[mask] = source[mask]
+            print('')
+
+            # Close the raster before proceeding to the next one
+            band = None
+            raster = None
+            array = None
 
 
-            basename = os.path.splitext(os.path.basename(shp_name))[0]
             for field in args['shapefiles'][shp_type][shp_name]:
+
+                # Skip the field 'type'
+                if field.lower() == 'type':
+                    continue
+
+                # Get rid of the path and the extension
+                basename = os.path.splitext( \
+                    os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
 
                 # Extract data from the current raster field
                 uri = args['shapefiles'][shp_type][shp_name][field]
@@ -291,29 +341,27 @@ def compute_transects(args):
                 transect_data_uri = \
                     os.path.join(args['intermediate_dir'], \
                         basename + '_' + field + '.h5')
+
                 
                 LOGGER.info('Extracting transect information from ' + basename)
-
                 
                 progress_step = tiles / 50
                 for transect in range(tiles):
                     if transect % progress_step == 0:
                         print '.',
 
-                    data = array[transect_info[transect]['raw_positions']]
+                    source = array[transect_info[transect]['raw_positions']]
+                    destination = transect_data_array[transect,:]
                     start = transect_info[transect]['clip_limits'][0]
                     shore = transect_info[transect]['clip_limits'][1]
                     end = transect_info[transect]['clip_limits'][2]
 
-                    data = interpolate_transect(data, \
-                        i_side_fine, \
-                        args['model_resolution'], \
-                        kind = 'nearest')
+                    source = interpolate_transect(source, i_side_fine, \
+                        args['model_resolution'], kind = 'nearest')
+                    source = source[start:end,]
                     
-                    data = data[start:end]
-
-                    # Save transect to file
-                    transect_data[transect,:data.size] = data
+                # Save transect to file
+                destination[mask] = source[mask]
                 print('')
 
                 # Close the raster before proceeding to the next one
