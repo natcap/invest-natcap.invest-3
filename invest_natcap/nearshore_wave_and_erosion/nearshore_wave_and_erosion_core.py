@@ -47,9 +47,9 @@ def execute(args):
 # Compute the shore transects
 def compute_transects(args):
     LOGGER.debug('Computing transects...')
-    print('arguments:')
-    for key in args:
-        print('entry', key, args[key])
+    #print('arguments:')
+    #for key in args:
+    #    print('entry', key, args[key])
 
     # Store shore and transect information
     shore_nodata = -20000.0
@@ -265,11 +265,19 @@ def compute_transects(args):
         f.create_dataset('habitat_data', \
             (tiles, max_transect_length, field_count), compression = 'gzip')
 
+    print('----------shapefiles')
+    print(args['shapefiles'])
+    sys.exit(0)
+
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
 
         for shp_name in args['shapefiles'][shp_type]:
             # Get rid of the path and the extension
+
+#            for field in args['shapefiles'][shp_type][shp_name]:
+
+
             basename = os.path.splitext(os.path.basename(shp_name))[0]
             for field in args['shapefiles'][shp_type][shp_name]:
 
@@ -286,6 +294,7 @@ def compute_transects(args):
                 
                 LOGGER.info('Extracting transect information from ' + basename)
 
+                
                 progress_step = tiles / 50
                 for transect in range(tiles):
                     if transect % progress_step == 0:

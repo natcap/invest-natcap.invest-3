@@ -483,6 +483,7 @@ def execute(args):
     # Preprocessing the AOI
     args['aoi_raster_uri'] = os.path.join(args['intermediate_dir'], 'aoi.tif')
     if not os.path.isfile(args['aoi_raster_uri']):
+        LOGGER.debug('Pre-processing the AOI...')
         args['aoi_raster_uri'] = \
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
@@ -504,32 +505,38 @@ def execute(args):
     #   -subsequent entries: ('field_name':field_value)
     #
     args['habitat_information'] = [\
-        ('mangrove',   {'habitat':'mangrove'}), \
-        ('marsh',      {'habitat':'marsh'}), \
-        ('seawall',    {'habitat':'man-made structure', 'type':7}), \
-        ('beach',      {'habitat':'beach'}), \
-        ('levee',      {'habitat':'man-made structure', 'type':5}), \
-        ('coral reef', {'habitat':'coral reef'}), \
+        ('mangrove',    {'habitat':'mangrove'}), \
+        ('marsh',       {'habitat':'marsh'}), \
+        ('seawall',     {'habitat':'man-made structure', 'type':7}), \
+        ('beach',       {'habitat':'beach'}), \
+        ('levee',       {'habitat':'man-made structure', 'type':5}), \
+        ('coral reef',  {'habitat':'coral reef'}), \
         ('underwater structures', {'habitat':'underwater structures'}), \
-        ('seagrass',   {'habitat':'seagrass', 'type':2}), \
-        ('kelp',       {'habitat':'seagrass', 'type':1})]
+        ('seagrass',    {'habitat':'seagrass', 'type':2}), \
+        ('kelp',        {'habitat':'seagrass', 'type':1}), \
+        ('land polygon',{'habitat':'land polygon'})]
 
     # Build the habitats name--priority mapping
-    args['habitat_priority'] = dict([(args['habitat_information'][i][0], \
-        len(args['habitat_information']) - i - 1) \
-        for i in range(len(args['habitat_information']))])
+    args['habitat_priority'] = \
+        dict([((args['habitat_information'][i][1]['habitat'], \
+                args['habitat_information'][i][1]['type'] if \
+                    'type' in args['habitat_information'][i][1] else None), \
+                len(args['habitat_information']) - i - 1) \
+            for i in range(len(args['habitat_information']))])
 
     # Build the habitats type + subtype -- habitats name mapping
     args['habitat_name'] = {}
     for information in args['habitat_information']:
+        assert 'habitat' in information[1]
         
         #habitat name == habitat type
-        if information[0] == information[1]['habitat']:
+        if len(information[1]) == 1:
             assert information[0] not in args['habitat_name']
             args['habitat_name'][information[1]['habitat']] = [information[0]]
         
         # habitat name != habitat type: look at type field
         else:
+            assert 'type' in information[1]
             # Initialize list if nothing there already
             if information[1]['habitat'] not in args['habitat_name']:
                 args['habitat_name'][information[1]['habitat']] = \
@@ -583,10 +590,6 @@ def execute(args):
                 field_signature += power
                 power *= 2
         shapefile_type_checksum[field_signature] = shapefile_type
-#        print(shapefile_type, shapefile_type_checksum[shapefile_type], \
-#            shapefile_fields)
-
-#    print('shapefile_type_checksum', shapefile_type_checksum)
 
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
@@ -594,10 +597,10 @@ def execute(args):
     in_raster_list = [] # Rasters that will be aligned and clipped and resampled
     in_habitat_type = [] # habitat type. See args['habitat_information']
     for file_uri in files:
- #       print('Processing', file_uri)
         basename = os.path.basename(file_uri)
         basename, ext = os.path.splitext(basename)
         if ext == '.shp':
+#            print('Checking', file_uri)
             # Find the number of fields in this shapefile
             shapefile = ogr.Open(file_uri)
             assert shapefile, "can't open " + file_uri
@@ -629,43 +632,21 @@ def execute(args):
                 if shapefile_type not in args['shapefiles']:
                     args['shapefiles'][shapefile_type] = {}
                     args['shapefiles'][shapefile_type][basename] = {}
-                print('Detected that', file_uri, 'is', shapefile_type)
-
-#                # Find habitat priority
-#                key = ''
-#                for information in args['habitat_information']:
-#                    if key == information[1]['habitat']:
-#                        break
-#                    else:
-#                        if key == information[1]['type']:
-#
-#
-#                shp_priority = args['habitat_priority'][shp_type]
-
-                # Use it to index habitat information
-                shp_information = args['habitat_information']
-
+                LOGGER.debug('Detected that', file_uri, 'is', shapefile_type)
 
                 # Rasterize the known shapefile for each field name
-                LOGGER.info('Rasterizing data from %s' % file_uri)
+                LOGGER.info('Processing %s...' % file_uri)
                 for field_name in shapefile_required_fields[shapefile_type]:
                     # Rasterize the shapefile's field
                     # If this habitat has subtypes, then the field 'type' 
-                    # is used to determine priority. The raster from this filed
-                    # will be named priority
+                    # is used to determine priority.
 #                    print('field_name', field_name)
-                    if (field_name == 'Type') and \
-                        (len(args['habitat_name'][shapefile_type]) > 1):
-                        output_uri = os.path.join(args['intermediate_dir'], \
-                            basename + '_' + 'priority' + '.tif')
-                    else:
-                        output_uri = os.path.join(args['intermediate_dir'], \
-                            basename + '_' + field_name + '.tif')
+                    output_uri = os.path.join(args['intermediate_dir'], \
+                        basename + '_' + field_name + '.tif')
 
-#                    print('------- checking existence of', output_uri)
                     if not os.path.isfile(output_uri):
                         # Rasterize the current shapefile field
-                        print('rasterizing field', field_name, 'to', output_uri)
+                        LOGGER.debug('rasterizing field', field_name, 'to', output_uri)
                         preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
                             args['cell_size'], output_uri, \
                             field_name = field_name, nodata = -99999.0)
@@ -676,33 +657,34 @@ def execute(args):
                     in_raster_list.append(output_uri)
 
                 # If priority raster not already added, add it now
-                if (shapefile_type in args['habitat_name']) and \
-                    (len(args['habitat_name'][shapefile_type]) == 1):
+                if (shapefile_type, None) in args['habitat_priority']:
                     # Priority raster name on disk
                     output_uri = os.path.join(args['intermediate_dir'], \
-                            basename + '_' + 'priority' + '.tif')
-                    # Copy data over from most recent raster
-                    shutil.copy(in_raster_list[-1], output_uri)
-                    # Extract array
-                    raster = gdal.Open(output_uri, gdal.GA_Update)
-                    band = raster.GetRasterBand(1)
-                    array = band.ReadAsArray()
-                    # Overwrite data with priority value
-                    array[array >= 0] = args['habitat_priority'][habitat_name]
-                    band.WriteArray()
-                    # Add new uri to uri list
-                    in_raster_list.append(output_uri)
-                    # clean-up
-                    band = None
-                    raster = None
-#                else:
-#                    print('shapefile_type', shapefile_type)
-#                    print('habitat_name', args['habitat_name'].keys())
+                            basename + '_' + 'type' + '.tif')
+                    if not os.path.isfile(output_uri):
+                        LOGGER.debug('Creating type raster to', output_uri)
+                        # Copy data over from most recent raster
+                        shutil.copy(in_raster_list[-1], output_uri)
+                        # Extract array
+                        raster = gdal.Open(output_uri, gdal.GA_Update)
+                        band = raster.GetRasterBand(1)
+                        array = band.ReadAsArray()
+                        # Overwrite data with priority value
+                        array[array >= 0] = args['habitat_priority'][(shapefile_type, None)]
+                        band.WriteArray(array)
+                        # Add new uri to uri list
+                        args['shapefiles'][shapefile_type][basename]['type'] = \
+                            output_uri
+                        in_raster_list.append(output_uri)
+                        # clean-up
+                        band = None
+                        raster = None
 
 #    print('habitat_name', args['habitat_name'])
 #    print('in_raster_list', in_raster_list)
 #    sys.exit(0)
 
+    LOGGER.debug('Uniformizing the input raster sizes...')
     # Need to uniformize the size of land and bathymetry rasters
     in_raster_list.append(args['landmass_raster_uri'])
     in_raster_list.append(args['bathymetry_raster_uri'])
@@ -722,9 +704,12 @@ def execute(args):
     raster_utils.align_dataset_list( \
         in_raster_list, out_raster_list, resample_method_list,
         out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+
+    LOGGER.debug('Done')
     # Now copy the result back to the original files
     for in_uri, out_uri in zip(in_raster_list, out_raster_list):
-        shutil.copy(out_uri, in_uri)
+        os.remove(in_uri)
+        os.rename(out_uri, in_uri)
 
     # Quick sanity test with shape just to make sure
     landmass_raster_shape = \
@@ -733,6 +718,7 @@ def execute(args):
         raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
     assert landmass_raster_shape == bathymetry_raster_shape
     
+    LOGGER.debug('Done')
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 
