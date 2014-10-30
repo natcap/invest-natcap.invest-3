@@ -52,7 +52,7 @@
                     "dataType": "float",
                     "helpText": "Default a  = (0.038 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
                 },
-		{
+                {
                     "id" : "param_b",
                     "args_id" : "g_param_b",
                     "type": "text",
@@ -62,6 +62,17 @@
                     "validateAs": {"type": "number"},
                     "dataType": "float",
                     "helpText": "Default b  = (0.6667 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+                },
+                {
+                    "id" : "param_tau",
+                    "args_id" : "g_param_tau",
+                    "type": "text",
+                    "label": "Fish growth parameter (tau)",
+                    "defaultValue": "0.08",
+                    "required": true,
+                    "validateAs": {"type": "number"},
+                    "dataType": "float",
+                    "helpText": "Default tau = (0.08 C^-1).  Specifies how sensitive finfish growth is to temperature. If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
                 }
             ]
         },

@@ -216,7 +216,10 @@ def set_cycle_func(vars_dict, rec_func):
     Migration = vars_dict['Migration']
 
     def age_based_cycle_func(N_prev):
-        '''Return N_asx, spawners
+        '''Return next cycle numbers and number of spawners used in recruitment
+        during that cycle
+
+        N_asx, spawners
         '''
         N_next = np.ndarray(N_prev.shape)
 
@@ -233,7 +236,10 @@ def set_cycle_func(vars_dict, rec_func):
         return N_next, spawners
 
     def stage_based_cycle_func(N_prev):
-        '''Return N_asx, spawners
+        '''Return next cycle numbers and number of spawners used in recruitment
+        during that cycle
+
+        N_asx, spawners
         '''
         N_next = np.ndarray(N_prev.shape)
 

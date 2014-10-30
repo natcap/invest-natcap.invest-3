@@ -85,7 +85,8 @@ def execute(args):
 
     cycle_history = calc_farm_cycles(
         args['outplant_buffer'], args['g_param_a'], args['g_param_b'],
-        args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
+        args['g_param_tau'], args['water_temp_dict'], args['farm_op_dict'],
+        float(args['duration']))
 
     out_path = os.path.join(output_dir, 'Finfish_Harvest.shp')
     if os.path.isfile(out_path):
@@ -159,7 +160,7 @@ def execute(args):
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
         value_history, histogram_paths, uncertainty_stats)
 
-def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
+def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict, farm_op_dict, dur):
     '''
     Input:
         outplant_buffer: The number of days surrounding the outplant day during which
@@ -185,7 +186,6 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
 
     cycle_history = {}
-    tau = 0.08
 
     for f in farm_op_dict.keys():
 
@@ -433,7 +433,7 @@ def do_monte_carlo_simulation(args):
         # Compute the cycle history given samples for parameters a and b.
         cycle_history = calc_farm_cycles(
             args['outplant_buffer'], sample_param('a'), sample_param('b'),
-            args['water_temp_dict'], args['farm_op_dict'],
+            args['g_param_tau'], args['water_temp_dict'], args['farm_op_dict'],
             float(args['duration']))
 
         # Compute the total harvested weight.

@@ -90,7 +90,7 @@
                             "args_id" : "population_csv_uri",
                             "type": "file",
                             "label": "Population Parameters File (CSV)",
-                            "defaultValue": "../Fisheries/Input/caribbean_spiny_lobster_main_params.csv",
+                            "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
                             "required": true,
                             "helpText": "The provided CSV file should contain all necessary parameters for population classes based on age/stage, sex, and area - excluding possible migration parameters.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
                         }
@@ -183,7 +183,7 @@
             "args_id" : "migr_cont",
             "label": "Migration Parameters",
             "type": "container",
-            "defaultValue": true,
+            "defaultValue": false,
             "collapsible": true,
             "elements":[
                 {
@@ -195,7 +195,7 @@
                             "args_id" : "migration_dir",
                             "type": "folder",
                             "label": "Migration Matrix CSV Folder",
-                            "defaultValue": "../Fisheries/Input/Caribbean_Spiny_Lobster_migration",
+                            "defaultValue": "../Fisheries/Input/MigrationFolder/",
                             "required": false,
                             "validateAs": {"type": "folder"},
                             "helpText": "The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an age/stage that migrates.  The folder should contain one CSV file for each age/stage that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
