@@ -95,27 +95,6 @@ def set_recru_func(vars_dict):
 
     N_next[0], spawners = rec_func(N_prev)
     '''
-    def create_Spawners(Matu, Weight):
-        return lambda N_prev: (N_prev * Matu * Weight).sum()
-
-    def create_BH(alpha, beta, sexsp, Matu, Weight, LarvDisp):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: (LarvDisp * ((alpha * spawners(
-            N_prev) / (beta + spawners(N_prev)))) / sexsp, spawners(N_prev))
-
-    def create_Ricker(alpha, beta, sexsp, Matu, Weight, LarvDisp):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: (LarvDisp * (alpha * spawners(N_prev) * (
-            np.e ** (-beta * spawners(N_prev)))) / sexsp, spawners(N_prev))
-
-    def create_Fecundity(Fec, sexsp, Matu, LarvDisp):
-        spawners = create_Spawners(Matu, Fec)
-        return lambda N_prev: (LarvDisp * spawners(
-            N_prev) / sexsp, spawners(N_prev))
-
-    def create_Fixed(fixed, sexsp, LarvDisp):
-        return lambda N_prev: (LarvDisp * fixed / sexsp, None)
-
     sexsp = vars_dict['sexsp']
     LarvDisp = vars_dict['Larvaldispersal']
 
@@ -125,24 +104,45 @@ def set_recru_func(vars_dict):
     else:
         Weight = np.ones([sexsp, len(vars_dict['Classes'])])
 
+    alpha = vars_dict['alpha']
+    beta = vars_dict['beta']
+    Matu = vars_dict['Maturity']
+    Fec = vars_dict['Fecundity']
+    fixed = vars_dict['total_recur_recruits']
+
+    def create_Spawners(N_prev):
+        return (N_prev * Matu * Weight).sum()
+
+    def create_BH(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * ((alpha * spawners(
+            N_prev) / (beta + spawners(N_prev)))) / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Ricker(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
+            np.e ** (-beta * spawners(N_prev)))) / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Fecundity(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * (N_prev * Matu * Fec).sum() / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Fixed(N_prev):
+        N_0 = LarvDisp * fixed / sexsp
+        return (N_0, None)
+
     # Create Recruitment Function
     if vars_dict['recruitment_type'] == "Beverton-Holt":
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
-        Matu = vars_dict['Maturity']
-        return create_BH(alpha, beta, sexsp, Matu, Weight, LarvDisp)
+        return create_BH
     elif vars_dict['recruitment_type'] == "Ricker":
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
-        Matu = vars_dict['Maturity']
-        return create_Ricker(alpha, beta, sexsp, Matu, Weight, LarvDisp)
+        return create_Ricker
     elif vars_dict['recruitment_type'] == "Fecundity":
-        Fec = vars_dict['Fecundity']
-        Matu = vars_dict['Maturity']
-        return create_Fecundity(Fec, sexsp, Matu, LarvDisp)
+        return create_Fecundity
     elif vars_dict['recruitment_type'] == "Fixed":
-        fixed = vars_dict['total_recur_recruits']
-        return create_Fixed(fixed, sexsp, LarvDisp)
+        return create_Fixed
     else:
         LOGGER.error("Could not determine correct recruitment function")
         raise ValueError
@@ -156,6 +156,7 @@ def set_init_cond_func(vars_dict):
     N_asx = np.ndarray([...])
     '''
     S = vars_dict['Survtotalfrac']  # S_asx
+    LarvDisp = vars_dict['Larvaldispersal']
     sexsp = vars_dict['sexsp']
     total_init_recruits = vars_dict['total_init_recruits']
     num_regions = len(vars_dict['Regions'])
@@ -168,7 +169,7 @@ def set_init_cond_func(vars_dict):
 
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
-        N_0[0] = total_init_recruits / (sexsp * num_regions)
+        N_0[0] = LarvDisp * total_init_recruits / sexsp
 
         for i in range(1, num_classes-1):
             N_0[i] = N_0[i-1] * S[i-1]
@@ -184,7 +185,7 @@ def set_init_cond_func(vars_dict):
         '''
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
-        N_0[0] = total_init_recruits / (sexsp * num_regions)
+        N_0[0] = LarvDisp * total_init_recruits / sexsp
         N_0[1:] = 1
 
         return N_0
@@ -228,10 +229,18 @@ def set_cycle_func(vars_dict, rec_func):
         N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
         for i in range(1, num_classes):
-            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[:, 0, :] * S[i-1]
+            if Migration[i-1][0, 0] != 1:
+                print "Before Migration:"
+                print N_prev[i-1]
+                print "After Migration:"
+                print np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[0, :]
+                print "Final return value:"
+                print np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[0, :] * S[i-1]
+
+            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[0, :] * S[i-1]
 
         if len(N_prev) > 1:
-            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(x), N_prev[-1]))[:, 0, :] * S[-1]
+            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(x), N_prev[-1]))[0, :] * S[-1]
 
         return N_next, spawners
 
@@ -251,8 +260,8 @@ def set_cycle_func(vars_dict, rec_func):
             lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
-            G_comp = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[:, 0, :] * G[i-1]
-            P_comp = np.array(map(lambda x: Migration[i].dot(x), N_prev[i]))[:, 0, :] * P[i]
+            G_comp = np.array(map(lambda x: Migration[i-1].dot(x), N_prev[i-1]))[0, :] * G[i-1]
+            P_comp = np.array(map(lambda x: Migration[i].dot(x), N_prev[i]))[0, :] * P[i]
             N_next[i] = G_comp + P_comp
 
         return N_next, spawners

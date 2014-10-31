@@ -680,7 +680,10 @@ def _generate_html(vars_dict):
     for i in range(0, total_timesteps):  # i is a cycle
         sub_dict = {}
         sub_dict['Cycle'] = str(i)
-        sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
+        if i == 0:
+            sub_dict['Spawners'] = "%.2f" % vars_dict['total_init_recruits']
+        else:
+            sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
         # This can be more rigorously checked
         if equilibrate_cycle and i >= equilibrate_cycle:
