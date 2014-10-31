@@ -505,46 +505,24 @@ def execute(args):
     #   -subsequent entries: ('field_name':field_value)
     #
     args['habitat_information'] = [\
-        ('mangrove',    {'habitat':'mangrove'}), \
-        ('marsh',       {'habitat':'marsh'}), \
-        ('seawall',     {'habitat':'man-made structure', 'type':7}), \
-        ('beach',       {'habitat':'beach'}), \
-        ('levee',       {'habitat':'man-made structure', 'type':5}), \
-        ('coral reef',  {'habitat':'coral reef'}), \
-        ('underwater structures', {'habitat':'underwater structures'}), \
-        ('seagrass',    {'habitat':'seagrass', 'type':2}), \
+        ('land polygon',{'habitat':'land polygon'}), \
         ('kelp',        {'habitat':'seagrass', 'type':1}), \
-        ('land polygon',{'habitat':'land polygon'})]
+        ('seagrass',    {'habitat':'seagrass', 'type':2}), \
+        ('underwater structures', {'habitat':'underwater structures'}), \
+        ('coral reef',  {'habitat':'coral reef'}), \
+        ('levee',       {'habitat':'man-made structure', 'type':5}), \
+        ('beach',       {'habitat':'beach'}), \
+        ('seawall',     {'habitat':'man-made structure', 'type':7}), \
+        ('marsh',       {'habitat':'marsh'}), \
+        ('mangrove',    {'habitat':'mangrove'}) \
+        ]
 
     # Build the habitats name--priority mapping
     args['habitat_priority'] = \
         dict([((args['habitat_information'][i][1]['habitat'], \
-                args['habitat_information'][i][1]['type'] if \
-                    'type' in args['habitat_information'][i][1] else None), \
-                len(args['habitat_information']) - i - 1) \
+                args['habitat_information'][i][1]['type'] if 'type' in \
+                args['habitat_information'][i][1] else None), i) \
             for i in range(len(args['habitat_information']))])
-
-    # Build the habitats type + subtype -- habitats name mapping
-    args['habitat_name'] = {}
-    for information in args['habitat_information']:
-        assert 'habitat' in information[1]
-        
-        #habitat name == habitat type
-        if len(information[1]) == 1:
-            assert information[0] not in args['habitat_name']
-            args['habitat_name'][information[1]['habitat']] = [information[0]]
-        
-        # habitat name != habitat type: look at type field
-        else:
-            assert 'type' in information[1]
-            # Initialize list if nothing there already
-            if information[1]['habitat'] not in args['habitat_name']:
-                args['habitat_name'][information[1]['habitat']] = \
-                    [information[1]['type']]
-            # Append to existing list otherwise    
-            else:
-                args['habitat_name'][information[1]['habitat']].append( \
-                    information[1]['type'])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -568,15 +546,30 @@ def execute(args):
             'StemHeight', \
             'StemDiam', \
             'StemDensty', \
-            'StemDrag',
+            'StemDrag', \
             'Type']}
+
+    # Assign a positional index to every shapefile field
+    args['field_index'] = {}
+    for habitat_type in shapefile_required_fields:
+        
+        required_fields = shapefile_required_fields[habitat_type]
+
+        args['field_index'][habitat_type] = {}
+
+
+        for field_id in range(len(required_fields)):                
+            field_name = required_fields[field_id]
+            # Field name is set to its index in the required fields array
+            args['field_index'][habitat_type][field_name.lower()] = field_id
+
 
     args['maximum_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
             for shp in shapefile_required_fields])
 
     # Collect all the different fields and assign a weight to each
-    field_values = {} # weight for each field
+    field_values = {} # weight for each field_value
     shapefile_type_checksum = {} # checksum for each shapefile type
     power = 1
     for shapefile_type in shapefile_required_fields:
@@ -679,7 +672,6 @@ def execute(args):
                     args['shapefiles'][shapefile_type][basename]['type'] = output_uri
                     in_raster_list.append(output_uri)
 
-#    print('habitat_name', args['habitat_name'])
 #    print('in_raster_list', in_raster_list)
 #    sys.exit(0)
 

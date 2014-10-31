@@ -258,6 +258,7 @@ def compute_transects(args):
     transect_count = tiles
 
     transect_data_array = np.ones((tiles, max_transect_length)) * -99999.0
+    habitat_data_array = np.ones((tiles, field_count, max_transect_length)) * -99999.0
 
     # Creating one HDF5 file that contains all the transect information
     transect_data_uri = os.path.join(args['intermediate_dir'], 'transect_data.h5')
@@ -268,14 +269,19 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = -99999.0)
     habitat_data = \
         f.create_dataset('habitat_data', \
-            (tiles, max_transect_length, field_count), compression = 'gzip')
+            (tiles, field_count, max_transect_length), compression = 'gzip')
 
 #    print('----------shapefiles')
 #    print(args['shapefiles'])
 #    sys.exit(0)
 
+    # HDF% file container
+    hdf5_files = {}
+
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
+
+        hdf5_files[shp_type] = []
 
         for shp_name in args['shapefiles'][shp_type]:
 
@@ -289,6 +295,12 @@ def compute_transects(args):
             raster = gdal.Open(type_shapefile_uri)
             band = raster.GetRasterBand(1)
             array = band.ReadAsArray()
+
+            # Creating HDF5 file that will store the transect data
+            transect_data_uri = \
+                os.path.join(args['intermediate_dir'], \
+                    basename + '_' + 'type' + '.h5')
+
 
             LOGGER.info('Extracting priority information from ' + basename)
             
@@ -320,6 +332,9 @@ def compute_transects(args):
             raster = None
             array = None
 
+            # Store numpy data to HDF5 dataset
+            hdf5_files[shp_type].append(transect_data_uri)
+
 
             for field in args['shapefiles'][shp_type][shp_name]:
 
@@ -332,17 +347,18 @@ def compute_transects(args):
                     os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
 
                 # Extract data from the current raster field
+                field_id = args['field_index'][shp_type][field]
                 uri = args['shapefiles'][shp_type][shp_name][field]
                 raster = gdal.Open(uri)
                 band = raster.GetRasterBand(1)
                 array = band.ReadAsArray()
 
-                # Creating HDF5 file that will store the transect data
+                # Creating HDF5 file that will store the habitat data
                 transect_data_uri = \
                     os.path.join(args['intermediate_dir'], \
                         basename + '_' + field + '.h5')
 
-                
+
                 LOGGER.info('Extracting transect information from ' + basename)
                 
                 progress_step = tiles / 50
@@ -351,7 +367,7 @@ def compute_transects(args):
                         print '.',
 
                     source = array[transect_info[transect]['raw_positions']]
-                    destination = transect_data_array[transect,:]
+                    destination = habitat_data_array[transect, field_id,:]
                     start = transect_info[transect]['clip_limits'][0]
                     shore = transect_info[transect]['clip_limits'][1]
                     end = transect_info[transect]['clip_limits'][2]
@@ -368,6 +384,10 @@ def compute_transects(args):
                 band = None
                 raster = None
                 array = None
+
+                # Store numpy data to HDF5 dataset
+                hdf5_files[shp_type].append(transect_data_uri)
+
 
     # Add size and model resolution to the attributes
     transect_data.attrs.create('transect_spacing', i_side_coarse)
