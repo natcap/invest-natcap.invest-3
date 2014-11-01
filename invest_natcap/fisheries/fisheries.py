@@ -100,7 +100,6 @@ def execute(args):
 
     # Setup Model
     vars_dict = model.initialize_vars(vars_dict)
-    # pp.pprint(vars_dict)
 
     recru_func = model.set_recru_func(vars_dict)
     init_cond_func = model.set_init_cond_func(vars_dict)
@@ -110,21 +109,6 @@ def execute(args):
     # Run Model
     vars_dict = model.run_population_model(
         vars_dict, init_cond_func, cycle_func, harvest_func)
-    pp.pprint(vars_dict)
-
-    N_all = vars_dict['N_tasx']
-    print "N_0"
-    pp.pprint(N_all[0])
-    print "N_1"
-    pp.pprint(N_all[1])
-    print "N_2"
-    pp.pprint(N_all[2])
-    print "N_3"
-    pp.pprint(N_all[3])
-    print "N_4"
-    pp.pprint(N_all[4])
-    print "N_5"
-    pp.pprint(N_all[5])
 
     # Generate Outputs
     io.generate_outputs(vars_dict)

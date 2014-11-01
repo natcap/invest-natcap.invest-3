@@ -368,5 +368,23 @@ class TestGenerateHTML(unittest.TestCase):
         pass
 
 
+class TestGenerateAOI(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = {
+            'workspace_dir': 'path/to/workspace_dir',
+            'output_dir': os.getcwd(),
+            'aoi_uri': os.path.join(data_directory, 'BC_temp_aoi.shp'),
+            'Classes': np.array(['larva']),
+            'Regions': np.array(['1']),
+            'N_tasx': np.ones([15, 2, 2, 2]),
+            'H_tx': np.ones([15, 1]),
+            'V_tx': np.ones([15, 1]) * 5.0,
+        }
+        pass
+
+    def test_generate_aoi(self):
+        fisheries_io._generate_aoi(self.vars_dict)
+
+
 if __name__ == '__main__':
     unittest.main()
