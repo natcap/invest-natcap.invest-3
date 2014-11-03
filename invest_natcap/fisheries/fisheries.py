@@ -7,6 +7,9 @@ import fisheries_model as model
 
 import pprint as pp
 
+from matplotlib import pyplot as plt
+import numpy as np
+
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -97,17 +100,15 @@ def execute(args):
 
     # Setup Model
     vars_dict = model.initialize_vars(vars_dict)
-    pp.pprint(vars_dict)
 
     recru_func = model.set_recru_func(vars_dict)
     init_cond_func = model.set_init_cond_func(vars_dict)
     cycle_func = model.set_cycle_func(vars_dict, recru_func)
     harvest_func = model.set_harvest_func(vars_dict)
 
-    # # Run Model
+    # Run Model
     vars_dict = model.run_population_model(
         vars_dict, init_cond_func, cycle_func, harvest_func)
-    pp.pprint(vars_dict)
 
-    # # Generate Outputs
-    # io.generate_outputs(vars_dict)
+    # Generate Outputs
+    io.generate_outputs(vars_dict)

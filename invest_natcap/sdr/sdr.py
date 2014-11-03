@@ -128,6 +128,7 @@ def execute(args):
 
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
+    stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
     
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
         
@@ -213,7 +214,6 @@ def execute(args):
     flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
         flow_accumulation_uri)
     
-    
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
@@ -224,7 +224,6 @@ def execute(args):
             zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'])
             
-    
     LOGGER.info("calculating w_bar")
     
     w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
@@ -328,12 +327,44 @@ def execute(args):
         gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
+    LOGGER.info('calculate sediment retention index')
+    def sediment_index_op(rkls, cp_factor, sdr_factor):
+        nodata_mask = (rkls == nodata_rkls) | (cp_factor == nodata_cp) | (sdr_factor == sdr_nodata)
+        return numpy.where(
+            nodata_mask, nodata_sed_retention_index, rkls * (1 - cp_factor) * sdr_factor)
+
+    nodata_sed_retention_index = -1
+    sed_retention_index_uri = os.path.join(
+        output_dir, 'sed_retention_index%s.tif' % file_suffix)
+
+    raster_utils.vectorize_datasets(
+        [usle_uri, cp_factor_uri, sdr_factor_uri], sediment_index_op, sed_retention_index_uri,
+        gdal.GDT_Float32, nodata_sed_retention_index, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    LOGGER.info('calculate sediment retention')
+    def sediment_retention_op(rkls, usle, stream_factor, sdr_factor):
+        nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (stream_factor == stream_nodata) | (sdr_factor == sdr_nodata)
+        return numpy.where(
+            nodata_mask, nodata_sediment_retention, (rkls - usle) * sdr_factor * (1 - stream_factor))
+    
+    nodata_sediment_retention = -1
+    sed_retention_uri = os.path.join(
+        intermediate_dir, 'sed_retention%s.tif' % file_suffix)
+
+    raster_utils.vectorize_datasets(
+        [rkls_uri, usle_uri, stream_uri, sdr_factor_uri], sediment_retention_op, sed_retention_uri,
+        gdal.GDT_Float32, nodata_sediment_retention, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
     field_summaries = {
         'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
+        'sed_retent': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
         }
 
     original_datasource = ogr.Open(args['watersheds_uri'])

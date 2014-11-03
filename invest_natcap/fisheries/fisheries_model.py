@@ -32,7 +32,6 @@ Presumed Order of Axes for Given Functions:
     Cycle
         N:  class, sex, region
         S:  class, sex, region
-
 '''
 
 
@@ -43,16 +42,17 @@ def initialize_vars(vars_dict):
     vars_dict = {
         # (other items)
         ...
-        'Survtotalfrac': np.array([...]),  # Index Order: region, sex, class
+        'Survtotalfrac': np.array([...]),  # Index Order: class, sex, region
         'G_survtotalfrac': np.array([...]),  # (same)
         'P_survtotalfrac': np.array([...]),  # (same)
-        'N_all': np.array([...]),  # Index Order: time, region, sex, class
+        'N_tasx': np.array([...]),  # Index Order: time, class, sex, region
         'H_tx': np.array([...]), # Time, Region
         'V_tx': np.array([...]), # Time, Region
+        'Spawners_t': np.array([...]),
     }
     '''
     # Initialize derived parameters
-    # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_all
+    # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_tasx
     vars_dict['Survtotalfrac'] = _calc_survtotalfrac(vars_dict)
     vars_dict['G_survtotalfrac'] = None
     vars_dict['P_survtotalfrac'] = None
@@ -65,14 +65,16 @@ def initialize_vars(vars_dict):
 
     # Swap axes for easier class-based math in model run
     vars_dict['Survtotalfrac'] = vars_dict['Survtotalfrac'].swapaxes(0, 2)
+    vars_dict['Survnaturalfrac'] = vars_dict['Survnaturalfrac'].swapaxes(0, 2)
 
     t = vars_dict['total_timesteps']
     x = len(vars_dict['Regions'])  # Region
     s = vars_dict['sexsp']  # Sex
     a = len(vars_dict['Classes'])  # Class
-    vars_dict['N_all'] = np.ndarray([t, a, s, x])
-    vars_dict['H_tx'] = np.ndarray([t, x])
-    vars_dict['V_tx'] = np.ndarray([t, x])
+    vars_dict['N_tasx'] = np.zeros([t, a, s, x])
+    vars_dict['H_tx'] = np.zeros([t, x])
+    vars_dict['V_tx'] = np.zeros([t, x])
+    vars_dict['Spawners_t'] = np.zeros([t])
 
     return vars_dict
 
@@ -80,7 +82,8 @@ def initialize_vars(vars_dict):
 def set_recru_func(vars_dict):
     '''
     Creates recruitment function that calculates the number of recruits for
-        class 0 at time t for each region (currently sex agnostic)
+        class 0 at time t for each region (currently sex agnostic). Also
+        returns number of spawners
 
     Returns single array region-element vectors for recruitment class
         work will have to be done outside the function to massage the
@@ -88,28 +91,10 @@ def set_recru_func(vars_dict):
 
     **Example Output of Returned Recruitment Function**
     np.array([1.5, 2.2, 3.6, 4.9])  # Recruitment in each region
+    45  # Number of Spawners
 
+    N_next[0], spawners = rec_func(N_prev)
     '''
-    def create_Spawners(Matu, Weight):
-        return lambda N_prev: (N_prev * Matu * Weight).sum()
-
-    def create_BH(alpha, beta, sexsp, Matu, Weight, LarvDisp):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: LarvDisp * ((alpha * spawners(
-            N_prev) / (beta + spawners(N_prev)))) / sexsp
-
-    def create_Ricker(alpha, beta, sexsp, Matu, Weight, LarvDisp):
-        spawners = create_Spawners(Matu, Weight)
-        return lambda N_prev: LarvDisp * (alpha * spawners(
-            N_prev) * (np.e ** (-beta * spawners(N_prev)))) / sexsp
-
-    def create_Fecundity(Fec, sexsp, Matu, LarvDisp):
-        spawners = create_Spawners(Matu, Fec)
-        return lambda N_prev: LarvDisp * spawners(N_prev) / sexsp
-
-    def create_Fixed(fixed, sexsp, LarvDisp):
-        return lambda N_prev: LarvDisp * fixed / sexsp
-
     sexsp = vars_dict['sexsp']
     LarvDisp = vars_dict['Larvaldispersal']
 
@@ -119,24 +104,45 @@ def set_recru_func(vars_dict):
     else:
         Weight = np.ones([sexsp, len(vars_dict['Classes'])])
 
+    alpha = vars_dict['alpha']
+    beta = vars_dict['beta']
+    Matu = vars_dict['Maturity']
+    Fec = vars_dict['Fecundity']
+    fixed = vars_dict['total_recur_recruits']
+
+    def create_Spawners(N_prev):
+        return (N_prev * Matu * Weight).sum()
+
+    def create_BH(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * ((alpha * spawners(
+            N_prev) / (beta + spawners(N_prev)))) / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Ricker(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
+            np.e ** (-beta * spawners(N_prev)))) / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Fecundity(N_prev):
+        spawners = create_Spawners
+        N_0 = (LarvDisp * (N_prev * Matu * Fec).sum() / sexsp)
+        return (N_0, spawners(N_prev))
+
+    def create_Fixed(N_prev):
+        N_0 = LarvDisp * fixed / sexsp
+        return (N_0, None)
+
     # Create Recruitment Function
     if vars_dict['recruitment_type'] == "Beverton-Holt":
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
-        Matu = vars_dict['Maturity']
-        return create_BH(alpha, beta, sexsp, Matu, Weight, LarvDisp)
+        return create_BH
     elif vars_dict['recruitment_type'] == "Ricker":
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
-        Matu = vars_dict['Maturity']
-        return create_Ricker(alpha, beta, sexsp, Matu, Weight, LarvDisp)
+        return create_Ricker
     elif vars_dict['recruitment_type'] == "Fecundity":
-        Fec = vars_dict['Fecundity']
-        Matu = vars_dict['Maturity']
-        return create_Fecundity(Fec, sexsp, Matu, LarvDisp)
+        return create_Fecundity
     elif vars_dict['recruitment_type'] == "Fixed":
-        fixed = vars_dict['total_recur_recruits']
-        return create_Fixed(fixed, sexsp, LarvDisp)
+        return create_Fixed
     else:
         LOGGER.error("Could not determine correct recruitment function")
         raise ValueError
@@ -150,6 +156,7 @@ def set_init_cond_func(vars_dict):
     N_asx = np.ndarray([...])
     '''
     S = vars_dict['Survtotalfrac']  # S_asx
+    LarvDisp = vars_dict['Larvaldispersal']
     sexsp = vars_dict['sexsp']
     total_init_recruits = vars_dict['total_init_recruits']
     num_regions = len(vars_dict['Regions'])
@@ -162,13 +169,13 @@ def set_init_cond_func(vars_dict):
 
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
-        N_0[0] = total_init_recruits / (sexsp * num_regions)
+        N_0[0] = LarvDisp * total_init_recruits / sexsp
 
-        for i in range(1, num_classes - 1):
-            N_0[i] = N_0[i - 1] * S[i]
+        for i in range(1, num_classes-1):
+            N_0[i] = N_0[i-1] * S[i-1]
 
         if len(N_0) > 1:
-            N_0[-1] = (N_0[-2] * S[-1]) / (1 - S[-1])
+            N_0[-1] = (N_0[-2] * S[-2]) / (1 - S[-1])
 
         return N_0
 
@@ -178,7 +185,7 @@ def set_init_cond_func(vars_dict):
         '''
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
-        N_0[0] = total_init_recruits / (sexsp * num_regions)
+        N_0[0] = LarvDisp * total_init_recruits / sexsp
         N_0[1:] = 1
 
         return N_0
@@ -199,6 +206,9 @@ def set_cycle_func(vars_dict, rec_func):
 
     **Example Output of Returned Cycle Function**
     N_asx = np.ndarray([...])
+    spawners = <int>
+
+    N_next, spawners = cycle_func(N_prev)
     '''
     S = vars_dict['Survtotalfrac']  # S_asx
     P = vars_dict['P_survtotalfrac']  # P_asx
@@ -207,40 +217,50 @@ def set_cycle_func(vars_dict, rec_func):
     Migration = vars_dict['Migration']
 
     def age_based_cycle_func(N_prev):
-        '''Return N_asx (N_cur)
+        '''Return next cycle numbers and number of spawners used in recruitment
+        during that cycle
+
+        N_asx, spawners
         '''
         N_next = np.ndarray(N_prev.shape)
 
-        N_next[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+        N_prev_xsa = N_prev.swapaxes(0, 2)
+        N_next_0_xsa, spawners = rec_func(N_prev_xsa)
+        N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
         for i in range(1, num_classes):
-            N_next[i] = np.array(map(
-                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * S[i-1]
+            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(
+                x), N_prev[i-1]))[:, 0, :] * S[i-1]
 
         if len(N_prev) > 1:
-            N_next[-1] += np.array(map(
-                lambda x: Migration[-1].dot(x), N_prev[-1])) * S[-1]
+            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(
+                x), N_prev[-1]))[:, 0, :] * S[-1]
 
-        return N_next
+        return N_next, spawners
 
     def stage_based_cycle_func(N_prev):
-        '''Return N_asx (N_cur)
+        '''Return next cycle numbers and number of spawners used in recruitment
+        during that cycle
+
+        N_asx, spawners
         '''
         N_next = np.ndarray(N_prev.shape)
 
-        N_next[0] = rec_func(N_prev.swapaxes(0, 2)).swapaxes(0, 2)
+        N_prev_xsa = N_prev.swapaxes(0, 2)
+        N_next_0_xsa, spawners = rec_func(N_prev_xsa)
+        N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
-        N_next[0] += np.array(map(
+        N_next[0] = N_next[0] + np.array(map(
             lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
-            G_comp = np.array(map(
-                lambda x: Migration[i-1].dot(x), N_prev[i-1])) * G[i-1]
-            P_comp = np.array(map(
-                lambda x: Migration[i].dot(x), N_prev[i])) * P[i]
+            G_comp = np.array(map(lambda x: Migration[i-1].dot(
+                x), N_prev[i-1]))[:, 0, :] * G[i-1]
+            P_comp = np.array(map(lambda x: Migration[i].dot(
+                x), N_prev[i]))[:, 0, :] * P[i]
             N_next[i] = G_comp + P_comp
 
-        return N_next
+        return N_next, spawners
 
     if vars_dict['population_type'] == 'Age-Based':
         return age_based_cycle_func
@@ -259,13 +279,13 @@ def set_harvest_func(vars_dict):
         Returns None if harvest isn't selected by user.
 
     **Example Outputs of Returned Harvest Function**
-    H_x, V_x = harv_func(N_all)
+    H_x, V_x = harv_func(N_tasx)
 
     H_x = np.array([3.0, 4.5, 2.5, ...])
     V_x = np.array([6.0, 9.0, 5.0, ...])
 
     '''
-    if vars_dict['harv_cont']:
+    if True:  # vars_dict['harv_cont']:
 
         sexsp = vars_dict['sexsp']
         frac_post_process = vars_dict['frac_post_process']
@@ -286,9 +306,9 @@ def set_harvest_func(vars_dict):
         I = np.array(I)
 
         def harv_func(N_asx):
-            H_asx = N_asx * I * Weight
-            H_x = np.array(map(lambda x: x.sum(), H_asx.swapaxes(
-                0, 2)))  # Sum harvest along each region
+            N_xsa = N_asx.swapaxes(0, 2)
+            H_xsa = N_xsa * I * Weight
+            H_x = np.array(map(lambda x: x.sum(), H_xsa))
             V_x = H_x * (frac_post_process * unit_price)
             return H_x, V_x
 
@@ -305,48 +325,52 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
     vars_dict = {
         # (other items)
         ...
-        'N_all': np.array([...]),  # Index Order: time, region, sex, class
+        'N_tasx': np.array([...]),  # Index Order: time, class, sex, region
         'H_tx': np.array([...]),  # Index Order: time, region
         'V_tx': np.array([...]),  # Index Order: time, region
+        'Spawners_t': np,array([...]),
         'equilibrate_cycle': <int>,
     }
     '''
-    N_all = vars_dict['N_all']
+    N_tasx = vars_dict['N_tasx']
     H_tx = vars_dict['H_tx']
-    V_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+    Spawners_t = vars_dict['Spawners_t']
     equilibrate_cycle = False
+    subset_size = 10
 
     # Set Initial Conditions for Population
-    N_all[0] = init_cond_func()
+    N_tasx[0] = init_cond_func()
 
     # Run Cycles
-    for i in range(0, len(N_all) - 1):
+    for i in range(0, len(N_tasx)-1):
         # Run Harvest and Check Equilibrium for Current Population
         # Consider Wrapping this into a function
-        if harvest_func and i >= 10:
-            H_x, V_x = harvest_func(N_all[i])
+        if harvest_func:
+            H_x, V_x = harvest_func(N_tasx[i])
             H_tx[i] = H_x
             V_tx[i] = V_x
-        if not equilibrate_cycle and _is_equilibrated(H_tx, i):
+        if not equilibrate_cycle and i >= subset_size and _is_equilibrated(H_tx, i, subset_size=subset_size):
             equilibrate_cycle = i
             LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
         # Find Numbers for Next Population
-        N_next = cycle_func(N_all[i])
-        N_all[i + 1] = N_next
+        N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
+        N_tasx[i+1] = N_next
 
     # Run Harvest and Check Equilibrium for Final Population
     if harvest_func:
-        H_x, V_x = harvest_func(N_all[-1])
+        H_x, V_x = harvest_func(N_tasx[-1])
         H_tx[-1] = H_x
         V_tx[-1] = V_x
-    if not equilibrate_cycle and _is_equilibrated(H_tx, len(N_all)):
-        equilibrate_cycle = len(N_all)
+    if not equilibrate_cycle and len(N_tasx) >= subset_size and _is_equilibrated(H_tx, len(N_tasx)-1, subset_size=subset_size):
+        equilibrate_cycle = len(N_tasx)
         LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
 
     # Store Results in Variables Dictionary
-    vars_dict['N_all'] = N_all
+    vars_dict['N_tasx'] = N_tasx
     vars_dict['H_tx'] = H_tx
     vars_dict['V_tx'] = V_tx
+    vars_dict['Spawners_t'] = Spawners_t
     vars_dict['equilibrate_cycle'] = equilibrate_cycle
 
     return vars_dict
@@ -408,7 +432,9 @@ def _calc_moving_average(H):
 def _is_equilibrated(H_tx, i, tolerance=0.001, subset_size=10):
     mov_avg = _calc_moving_average(H_tx[i-(subset_size-1): i+1])
     cur = H_tx[i].sum()
-    diff = np.abs(cur - mov_avg)
+    frac = mov_avg / cur
+    diff = np.abs(frac - 1)
+
     if diff < tolerance:
         return True
     else:

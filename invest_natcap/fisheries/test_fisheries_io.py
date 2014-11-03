@@ -78,6 +78,7 @@ class TestPopulationParamsIO(unittest.TestCase):
         # Test Stage-based without Duration vector
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail2.csv')
         args['population_csv_uri'] = population_csv_uri
+        args['recruitment_type'] = 'Beverton-Holt'
         args['population_type'] = 'Stage-Based'
         with self.assertRaises(MissingParameter):
             fisheries_io._verify_population_csv(args)
@@ -85,7 +86,6 @@ class TestPopulationParamsIO(unittest.TestCase):
         # Test B-H / Weight without Weight vector
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail3.csv')
         args['population_csv_uri'] = population_csv_uri
-        args['recruitment_type'] = 'Beverton-Holt'
         args['spawn_units'] = 'Weight'
         with self.assertRaises(MissingParameter):
             fisheries_io._verify_population_csv(args)
@@ -224,7 +224,7 @@ class TestSingleParamsIO(unittest.TestCase):
         args['aoi_uri'] = None
 
         # Clean up filesystem
-        os.rmdir(args['workspace_dir'])
+        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
 class TestFetchVerifyArgs(unittest.TestCase):
@@ -257,7 +257,7 @@ class TestFetchVerifyArgs(unittest.TestCase):
         # pp.pprint(vars_dict)
         # with self.assertRaises():
         #    fisheries_io.fetch_verify_args(args)
-        os.rmdir(args['workspace_dir'])
+        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
 class TestGenerateCSV(unittest.TestCase):
@@ -303,7 +303,7 @@ class TestGenerateCSV(unittest.TestCase):
             'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
             'H_tx': np.ones([15, 2]),
             'V_tx': np.ones([15, 2]) * 5.0,
         }
@@ -357,7 +357,7 @@ class TestGenerateHTML(unittest.TestCase):
             'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_all': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([15, 2, 2, 2]),  # Index Order: time, class, sex, region
             'H_tx': np.ones([15, 2]),
             'V_tx': np.ones([15, 2]) * 5.0,
         }
@@ -365,6 +365,25 @@ class TestGenerateHTML(unittest.TestCase):
 
     def test_generate_html(self):
         # fisheries_io._generate_html(self.vars_dict)
+        pass
+
+
+class TestGenerateAOI(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = {
+            'workspace_dir': 'path/to/workspace_dir',
+            'output_dir': os.getcwd(),
+            'aoi_uri': os.path.join(data_directory, 'Galveston_Subregion.shp'),
+            'Classes': np.array(['larva']),
+            'Regions': np.array(['1']),
+            'N_tasx': np.ones([15, 2, 2, 2]),
+            'H_tx': np.ones([15, 1]),
+            'V_tx': np.ones([15, 1]) * 5.0,
+        }
+        pass
+
+    def test_generate_aoi(self):
+        # fisheries_io._generate_aoi(self.vars_dict)
         pass
 
 
