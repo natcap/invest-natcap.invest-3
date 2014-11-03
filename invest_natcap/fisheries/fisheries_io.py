@@ -589,7 +589,8 @@ def generate_outputs(vars_dict):
     # HTML results page
     _generate_html(vars_dict)
     # Append Results to Shapefile
-    pass
+    if vars_dict['aoi_uri']:
+        _generate_aoi(vars_dict)
 
 
 def _generate_csv(vars_dict):
@@ -745,7 +746,7 @@ def _generate_html(vars_dict):
 
 def _generate_aoi(vars_dict):
     '''Appends the final harvest and valuation values for each region to an
-    input shapefile.  The 'name' attributes of each region in the input
+    input shapefile.  The 'NAME' attributes of each region in the input
     shapefile must exactly match the names of each region in the population
     parameters file.
 
@@ -754,14 +755,19 @@ def _generate_aoi(vars_dict):
     Regions = vars_dict['Regions']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
+    output_aoi_uri = os.path.join(vars_dict['output_dir'], 'Results.shp')
 
-    ds = ogr.Open(aoi_uri, update=1)
+    # Copy AOI file to outputs directory
+    raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
+
+    # Append attributes to Shapefile
+    ds = ogr.Open(output_aoi_uri, update=1)
     layer = ds.GetLayer()
 
-    harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    harvest_field = ogr.FieldDefn('Harvest', ogr.OFTReal)
     layer.CreateField(harvest_field)
 
-    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+    val_field = ogr.FieldDefn('Valuation', ogr.OFTReal)
     layer.CreateField(val_field)
 
     harv_reg_dict = {}
@@ -773,9 +779,9 @@ def _generate_aoi(vars_dict):
         val_reg_dict[Regions[i]] = V_tx[-1][i]
 
     for feature in layer:
-        region_name = str(feature.items()['Name'])
-        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-        feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+        region_name = str(feature.items()['NAME'])
+        feature.SetField('Harvest', "%.2f" % harv_reg_dict[region_name])
+        feature.SetField('Valuation', "%.2f" % val_reg_dict[region_name])
         layer.SetFeature(feature)
 
     layer.ResetReading()
