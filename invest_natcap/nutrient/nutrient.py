@@ -3,6 +3,7 @@ Retention model."""
 
 import logging
 import os
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -25,10 +26,99 @@ def execute(args):
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
 
+    def _validate_inputs(
+        nutrients_to_process, lucode_to_parameters, threshold_lookup,
+        valuation_lookup):
+        
+        """Validation helper method to check that table headers are included
+            that are necessary depending on the nutrient type requested by
+            the user"""
+
+        #Make sure all the nutrient inputs are good
+        if len(nutrients_to_process) == 0:
+            raise ValueError("Neither phosphorous nor nitrogen was selected"
+                             " to be processed.  Choose at least one.")
+
+        #Build up a list that'll let us iterate through all the input tables
+        #and check for the required rows, and report errors if something
+        #is missing.
+        row_header_table_list = []
+
+        lu_parameter_row = lucode_to_parameters.values()[0]
+        row_header_table_list.append(
+            (lu_parameter_row, ['load_', 'eff_'],
+             args['biophysical_table_uri']))
+
+        threshold_row = threshold_lookup.values()[0]
+        row_header_table_list.append(
+            (threshold_row, ['thresh_'],
+             args['water_purification_threshold_table_uri']))
+
+        if valuation_lookup is not None:
+            valuation_row = valuation_lookup.values()[0]
+            row_header_table_list.append(
+                (valuation_row, ['cost_', 'time_span_', 'discount_'],
+                 args['biophysical_table_uri']))
+
+        missing_headers = []
+        for row, header_prefixes, table_type in row_header_table_list:
+            for nutrient_id in nutrients_to_process:
+                for header_prefix in header_prefixes:
+                    header = header_prefix + nutrient_id
+                    if header not in row:
+                        missing_headers.append(
+                            "Missing header %s from %s" % (header, table_type))
+
+        if len(missing_headers) > 0:
+            raise ValueError('\n'.join(missing_headers))
+
+        #make sure values are in range
+        csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri'], 'rU'))
+        biophysical_table = {}
+        for row in csv_dict_reader:
+            biophysical_table[int(row['lucode'])] = row
+
+        value_headers_to_check = [('Kc', (0.0, 1.5))]
+        for nutrient_id in nutrients_to_process:
+            value_headers_to_check.append(('eff_' + nutrient_id, (0.0, 1.0)))
+
+        #Test to see if c or p values are outside of 0..1
+        for table_key, (low_range, upper_range) in value_headers_to_check:
+            for (lulc_code, table) in biophysical_table.iteritems():
+                try:
+                    float_value = float(table[table_key])
+                    #print lulc_code, table_key, table_key, low_range, upper_range, float_value
+                    if not (low_range <= float_value <= upper_range):
+                        raise Exception(
+                            'Value should be within range %f..%f offending value '
+                            'table %s, lulc_code %s, value %s' % (
+                                low_range, upper_range, table_key, str(lulc_code),
+                                str(float_value)))
+                except ValueError as e:
+                    raise Exception(
+                        'Value is not a floating point value within range %f..%f '
+                        'offending value table %s, lulc_code %s, value %s' % (
+                            low_range, upper_range, table_key, str(lulc_code),
+                            table[table_key]))
         
     if not args['calc_p'] and not args['calc_n']:
         raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
     
+    nutrients_to_process = []
+    for nutrient_id in ['n', 'p']:
+        if args['calc_' + nutrient_id]:
+            nutrients_to_process.append(nutrient_id)
+    lucode_to_parameters = raster_utils.get_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode')
+
+    threshold_table = raster_utils.get_lookup_from_csv(
+        args['water_purification_threshold_table_uri'], 'ws_id')
+    valuation_lookup = None
+    if args['valuation_enabled']:
+        valuation_lookup = raster_utils.get_lookup_from_csv(
+            args['water_purification_valuation_table_uri'], 'ws_id')
+    _validate_inputs(nutrients_to_process, lucode_to_parameters,
+        threshold_table, valuation_lookup)
     
     #Set up the water yield arguments that might be a little different than
     #nutrient retention
@@ -100,52 +190,7 @@ def _execute_nutrient(args):
 
         returns nothing.
     """
-    def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters, threshold_lookup,
-        valuation_lookup):
-        
-        """Validation helper method to check that table headers are included
-            that are necessary depending on the nutrient type requested by
-            the user"""
-
-        #Make sure all the nutrient inputs are good
-        if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorous nor nitrogen was selected"
-                             " to be processed.  Choose at least one.")
-
-        #Build up a list that'll let us iterate through all the input tables
-        #and check for the required rows, and report errors if something
-        #is missing.
-        row_header_table_list = []
-
-        lu_parameter_row = lucode_to_parameters.values()[0]
-        row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_'],
-             args['biophysical_table_uri']))
-
-        threshold_row = threshold_lookup.values()[0]
-        row_header_table_list.append(
-            (threshold_row, ['thresh_'],
-             args['water_purification_threshold_table_uri']))
-
-        if valuation_lookup is not None:
-            valuation_row = valuation_lookup.values()[0]
-            row_header_table_list.append(
-                (valuation_row, ['cost_', 'time_span_', 'discount_'],
-                 args['biophysical_table_uri']))
-
-        missing_headers = []
-        for row, header_prefixes, table_type in row_header_table_list:
-            for nutrient_id in nutrients_to_process:
-                for header_prefix in header_prefixes:
-                    header = header_prefix + nutrient_id
-                    if header not in row:
-                        missing_headers.append(
-                            "Missing header %s from %s" % (header, table_type))
-
-        if len(missing_headers) > 0:
-            raise ValueError('\n'.join(missing_headers))
-
+    
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
@@ -177,8 +222,11 @@ def _execute_nutrient(args):
     if args['valuation_enabled']:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-    _validate_inputs(nutrients_to_process, lucode_to_parameters,
-                     threshold_table, valuation_lookup)
+    #_validate_inputs(nutrients_to_process, lucode_to_parameters,
+    #                 threshold_table, valuation_lookup)
+
+
+
 
     #This one is tricky, we want to make a dictionary that indexes by nutrient
     #id and yields a dicitonary indexed by ws_id to the threshold amount of
