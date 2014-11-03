@@ -232,7 +232,7 @@ def _parse_population_csv(uri, sexsp):
 
     regions = _get_row(csv_data, start_cols[0])[0: end_cols[0]+1]
 
-    pop_dict["Regions"] = map(lambda x: x.lower(), regions[1:])
+    pop_dict["Regions"] = regions[1:]
 
     surv_table = _get_table(csv_data, start_rows[0]+1, start_cols[0]+1)
     class_attributes_table = _get_table(
@@ -681,7 +681,7 @@ def _generate_html(vars_dict):
         sub_dict = {}
         sub_dict['Cycle'] = str(i)
         if i == 0:
-            sub_dict['Spawners'] = "%.2f" % vars_dict['total_init_recruits']
+            sub_dict['Spawners'] = "(none)"
         else:
             sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
@@ -744,4 +744,38 @@ def _generate_html(vars_dict):
 
 
 def _generate_aoi(vars_dict):
-    pass
+    '''Appends the final harvest and valuation values for each region to an
+    input shapefile.  The 'name' attributes of each region in the input
+    shapefile must exactly match the names of each region in the population
+    parameters file.
+
+    '''
+    aoi_uri = vars_dict['aoi_uri']
+    Regions = vars_dict['Regions']
+    H_tx = vars_dict['H_tx']
+    V_tx = vars_dict['V_tx']
+
+    ds = ogr.Open(aoi_uri, update=1)
+    layer = ds.GetLayer()
+
+    harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    layer.CreateField(harvest_field)
+
+    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+    layer.CreateField(val_field)
+
+    harv_reg_dict = {}
+    for i in range(0, len(Regions)):
+        harv_reg_dict[Regions[i]] = H_tx[-1][i]
+
+    val_reg_dict = {}
+    for i in range(0, len(Regions)):
+        val_reg_dict[Regions[i]] = V_tx[-1][i]
+
+    for feature in layer:
+        region_name = str(feature.items()['Name'])
+        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+        feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+        layer.SetFeature(feature)
+
+    layer.ResetReading()
