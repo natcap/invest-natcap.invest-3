@@ -376,6 +376,9 @@ def compute_transects(args):
                 raster = None
                 array = None
 
+    # Both the habitat type and the habitat field data are complete, save them
+    habitat_type_dataset[...] = transect_data_array[...]
+    habitat_properties_dataset[...] = habitat_data_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
@@ -391,8 +394,8 @@ def compute_transects(args):
 
 
     # We're done, we close the file
-    habitat_type_dataset = None
-    habitat_properties_dataset = None
+    #habitat_type_dataset = None
+    #habitat_properties_dataset = None
     habitat_type_file.close()
     habitat_properties_file.close()
         
