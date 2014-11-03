@@ -30,13 +30,13 @@
                     "id" : "aoi_uri",
                     "args_id" : "aoi_uri",
                     "type": "file",
-                    "label": "Area(s) of Interest (SHP) [Currently Unimplemented]",
+                    "label": "Area(s) of Interest (SHP)",
                     "required": false,
                     "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
-                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘name’ attribute. The 'name' attribute can be numeric or alphabetic, but must be unique within the given file."
+                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'name' attribute can be numeric or alphabetic, but must be unique within the given file."
                 },
                 {
                     "id" : "total_timesteps",

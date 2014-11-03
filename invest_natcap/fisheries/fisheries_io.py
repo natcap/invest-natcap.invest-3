@@ -416,6 +416,7 @@ def _verify_single_params(args):
     if type(total_timesteps) != int or total_timesteps < 1:
         LOGGER.error("Total Timesteps value must be positive integer")
         raise ValueError
+    params_dict['total_timesteps'] = total_timesteps + 1
 
     # Check total_init_recruits for non-negative float
     total_init_recruits = args['total_init_recruits']
@@ -456,13 +457,6 @@ def _verify_single_params(args):
         if unit_price < 0:
             LOGGER.error("Unit price of harvest must be non-negative float")
             raise ValueError
-
-    ############ IMPLEMENT LATER
-    # If shapefile exists:
-    # Check file extension? (maybe try / except would be better)
-    # Check shapefile subregions match regions in population parameters file
-    # aoi_uri = args['aoi_uri']
-    ############################################
 
     return params_dict
 
@@ -708,7 +702,7 @@ def _generate_html(vars_dict):
                 'type': 'text',
                 'section': 'body',
                 'text': '<h2>Final Harvest by Subregion After ' +
-                        str(total_timesteps - 1) + ' Cycles</h2>'},
+                        str(total_timesteps-1) + ' Cycles</h2>'},
                 {
                     'type': 'table',
                     'section': 'body',
