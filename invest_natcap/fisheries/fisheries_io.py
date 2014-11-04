@@ -4,7 +4,6 @@ import csv
 
 from osgeo import ogr
 import numpy as np
-import pprint as pp
 
 from invest_natcap import raster_utils
 from invest_natcap import reporting
@@ -24,6 +23,7 @@ class MissingParameter(Exception):
         self.msg = msg
 
 
+# Fetch and Verify Arguments
 def fetch_verify_args(args):
     '''Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a dictionary of variables
@@ -411,6 +411,16 @@ def _verify_single_params(args):
             raise OSError
     params_dict['output_dir'] = output_dir
 
+    # Create output directory
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    if not os.path.isdir(intermediate_dir):
+        try:
+            os.makedirs(intermediate_dir)
+        except:
+            LOGGER.error("Cannot create Intermediate Directory")
+            raise OSError
+    params_dict['intermediate_dir'] = intermediate_dir
+
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
@@ -579,15 +589,16 @@ def generate_outputs(vars_dict):
     '''
     '''
     # CSV results page
-    _generate_csv(vars_dict)
+    _generate_intermediate_csv(vars_dict)
+    _generate_results_csv(vars_dict)
     # HTML results page
-    _generate_html(vars_dict)
+    _generate_results_html(vars_dict)
     # Append Results to Shapefile
     if vars_dict['aoi_uri']:
-        _generate_aoi(vars_dict)
+        _generate_results_aoi(vars_dict)
 
 
-def _generate_csv(vars_dict):
+def _generate_results_csv(vars_dict):
     '''Generates a CSV file that contains a summary of all harvest totals
     for each subregion.
     '''
@@ -634,11 +645,48 @@ def _generate_csv(vars_dict):
             csv_writer.writerow(line)
 
 
-def _generate_html(vars_dict):
+def _generate_intermediate_csv(vars_dict):
+    '''Want to create an intermediate output that gives the number of
+    individuals within each area for each cycle for each age/stage.
+    '''
+    uri = os.path.join(
+        vars_dict['intermediate_dir'], 'Intermediate_Population_Numbers.csv')
+    Regions = vars_dict['Regions']
+    Classes = vars_dict['Classes']
+    N_tasx = vars_dict['N_tasx']
+    N_txsa = N_tasx.swapaxes(1, 3)
+    sexsp = vars_dict['sexsp']
+    Sexes = ['Female', 'Male']
+
+    with open(uri, 'wb') as c_file:
+        # c_writer = csv.writer(c_file)
+        if sexsp == 2:
+            line = "Timestep, Region, Class, Sex, Numbers\n"
+            c_file.write(line)
+        else:
+            line = "Timestep, Region, Class, Numbers\n"
+            c_file.write(line)
+
+        for t in range(0, len(N_txsa)):
+            for x in range(0, len(Regions)):
+                for a in range(0, len(Classes)):
+                    if sexsp == 2:
+                        for s in range(0, 2):
+                            line = "%i, %s, %s, %s, %f\n" % (
+                                t, Regions[x], Classes[a], Sexes[s], N_txsa[t, x, s, a])
+                            c_file.write(line)
+                    else:
+                        line = "%i, %s, %s, %f\n" % (
+                                t, Regions[x], Classes[a], N_txsa[t, x, 0, a])
+                        c_file.write(line)
+
+
+def _generate_results_html(vars_dict):
     '''Generates an HTML file that contains a summary of all harvest totals
     for each subregion.
     '''
     uri = os.path.join(vars_dict['output_dir'], 'Results_Page.html')
+    recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -677,6 +725,8 @@ def _generate_html(vars_dict):
         sub_dict['Cycle'] = str(i)
         if i == 0:
             sub_dict['Spawners'] = "(none)"
+        elif recruitment_type == 'Fixed':
+            sub_dict['Spawners'] = "(fixed recruitment)"
         else:
             sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
@@ -711,11 +761,13 @@ def _generate_html(vars_dict):
                     'total': True,
                     'data_type': 'dictionary',
                     'columns': final_cycle_columns,
-                    'data': final_cycle_body},
+                    'data': final_cycle_body
+                },
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Cycle Breakdown</h2>'},
+                    'text': '<h2>Cycle Breakdown</h2>'
+                },
                 {
                     'type': 'table',
                     'section': 'body',
@@ -724,21 +776,22 @@ def _generate_html(vars_dict):
                     'total': False,
                     'data_type': 'dictionary',
                     'columns': cycle_breakdown_columns,
-                    'data': cycle_breakdown_body},
+                    'data': cycle_breakdown_body
+                },
                 {
                     'type': 'head',
                     'section': 'head',
                     'format': 'style',
                     'data_src': css,
-                    'input_type': 'Text'}
-                ]
+                    'input_type': 'Text'
+                }]
 
     rep_args['elements'] = elements
 
     reporting.generate_report(rep_args)
 
 
-def _generate_aoi(vars_dict):
+def _generate_results_aoi(vars_dict):
     '''Appends the final harvest and valuation values for each region to an
     input shapefile.  The 'NAME' attributes of each region in the input
     shapefile must exactly match the names of each region in the population
@@ -749,7 +802,9 @@ def _generate_aoi(vars_dict):
     Regions = vars_dict['Regions']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    output_aoi_uri = os.path.join(vars_dict['output_dir'], 'Results.shp')
+    basename = os.path.splitext(os.path.basename(aoi_uri))[0]
+    output_aoi_uri = os.path.join(
+        vars_dict['output_dir'], basename + '_Results.shp')
 
     # Copy AOI file to outputs directory
     raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
@@ -758,10 +813,10 @@ def _generate_aoi(vars_dict):
     ds = ogr.Open(output_aoi_uri, update=1)
     layer = ds.GetLayer()
 
-    harvest_field = ogr.FieldDefn('Harvest', ogr.OFTReal)
+    harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
     layer.CreateField(harvest_field)
 
-    val_field = ogr.FieldDefn('Valuation', ogr.OFTReal)
+    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
     layer.CreateField(val_field)
 
     harv_reg_dict = {}
@@ -774,8 +829,8 @@ def _generate_aoi(vars_dict):
 
     for feature in layer:
         region_name = str(feature.items()['NAME'])
-        feature.SetField('Harvest', "%.2f" % harv_reg_dict[region_name])
-        feature.SetField('Valuation', "%.2f" % val_reg_dict[region_name])
+        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+        feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
         layer.SetFeature(feature)
 
     layer.ResetReading()
