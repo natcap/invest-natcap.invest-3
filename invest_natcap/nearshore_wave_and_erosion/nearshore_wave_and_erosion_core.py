@@ -47,9 +47,9 @@ def execute(args):
 # Compute the shore transects
 def compute_transects(args):
     LOGGER.debug('Computing transects...')
-    print('arguments:')
-    for key in args:
-        print('entry', key, args[key])
+    #print('arguments:')
+    #for key in args:
+    #    print('entry', key, args[key])
 
     # Store shore and transect information
     shore_nodata = -20000.0
@@ -248,63 +248,127 @@ def compute_transects(args):
                         
                         tiles += 1
 
+    LOGGER.debug('found %i tiles.' % tiles)
+
     print('transect_info size', len(transect_info))
     for ID in range(len(transect_info)):
         pass
     
-    # Creating one HDF5 file that contains all the transect information
-    transect_data_uri = os.path.join(args['intermediate_dir'], 'transect_data.h5')
+
+    # Create a numpy array to store the habitat type
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    f = h5.File(transect_data_uri, 'w')
-    transect_data = \
-        f.create_dataset('transect_data', (tiles, max_transect_length), \
-            compression = 'gzip', fillvalue = -999999.0)
-    habitat_data = \
-        f.create_dataset('habitat_data', \
-            (tiles, max_transect_length, field_count), compression = 'gzip')
+    transect_data_array = np.ones((tiles, max_transect_length)) * -99999.0
+    habitat_data_array = np.ones((tiles, field_count, max_transect_length)) * -99999.0
+
+    # Creating HDF5 file that will store the transect data
+    habitat_type_uri = \
+        os.path.join(args['intermediate_dir'], 'habitat_type.h5')
+    habitat_properties_uri = \
+        os.path.join(args['intermediate_dir'], 'habitat_properties.h5')
+
+    habitat_type_file = h5.File(habitat_type_uri, 'w')
+    habitat_type_dataset = \
+        habitat_type_file.create_dataset('habitat_types', \
+            transect_data_array.shape, compression = 'gzip', \
+            fillvalue = -99999.0)
+
+    habitat_properties_file = h5.File(habitat_properties_uri, 'w')
+    habitat_properties_dataset = \
+        habitat_properties_file.create_dataset('habitat_properties', \
+            habitat_data_array.shape, compression = 'gzip', \
+            fillvalue = -99999.0)
+
+
+    # HDF5 file container
+    hdf5_files = {}
 
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
 
+        hdf5_files[shp_type] = []
+
         for shp_name in args['shapefiles'][shp_type]:
+
             # Get rid of the path and the extension
-            basename = os.path.splitext(os.path.basename(shp_name))[0]
+            basename = os.path.splitext(os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
+
+
+            # Extract the type for this shapefile
+            type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
+
+            raster = gdal.Open(type_shapefile_uri)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+
+            LOGGER.info('Extracting priority information from ' + basename)
+            
+            progress_step = tiles / 50
+            for transect in range(tiles):
+                if transect % progress_step == 0:
+                    print '.',
+
+                source = array[transect_info[transect]['raw_positions']]
+                start = transect_info[transect]['clip_limits'][0]
+                shore = transect_info[transect]['clip_limits'][1]
+                end = transect_info[transect]['clip_limits'][2]
+
+                destination = transect_data_array[transect,:end-start]
+
+                source = interpolate_transect(source, i_side_fine, \
+                    args['model_resolution'], kind = 'nearest')
+                source = source[start:end,]
+                
+                # Compute the mask that will be used to update the values
+                mask = destination < source
+
+                # Save transect to file
+                destination[mask] = source[mask]
+            print('')
+
+            # Clean up
+            band = None
+            raster = None
+            array = None
+
+
             for field in args['shapefiles'][shp_type][shp_name]:
 
+                # Skip the field 'type'
+                if field.lower() == 'type':
+                    continue
+
+                # Get rid of the path and the extension
+                basename = os.path.splitext( \
+                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
+
                 # Extract data from the current raster field
+                field_id = args['field_index'][shp_type][field]
                 uri = args['shapefiles'][shp_type][shp_name][field]
                 raster = gdal.Open(uri)
                 band = raster.GetRasterBand(1)
                 array = band.ReadAsArray()
 
-                # Creating HDF5 file that will store the transect data
-                transect_data_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        basename + '_' + field + '.h5')
-                
                 LOGGER.info('Extracting transect information from ' + basename)
-
+                
                 progress_step = tiles / 50
                 for transect in range(tiles):
                     if transect % progress_step == 0:
                         print '.',
 
-                    data = array[transect_info[transect]['raw_positions']]
+                    source = array[transect_info[transect]['raw_positions']]
+                    destination = habitat_data_array[transect, field_id,:]
                     start = transect_info[transect]['clip_limits'][0]
                     shore = transect_info[transect]['clip_limits'][1]
                     end = transect_info[transect]['clip_limits'][2]
 
-                    data = interpolate_transect(data, \
-                        i_side_fine, \
-                        args['model_resolution'], \
-                        kind = 'nearest')
+                    source = interpolate_transect(source, i_side_fine, \
+                        args['model_resolution'], kind = 'nearest')
+                    source = source[start:end,]
                     
-                    data = data[start:end]
-
-                    # Save transect to file
-                    transect_data[transect,:data.size] = data
+                # Save transect to file
+                destination[mask] = source[mask]
                 print('')
 
                 # Close the raster before proceeding to the next one
@@ -312,34 +376,25 @@ def compute_transects(args):
                 raster = None
                 array = None
 
+
     # Add size and model resolution to the attributes
-    transect_data.attrs.create('transect_spacing', i_side_coarse)
-    transect_data.attrs.create('model_resolution', args['model_resolution'])
-    habitat_data.attrs.create('transect_spacing', i_side_coarse)
-    habitat_data.attrs.create('model_resolution', args['model_resolution'])
+    habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
+    habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
+    habitat_properties_dataset.attrs.create('transect_spacing', i_side_coarse)
+    habitat_properties_dataset.attrs.create('model_resolution', args['model_resolution'])
     
-    # We're done, we close the file
-    f.close()
-
-
-    LOGGER.debug('found %i tiles.' % tiles)
 
     # Store shore information gathered during the computation
     transect_band.WriteArray(transects)
     transect_band = None
     transect_raster = None
 
-    ## Interpolate the shoreline using transect sections
-    #LOGGER.debug('interpolating...')
-    #points = np.where(shore_profile != shore_nodata)
-    #values = shore_profile[points]
-    #grid_i, grid_j = np.mgrid[0:row_count, 0:col_count]
 
-    #shore_profile = interpolate.griddata(points, values, (grid_i, grid_j), method='nearest')
-    #LOGGER.debug('interpolation done.')
-    #shore_band.WriteArray(shore_profile)
-    #shore_band = None
-    #shore_raster = None
+    # We're done, we close the file
+    habitat_type_dataset = None
+    habitat_properties_dataset = None
+    habitat_type_file.close()
+    habitat_properties_file.close()
         
     return
 
