@@ -688,6 +688,7 @@ def clip_project_align_dataset_uri(unclipped_uri, reference_uri, clipped_uri, al
 
 
 def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignore_nodata=True):
+    nodata = raster_utils.get_nodata_from_uri(value_dataset_uri)
     #get unique counts
     counts = raster_utils.unique_raster_values_count(reference_dataset_uri, ignore_nodata=False)
 
@@ -712,6 +713,6 @@ def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignor
 
     value_sums = copy.copy(counts)    
     for v, n, i in zip(reference_values, reference_counts, reference_cumulative_counts):
-        value_sums[v] = numpy.sum(value_array[index[i:i+n]])
+        value_sums[v] = numpy.sum(value_array[index[i:i+n]][value_array[index[i:i+n]] != nodata])
 
     return value_sums
