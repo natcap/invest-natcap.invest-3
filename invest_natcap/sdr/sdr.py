@@ -343,17 +343,62 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculate sediment retention')
-    def sediment_retention_op(rkls, usle, stream_factor, sdr_factor):
-        nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (stream_factor == stream_nodata) | (sdr_factor == sdr_nodata)
+    d_up_bare_soil_uri = os.path.join(intermediate_dir, 'd_up_bare_soil%s.tif' % file_suffix)
+    d_up_nodata = -1.0
+    def d_up_bare_soil_op(s_bar, flow_accumulation):
+        """Calculate the d_up index for bare soil
+            1.0 * s_bar * sqrt(upstream area) """
+        d_up_array = s_bar * numpy.sqrt(flow_accumulation * cell_area)
         return numpy.where(
-            nodata_mask, nodata_sediment_retention, (rkls - usle) * sdr_factor * (1 - stream_factor))
-    
+            (s_bar != s_bar_nodata) & 
+            (flow_accumulation != flow_accumulation_nodata), d_up_array,
+            d_up_nodata)
+    raster_utils.vectorize_datasets(
+        [s_bar_uri, flow_accumulation_uri], d_up_bare_soil_op, d_up_bare_soil_uri, 
+        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    ic_factor_bare_soil_uri = os.path.join(
+        intermediate_dir, 'ic_factor_bare_soil%s.tif' % file_suffix)
+    ic_bare_soil_nodata = -9999.0
+    def ic_bare_soil_op(d_up_bare_soil, d_dn):
+        nodata_mask = (d_up_bare_soil == d_up_nodata) | (d_dn == d_dn_nodata)
+        return numpy.where(
+            nodata_mask, ic_nodata, numpy.log10(d_up_bare_soil/d_dn))
+    raster_utils.vectorize_datasets(
+        [d_up_bare_soil_uri, d_dn_uri], ic_bare_soil_op, ic_factor_bare_soil_uri, 
+        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    sdr_factor_bare_soil_uri = os.path.join(intermediate_dir, 'sdr_factor_bare_soil%s.tif' % file_suffix)
+    def sdr_bare_soil_op(ic_bare_soil_factor, stream):
+        nodata_mask = (ic_bare_soil_factor == ic_nodata)
+        sdr_bare_soil = numpy.where(
+            nodata_mask, sdr_nodata, sdr_max/(1+numpy.exp((ic_0-ic_bare_soil_factor)/k)))
+        #mask out the stream layer
+        return numpy.where(stream == 1, 0.0, sdr_bare_soil)
+
+    raster_utils.vectorize_datasets(
+        [ic_factor_bare_soil_uri, stream_uri], sdr_bare_soil_op, sdr_factor_bare_soil_uri, 
+        gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+    def sediment_retention_bare_soil_op(rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
+        nodata_mask = (
+            (rkls == nodata_rkls) | (usle == nodata_usle) |
+            (stream_factor == stream_nodata) | (sdr_factor == sdr_nodata) | 
+            (sdr_factor_bare_soil == sdr_nodata))
+        return numpy.where(
+            nodata_mask, nodata_sediment_retention,
+            (rkls * sdr_factor_bare_soil - usle * sdr_factor) * (1 - stream_factor))
+
     nodata_sediment_retention = -1
-    sed_retention_uri = os.path.join(
+    sed_retention_bare_soil_uri = os.path.join(
         intermediate_dir, 'sed_retention%s.tif' % file_suffix)
 
     raster_utils.vectorize_datasets(
-        [rkls_uri, usle_uri, stream_uri, sdr_factor_uri], sediment_retention_op, sed_retention_uri,
+        [rkls_uri, usle_uri, stream_uri, sdr_factor_uri, sdr_factor_bare_soil_uri],
+        sediment_retention_bare_soil_op, sed_retention_bare_soil_uri,
         gdal.GDT_Float32, nodata_sediment_retention, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
@@ -364,7 +409,7 @@ def execute(args):
     field_summaries = {
         'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
-        'sed_retent': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
+        'sed_retent': raster_utils.aggregate_raster_values_uri(sed_retention_bare_soil_uri, args['watersheds_uri'], 'ws_id').total,
         }
 
     original_datasource = ogr.Open(args['watersheds_uri'])
