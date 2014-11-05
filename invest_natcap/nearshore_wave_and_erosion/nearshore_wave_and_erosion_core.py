@@ -157,7 +157,7 @@ def compute_transects(args):
                     if shore_pts[0].size:
 
                         # Store shore position
-                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = 2
+                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
 
                         # Estimate shore orientation
                         shore_orientations = \
@@ -178,7 +178,7 @@ def compute_transects(args):
 
                         # Store every transect position at this point 
                         # so we know what transects are discarded later on
-                        transects[transect_position] = -10
+                        #transects[transect_position] = 50
 
                         # Compute transect orientation
                         transect_orientation = \
@@ -199,9 +199,10 @@ def compute_transects(args):
                             args['max_profile_length'])
 
                         # Interpolate transect to the model resolution
-                        interpolated_depths = \
-                            interpolate_transect(raw_depths, i_side_fine, \
-                                args['model_resolution'])
+                        interpolated_depths = raw_depths
+#                        interpolated_depths = \
+#                            interpolate_transect(raw_depths, i_side_fine, \
+#                                args['model_resolution'])
 
                         # Not enough values for interpolation
                         if interpolated_depths is None:
@@ -213,9 +214,10 @@ def compute_transects(args):
                                 args['smoothing_percentage'])
 
                         # Clip transect
+#                        print('size before', smoothed_depths.size)
                         (clipped_transect, (start, shore, end)) = \
-                            clip_transect(smoothed_depths, raw_depths, \
-                                interpolated_depths)
+                            clip_transect(smoothed_depths)
+#                        print('size after', clipped_transect.size)
 
                         # Transect could be invalid, skip it
                         if clipped_transect is None:
@@ -231,8 +233,8 @@ def compute_transects(args):
                         if (end - start) > max_transect_length:
                             max_transect_length = end - start
                         
-                        ## Store transect information
-                        #transects[transect_position] = 4
+                        # Store transect information
+                        transects[transect_position] = tiles
                         #position1 = \
                         #    (transect_position + \
                         #        transect_orientation).astype(int)
@@ -241,7 +243,9 @@ def compute_transects(args):
                         #        transect_orientation * 3).astype(int)
                         #transects[position1[0], position1[1]] = 6
                         #transects[position3[0], position3[1]] = 8
-                        #transects[raw_positions] = raw_depths
+                        #transects[raw_positions] = 100 + tiles #raw_depths
+                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
+                            tiles #raw_depths
 
                         ## Will reconstruct the shore from this information
                         #shore_profile[raw_positions] = raw_depths
@@ -294,7 +298,6 @@ def compute_transects(args):
             # Get rid of the path and the extension
             basename = os.path.splitext(os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
 
-
             # Extract the type for this shapefile
             type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
 
@@ -316,9 +319,13 @@ def compute_transects(args):
 
                 destination = transect_data_array[transect,:end-start]
 
-                source = interpolate_transect(source, i_side_fine, \
-                    args['model_resolution'], kind = 'nearest')
+#                source = interpolate_transect(source, i_side_fine, \
+#                    args['model_resolution'], kind = 'nearest')
                 source = source[start:end,]
+
+#                source = \
+#                    apply_habitat_constraints(source, args['habitat_information'])
+#                sys.exit(0)
                 
                 # Compute the mask that will be used to update the values
                 mask = destination < source
@@ -363,8 +370,8 @@ def compute_transects(args):
                     shore = transect_info[transect]['clip_limits'][1]
                     end = transect_info[transect]['clip_limits'][2]
 
-                    source = interpolate_transect(source, i_side_fine, \
-                        args['model_resolution'], kind = 'nearest')
+#                    source = interpolate_transect(source, i_side_fine, \
+#                        args['model_resolution'], kind = 'nearest')
                     source = source[start:end,]
                     
                 # Save transect to file
@@ -391,6 +398,7 @@ def compute_transects(args):
     transect_band.WriteArray(transects)
     transect_band = None
     transect_raster = None
+    raster_utils.calculate_raster_stats_uri(args['transects_uri'])
 
 
     # We're done, we close the file
@@ -400,6 +408,20 @@ def compute_transects(args):
     habitat_properties_file.close()
         
     return
+
+def apply_habitat_constraints(habitat, constraints):
+    print('transect size', habitat.size)
+
+    habitat_types = np.unique(habitat).astype(int)
+    
+    print('habitat types', habitat_types)
+
+    for habitat_type in habitat_types:
+        print('habitat_type', habitat_type)
+        if (habitat_type >= 0) and (habitat_type < len(constraints)):
+            print('constraints', constraints[habitat_type])
+
+    return habitat
 
 
 def compute_shore_orientation(shore, shore_pts, i_base, j_base):
@@ -696,11 +718,11 @@ def smooth_transect(transect, window_size_pct):
 
     return y[window_length:-window_length+1] 
 
-def clip_transect(transect, raw_depths, interpolated_depths):
+def clip_transect(transect):
     """Clip transect using maximum and minimum heights"""
     # Return if transect size is 1
     if transect.size == 1:
-        return (transect, (0, 1))
+        return (transect, (0, 0, 1))
 
     # Return if transect is full of zeros, otherwise break
     uniques = np.unique(transect)
@@ -722,15 +744,19 @@ def clip_transect(transect, raw_depths, interpolated_depths):
 
     # Find water extent
     water_extent = 1
+#    print('transect size', transect.size)
+#    print('shore', shore)
     while transect[shore - 1 + water_extent] <= 0:
-        water_extent += 1
         # Stop if reached the end of the transect
         if shore + water_extent == transect.size:
             break
+        # Else, proceed to the next pixel
+        water_extent += 1
 
     # Compute the extremes on the valid portion only
     highest_point = np.argmax(transect[:shore])
     lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
+#    print('highest, lowest', (highest_point, lowest_point))
 
     assert highest_point < lowest_point
 
