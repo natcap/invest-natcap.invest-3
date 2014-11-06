@@ -631,9 +631,9 @@ def _generate_results_csv(vars_dict):
 
         # Give Total Harvest for Each Cycle
         csv_writer.writerow([])
-        csv_writer.writerow(['Cycle Breakdown'])
+        csv_writer.writerow(['Timestep Breakdown'])
         csv_writer.writerow([])
-        csv_writer.writerow(['Cycle', 'Spawners', 'Harvest', 'Equilibrated?'])
+        csv_writer.writerow(['Timestep', 'Spawners', 'Harvest', 'Equilibrated?'])
 
         for i in range(0, len(H_tx)):  # i is a cycle
             line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
