@@ -821,11 +821,9 @@ def execute(args):
 
     #aggregating arrays
     aggregated_rasters = {}
-    aggregated_rasters[raster_table_field_yield] = crop_production_core.unique_raster_mask_value_sum(reclass_crop_cover_uri,
-                                                                                                     yield_uri)
-
+    value_sums, nodata_sums = crop_production_core.unique_raster_mask_value_sum(reclass_crop_cover_uri,
+                                                                                yield_uri)
     #metadata
-
     start_time = datetime.datetime.strptime(args["_iui_meta"]["logfile"]["timestamp"], "%Y-%m-%d--%H_%M_%S")
     finish_time = datetime.datetime.fromtimestamp(int(math.floor(time.time())))
 
@@ -861,6 +859,20 @@ def execute(args):
 
         crop_labels[crop] = {"user_crop" : user_crops,
                              "description" : invest_description}
+
+    #masking nodata sums and creating notes partial nodata sums
+    existing_yield_nodata = []
+    for k in nodata_sums.keys():
+        if nodata_sums[k] == 2:
+            value_sums[k] = "NoData"
+        elif nodata_sums[k] == 1:
+            existing_yield_nodata.append(crop_labels[k]["description"])
+
+    if len(existing_yield_nodata) > 0:
+        existing_yield_nodata.sort()
+        existing_yield_nodata = "Note: Some existing yield nodata values for "+", ".join(existing_yield_nodata)
+    
+    aggregated_rasters[raster_table_field_yield] = value_sums
     
 
     #summary table        
@@ -1012,7 +1024,11 @@ def execute(args):
                     'columns':production_columns,
                     'key':'Crop Id',
                     'data': production_data,
-                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},                
+                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},
+                {
+                    'type' : 'text',
+                    'section': 'body',
+                    'text' : existing_yield_nodata},
                 {
                     'type': 'text',
                     'section': 'body',
