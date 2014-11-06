@@ -329,14 +329,14 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
         'H_tx': np.array([...]),  # Index Order: time, region
         'V_tx': np.array([...]),  # Index Order: time, region
         'Spawners_t': np,array([...]),
-        'equilibrate_cycle': <int>,
+        'equilibrate_timestep': <int>,
     }
     '''
     N_tasx = vars_dict['N_tasx']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
     Spawners_t = vars_dict['Spawners_t']
-    equilibrate_cycle = False
+    equilibrate_timestep = False
     subset_size = 10
 
     # Set Initial Conditions for Population
@@ -350,9 +350,9 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
             H_x, V_x = harvest_func(N_tasx[i])
             H_tx[i] = H_x
             V_tx[i] = V_x
-        if not equilibrate_cycle and i >= subset_size and _is_equilibrated(H_tx, i, subset_size=subset_size):
-            equilibrate_cycle = i
-            LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
+        if not equilibrate_timestep and i >= subset_size and _is_equilibrated(H_tx, i, subset_size=subset_size):
+            equilibrate_timestep = i
+            LOGGER.info('Model Equilibrated at Timestep %i', equilibrate_timestep)
         # Find Numbers for Next Population
         N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
         N_tasx[i+1] = N_next
@@ -362,16 +362,16 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
         H_x, V_x = harvest_func(N_tasx[-1])
         H_tx[-1] = H_x
         V_tx[-1] = V_x
-    if not equilibrate_cycle and len(N_tasx) >= subset_size and _is_equilibrated(H_tx, len(N_tasx)-1, subset_size=subset_size):
-        equilibrate_cycle = len(N_tasx)
-        LOGGER.info('Model Equilibrated at Cycle %i', equilibrate_cycle)
+    if not equilibrate_timestep and len(N_tasx) >= subset_size and _is_equilibrated(H_tx, len(N_tasx)-1, subset_size=subset_size):
+        equilibrate_timestep = len(N_tasx)
+        LOGGER.info('Model Equilibrated at Timestep %i', equilibrate_timestep)
 
     # Store Results in Variables Dictionary
     vars_dict['N_tasx'] = N_tasx
     vars_dict['H_tx'] = H_tx
     vars_dict['V_tx'] = V_tx
     vars_dict['Spawners_t'] = Spawners_t
-    vars_dict['equilibrate_cycle'] = equilibrate_cycle
+    vars_dict['equilibrate_timestep'] = equilibrate_timestep
 
     return vars_dict
 

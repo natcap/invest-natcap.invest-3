@@ -36,7 +36,7 @@
                         "layers": [{"name": {"inheritFrom": "file"}}],
 		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
-                    "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
+                    "helpText": "(Optional) The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
                 },
                 {
                     "id" : "total_timesteps",
@@ -71,7 +71,7 @@
                             "options" : ["Age-Based", "Stage-Based"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the classes provided in the Population Parameters CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length timesteps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided timestep.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+                            "helpText": "Specifies whether the classes provided in the Population Attributes CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length timesteps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided timestep.<br><br>If the stage-based model is selected, the Population Attributes CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
                         },
                         {
                             "id" : "sexsp",
@@ -89,10 +89,10 @@
                             "id" : "population_csv_uri",
                             "args_id" : "population_csv_uri",
                             "type": "file",
-                            "label": "Population Parameters File (CSV)",
+                            "label": "Population Attributes File (CSV)",
                             "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
                             "required": true,
-                            "helpText": "The provided CSV file should contain all necessary parameters for population classes based on age/stage, sex, and area - excluding possible migration parameters.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+                            "helpText": "The provided CSV file should contain all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
                         }
                     ]
                 }
@@ -128,7 +128,7 @@
                             "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each timestep. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Parameters CSV File indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Timestep’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
+                            "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each timestep. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Attributes CSV File indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Timestep’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
                         },
                         {
                             "id" : "spawn_units",
@@ -140,7 +140,7 @@
                             "options" : ["Individuals", "Weight"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Parameters CSV file. The 'Alpha' and 'Beta' parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+                            "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Attributes CSV file. The 'Alpha' and 'Beta' parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
                         },
                         {
                             "id" : "alpha",
@@ -198,7 +198,7 @@
                             "defaultValue": "../Fisheries/Input/MigrationFolder/",
                             "required": false,
                             "validateAs": {"type": "folder"},
-                            "helpText": "The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an age/stage that migrates.  The folder should contain one CSV file for each age/stage that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
+                            "helpText": "(Optional) The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an age/stage that migrates.  The folder should contain one CSV file for each age/stage that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Attributes CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
                         }
                     ]
                 }
@@ -225,7 +225,7 @@
                             "options" : ["Individuals", "Weight"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
+                            "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Attributes CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
                         },
                         {
                             "id" : "frac_post_process",
