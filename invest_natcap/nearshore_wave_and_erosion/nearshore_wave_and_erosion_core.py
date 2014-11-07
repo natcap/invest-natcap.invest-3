@@ -234,7 +234,7 @@ def compute_transects(args):
                             max_transect_length = end - start
                         
                         # Store transect information
-                        transects[transect_position] = tiles
+#                        transects[transect_position] = tiles
                         #position1 = \
                         #    (transect_position + \
                         #        transect_orientation).astype(int)
@@ -244,8 +244,8 @@ def compute_transects(args):
                         #transects[position1[0], position1[1]] = 6
                         #transects[position3[0], position3[1]] = 8
                         #transects[raw_positions] = 100 + tiles #raw_depths
-                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
-                            tiles #raw_depths
+#                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
+#                            tiles #raw_depths
 
                         ## Will reconstruct the shore from this information
                         #shore_profile[raw_positions] = raw_depths
@@ -312,16 +312,23 @@ def compute_transects(args):
                 if transect % progress_step == 0:
                     print '.',
 
-                source = array[transect_info[transect]['raw_positions']]
+                raw_positions = transect_info[transect]['raw_positions']
+#                print('raw_positions', raw_positions[0].size)
+                
+                source = array[raw_positions]
+
                 start = transect_info[transect]['clip_limits'][0]
                 shore = transect_info[transect]['clip_limits'][1]
                 end = transect_info[transect]['clip_limits'][2]
+                print('start, shore, end', (start, shore, end))
 
                 destination = transect_data_array[transect,:end-start]
+                print('destination', destination)
 
 #                source = interpolate_transect(source, i_side_fine, \
 #                    args['model_resolution'], kind = 'nearest')
                 source = source[start:end,]
+                print('source', source)
 
 #                source = \
 #                    apply_habitat_constraints(source, args['habitat_information'])
@@ -329,9 +336,24 @@ def compute_transects(args):
                 
                 # Compute the mask that will be used to update the values
                 mask = destination < source
+                print('mask', mask)
+#                print('mask size', np.sum(mask.astype(int)))
 
                 # Save transect to file
                 destination[mask] = source[mask]
+                print('new destination', destination)
+
+                clipped_positions = \
+                    (raw_positions[0][start:end], raw_positions[1][start:end])
+#                print('clipped_positions', clipped_positions[0].size)
+
+                masked_positions = \
+                    (clipped_positions[0][mask], clipped_positions[1][mask])
+#                print('masked_positions', masked_positions[0].size)
+                
+                transects[masked_positions] = source[mask]
+#                print('')
+                sys.exit(0)
             print('')
 
             # Clean up
@@ -364,7 +386,11 @@ def compute_transects(args):
                     if transect % progress_step == 0:
                         print '.',
 
-                    source = array[transect_info[transect]['raw_positions']]
+                    raw_positions = transect_info[transect]['raw_positions']
+#                    print('raw_positions', raw_positions[0].size)
+                    
+                    source = array[raw_positions]
+
                     destination = habitat_data_array[transect, field_id,:]
                     start = transect_info[transect]['clip_limits'][0]
                     shore = transect_info[transect]['clip_limits'][1]
@@ -374,8 +400,19 @@ def compute_transects(args):
 #                        args['model_resolution'], kind = 'nearest')
                     source = source[start:end,]
                     
-                # Save transect to file
-                destination[mask] = source[mask]
+                    # Save transect to file
+                    destination[mask] = source[mask]
+
+                    clipped_positions = \
+                        (raw_positions[0][start:end], raw_positions[1][start:end])
+#                    print('clipped_positions', clipped_positions[0].size)
+
+                    masked_positions = \
+                        (clipped_positions[0][mask], clipped_positions[1][mask])
+#                    print('masked_positions', masked_positions[0].size)
+                    
+                    transects[masked_positions] = source[mask]
+#                    print('')
                 print('')
 
                 # Close the raster before proceeding to the next one
