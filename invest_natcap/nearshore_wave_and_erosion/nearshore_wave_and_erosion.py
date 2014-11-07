@@ -505,16 +505,16 @@ def execute(args):
     #   -subsequent entries: ('field_name':field_value)
     #
     args['habitat_information'] = [\
-        ('land polygon',{'habitat':'land polygon'}), \
-        ('kelp',        {'habitat':'seagrass', 'type':1}), \
-        ('seagrass',    {'habitat':'seagrass', 'type':2}), \
-        ('underwater structures', {'habitat':'underwater structures'}), \
-        ('coral reef',  {'habitat':'coral reef'}), \
-        ('levee',       {'habitat':'man-made structure', 'type':5}), \
-        ('beach',       {'habitat':'beach'}), \
-        ('seawall',     {'habitat':'man-made structure', 'type':7}), \
-        ('marsh',       {'habitat':'marsh'}), \
-        ('mangrove',    {'habitat':'mangrove'}) \
+        ('land polygon',          {'habitat':'land polygon'},                 {}), \
+        ('kelp',                  {'habitat':'seagrass', 'type':1},           {'water':0.}), \
+        ('seagrass',              {'habitat':'seagrass', 'type':2},           {'land':0.}), \
+        ('underwater structures', {'habitat':'underwater structures'},        {'land':0.}), \
+        ('coral reef',            {'habitat':'coral reef'},                   {'land':0.}), \
+        ('levee',                 {'habitat':'man-made structure', 'type':5}, {'land':-50.0}), \
+        ('beach',                 {'habitat':'beach'},                        {'MHHW':1, 'MLLW':1}), \
+        ('seawall',               {'habitat':'man-made structure', 'type':7}, {'land':25.0, 'water':25.0}), \
+        ('marsh',                 {'habitat':'marsh'},                        {'MLLW':2}), \
+        ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2}) \
         ]
 
     # Build the habitats name--priority mapping
