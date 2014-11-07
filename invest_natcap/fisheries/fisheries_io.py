@@ -91,7 +91,7 @@ def fetch_verify_args(args):
 
 
 def _verify_population_csv(args):
-    '''Parses and verifies inputs from the population parameters csv file.
+    '''Parses and verifies inputs from the population attributes csv file.
     If not all necessary vectors are included, the function will raise a
     MissingParameter exception
 
@@ -131,28 +131,28 @@ def _verify_population_csv(args):
                         'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.error("Population Parameters File does not contain all necessary parameters")
-        raise MissingParameter("Population Parameters File does not contain all necessary parameters")
+        LOGGER.error("Population Attributes File does not contain all necessary parameters")
+        raise MissingParameter("Population Attributes File does not contain all necessary parameters")
 
     if (args['recruitment_type'] != 'Fixed') and ('Maturity' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
-        raise MissingParameter("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
+        LOGGER.error("Population Attributes File must contain a 'Maturity' vector when running the given recruitment function")
+        raise MissingParameter("Population Attributes File must contain a 'Maturity' vector when running the given recruitment function")
 
     if (args['population_type'] == 'Stage-Based') and ('Duration' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
-        raise MissingParameter("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
+        LOGGER.error("Population Attributes File must contain a 'Duration' vector when running Stage-Based models")
+        raise MissingParameter("Population Attributes File must contain a 'Duration' vector when running Stage-Based models")
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
-        LOGGER.error("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
-        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
+        LOGGER.error("Population Attributes File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
+        raise MissingParameter("Population Attributes File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
 
     if (args['harvest_units'] == 'Weight') and ('Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
-        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
+        LOGGER.error("Population Attributes File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
+        raise MissingParameter("Population Attributes File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
 
     if (args['recruitment_type'] == 'Fecundity' and 'Fecundity' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
-        raise MissingParameter("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+        LOGGER.error("Population Attributes File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+        raise MissingParameter("Population Attributes File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -196,7 +196,7 @@ def _verify_population_csv(args):
 
 
 def _parse_population_csv(uri, sexsp):
-    '''Parses the given population parameters csv file and returns a dictionary
+    '''Parses the given population attributes csv file and returns a dictionary
     of lists, arrays, and matrices
 
     **Notes**
@@ -357,7 +357,7 @@ def _parse_migration_tables(args, class_list):
                     mig_dict[class_name] = Migration
                 else:
                     # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Parameters File. This could result in no migration for a class with expected migration.", class_name.capitalize())
+                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Attributes File. This could result in no migration for a class with expected migration.", class_name.capitalize())
 
         except:
             LOGGER.warning("Issue parsing at least one migration table")
@@ -606,7 +606,7 @@ def _generate_results_csv(vars_dict):
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    equilibrate_cycle = int(vars_dict['equilibrate_cycle'])
+    equilibrate_timestep = int(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
     with open(uri, 'wb') as csv_file:
@@ -617,7 +617,7 @@ def _generate_results_csv(vars_dict):
         #Header for final results table
         csv_writer.writerow(
             ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
-                ' Cycles'])
+                ' Timesteps'])
         csv_writer.writerow([])
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
@@ -631,14 +631,14 @@ def _generate_results_csv(vars_dict):
 
         # Give Total Harvest for Each Cycle
         csv_writer.writerow([])
-        csv_writer.writerow(['Cycle Breakdown'])
+        csv_writer.writerow(['Timestep Breakdown'])
         csv_writer.writerow([])
-        csv_writer.writerow(['Cycle', 'Spawners', 'Harvest', 'Equilibrated?'])
+        csv_writer.writerow(['Timestep', 'Spawners', 'Harvest', 'Equilibrated?'])
 
         for i in range(0, len(H_tx)):  # i is a cycle
             line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
             # This can be more rigorously checked
-            if equilibrate_cycle and i >= equilibrate_cycle:
+            if equilibrate_timestep and i >= equilibrate_timestep:
                 line.append('Y')
             else:
                 line.append('N')
@@ -650,7 +650,7 @@ def _generate_intermediate_csv(vars_dict):
     individuals within each area for each cycle for each age/stage.
     '''
     uri = os.path.join(
-        vars_dict['intermediate_dir'], 'Intermediate_Population_Numbers.csv')
+        vars_dict['intermediate_dir'], 'Population_by_Timestep.csv')
     Regions = vars_dict['Regions']
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
@@ -690,7 +690,7 @@ def _generate_results_html(vars_dict):
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    equilibrate_cycle = int(vars_dict['equilibrate_cycle'])
+    equilibrate_timestep = int(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
     # Set Reporting Arguments
@@ -706,23 +706,25 @@ def _generate_results_html(vars_dict):
     final_cycle_columns = [{'name': 'Subregion', 'total': False},
                            {'name': 'Harvest', 'total': True},
                            {'name': 'Value', 'total': True}]
-    final_cycle_body = []
+
+    final_timestep_body = []
     for i in range(0, len(H_tx[-1])):  # i is a cycle
         sub_dict = {}
         sub_dict['Subregion'] = Regions[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
         sub_dict['Value'] = "%.2f" % V_tx[-1, i]
-        final_cycle_body.append(sub_dict)
+        final_timestep_body.append(sub_dict)
 
-    # Create Harvest Cycle Breakdown Table
-    cycle_breakdown_columns = [{'name': 'Cycle', 'total': False},
+    # Create Harvest Timestep Table
+    timestep_breakdown_columns = [{'name': 'Timestep', 'total': False},
                                {'name': 'Spawners', 'total': True},
                                {'name': 'Harvest', 'total': True},
                                {'name': 'Equilibrated?', 'total': False}]
-    cycle_breakdown_body = []
-    for i in range(0, total_timesteps):  # i is a cycle
+
+    timestep_breakdown_body = []
+    for i in range(0, total_timesteps):
         sub_dict = {}
-        sub_dict['Cycle'] = str(i)
+        sub_dict['Timestep'] = str(i)
         if i == 0:
             sub_dict['Spawners'] = "(none)"
         elif recruitment_type == 'Fixed':
@@ -731,11 +733,11 @@ def _generate_results_html(vars_dict):
             sub_dict['Spawners'] = "%.2f" % Spawners_t[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[i].sum()
         # This can be more rigorously checked
-        if equilibrate_cycle and i >= equilibrate_cycle:
+        if equilibrate_timestep and i >= equilibrate_timestep:
             sub_dict['Equilibrated?'] = 'Y'
         else:
             sub_dict['Equilibrated?'] = 'N'
-        cycle_breakdown_body.append(sub_dict)
+        timestep_breakdown_body.append(sub_dict)
 
     # Generate Report
     css = """body { background-color: #EFECCA; color: #002F2F; }
@@ -752,7 +754,7 @@ def _generate_results_html(vars_dict):
                 'type': 'text',
                 'section': 'body',
                 'text': '<h2>Final Harvest by Subregion After ' +
-                        str(total_timesteps-1) + ' Cycles</h2>'},
+                        str(total_timesteps-1) + ' Timesteps</h2>'},
                 {
                     'type': 'table',
                     'section': 'body',
@@ -761,12 +763,12 @@ def _generate_results_html(vars_dict):
                     'total': True,
                     'data_type': 'dictionary',
                     'columns': final_cycle_columns,
-                    'data': final_cycle_body
+                    'data': final_timestep_body
                 },
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Cycle Breakdown</h2>'
+                    'text': '<h2>Timestep Breakdown</h2>'
                 },
                 {
                     'type': 'table',
@@ -775,8 +777,8 @@ def _generate_results_html(vars_dict):
                     'checkbox': False,
                     'total': False,
                     'data_type': 'dictionary',
-                    'columns': cycle_breakdown_columns,
-                    'data': cycle_breakdown_body
+                    'columns': timestep_breakdown_columns,
+                    'data': timestep_breakdown_body
                 },
                 {
                     'type': 'head',
@@ -813,20 +815,23 @@ def _generate_results_aoi(vars_dict):
     ds = ogr.Open(output_aoi_uri, update=1)
     layer = ds.GetLayer()
 
+    # Set Harvest
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
     layer.CreateField(harvest_field)
-
-    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
-    layer.CreateField(val_field)
 
     harv_reg_dict = {}
     for i in range(0, len(Regions)):
         harv_reg_dict[Regions[i]] = H_tx[-1][i]
 
+    # Set Valuation
+    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+    layer.CreateField(val_field)
+
     val_reg_dict = {}
     for i in range(0, len(Regions)):
         val_reg_dict[Regions[i]] = V_tx[-1][i]
 
+    # Add Information to Shapefile
     for feature in layer:
         region_name = str(feature.items()['NAME'])
         feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])

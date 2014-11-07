@@ -1108,7 +1108,7 @@ def extract_band_and_nodata(dataset, get_array=False):
     nodata = band.GetNoDataValue()
 
     #gdal has strange behaviors with nodata and byte rasters, this packs it into the right space
-    if band.DataType == gdal.GDT_Byte:
+    if band.DataType == gdal.GDT_Byte and nodata is not None:
         nodata = nodata % 256
 
     if get_array:
