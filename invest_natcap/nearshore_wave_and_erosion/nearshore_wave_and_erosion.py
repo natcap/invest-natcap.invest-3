@@ -14,7 +14,7 @@ import nearshore_wave_and_erosion_core
 
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
-LOGGER = logging.getLogger('coastal_vulnerability_core')
+LOGGER = logging.getLogger('nearshore_wave_and_erosion')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -473,12 +473,14 @@ def execute(args):
     args['max_land_profile_height'] = 20 # Maximum inland elevation
 
     # Preprocess the landmass
-    args['landmass_raster_uri'] = os.path.join(args['intermediate_dir'], 'landmass.tif')
+    args['landmass_raster_uri'] = \
+        os.path.join(args['intermediate_dir'], 'landmass.tif')
     if not os.path.isfile(args['landmass_raster_uri']):
         LOGGER.debug('Pre-processing landmass...')
         preprocess_polygon_datasource(args['landmass_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
+        shutil.copy()
 
     # Preprocessing the AOI
     args['aoi_raster_uri'] = os.path.join(args['intermediate_dir'], 'aoi.tif')
@@ -488,8 +490,22 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
+        # Set data to zero
+        def set_to_zero(x):
+            x[x != nodata] = 0.
+
+        cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
+        nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+        
+        temporary_filename = raster_utils.temporary_filename(suffix='.tif')
+        raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
+            temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
+            vectorize_op = False)
+        os.remove()
+
     # Preprocess bathymetry
-    args['bathymetry_raster_uri'] = os.path.join(args['intermediate_dir'], 'bathymetry.tif')
+    args['bathymetry_raster_uri'] = \
+        os.path.join(args['intermediate_dir'], 'bathymetry.tif')
     if not os.path.isfile(args['bathymetry_raster_uri']):
         LOGGER.debug('Pre-processing bathymetry...')
         preprocess_dataset(args['bathymetry_uri'], \
@@ -659,11 +675,14 @@ def execute(args):
                         # Copy data over from most recent raster
                         shutil.copy(in_raster_list[-1], output_uri)
                         # Extract array
+                        nodata = raster_utils.get_nodata_from_uri(output_uri)
                         raster = gdal.Open(output_uri, gdal.GA_Update)
                         band = raster.GetRasterBand(1)
                         array = band.ReadAsArray()
                         # Overwrite data with priority value
-                        array[array >= 0] = args['habitat_priority'][(shapefile_type, None)]
+                        array[array != nodata] = args['habitat_priority'][(shapefile_type, None)]
+                        print('assigning', args['habitat_priority'][(shapefile_type, None)], \
+                            'to', basename + '_' + 'type' + '.tif')
                         band.WriteArray(array)
                         # clean-up
                         band = None
