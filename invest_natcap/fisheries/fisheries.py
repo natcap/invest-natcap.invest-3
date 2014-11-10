@@ -110,10 +110,5 @@ def execute(args):
     vars_dict = model.run_population_model(
         vars_dict, init_cond_func, cycle_func, harvest_func)
 
-    print "N_0"
-    pp.pprint(vars_dict['N_tasx'][0])
-    print "N_1"
-    pp.pprint(vars_dict['N_tasx'][1])
-
     # Generate Outputs
     io.generate_outputs(vars_dict)
