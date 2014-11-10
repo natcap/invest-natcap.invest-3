@@ -424,7 +424,7 @@ def _verify_single_params(args):
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
-        LOGGER.error("Total Timesteps value must be positive integer")
+        LOGGER.error("Total Time Steps value must be positive integer")
         raise ValueError
     params_dict['total_timesteps'] = total_timesteps + 1
 
@@ -449,7 +449,7 @@ def _verify_single_params(args):
             raise ValueError
         if args['total_recur_recruits'] < 0:
             LOGGER.error(
-                "Total Recruits per Timestep must be non-negative float")
+                "Total Recruits per Time Step must be non-negative float")
             raise ValueError
 
     # If Harvest:
@@ -617,11 +617,11 @@ def _generate_results_csv(vars_dict):
         #Header for final results table
         csv_writer.writerow(
             ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
-                ' Timesteps'])
+                ' Time Steps'])
         csv_writer.writerow([])
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
-        sum_headers_row = ['Subregion', 'Harvest', 'Value']
+        sum_headers_row = ['Subregion', 'Harvest', 'Valuation']
         csv_writer.writerow(sum_headers_row)
         for i in range(0, len(H_tx[-1])):  # i is a cycle
             line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
@@ -631,9 +631,9 @@ def _generate_results_csv(vars_dict):
 
         # Give Total Harvest for Each Cycle
         csv_writer.writerow([])
-        csv_writer.writerow(['Timestep Breakdown'])
+        csv_writer.writerow(['Time Step Breakdown'])
         csv_writer.writerow([])
-        csv_writer.writerow(['Timestep', 'Spawners', 'Harvest', 'Equilibrated?'])
+        csv_writer.writerow(['Time Step', 'Spawners', 'Harvest', 'Equilibrated?'])
 
         for i in range(0, len(H_tx)):  # i is a cycle
             line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
@@ -650,7 +650,7 @@ def _generate_intermediate_csv(vars_dict):
     individuals within each area for each cycle for each age/stage.
     '''
     uri = os.path.join(
-        vars_dict['intermediate_dir'], 'Population_by_Timestep.csv')
+        vars_dict['intermediate_dir'], 'Population_by_Time_Step.csv')
     Regions = vars_dict['Regions']
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
@@ -661,10 +661,10 @@ def _generate_intermediate_csv(vars_dict):
     with open(uri, 'wb') as c_file:
         # c_writer = csv.writer(c_file)
         if sexsp == 2:
-            line = "Timestep, Region, Class, Sex, Numbers\n"
+            line = "Time Step, Region, Class, Sex, Numbers\n"
             c_file.write(line)
         else:
-            line = "Timestep, Region, Class, Numbers\n"
+            line = "Time Step, Region, Class, Numbers\n"
             c_file.write(line)
 
         for t in range(0, len(N_txsa)):
@@ -702,21 +702,34 @@ def _generate_results_html(vars_dict):
 
     total_timesteps = len(H_tx)
 
+    # Create Model Run Overview Table
+    overview_columns = [{'name': 'Attribute', 'total': False},
+                        {'name': 'Value', 'total': False}]
+
+    overview_body = [
+        {'Attribute': 'Model Type', 'Value': vars_dict['population_type']},
+        {'Attribute': 'Recruitment Type', 'Value': vars_dict['recruitment_type']},
+        {'Attribute': 'Sex-Specific?', 'Value': (
+            'Yes' if vars_dict['sexsp'] == 2 else 'No')},
+        {'Attribute': 'Classes', 'Value': str(len(vars_dict['Classes']))},
+        {'Attribute': 'Regions', 'Value': str(len(Regions))},
+    ]
+
     # Create Final Cycle Harvest Summary Table
     final_cycle_columns = [{'name': 'Subregion', 'total': False},
                            {'name': 'Harvest', 'total': True},
-                           {'name': 'Value', 'total': True}]
+                           {'name': 'Valuation', 'total': True}]
 
     final_timestep_body = []
     for i in range(0, len(H_tx[-1])):  # i is a cycle
         sub_dict = {}
         sub_dict['Subregion'] = Regions[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
-        sub_dict['Value'] = "%.2f" % V_tx[-1, i]
+        sub_dict['Valuation'] = "%.2f" % V_tx[-1, i]
         final_timestep_body.append(sub_dict)
 
-    # Create Harvest Timestep Table
-    timestep_breakdown_columns = [{'name': 'Timestep', 'total': False},
+    # Create Harvest Time Step Table
+    timestep_breakdown_columns = [{'name': 'Time Step', 'total': False},
                                {'name': 'Spawners', 'total': True},
                                {'name': 'Harvest', 'total': True},
                                {'name': 'Equilibrated?', 'total': False}]
@@ -724,7 +737,7 @@ def _generate_results_html(vars_dict):
     timestep_breakdown_body = []
     for i in range(0, total_timesteps):
         sub_dict = {}
-        sub_dict['Timestep'] = str(i)
+        sub_dict['Time Step'] = str(i)
         if i == 0:
             sub_dict['Spawners'] = "(none)"
         elif recruitment_type == 'Fixed':
@@ -753,8 +766,23 @@ def _generate_results_html(vars_dict):
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Final Harvest by Subregion After ' +
-                        str(total_timesteps-1) + ' Timesteps</h2>'},
+                'text': '<h2>Model Run Overview</h2>'
+                },
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type': 'dictionary',
+                    'columns': overview_columns,
+                    'data': overview_body
+                },
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Final Harvest by Subregion After ' +
+                            str(total_timesteps-1) + ' Time Steps</h2>'},
                 {
                     'type': 'table',
                     'section': 'body',
@@ -768,7 +796,7 @@ def _generate_results_html(vars_dict):
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Timestep Breakdown</h2>'
+                    'text': '<h2>Time Step Breakdown</h2>'
                 },
                 {
                     'type': 'table',
