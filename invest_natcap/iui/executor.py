@@ -333,7 +333,7 @@ class Executor(threading.Thread):
         def pkg_ver(name):
             try:
                 return __import__(name).__version__
-            except ImportError:
+            except (ImportError, AttributeError):
                 return '?'
         packages = [
             ('Cython', pkg_ver('Cython')),
