@@ -32,12 +32,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('crop_production')
 
-logging.getLogger("root").setLevel(logging.WARNING)
+#logging.getLogger("root").setLevel(logging.WARNING)
 logging.getLogger("raster_utils").setLevel(logging.ERROR)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
 logging.getLogger("invest_natcap.table_generator").setLevel(logging.WARNING)
 logging.getLogger("invest_natcap.reporting").setLevel(logging.WARNING)
-logging.getLogger("crop_production_core").setLevel(logging.INFO)
+#logging.getLogger("crop_production_core").setLevel(logging.INFO)
 
         
 def execute(args):
@@ -105,7 +105,7 @@ def execute(args):
 
     crop_production_name = "%i_prod.tif"
 
-    yield_percentile_name = "yield_percentile_%i.tif"
+    yield_percentile_name = "yield_percentile_%s.tif"
 
     intermediate_uri = os.path.join(workspace_dir, intermediate_dir)
 
@@ -595,103 +595,50 @@ def execute(args):
                       raster_path,
                       extent_4326_uri,
                       climate_uri)
+
+
+
+    #file_index_field_income_climate = "CBI_yield"
+    file_index_field_income_climate = "Income_Climate"
+    income_climate_field_key = "ClimateBin"
     
-    
+    for income_climate_field_income in ["HiIncomeYield",
+                                        "MedIncomeYield",
+                                        "LowIncomeYield",
+                                        "AllAreaYield"]:
+        
+        LOGGER.debug("Creating yield using %s.",
+                     income_climate_field_income)
+        
+        yield_uri = os.path.join(intermediate_uri,
+                                 yield_percentile_name % income_climate_field_income)
 
+        yield_op = crop_production_core.yield_closer(reclass_crop_cover_uri,
+                                                     climate_uri,
+                                                     raster_table_uri,
+                                                     raster_table_field_key,
+                                                     file_index_field_income_climate,
+                                                     income_climate_field_key,
+                                                     income_climate_field_income,
+                                                     raster_path,
+                                                     default_value = 0,
+                                                     nodata = -1,
+                                                     ignore_crop = 0,
+                                                     ignore_crop_value = -1,
+                                                     ignore_climate = 0,
+                                                     ignore_climate_value = 0)
 
-##    LOGGER.debug("Creating income raster.")
-##    income_uri = os.path.join(intermediate_uri, "income.tif")
-##
-##    clip_project_align_dataset_uri(args["income_raster"], reclass_crop_cover_uri, income_uri)
-
-    def percentile_yield_closer(reclass_crop_cover_uri,
-                                climate_uri,
-                                income_uri,
-                                file_index_uri,
-                                raster_path,
-                                file_index_field_key,
-                                file_index_field_percentile,
-                                percentile_field_key,
-                                percentile,
-                                default_value = 0,
-                                nodata = -1,
-                                ignore_crop=None):
-
-        file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
-        crop_types = list(raster_utils.unique_raster_values_count(reclass_crop_cover_uri).keys())
-
-        if ignore_crop != None:
-            try:
-                crop_types = set(crop_types)
-                crop_types.remove(ignore_crop)
-            except KeyError:
-                LOGGER.warning("Ignore crop %i not present.", ignore_crop)
-            crop_types = list(crop_types)
-            
-        yield_dict = {}
-        for crop in crop_types:
-            csv_uri = file_index[crop][file_index_field_percentile]
-            if csv_uri != "":
-                csv_uri = os.path.join(raster_path, csv_uri)
-                LOGGER.debug("Processing: %s", csv_uri)
-                yield_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
-                                                                    percentile_field_key)
-            else:
-                yield_dict[crop] = NoKeyErrorDict({}, nodata)
-
-        incomes = ["Nodata", "HiIncome%i", "MedIncome%i", "LowIncome%i", "AllIncome%i"]
-
-        nodata_list = [raster_utils.get_nodata_from_uri(raster) for raster in [reclass_crop_cover_uri,
-                                                                                climate_uri,
-                                                                                income_uri]]
-        def percentile_yield_op(crop, climate, income):
-            #print crop, climate, income
-            if any([apply(operator.eq, pair) for pair in zip([crop, climate, income], nodata_list)]):
-                return nodata
-            elif ignore_crop != None and crop == ignore_crop:
-                return default_value
-            elif income == 0 or climate == 0:
-                return nodata
-            else:
-                try:
-                    return float(yield_dict[int(crop)][int(climate)][incomes[int(income)] % percentile])
-                except ValueError:
-                    try:
-                        return float(yield_dict[crop][climate][incomes[4] % percentile])
-                    except ValueError:
-                        return default_value
-
-        return percentile_yield_op
-
-##    for percentile in [25, 50, 75, 95]:
-##        LOGGER.debug("Creating yield using %i percent.", percentile)
-##        yield_uri = os.path.join(intermediate_uri, yield_percentile_name % percentile)
-##
-##        percentile_yield_op = percentile_yield_closer(reclass_crop_cover_uri,
-##                                                      climate_uri,
-##                                                      income_uri,
-##                                                      raster_table_uri,
-##                                                      raster_path,
-##                                                      raster_table_field_key,
-##                                                      "CBI_yield",
-##                                                      "ClimateBin",
-##                                                      percentile,
-##                                                      default_value = 0,
-##                                                      nodata = -1,
-##                                                      ignore_crop = 0)
-##
-##        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
-##                                         climate_uri,
-##                                         income_uri],
-##                                        percentile_yield_op,
-##                                        yield_uri,
-##                                        gdal_type_float,
-##                                        nodata_float,
-##                                        cell_size,
-##                                        "dataset",
-##                                        dataset_to_bound_index=0,
-##                                        dataset_to_align_index=0)                                        
-##                                                      
+        raster_utils.vectorize_datasets([reclass_crop_cover_uri,
+                                         climate_uri],
+                                        yield_op,
+                                        yield_uri,
+                                        gdal_type_float,
+                                        nodata_float,
+                                        cell_size,
+                                        "dataset",
+                                        dataset_to_bound_index=0,
+                                        dataset_to_align_index=0)                                        
+                                                      
 
 
 ##    if args["enable_tab_modeled"]:
