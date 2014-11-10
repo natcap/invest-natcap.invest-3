@@ -723,3 +723,92 @@ def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignor
         value_sums[v] = numpy.sum(value_array[index[i:i+n]][value_array[index[i:i+n]] != nodata])
 
     return value_sums, nodata_sums
+
+def yield_closer(reclass_crop_cover_uri,
+                 climate_uri,
+                 file_index_uri,
+                 file_index_field_key,
+                 file_index_field_income_climate,
+                 income_climate_field_key,
+                 income_climate_field_income,
+                 raster_path,
+                 default_value = 0,
+                 nodata = -1,
+                 ignore_crop = 0,
+                 ignore_crop_value = -1,
+                 ignore_climate = 0,
+                 ignore_climate_value = 0):
+    """Creates a function that returns the yield based on
+    the crop, climate, income tuple.
+
+    Args:
+        reclass_crop_cover_uri (str): The path for the reclassed crop cover raster
+        climate_uri (str): The path for the mosaicked climate raster
+        field_index_uri (str): The path for the data index
+        file_index_field_key (str): The key field for data index
+        file_index_field_income_climate (str): The income climate field within the data index
+        income_climate_field_key (str): The percentile field within the crop yield table
+        income_climate_field_income (str): The income field within the crop yield table
+
+    Returns:
+        types.FunctionType
+
+    Notes:
+        Google Style comments supported in Sphinx through sphinxcontrib.napoleon
+    """    
+    LOGGER.debug("Yield closure yield id field %s.", income_climate_field_key)
+
+    #load data index
+    file_index = raster_utils.get_lookup_from_csv(file_index_uri, file_index_field_key)
+
+    #get unique crops
+    crop_types = list(raster_utils.unique_raster_values_count(reclass_crop_cover_uri,
+                                                              ignore_nodata=True).keys())
+
+    #remove ignore crops
+    if ignore_crop != None:
+        try:
+            crop_types = set(crop_types)
+            crop_types.remove(ignore_crop)
+        except KeyError:
+            LOGGER.warning("Ignore crop %i not present.", ignore_crop)
+        crop_types = list(crop_types)
+
+    #build crop dictionary of climate income dictionaries
+    yield_dict = {}
+    for crop in crop_types:
+        csv_uri = file_index[crop][file_index_field_income_climate]
+        if csv_uri != "":
+            csv_uri = os.path.join(raster_path, csv_uri)
+            LOGGER.info("Processing yield for type %i.", crop)
+            LOGGER.debug("Processing: %s", csv_uri)
+            yield_dict[crop] = raster_utils.get_lookup_from_csv(csv_uri,
+                                                                income_climate_field_key)
+        else:
+            yield_dict[crop] = NoKeyErrorDict({}, nodata)
+
+    nodata_list = [raster_utils.get_nodata_from_uri(raster) for raster in [reclass_crop_cover_uri,
+                                                                            climate_uri]]
+
+    #define operator
+    def yield_op(crop, climate):
+        #return nodata value if nodata present
+        if any([apply(operator.eq, pair) for pair in zip([crop, climate], nodata_list)]):
+            return nodata
+
+        #return ignore crop value if ignore crop present
+        elif ignore_crop != None and crop == ignore_crop:
+            return ignore_crop_value
+
+        #return ignore climate value if ignore climate present
+        elif climate == ignore_climate:
+            return ignore_climate_value
+
+        #return climate income value if available, otherwise default value
+        else:
+            try:
+                return float(yield_dict[int(crop)][int(climate)][income_climate_field_income])
+            except ValueError:
+                return default_value
+
+    return yield_op

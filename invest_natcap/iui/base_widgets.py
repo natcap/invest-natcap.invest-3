@@ -2243,6 +2243,9 @@ class Root(DynamicElement):
 
         self.embedded_uis = []
 
+        if 'include_meta' not in self.attributes:
+            self.attributes['include_meta'] = False
+
     def find_and_replace(self, attributes):
         """Initiates a recursive search and replace of the attributes
             dictionary according to the 'inheritFrom' capabilities of the JSON
@@ -2605,8 +2608,6 @@ class ExecRoot(Root):
         self.warning_dialog = WarningDialog()
         self.initElements()
 
-        if 'include_meta' not in self.attributes:
-            self.attributes['include_meta'] = False
 
     def save_to_json(self):
         """Save the current state of the UI to a python file after checking that
