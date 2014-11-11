@@ -572,6 +572,17 @@ def execute(args):
 
         return result
 
+    # Scales a raster inplace by 'scaling_factor'
+    def scale_raster_inplace(raster_uri, scaling_factor):
+        temp_uri = raster_utils.temporary_filename()
+
+        raster_utils.vectorize_datasets([raster_uri], \
+            lambda x: x * scaling_factor, temp_uri, gdal.GDT_Float32, -1, \
+            cell_size, 'intersection', vectorize_op = False)
+
+        os.remove(raster_uri)
+        os.rename(temp_uri, raster_uri)
+
     # Precompute aoi nodata
     aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
 
@@ -606,6 +617,13 @@ def execute(args):
                 raster_utils.distance_transform_edt(land_distance_mask_uri, \
                     constraint_uri)
 
+                raster_utils.vectorize_datasets( \
+                    [args['landmass_raster_uri'], args['aoi_raster_uri']], \
+                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                scale_raster_inplace(constraint_uri, cell_size)
+
             args['constraints_type']['land'] = constraint_uri
 
         # Detect a sea-related distance constraint
@@ -633,6 +651,8 @@ def execute(args):
                 # Use the mask to compute distance over land
                 raster_utils.distance_transform_edt(water_distance_mask_uri, \
                     constraint_uri)
+
+                scale_raster_inplace(constraint_uri, cell_size)
 
             args['constraints_type']['water'] = constraint_uri
 
