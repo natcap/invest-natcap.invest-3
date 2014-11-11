@@ -493,7 +493,6 @@ def execute(args):
         preprocess_polygon_datasource(args['landmass_uri'], \
             args['aoi_uri'], args['cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
-        shutil.copy()
 
     # Preprocessing the AOI
     args['aoi_raster_uri'] = os.path.join(args['intermediate_dir'], 'aoi.tif')
@@ -514,7 +513,8 @@ def execute(args):
         raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
             temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
             vectorize_op = False)
-        os.remove()
+        os.remove(args['aoi_raster_uri'])
+        os.rename(temporary_filename, args['aoi_raster_uri'])
 
     # Preprocess bathymetry
     args['bathymetry_raster_uri'] = \
