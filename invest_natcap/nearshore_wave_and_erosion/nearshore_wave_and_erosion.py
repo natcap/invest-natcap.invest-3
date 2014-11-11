@@ -504,15 +504,21 @@ def execute(args):
 
         # Set data to zero
         def set_to_zero(x):
-            x[x != nodata] = 0.
+            result = numpy.copy(x)
+            result[x != nodata] = 0.
+
+            return result
+
 
         cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
         nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
         
         temporary_filename = raster_utils.temporary_filename(suffix='.tif')
+        
         raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
             temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
             vectorize_op = False)
+        
         os.remove(args['aoi_raster_uri'])
         os.rename(temporary_filename, args['aoi_raster_uri'])
 
@@ -545,160 +551,6 @@ def execute(args):
         ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2}) \
         ]
 
-    # Build the habitats name--priority mapping
-    args['habitat_priority'] = \
-        dict([((args['habitat_information'][i][1]['habitat'], \
-                args['habitat_information'][i][1]['type'] if 'type' in \
-                args['habitat_information'][i][1] else None), i) \
-            for i in range(len(args['habitat_information']))])
-
-    # Detect habitat constraints
-    args['constraints_type'] = {}
-
-    # Mask the raster to only keep landmasses
-    def keep_land(x, aoi):
-        result = numpy.zeros(x.shape) # Add everything
-        result[x <= 0] = 0 # Remove water
-
-        return result
-
-    # Mask the raster to only keep water pixels
-    def keep_water(x, aoi):
-        result = numpy.zeros(x.shape) # Add everything
-        result[x > 0] = 1 # Remove land
-
-        return result
-
-    # Scales a raster inplace by 'scaling_factor'
-    def scale_raster_inplace(raster_uri, scaling_factor):
-        temp_uri = raster_utils.temporary_filename()
-
-        raster_utils.vectorize_datasets([raster_uri], \
-            lambda x: x * scaling_factor, temp_uri, gdal.GDT_Float32, -1, \
-            cell_size, 'intersection', vectorize_op = False)
-
-        os.remove(raster_uri)
-        os.rename(temp_uri, raster_uri)
-
-    # Precompute aoi nodata
-    aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
-
-    print('habitat_information')
-    for habitat_information in args['habitat_information']:
-        habitat_constraints = habitat_information[2]
-        print(habitat_constraints)
-
-        # Detected a land-related distance constraint
-        if 'land' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'land_distance_map.tif')
-            print('Checking land constraint')
-
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-                print('Creating land constraint', constraint_uri)
-                
-                land_distance_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'land_distance_mask.tif')
-                
-                value_not_in_raster, raster_nodata, cell_size = \
-                    extract_raster_information(args['landmass_raster_uri'])
-
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
-
-                # Use the mask to compute distance over land
-                raster_utils.distance_transform_edt(land_distance_mask_uri, \
-                    constraint_uri)
-
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
-
-                scale_raster_inplace(constraint_uri, cell_size)
-
-            args['constraints_type']['land'] = constraint_uri
-
-        # Detect a sea-related distance constraint
-        if 'water' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'water_distance_map.tif')
-            print('checking water constraint')
-
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-                print('Creating water constraint', constraint_uri)
-
-                water_distance_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'water_distance_mask.tif')
-
-                value_not_in_raster, raster_nodata, cell_size = \
-                    extract_raster_information(args['bathymetry_raster_uri'])
-
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
-
-                # Use the mask to compute distance over land
-                raster_utils.distance_transform_edt(water_distance_mask_uri, \
-                    constraint_uri)
-
-                scale_raster_inplace(constraint_uri, cell_size)
-
-            args['constraints_type']['water'] = constraint_uri
-
-
-        # Detect a mean high water-related depth constraint
-        if 'MHHW' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'MHHW_depth_map.tif')
-            print('checking MHHW constraint')
-
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-                print('Creating MHHW constraint', constraint_uri)
-
-                MHHW_depth_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'MHHW_depth_mask.tif')
-
-                value_not_in_raster, raster_nodata, cell_size = \
-                    extract_raster_information(args['bathymetry_raster_uri'])
-
-                # Interpolate MHHW (linear):
-
-
-
-                # Mask bathymetry to remove positive values
-                # Divide bathymetry by MHHW
-#                raster_utils.vectorize_datasets( \
-#                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-#                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
-#                    -1, cell_size, 'intersection', vectorize_op = False)
-
-                # Use the mask to compute distance over land
-#                raster_utils.distance_transform_edt(water_distance_mask_uri, \
-#                    constraint_uri)
-
-#                scale_raster_inplace(constraint_uri, cell_size)
-
-#            args['constraints_type']['MHHW'] = constraint_uri
-
-
-
-        # Detected a water-related distance constraint
-        #if 'water' in habitat_constraints
-        #    constraint_uri = os.path.join(args['intermediate_dir'], \
-        #        'water_distance_map.tif')
-
-#    sys.exit(0)
-
     # List all shapefiles in the habitats directory
     files = []
 
@@ -723,6 +575,13 @@ def execute(args):
             'StemDensty', \
             'StemDrag', \
             'Type']}
+
+    # Build the habitats name--priority mapping
+    args['habitat_priority'] = \
+        dict([((args['habitat_information'][i][1]['habitat'], \
+                args['habitat_information'][i][1]['type'] if 'type' in \
+                args['habitat_information'][i][1] else None), i) \
+            for i in range(len(args['habitat_information']))])
 
     # Assign a positional index to every shapefile field
     args['field_index'] = {}
@@ -850,8 +709,159 @@ def execute(args):
                     args['shapefiles'][shapefile_type][basename]['type'] = output_uri
                     in_raster_list.append(output_uri)
 
-#    print('in_raster_list', in_raster_list)
+    # Detect habitat constraints
+    args['constraints_type'] = {}
+
+    # Mask the raster to only keep landmasses
+    def keep_land(x, aoi):
+        result = numpy.zeros(x.shape) # Add everything
+        result[x <= 0] = 0 # Remove water
+
+        return result
+
+    # Mask the raster to only keep water pixels
+    def keep_water(x, aoi):
+        result = numpy.zeros(x.shape) # Add everything
+        result[x > 0] = 1 # Remove land
+
+        return result
+
+    # Scales a raster inplace by 'scaling_factor'
+    def scale_raster_inplace(raster_uri, scaling_factor):
+        temp_uri = raster_utils.temporary_filename()
+
+        raster_utils.vectorize_datasets([raster_uri], \
+            lambda x: x * scaling_factor, temp_uri, gdal.GDT_Float32, -1, \
+            cell_size, 'intersection', vectorize_op = False)
+
+        os.remove(raster_uri)
+        os.rename(temp_uri, raster_uri)
+
+    # Precompute aoi nodata
+    aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+
+    print('habitat_information')
+    for habitat_information in args['habitat_information']:
+        habitat_constraints = habitat_information[2]
+        print(habitat_constraints)
+
+        # Detected a land-related distance constraint
+        if 'land' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'land_distance_map.tif')
+            print('Checking land constraint')
+
+            # Create the constraint raster if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating land constraint', constraint_uri)
+                
+                land_distance_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'land_distance_mask.tif')
+                
+                value_not_in_raster, raster_nodata, cell_size = \
+                    extract_raster_information(args['landmass_raster_uri'])
+
+                raster_utils.vectorize_datasets( \
+                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                # Use the mask to compute distance over land
+                raster_utils.distance_transform_edt(land_distance_mask_uri, \
+                    constraint_uri)
+
+                raster_utils.vectorize_datasets( \
+                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                scale_raster_inplace(constraint_uri, cell_size)
+
+            args['constraints_type']['land'] = constraint_uri
+
+        # Detect a sea-related distance constraint
+        if 'water' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'water_distance_map.tif')
+            print('checking water constraint')
+
+            # Create the constraint raster if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating water constraint', constraint_uri)
+
+                water_distance_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'water_distance_mask.tif')
+
+                value_not_in_raster, raster_nodata, cell_size = \
+                    extract_raster_information(args['bathymetry_raster_uri'])
+
+                raster_utils.vectorize_datasets( \
+                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                # Use the mask to compute distance over land
+                raster_utils.distance_transform_edt(water_distance_mask_uri, \
+                    constraint_uri)
+
+                scale_raster_inplace(constraint_uri, cell_size)
+
+            args['constraints_type']['water'] = constraint_uri
+
+
+        # Detect a mean high water-related depth constraint
+        if 'MHHW' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'MHHW_depth_map.tif')
+            print('checking MHHW constraint')
+
+            # Create the constraint raster if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating MHHW constraint', constraint_uri)
+
+                MHHW_depth_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'MHHW_depth_mask.tif')
+
+                value_not_in_raster, raster_nodata, cell_size = \
+                    extract_raster_information(args['bathymetry_raster_uri'])
+
+#                # Interpolate MHHW (linear):
+#                MHHW_raster = gdal.Open()
+#
+#                points = numpy.where(MHHW_array != MHHW_nodata)
+#                
+#                grid_i, grid_j = \
+#                    numpy.mgrid[0:MHHW_array.shape[0], 0:MHHW_array.shape[1]]
+#
+#                interpolation = \
+#                    griddata(points, values, (grid_i, grid_j), method = 'linear')
+
+                # Divide bathymetry by MHHW
+#                raster_utils.vectorize_datasets( \
+#                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+#                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+#                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                # Use the mask to compute distance over land
+#                raster_utils.distance_transform_edt(water_distance_mask_uri, \
+#                    constraint_uri)
+
+#                scale_raster_inplace(constraint_uri, cell_size)
+
+#            args['constraints_type']['MHHW'] = constraint_uri
+
+
+
+        # Detected a water-related distance constraint
+        #if 'water' in habitat_constraints
+        #    constraint_uri = os.path.join(args['intermediate_dir'], \
+        #        'water_distance_map.tif')
+
 #    sys.exit(0)
+
 
     LOGGER.debug('Uniformizing the input raster sizes...')
     # Need to uniformize the size of land and bathymetry rasters
