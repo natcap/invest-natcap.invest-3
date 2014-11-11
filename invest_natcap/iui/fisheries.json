@@ -43,12 +43,12 @@
                     "args_id" : "total_timesteps",
                     "type": "text",
                     "dataType": "int",
-                    "label": "Number of Timesteps for Model Run",
+                    "label": "Number of Time Steps for Model Run",
                     "validateAs": {"type": "number"},
                     "validText": "[0-9]+",
                     "defaultValue": "100",
                     "required": true,
-                    "helpText": "The number of timesteps the simulation shall execute before completion.<br><br>Must be a positive integer."
+                    "helpText": "The number of time steps the simulation shall execute before completion.<br><br>Must be a positive integer."
                 }
             ]
         },
@@ -71,7 +71,7 @@
                             "options" : ["Age-Based", "Stage-Based"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "Specifies whether the classes provided in the Population Attributes CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length timesteps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided timestep.<br><br>If the stage-based model is selected, the Population Attributes CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+                            "helpText": "Specifies whether the classes provided in the Population Attributes CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Attributes CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
                         },
                         {
                             "id" : "sexsp",
@@ -128,7 +128,7 @@
                             "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
                             "returns": "strings",
                             "dataType": "string",
-                            "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each timestep. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Attributes CSV File indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Timestep’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
+                            "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each time step. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Attributes CSV file indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Time Step’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
                         },
                         {
                             "id" : "spawn_units",
@@ -169,7 +169,7 @@
                             "args_id" : "total_recur_recruits",
                             "type": "text",
                             "dataType": "float",
-                            "label": "Total Recruits per Timestep (Fixed)",
+                            "label": "Total Recruits per Time Step (Fixed)",
                             "required": false,
                             "validateAs": {"type": "number"},
                             "helpText": "Specifies the total number of recruits that come into the population at each time step (a fixed number).<br><br>Used only for the Fixed recruitment function."
