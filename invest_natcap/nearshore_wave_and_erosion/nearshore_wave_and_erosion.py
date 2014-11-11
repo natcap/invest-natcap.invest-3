@@ -443,6 +443,18 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     
     return output_uri
 
+def extract_raster_information(raster_uri):
+    value_not_in_raster = \
+        raster_utils.calculate_value_not_in_dataset_uri(raster_uri)
+
+    raster_nodata = \
+        raster_utils.get_nodata_from_uri(raster_uri)
+
+    cell_size = \
+        raster_utils.get_cell_size_from_uri(raster_uri)
+
+    return (value_not_in_raster, raster_nodata, cell_size)
+    
 
 
 def execute(args):
@@ -544,6 +556,25 @@ def execute(args):
     # Detect habitat constraints
     args['constraints_type'] = {}
 
+    # Mask the raster to only keep landmasses
+    def keep_land(x, aoi):
+        result = numpy.zeros(x.shape) # Add everything
+        result[aoi != aoi_nodata] = 1 # Remove AOI
+        result[x != raster_nodata] = 0 # Add land
+
+        return result
+
+    # Mask the raster to only keep water pixels
+    def keep_water(x, aoi):
+        result = numpy.zeros(x.shape) # Add everything
+        #result[aoi != aoi_nodata] = 0 # Add AOI
+        result[x != raster_nodata] = 1 # Remove land
+
+        return result
+
+    # Precompute aoi nodata
+    aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+
     print('habitat_information')
     for habitat_information in args['habitat_information']:
         habitat_constraints = habitat_information[2]
@@ -563,29 +594,8 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'land_distance_mask.tif')
                 
-                value_not_in_raster = \
-                    raster_utils.calculate_value_not_in_dataset_uri( \
-                        args['landmass_raster_uri'])
-
-                raster_nodata = \
-                    raster_utils.get_nodata_from_uri( \
-                        args['landmass_raster_uri'])
-
-                cell_size = \
-                    raster_utils.get_cell_size_from_uri( \
-                        args['landmass_raster_uri'])
-                
-                aoi_nodata = \
-                    raster_utils.get_nodata_from_uri( \
-                        args['aoi_raster_uri'])
-                
-                # Mask the raster to only keep landmasses
-                def keep_land(x, aoi):
-                    result = numpy.zeros(x.shape) # Add everything
-                    result[aoi != aoi_nodata] = 1 # Leave out AOI
-                    result[x != raster_nodata] = 0 # Add land
-
-                    return result
+                value_not_in_raster, raster_nodata, cell_size = \
+                    extract_raster_information(args['landmass_raster_uri'])
 
                 raster_utils.vectorize_datasets( \
                     [args['landmass_raster_uri'], args['aoi_raster_uri']], \
@@ -597,6 +607,36 @@ def execute(args):
                     constraint_uri)
 
             args['constraints_type']['land'] = constraint_uri
+
+        # Detect a sea-related distance constraint
+        if 'water' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'water_distance_map.tif')
+            print('checking water constraint')
+
+            # Create the distance constraint if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating water constraint', constraint_uri)
+
+                water_distance_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'water_distance_mask.tif')
+
+                value_not_in_raster, raster_nodata, cell_size = \
+                    extract_raster_information(args['landmass_raster_uri'])
+
+                raster_utils.vectorize_datasets( \
+                    [args['landmass_raster_uri'], args['aoi_raster_uri']], \
+                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                # Use the mask to compute distance over land
+                raster_utils.distance_transform_edt(water_distance_mask_uri, \
+                    constraint_uri)
+
+            args['constraints_type']['water'] = constraint_uri
+
+
 
         # Detected a water-related distance constraint
         #if 'water' in habitat_constraints
