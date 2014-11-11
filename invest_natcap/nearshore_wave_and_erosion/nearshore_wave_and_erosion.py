@@ -597,7 +597,7 @@ def execute(args):
                 'land_distance_map.tif')
             print('Checking land constraint')
 
-            # Create the distance constraint if it doesn't exist already
+            # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
                 print('Creating land constraint', constraint_uri)
                 
@@ -632,7 +632,7 @@ def execute(args):
                 'water_distance_map.tif')
             print('checking water constraint')
 
-            # Create the distance constraint if it doesn't exist already
+            # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
                 print('Creating water constraint', constraint_uri)
 
@@ -657,13 +657,52 @@ def execute(args):
             args['constraints_type']['water'] = constraint_uri
 
 
+        ## Detect a mean high water-related depth constraint
+        #if 'MHHW' in habitat_constraints:
+        #    constraint_uri = os.path.join(args['intermediate_dir'], \
+        #        'MHHW_depth_map.tif')
+        #    print('checking MHHW constraint')
+#
+#        #    # Create the constraint raster if it doesn't exist already
+#        #    if not os.path.isfile(constraint_uri):
+#        #        print('Creating MHHW constraint', constraint_uri)
+#
+#        #        MHHW_depth_mask_uri = \
+#        #            os.path.join(args['intermediate_dir'], \
+#        #                'MHHW_depth_mask.tif')
+#
+#        #        value_not_in_raster, raster_nodata, cell_size = \
+#        #            extract_raster_information(args['bathymetry_raster_uri'])
+#
+#        #        # Interpolate MHHW (linear):
+#
+#
+#        #        #values = numpy.where()
+#        #        #grid_x, grid_y = 
+#
+#        #        # Mask bathymetry to remove positive values
+#        #        # Divide bathymetry by MHHW
+#        #        raster_utils.vectorize_datasets( \
+#        #            [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+#        #            keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+#        #            -1, cell_size, 'intersection', vectorize_op = False)
+#
+#        #        # Use the mask to compute distance over land
+#        #        raster_utils.distance_transform_edt(water_distance_mask_uri, \
+#        #            constraint_uri)
+#
+#        #        scale_raster_inplace(constraint_uri, cell_size)
+#
+        #    args['constraints_type']['water'] = constraint_uri
+
+
 
         # Detected a water-related distance constraint
         #if 'water' in habitat_constraints
         #    constraint_uri = os.path.join(args['intermediate_dir'], \
         #        'water_distance_map.tif')
 
-    sys.exit(0)
+#    sys.exit(0)
 
     # List all shapefiles in the habitats directory
     files = []
