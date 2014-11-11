@@ -697,7 +697,7 @@ def execute(args):
         #    constraint_uri = os.path.join(args['intermediate_dir'], \
         #        'water_distance_map.tif')
 
-    sys.exit(0)
+#    sys.exit(0)
 
     # List all shapefiles in the habitats directory
     files = []
