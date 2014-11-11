@@ -4,6 +4,7 @@ import sys
 import os
 import shutil
 import logging
+import numpy
 
 from osgeo import gdal
 from osgeo import ogr
@@ -539,6 +540,70 @@ def execute(args):
                 args['habitat_information'][i][1]['type'] if 'type' in \
                 args['habitat_information'][i][1] else None), i) \
             for i in range(len(args['habitat_information']))])
+
+    # Detect habitat constraints
+    args['constraints_type'] = {}
+
+    print('habitat_information')
+    for habitat_information in args['habitat_information']:
+        habitat_constraints = habitat_information[2]
+        print(habitat_constraints)
+
+        # Detected a land-related distance constraint
+        if 'land' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'land_distance_map.tif')
+            print('Checking land constraint')
+
+            # Create the distance constraint if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating land constraint', constraint_uri)
+                
+                land_distance_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'land_distance_mask.tif')
+                
+                value_not_in_raster = \
+                    raster_utils.calculate_value_not_in_dataset_uri( \
+                        args['landmass_raster_uri'])
+
+                raster_nodata = \
+                    raster_utils.get_nodata_from_uri( \
+                        args['landmass_raster_uri'])
+
+                cell_size = \
+                    raster_utils.get_cell_size_from_uri( \
+                        args['landmass_raster_uri'])
+                
+                aoi_nodata = \
+                    raster_utils.get_nodata_from_uri( \
+                        args['aoi_raster_uri'])
+                
+                # Mask the raster to only keep landmasses
+                def keep_land(x, aoi):
+                    result = numpy.zeros(x.shape) # Add everything
+                    result[aoi != aoi_nodata] = 1 # Leave out AOI
+                    result[x != raster_nodata] = 0 # Add land
+
+                    return result
+
+                raster_utils.vectorize_datasets( \
+                    [args['landmass_raster_uri'], args['aoi_raster_uri']], \
+                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                    -1, cell_size, 'intersection', vectorize_op = False)
+
+                # Use the mask to compute distance over land
+                raster_utils.distance_transform_edt(land_distance_mask_uri, \
+                    constraint_uri)
+
+            args['constraints_type']['land'] = constraint_uri
+
+        # Detected a water-related distance constraint
+        #if 'water' in habitat_constraints
+        #    constraint_uri = os.path.join(args['intermediate_dir'], \
+        #        'water_distance_map.tif')
+
+    sys.exit(0)
 
     # List all shapefiles in the habitats directory
     files = []

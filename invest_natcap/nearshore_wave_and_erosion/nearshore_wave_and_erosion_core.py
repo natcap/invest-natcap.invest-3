@@ -256,16 +256,14 @@ def compute_transects(args):
     LOGGER.debug('found %i tiles.' % tiles)
 
     print('transect_info size', len(transect_info))
-    for ID in range(len(transect_info)):
-        pass
-    
 
     # Create a numpy array to store the habitat type
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    transect_data_array = np.ones((tiles, max_transect_length)) * -99999.0
-    habitat_data_array = np.ones((tiles, field_count, max_transect_length)) * -99999.0
+    habitat_type_array = np.ones((tiles, max_transect_length)) * -99999.0
+    habitat_properties_array = \
+        np.ones((tiles, field_count, max_transect_length)) * -99999.0
 
     # Creating HDF5 file that will store the transect data
     habitat_type_uri = \
@@ -276,13 +274,13 @@ def compute_transects(args):
     habitat_type_file = h5.File(habitat_type_uri, 'w')
     habitat_type_dataset = \
         habitat_type_file.create_dataset('habitat_types', \
-            transect_data_array.shape, compression = 'gzip', \
+            habitat_type_array.shape, compression = 'gzip', \
             fillvalue = -99999.0)
 
     habitat_properties_file = h5.File(habitat_properties_uri, 'w')
     habitat_properties_dataset = \
         habitat_properties_file.create_dataset('habitat_properties', \
-            habitat_data_array.shape, compression = 'gzip', \
+            habitat_properties_array.shape, compression = 'gzip', \
             fillvalue = -99999.0)
 
 
@@ -299,7 +297,8 @@ def compute_transects(args):
         for shp_name in args['shapefiles'][shp_type]:
 
             # Get rid of the path and the extension
-            basename = os.path.splitext(os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
+            basename = os.path.splitext(os.path.basename( \
+                args['shapefiles'][shp_type][shp_name]['type']))[0]
 
             # Extract the type for this shapefile
             type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
@@ -326,7 +325,7 @@ def compute_transects(args):
                 shore = transect_info[transect]['clip_limits'][1]
                 end = transect_info[transect]['clip_limits'][2]
 
-                destination = transect_data_array[transect,:end-start]
+                destination = habitat_type_array[transect,:end-start]
 
 #                source = interpolate_transect(source, i_side_fine, \
 #                    args['model_resolution'], kind = 'nearest')
@@ -339,19 +338,19 @@ def compute_transects(args):
                 # Compute the mask that will be used to update the values
                 mask = destination < source
 #                print('mask size', np.sum(mask.astype(int)))
-                if transect in transect_range:
-                    print('transect', transect)
-                    print('start, shore, end', (start, shore, end))
-                    print('source', source)
-                    print('mask', mask)
-                    print('destination', destination)
+                #if transect in transect_range:
+                #    print('transect', transect)
+                #    print('start, shore, end', (start, shore, end))
+                #    print('source', source)
+                #    print('mask', mask)
+                #    print('destination', destination)
 
                 # Save transect to file
                 destination[mask] = source[mask]
 
-                if transect in transect_range:
-                    print('new destination', destination)
-                    print ''
+                #if transect in transect_range:
+                #    print('new destination', destination)
+                #    print ''
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
@@ -369,7 +368,8 @@ def compute_transects(args):
                 
                 transects[masked_positions] = source[mask]
                 transects[nodata_positions] = 0
-                transects[(raw_positions[0][shore], raw_positions[1][shore])] = transect
+                transects[(raw_positions[0][shore], \
+                    raw_positions[1][shore])] = transect
 
 #                print('')
 #                sys.exit(0)
@@ -414,7 +414,7 @@ def compute_transects(args):
 #                    shore = transect_info[transect]['clip_limits'][1]
 #                    end = transect_info[transect]['clip_limits'][2]
 #
-#                    destination = habitat_data_array[transect, field_id,:end-start]
+#                    destination = habitat_properties_array[transect, field_id,:end-start]
 #
 ##                    source = interpolate_transect(source, i_side_fine, \
 ##                        args['model_resolution'], kind = 'nearest')
@@ -452,8 +452,8 @@ def compute_transects(args):
 #                array = None
 
     # Both the habitat type and the habitat field data are complete, save them
-    habitat_type_dataset[...] = transect_data_array[...]
-    habitat_properties_dataset[...] = habitat_data_array[...]
+    habitat_type_dataset[...] = habitat_type_array[...]
+    habitat_properties_dataset[...] = habitat_properties_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
