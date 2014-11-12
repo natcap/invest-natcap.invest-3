@@ -61,6 +61,7 @@ def compute_transects(args):
     transect_band = transect_raster.GetRasterBand(1)
     transects = transect_band.ReadAsArray()
     
+    print('past transects')
 
     # Store transect profiles to reconstruct shore profile
     args['shore_profile_uri'] = os.path.join( \
@@ -71,24 +72,24 @@ def compute_transects(args):
     shore_band = shore_raster.GetRasterBand(1)
     shore_profile = shore_band.ReadAsArray()
 
+    print('past shore')
+
     # Landmass
-    raster = gdal.Open(args['landmass_raster_uri'])
+    landmass_raster = gdal.Open(args['landmass_raster_uri'])
     message = 'Cannot open file ' + args['landmass_raster_uri']
-    assert raster is not None, message
-    fine_geotransform = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    landmass = band.ReadAsArray()
-    band = None
-    raster = None
+    assert landmass_raster is not None, message
+    fine_geotransform = landmass_raster.GetGeoTransform()
+    landmass_band = landmass_raster.GetRasterBand(1)
     
+    print('past landmass')
+
     # AOI
-    raster = gdal.Open(args['aoi_raster_uri'])
+    aoi_raster = gdal.Open(args['aoi_raster_uri'])
     message = 'Cannot open file ' + args['aoi_raster_uri']
-    assert raster is not None, message
-    band = raster.GetRasterBand(1)
-    aoi = band.ReadAsArray()
-    band = None
-    raster = None
+    assert aoi_raster is not None, message
+    aoi_band = aoi_raster.GetRasterBand(1)
+    
+    print('past AOI')
     
     # Bathymetry
     raster = gdal.Open(args['bathymetry_raster_uri'])
@@ -99,9 +100,12 @@ def compute_transects(args):
     band = None
     raster = None
 
-    row_count, col_count = landmass.shape
+    row_count = landmass_band.YSize 
+    col_count = landmass_band.XSize
 
-    # Get the fine and coarse raster cell sizes, making sure the signs are consistent
+    print('past bathymetry')
+
+   # Get the fine and coarse raster cell sizes, making sure the signs are consistent
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
@@ -142,13 +146,15 @@ def compute_transects(args):
             j_base = (j - j_start) / j_side_fine - 2
 
             # Data under the tile
-            data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+            #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+            data = aoi_band.ReadAsArray(i_base, j_base, i_offset, j_offset)
 
             # Avoid nodata on tile
             if np.sum(data) == tile_size:
 
                 # Look for landmass cover on tile
-                tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
+                #tile = landmass[i_base:i_base+i_offset, :j_base+j_offset]
+                tile = landmass_band.ReadAsArray(i_base, j_base, i_offset, j_offset)
                 land = np.sum(tile)
 
                 # If land and sea, we have a shore: detect it and store
@@ -252,6 +258,14 @@ def compute_transects(args):
                         #shore_profile[raw_positions] = raw_depths
                         
                         tiles += 1
+
+    # Cleanup
+    aoi_band = None
+    aoi_raster = None
+    landmass_band = None
+    landmass_raster = None
+
+    
 
     LOGGER.debug('found %i tiles.' % tiles)
 
