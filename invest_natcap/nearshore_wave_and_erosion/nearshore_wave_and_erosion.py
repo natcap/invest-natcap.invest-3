@@ -444,16 +444,13 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     return output_uri
 
 def extract_raster_information(raster_uri):
-    value_not_in_raster = \
-        raster_utils.calculate_value_not_in_dataset_uri(raster_uri)
-
     raster_nodata = \
         raster_utils.get_nodata_from_uri(raster_uri)
 
     cell_size = \
         raster_utils.get_cell_size_from_uri(raster_uri)
 
-    return (value_not_in_raster, raster_nodata, cell_size)
+    return (raster_nodata, cell_size)
     
 
 
@@ -509,7 +506,7 @@ def execute(args):
 
             return result
 
-
+        print('setting AOI values to zero')
         cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
         nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
         
@@ -518,7 +515,9 @@ def execute(args):
         raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
             temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
             vectorize_op = False)
-        
+
+        print('cleaning up')
+
         os.remove(args['aoi_raster_uri'])
         os.rename(temporary_filename, args['aoi_raster_uri'])
 
@@ -759,7 +758,7 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'land_distance_mask.tif')
                 
-                value_not_in_raster, raster_nodata, cell_size = \
+                raster_nodata, cell_size = \
                     extract_raster_information(args['landmass_raster_uri'])
 
                 raster_utils.vectorize_datasets( \
@@ -794,7 +793,7 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'water_distance_mask.tif')
 
-                value_not_in_raster, raster_nodata, cell_size = \
+                raster_nodata, cell_size = \
                     extract_raster_information(args['bathymetry_raster_uri'])
 
                 raster_utils.vectorize_datasets( \
@@ -825,19 +824,31 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'MHHW_depth_mask.tif')
 
-                value_not_in_raster, raster_nodata, cell_size = \
+                raster_nodata, cell_size = \
                     extract_raster_information(args['bathymetry_raster_uri'])
 
-#                # Interpolate MHHW (linear):
-#                MHHW_raster = gdal.Open()
-#
-#                points = numpy.where(MHHW_array != MHHW_nodata)
-#                
-#                grid_i, grid_j = \
-#                    numpy.mgrid[0:MHHW_array.shape[0], 0:MHHW_array.shape[1]]
-#
-#                interpolation = \
-#                    griddata(points, values, (grid_i, grid_j), method = 'linear')
+                # Interpolate MHHW (linear):
+                
+                # Find the filename
+                #MHHW_uri = ''
+                #for raster_uri in in_raster_list:
+                #    if 'mhhw' in raster_uri:
+                #        MHHW_uri = raster_uri
+                #        break
+                #assert MHHW_uri
+
+                #MHHW_nodata = raster_utils.get_nodata_from_uri()
+                #MHHW_raster = gdal.Open()
+                #MHHW_band = MHHW_raster.GetRasterBand(1)
+                #MHHW_array = MHHW_band.ReadAsArray()
+
+                #points = numpy.where(MHHW_array != MHHW_nodata)
+                
+                #grid_i, grid_j = \
+                #    numpy.mgrid[0:MHHW_array.shape[0], 0:MHHW_array.shape[1]]
+
+                #interpolation = \
+                #    griddata(points, values, (grid_i, grid_j), method = 'linear')
 
                 # Divide bathymetry by MHHW
 #                raster_utils.vectorize_datasets( \
@@ -860,7 +871,7 @@ def execute(args):
         #    constraint_uri = os.path.join(args['intermediate_dir'], \
         #        'water_distance_map.tif')
 
-#    sys.exit(0)
+    sys.exit(0)
 
 
     LOGGER.debug('Uniformizing the input raster sizes...')
