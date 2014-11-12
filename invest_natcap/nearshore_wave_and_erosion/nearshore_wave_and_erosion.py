@@ -714,7 +714,7 @@ def execute(args):
     # Mask the raster to only keep landmasses
     def keep_land(x, aoi):
         result = numpy.zeros(x.shape) # Add everything
-        result[x <= 0] = 0 # Remove water
+        result[x <= 0] = 1 # Remove water
 
         return result
 

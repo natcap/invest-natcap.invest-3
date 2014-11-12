@@ -90,7 +90,7 @@ def compute_transects(args):
     aoi_band = aoi_raster.GetRasterBand(1)
     
     print('past AOI')
-    
+
     # Bathymetry
     raster = gdal.Open(args['bathymetry_raster_uri'])
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
@@ -139,11 +139,11 @@ def compute_transects(args):
             str((i_end - i)/i_side_coarse))
 
         # Top of the current tile
-        i_base = (i - i_start) / i_side_fine - 2
+        i_base = max((i - i_start) / i_side_fine - 2, 0)
 
         for j in range(j_start, j_end, j_side_coarse):
             # Left coordinate of the current tile
-            j_base = (j - j_start) / j_side_fine - 2
+            j_base = max((j - j_start) / j_side_fine - 2, 0)
 
             # Data under the tile
             #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
