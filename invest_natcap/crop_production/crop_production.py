@@ -847,7 +847,7 @@ def execute(args):
 
     if args["enable_tab_percentile"] == True:
         for percentile in [25, 50, 75, 95]:
-            production_columns.append({'name': '%i%% Yield' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
+            production_columns.append({'name': '%ith Percentile' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
 
     production_data = []
 
@@ -864,7 +864,7 @@ def execute(args):
 
         if args["enable_tab_percentile"] == True:
             for percentile in [25, 50, 75, 95]:
-                record['%i%% Yield' % percentile] = ""
+                record['%ith Percentile' % percentile] = ""
 
         production_data.append(record)
 
