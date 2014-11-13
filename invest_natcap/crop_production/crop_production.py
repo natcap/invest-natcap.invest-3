@@ -876,8 +876,9 @@ def execute(args):
     nutrient_list = nutrient_selection.keys()
     nutrient_list.sort()
 
-    nutrition_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-                                             {'name': 'Nutrient', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'}]
+    nutrition_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"left\"'},
+                         {'name': 'Nutrient', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"left\"'},
+                         {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
 
     if args["enable_tab_percentile"] == True:
         for percentile in [25, 50, 75, 95]:
@@ -886,7 +887,9 @@ def execute(args):
     nutrition_data = []
 
     for nutrient in nutrient_list:
-        record = {'Short Name': nutrient_aliases[nutrient], 'Nutrient': nutrient}
+        record = {'Short Name': nutrient_aliases[nutrient],
+                  'Nutrient': nutrient,
+                  'Existing Yield' : ""}
 
         if args["enable_tab_percentile"] == True:
             for percentile in [25, 50, 75, 95]:
@@ -895,8 +898,29 @@ def execute(args):
         nutrition_data.append(record)
 
     #economic table
-    economic_columns = []
+    economic_component_list = ["Labor", "Machine", "Seed", "Nitrogen", "Phosphorus", "Potassium", "Sale"]
+        
+    economic_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                        {'name': 'Component', 'total':False, 'attr' : {'align':'left'}, 'td_class' : '\" align=\"center\"'},
+                        {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+    if args["enable_tab_percentile"] == True:
+        for percentile in [25, 50, 75, 95]:
+            economic_columns.append({'name': '%ith Percentile' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
+
+
     economic_data = []
+
+    for component in economic_component_list:
+        record = {'Short Name': '',
+                  'Component' : component,
+                  'Existing Yield' : ""}
+
+        if args["enable_tab_percentile"] == True:
+            for percentile in [25, 50, 75, 95]:
+                record['%ith Percentile' % percentile] = ""
+
+        economic_data.append(record)
     
     #reporting parameters
     report_args = {
@@ -997,7 +1021,18 @@ def execute(args):
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Economic Value</h2>'}                
+                    'text': '<h2>Economic Value</h2>'},
+                {   'type': 'table',
+                    'section': 'body',
+                    'sortable': False,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type':'dictionary',
+                    'columns':economic_columns,
+##                    'key':'Crop Id',
+                    'data': economic_data,
+                    'attributes': {'id':'Short Name', 'border':1, 'style':'border-collapse:collapse;'}},
+                
                 ],
             'out_uri': report_uri}
     
