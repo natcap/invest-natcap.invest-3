@@ -59,7 +59,7 @@ def compute_transects(args):
         args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
     transect_band = transect_raster.GetRasterBand(1)
-    transects = transect_band.ReadAsArray()
+#    transects = transect_band.ReadAsArray()
     
     print('past transects')
 
@@ -165,7 +165,7 @@ def compute_transects(args):
                     if shore_pts[0].size:
 
                         # Store shore position
-                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
+#                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
 
                         # Estimate shore orientation
                         shore_orientations = \
@@ -382,10 +382,10 @@ def compute_transects(args):
                     raw_positions[1][nodata_mask])
 
                 
-                transects[masked_positions] = source[mask]
-                transects[nodata_positions] = 0
-                transects[(raw_positions[0][shore], \
-                    raw_positions[1][shore])] = transect
+#                transects[masked_positions] = source[mask]
+#                transects[nodata_positions] = 0
+#                transects[(raw_positions[0][shore], \
+#                    raw_positions[1][shore])] = transect
 
 #                print('')
 #                sys.exit(0)
@@ -479,7 +479,7 @@ def compute_transects(args):
     
 
     # Store shore information gathered during the computation
-    transect_band.WriteArray(transects)
+#    transect_band.WriteArray(transects)
     transect_band = None
     transect_raster = None
     raster_utils.calculate_raster_stats_uri(args['transects_uri'])
