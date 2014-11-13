@@ -311,7 +311,7 @@ def get_dictionary_values_ordered(dict_list, key_name):
 
     return ordered_value_list
 
-def add_checkbox_column(col_list, row_list, checkbox_pos):
+def add_checkbox_column(col_list, row_list, checkbox_pos=1):
     """Insert a new column into the list of column dictionaries so that it
         is the second column dictionary found in the list. Also add the
         checkbox column header to the list of row dictionaries and
@@ -334,7 +334,7 @@ def add_checkbox_column(col_list, row_list, checkbox_pos):
              ...]
 
         checkbox_pos - an integer for the position of the checkbox
-            column
+            column. Defaulted at 1 (optional)
 
         returns - a tuple of the updated column and rows list of dictionaries
             in that order"""
