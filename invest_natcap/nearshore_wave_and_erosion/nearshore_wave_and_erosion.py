@@ -499,27 +499,29 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
-        # Set data to zero
-        def set_to_zero(x):
-            result = numpy.copy(x)
-            result[x != nodata] = 0.
-
-            return result
-
-        print('setting AOI values to zero')
-        cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
-        nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
-        
-        temporary_filename = raster_utils.temporary_filename(suffix='.tif')
-        
-        raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
-            temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
-            vectorize_op = False)
-
-        print('cleaning up')
-
-        os.remove(args['aoi_raster_uri'])
-        os.rename(temporary_filename, args['aoi_raster_uri'])
+#        # Set data to zero
+#        def set_to_zero(x):
+#            result = numpy.copy(x)
+#            result[x != nodata] = 0.
+#
+#            return result
+#
+#        print('setting AOI values to zero')
+#        cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
+#        nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+#        
+#        temporary_filename = raster_utils.temporary_filename(suffix='.tif')
+#        
+#        raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
+#            temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
+#            vectorize_op = False)
+#        
+#        print('cleaning up')
+#
+#        os.remove(args['aoi_raster_uri'])
+#        os.rename(temporary_filename, args['aoi_raster_uri'])
+#
+#        raster_utils.calculate_raster_stats_uri(temporary_filename)
 
     # Preprocess bathymetry
     args['bathymetry_raster_uri'] = \
@@ -702,6 +704,7 @@ def execute(args):
                             'to', basename + '_' + 'type' + '.tif')
                         band.WriteArray(array)
                         # clean-up
+                        array = None
                         band = None
                         raster = None
                     # Add new uri to uri list
@@ -711,10 +714,14 @@ def execute(args):
     # Detect habitat constraints
     args['constraints_type'] = {}
 
+    # Precompute aoi nodata
+    aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+
     # Mask the raster to only keep landmasses
     def keep_land(x, aoi):
         result = numpy.zeros(x.shape) # Add everything
-        result[x <= 0] = 1 # Remove water
+        result[aoi != aoi_nodata] = 1 # Remove land and water
+        result[x > 0] = 0 # Add land
 
         return result
 
@@ -735,9 +742,6 @@ def execute(args):
 
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
-
-    # Precompute aoi nodata
-    aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
 
     print('habitat_information')
     for habitat_information in args['habitat_information']:
@@ -769,11 +773,6 @@ def execute(args):
                 # Use the mask to compute distance over land
                 raster_utils.distance_transform_edt(land_distance_mask_uri, \
                     constraint_uri)
-
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
 
                 scale_raster_inplace(constraint_uri, cell_size)
 

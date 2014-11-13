@@ -63,16 +63,16 @@ def compute_transects(args):
     
     print('past transects')
 
-    # Store transect profiles to reconstruct shore profile
-    args['shore_profile_uri'] = os.path.join( \
-        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
-    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
-        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
-    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
-    shore_band = shore_raster.GetRasterBand(1)
-    shore_profile = shore_band.ReadAsArray()
-
-    print('past shore')
+#    # Store transect profiles to reconstruct shore profile
+#    args['shore_profile_uri'] = os.path.join( \
+#        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
+#    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+#        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+#    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
+#    shore_band = shore_raster.GetRasterBand(1)
+#    shore_profile = shore_band.ReadAsArray()
+#
+#    print('past shore')
 
     # Landmass
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
@@ -80,6 +80,7 @@ def compute_transects(args):
     assert landmass_raster is not None, message
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
+    landmass = landmass_band.ReadAsArray()
     
     print('past landmass')
 
@@ -260,6 +261,7 @@ def compute_transects(args):
                         tiles += 1
 
     # Cleanup
+    landmass = None
     aoi_band = None
     aoi_raster = None
     landmass_band = None
@@ -597,6 +599,7 @@ def compute_transect_orientation(position, orientation, landmass):
     # orientation is perpendicular to the shore
     orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
 
+    # Compute the long (l) and the short (s) axes indices
     l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
     s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
 
