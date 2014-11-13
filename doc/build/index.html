@@ -1,0 +1,269 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>InVEST 3 API Reference &mdash; InVEST 3 3.0.1 documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.gif"/>
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="InVEST 3 3.0.1 documentation" href="#"/>
+        <link rel="next" title="Core Utilities" href="core_utilities.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="#" class="fa fa-home"> InVEST 3</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="core_utilities.html">Core Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/cython_modules.html">Cython Modules Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/dbfpy.html">DBFpy Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/invest_core.html">Core Geoprocessing Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/iui.html">User Interface Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/optimization.html">Optimization Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/raster_utils.html">Raster Utilities Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/report_generation.html">Report Generation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/reporting.html">Reporting Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/testing.html">Testing Package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models/blue_carbon.html">Blue Carbon Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/carbon.html">Carbon Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/crop_production.html">Crop Production Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/finfish_aquaculture.html">Finfish Aquaculture Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/fisheries.html">Fisheries Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/flood_mitigation.html">Flood Mitigation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_quality.html">Habitat Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_risk_assessment.html">Habitat Risk Assessment Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_suitability.html">Habitat Suitability Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/hydropower.html">Hydropower Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/malaria.html">Malaria Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/marine_water_quality.html">Marine Water Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/monthly_water_yield.html">Monthly Water Yield Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/ndr.html">Nutrient Delivery Ratio Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/nearshore_wave_and_erosion.html">Nearshore Wave and Erosion Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/nutrient.html">Nutrient Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/pollination.html">Pollination Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/recreation.html">Recreation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/scenic_quality.html">Scenic Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/sdr.html">Sediment Delivery Ratio Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/sediment.html">Sediment Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/timber.html">Timber Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/wave_energy.html">Wave Energy Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/wind_energy.html">Wind Energy Package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="supporting_tools.html">Supporting Tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/coastal_vulnerability.html">Coastal Protection Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/overlap_analysis.html">Overlap Analysis Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/routing.html">Routing Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/scenario_generator.html">Scenario Generator Package</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="#">InVEST 3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+      
+    <li>InVEST 3 API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="invest-3-api-reference">
+<h1>InVEST 3 API Reference<a class="headerlink" href="#invest-3-api-reference" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="core_utilities.html">Core Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/cython_modules.html">Cython Modules Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/dbfpy.html">DBFpy Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/invest_core.html">Core Geoprocessing Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/iui.html">User Interface Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/optimization.html">Optimization Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/raster_utils.html">Raster Utilities Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/report_generation.html">Report Generation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/reporting.html">Reporting Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core_utilities/testing.html">Testing Package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models/blue_carbon.html">Blue Carbon Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/carbon.html">Carbon Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/crop_production.html">Crop Production Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/finfish_aquaculture.html">Finfish Aquaculture Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/fisheries.html">Fisheries Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/flood_mitigation.html">Flood Mitigation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_quality.html">Habitat Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_risk_assessment.html">Habitat Risk Assessment Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/habitat_suitability.html">Habitat Suitability Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/hydropower.html">Hydropower Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/malaria.html">Malaria Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/marine_water_quality.html">Marine Water Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/monthly_water_yield.html">Monthly Water Yield Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/ndr.html">Nutrient Delivery Ratio Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/nearshore_wave_and_erosion.html">Nearshore Wave and Erosion Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/nutrient.html">Nutrient Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/pollination.html">Pollination Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/recreation.html">Recreation Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/scenic_quality.html">Scenic Quality Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/sdr.html">Sediment Delivery Ratio Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/sediment.html">Sediment Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/timber.html">Timber Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/wave_energy.html">Wave Energy Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/wind_energy.html">Wind Energy Package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="supporting_tools.html">Supporting Tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/coastal_vulnerability.html">Coastal Protection Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/overlap_analysis.html">Overlap Analysis Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/routing.html">Routing Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting_tools/scenario_generator.html">Scenario Generator Package</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="core_utilities.html" class="btn btn-neutral float-right" title="Core Utilities"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, The Natural Capital Project.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'3.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

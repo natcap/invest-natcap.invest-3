@@ -1,0 +1,20 @@
+Nutrient Package
+================
+
+Nutrient
+--------
+
+.. automodule:: invest_natcap.nutrient.nutrient
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: invest_natcap.nutrient
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. End of file

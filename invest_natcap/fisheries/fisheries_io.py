@@ -1,3 +1,7 @@
+'''
+The Fisheries IO module contains functions for handling inputs and outputs
+'''
+
 import logging
 import os
 import csv
@@ -14,10 +18,9 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 class MissingParameter(Exception):
-    '''This is a broad exception which can be raised if the any of the
-    parameters required for a specific model run type are missing. This
-    can include recruitment parameters, vulnerability, exploitation fraction,
-    maturity, weight, or duration.
+    '''
+    A broad exception class that is raised when a necessary parameter is not
+        provided.
     '''
     def __init__(self, msg):
         self.msg = msg
@@ -25,52 +28,56 @@ class MissingParameter(Exception):
 
 # Fetch and Verify Arguments
 def fetch_verify_args(args):
-    '''Fetches input arguments from the user, verifies for correctness and
+    '''
+    Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a dictionary of variables
 
     This function receives an unmodified 'args' dictionary from the user
 
-    :param dictionary args: arguments from the user
-    :return: vars_dict
-    :rtype: dictionary
+    Args:
+        args (dictionary): arguments from the user
 
-    **Example Output**
-    vars_dict = {
-        'workspace_dir': 'path/to/workspace_dir',
-        'output_dir': 'path/to/output_dir',
-        'aoi_uri': 'path/to/aoi_uri',
-        'total_timesteps': 100,
-        'population_type': 'Stage-Based',
-        'sexsp': 2,
-        'spawn_units': 'Weight',
-        'total_init_recruits': 100.0,
-        'recruitment_type': 'Ricker',
-        'alpha': 32.4,
-        'beta': 54.2,
-        'total_recur_recruits': 92.1,
-        'migr_cont': True,
-        'harv_cont': True,
-        'harvest_units': 'Individuals',
-        'frac_post_process': 0.5,
-        'unit_price': 5.0,
+    Returns:
+        vars_dict (dictionary)
 
-        # Pop Params
-        'population_csv_uri': 'path/to/csv_uri',
-        'Survnaturalfrac': np.array([[[...], [...]], [[...], [...]], ...]),
-        'Classes': np.array([...]),
-        'Vulnfishing': np.array([...], [...]),
-        'Maturity': np.array([...], [...]),
-        'Duration': np.array([...], [...]),
-        'Weight': np.array([...], [...]),
-        'Fecundity': np.array([...], [...]),
-        'Regions': np.array([...]),
-        'Exploitationfraction': np.array([...]),
-        'Larvaldispersal': np.array([...]),
+    Example Returned Dictionary of Verified Arguments::
 
-        # Mig Params
-        'migration_dir': 'path/to/mig_dir',
-        'Migration': [np.matrix, np.matrix, ...]
-    }
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'output_dir': 'path/to/output_dir',
+            'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Ricker',
+            'alpha': 32.4,
+            'beta': 54.2,
+            'total_recur_recruits': 92.1,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+
+            # Pop Params
+            'population_csv_uri': 'path/to/csv_uri',
+            'Survnaturalfrac': np.array([[[...], [...]], [[...], [...]], ...]),
+            'Classes': np.array([...]),
+            'Vulnfishing': np.array([...], [...]),
+            'Maturity': np.array([...], [...]),
+            'Duration': np.array([...], [...]),
+            'Weight': np.array([...], [...]),
+            'Fecundity': np.array([...], [...]),
+            'Regions': np.array([...]),
+            'Exploitationfraction': np.array([...]),
+            'Larvaldispersal': np.array([...]),
+
+            # Mig Params
+            'migration_dir': 'path/to/mig_dir',
+            'Migration': [np.matrix, np.matrix, ...]
+        }
 
     '''
     if args['sexsp'] == 'Yes':
@@ -91,37 +98,40 @@ def fetch_verify_args(args):
 
 
 def _verify_population_csv(args):
-    '''Parses and verifies inputs from the population attributes csv file.
-    If not all necessary vectors are included, the function will raise a
-    MissingParameter exception
+    '''Parses and verifies the population arributes file
 
-    **Notes**
-    See _parse_population_csv function for notes for list of dictionary keys
-        in returned pop_dict
+    Parses and verifies inputs from the population attributes csv file.
+        If not all necessary vectors are included, the function will raise a
+        MissingParameter exception. Survival matrix will be arranged by
+        class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
+        be arranged by class-elements, 2nd dim: sex (depending on whether model
+        is sex-specific) Region vectors will be arraged by region-elements,
+        sex-agnostic.
 
-    Survival matrix will be arranged by class-elements, 2nd dim: sex, and
-        3rd dim: region
-    Class vectors will be arranged by class-elements, 2nd dim: sex (depending
-        on whether model is sex-specific)
-    Region vectors will be arraged by region-elements, sex-agnostic
+    Args:
+        args (dictionary): arguments provided by user
 
-    **Example Output**
-    pop_dict = {
-        'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...),
+    Returns:
+        pop_dict (dictionary): verified population arguments
 
-        # Class Vectors
-        'Classes': np.array([...]),
-        'Vulnfishing': np.array([...], [...]),
-        'Maturity': np.array([...], [...]),
-        'Duration': np.array([...], [...]),
-        'Weight': np.array([...], [...]),
-        'Fecundity': np.array([...], [...]),
+    Example Returned Population Dictionary::
 
-        # Region Vectors
-        'Regions': np.array([...]),
-        'Exploitationfraction': np.array([...]),
-        'Larvaldispersal': np.array([...]),
-    }
+        {
+            'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...),
+
+            # Class Vectors
+            'Classes': np.array([...]),
+            'Vulnfishing': np.array([...], [...]),
+            'Maturity': np.array([...], [...]),
+            'Duration': np.array([...], [...]),
+            'Weight': np.array([...], [...]),
+            'Fecundity': np.array([...], [...]),
+
+            # Region Vectors
+            'Regions': np.array([...]),
+            'Exploitationfraction': np.array([...]),
+            'Larvaldispersal': np.array([...]),
+        }
     '''
     population_csv_uri = args['population_csv_uri']
     pop_dict = _parse_population_csv(population_csv_uri, args['sexsp'])
@@ -196,19 +206,20 @@ def _verify_population_csv(args):
 
 
 def _parse_population_csv(uri, sexsp):
-    '''Parses the given population attributes csv file and returns a dictionary
-    of lists, arrays, and matrices
+    '''
+    Parses the given population attributes csv file and returns a dictionary
+        of lists, arrays, and matrices
 
-    **Notes**
     Dictionary items containing lists, arrays or matrices are capitalized,
     while single variables are lowercase.
 
     Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
-    **Example**
-    pop_dict = {{'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...)},
-                {'Vulnfishing': np.array([...], [...]), ...},
+    Example:
+
+        pop_dict = {{'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...)},
+                    {'Vulnfishing': np.array([...], [...]), ...},
     '''
     csv_data = []
     pop_dict = {}
@@ -275,8 +286,9 @@ def _verify_migration_tables(args, class_list, region_list):
     If migration matrices are not provided for all classes, the function will
     generate identity matrices for missing classes
 
-    **Example**
-    mig_dict = {'Migration': [np.matrix, np.matrix, ...]}
+    Example:
+
+        mig_dict = {'Migration': [np.matrix, np.matrix, ...]}
     '''
     migration_dict = {}
 
@@ -310,20 +322,22 @@ def _verify_migration_tables(args, class_list, region_list):
 
 
 def _parse_migration_tables(args, class_list):
-    '''Parses all files in the given directory as migration matrices
-    and returns a dictionary of stages and their corresponding migration
-    numpy matrix.
+    '''Parses the migration tables given by user
 
-    If extra files are provided that do not match the class names, an exception
-    will be thrown
+    Parses all files in the given directory as migration matrices and returns a
+    dictionary of stages and their corresponding migration numpy matrix. If
+    extra files are provided that do not match the class names, an exception
+    will be thrown.
 
-    :param string uri: filepath to the directory of migration tables
+    Args:
+        uri (string): filepath to the directory of migration tables
 
-    :returns: mig_dict
-    :rtype: dictionary
+    Returns:
+        mig_dict (dictionary)
 
-    **Example**
-    mig_dict = {{'stage1': np.matrix}, {'stage2': np.matrix}, ...}
+    Example::
+
+        mig_dict = {{'stage1': np.matrix}, {'stage2': np.matrix}, ...}
     '''
     mig_dict = {}
 
@@ -367,29 +381,30 @@ def _parse_migration_tables(args, class_list):
 
 def _verify_single_params(args):
     '''
-    **Example**
-    params_dict = {
-        'workspace_dir': 'path/to/workspace_dir',
-        'population_csv_uri': 'path/to/csv_uri',
-        'migration_dir': 'path/to/mig_dir',
-        'aoi_uri': 'path/to/aoi_uri',
-        'total_timesteps': 100,
-        'population_type': 'Stage-Based',
-        'sexsp': 2,
-        'spawn_units': 'Weight',
-        'total_init_recruits': 100.0,
-        'recruitment_type': 'Ricker',
-        'alpha': 32.4,
-        'beta': 54.2,
-        'total_recur_recruits': 92.1,
-        'migr_cont': True,
-        'harv_cont': True,
-        'harvest_units': 'Individuals',
-        'frac_post_process': 0.5,
-        'unit_price': 5.0,
-        ...
-        'output_dir': 'path/to/output_dir',
-    }
+    Example Returned Parameters Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'population_csv_uri': 'path/to/csv_uri',
+            'migration_dir': 'path/to/mig_dir',
+            'aoi_uri': 'path/to/aoi_uri',
+            'total_timesteps': 100,
+            'population_type': 'Stage-Based',
+            'sexsp': 2,
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100.0,
+            'recruitment_type': 'Ricker',
+            'alpha': 32.4,
+            'beta': 54.2,
+            'total_recur_recruits': 92.1,
+            'migr_cont': True,
+            'harv_cont': True,
+            'harvest_units': 'Individuals',
+            'frac_post_process': 0.5,
+            'unit_price': 5.0,
+            # ...
+            'output_dir': 'path/to/output_dir',
+        }
     '''
     params_dict = args
 
@@ -424,7 +439,7 @@ def _verify_single_params(args):
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
-        LOGGER.error("Total Timesteps value must be positive integer")
+        LOGGER.error("Total Time Steps value must be positive integer")
         raise ValueError
     params_dict['total_timesteps'] = total_timesteps + 1
 
@@ -449,7 +464,7 @@ def _verify_single_params(args):
             raise ValueError
         if args['total_recur_recruits'] < 0:
             LOGGER.error(
-                "Total Recruits per Timestep must be non-negative float")
+                "Total Recruits per Time Step must be non-negative float")
             raise ValueError
 
     # If Harvest:
@@ -477,13 +492,12 @@ def _listdir(path):
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
 
-    Input:
-        :param string path: the location container from which we want to
+    Args:
+        path (string): the location container from which we want to
             gather all files
 
     Returns:
-        :return: A list of full URIs contained within 'path'.
-        :rtype: list
+        uris (list): A list of full URIs contained within 'path'
     '''
     file_names = os.listdir(path)
     uris = map(lambda x: os.path.join(path, x), file_names)
@@ -586,7 +600,18 @@ def _vectorize_reg_attribute(lst):
 
 # Generate Outputs
 def generate_outputs(vars_dict):
-    '''
+    '''Generates outputs from a fisheries model run
+
+    Creates the following:
+
+        + Results CSV File
+        + Results HTML Page
+        + Results Shapefile (if provided)
+        + Intermediate CSV File
+
+    Args:
+        vars_dict (dictionary)
+
     '''
     # CSV results page
     _generate_intermediate_csv(vars_dict)
@@ -617,11 +642,11 @@ def _generate_results_csv(vars_dict):
         #Header for final results table
         csv_writer.writerow(
             ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
-                ' Timesteps'])
+                ' Time Steps'])
         csv_writer.writerow([])
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
-        sum_headers_row = ['Subregion', 'Harvest', 'Value']
+        sum_headers_row = ['Subregion', 'Harvest', 'Valuation']
         csv_writer.writerow(sum_headers_row)
         for i in range(0, len(H_tx[-1])):  # i is a cycle
             line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
@@ -631,9 +656,9 @@ def _generate_results_csv(vars_dict):
 
         # Give Total Harvest for Each Cycle
         csv_writer.writerow([])
-        csv_writer.writerow(['Timestep Breakdown'])
+        csv_writer.writerow(['Time Step Breakdown'])
         csv_writer.writerow([])
-        csv_writer.writerow(['Timestep', 'Spawners', 'Harvest', 'Equilibrated?'])
+        csv_writer.writerow(['Time Step', 'Spawners', 'Harvest', 'Equilibrated?'])
 
         for i in range(0, len(H_tx)):  # i is a cycle
             line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
@@ -646,11 +671,11 @@ def _generate_results_csv(vars_dict):
 
 
 def _generate_intermediate_csv(vars_dict):
-    '''Want to create an intermediate output that gives the number of
-    individuals within each area for each cycle for each age/stage.
+    '''Generates an intermediate output that gives the number of
+    individuals within each area for each time step for each age/stage.
     '''
     uri = os.path.join(
-        vars_dict['intermediate_dir'], 'Population_by_Timestep.csv')
+        vars_dict['intermediate_dir'], 'Population_by_Time_Step.csv')
     Regions = vars_dict['Regions']
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
@@ -661,10 +686,10 @@ def _generate_intermediate_csv(vars_dict):
     with open(uri, 'wb') as c_file:
         # c_writer = csv.writer(c_file)
         if sexsp == 2:
-            line = "Timestep, Region, Class, Sex, Numbers\n"
+            line = "Time Step, Region, Class, Sex, Numbers\n"
             c_file.write(line)
         else:
-            line = "Timestep, Region, Class, Numbers\n"
+            line = "Time Step, Region, Class, Numbers\n"
             c_file.write(line)
 
         for t in range(0, len(N_txsa)):
@@ -702,21 +727,34 @@ def _generate_results_html(vars_dict):
 
     total_timesteps = len(H_tx)
 
+    # Create Model Run Overview Table
+    overview_columns = [{'name': 'Attribute', 'total': False},
+                        {'name': 'Value', 'total': False}]
+
+    overview_body = [
+        {'Attribute': 'Model Type', 'Value': vars_dict['population_type']},
+        {'Attribute': 'Recruitment Type', 'Value': vars_dict['recruitment_type']},
+        {'Attribute': 'Sex-Specific?', 'Value': (
+            'Yes' if vars_dict['sexsp'] == 2 else 'No')},
+        {'Attribute': 'Classes', 'Value': str(len(vars_dict['Classes']))},
+        {'Attribute': 'Regions', 'Value': str(len(Regions))},
+    ]
+
     # Create Final Cycle Harvest Summary Table
     final_cycle_columns = [{'name': 'Subregion', 'total': False},
                            {'name': 'Harvest', 'total': True},
-                           {'name': 'Value', 'total': True}]
+                           {'name': 'Valuation', 'total': True}]
 
     final_timestep_body = []
     for i in range(0, len(H_tx[-1])):  # i is a cycle
         sub_dict = {}
         sub_dict['Subregion'] = Regions[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
-        sub_dict['Value'] = "%.2f" % V_tx[-1, i]
+        sub_dict['Valuation'] = "%.2f" % V_tx[-1, i]
         final_timestep_body.append(sub_dict)
 
-    # Create Harvest Timestep Table
-    timestep_breakdown_columns = [{'name': 'Timestep', 'total': False},
+    # Create Harvest Time Step Table
+    timestep_breakdown_columns = [{'name': 'Time Step', 'total': False},
                                {'name': 'Spawners', 'total': True},
                                {'name': 'Harvest', 'total': True},
                                {'name': 'Equilibrated?', 'total': False}]
@@ -724,7 +762,7 @@ def _generate_results_html(vars_dict):
     timestep_breakdown_body = []
     for i in range(0, total_timesteps):
         sub_dict = {}
-        sub_dict['Timestep'] = str(i)
+        sub_dict['Time Step'] = str(i)
         if i == 0:
             sub_dict['Spawners'] = "(none)"
         elif recruitment_type == 'Fixed':
@@ -753,8 +791,23 @@ def _generate_results_html(vars_dict):
     elements = [{
                 'type': 'text',
                 'section': 'body',
-                'text': '<h2>Final Harvest by Subregion After ' +
-                        str(total_timesteps-1) + ' Timesteps</h2>'},
+                'text': '<h2>Model Run Overview</h2>'
+                },
+                {
+                    'type': 'table',
+                    'section': 'body',
+                    'sortable': True,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type': 'dictionary',
+                    'columns': overview_columns,
+                    'data': overview_body
+                },
+                {
+                    'type': 'text',
+                    'section': 'body',
+                    'text': '<h2>Final Harvest by Subregion After ' +
+                            str(total_timesteps-1) + ' Time Steps</h2>'},
                 {
                     'type': 'table',
                     'section': 'body',
@@ -768,7 +821,7 @@ def _generate_results_html(vars_dict):
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Timestep Breakdown</h2>'
+                    'text': '<h2>Time Step Breakdown</h2>'
                 },
                 {
                     'type': 'table',

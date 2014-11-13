@@ -59,36 +59,39 @@ def compute_transects(args):
         args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
     transect_band = transect_raster.GetRasterBand(1)
-    transects = transect_band.ReadAsArray()
+#    transects = transect_band.ReadAsArray()
+    
+    print('past transects')
 
-    # Store transect profiles to reconstruct shore profile
-    args['shore_profile_uri'] = os.path.join( \
-        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
-    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
-        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
-    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
-    shore_band = shore_raster.GetRasterBand(1)
-    shore_profile = shore_band.ReadAsArray()
+#    # Store transect profiles to reconstruct shore profile
+#    args['shore_profile_uri'] = os.path.join( \
+#        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
+#    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+#        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+#    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
+#    shore_band = shore_raster.GetRasterBand(1)
+#    shore_profile = shore_band.ReadAsArray()
+#
+#    print('past shore')
 
     # Landmass
-    raster = gdal.Open(args['landmass_raster_uri'])
+    landmass_raster = gdal.Open(args['landmass_raster_uri'])
     message = 'Cannot open file ' + args['landmass_raster_uri']
-    assert raster is not None, message
-    fine_geotransform = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    landmass = band.ReadAsArray()
-    band = None
-    raster = None
+    assert landmass_raster is not None, message
+    fine_geotransform = landmass_raster.GetGeoTransform()
+    landmass_band = landmass_raster.GetRasterBand(1)
+    landmass = landmass_band.ReadAsArray()
     
+    print('past landmass')
+
     # AOI
-    raster = gdal.Open(args['aoi_raster_uri'])
+    aoi_raster = gdal.Open(args['aoi_raster_uri'])
     message = 'Cannot open file ' + args['aoi_raster_uri']
-    assert raster is not None, message
-    band = raster.GetRasterBand(1)
-    aoi = band.ReadAsArray()
-    band = None
-    raster = None
+    assert aoi_raster is not None, message
+    aoi_band = aoi_raster.GetRasterBand(1)
     
+    print('past AOI')
+
     # Bathymetry
     raster = gdal.Open(args['bathymetry_raster_uri'])
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
@@ -98,9 +101,12 @@ def compute_transects(args):
     band = None
     raster = None
 
-    row_count, col_count = landmass.shape
+    row_count = landmass_band.YSize 
+    col_count = landmass_band.XSize
 
-    # Get the fine and coarse raster cell sizes, making sure the signs are consistent
+    print('past bathymetry')
+
+   # Get the fine and coarse raster cell sizes, making sure the signs are consistent
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
@@ -134,20 +140,22 @@ def compute_transects(args):
             str((i_end - i)/i_side_coarse))
 
         # Top of the current tile
-        i_base = (i - i_start) / i_side_fine - 2
+        i_base = max((i - i_start) / i_side_fine - 2, 0)
 
         for j in range(j_start, j_end, j_side_coarse):
             # Left coordinate of the current tile
-            j_base = (j - j_start) / j_side_fine - 2
+            j_base = max((j - j_start) / j_side_fine - 2, 0)
 
             # Data under the tile
-            data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+            #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
+            data = aoi_band.ReadAsArray(i_base, j_base, i_offset, j_offset)
 
             # Avoid nodata on tile
             if np.sum(data) == tile_size:
 
                 # Look for landmass cover on tile
-                tile = landmass[i_base:i_base+i_offset, j_base:j_base+j_offset]
+                #tile = landmass[i_base:i_base+i_offset, :j_base+j_offset]
+                tile = landmass_band.ReadAsArray(i_base, j_base, i_offset, j_offset)
                 land = np.sum(tile)
 
                 # If land and sea, we have a shore: detect it and store
@@ -157,7 +165,7 @@ def compute_transects(args):
                     if shore_pts[0].size:
 
                         # Store shore position
-                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
+#                        transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
 
                         # Estimate shore orientation
                         shore_orientations = \
@@ -252,19 +260,26 @@ def compute_transects(args):
                         
                         tiles += 1
 
+    # Cleanup
+    landmass = None
+    aoi_band = None
+    aoi_raster = None
+    landmass_band = None
+    landmass_raster = None
+
+    
+
     LOGGER.debug('found %i tiles.' % tiles)
 
     print('transect_info size', len(transect_info))
-    for ID in range(len(transect_info)):
-        pass
-    
 
     # Create a numpy array to store the habitat type
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    transect_data_array = np.ones((tiles, max_transect_length)) * -99999.0
-    habitat_data_array = np.ones((tiles, field_count, max_transect_length)) * -99999.0
+    habitat_type_array = np.ones((tiles, max_transect_length)) * -99999.0
+    habitat_properties_array = \
+        np.ones((tiles, field_count, max_transect_length)) * -99999.0
 
     # Creating HDF5 file that will store the transect data
     habitat_type_uri = \
@@ -275,13 +290,13 @@ def compute_transects(args):
     habitat_type_file = h5.File(habitat_type_uri, 'w')
     habitat_type_dataset = \
         habitat_type_file.create_dataset('habitat_types', \
-            transect_data_array.shape, compression = 'gzip', \
+            habitat_type_array.shape, compression = 'gzip', \
             fillvalue = -99999.0)
 
     habitat_properties_file = h5.File(habitat_properties_uri, 'w')
     habitat_properties_dataset = \
         habitat_properties_file.create_dataset('habitat_properties', \
-            habitat_data_array.shape, compression = 'gzip', \
+            habitat_properties_array.shape, compression = 'gzip', \
             fillvalue = -99999.0)
 
 
@@ -289,6 +304,8 @@ def compute_transects(args):
     hdf5_files = {}
 
     # Iterate through shapefile types
+    transect_range = range(2)
+
     for shp_type in args['shapefiles']:
 
         hdf5_files[shp_type] = []
@@ -296,17 +313,20 @@ def compute_transects(args):
         for shp_name in args['shapefiles'][shp_type]:
 
             # Get rid of the path and the extension
-            basename = os.path.splitext(os.path.basename(args['shapefiles'][shp_type][shp_name]['type']))[0]
+            basename = os.path.splitext(os.path.basename( \
+                args['shapefiles'][shp_type][shp_name]['type']))[0]
 
             # Extract the type for this shapefile
             type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
 
+            source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
             raster = gdal.Open(type_shapefile_uri)
             band = raster.GetRasterBand(1)
             array = band.ReadAsArray()
 
             LOGGER.info('Extracting priority information from ' + basename)
             
+            mask = None
             progress_step = tiles / 50
             for transect in range(tiles):
                 if transect % progress_step == 0:
@@ -320,15 +340,12 @@ def compute_transects(args):
                 start = transect_info[transect]['clip_limits'][0]
                 shore = transect_info[transect]['clip_limits'][1]
                 end = transect_info[transect]['clip_limits'][2]
-                print('start, shore, end', (start, shore, end))
 
-                destination = transect_data_array[transect,:end-start]
-                print('destination', destination)
+                destination = habitat_type_array[transect,:end-start]
 
 #                source = interpolate_transect(source, i_side_fine, \
 #                    args['model_resolution'], kind = 'nearest')
                 source = source[start:end,]
-                print('source', source)
 
 #                source = \
 #                    apply_habitat_constraints(source, args['habitat_information'])
@@ -336,12 +353,20 @@ def compute_transects(args):
                 
                 # Compute the mask that will be used to update the values
                 mask = destination < source
-                print('mask', mask)
 #                print('mask size', np.sum(mask.astype(int)))
+                #if transect in transect_range:
+                #    print('transect', transect)
+                #    print('start, shore, end', (start, shore, end))
+                #    print('source', source)
+                #    print('mask', mask)
+                #    print('destination', destination)
 
                 # Save transect to file
                 destination[mask] = source[mask]
-                print('new destination', destination)
+
+                #if transect in transect_range:
+                #    print('new destination', destination)
+                #    print ''
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
@@ -350,10 +375,20 @@ def compute_transects(args):
                 masked_positions = \
                     (clipped_positions[0][mask], clipped_positions[1][mask])
 #                print('masked_positions', masked_positions[0].size)
+
+                nodata_mask = destination == source_nodata
+
+                nodata_positions = (raw_positions[0][nodata_mask], \
+                    raw_positions[1][nodata_mask])
+
                 
-                transects[masked_positions] = source[mask]
+#                transects[masked_positions] = source[mask]
+#                transects[nodata_positions] = 0
+#                transects[(raw_positions[0][shore], \
+#                    raw_positions[1][shore])] = transect
+
 #                print('')
-                sys.exit(0)
+#                sys.exit(0)
             print('')
 
             # Clean up
@@ -362,67 +397,79 @@ def compute_transects(args):
             array = None
 
 
-            for field in args['shapefiles'][shp_type][shp_name]:
-
-                # Skip the field 'type'
-                if field.lower() == 'type':
-                    continue
-
-                # Get rid of the path and the extension
-                basename = os.path.splitext( \
-                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
-
-                # Extract data from the current raster field
-                field_id = args['field_index'][shp_type][field]
-                uri = args['shapefiles'][shp_type][shp_name][field]
-                raster = gdal.Open(uri)
-                band = raster.GetRasterBand(1)
-                array = band.ReadAsArray()
-
-                LOGGER.info('Extracting transect information from ' + basename)
-                
-                progress_step = tiles / 50
-                for transect in range(tiles):
-                    if transect % progress_step == 0:
-                        print '.',
-
-                    raw_positions = transect_info[transect]['raw_positions']
-#                    print('raw_positions', raw_positions[0].size)
-                    
-                    source = array[raw_positions]
-
-                    destination = habitat_data_array[transect, field_id,:]
-                    start = transect_info[transect]['clip_limits'][0]
-                    shore = transect_info[transect]['clip_limits'][1]
-                    end = transect_info[transect]['clip_limits'][2]
-
-#                    source = interpolate_transect(source, i_side_fine, \
-#                        args['model_resolution'], kind = 'nearest')
-                    source = source[start:end,]
-                    
-                    # Save transect to file
-                    destination[mask] = source[mask]
-
-                    clipped_positions = \
-                        (raw_positions[0][start:end], raw_positions[1][start:end])
-#                    print('clipped_positions', clipped_positions[0].size)
-
-                    masked_positions = \
-                        (clipped_positions[0][mask], clipped_positions[1][mask])
-#                    print('masked_positions', masked_positions[0].size)
-                    
-                    transects[masked_positions] = source[mask]
-#                    print('')
-                print('')
-
-                # Close the raster before proceeding to the next one
-                band = None
-                raster = None
-                array = None
+#            for field in args['shapefiles'][shp_type][shp_name]:
+#
+#                # Skip the field 'type'
+#                if field.lower() == 'type':
+#                    continue
+#
+#                # Get rid of the path and the extension
+#                basename = os.path.splitext( \
+#                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
+#
+#                # Extract data from the current raster field
+#                field_id = args['field_index'][shp_type][field]
+#                uri = args['shapefiles'][shp_type][shp_name][field]
+#                raster = gdal.Open(uri)
+#                band = raster.GetRasterBand(1)
+#                array = band.ReadAsArray()
+#
+#                LOGGER.info('Extracting transect information from ' + basename)
+#                
+#                progress_step = tiles / 50
+#                for transect in range(tiles):
+#                    if transect % progress_step == 0:
+#                        print '.',
+#
+#                    raw_positions = transect_info[transect]['raw_positions']
+##                    print('raw_positions', raw_positions[0].size)
+#                    
+#                    source = array[raw_positions]
+#
+#                    start = transect_info[transect]['clip_limits'][0]
+#                    shore = transect_info[transect]['clip_limits'][1]
+#                    end = transect_info[transect]['clip_limits'][2]
+#
+#                    destination = habitat_properties_array[transect, field_id,:end-start]
+#
+##                    source = interpolate_transect(source, i_side_fine, \
+##                        args['model_resolution'], kind = 'nearest')
+#                    source = source[start:end,]
+#                    
+##                    if transect in transect_range:
+##                        print('transect', transect)
+##                        print('start, shore, end', (start, shore, end))
+##                        print('source', source)
+##                        print('mask', mask)
+##                        print('destination', destination)
+#
+#                    # Save transect to file
+##                    destination[mask] = source[mask]
+#
+##                    if transect in transect_range:
+##                        print('new destination', destination)
+##                        print ''
+#
+#                    clipped_positions = \
+#                        (raw_positions[0][start:end], raw_positions[1][start:end])
+##                    print('clipped_positions', clipped_positions[0].size)
+#
+#                    masked_positions = \
+#                        (clipped_positions[0][mask], clipped_positions[1][mask])
+##                    print('masked_positions', masked_positions[0].size)
+#                    
+##                    transects[masked_positions] = source[mask]
+##                    print('')
+#                print('')
+#
+#                # Close the raster before proceeding to the next one
+#                band = None
+#                raster = None
+#                array = None
 
     # Both the habitat type and the habitat field data are complete, save them
-    habitat_type_dataset[...] = transect_data_array[...]
-    habitat_properties_dataset[...] = habitat_data_array[...]
+    habitat_type_dataset[...] = habitat_type_array[...]
+    habitat_properties_dataset[...] = habitat_properties_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
@@ -432,7 +479,7 @@ def compute_transects(args):
     
 
     # Store shore information gathered during the computation
-    transect_band.WriteArray(transects)
+#    transect_band.WriteArray(transects)
     transect_band = None
     transect_raster = None
     raster_utils.calculate_raster_stats_uri(args['transects_uri'])
@@ -552,6 +599,7 @@ def compute_transect_orientation(position, orientation, landmass):
     # orientation is perpendicular to the shore
     orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
 
+    # Compute the long (l) and the short (s) axes indices
     l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
     s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
 
