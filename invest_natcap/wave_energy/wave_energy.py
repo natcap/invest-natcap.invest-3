@@ -1332,6 +1332,17 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
 
         in_feat = in_layer.GetNextFeature()
 
+    # Add in a check to make sure the intersection didn't come back
+    # empty
+    if(shp_layer.GetFeatureCount() == 0):
+        raise Exception('Intersection ERROR: clip_shape found no '
+            'intersection between: file - %s and file - %s. This '
+            'could be caused by the AOI not overlapping any Wave Energy '
+            'Points. '
+            'Suggestions: open workspace/intermediate/projected_wave_data.shp'
+            'and the AOI to make sure AOI overlaps at least on point.' %
+            (shape_to_clip_uri, binding_shape_uri))
+
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
         machine performance table using new ranges from wave watch data.
