@@ -217,6 +217,7 @@ def _parse_population_csv(uri, sexsp):
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
     Example:
+
         pop_dict = {{'Survnaturalfrac': np.array([[...], [...]], [[...], [...]], ...)},
                     {'Vulnfishing': np.array([...], [...]), ...},
     '''
@@ -599,7 +600,18 @@ def _vectorize_reg_attribute(lst):
 
 # Generate Outputs
 def generate_outputs(vars_dict):
-    '''
+    '''Generates outputs from a fisheries model run
+
+    Creates the following:
+
+        + Results CSV File
+        + Results HTML Page
+        + Results Shapefile (if provided)
+        + Intermediate CSV File
+
+    Args:
+        vars_dict (dictionary)
+
     '''
     # CSV results page
     _generate_intermediate_csv(vars_dict)
@@ -659,7 +671,7 @@ def _generate_results_csv(vars_dict):
 
 
 def _generate_intermediate_csv(vars_dict):
-    '''Creates an intermediate output that gives the number of
+    '''Generates an intermediate output that gives the number of
     individuals within each area for each time step for each age/stage.
     '''
     uri = os.path.join(
@@ -695,7 +707,7 @@ def _generate_intermediate_csv(vars_dict):
 
 
 def _generate_results_html(vars_dict):
-    '''Creates an HTML file that contains a summary of all harvest totals
+    '''Generates an HTML file that contains a summary of all harvest totals
     for each subregion.
     '''
     uri = os.path.join(vars_dict['output_dir'], 'Results_Page.html')
