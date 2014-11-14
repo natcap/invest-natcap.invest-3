@@ -70,16 +70,18 @@ def compute_transects(args):
         'blocksize', block_size)
 #    sys.exit(0)
 
-#    # Store transect profiles to reconstruct shore profile
-#    args['shore_profile_uri'] = os.path.join( \
-#        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
-#    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
-#        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
-#    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
-#    shore_band = shore_raster.GetRasterBand(1)
+    # Store transect profiles to reconstruct shore profile
+    args['shore_profile_uri'] = os.path.join( \
+        os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
+    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+        args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+    shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
+    shore_band = shore_raster.GetRasterBand(1)
+    shore = \
+        sp.sparse.lil_matrix((shore_band.XSize, shore_band.YSize))
 #    shore_profile = shore_band.ReadAsArray()
-#
-#    print('past shore')
+
+    print('past shore')
 
     # Landmass
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
@@ -518,11 +520,12 @@ def compute_transects(args):
             # Load data from the dataset
             try:
                 transect_band.ReadAsArray(
-                    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                    xoff=col_offset, yoff=row_offset, 
+                    win_xsize=col_block_width,
                     win_ysize=row_block_width, 
                     buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
             except IndexError as detail:
-                print('Index error:', detail.strerror)
+                print('Index error while reading raster:', detail.strerror)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
 
@@ -532,9 +535,15 @@ def compute_transects(args):
                 0:col_block_width]
             
             # Load data from the sparse matrix
-            matrix_block = transects[ \
-                row_offset:row_offset+row_block_width, \
-                col_offset:col_offset+col_block_width].todense()
+            try:
+                matrix_block = transects[ \
+                    row_offset:row_offset+row_block_width, \
+                    col_offset:col_offset+col_block_width].todense()
+            except IndexError as detail:
+                print('Index error while reading transects:', detail.strerror)
+                print('dataset shape', dataset.shape)
+                print('Index accessed', (row_block_width, col_block_width))
+
 
             # Write sparse matrix contents over the dataset
             mask = np.where(matrix_block != 0)
@@ -546,9 +555,15 @@ def compute_transects(args):
 #
             dataset_block[mask] = matrix_block[mask]
 
-            transect_band.WriteArray(
-                dataset_block[0:row_block_width, 0:col_block_width],
-                xoff=col_offset, yoff=row_offset)
+            try:
+                transect_band.WriteArray(
+                    dataset_block[0:row_block_width, 0:col_block_width],
+                    xoff=col_offset, yoff=row_offset)
+            except IndexError as detail:
+                print('Index error while writing raster:', detail.strerror)
+                print('dataset shape', dataset.shape)
+                print('Index accessed', (row_block_width, col_block_width))
+
 
             processed_blocks += 1
 
