@@ -387,7 +387,7 @@ def compute_transects(args):
                     raw_positions[1][nodata_mask])
 
                 
-#                transects[masked_positions] = source[mask]
+                transects[masked_positions] = source[mask]
                 transects[nodata_positions] = -2
                 transects[(raw_positions[0][shore], \
                     raw_positions[1][shore])] = transect
@@ -402,75 +402,75 @@ def compute_transects(args):
             array = None
 
 
-#            for field in args['shapefiles'][shp_type][shp_name]:
-#
-#                # Skip the field 'type'
-#                if field.lower() == 'type':
-#                    continue
-#
-#                # Get rid of the path and the extension
-#                basename = os.path.splitext( \
-#                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
-#
-#                # Extract data from the current raster field
-#                field_id = args['field_index'][shp_type][field]
-#                uri = args['shapefiles'][shp_type][shp_name][field]
-#                raster = gdal.Open(uri)
-#                band = raster.GetRasterBand(1)
-#                array = band.ReadAsArray()
-#
-#                LOGGER.info('Extracting transect information from ' + basename)
-#                
-#                progress_step = tiles / 50
-#                for transect in range(tiles):
-#                    if transect % progress_step == 0:
-#                        print '.',
-#
-#                    raw_positions = transect_info[transect]['raw_positions']
-##                    print('raw_positions', raw_positions[0].size)
-#                    
-#                    source = array[raw_positions]
-#
-#                    start = transect_info[transect]['clip_limits'][0]
-#                    shore = transect_info[transect]['clip_limits'][1]
-#                    end = transect_info[transect]['clip_limits'][2]
-#
-#                    destination = habitat_properties_array[transect, field_id,:end-start]
-#
-##                    source = interpolate_transect(source, i_side_fine, \
-##                        args['model_resolution'], kind = 'nearest')
-#                    source = source[start:end,]
-#                    
-##                    if transect in transect_range:
-##                        print('transect', transect)
-##                        print('start, shore, end', (start, shore, end))
-##                        print('source', source)
-##                        print('mask', mask)
-##                        print('destination', destination)
-#
-#                    # Save transect to file
-##                    destination[mask] = source[mask]
-#
-##                    if transect in transect_range:
-##                        print('new destination', destination)
-##                        print ''
-#
-#                    clipped_positions = \
-#                        (raw_positions[0][start:end], raw_positions[1][start:end])
-##                    print('clipped_positions', clipped_positions[0].size)
-#
-#                    masked_positions = \
-#                        (clipped_positions[0][mask], clipped_positions[1][mask])
-##                    print('masked_positions', masked_positions[0].size)
-#                    
-##                    transects[masked_positions] = source[mask]
-##                    print('')
-#                print('')
-#
-#                # Close the raster before proceeding to the next one
-#                band = None
-#                raster = None
-#                array = None
+            for field in args['shapefiles'][shp_type][shp_name]:
+
+                # Skip the field 'type'
+                if field.lower() == 'type':
+                    continue
+
+                # Get rid of the path and the extension
+                basename = os.path.splitext( \
+                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
+
+                # Extract data from the current raster field
+                field_id = args['field_index'][shp_type][field]
+                uri = args['shapefiles'][shp_type][shp_name][field]
+                raster = gdal.Open(uri)
+                band = raster.GetRasterBand(1)
+                array = band.ReadAsArray()
+
+                LOGGER.info('Extracting transect information from ' + basename)
+                
+                progress_step = tiles / 50
+                for transect in range(tiles):
+                    if transect % progress_step == 0:
+                        print '.',
+
+                    raw_positions = transect_info[transect]['raw_positions']
+#                    print('raw_positions', raw_positions[0].size)
+                    
+                    source = array[raw_positions]
+
+                    start = transect_info[transect]['clip_limits'][0]
+                    shore = transect_info[transect]['clip_limits'][1]
+                    end = transect_info[transect]['clip_limits'][2]
+
+                    destination = habitat_properties_array[transect, field_id,:end-start]
+
+#                    source = interpolate_transect(source, i_side_fine, \
+#                        args['model_resolution'], kind = 'nearest')
+                    source = source[start:end,]
+                    
+#                    if transect in transect_range:
+#                        print('transect', transect)
+#                        print('start, shore, end', (start, shore, end))
+#                        print('source', source)
+#                        print('mask', mask)
+#                        print('destination', destination)
+
+                    # Save transect to file
+#                    destination[mask] = source[mask]
+
+#                    if transect in transect_range:
+#                        print('new destination', destination)
+#                        print ''
+
+                    clipped_positions = \
+                        (raw_positions[0][start:end], raw_positions[1][start:end])
+#                    print('clipped_positions', clipped_positions[0].size)
+
+                    masked_positions = \
+                        (clipped_positions[0][mask], clipped_positions[1][mask])
+#                    print('masked_positions', masked_positions[0].size)
+                    
+                    transects[masked_positions] = source[mask]
+#                    print('')
+                print('')
+
+                # Close the raster before proceeding to the next one
+                band = None
+                raster = None
+                array = None
 
     # Both the habitat type and the habitat field data are complete, save them
     habitat_type_dataset[...] = habitat_type_array[...]
@@ -484,7 +484,7 @@ def compute_transects(args):
     
 
     # Store shore information gathered during the computation
-#    transect_band.WriteArray(transects)
+    LOGGER.info('Storing transect information...')
     n_rows = transect_band.YSize
     n_cols = transect_band.XSize
 
@@ -493,6 +493,11 @@ def compute_transects(args):
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
    
     dataset_buffer = np.zeros((rows_per_block, cols_per_block))
+
+    # Compute data for progress bar
+    block_count = n_row_blocks * n_col_blocks
+    progress_step = block_count / 50
+    processed_blocks = 0
 
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
@@ -506,11 +511,21 @@ def compute_transects(args):
             if col_block_width > cols_per_block:
                 col_block_width = cols_per_block
 
+            # Show progress bar
+            if processed_blocks % progress_step == 0:
+                print '.',
+
             # Load data from the dataset
-            transect_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                win_ysize=row_block_width, 
-                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
+            try:
+                transect_band.ReadAsArray(
+                    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                    win_ysize=row_block_width, 
+                    buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
+            except IndexError as detail:
+                print('Index error:', detail.strerror)
+                print('dataset shape', dataset.shape)
+                print('Index accessed', (row_block_width, col_block_width))
+
                 
             dataset_block = dataset_buffer[ \
                 0:row_block_width, \
@@ -524,48 +539,25 @@ def compute_transects(args):
             # Write sparse matrix contents over the dataset
             mask = np.where(matrix_block != 0)
 
-            print('dataset_block shape', dataset_block.shape, \
-                'dataset offset', (row_offset, col_offset), \
-                'matrix_block shape', matrix_block.shape, \
-                'raster shape', (n_rows, n_cols))
-
+#            print('dataset_block shape', dataset_block.shape, \
+#                'dataset offset', (row_offset, col_offset), \
+#                'matrix_block shape', matrix_block.shape, \
+#                'raster shape', (n_rows, n_cols))
+#
             dataset_block[mask] = matrix_block[mask]
 
             transect_band.WriteArray(
                 dataset_block[0:row_block_width, 0:col_block_width],
                 xoff=col_offset, yoff=row_offset)
 
-#    #Making sure the band and dataset is flushed and not in memory before
-#    #adding stats
-#    output_band.FlushCache()
-#    output_band = None
-#    output_dataset.FlushCache()
-#    gdal.Dataset.__swig_destroy__(output_dataset)
-#    output_dataset = None
-#
-#    #Clean up the files made by temporary file because we had an issue once
-#    #where I was running the water yield model over 2000 times and it made
-#    #so many temporary files I ran out of disk space.
-#    if aoi_uri != None:
-#        mask_band = None
-#        gdal.Dataset.__swig_destroy__(mask_dataset)
-#        mask_dataset = None
-#        os.remove(mask_uri)
-#    aligned_bands = None
-#    for dataset in aligned_datasets:
-#        gdal.Dataset.__swig_destroy__(dataset)
-#    aligned_datasets = None
-#    if not datasets_are_pre_aligned:
-#        #if they weren't pre-aligned then we have temporary files to remove
-#        for temp_dataset_uri in dataset_out_uri_list:
-#            try:
-#                os.remove(temp_dataset_uri)
-#            except OSError:
-#                LOGGER.warn("couldn't delete file %s", temp_dataset_uri)
-#    calculate_raster_stats_uri(dataset_out_uri)
-   
+            processed_blocks += 1
 
+    #Making sure the band and dataset is flushed and not in memory before
+    #adding stats
+    transect_band.FlushCache()
     transect_band = None
+    transect_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(transect_raster)
     transect_raster = None
     raster_utils.calculate_raster_stats_uri(args['transects_uri'])
 
