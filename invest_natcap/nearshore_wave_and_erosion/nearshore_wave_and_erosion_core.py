@@ -542,6 +542,7 @@ def compute_transects(args):
                 print('Index error while reading raster:', detail.strerror)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
+            print('1.1')
 
                 
             dataset_block = dataset_buffer[ \
@@ -559,12 +560,11 @@ def compute_transects(args):
                 print('Index error while reading transects:', detail.strerror)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
+            print('2.1')
 
 
             # Write sparse matrix contents over the dataset
             mask = np.where(matrix_block != 0)
-
-            print('3')
 
             print('dataset_block shape', dataset_block.shape, \
                 'dataset offset', (row_offset, col_offset), \
@@ -572,6 +572,8 @@ def compute_transects(args):
                 'raster shape', (n_rows, n_cols))
 
             dataset_block[mask] = matrix_block[mask]
+
+            print('3')
 
             try:
                 transect_band.WriteArray(
@@ -581,8 +583,7 @@ def compute_transects(args):
                 print('Index error while writing raster:', detail.strerror)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
-
-            print('4')
+            print('3.1')
 
             processed_blocks += 1
 
