@@ -62,11 +62,11 @@ def compute_transects(args):
     transect_band = transect_raster.GetRasterBand(1)
     block_size = transect_band.GetBlockSize()
     transects = \
-        sp.sparse.lil_matrix((transect_band.XSize, transect_band.YSize))
+        sp.sparse.lil_matrix((transect_band.YSize, transect_band.XSize))
 #    transects = transect_band.ReadAsArray()
     
     print('past transects. size', \
-        (transect_band.XSize, transect_band.YSize), \
+        (transect_band.YSize, transect_band.XSize), \
         'blocksize', block_size)
 #    sys.exit(0)
 
@@ -502,10 +502,24 @@ def compute_transects(args):
     n_rows = transect_band.YSize
     n_cols = transect_band.XSize
 
+    print('transect XY size:', (n_cols, n_rows))
+
+    array = transect_band.ReadAsArray()
+
+    print('transect IJ size:', array.shape)
+    print('block size:', block_size)
+
     cols_per_block, rows_per_block = block_size[0], block_size[1]
+ 
+    print('rows_per_block, cols_per_block', (rows_per_block, cols_per_block))
+
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
    
+    print('blocks per row, blocks per col', (n_row_blocks, n_col_blocks))
+
+#    sys.exit(0)
+
     dataset_buffer = np.zeros((rows_per_block, cols_per_block))
 
     # Compute data for progress bar
