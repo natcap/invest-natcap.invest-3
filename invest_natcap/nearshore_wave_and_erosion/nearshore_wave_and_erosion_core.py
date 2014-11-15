@@ -539,7 +539,7 @@ def compute_transects(args):
                     win_ysize=row_block_width, 
                     buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
             except IndexError as detail:
-                print('Index error while reading raster:', detail.strerror)
+                print('Index error while reading raster:', detail.message)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
             print('1.1')
@@ -557,7 +557,7 @@ def compute_transects(args):
                     row_offset:row_offset+row_block_width, \
                     col_offset:col_offset+col_block_width].todense()
             except IndexError as detail:
-                print('Index error while reading transects:', detail.strerror)
+                print('Index error while reading transects:', detail.message)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
             print('2.1')
@@ -580,7 +580,7 @@ def compute_transects(args):
                     dataset_block[0:row_block_width, 0:col_block_width],
                     xoff=col_offset, yoff=row_offset)
             except IndexError as detail:
-                print('Index error while writing raster:', detail.strerror)
+                print('Index error while writing raster:', detail.message)
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
             print('3.1')
