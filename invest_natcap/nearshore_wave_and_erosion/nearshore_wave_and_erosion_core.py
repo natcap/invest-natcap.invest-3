@@ -502,8 +502,6 @@ def compute_transects(args):
     n_rows = transect_band.YSize
     n_cols = transect_band.XSize
 
-    array = transect_band.ReadAsArray()
-
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
