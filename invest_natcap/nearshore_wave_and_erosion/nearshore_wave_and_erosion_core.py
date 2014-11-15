@@ -502,23 +502,11 @@ def compute_transects(args):
     n_rows = transect_band.YSize
     n_cols = transect_band.XSize
 
-    print('transect XY size:', (n_cols, n_rows))
-
     array = transect_band.ReadAsArray()
 
-    print('transect IJ size:', array.shape)
-    print('block size:', block_size)
-
     cols_per_block, rows_per_block = block_size[0], block_size[1]
- 
-    print('rows_per_block, cols_per_block', (rows_per_block, cols_per_block))
-
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-   
-    print('blocks per row, blocks per col', (n_row_blocks, n_col_blocks))
-
-#    sys.exit(0)
 
     dataset_buffer = np.zeros((rows_per_block, cols_per_block))
 
@@ -543,71 +531,32 @@ def compute_transects(args):
             if processed_blocks % progress_step == 0:
                 print '.',
 
-            print('dataset offset', (row_offset, col_offset))
-            print('1')
-
             # Load data from the dataset
-            try:
-                transect_band.ReadAsArray(
-                    xoff=col_offset, yoff=row_offset, 
-                    win_xsize=col_block_width,
-                    win_ysize=row_block_width, 
-                    buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
-            except IndexError as detail:
-                print('Index error while reading raster:', detail.message)
-                print('transect raster shape', (transect_band.YSize, transect_band.XSize))
-                print('Offset', (row_offset, col_offset))
-                print('Size written', (row_block_width, col_block_width))
-                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
-            print('1.1')
-
+            transect_band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset, 
+                win_xsize=col_block_width,
+                win_ysize=row_block_width, 
+                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
                 
             dataset_block = dataset_buffer[ \
                 0:row_block_width, \
                 0:col_block_width]
             
-            print('2')
-
             # Load data from the sparse matrix
-            try:
-                matrix_block = transects[ \
-                    row_offset:row_offset+row_block_width, \
-                    col_offset:col_offset+col_block_width].todense()
-            except IndexError as detail:
-                print('Index error while reading transects:', detail.message)
-                print('transect matrix shape', transects.shape)
-                print('Offset', (row_offset, col_offset))
-                print('Size read', (row_block_width, col_block_width))
-                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
-            print('2.1')
-
+            matrix_block = transects[ \
+                row_offset:row_offset+row_block_width, \
+                col_offset:col_offset+col_block_width].todense()
 
             # Write sparse matrix contents over the dataset
             mask = np.where(matrix_block != 0)
 
-            print('dataset_block shape', dataset_block.shape, \
-                'matrix_block shape', matrix_block.shape, \
-                'raster shape', (n_rows, n_cols))
-
             dataset_block[mask] = matrix_block[mask]
 
-            print('3')
-
-            try:
-                transect_band.WriteArray(
-                    dataset_block[0:row_block_width, 0:col_block_width],
-                    xoff=col_offset, yoff=row_offset)
-            except IndexError as detail:
-                print('Index error while writing raster:', detail.message)
-                print('transect raster shape', (transect_band.YSize, transect_band.XSize))
-                print('Offset', (row_offset, col_offset))
-                print('Size written', (row_block_width, col_block_width))
-                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
-            print('3.1')
+            transect_band.WriteArray(
+                dataset_block[0:row_block_width, 0:col_block_width],
+                xoff=col_offset, yoff=row_offset)
 
             processed_blocks += 1
-
-    print('5')
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
