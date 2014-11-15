@@ -153,9 +153,20 @@ def compute_transects(args):
         # Top of the current tile
         i_base = max((i - i_start) / i_side_fine - 2, 0)
 
+        # Adjust offset so it doesn't get outside raster bounds
+        # TODO: Allow to use fractional tile size
+        if (i_base + i_offset) >= row_count:
+            continue
+
         for j in range(j_start, j_end, j_side_coarse):
+ 
             # Left coordinate of the current tile
             j_base = max((j - j_start) / j_side_fine - 2, 0)
+
+            # Adjust offset so it doesn't get outside raster bounds
+            # TODO: Allow to use fractional tile size
+            if (j_base + j_offset) >= col_count:
+                continue
 
             # Data under the tile
             #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
@@ -163,6 +174,7 @@ def compute_transects(args):
             # Look for landmass cover on tile
             #tile = landmass[i_base:i_base+i_offset, :j_base+j_offset]
             tile = landmass_band.ReadAsArray(j_base, i_base, j_offset, i_offset)
+            
             land = np.sum(tile)
 
             # If land and sea, we have a shore: detect it and store
@@ -517,6 +529,8 @@ def compute_transects(args):
             if processed_blocks % progress_step == 0:
                 print '.',
 
+            print('1')
+
             # Load data from the dataset
             try:
                 transect_band.ReadAsArray(
@@ -534,6 +548,8 @@ def compute_transects(args):
                 0:row_block_width, \
                 0:col_block_width]
             
+            print('2')
+
             # Load data from the sparse matrix
             try:
                 matrix_block = transects[ \
@@ -548,11 +564,13 @@ def compute_transects(args):
             # Write sparse matrix contents over the dataset
             mask = np.where(matrix_block != 0)
 
-#            print('dataset_block shape', dataset_block.shape, \
-#                'dataset offset', (row_offset, col_offset), \
-#                'matrix_block shape', matrix_block.shape, \
-#                'raster shape', (n_rows, n_cols))
-#
+            print('3')
+
+            print('dataset_block shape', dataset_block.shape, \
+                'dataset offset', (row_offset, col_offset), \
+                'matrix_block shape', matrix_block.shape, \
+                'raster shape', (n_rows, n_cols))
+
             dataset_block[mask] = matrix_block[mask]
 
             try:
@@ -564,8 +582,11 @@ def compute_transects(args):
                 print('dataset shape', dataset.shape)
                 print('Index accessed', (row_block_width, col_block_width))
 
+            print('4')
 
             processed_blocks += 1
+
+    print('5')
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
