@@ -529,6 +529,7 @@ def compute_transects(args):
             if processed_blocks % progress_step == 0:
                 print '.',
 
+            print('dataset offset', (row_offset, col_offset))
             print('1')
 
             # Load data from the dataset
@@ -540,8 +541,10 @@ def compute_transects(args):
                     buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
             except IndexError as detail:
                 print('Index error while reading raster:', detail.message)
-                print('dataset shape', dataset.shape)
-                print('Index accessed', (row_block_width, col_block_width))
+                print('transect raster shape', (transect_band.YSize, transect_band.XSize))
+                print('Offset', (row_offset, col_offset))
+                print('Size written', (row_block_width, col_block_width))
+                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
             print('1.1')
 
                 
@@ -558,8 +561,10 @@ def compute_transects(args):
                     col_offset:col_offset+col_block_width].todense()
             except IndexError as detail:
                 print('Index error while reading transects:', detail.message)
-                print('dataset shape', dataset.shape)
-                print('Index accessed', (row_block_width, col_block_width))
+                print('transect matrix shape', transects.shape)
+                print('Offset', (row_offset, col_offset))
+                print('Size read', (row_block_width, col_block_width))
+                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
             print('2.1')
 
 
@@ -567,7 +572,6 @@ def compute_transects(args):
             mask = np.where(matrix_block != 0)
 
             print('dataset_block shape', dataset_block.shape, \
-                'dataset offset', (row_offset, col_offset), \
                 'matrix_block shape', matrix_block.shape, \
                 'raster shape', (n_rows, n_cols))
 
@@ -581,8 +585,10 @@ def compute_transects(args):
                     xoff=col_offset, yoff=row_offset)
             except IndexError as detail:
                 print('Index error while writing raster:', detail.message)
-                print('dataset shape', dataset.shape)
-                print('Index accessed', (row_block_width, col_block_width))
+                print('transect raster shape', (transect_band.YSize, transect_band.XSize))
+                print('Offset', (row_offset, col_offset))
+                print('Size written', (row_block_width, col_block_width))
+                print('(row blocks, col blocks)', (n_row_blocks, n_col_blocks))
             print('3.1')
 
             processed_blocks += 1
