@@ -17,7 +17,7 @@
                                                 "type": "folder",
                                                 "label": "Workspace",
                                                 "defaultValue": "../BlueCarbon/output",
-                                                "helpText": "The directory to hold output from a particular model run. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "The directory to hold output from a particular model run. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -26,7 +26,7 @@
                                                 "type": "file",
                                                 "label": "LULC Year 1",
                                                 "defaultValue": "../BlueCarbon/input/GBJC_2004_mean_Resample.tif",
-                                                "helpText": "The land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "The land-use / land-cover raster for time 1. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -38,7 +38,7 @@
                                                 "validText": "[1-9][0-9]*",
                                                 "dataType": "int",
                                                 "defaultValue": "2004",
-                                                "helpText": "The year of the land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "The year of the land-use / land-cover raster for time 1. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },                                                                
                                             {
@@ -47,7 +47,7 @@
                                                 "type": "file",
                                                 "label": "LULC Year 2",
                                                 "defaultValue": "../BlueCarbon/input/GBJC_2050_mean_Resample.tif",
-                                                "helpText": "The land use land cover raster for time 2. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "The land-use / land-cover raster for time 2. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -59,7 +59,7 @@
                                                 "validText": "[1-9][0-9]*",
                                                 "dataType": "int",
                                                 "defaultValue": "2050",
-                                                "helpText": "The year of the land use land cover raster for time 2. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "The year of the land-use / land-cover raster for time 2. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -168,7 +168,7 @@
                                                 "type": "file",
                                                 "label": "Carbon Pools CSV",
                                                 "defaultValue": "../BlueCarbon/input/carbon.csv",
-                                                "helpText": "Carbon in metric tons per hectacre (t ha-1) stored in each of the four fundamental pools for each LULC class. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "Carbon in metric tons per hectacre (t ha-1) stored in each of the four fundamental pools for each LULC class. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -186,7 +186,7 @@
                                                 "type": "file",
                                                 "label": "Transition Matrix CSV",
                                                 "defaultValue": "../BlueCarbon/input/transition.csv",
-                                                "helpText": "Coefficients for the carbon storage rates for the transtion between each of the land use land cover classes. Values above 1 indicate an increase, values below 1 indicate a decrease. Absent transitions are assigned a value of 1, representing no change. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "Coefficients for the carbon storage rates for the transtion between each of the land-use / land-cover classes. Values above 1 indicate an increase, values below 1 indicate a decrease. Absent transitions are assigned a value of 1, representing no change. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             }
                                     ]
@@ -266,7 +266,7 @@
                                                                             "Carbon Dioxide (CO2)"],
                                                                 "defaultValue": 1,
                                                                 "required": true,
-                                                                "helpText": "The units for the price per unit of carbon type. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
+                                                                "helpText": "The units for the price per unit of carbon type. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
                                                             {
                                                                 "id": "discount_rate",
@@ -279,7 +279,7 @@
                                                                 "validText": "-?([0-9]+)?\\.[0-9]+",
                                                                 "defaultValue": "5",
                                                                 "validateAs": {"type": "number"},
-                                                                "helpText": "The discount rate as an integer percent. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
+                                                                "helpText": "The discount rate as an integer percent. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>"
                                                             },
                                                             {
                                                                 "id" : "price_table",
@@ -294,7 +294,7 @@
                                                                     "type": "file",
                                                                     "label": "Carbon Price Table",
                                                                     "defaultValue": "../BlueCarbon/input/SCC5.csv",
-                                                                    "helpText": "The social cost of carbon table. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                    "helpText": "The social cost of carbon table. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                                     "enabledBy" : "price_table",
                                                                     "required" : true
                                                             },                                                            
@@ -308,7 +308,7 @@
                                                                 "validText": "[0-9]+(\\.[0-9][0-9])?",
                                                                 "defaultValue": "43.00",
                                                                 "validateAs": {"type": "number"},
-                                                                "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                                 "disabledBy" : "price_table",
                                                                 "required" : true
                                                             },
@@ -323,7 +323,7 @@
                                                                 "validText": "-?([0-9]+)?\\.[0-9]+",
                                                                 "defaultValue": "0",
                                                                 "validateAs": {"type": "number"},
-                                                                "helpText": "The integer percent increase of the price of carbon per year. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                                "helpText": "The integer percent increase of the price of carbon per year. <p>For more information, see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                                 "disabledBy" : "price_table",
                                                                 "required" : true
                                                             }
