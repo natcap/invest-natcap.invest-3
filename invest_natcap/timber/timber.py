@@ -14,7 +14,7 @@ import timber_core
 def execute(args):
     """
     This function invokes the timber model given uri inputs specified by
-        the user guide.
+    the user guide.
 
     Args:
         workspace_dir (string): The file location where the outputs will

@@ -502,7 +502,7 @@ def get_count_feature_set_uri(fs_uri):
     shapefile = None
 
     return count
-    
+
 def execute(args):
     """
     Entry point into the Scenic Quality Model

@@ -1,6 +1,11 @@
 Wave Energy Package
 ===================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.wave_energy.wave_energy.execute
+
 Wave Energy
 -----------
 

@@ -1,10 +1,15 @@
 Wind Energy Package
 ===================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.wind_energy.wind_energy.execute
+
 Wave Energy
 -----------
 
-.. automodule:: invest_natcap.wave_energy.wave_energy
+.. automodule:: invest_natcap.wind_energy.wind_energy
     :members:
     :undoc-members:
     :show-inheritance:
@@ -12,7 +17,7 @@ Wave Energy
 Module contents
 ---------------
 
-.. automodule:: invest_natcap.wave_energy
+.. automodule:: invest_natcap.wind_energy
     :members:
     :undoc-members:
     :show-inheritance:

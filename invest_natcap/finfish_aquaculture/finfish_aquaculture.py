@@ -13,6 +13,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 
+
 def execute(args):
     """
     This function will take care of preparing files passed into
@@ -21,31 +22,36 @@ def execute(args):
     create objects to be passed to the aquaculture_core.py module. It may
     write log, warning, or error messages to stdout.
 
-    workspace_dir (string): The directory in which to place all result files.
-    ff_farm_loc (string): URI that points to a shape file of fishery locations
-    farm_ID (string): column heading used to describe individual farms. Used to
-        link GIS location data to later inputs.
-    g_param_a (float): Growth parameter alpha, used in modeling fish growth,
-        should be an int or float.
-    g_param_b (float): Growth parameter beta, used in modeling fish growth,
-        should be an int or float.
-    g_param_tau (float): Growth parameter tau, used in modeling fish growth,
-        should be an int or float
-    use_uncertainty (boolean)
-    g_param_a_sd (float):
-    g_param_b_sd (float):
-    num_monte_carlo_runs (int):
-    water_temp_tbl (string): URI to a CSV table where daily water temperature
-            values are stored from one year
-    farm_op_tbl (string): URI to CSV table of static variables for calculations
-    outplant_buffer (int): This value will allow the outplanting start day to
-        be flexible plus or minus the number of days specified here.
-    do_valuation (boolean): Boolean that indicates whether or not valuation
-        should be performed on the aquaculture model
-    p_per_kg (float): Market price per kilogram of processed fish
-    frac_p (float): Fraction of market price that accounts for costs rather
-        than profit
-    discount (float): Daily market discount rate
+    Args:
+        workspace_dir (string): The directory in which to place all result
+            files.
+        ff_farm_loc (string): URI that points to a shape file of fishery
+            locations
+        farm_ID (string): column heading used to describe individual farms.
+            Used to link GIS location data to later inputs.
+        g_param_a (float): Growth parameter alpha, used in modeling fish
+            growth, should be an int or float.
+        g_param_b (float): Growth parameter beta, used in modeling fish growth,
+            should be an int or float.
+        g_param_tau (float): Growth parameter tau, used in modeling fish
+            growth, should be an int or float
+        use_uncertainty (boolean)
+        g_param_a_sd (float): (description)
+        g_param_b_sd (float): (description)
+        num_monte_carlo_runs (int):
+        water_temp_tbl (string): URI to a CSV table where daily water
+            temperature values are stored from one year
+        farm_op_tbl (string): URI to CSV table of static variables for
+            calculations
+        outplant_buffer (int): This value will allow the outplanting
+            start day to be flexible plus or minus the number of days specified
+            here.
+        do_valuation (boolean): Boolean that indicates whether or not valuation
+            should be performed on the aquaculture model
+        p_per_kg (float): Market price per kilogram of processed fish
+        frac_p (float): Fraction of market price that accounts for costs rather
+            than profit
+        discount (float): Daily market discount rate
 
     Example Args Dictionary::
 

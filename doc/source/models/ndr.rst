@@ -1,6 +1,11 @@
 Nutrient Delivery Ratio Package
 ===============================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.ndr.ndr.execute
+
 Nutrient Delivery Ratio
 -----------------------
 

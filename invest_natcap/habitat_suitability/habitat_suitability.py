@@ -42,7 +42,7 @@ def execute(args):
             table that has that has columns "Suitability" in (0,1) and "Depth"
             in range(depth_biophysical_uri)
 
-      Example Args Dictionary::
+    Example Args Dictionary::
 
         {
             'workspace_dir': 'path/to/workspace_dir',

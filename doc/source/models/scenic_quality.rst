@@ -1,6 +1,11 @@
 Scenic Quality Package
 ======================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.scenic_quality.scenic_quality.execute
+
 Scenic Quality
 --------------
 

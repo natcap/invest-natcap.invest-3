@@ -1,6 +1,11 @@
 Crop Production Package
 =======================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.crop_production.crop_file_index.execute
+
 Crop File Index
 ---------------
 

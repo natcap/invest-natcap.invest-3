@@ -1,6 +1,11 @@
 Habitat Quality Package
 =======================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.habitat_quality.habitat_quality.execute
+
 Habitat Quality
 ---------------
 

@@ -1,6 +1,11 @@
 Recreation Package
 ==================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.recreation.recreation_client.execute
+
 Recreation Server Initial
 -------------------------
 
