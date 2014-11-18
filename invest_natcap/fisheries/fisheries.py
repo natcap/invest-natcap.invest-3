@@ -1,5 +1,6 @@
 '''
-The Fisheries module contains the high-level code for excuting the fisheries model
+The Fisheries module contains the high-level code for excuting the fisheries
+model
 '''
 
 import logging
