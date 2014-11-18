@@ -28,85 +28,125 @@ LOGGER = logging.getLogger('wind_energy')
 
 speedups.enable()
 
+
 class HubHeightError(Exception):
     """A custom error message for a hub height that is not supported in
         the current wind data
     """
     pass
+
+
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
     pass
+
+
 class TimePeriodError(Exception):
     """A custom error message for when the number of years does not match
         the number of years given in the price table"""
     pass
 
-def execute(args):
-    """This module handles the execution of the wind energy model
-        given the following dictionary:
 
-        args[workspace_dir] - a python string which is the uri path to where the
-            outputs will be saved (required)
-        args[wind_data_uri] - a text file where each row is a location with at
-            least the Longitude, Latitude, Scale and Shape parameters (required)
-        args[aoi_uri] - a uri to an OGR datasource that is of type polygon and
-            projected in linear units of meters. The polygon specifies the
+def execute(args):
+    """
+    This module handles the execution of the wind energy model
+    given the following dictionary:
+
+    Args:
+        workspace_dir (string): a python string which is the uri path to where
+            the outputs will be saved (required)
+        wind_data_uri (string): a text file where each row is a location with
+            at least the Longitude, Latitude, Scale and Shape parameters
+            (required)
+        aoi_uri (string): a uri to an OGR datasource that is of type polygon
+            and projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
             of the land polygon that is of interest (optional for biophysical
             and no distance masking, required for biophysical and distance
             masking, required for valuation)
-        args[bathymetry_uri] - a uri to a GDAL dataset that has the depth
+        bathymetry_uri (string): a uri to a GDAL dataset that has the depth
             values of the area of interest (required)
-        args[global_wind_parameters_uri] - a uri to a CSV file that holds the
-            global parameter values for both the biophysical and valuation
-            module (required)
-        args[bottom_type_uri] - a uri to an OGR datasource of type polygon
-            that depicts the subsurface geology type (optional)
-        args[turbine_parameters_uri] - a uri to a CSV file that holds the
+        land_polygon_uri (string): a uri to an OGR datasource of type polygon
+            that provides a coastline for determining distances from wind farm
+            bins. Enabled by AOI and required if wanting to mask by distances
+            or run valuation
+        global_wind_parameters_uri (string): a float for the average distance
+            in kilometers from a grid connection point to a land connection
+            point (required for valuation if grid connection points are not
+            provided)
+        suffix (string): a String to append to the end of the output files
+            (optional)
+        turbine_parameters_uri (string): a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters
             (required)
-        args[number_of_turbines] - an integer value for the number of machines
+        number_of_turbines (int): an integer value for the number of machines
             for the wind farm (required for valuation)
-        args[min_depth] - a float value for the minimum depth for offshore wind
-            farm installation (meters) (required)
-        args[max_depth] - a float value for the maximum depth for offshore wind
-            farm installation (meters) (required)
-        args[suffix] - a String to append to the end of the output files
-            (optional)
-        args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
-            provides a coastline for determining distances from wind farm bins.
-            Enabled by AOI and required if wanting to mask by distances or
-            run valuation
-        args[min_distance] - a float value for the minimum distance from shore
+        min_depth (float): a float value for the minimum depth for offshore
+            wind farm installation (meters) (required)
+        max_depth (float): a float value for the maximum depth for offshore
+            wind farm installation (meters) (required)
+        min_distance (float): a float value for the minimum distance from shore
             for offshore wind farm installation (meters) The land polygon must
             be selected for this input to be active (optional, required for
             valuation)
-        args[max_distance] - a float value for the maximum distance from shore
+        max_distance (float): a float value for the maximum distance from shore
             for offshore wind farm installation (meters) The land polygon must
             be selected for this input to be active (optional, required for
             valuation)
-        args[grid_points_uri] - a uri to a CSV file that specifies the landing
-            and grid point locations (optional)
-        args[foundation_cost] - a float representing how much the foundation
+        valuation_container (boolean): Indicates whether model includes
+            valuation
+        foundation_cost (float): a float representing how much the foundation
             will cost for the specific type of turbine (required for valuation)
-        args[dollar_per_kWh] - a float value for the amount of dollars per
-            kilowatt hour (kWh) (required for valuation)
-        args[discount_rate] - a float value for the discount rate (required for
-            valuation)
-        args[avg_grid_distance] - a float for the average distance in kilometers
-            from a grid connection point to a land connection point
+        discount_rate (float): a float value for the discount rate (required
+            for valuation)
+        grid_points_uri (string): a uri to a CSV file that specifies the
+            landing and grid point locations (optional)
+        avg_grid_distance (float): a float for the average distance in
+            kilometers from a grid connection point to a land connection point
             (required for valuation if grid connection points are not provided)
-        args[price_table] - a bool indicating whether to use the wind energy
+        price_table (boolean): a bool indicating whether to use the wind energy
             price table or not (required)
-        args[wind_schedule] - a URI to a CSV file for the yearly prices of
+        wind_schedule (string): a URI to a CSV file for the yearly prices of
             wind energy for the lifespan of the farm (required if 'price_table'
             is true)
-        args[wind_price] - a float for the wind energy price at year 0
+        wind_price (float): a float for the wind energy price at year 0
             (required if price_table is false)
-        args[rate_change] - a float as a percent for the annual rate of change
+        rate_change (float): a float as a percent for the annual rate of change
             in the price of wind energy. (required if price_table is false)
-        returns - nothing"""
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'wind_data_uri': 'path/to/file',
+            'aoi_uri': 'path/to/shapefile',
+            'bathymetry_uri': 'path/to/raster',
+            'land_polygon_uri': 'path/to/shapefile',
+            'global_wind_parameters_uri': 'path/to/csv',
+            'suffix': '_results',
+            'turbine_parameters_uri': 'path/to/csv',
+            'number_of_turbines': 10,
+            'min_depth': 3,
+            'max_depth': 60,
+            'min_distance': 0,
+            'max_distance': 200000,
+            'valuation_container': True,
+            'foundation_cost': 3.4,
+            'discount_rate': 7.0,
+            'grid_points_uri': 'path/to/csv',
+            'avg_grid_distance': 4,
+            'price_table': True,
+            'wind_schedule': 'path/to/csv',
+            'wind_price': 0.4,
+            'rate_change': 0.0,
+
+        }
+
+    Returns:
+        None
+
+    """
 
     LOGGER.debug('Starting the Wind Energy Model')
 

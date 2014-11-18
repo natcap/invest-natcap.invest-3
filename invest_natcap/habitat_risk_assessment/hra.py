@@ -43,30 +43,42 @@ def execute(args):
     '''This function will prepare files passed from the UI to be sent on to the
     hra_core module.
 
-    Input:
-        args- A python dictionary created by the UI for use in the HRA model. It
-            will contain the following data.
-        args['workspace_dir']- String which points to the directory into which
+    Args:
+        workspace_dir (string): The location of the directory into which
             intermediate and output files should be placed.
-        args['csv_uri']- The location of the directory containing the CSV files
-            of habitat, stressor, and overlap ratings. Will also contain a .txt
-            JSON file that has directory locations (potentially) for habitats,
-            species, stressors, and criteria.
-        args['grid_size']- Int representing the desired pixel dimensions of
-            both intermediate and ouput rasters.
-        args['risk_eq']- A string identifying the equation that should be used
+        csv_uri (string): The location of the directory containing the CSV
+            files of habitat, stressor, and overlap ratings. Will also contain
+            a .txt JSON file that has directory locations (potentially) for
+            habitats, species, stressors, and criteria.
+        grid_size (int): Represents the desired pixel dimensions of both
+            intermediate and ouput rasters.
+        risk_eq (string): A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell. This will be
             either 'Euclidean' or 'Multiplicative'.
-        args['decay_eq']- A string identifying the equation that should be used
-            in calculating the decay of stressor buffer influence. This can be
-            'None', 'Linear', or 'Exponential'.
-        args['max_rating']- An int representing the highest potential value that
+        decay_eq (string): A string identifying the equation that should be
+            used in calculating the decay of stressor buffer influence. This
+            can be 'None', 'Linear', or 'Exponential'.
+        max_rating (int): An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
-        args['aoi_tables']- A shapefile containing one or more planning regions
-            for a given model. This will be used to get the average risk value
-            over a larger area. Each potential region MUST contain the
-            attribute "name" as a way of identifying each individual shape.
+        max_stress (int)
+        aoi_tables (string): A shapefile containing one or more planning
+            regions for a given model. This will be used to get the average
+            risk value over a larger area. Each potential region MUST contain
+            the attribute "name" as a way of identifying each individual shape.
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'csv_uri': 'path/to/csv',
+            'grid_size': 200,
+            'risk_eq': 'Euclidean',
+            'decay_eq': 'None',
+            'max_rating': 3,
+            'max_stress': 4,
+            'aoi_tables': 'path/to/shapefile',
+        }
 
     Intermediate:
         hra_args['habitats_dir']- The directory location of all habitat
@@ -86,9 +98,13 @@ def execute(args):
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
 
-            {'Stressor 1': 50,
-             'Stressor 2': ...,
-            }
+            Example::
+
+                {
+                    'Stressor 1': 50,
+                    'Stressor 2': ...,
+                }
+
         hra_args['h_s_c']- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
             h-s will hold criteria that apply to habitat and stressor overlaps,
@@ -96,17 +112,21 @@ def execute(args):
             keys are tuples of (Habitat, Stressor) names. The overall structure
             will be as pictured:
 
-            {(Habitat A, Stressor 1):
-                    {'Crit_Ratings':
-                        {'CritName':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'Crit_Rasters':
-                        {'CritName':
-                            {'Weight': 1.0, 'DQ': 1.0}
-                        },
-                    }
-            }
+            Example::
+
+                {
+                    (Habitat A, Stressor 1):
+                        {'Crit_Ratings':
+                            {'CritName':
+                                {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                            },
+                        'Crit_Rasters':
+                            {'CritName':
+                                {'Weight': 1.0, 'DQ': 1.0}
+                            },
+                        }
+                }
+
         hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             raster information. The outermost keys are habitat names.
@@ -127,18 +147,22 @@ def execute(args):
             be placed in their criteria name subdictionary. The overall
             structure will be as pictured:
 
-            {(Habitat A, Stressor 1):
-                    {'Crit_Ratings':
-                        {'CritName':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'Crit_Rasters':
-                        {'CritName':
-                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
-                        },
-                    'DS':  "A-1 Dataset URI"
-                    }
-            }
+            Example::
+
+                {
+                    (Habitat A, Stressor 1):
+                        {'Crit_Ratings':
+                            {'CritName':
+                                {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                            },
+                        'Crit_Rasters':
+                            {'CritName':
+                                {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
+                            },
+                        'DS':  "A-1 Dataset URI"
+                        }
+                }
+
         hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat

@@ -504,7 +504,59 @@ def get_count_feature_set_uri(fs_uri):
     return count
     
 def execute(args):
-    """DOCSTRING"""
+    """
+    Entry point into the Scenic Quality Model
+
+    Args:
+        workspace_dir (string): Results will be saved to this location.
+        aoi_uri (string): This AOI instructs the model where to clip
+            the input data and the extent of analysis.
+        cell_size (float): Length (in meters) of each side of the (square)
+            cell.
+        structure_uri (string): Shapefile indicating the locations of objects
+            that contribute to negative scenic quality, such as aquaculture
+            netpens or wave energy facilities.
+        dem_uri (string): An elevation raster layer is required to conduct
+            viewshed analysis.
+        refraction (float): The earth curvature correction option corrects
+            for the curvature of the earth and refraction of visible light in
+            air.
+        pop_uri (string): Raster used to determine population within the
+            AOI’s land-seascape where point features contributing to negative
+            scenic quality are visible and not visible.
+        overlap_uri (string): A shapefile used to determine the impact of
+            objects on visual quality. This input must be a polygon and
+            projected in meters.
+        valuation_function (string): Indicates the functional form f(x) the
+            model will use to value the visual impact for each viewpoint.
+        a_coefficient (float): first coefficient for valuation function
+        b_coefficient (float): second coefficient for valuation function
+        c_coefficient (float): third coefficient for valuation function
+        d_coefficient (float): fourth coefficient for valuation function
+        max_valuation_radius (float): Radius beyond which the valuation is set
+            to zero.
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'aoi_uri': 'path/to/shapefile',
+            'cell_size': 500,
+            'structure_uri': 'path/to/shapefile',
+            'dem_uri': 'path/to/raster',
+            'refraction': 0.13,
+            'pop_uri': 'path/to/shapefile',
+            'overlap_uri': 'path/to/shapefile',
+            'valuation_function': 'polynomial: a + bx + cx^2 + dx^3',
+            'a_coefficient': 1.0,
+            'b_coefficient': 0.0,
+            'c_coefficient': 0.0,
+            'd_coefficient': 0.0,
+            'max_valuation_radius': 8000.0,
+
+        }
+
+    """
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args

@@ -17,29 +17,48 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('marine_water_quality_biophysical')
 
-def execute(args):
-    """Main entry point for the InVEST 3.0 marine water quality
-        biophysical model.
 
-        args - dictionary of string value pairs for input to this model.
-        args['workspace_dir'] - output directory.
-        args['aoi_poly_uri'] - OGR polygon Datasource indicating region
+def execute(args):
+    """
+    Main entry point for the InVEST 3.0 marine water quality
+    biophysical model.
+
+    Args:
+        workspace_dir (string): Directory to place outputs
+        aoi_poly_uri (string): OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
-        args['pixel_size'] - float indicating pixel size in meters
-            of output grid.
-        args['layer_depth'] - float indicating the depth of the grid cells in
-            meters.
-        args['kps'] - float indicating decay rate of pollutant (kg/day)
-        args['land_poly_uri'] - OGR polygon DataSource indicating areas where
+        land_poly_uri (string): OGR polygon DataSource indicating areas where
             land is.
-        args['source_points_uri'] - OGR point Datasource indicating point
+        pixel_size (int): float indicating pixel size in meters of output
+            grid.
+        layer_depth (float): float indicating the depth of the grid cells in
+            meters.
+        source_points_uri (string): OGR point Datasource indicating point
             sources of pollution.
-        args['source_point_data_uri'] - csv file indicating the biophysical
+        source_point_data_uri (string): csv file indicating the biophysical
             properties of the point sources.
-        args['tide_e_points_uri'] - OGR point Datasource with spatial
+        kps (float): float indicating decay rate of pollutant (kg/day)
+        tide_e_points_uri (string): OGR point Datasource with spatial
             information about the E parameter
-        args['adv_uv_points_uri'] - optional OGR point Datasource with spatial
-            advection u and v vectors."""
+        adv_uv_points_uri (string): optional OGR point Datasource with spatial
+            advection u and v vectors.
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'aoi_poly_uri': 'path/to/shapefile',
+            'land_poly_uri': 'path/to/shapefile',
+            'pixel_size': 100,
+            'layer_depth': 1.0,
+            'source_points_uri': 'path/to/shapefile',
+            'source_point_data_uri': 'path/to/csv',
+            'kps': 0.001,
+            'tide_e_points_uri': 'path/to/shapefile',
+            'adv_uv_points_uri': 'path/to/shapefile',
+        }
+
+    """
 
     LOGGER.info("Starting MWQ execute")
 

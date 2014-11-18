@@ -14,38 +14,61 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 
 def execute(args):
-    """This function will take care of preparing files passed into 
+    """
+    This function will take care of preparing files passed into
     the finfish aquaculture model. It will handle all files/inputs associated
-    with biophysical and valuation calculations and manipulations. It will create objects
-    to be passed to the aquaculture_core.py module. It may write log, 
-    warning, or error messages to stdout.
+    with biophysical and valuation calculations and manipulations. It will
+    create objects to be passed to the aquaculture_core.py module. It may
+    write log, warning, or error messages to stdout.
 
-    --Biophysical Args--
-    args: a python dictionary containing the following data:
-    args['workspace_dir']- The directory in which to place all result files.
-    args['ff_farm_loc']- URI that points to a shape file of fishery locations
-    args['farm_ID']- column heading used to describe individual farms. Used to link
-                            GIS location data to later inputs.
-    args['g_param_a']- Growth parameter alpha, used in modeling fish growth, 
-                            should be int or a float.
-    args['g_param_b']- Growth parameter beta, used in modeling fish growth, 
-                            should be int or a float.
-    args['water_temp_tbl']- URI to a CSV table where daily water temperature
-                            values are stored from one year
-    args['farm_op_tbl']- URI to CSV table of static variables for calculations
+    workspace_dir (string): The directory in which to place all result files.
+    ff_farm_loc (string): URI that points to a shape file of fishery locations
+    farm_ID (string): column heading used to describe individual farms. Used to
+        link GIS location data to later inputs.
+    g_param_a (float): Growth parameter alpha, used in modeling fish growth,
+        should be an int or float.
+    g_param_b (float): Growth parameter beta, used in modeling fish growth,
+        should be an int or float.
+    g_param_tau (float): Growth parameter tau, used in modeling fish growth,
+        should be an int or float
+    use_uncertainty (boolean)
+    g_param_a_sd (float):
+    g_param_b_sd (float):
+    num_monte_carlo_runs (int):
+    water_temp_tbl (string): URI to a CSV table where daily water temperature
+            values are stored from one year
+    farm_op_tbl (string): URI to CSV table of static variables for calculations
+    outplant_buffer (int): This value will allow the outplanting start day to
+        be flexible plus or minus the number of days specified here.
+    do_valuation (boolean): Boolean that indicates whether or not valuation
+        should be performed on the aquaculture model
+    p_per_kg (float): Market price per kilogram of processed fish
+    frac_p (float): Fraction of market price that accounts for costs rather
+        than profit
+    discount (float): Daily market discount rate
 
-    args['outplant_buffer'] - This value will allow the outplanting start day to be 
-        flexible plus or minus the number of days specified here.
+    Example Args Dictionary::
 
-    --Valuation Args--
-    args['do_valuation']- Boolean that indicates whether or not valuation should be
-                    performed on the aquaculture model
-    args['p_per_kg']: Market price per kilogram of processed fish
-    args['frac_p']: Fraction of market price that accounts for costs rather than
-                    profit
-    args['discount']: Daily market discount rate
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'ff_farm_loc': 'path/to/shapefile',
+            'farm_ID': 'FarmID'
+            'g_param_a': 0.038,
+            'g_param_b': 0.6667,
+            'g_param_tau': 0.08,
+            'use_uncertainty': True,
+            'g_param_a_sd': 0.005,
+            'g_param_b_sd': 0.05,
+            'num_monte_carlo_runs': 1000,
+            'water_temp_tbl': 'path/to/water_temp_tbl',
+            'farm_op_tbl': 'path/to/farm_op_tbl',
+            'outplant_buffer': 3,
+            'do_valuation': True,
+            'p_per_kg': 2.25,
+            'frac_p': 0.3,
+            'discount': 0.000192,
+        }
 
-    returns nothing
     """
 
     #initialize new dictionary of purely biophysical/general arguments which will be
