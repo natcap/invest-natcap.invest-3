@@ -1,6 +1,14 @@
 Carbon Package
 ==============
 
+Carbon Combined
+---------------
+
+.. automodule:: invest_natcap.carbon.carbon_combined
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Carbon Biophysical
 ------------------
 
@@ -9,10 +17,10 @@ Carbon Biophysical
     :undoc-members:
     :show-inheritance:
 
-Carbon Combined
----------------
+Carbon Valuation
+----------------
 
-.. automodule:: invest_natcap.carbon.carbon_combined
+.. automodule:: invest_natcap.carbon.carbon_valuation
     :members:
     :undoc-members:
     :show-inheritance:
@@ -25,13 +33,6 @@ Carbon Utilities
     :undoc-members:
     :show-inheritance:
 
-Carbon Valuation
-----------------
-
-.. automodule:: invest_natcap.carbon.carbon_valuation
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Module contents
 ---------------

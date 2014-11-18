@@ -1,22 +1,6 @@
 Recreation Package
 ==================
 
-Recreation Client
------------------
-
-.. automodule:: invest_natcap.recreation.recreation_client
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Recreation Server Core
-----------------------
-
-.. automodule:: invest_natcap.recreation.recreation_server_core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Recreation Server Initial
 -------------------------
 
@@ -25,10 +9,26 @@ Recreation Server Initial
     :undoc-members:
     :show-inheritance:
 
+Recreation Client
+-----------------
+
+.. automodule:: invest_natcap.recreation.recreation_client
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Recreation Server Scenario
 --------------------------
 
 .. automodule:: invest_natcap.recreation.recreation_server_scenario
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Recreation Server Core
+----------------------
+
+.. automodule:: invest_natcap.recreation.recreation_server_core
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,6 +1,22 @@
 Marine Water Quality Package
 ============================
 
+Marine Water Quality Biophysical
+--------------------------------
+
+.. automodule:: invest_natcap.marine_water_quality.marine_water_quality_biophysical
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Marine Water Quality Core
+-------------------------
+
+.. automodule:: invest_natcap.marine_water_quality.marine_water_quality_core
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Create Grid
 -----------
 
@@ -17,21 +33,6 @@ Interpolate Points to Raster
     :undoc-members:
     :show-inheritance:
 
-Marine Water Quality Biophysical
---------------------------------
-
-.. automodule:: invest_natcap.marine_water_quality.marine_water_quality_biophysical
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Marine Water Quality Core
--------------------------
-
-.. automodule:: invest_natcap.marine_water_quality.marine_water_quality_core
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Module contents
 ---------------

@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class MissingParameter(Exception):
     '''
     A broad exception class that is raised when a necessary parameter is not
-        provided.
+    provided.
     '''
     def __init__(self, msg):
         self.msg = msg
@@ -101,12 +101,12 @@ def _verify_population_csv(args):
     '''Parses and verifies the population arributes file
 
     Parses and verifies inputs from the population attributes csv file.
-        If not all necessary vectors are included, the function will raise a
-        MissingParameter exception. Survival matrix will be arranged by
-        class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
-        be arranged by class-elements, 2nd dim: sex (depending on whether model
-        is sex-specific) Region vectors will be arraged by region-elements,
-        sex-agnostic.
+    If not all necessary vectors are included, the function will raise a
+    MissingParameter exception. Survival matrix will be arranged by
+    class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
+    be arranged by class-elements, 2nd dim: sex (depending on whether model
+    is sex-specific) Region vectors will be arraged by region-elements,
+    sex-agnostic.
 
     Args:
         args (dictionary): arguments provided by user
@@ -208,13 +208,16 @@ def _verify_population_csv(args):
 def _parse_population_csv(uri, sexsp):
     '''
     Parses the given population attributes csv file and returns a dictionary
-        of lists, arrays, and matrices
+    of lists, arrays, and matrices
 
     Dictionary items containing lists, arrays or matrices are capitalized,
     while single variables are lowercase.
 
     Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
+
+    Returns:
+        pop_dict (dictionary): verified population arguments
 
     Example:
 
