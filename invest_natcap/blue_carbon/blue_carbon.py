@@ -1,7 +1,7 @@
 """
 """
 from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
+#gdal.UseExceptions()
 from invest_natcap import raster_utils
 
 import logging
