@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class MissingParameter(Exception):
     '''
     A broad exception class that is raised when a necessary parameter is not
-        provided.
+    provided.
     '''
     def __init__(self, msg):
         self.msg = msg
@@ -100,13 +100,13 @@ def fetch_verify_args(args):
 def _verify_population_csv(args):
     '''Parses and verifies the population arributes file
 
-    Parses and verifies inputs from the population attributes csv file.
-        If not all necessary vectors are included, the function will raise a
-        MissingParameter exception. Survival matrix will be arranged by
-        class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
-        be arranged by class-elements, 2nd dim: sex (depending on whether model
-        is sex-specific) Region vectors will be arraged by region-elements,
-        sex-agnostic.
+    Parses and verifies inputs from the Population Parameters csv file.
+    If not all necessary vectors are included, the function will raise a
+    MissingParameter exception. Survival matrix will be arranged by
+    class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
+    be arranged by class-elements, 2nd dim: sex (depending on whether model
+    is sex-specific) Region vectors will be arraged by region-elements,
+    sex-agnostic.
 
     Args:
         args (dictionary): arguments provided by user
@@ -141,28 +141,28 @@ def _verify_population_csv(args):
                         'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.error("Population Attributes File does not contain all necessary parameters")
-        raise MissingParameter("Population Attributes File does not contain all necessary parameters")
+        LOGGER.error("Population Parameters File does not contain all necessary parameters")
+        raise MissingParameter("Population Parameters File does not contain all necessary parameters")
 
     if (args['recruitment_type'] != 'Fixed') and ('Maturity' not in pop_dict.keys()):
-        LOGGER.error("Population Attributes File must contain a 'Maturity' vector when running the given recruitment function")
-        raise MissingParameter("Population Attributes File must contain a 'Maturity' vector when running the given recruitment function")
+        LOGGER.error("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
+        raise MissingParameter("Population Parameters File must contain a 'Maturity' vector when running the given recruitment function")
 
     if (args['population_type'] == 'Stage-Based') and ('Duration' not in pop_dict.keys()):
-        LOGGER.error("Population Attributes File must contain a 'Duration' vector when running Stage-Based models")
-        raise MissingParameter("Population Attributes File must contain a 'Duration' vector when running Stage-Based models")
+        LOGGER.error("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
+        raise MissingParameter("Population Parameters File must contain a 'Duration' vector when running Stage-Based models")
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and args['spawn_units'] == 'Weight' and 'Weight' not in pop_dict.keys():
-        LOGGER.error("Population Attributes File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
-        raise MissingParameter("Population Attributes File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
+        LOGGER.error("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
+        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when Spawners are calulated by weight using the Beverton-Holt or Ricker recruitment functions")
 
     if (args['harvest_units'] == 'Weight') and ('Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Attributes File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
-        raise MissingParameter("Population Attributes File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
+        LOGGER.error("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
+        raise MissingParameter("Population Parameters File must contain a 'Weight' vector when 'Harvest by Weight' is selected")
 
     if (args['recruitment_type'] == 'Fecundity' and 'Fecundity' not in pop_dict.keys()):
-        LOGGER.error("Population Attributes File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
-        raise MissingParameter("Population Attributes File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+        LOGGER.error("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
+        raise MissingParameter("Population Parameters File must contain a 'Fecundity' vector when using the Fecundity recruitment function")
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -207,14 +207,17 @@ def _verify_population_csv(args):
 
 def _parse_population_csv(uri, sexsp):
     '''
-    Parses the given population attributes csv file and returns a dictionary
-        of lists, arrays, and matrices
+    Parses the given Population Parameters csv file and returns a dictionary
+    of lists, arrays, and matrices
 
     Dictionary items containing lists, arrays or matrices are capitalized,
     while single variables are lowercase.
 
     Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
+
+    Returns:
+        pop_dict (dictionary): verified population arguments
 
     Example:
 
@@ -371,7 +374,7 @@ def _parse_migration_tables(args, class_list):
                     mig_dict[class_name] = Migration
                 else:
                     # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Attributes File. This could result in no migration for a class with expected migration.", class_name.capitalize())
+                    LOGGER.warning("The %s class in the Migration Directory did not match any class in the Population Parameters File. This could result in no migration for a class with expected migration.", class_name.capitalize())
 
         except:
             LOGGER.warning("Issue parsing at least one migration table")

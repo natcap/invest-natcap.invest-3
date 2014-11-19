@@ -1,6 +1,11 @@
 Habitat Suitability Package
 ===========================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.habitat_suitability.habitat_suitability.execute
+
 Habitat Suitability
 -------------------
 

@@ -49,10 +49,10 @@ def initialize_vars(vars_dict):
     Returns:
         vars_dict (dictionary): modified vars_dict with additional variables
 
-    Example Extra Variables Dictionary::
+    Example Return Dictionary::
 
         {
-            # (other items)
+            # (original items in dictionary)
             ...
             'Survtotalfrac': np.array([...]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.array([...]),  # (same)
@@ -94,8 +94,8 @@ def initialize_vars(vars_dict):
 def set_recru_func(vars_dict):
     '''
     Creates recruitment function that calculates the number of recruits for
-        class 0 at time t for each region (currently sex agnostic). Also
-        returns number of spawners
+    class 0 at time t for each region (currently sex agnostic). Also
+    returns number of spawners
 
     Args:
         vars_dict (dictionary)
@@ -317,8 +317,8 @@ def set_cycle_func(vars_dict, rec_func):
 def set_harvest_func(vars_dict):
     '''
     Creates harvest function that calculates the given harvest and valuation
-        of the fisheries population over each time step for a given region.
-        Returns None if harvest isn't selected by user.
+    of the fisheries population over each time step for a given region.
+    Returns None if harvest isn't selected by user.
 
     Example Outputs of Returned Harvest Function::
 
@@ -384,7 +384,10 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
 
         harvest_func (lambda function): computes harvest and valuation
 
-    Example Output Dictionary::
+    Returns:
+        vars_dict (dictionary)
+
+    Example Returned Dictionary::
 
         {
             # (other items)

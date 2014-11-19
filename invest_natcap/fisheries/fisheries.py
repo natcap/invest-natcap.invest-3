@@ -1,5 +1,6 @@
 '''
-The Fisheries module contains the high-level code for excuting the fisheries model
+The Fisheries module contains the high-level code for excuting the fisheries
+model
 '''
 
 import logging
@@ -101,7 +102,7 @@ def execute(args):
             'harv_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
-            'unit_price': 5.0
+            'unit_price': 5.0,
         }
     '''
 

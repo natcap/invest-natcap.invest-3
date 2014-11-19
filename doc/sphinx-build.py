@@ -9,6 +9,12 @@
 """
 
 import sys
+import os
+
+try:
+    sys.path.append(os.environ['WORKSPACE'])
+except:
+    pass
 
 if __name__ == '__main__':
     from sphinx import main

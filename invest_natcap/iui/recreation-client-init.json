@@ -44,7 +44,7 @@
                     "type" : "checkbox",
                     "label" : "Grid AOI",
                     "defaultValue" : true,
-                    "helpText": "Select if you want the area of interest to be gridded. If unselected the AOI must contain multiple shapes."
+                    "helpText": "Select if you want the area of interest to be gridded. If unselected, the AOI must contain multiple shapes."
                 },
                 {
                     "id": "grid_type",

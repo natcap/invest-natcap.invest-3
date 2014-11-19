@@ -44,7 +44,7 @@
 					            "Global"],
 		            "defaultValue": 0,
 		            "required": true,
-                    "helpText": "A list of analysis areas the model can currently be run on. All the wave energy data needed for these areas are pre-packaged in the WaveData folder."
+                    "helpText": "A list of analysis areas for which the model can currently be run. All the wave energy data needed for these areas are pre-packaged in the WaveData folder."
 		        },
                 {
                     "id" : "aoi",
@@ -70,7 +70,7 @@
                     "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Performance.csv",
                     "required": true,
                     "validateAs": {"type":"CSV"},
-                    "helpText": "A Comma Separated Value table that has the performance of a particular wave energy machine at certain sea state conditions."
+                    "helpText": "A Comma Separated Values (CSV) table that has the performance of a particular wave energy machine at certain sea state conditions."
                 },
                 {
                     "id" : "machine_param_table",
@@ -90,7 +90,7 @@
                 									  "validateAs": {"type": "number",
                 									                 "allowedValues":{"pattern":"[0-9]*\\.?[0-9]+$"}
                 									                 }}]},
-                    "helpText": "A Comma Separated Value table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
+                    "helpText": "A Comma Separated Values (CSV) table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
                 },
                 {
                     "id" : "dem",
@@ -149,7 +149,7 @@
                                                                 "validateAs": {"type": "number",
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
                                                     ]},
-                                "helpText": "A Comma Separated Value table that has the landing points and grid points locations for computing cable distances."
+                                "helpText": "A Comma Separated Values (CSV) table that has the landing points and grid points locations for computing cable distances."
 
                             },
                             {
@@ -169,7 +169,7 @@
                                                                 "validateAs": {"type": "number",
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
                                                     ]},
-                                "helpText": "A Comma Separated Value table that has the economic parameters for the wave energy machine."
+                                "helpText": "A Comma Separated Values (CSV) table that has the economic parameters for the wave energy machine."
 
                             },
                             {

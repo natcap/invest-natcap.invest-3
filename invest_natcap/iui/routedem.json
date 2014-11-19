@@ -55,7 +55,7 @@
                     "label": "Flow Direction Filename",
                     "defaultValue": "flow_direction.tif",
                     "required": true,
-                    "helpText": "The filename of the flow direction raster, it will go in the project workspace."
+                    "helpText": "The filename of the flow direction raster. It will go in the project workspace."
                 },
                 {        
                     "id" : "flow_accumulation_filename",
@@ -64,7 +64,7 @@
                     "label": "Flow Accumulation Filename",
                     "defaultValue": "flow_accumulation.tif",
                     "required": true,
-                    "helpText": "The filename of the flow accumulation raster, it will go in the project workspace."
+                    "helpText": "The filename of the flow accumulation raster. It will go in the project workspace."
                 },
                 {        
                     "id" : "threshold_flow_accumulation",
@@ -83,7 +83,7 @@
                     "label": "Calculate Multiple Stream Thresholds",
                     "defaultValue": true,
                     "required": false,
-                    "helpText": "Select to calculate multiple stream maps. if enabled set stream threshold to lowest amount, then set upper and step size thresholds."
+                    "helpText": "Select to calculate multiple stream maps. If enabled set stream threshold to lowest amount, then set upper and step size thresholds."
                 },
                 {        
                     "id" : "threshold_flow_accumulation_upper",
@@ -124,7 +124,7 @@
                     "defaultValue": "slope.tif",
                     "required": true,
                     "enabledBy": "calculate_slope",
-                    "helpText": "The filename of the output slope raster, it will go in the project workspace."
+                    "helpText": "The filename of the output slope raster. It will go in the project workspace."
                 },
                 {
                     "id" : "calculate_downstream_distance",
@@ -143,7 +143,7 @@
                     "defaultValue": "downstream_distance.tif",
                     "required": true,
                     "enabledBy": "calculate_downstream_distance",
-                    "helpText": "The filename of the output slope raster, it will go in the project workspace."
+                    "helpText": "The filename of the output slope raster. It will go in the project workspace."
                 }
             ]
         }

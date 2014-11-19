@@ -1,6 +1,11 @@
 Flood Mitigation Package
 ========================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.flood_mitigation.flood_mitigation.execute
+
 Flood Mitigation
 ----------------
 

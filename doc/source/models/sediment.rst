@@ -1,6 +1,11 @@
 Sediment Package
 ================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.sediment.sediment.execute
+
 Sediment
 --------
 
