@@ -8,7 +8,6 @@ import fnmatch
 import math
 import numpy as np
 
-from scipy import ndimage
 from osgeo import gdal, ogr, osr
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
@@ -158,12 +157,16 @@ def execute(args):
                 {
                     (Habitat A, Stressor 1):
                         {'Crit_Ratings':
-                            {'CritName':
-                                {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {
+                                'CritName':
+                                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                             },
                         'Crit_Rasters':
                             {'CritName':
-                                {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
+                                {
+                                    'DS': "CritName Raster URI",
+                                    'Weight': 1.0, 'DQ': 1.0
+                                }
                             },
                         'DS':  "A-1 Dataset URI"
                         }
@@ -235,9 +238,9 @@ def execute(args):
                         feature.items().keys()))
 
             if 'name' not in lower_attrib:
-                raise ImproperAOIAttributeName("Subregion layer attributes must \
-                    contain the attribute \"Name\" in order to be properly used \
-                    within the HRA model run.")
+                raise ImproperAOIAttributeName("Subregion layer attributes \
+                    must contain the attribute \"Name\" in order to be \
+                    properly used within the HRA model run.")
 
         #By this point, we know that the AOI layer contains the 'name' attrib
         #in some form. Pass that on to the core so that the name can be easily
@@ -343,7 +346,10 @@ def make_add_overlap_rasters(dir, habitats, stress_dict,
                         },
                     'Crit_Rasters':
                         {'CritName':
-                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
+                            {
+                                'DS': "CritName Raster URI",
+                                'Weight': 1.0, 'DQ': 1.0
+                            }
                         },
                     'DS':  "A Dataset URI"
                     }
@@ -450,10 +456,11 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
 
     for shape in stress_list:
 
-        #The return of os.path.split is a tuple where everything after the final
-        #slash is returned as the 'tail' in the second element of the tuple
-        #path.splitext returns a tuple such that the first element is what comes
-        #before the file extension, and the second is the extension itself
+        #The return of os.path.split is a tuple where everything after the
+        #final slash is returned as the 'tail' in the second element of the
+        #tuple path.splitext returns a tuple such that the first element is
+        #what comes before the file extension, and the second is the extension
+        #itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
 
@@ -467,20 +474,26 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
 
         #Need to create a larger base than the envelope that would normally
         #surround the raster, since we know that we can be expanding by at
-        #least buffer size more. For reference, look to "~/workspace/Examples/expand_raster.py"
+        #least buffer size more. For reference, look to
+        #"~/workspace/Examples/expand_raster.py"
         shp_extent = layer.GetExtent()
 
         #These have to be expanded by 2 * buffer to account for both sides
         width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
         height = abs(shp_extent[3] - shp_extent[2]) + 2*buff
         p_width = int(np.ceil(width / grid_size))
-        p_height = int(np.ceil(height /grid_size))
+        p_height = int(np.ceil(height / grid_size))
 
         driver = gdal.GetDriverByName('GTiff')
         raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
 
         #increase everything by buffer size
-        transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
+        transform = [shp_extent[0] - buff,
+                     grid_size,
+                     0.0,
+                     shp_extent[3] + buff,
+                     0.0,
+                     -grid_size]
         raster.SetGeoTransform(transform)
 
         srs = osr.SpatialReference()
@@ -574,7 +587,14 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
 
     cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
     raster_utils.vectorize_datasets(
-            [dist_trans_uri], zero_buff_op, out_uri, gdal.GDT_Float32, nodata, cell_size, "intersection", vectorize_op=False)
+        [dist_trans_uri],
+        zero_buff_op,
+        out_uri,
+        gdal.GDT_Float32,
+        nodata,
+        cell_size,
+        "intersection",
+        vectorize_op=False)
 
 
 def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
@@ -891,8 +911,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
-                        contain the attribute \"Rating\" in order to be properly used \
-                        within the HRA model run.")
+                        contain the attribute \"Rating\" in order to be \
+                        properly used within the HRA model run.")
 
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
@@ -937,10 +957,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
-                raise DQWeightNotFound("All spatial criteria desired within the \
-                    model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all\
-                    relavant criteria data.")
+                raise DQWeightNotFound("All spatial criteria desired within \
+                    the model run require corresponding Data Quality and \
+                    Weight information. Please run HRA Preprocessor again to \
+                    include all relavant criteria data.")
 
     #Habs
     for h in crit_dict['h']:
@@ -968,8 +988,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
-                        contain the attribute \"Rating\" in order to be properly used \
-                        within the HRA model run.")
+                        contain the attribute \"Rating\" in order to be \
+                        properly used within the HRA model run.")
 
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
@@ -1013,10 +1033,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             if c_name in habitats[h]['Crit_Rasters']:
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
-                raise DQWeightNotFound("All spatial criteria desired within the \
-                    model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all\
-                    relavant criteria data.")
+                raise DQWeightNotFound("All spatial criteria desired within \
+                    the model run require corresponding Data Quality and \
+                    Weight information. Please run HRA Preprocessor again to \
+                    include all relavant criteria data.")
     #H-S-E
     for pair in crit_dict['h_s_e']:
 
@@ -1043,8 +1063,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 if 'rating' not in lower_attrib:
                     raise ImproperCriteriaAttributeName("Criteria layer must \
-                        contain the attribute \"Rating\" in order to be properly used \
-                        within the HRA model run.")
+                        contain the attribute \"Rating\" in order to be \
+                        properly used within the HRA model run.")
 
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
@@ -1088,10 +1108,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
-                raise DQWeightNotFound("All spatial criteria desired within the \
-                    model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all\
-                    relavant criteria data.")
+                raise DQWeightNotFound("All spatial criteria desired within \
+                    the model run require corresponding Data Quality and \
+                    Weight information. Please run HRA Preprocessor again to \
+                    include all relavant criteria data.")
 
 
 def unpack_over_dict(csv_uri, args):
