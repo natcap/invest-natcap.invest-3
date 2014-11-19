@@ -20,33 +20,50 @@ LOGGER = logging.getLogger('sediment')
 
 
 def execute(args):
-    """Calculates habitat suitability scores and patches given biophysical 
-        rasters and classification curves. 
-        
-        workspace_dir - uri to workspace directory for output files
-        output_cell_size - (optional) size of output cells
-        habitat_threshold - a value to threshold the habitat score values to 
-            0 and 1
-        depth_biophysical_uri - uri to a depth raster 
-        salinity_biophysical_uri - uri to salinity raster
-        temperature_biophysical_uri - uri to temperature raster
-        oyster_habitat_suitability_depth_table_uri - uri to a csv table that
-            has that has columns "Suitability" in (0,1) and "Depth" in
-            range(depth_biophysical_uri)
-        oyster_habitat_suitability_salinity_table_uri -  uri to a csv table that
-            has that has columns "Suitability" in (0,1) and "Salinity" in 
-            range(salinity_biophysical_uri)
-        oyster_habitat_suitability_temperature_table_uri - uri to a csv table
-            that has that has columns "Suitability" in (0,1) and  "Temperature"
-            in range(temperature_biophysical_uri)
-           """
+    """
+    Calculates habitat suitability scores and patches given biophysical
+    rasters and classification curves.
+
+    Args:
+        workspace_dir (string): uri to workspace directory for output files
+        habitat_threshold (float): (optional) size of output cells
+        output_cell_size (float): a value to threshold the habitat score values
+            to 0 and 1
+        temperature_biophysical_uri (string): uri to temperature raster
+        salinity_biophysical_uri (string): uri to salinity raster
+        depth_biophysical_uri (string): uri to a depth raster
+        oyster_habitat_suitability_temperature_table_uri (string): uri to a csv
+            table that has that has columns "Suitability" in (0,1) and
+            "Temperature" in range(temperature_biophysical_uri)
+        oyster_habitat_suitability_salinity_table_uri (string): uri to a csv
+            table that has that has columns "Suitability" in (0,1) and
+            "Salinity" in range(salinity_biophysical_uri)
+        oyster_habitat_suitability_depth_table_uri (string): uri to a csv
+            table that has that has columns "Suitability" in (0,1) and "Depth"
+            in range(depth_biophysical_uri)
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'habitat_threshold': 'example',
+            'output_cell_size': 'example',
+            'temperature_biophysical_uri': 'path/to/raster',
+            'salinity_biophysical_uri': 'path/to/raster',
+            'depth_biophysical_uri': 'path/to/raster',
+            'oyster_habitat_suitability_temperature_table_uri': 'path/to/csv',
+            'oyster_habitat_suitability_salinity_table_uri': 'path/to/csv',
+            'oyster_habitat_suitability_depth_table_uri': 'path/to/csv',
+        }
+
+    """
     try:
         file_suffix = args['suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
             file_suffix = '_' + file_suffix
     except KeyError:
         file_suffix = ''
-        
+
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
@@ -55,7 +72,7 @@ def execute(args):
         if not os.path.exists(directory):
             LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
-           
+
     #align the raster lists
     aligned_raster_stack = {
         'salinity_biophysical_uri': os.path.join(
@@ -70,16 +87,16 @@ def execute(args):
         'depth_biophysical_uri']
     dataset_uri_list = [args[x] for x in biophysical_keys]
     dataset_out_uri_list = [aligned_raster_stack[x] for x in biophysical_keys]
-    
+
     out_pixel_size = min(
         [raster_utils.get_cell_size_from_uri(x) for x in dataset_uri_list])
-    
+
     raster_utils.align_dataset_list(
         dataset_uri_list, dataset_out_uri_list,
         ['nearest'] * len(dataset_out_uri_list),
         out_pixel_size, 'intersection', 0)
-    
-    
+
+
     #build up the interpolation functions for the habitat
     biophysical_to_table = {
         'salinity_biophysical_uri': 
@@ -129,11 +146,11 @@ def execute(args):
             biophysical_to_habitat_quality[biophysical_uri_key],
             gdal.GDT_Float32, reclass_nodata, out_pixel_size, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
-    
+
     #calculate the geometric mean of the suitability rasters
     oyster_suitability_uri = os.path.join(
         output_dir, 'oyster_habitat_suitability.tif')
-    
+
     def geo_mean(*values):
         """Geometric mean of input values"""
         running_product = values[0]
@@ -143,52 +160,52 @@ def execute(args):
             running_mask = running_mask | (values[index] == reclass_nodata)
         return numpy.where(
             running_mask, reclass_nodata, running_product**(1./len(values)))
-    
+
     raster_utils.vectorize_datasets(
         biophysical_to_habitat_quality.values(), geo_mean,
         oyster_suitability_uri, gdal.GDT_Float32, reclass_nodata,
         out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-    
+
      #calculate the geometric mean of the suitability rasters
     oyster_suitability_mask_uri = os.path.join(
         output_dir, 'oyster_habitat_suitability_mask.tif')
-    
+
     def threshold(value):
         """Threshold the values to args['habitat_threshold']"""
-        
+
         threshold_value = value >= args['habitat_threshold']
         return numpy.where(
             value == reclass_nodata, reclass_nodata, threshold_value)
-            
+
     raster_utils.vectorize_datasets(
         [oyster_suitability_uri], threshold,
         oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
         out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-        
+
     #polygonalize output mask
     output_mask_ds = gdal.Open(oyster_suitability_mask_uri)
     output_mask_band = output_mask_ds.GetRasterBand(1)
     output_mask_wkt = output_mask_ds.GetProjection()
-    
+
     output_sr = osr.SpatialReference()
     output_sr.ImportFromWkt(output_mask_wkt)
-    
-    
+
+
     oyster_suitability_datasource_uri = os.path.join(
         output_dir, 'oyster_habitat_suitability_mask.shp')
-    
+
     if os.path.isfile(oyster_suitability_datasource_uri):
         os.remove(oyster_suitability_datasource_uri)
 
-    
+
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     oyster_suitability_datasource = output_driver.CreateDataSource(
         oyster_suitability_datasource_uri)
     oyster_suitability_layer = oyster_suitability_datasource.CreateLayer(
             'oyster', output_sr, ogr.wkbPolygon)
-            
+
     field = ogr.FieldDefn('pixel_value', ogr.OFTReal)
     oyster_suitability_layer.CreateField(field)
 

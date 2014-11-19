@@ -1,6 +1,11 @@
 Marine Water Quality Package
 ============================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.marine_water_quality.marine_water_quality_biophysical.execute
+
 Marine Water Quality Biophysical
 --------------------------------
 

@@ -1,6 +1,11 @@
 Carbon Package
 ==============
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.carbon.carbon_combined.execute_30
+
 Carbon Combined
 ---------------
 

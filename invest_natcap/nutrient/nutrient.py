@@ -21,15 +21,78 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    """A high level wrapper for the InVEST nutrient model that first calls
-        through to the InVEST water yield function.  This is a historical
-        separation that used to make sense when we manually required users
-        to pass the water yield pixel raster to the nutrient output."""
+    """
+    A high level wrapper for the InVEST nutrient model that first calls
+    through to the InVEST water yield function.  This is a historical
+    separation that used to make sense when we manually required users
+    to pass the water yield pixel raster to the nutrient output.
+
+    Args:
+        workspace_dir (string): directory in which the output and intermediate
+            files will be saved
+        results_suffix (string): This text will be appended to the end of the
+            output files to help separate multiple runs.
+        dem_uri (string): A GIS raster dataset with an elevation value for
+            each cell.
+        precipitation_uri (string): A GIS raster dataset with a non-zero value
+            for average annual precipitation for each cell.
+        eto_uri (string): A GIS raster dataset, with an annual average
+            evapotranspiration value for each cell.
+        depth_to_root_rest_layer_uri (string): GIS raster dataset with an
+            average root restricting layer depth value for each cell.
+        pawc_uri (string): A GIS raster dataset with a plant available water
+            content value for each cell.
+        lulc_uri (string): A GIS raster dataset, with an integer LULC code for
+            each cell.
+        seasonality_constant (float): Floating point value on the order of 1
+            to 20 corresponding to the seasonal distribution of precipitation
+        watersheds_uri (string): This is a layer of watersheds such that each
+            watershed contributes to a point of interest where water quality
+            will be analyzed.
+        biophysical_table_uri (string): A table containing model information
+            corresponding to each of the land use classes in the LULC raster
+            input.
+        calc_p (boolean): Select to calculate phosphorous export.
+        calc_n (boolean): Select to calculate nitrogen export.
+        accum_threshold (int): The number of upstream cells that must flow
+            into a cell before it's considered part of a stream such that
+            retention stops and the remaining export is exported to the stream.
+        water_purification_threshold_table_uri (string): A table containing
+            annual nutrient load threshold information.
+        valuation_enabled (boolean): indicates whether the model will include
+            valuation
+        water_purification_valuation_table_uri (string): A table containing
+            valuation information
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'results_suffix': '_results',
+            'dem_uri': 'path/to/',
+            'precipitation_uri': 'path/to/raster',
+            'eto_uri': 'path/to/raster',
+            'depth_to_root_rest_layer_uri': 'path/to/raster',
+            'pawc_uri': 'path/to/raster',
+            'lulc_uri': 'path/to/raster',
+            'seasonality_constant': 5,
+            'watersheds_uri': 'path/to/shapefile',
+            'biophysical_table_uri': 'path/to/csv',
+            'calc_p': True,
+            'calc_n': True,
+            'accum_threshold': 1000,
+            'water_purification_threshold_table_uri': 'path/to/csv',
+            'valuation_enabled': True,
+            'water_purification_valuation_table_uri': 'path/to/csv',
+
+        }
+
+    """
 
     def _validate_inputs(
         nutrients_to_process, lucode_to_parameters, threshold_lookup,
         valuation_lookup):
-        
+
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
             the user"""

@@ -1,6 +1,11 @@
 Fisheries Package
 =================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.fisheries.fisheries.execute
+
 Fisheries
 ---------
 

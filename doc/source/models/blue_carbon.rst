@@ -1,6 +1,11 @@
 Blue Carbon Package
 ===================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.blue_carbon.blue_carbon.execute
+
 Blue Carbon
 -----------
 

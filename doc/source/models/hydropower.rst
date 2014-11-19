@@ -1,6 +1,11 @@
 Hydropower Package
 ==================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.hydropower.hydropower_water_yield.execute
+
 Hydropower Water Yield
 ----------------------
 

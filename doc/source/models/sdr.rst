@@ -1,6 +1,11 @@
 Sediment Delivery Ratio Package
 ===============================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.sdr.sdr.execute
+
 Sediment Delivery Ratio
 -----------------------
 

@@ -1,6 +1,11 @@
 Nutrient Package
 ================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.nutrient.nutrient.execute
+
 Nutrient
 --------
 

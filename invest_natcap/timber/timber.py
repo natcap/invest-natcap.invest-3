@@ -10,21 +10,30 @@ import json
 from invest_natcap.dbfpy import dbf
 import timber_core
 
+
 def execute(args):
-    """This function invokes the timber model given uri inputs specified by 
-        the user guide.
-    
-    args - a dictionary object of arguments 
-       
-    args['workspace_dir']     - The file location where the outputs will 
-                                be written (Required)
-    args['timber_shape_uri']  - The shape file describing timber parcels with 
-                                fields as described in the user guide (Required)
-    args['attr_table_uri']    - The DBF polygon attribute table location with 
-                                fields that describe polygons in 
-                                timber_shape_uri (Required)
-    args['market_disc_rate']  - The market discount rate as a float
-                                (Required, Default: 7)
+    """
+    This function invokes the timber model given uri inputs specified by
+    the user guide.
+
+    Args:
+        workspace_dir (string): The file location where the outputs will
+            be written (Required)
+        timber_shape_uri (string): The shapefile describing timber parcels
+            with fields as described in the user guide (Required)
+        attr_table_uri (string): The DBF polygon attribute table location with
+            fields that describe polygons in timber_shape_uri (Required)
+        market_disc_rate (float): The market discount rate
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'timber_shape_uri': 'path/to/shapefile',
+            'attr_table_uri': 'path/to/dbf',
+            'market_disc_rate': 7.0,
+        }
+
     """
     filesystemencoding = sys.getfilesystemencoding()
 

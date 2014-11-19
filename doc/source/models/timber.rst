@@ -1,6 +1,11 @@
 Timber Package
 ==============
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.timber.timber.execute
+
 Timber
 ------
 
