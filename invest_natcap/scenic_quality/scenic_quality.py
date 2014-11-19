@@ -6,8 +6,6 @@ import numpy as np
 import scipy.stats
 import shutil
 import logging
-import cProfile
-import pstats
 
 from osgeo import gdal
 from osgeo import ogr
@@ -15,7 +13,7 @@ from osgeo import osr
 
 from invest_natcap import raster_utils
 from invest_natcap.scenic_quality import scenic_quality_core
-import scenic_quality_cython_core
+#from invest_natcap.overlap_analysis import overlap_analysis
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -165,6 +163,8 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     base_uri = os.path.split(out_viewshed_uri)[0]
     I_uri = os.path.join(base_uri, 'I.tif')
     J_uri = os.path.join(base_uri, 'J.tif')
+    #I_uri = raster_utils.temporary_filename()
+    #J_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
@@ -183,30 +183,23 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     GT = raster_utils.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
-    input_nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
     input_raster = gdal.Open(in_dem_uri)
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    input_array[input_array == input_nodata] = 0.
     input_raster = None
 
     # Create a raster from base before passing it to viewshed
     visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        0., gdal.GDT_Float64, fill_value = 0.)
+        255, gdal.GDT_Byte, fill_value = 255)
 
     # Call the non-uri version of viewshed.
-    cProfile.runctx( \
-        'compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-        cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
-        curvature_correction, refr_coeff, args)' \
-        , globals(), locals(), 'stats')
-    p = pstats.Stats('stats')
-    p.sort_stats("time").print_stats(20)
-    p.sort_stats('cumulative').print_stats(20)
+    #compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,
+    compute_viewshed(input_array, visibility_uri, in_structure_uri,
+    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, 
+    refr_coeff, args)
 
-    os.remove(I_uri)
-    os.remove(J_uri)
 
+#def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
 def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
     refr_coeff, args):
@@ -220,6 +213,56 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
+    #input_raster = gdal.Open(in_dem_uri)
+    #input_band = input_raster.GetRasterBand(1)
+    #input_array = input_band.ReadAsArray()
+    #input_band = None
+    #input_raster = None
+
+    # Compute the distance for each point
+    def compute_distance(vi, vj, cell_size):
+        def compute(i, j, v):
+            if v == 1:
+                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
+            else:
+                return -1.
+        return compute
+
+    # Apply the valuation functions to the distance
+    def polynomial(a, b, c, d, max_valuation_radius):
+        def compute(x, v):
+            if v==1:
+                if x < 1000:
+                    return a + b*1000 + c*1000**2 + d*1000**3 - \
+                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return a + b*x + c*x**2 + d*x**3
+                else:
+                    return 0.
+            else:
+                return 0.
+        return compute
+
+    def logarithmic(a, b, max_valuation_radius):
+        def compute(x, v):
+            if v==1:
+                if x < 1000:
+                    return a + b*math.log(1000) - (b/1000)*(1000-x)
+                elif x <= max_valuation_radius:
+                    return a + b*math.log(x)
+                else:
+                    return 0.
+            else:
+                return 0.
+        return compute
+
+    # Multiply a value by a constant
+    def multiply(c):
+        def compute(x):
+            return x*c
+        return compute
+
+
     # Setup valuation function
     a = args["a_coefficient"]
     b = args["b_coefficient"]
@@ -230,26 +273,26 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     max_valuation_radius = args['max_valuation_radius']
     if "polynomial" in args["valuation_function"]:
         print("Polynomial")
-        valuation_function = scenic_quality_cython_core.polynomial
+        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
     elif "logarithmic" in args['valuation_function']:
         print("logarithmic")
-        valuation_function = scenic_quality_cython_core.logarithmic
+        valuation_function = logarithmic(a, b, max_valuation_radius)
 
     assert valuation_function is not None
     
     # Make sure the values don't become too small at max_valuation_radius:
-#    test_function = valuation_function(0, 0, max_valuation_radius, 1)
-#    edge_value = test_function(np.array([0]), \
-#                                    np.array([1]), \
-#                                    np.array([1]), \
-#                                    np.array([0]))
-#    edge_value = valuation_function(max_valuation_radius, 1)
-#    message = "Valuation function can't be negative if evaluated at " + \
-#    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
-#    assert edge_value >= 0., message
+    edge_value = valuation_function(max_valuation_radius, 1)
+    message = "Valuation function can't be negative if evaluated at " + \
+    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
+    assert edge_value >= 0., message
         
     # Base path uri
     base_uri = os.path.split(visibility_uri)[0]
+
+    # Temporary files that will be used 
+    distance_uri = raster_utils.temporary_filename()
+    viewshed_uri = raster_utils.temporary_filename()
+
 
     # The model extracts each viewpoint from the shapefile
     point_list = []
@@ -259,19 +302,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert layer is not None
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
-
-    array_shape = (rows, cols)
-    
-    # Create arrays for the parameters used for the computation at each viewpoint
-    max_distances = np.ones(feature_count).astype(int) * -1
-    coefficients = np.ones(feature_count)
-    obs_elevations = np.zeros(feature_count)
-    tgt_elevations = np.zeros(feature_count)
-    viewpoint_row = np.ones(feature_count).astype(int) * -1
-    viewpoint_col = np.ones(feature_count).astype(int) * -1
-
+    viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
     for f in range(feature_count):
+        print("feature " + str(f))
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         # Check for feature information (radius, coeff, height)
@@ -289,15 +323,15 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
                         str(max_dist) + ')')
                     LOGGER.warning( \
                         'The valuation is performed beyond what is visible')
-                max_distances[f] = int(max_dist/cell_size)
+                max_dist = int(max_dist/cell_size)
             if field_name.lower() == 'coeff':
-                coefficients[f] = float(feature.GetField(field))
+                coefficient = float(feature.GetField(field))
                 assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'offseta':
-                obs_elevations[f] = float(feature.GetField(field))
+            if field_name.lower() == 'OFFSETA':
+                obs_elev = float(feature.GetField(field))
                 assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name.lower() == 'offsetb':
-                tgt_elevations[f] = float(feature.GetField(field))
+            if field_name.lower() == 'OFFSETB':
+                tgt_elev = float(feature.GetField(field))
                 assert tgt_elev is not None, "OFFSETB can't be None"
                 
         geometry = feature.GetGeometryRef()
@@ -307,159 +341,58 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-        viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
 
+        array_shape = (rows, cols)
+    
+        #tmp_visibility_uri = raster_utils.temporary_filename()
+        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri( \
+            visibility_uri, tmp_visibility_uri, 'GTiff', \
+            255, gdal.GDT_Float64, fill_value=255)
+        scenic_quality_core.viewshed(input_array, cell_size, \
+        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
+        max_dist, refr_coeff)
+        
+        # Compute the distance
+        #tmp_distance_uri = raster_utils.temporary_filename() 
+        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
+        raster_utils.new_raster_from_base_uri(visibility_uri, \
+        tmp_distance_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
+        distance_fn = compute_distance(i,j, cell_size)
+        raster_utils.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
+        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
+        # Apply the valuation function
+        #tmp_viewshed_uri = raster_utils.temporary_filename()
+        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
+
+        raster_utils.vectorize_datasets(
+            [tmp_distance_uri, tmp_visibility_uri],
+            valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size, 
+            "union")
+
+
+        # Multiply the viewshed by its coefficient
+        scaled_viewshed_uri = raster_utils.temporary_filename() 
+        #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #raster_utils.temporary_filename()
+        apply_coefficient = multiply(coefficient)
+        raster_utils.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
+        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
+        viewshed_uri_list.append(scaled_viewshed_uri)
+    
     layer = None
     shapefile = None
-
-    arg_dist = np.argsort(max_distances)
-
-
-    I_raster = gdal.Open(I_uri, gdal.GA_Update)
-    I_band = I_raster.GetRasterBand(1)
-    I_array = I_band.ReadAsArray()
-    I_band = None
-    I_raster = None
-    J_raster = gdal.Open(J_uri, gdal.GA_Update)
-    J_band = J_raster.GetRasterBand(1)
-    J_array = J_band.ReadAsArray()
-    J_band = None
-    J_raster = None
-
-    visibility_raster = gdal.Open(visibility_uri)
-    visibility_band = visibility_raster.GetRasterBand(1)
-    accum_visibility = visibility_band.ReadAsArray()
-    accum_visibility[:] = 0.0
-    visibility_band = None
-    visibility_raster = None
-
-    # Compute distances
-    distances_array = np.copy(accum_visibility)
-
-    last_dist = 0
-    for dist in range(arg_dist.size-1, -1, -1):
-        f = arg_dist[dist]
-        print("Iteration " + str(dist) + ", processing viewpoint " + str(f))
-
-        max_dist = max_distances[f]
-        coefficient = coefficients[f]
-        obs_elev = obs_elevations[f]
-        tgt_elev = tgt_elevations[f]
-        i = viewpoint_row[f]
-        j = viewpoint_col[f]
-
-        # Create a visibility map
-        # Visibility convention: 1 visible, \
-        # <0 is additional height to become visible
-        visibility_map = np.zeros(input_array.shape)
-        visibility_map[input_array == nodata] = 2. 
-
-        # perimeter
-        # 1- get perimeter cells
-        perimeter_cells = \
-            scenic_quality_core.get_perimeter_cells(input_array.shape, (i,j), max_dist)
-
-        # angles
-        # cell_angles + append the last element (2 PI) automatically
-        angles = scenic_quality_core.cell_angles(perimeter_cells, (i,j))
-        angles = np.append(angles, 2.0 * math.pi)
-        
-        # Viewshed information
-        row_max = np.amax(perimeter_cells[0])
-        row_min = np.amin(perimeter_cells[0])
-        col_max = np.amax(perimeter_cells[1])    
-        col_min = np.amin(perimeter_cells[1])
-        
-        # Shape of the viewshed
-        viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
-
-        # Viewer's coordiantes relative to the viewshed 
-        v = (i - row_min, j - col_min)
-
-        # add_events, center_events, remove_events
-        add_events, center_events, remove_events, I, J = \
-            scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
-            v, max_dist)
-
-        # arg_min, arg_center, arg_max
-        arg_min = np.argsort(add_events).astype(np.int64)
-        arg_max = np.argsort(remove_events).astype(np.int64)
-        arg_center = np.argsort(center_events).astype(np.int64)
-
-        # I and J are relative to the viewshed_shape. Make them absolute
-        I += row_min
-        J += col_min
-
-        # coord
-        coord = np.array([I, J])
-
-        # Compute distances
-        distances = np.copy(I).astype(np.float64)
-        distances_sq = np.copy(I).astype(np.float64)
-
-        scenic_quality_cython_core.compute_distances( \
-            i, j, cell_size, I, J, distances_sq, distances)
-
-        # Computation of the visibility:
-        # 1- get the height of the DEM w.r.t. the viewer's elevatoin (coord+elev)
-        visibility = (input_array[(I, J)] - \
-            input_array[i, j] - obs_elev).astype(np.float64)
-        offset_visibility = visibility + tgt_elev
-    
-        # 2- Factor the effect of refraction in the elevation.
-        # From the equation on the ArcGIS website:
-        # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
-        D_earth = 12740000. # Diameter of the earth in meters
-        correction = distances_sq.astype(float) * \
-            (refr_coeff - 1.) / D_earth
-        visibility += correction
-        offset_visibility += correction
-        # 3- Divide the height by the distance to get a visibility score
-        visibility /= distances
-        offset_visibility /= distances
-
-        # compute viewshed
-        visibility_array = scenic_quality_core.viewshed(
-            input_array, cell_size, visibility_map, perimeter_cells, \
-            (i,j), angles, v, viewshed_shape, row_min, col_min, \
-            add_events, center_events, remove_events, I, J, \
-            arg_min, arg_max, arg_center, \
-            coord, distances_sq, distances, visibility, offset_visibility, \
-            obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython')
-        
-        # apply valuation function
-        valuation_function(a, b, c, d, \
-            max_valuation_radius, i, j, cell_size, \
-            coefficient , I, J, distances, \
-            visibility_array, accum_visibility)
-
-        # Write temporary result on disk
-        tmp_uri = os.path.join(base_uri, 'viewshed_' + str(dist) + '_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(visibility_uri, tmp_uri, 'GTiff', \
-            0., gdal.GDT_Float32, fill_value = 0)
-        tmp_raster = gdal.Open(tmp_uri, gdal.GA_Update)
-        tmp_band = tmp_raster.GetRasterBand(1)
-        tmp_band.WriteArray(visibility_array)
-        tmp_band = None
-        tmp_raster = None
-        raster_utils.calculate_raster_stats_uri(tmp_uri)
-        visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_band.WriteArray(accum_visibility)
-        visibility_band = None
-        visibility_raster = None
-        raster_utils.calculate_raster_stats_uri(visibility_uri)
-        
-        last_dist = max_distances[f]
-
-    # Write result on disk
-    visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
-    visibility_band = visibility_raster.GetRasterBand(1)
-    visibility_band.WriteArray(accum_visibility)
-    visibility_band = None
-    visibility_raster = None
-    raster_utils.calculate_raster_stats_uri(visibility_uri)
+    # Accumulate result to combined raster
+    def sum_rasters(*x):
+        return np.sum(x, axis = 0)
+    LOGGER.debug('Summing up everything using vectorize_datasets...')
+    LOGGER.debug('visibility_uri' + visibility_uri)
+    LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
+    raster_utils.vectorize_datasets( \
+        viewshed_uri_list, sum_rasters, \
+        visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", vectorize_op=False)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -494,69 +427,14 @@ def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
 
 def get_count_feature_set_uri(fs_uri):
     shapefile = ogr.Open(fs_uri)
-    message = "Problem encoutered with " + fs_uri
-    assert shapefile is not None, message
     layer = shapefile.GetLayer()
-    assert layer is not None, message
     count = layer.GetFeatureCount()
     shapefile = None
 
     return count
-
+    
 def execute(args):
-    """
-    Entry point into the Scenic Quality Model
-
-    Args:
-        workspace_dir (string): Results will be saved to this location.
-        aoi_uri (string): This AOI instructs the model where to clip
-            the input data and the extent of analysis.
-        cell_size (float): Length (in meters) of each side of the (square)
-            cell.
-        structure_uri (string): Shapefile indicating the locations of objects
-            that contribute to negative scenic quality, such as aquaculture
-            netpens or wave energy facilities.
-        dem_uri (string): An elevation raster layer is required to conduct
-            viewshed analysis.
-        refraction (float): The earth curvature correction option corrects
-            for the curvature of the earth and refraction of visible light in
-            air.
-        pop_uri (string): Raster used to determine population within the
-            AOI’s land-seascape where point features contributing to negative
-            scenic quality are visible and not visible.
-        overlap_uri (string): A shapefile used to determine the impact of
-            objects on visual quality. This input must be a polygon and
-            projected in meters.
-        valuation_function (string): Indicates the functional form f(x) the
-            model will use to value the visual impact for each viewpoint.
-        a_coefficient (float): first coefficient for valuation function
-        b_coefficient (float): second coefficient for valuation function
-        c_coefficient (float): third coefficient for valuation function
-        d_coefficient (float): fourth coefficient for valuation function
-        max_valuation_radius (float): Radius beyond which the valuation is set
-            to zero.
-
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'aoi_uri': 'path/to/shapefile',
-            'cell_size': 500,
-            'structure_uri': 'path/to/shapefile',
-            'dem_uri': 'path/to/raster',
-            'refraction': 0.13,
-            'pop_uri': 'path/to/shapefile',
-            'overlap_uri': 'path/to/shapefile',
-            'valuation_function': 'polynomial: a + bx + cx^2 + dx^3',
-            'a_coefficient': 1.0,
-            'b_coefficient': 0.0,
-            'c_coefficient': 0.0,
-            'd_coefficient': 0.0,
-            'max_valuation_radius': 8000.0,
-
-        }
-
-    """
+    """DOCSTRING"""
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
@@ -624,7 +502,7 @@ def execute(args):
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AOI: %s", aq_args['dem_uri'], aoi_dem_uri)
+    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
     raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
@@ -717,20 +595,13 @@ def execute(args):
                                        1)
         
         pop = gdal.Open(pop_vs_uri)
-        messge = "Can't open " + pop_vs_uri
-        assert pop is not None, message
         pop_band = pop.GetRasterBand(1)
-        messge = "Can't extract band from " + pop_vs_uri
-        assert pop_band is not None, message
         vs = gdal.Open(viewshed_uri)
         vs_band = vs.GetRasterBand(1)
-        message = 'population and viewshed file sizes are incompatible'
-        assert vs_band.XSize >= pop_band.XSize, message
-        assert vs_band.YSize >= pop_band.YSize, message
 
         affected_pop = 0
         unaffected_pop = 0
-        for row_index in range(pop_band.YSize):
+        for row_index in range(vs_band.YSize):
             pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
             vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
 
