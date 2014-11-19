@@ -265,7 +265,16 @@
                             "defaultValue": "",
                             "helpText": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm. They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><td>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr><td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td><td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above. In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
                             "enabledBy" : "price_table",
-                            "required" : true
+                            "required" : true,
+                            "validateAs": { "type": "CSV",
+                                            "fieldsExist": ["YEAR", "PRICE"],
+                                            "restrictions": [{"field": "YEAR",
+                                                            "validateAs": {"type": "number",
+                                                                           "allowedValues": {"pattern":"^[0-9]+"}}},
+                                                            {"field": "PRICE",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
+                                                ]}
                         },
                         {
                             "id": "wind_price",
