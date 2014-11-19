@@ -226,7 +226,8 @@ def compute_transects(args):
                         args['max_profile_length'])
 
                     # Interpolate transect to the model resolution
-                    interpolated_depths = raw_depths
+                    interpolated_depths = \
+                        raw_depths if raw_depths.size > 5 else None
 #                        interpolated_depths = \
 #                            interpolate_transect(raw_depths, i_side_fine, \
 #                                args['model_resolution'])
@@ -298,9 +299,9 @@ def compute_transects(args):
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    habitat_type_array = np.ones((tiles, max_transect_length)) * habitat_type_nodata.0
+    habitat_type_array = np.ones((tiles, max_transect_length)) * habitat_type_nodata
     habitat_properties_array = \
-        np.ones((tiles, field_count, max_transect_length)) * habitat_type_nodata.0
+        np.ones((tiles, field_count, max_transect_length)) * habitat_type_nodata
 
     # Creating HDF5 file that will store the transect data
     habitat_type_uri = \
@@ -348,6 +349,8 @@ def compute_transects(args):
             LOGGER.info('Extracting priority information from ' + basename)
             
             mask = None
+            mask_dict = {}
+
             progress_step = tiles / 50
             for transect in range(tiles):
                 if transect % progress_step == 0:
@@ -379,6 +382,8 @@ def compute_transects(args):
                 
                 # Compute the mask that will be used to update the values
                 mask = destination < source
+
+                mask_dict[transect] = mask
 
                 # Update habitat_types with new type of higher priority
                 destination[mask] = source[mask]
@@ -465,7 +470,10 @@ def compute_transects(args):
 #                        print('destination', destination)
 
                     # Save transect to file
-#                    destination[mask] = source[mask]
+                    mask = mask_dict[transect]
+
+                    print('destination', destination.size, 'source', source.size, 'mask', mask.size)
+                    destination[mask] = source[mask]
 
 #                    if transect in transect_range:
 #                        print('new destination', destination)
