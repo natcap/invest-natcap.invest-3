@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.wind_energy.wind_energy",
     "modelName" : "wind_energy",
     "localDocURI": "../documentation/wind_energy.html",
-    "height": 900,
+    "height": 1000,
     "width" : 800,
     "elements": [
         {
