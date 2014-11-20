@@ -149,7 +149,7 @@
             "args_id": "calc_p",
             "type": "checkbox",
             "label": "Calculate phosphorous retention",
-            "defaultValue": false,
+            "defaultValue": true,
             "required": false,
             "helpText": "Select to calculate phosphorous export."
         },
@@ -158,7 +158,7 @@
             "args_id": "calc_n",
             "type": "checkbox",
             "label": "Calculate nitrogen retention",
-            "defaultValue": false,
+            "defaultValue": true,
             "required": false,
             "helpText": "Select to calculate nitrogen export."
         },
