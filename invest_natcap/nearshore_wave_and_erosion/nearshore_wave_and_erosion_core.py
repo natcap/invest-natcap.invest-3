@@ -291,7 +291,7 @@ def compute_transects(args):
 
     LOGGER.debug('found %i tiles.' % tiles)
 
-    habitat_type_nodata = -99999.0
+    habitat_nodata = -99999.0
 
     print('transect_info size', len(transect_info))
 
@@ -299,27 +299,82 @@ def compute_transects(args):
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    habitat_type_array = np.ones((tiles, max_transect_length)) * habitat_type_nodata
-    habitat_properties_array = \
-        np.ones((tiles, field_count, max_transect_length)) * habitat_type_nodata
-
     # Creating HDF5 file that will store the transect data
-    habitat_type_uri = \
-        os.path.join(args['intermediate_dir'], 'habitat_type.h5')
-    habitat_properties_uri = \
-        os.path.join(args['intermediate_dir'], 'habitat_properties.h5')
+    transect_data_uri = \
+        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    
+    transect_data_file = h5.File(transect_data_uri, 'w')
+    
 
-    habitat_type_file = h5.File(habitat_type_uri, 'w')
+
     habitat_type_dataset = \
-        habitat_type_file.create_dataset('habitat_types', \
-            habitat_type_array.shape, compression = 'gzip', \
-            fillvalue = habitat_type_nodata)
-
-    habitat_properties_file = h5.File(habitat_properties_uri, 'w')
+        transect_data_file.create_dataset('habitat_types', \
+            (transect_count, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+    
     habitat_properties_dataset = \
-        habitat_properties_file.create_dataset('habitat_properties', \
-            habitat_properties_array.shape, compression = 'gzip', \
-            fillvalue = habitat_type_nodata)
+        transect_data_file.create_dataset('habitat_properties', \
+            (transect_count, field_count, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    bathymetry_dataset = \
+        transect_data_file.create_dataset('bathymetry', \
+            (tiles, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+    
+    positions_dataset = \
+        transect_data_file.create_dataset('ij_positions', \
+            (tiles, 2, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+    
+    shore_dataset = \
+        transect_data_file.create_dataset('shore_index', \
+            (tiles, 1), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (tiles, 4), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    limits_group = transect_data_file.create_group('limits')
+
+    indices_limit_dataset = \
+        limits_group.create_dataset('indices', \
+            (tiles, 2), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    coordinates_limits_dataset = \
+        limits_group.create_dataset('coordinates_ij', \
+            (tiles, 2), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+
+
+    habitat_type_array = \
+        np.ones(habitat_type_dataset.shape) * habitat_nodata
+
+    habitat_properties_array = \
+        np.ones(habitat_properties_dataset.shape) * habitat_nodata
+
+    bathymetry_array = \
+        np.ones(bathymetry_dataset.shape) * habitat_nodata
+
+    positions_array = \
+        np.ones(positions_dataset.shape) * habitat_nodata
+
+    shore_array = \
+        np.ones(shore_dataset.shape) * habitat_nodata
+
+    climatic_forcing_array = \
+        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
+
+    indices_limit_array = \
+        np.ones(indices_limit_dataset.shape) * habitat_nodata
+
+    coordinates_limits_array = \
+        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
+
 
 
     # HDF5 file container
@@ -400,7 +455,7 @@ def compute_transects(args):
                 source_nodata_mask = destination == source_nodata
 
                 # Remove source nodata
-                destination[source_nodata_mask] = habitat_type_nodata
+                destination[source_nodata_mask] = habitat_nodata
 
                 # Find where source nodata is in the raster
                 source_nodata_coordinates = \
@@ -472,7 +527,6 @@ def compute_transects(args):
                     # Save transect to file
                     mask = mask_dict[transect]
 
-                    print('destination', destination.size, 'source', source.size, 'mask', mask.size)
                     destination[mask] = source[mask]
 
 #                    if transect in transect_range:
@@ -576,8 +630,7 @@ def compute_transects(args):
     # We're done, we close the file
     #habitat_type_dataset = None
     #habitat_properties_dataset = None
-    habitat_type_file.close()
-    habitat_properties_file.close()
+    transect_data_file.close()
         
     return
 
