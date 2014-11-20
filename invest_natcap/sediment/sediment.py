@@ -19,48 +19,66 @@ LOGGER = logging.getLogger('sediment')
 
 
 def execute(args):
-    """This function invokes the sediment model given
-        URI inputs of files. It may write log, warning, or error messages to
-        stdout.
+    """
+    This function invokes the sediment model given
+    URI inputs of files. It may write log, warning, or error messages to
+    stdout.
 
-        args - a python dictionary with at the following possible entries:
-        args['workspace_dir'] - a uri to the directory that will write output
+    Args:
+        workspace_dir (string): a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['suffix'] - a string to append to any output file name (optional)
-        args['dem_uri'] - a uri to a digital elevation raster file (required)
-        args['erosivity_uri'] - a uri to an input raster describing the
+        suffix (string): a string to append to any output file name (optional)
+        dem_uri (string): a uri to a digital elevation raster file (required)
+        erosivity_uri (string): a uri to an input raster describing the
             rainfall eroisivity index (required)
-        args['erodibility_uri'] - a uri to an input raster describing soil
+        erodibility_uri (string): a uri to an input raster describing soil
             erodibility (required)
-        args['landuse_uri'] - a uri to a land use/land cover raster whose
+        landuse_uri (string): a uri to a land use/land cover raster whose
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical
             properties of the landscape.  (required)
-        args['watersheds_uri'] - a uri to an input shapefile of the watersheds
+        watersheds_uri (string): a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
-        args['reservoir_locations_uri'] - a uri to an input shape file with
-            points indicating reservoir locations with IDs. (optional)
-        args['reservoir_properties_uri'] - a uri to an input CSV table
-            describing properties of input reservoirs provided in the
-            reservoirs_uri shapefile (optional)
-        args['biophysical_table_uri'] - a uri to an input CSV file with
+        biophysical_table_uri (string): a uri to an input CSV file with
             biophysical information about each of the land use classes.
-        args['threshold_flow_accumulation'] - an integer describing the number
+        threshold_flow_accumulation (int): an integer describing the number
             of upstream cells that must flow int a cell before it's considered
             part of a stream.  required if 'v_stream_uri' is not provided.
-        args['sediment_threshold_table_uri'] - A uri to a csv that contains
-            fields 'ws_id', 'dr_time', 'dr_deadvol', 'wq_annload' where 'ws_id'
-            correspond to watershed input ids.
-        args['sediment_valuation_table_uri'] - A uri to a csv that contains
-            fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost',
-            'wq_time', 'wq_disc' correspond to watershed input ids.
-        args['drainage_uri'] - An optional GIS raster dataset mask, that
+        drainage_uri (string): An optional GIS raster dataset mask, that
             indicates areas that drain to the watershed.  Format is that 1's
             indicate drainage areas and 0's or nodata indicate areas with no
             additional drainage.  This model is most accurate when the drainage
             raster aligns with the DEM.
+        sediment_threshold_table_uri (string): A uri to a csv that contains
+            fields 'ws_id', 'dr_time', 'dr_deadvol', 'wq_annload' where 'ws_id'
+            correspond to watershed input ids.
+        valuation_container (boolean): Indicates whether model should include
+            valuation.
+        sediment_valuation_table_uri (string): A uri to a csv that contains
+            fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost',
+            'wq_time', 'wq_disc' correspond to watershed input ids.
 
-        returns nothing."""
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace',
+            'suffix': '_results',
+            'dem_uri': 'path/to/raster',
+            'erosivity_uri': 'path/to/raster',
+            'erodibility_uri': 'path/to/raster',
+            'landuse_uri': 'path/to/raster',
+            'watersheds_uri': 'path/to/shapefile',
+            'biophysical_table_uri': 'path/to/csv',
+            'threshold_flow_accumulation': 1000,
+            'drainage_uri': 'path/to/raster',
+            'sediment_threshold_table_uri': 'path/to/csv',
+            'valuation_container': True,
+            'sediment_valuation_table_uri': 'path/to/csv',
+        }
+
+    Returns:
+        None
+    """
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:

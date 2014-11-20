@@ -1,6 +1,11 @@
 Malaria Package
 ===============
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.malaria.malaria.execute_30
+
 Malaria
 -------
 

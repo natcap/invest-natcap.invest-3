@@ -328,17 +328,17 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
     
     LOGGER.info('calculate sediment retention index')
-    def sediment_index_op(rkls, cp_factor, sdr_factor):
-        nodata_mask = (rkls == nodata_rkls) | (cp_factor == nodata_cp) | (sdr_factor == sdr_nodata)
+    def sediment_index_op(rkls, usle, sdr_factor):
+        nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (sdr_factor == sdr_nodata)
         return numpy.where(
-            nodata_mask, nodata_sed_retention_index, rkls * (1 - cp_factor) * sdr_factor)
+            nodata_mask, nodata_sed_retention_index, (rkls - usle) * sdr_factor)
 
     nodata_sed_retention_index = -1
     sed_retention_index_uri = os.path.join(
         output_dir, 'sed_retention_index%s.tif' % file_suffix)
 
     raster_utils.vectorize_datasets(
-        [usle_uri, cp_factor_uri, sdr_factor_uri], sediment_index_op, sed_retention_index_uri,
+        [rkls_uri, usle_uri, sdr_factor_uri], sediment_index_op, sed_retention_index_uri,
         gdal.GDT_Float32, nodata_sed_retention_index, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 

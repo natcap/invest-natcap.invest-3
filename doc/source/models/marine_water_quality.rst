@@ -1,21 +1,10 @@
 Marine Water Quality Package
 ============================
 
-Create Grid
------------
+Model Entry Point
+-----------------
 
-.. automodule:: invest_natcap.marine_water_quality.create_grid
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Interpolate Points to Raster
-----------------------------
-
-.. automodule:: invest_natcap.marine_water_quality.interpolate_points_to_raster
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autofunction:: invest_natcap.marine_water_quality.marine_water_quality_biophysical.execute
 
 Marine Water Quality Biophysical
 --------------------------------
@@ -32,6 +21,23 @@ Marine Water Quality Core
     :members:
     :undoc-members:
     :show-inheritance:
+
+Create Grid
+-----------
+
+.. automodule:: invest_natcap.marine_water_quality.create_grid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Interpolate Points to Raster
+----------------------------
+
+.. automodule:: invest_natcap.marine_water_quality.interpolate_points_to_raster
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

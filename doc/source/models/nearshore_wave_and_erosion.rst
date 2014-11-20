@@ -1,6 +1,11 @@
 Nearshore Wave and Erosion Package
 ==================================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion_core.execute
+
 Nearshore Wave and Erosion
 --------------------------
 

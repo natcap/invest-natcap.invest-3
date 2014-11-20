@@ -24,55 +24,82 @@ def execute_30(**args):
 
     This can include the biophysical model, the valuation model, or both.
 
-    args - a python dictionary with the following possible entries:
-    'workspace_dir' - a uri to the directory where we will write output
-        and intermediate files.
-    'suffix' - a string to append to any output file name (optional)
-    'do_biophysical' - whether to run the biophysical model
-    'do_valuation' - whether to run the valuation model
+    Args:
+        workspace_dir (string): a uri to the directory that will write output
+            and other temporary files during calculation. (required)
+        suffix (string): a string to append to any output file name (optional)
 
-    The following arguments are for the *biophysical* model:
-    'lulc_cur_uri' - uri to a GDAL raster dataset for the current LULC map
-    'lulc_cur_year' - year of the current LULC map (required if
-        'hwp_cur_shape_uri' or 'hwp_fut_shape_uri' is present)
-    'lulc_fut_uri' - uri to a raster dataset for the future LULC map.
-        (for sequestration analysis)
-    'lulc_redd_uri' - uri to the LULC map for the REDD scenario
-        (for REDD scenario analysis)
-    'lulc_fut_year' - year of the future (and REDD scenario, if applicable)
-        LULC maps. (required if 'hwp_fut_shape_uri' is present)
-    'carbon_pools_uri' - uri to a CSV or DBF dataset mapping carbon
-        storage density to the lulc classifications specified in the
-        lulc rasters. (required if 'use_uncertainty' is false)
-    'carbon_pools_uncertain_uri' - as above, but has probability distribution
-        data for each lulc type rather than point estimates.
-        (required if 'use_uncertainty' is true)
-    'do_uncertainty' - a boolean that indicates whether we should do
-        uncertainty analysis. Defaults to False if not present.
-    'confidence_threshold' - a number between 0 and 100 that indicates
-        the minimum threshold for which we should highlight regions in the
-        output raster. (required if 'do_uncertainty' is True)
-    'hwp_cur_shape_uri' - current shapefile uri for harvested wood
-        calculation (optional, include if calculating current lulc hwp)
-    'hwp_fut_shape_uri' - Future shapefile uri for harvested wood
-        calculation (optional, include if calculating future lulc hwp)
-
-
-    The following arguments specify sequestration data (if the valuation
-        model is run without the biophysical model):
-    'sequest_uri': uri to a GDAL raster dataset describing the amount of
-        carbon sequestered.
-    'yr_cur' - the year at which the sequestration measurement started
-    'yr_fut' - the year at which the sequestration measurement ended
-
-    The following arguments are for the *valuation* model:
-    'carbon_price_units' - a string indicating whether the price is
-        in terms of carbon or carbon dioxide. Can value either as
-        'Carbon (C)' or 'Carbon Dioxide (CO2)'.
-    'V' - value of a sequestered ton of carbon or carbon dioxide in
+        do_biophysical (boolean): whether to run the biophysical model
+        lulc_cur_uri (string): a uri to a GDAL raster dataset (required)
+        lulc_cur_year (int): An integer representing the year of lulc_cur
+            used in HWP calculation (required if args contains a
+            'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
+        lulc_fut_uri (string): a uri to a GDAL raster dataset (optional
+            if calculating sequestration)
+        lulc_redd_uri (string): a uri to a GDAL raster dataset that represents
+            land cover data for the REDD policy scenario (optional).
+        lulc_fut_year (int): An integer representing the year of  lulc_fut
+            used in HWP calculation (required if args contains a
+            'hwp_fut_shape_uri' key)
+        carbon_pools_uri (string): a uri to a CSV or DBF dataset mapping carbon
+            storage density to the lulc classifications specified in the
+            lulc rasters. (required if 'do_uncertainty' is false)
+        hwp_cur_shape_uri (String): Current shapefile uri for harvested wood
+            calculation (optional, include if calculating current lulc hwp)
+        hwp_fut_shape_uri (String): Future shapefile uri for harvested wood
+            calculation (optional, include if calculating future lulc hwp)
+        do_uncertainty (boolean): a boolean that indicates whether we should do
+            uncertainty analysis. Defaults to False if not present.
+        carbon_pools_uncertain_uri (string): as above, but has probability
+            distribution data for each lulc type rather than point estimates.
+            (required if 'do_uncertainty' is true)
+        confidence_threshold (float): a number between 0 and 100 that indicates
+            the minimum threshold for which we should highlight regions in the
+            output raster. (required if 'do_uncertainty' is True)
+        sequest_uri (string): uri to a GDAL raster dataset describing the
+            amount of carbon sequestered.
+        yr_cur (int): the year at which the sequestration measurement started
+        yr_fut (int): the year at which the sequestration measurement ended
+        do_valuation (boolean): whether to run the valuation model
+        carbon_price_units (string): indicates whether the price is
+            in terms of carbon or carbon dioxide. Can value either as
+            'Carbon (C)' or 'Carbon Dioxide (CO2)'.
+        V (string): value of a sequestered ton of carbon or carbon dioxide in
         dollars per metric ton
-    'r' - the market discount rate in terms of a percentage
-    'c' - the annual rate of change in the price of carbon
+        r (int): the market discount rate in terms of a percentage
+        c (float): the annual rate of change in the price of carbon
+
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir/',
+            'suffix': '_results',
+            'do_biophysical': True,
+            'lulc_cur_uri': 'path/to/lulc_cur',
+            'lulc_cur_year': 2014,
+            'lulc_fut_uri': 'path/to/lulc_fut',
+            'lulc_redd_uri': 'path/to/lulc_redd',
+            'lulc_fut_year': 2025,
+            'carbon_pools_uri': 'path/to/carbon_pools',
+            'hwp_cur_shape_uri': 'path/to/hwp_cur_shape',
+            'hwp_fut_shape_uri': 'path/to/hwp_fut_shape',
+            'do_uncertainty': True,
+            'carbon_pools_uncertain_uri': 'path/to/carbon_pools_uncertain',
+            'confidence_threshold': 50.0,
+            'sequest_uri': 'path/to/sequest_uri',
+            'yr_cur': 2014,
+            'yr_fut': 2025,
+            'do_valuation': True,
+            'carbon_price_units':, 'Carbon (C)',
+            'V': 43.0,
+            'r': 7,
+            'c': 0,
+        }
+
+    Returns:
+        outputs (dictionary): contains names of all output files
+
     """
     if not args['do_biophysical'] and not args['do_valuation']:
         raise Exception(

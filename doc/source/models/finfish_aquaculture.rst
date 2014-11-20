@@ -1,6 +1,11 @@
 Finfish Aquaculture Package
 ===========================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.finfish_aquaculture.finfish_aquaculture.execute
+
 Finfish Aquaculture
 -------------------
 

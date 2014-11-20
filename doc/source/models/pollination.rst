@@ -1,6 +1,11 @@
 Pollination Package
 ===================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.overlap_analysis.overlap_analysis.execute
+
 Overlap Analysis
 ----------------
 

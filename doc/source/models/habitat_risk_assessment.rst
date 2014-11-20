@@ -1,6 +1,11 @@
 Habitat Risk Assessment Package
 ===============================
 
+Model Entry Point
+-----------------
+
+.. autofunction:: invest_natcap.habitat_risk_assessment.hra.execute
+
 Habitat Risk Assessment
 -----------------------
 
