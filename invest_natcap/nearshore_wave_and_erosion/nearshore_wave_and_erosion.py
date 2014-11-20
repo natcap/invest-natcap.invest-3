@@ -5,6 +5,7 @@ import os
 import shutil
 import logging
 import numpy
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -598,6 +599,10 @@ def execute(args):
             # Field name is set to its index in the required fields array
             args['field_index'][habitat_type][field_name.lower()] = field_id
 
+    # Save the dictionary
+    field_index_dictionary_uri = \
+        os.path.join(args['intermediate_dir'], 'field_indices')
+    json.dump(args['field_index'], open(field_index_dictionary_uri, 'w'))
 
     args['maximum_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
@@ -716,21 +721,41 @@ def execute(args):
 
     # Precompute aoi nodata
     aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+    bathymetry_nodata, cell_size = \
+        extract_raster_information(args['bathymetry_raster_uri'])
 
-    # Mask the raster to only keep landmasses
-    def keep_land(x, aoi):
+
+
+    # Keep land and nodata
+    def keep_land_and_nodata(x, aoi):
         result = numpy.zeros(x.shape) # Add everything
-        result[aoi != aoi_nodata] = 1 # Remove land and water
+        result[x != bathymetry_nodata] = 1 # Remove land and water
         result[x > 0] = 0 # Add land
 
         return result
 
-    # Mask the raster to only keep water pixels
-    def keep_water(x, aoi):
+    # Keep water and nodata
+    def keep_water_and_nodata(x, aoi):
         result = numpy.zeros(x.shape) # Add everything
         result[x > 0] = 1 # Remove land
 
         return result
+
+    # Keep water only, discards nodata
+    def keep_water(x, aoi):
+        result = numpy.ones(x.shape) # Remove everything
+        result[x != bathymetry_nodata] = 0 # Add land and water
+        result[x > 0] = 1 # Remove land
+
+        return result
+
+    # Keep land only, discards nodata
+    def keep_land(x, aoi):
+        result = numpy.ones(x.shape) # Remove everything
+        result[x > 0] = 0 # Add land
+
+        return result
+
 
     # Scales a raster inplace by 'scaling_factor'
     def scale_raster_inplace(raster_uri, scaling_factor):
@@ -762,12 +787,9 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'land_distance_mask.tif')
                 
-                raster_nodata, cell_size = \
-                    extract_raster_information(args['landmass_raster_uri'])
-
                 raster_utils.vectorize_datasets( \
                     [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                    keep_land_and_nodata, land_distance_mask_uri, gdal.GDT_Float32, \
                     -1, cell_size, 'intersection', vectorize_op = False)
 
                 # Use the mask to compute distance over land
@@ -792,12 +814,9 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'water_distance_mask.tif')
 
-                raster_nodata, cell_size = \
-                    extract_raster_information(args['bathymetry_raster_uri'])
-
                 raster_utils.vectorize_datasets( \
                     [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+                    keep_water_and_nodata, water_distance_mask_uri, gdal.GDT_Float32, \
                     -1, cell_size, 'intersection', vectorize_op = False)
 
                 # Use the mask to compute distance over land
@@ -823,45 +842,94 @@ def execute(args):
                     os.path.join(args['intermediate_dir'], \
                         'MHHW_depth_mask.tif')
 
-                raster_nodata, cell_size = \
-                    extract_raster_information(args['bathymetry_raster_uri'])
+                raster_utils.vectorize_datasets( \
+                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                    keep_land, MHHW_depth_mask_uri, gdal.GDT_Float32, \
+                    bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
 
-                # Interpolate MHHW (linear):
-                
+                # Now, find the mean MHHW
+                MHHW_depth_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'MHHW_depth_mask.tif')
+
                 # Find the filename
-                #MHHW_uri = ''
-                #for raster_uri in in_raster_list:
-                #    if 'mhhw' in raster_uri:
-                #        MHHW_uri = raster_uri
-                #        break
-                #assert MHHW_uri
+                MHHW_uri = ''
+                for raster_uri in in_raster_list:
+                    if 'mhhw' in raster_uri:
+                        MHHW_uri = raster_uri
+                        break
+                assert MHHW_uri
 
-                #MHHW_nodata = raster_utils.get_nodata_from_uri()
-                #MHHW_raster = gdal.Open()
-                #MHHW_band = MHHW_raster.GetRasterBand(1)
-                #MHHW_array = MHHW_band.ReadAsArray()
+                # Compute the average MHHW
+                MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
+                MHHW_raster = gdal.Open(MHHW_uri)
+                MHHW_band = MHHW_raster.GetRasterBand(1)
+                (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
 
-                #points = numpy.where(MHHW_array != MHHW_nodata)
-                
-                #grid_i, grid_j = \
-                #    numpy.mgrid[0:MHHW_array.shape[0], 0:MHHW_array.shape[1]]
+                mean_MHHW = (MHHW_min + MHHW_max) / 2.
 
-                #interpolation = \
-                #    griddata(points, values, (grid_i, grid_j), method = 'linear')
+                assert mean_MHHW > 0, "Mean High High Water can't be negative"
 
-                # Divide bathymetry by MHHW
-#                raster_utils.vectorize_datasets( \
-#                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-#                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
-#                    -1, cell_size, 'intersection', vectorize_op = False)
+                # Scale depths to mean_MHHW
+                raster_utils.vectorize_datasets( \
+                    [MHHW_depth_mask_uri, args['bathymetry_raster_uri']], \
+                    lambda x, y: numpy.where(x==0, y / mean_MHHW, 0.), \
+                    constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                    'intersection', vectorize_op = False)
 
-                # Use the mask to compute distance over land
-#                raster_utils.distance_transform_edt(water_distance_mask_uri, \
-#                    constraint_uri)
+            args['constraints_type']['MHHW'] = constraint_uri
 
-#                scale_raster_inplace(constraint_uri, cell_size)
 
-#            args['constraints_type']['MHHW'] = constraint_uri
+        # Detect a mean low water-related depth constraint
+        if 'MLLW' in habitat_constraints:
+            constraint_uri = os.path.join(args['intermediate_dir'], \
+                'MLLW_depth_map.tif')
+            print('checking MLLW constraint')
+
+            # Create the constraint raster if it doesn't exist already
+            if not os.path.isfile(constraint_uri):
+                print('Creating MLLW constraint', constraint_uri)
+
+                MLLW_depth_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'MLLW_depth_mask.tif')
+
+                raster_utils.vectorize_datasets( \
+                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                    keep_water, MLLW_depth_mask_uri, gdal.GDT_Float32, \
+                    bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
+
+                # Now, find the mean MLLW
+                MLLW_depth_mask_uri = \
+                    os.path.join(args['intermediate_dir'], \
+                        'MLLW_depth_mask.tif')
+
+                # Find the filename
+                MLLW_uri = ''
+                for raster_uri in in_raster_list:
+                    if 'mllw' in raster_uri:
+                        MLLW_uri = raster_uri
+                        break
+                assert MLLW_uri
+
+                # Compute the average MLLW
+                MLLW_nodata = raster_utils.get_nodata_from_uri(MLLW_uri)
+                MLLW_raster = gdal.Open(MLLW_uri)
+                MLLW_band = MLLW_raster.GetRasterBand(1)
+                (MLLW_min, MLLW_max) = MLLW_band.ComputeRasterMinMax()
+
+                mean_MLLW = (MLLW_min + MLLW_max) / 2.
+
+                assert mean_MLLW < 0, "Mean Low Low Water can't be positive"
+
+                # Scale depths to mean_MLLW
+                raster_utils.vectorize_datasets( \
+                    [MLLW_depth_mask_uri, args['bathymetry_raster_uri']], \
+                    lambda x, y: numpy.where(x==0, y / mean_MLLW, 0.), \
+                    constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                    'intersection', vectorize_op = False)
+
+            args['constraints_type']['MLLW'] = constraint_uri
 
 
 
@@ -869,8 +937,6 @@ def execute(args):
         #if 'water' in habitat_constraints
         #    constraint_uri = os.path.join(args['intermediate_dir'], \
         #        'water_distance_map.tif')
-
-#    sys.exit(0)
 
 
     LOGGER.debug('Uniformizing the input raster sizes...')
