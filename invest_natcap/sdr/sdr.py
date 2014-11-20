@@ -331,7 +331,7 @@ def execute(args):
     def sediment_index_op(rkls, usle, sdr_factor):
         nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (sdr_factor == sdr_nodata)
         return numpy.where(
-            nodata_mask, nodata_sed_retention_index, (rkls - usle) * sdr_factor)
+            nodata_mask, nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
 
     nodata_sed_retention_index = -1
     sed_retention_index_uri = os.path.join(

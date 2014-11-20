@@ -136,12 +136,21 @@ def get_nodata_from_uri(dataset_uri):
     if band.DataType == gdal.GDT_Byte and nodata is not None:
         nodata = nodata % 256
 
+
+    #get the type of the underlying array, i read the array because gdal does
+    #not give a reliable type underneath
+    data_type = band.ReadAsArray(0,0,1,1).dtype
+    #awkwardly cram this in a 1 element numpy array to get the type correct
+    nodata_cast = numpy.array([nodata], dtype=data_type)
+    
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
+    
+    #return the first element in the single element array
+    return nodata_cast[0]
 
-    return nodata
 
 def get_datatype_from_uri(dataset_uri):
     """Returns the datatype for the first band from a gdal dataset
@@ -684,7 +693,6 @@ def aggregate_raster_values_uri(
         """
 
     raster_nodata = get_nodata_from_uri(raster_uri)
-    
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
