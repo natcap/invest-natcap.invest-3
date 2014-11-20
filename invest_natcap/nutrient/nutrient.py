@@ -465,7 +465,7 @@ def _execute_nutrient(args):
         #The retention calculation is only interesting to see where nutrient
         # retains on the landscape
         retention_uri[nutrient] = os.path.join(
-            intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
+            output_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
             flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],

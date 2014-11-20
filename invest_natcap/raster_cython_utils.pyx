@@ -406,6 +406,12 @@ def new_raster_from_base(
 
         returns a new GDAL raster dataset."""
 
+    #This might be a numpy type coming in, set it to native python type
+    try:
+        nodata = nodata.item()
+    except AttributeError:
+        pass
+
     if n_rows is None:
         n_rows = base.RasterYSize
     if n_cols is None:
@@ -438,6 +444,7 @@ def new_raster_from_base(
     band = new_raster.GetRasterBand(1)
 
     band.SetNoDataValue(nodata)
+    
     if fill_value != None:
         band.Fill(fill_value)
     else:
