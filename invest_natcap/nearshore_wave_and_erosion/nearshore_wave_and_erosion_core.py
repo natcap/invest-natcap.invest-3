@@ -241,11 +241,9 @@ def compute_transects(args):
                         smooth_transect(interpolated_depths, \
                             args['smoothing_percentage'])
 
-                    # Clip transect
-#                        print('size before', smoothed_depths.size)
+                    # Clip if transect hits land
                     (clipped_transect, (start, shore, end)) = \
                         clip_transect(smoothed_depths)
-#                        print('size after', clipped_transect.size)
 
                     # Transect could be invalid, skip it
                     if clipped_transect is None:
@@ -254,8 +252,10 @@ def compute_transects(args):
                     # At this point, the transect is valid: 
                     # extract remaining information about it
                     transect_info.append( \
-                        {'raw_positions':raw_positions, \
-                        'clip_limits':(start, shore, end)})
+                        {'raw_positions': \
+                            (raw_positions[0][start:end], \
+                            raw_positions[1][start:end]), \
+                        'clip_limits':(0, shore-start, end-start)})
 
                     # Update the logest transect length if necessary
                     if (end - start) > max_transect_length:
@@ -291,7 +291,7 @@ def compute_transects(args):
 
     LOGGER.debug('found %i tiles.' % tiles)
 
-    habitat_nodata = -99999.0
+    habitat_nodata = -99999
 
     print('transect_info size', len(transect_info))
 
@@ -346,13 +346,13 @@ def compute_transects(args):
 
     coordinates_limits_dataset = \
         limits_group.create_dataset('coordinates_ij', \
-            (tiles, 2), \
+            (tiles, 4), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
 
 
     habitat_type_array = \
-        np.ones(habitat_type_dataset.shape) * habitat_nodata
+        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
 
     habitat_properties_array = \
         np.ones(habitat_properties_dataset.shape) * habitat_nodata
@@ -361,19 +361,39 @@ def compute_transects(args):
         np.ones(bathymetry_dataset.shape) * habitat_nodata
 
     positions_array = \
-        np.ones(positions_dataset.shape) * habitat_nodata
+        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
 
     shore_array = \
-        np.ones(shore_dataset.shape) * habitat_nodata
+        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
 
     climatic_forcing_array = \
         np.ones(climatic_forcing_dataset.shape) * habitat_nodata
 
     indices_limit_array = \
-        np.ones(indices_limit_dataset.shape) * habitat_nodata
+        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
 
     coordinates_limits_array = \
         np.ones(coordinates_limits_dataset.shape) * habitat_nodata
+
+
+
+    for transect in range(transect_count):
+        (start, shore, end) = transect_info[transect]['clip_limits']
+
+        positions_array[transect, 0, 0:end] = \
+            transect_info[transect]['raw_positions'][0][0:end]
+
+        positions_array[transect, 1, 0:end] = \
+            transect_info[transect]['raw_positions'][1][0:end]
+
+        indices_limit_array[transect] = [start, end]
+
+        coordinates_limits_array[transect] = [ \
+            transect_info[transect]['raw_positions'][0][0], \
+            transect_info[transect]['raw_positions'][1][0], \
+            transect_info[transect]['raw_positions'][0][-1], \
+            transect_info[transect]['raw_positions'][1][-1], \
+            ]
 
 
 
@@ -411,13 +431,15 @@ def compute_transects(args):
                 if transect % progress_step == 0:
                     print '.',
 
-                raw_positions = transect_info[transect]['raw_positions']
-#                print('raw_positions', raw_positions[0].size)
-                
                 start = transect_info[transect]['clip_limits'][0]
                 shore = transect_info[transect]['clip_limits'][1]
                 end = transect_info[transect]['clip_limits'][2]
 
+                #raw_positions = transect_info[transect]['raw_positions']
+                raw_positions = \
+                    (positions_array[transect, 0, start:end], \
+                    positions_array[transect, 1, start:end])
+                
                 # Load the habitat type buffer
                 destination = habitat_type_array[transect,:end-start]
 
@@ -947,9 +969,9 @@ def smooth_transect(transect, window_size_pct):
 
 def clip_transect(transect):
     """Clip transect using maximum and minimum heights"""
-    # Return if transect size is 1
-    if transect.size == 1:
-        return (transect, (0, 0, 1))
+    # Transect has to have a minimum size
+    if transect.size < 5:
+         return (None, (None, None, None))
 
     # Return if transect is full of zeros, otherwise break
     uniques = np.unique(transect)
