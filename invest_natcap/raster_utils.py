@@ -693,12 +693,11 @@ def aggregate_raster_values_uri(
         """
 
     raster_nodata = get_nodata_from_uri(raster_uri)
-    LOGGER.debug("raster_nodata %s", str(raster_nodata))
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename(suffix='.tif')
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float64,
-        float(raster_nodata), out_pixel_size, "union",
+        raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False, process_pool=process_pool,
         vectorize_op=False)
