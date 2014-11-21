@@ -346,7 +346,7 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata)
 
     coordinates_limits_dataset = \
-        limits_group.create_dataset('coordinates_ij', \
+        limits_group.create_dataset('ij_coordinates', \
             (tiles, 4), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
@@ -443,10 +443,6 @@ def compute_transects(args):
 
                 shore = shore_array[transect]
 
-#                start = transect_info[transect]['clip_limits'][0]
-#                shore = transect_info[transect]['clip_limits'][1]
-#                end = transect_info[transect]['clip_limits'][2]
-
                 #raw_positions = transect_info[transect]['raw_positions']
                 raw_positions = \
                     (positions_array[transect, 0, start:end], \
@@ -540,7 +536,6 @@ def compute_transects(args):
 
                     shore = shore_array[transect]
 
-                    #raw_positions = transect_info[transect]['raw_positions']
                     raw_positions = \
                         (positions_array[transect, 0, start:end], \
                         positions_array[transect, 1, start:end])
@@ -548,36 +543,13 @@ def compute_transects(args):
 
                     source = array[raw_positions]
 
-#                    start = transect_info[transect]['clip_limits'][0]
-#                    shore = transect_info[transect]['clip_limits'][1]
-#                    end = transect_info[transect]['clip_limits'][2]
-
                     destination = \
                         habitat_properties_array[transect, field_id, start:end]
-
-#                    source = interpolate_transect(source, i_side_fine, \
-#                        args['model_resolution'], kind = 'nearest')
-                    
-#                    if transect in transect_range:
-#                        print('transect', transect)
-#                        print('start, shore, end', (start, shore, end))
-#                        print('source', source)
-#                        print('mask', mask)
-#                        print('destination', destination)
 
                     # Save transect to file
                     mask = mask_dict[transect]
 
-                    if mask.size != source.size:
-                        print('mask', mask.size, \
-                            'source', source.size, \
-                            'destination', destination.size)
-
                     destination[mask] = source[mask]
-
-#                    if transect in transect_range:
-#                        print('new destination', destination)
-#                        print ''
 
                     clipped_positions = \
                         (raw_positions[0][start:end], raw_positions[1][start:end])
