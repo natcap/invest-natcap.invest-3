@@ -88,7 +88,7 @@ def fetch_verify_args(args):
         ]
 
     '''
-    if args['sexsp'] == 'Yes':
+    if args['sexsp'].lower() == 'yes':
         args['sexsp'] = 2
     else:
         args['sexsp'] = 1
@@ -96,22 +96,18 @@ def fetch_verify_args(args):
     params_dict = _verify_single_params(args)
 
     # Implement Single / Batch Here
-    # pop_dict = _verify_population_csvs(args)
     pop_list = _verify_population_csvs(args)
 
     mig_dict = _verify_migration_tables(
-        # args, pop_dict['Classes'], pop_dict['Regions'])
         args, pop_list[0]['Classes'], pop_list[0]['Regions'])
 
     # Create model_list Here
-    # vars_dict = dict(pop_dict.items() + mig_dict.items() + params_dict.items())
     model_list = []
     for pop_dict in pop_list:
         vars_dict = dict(pop_dict.items() + mig_dict.items() +
                          params_dict.items())
         model_list.append(vars_dict)
 
-    # return vars_dict
     return model_list
 
 
@@ -152,7 +148,7 @@ def _verify_population_csvs(args):
         ]
     '''
     if args['do_batch'] is False:
-        population_csv_uri_list = args['population_csv_uri']
+        population_csv_uri_list = [args['population_csv_uri']]
     else:
         population_csv_uri_list = _listdir(
             args['population_csv_dir'])
@@ -164,8 +160,6 @@ def _verify_population_csvs(args):
             pop_dict = _verify_population_csv(args, uri)
             pop_list.append(pop_dict)
 
-    # Cross-verify populations HERE
-    # if len > 1
     return pop_list
 
 
@@ -322,9 +316,12 @@ def _parse_population_csv(uri, sexsp):
 
     Example:
 
-        pop_dict = {{'Survnaturalfrac': np.array(
-                        [[...], [...]], [[...], [...]], ...)},
-                    {'Vulnfishing': np.array([...], [...]), ...},
+        pop_dict = {
+            'Survnaturalfrac': np.array(
+                [[...], [...]], [[...], [...]], ...),
+            'Vulnfishing': np.array([...], [...]),
+            ...
+        }
     '''
     csv_data = []
     pop_dict = {}
@@ -600,7 +597,7 @@ def _verify_single_params(args):
     return params_dict
 
 
-# Helper function for Migration directory
+# Helper function
 def _listdir(path):
     '''
     A replacement for the standar os.listdir which, instead of returning
