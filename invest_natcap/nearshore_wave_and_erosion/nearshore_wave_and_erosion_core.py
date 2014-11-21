@@ -255,6 +255,7 @@ def compute_transects(args):
                         {'raw_positions': \
                             (raw_positions[0][start:end], \
                             raw_positions[1][start:end]), \
+                        'depths':smoothed_depths[start:end], \
                         'clip_limits':(0, shore-start, end-start)})
 
                     # Update the logest transect length if necessary
@@ -380,13 +381,18 @@ def compute_transects(args):
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
-        positions_array[transect, 0, 0:end] = \
-            transect_info[transect]['raw_positions'][0][0:end]
+        bathymetry_array[transect, start:end] = \
+            transect_info[transect]['depths'][start:end]
 
-        positions_array[transect, 1, 0:end] = \
-            transect_info[transect]['raw_positions'][1][0:end]
+        positions_array[transect, 0, start:end] = \
+            transect_info[transect]['raw_positions'][0][start:end]
+
+        positions_array[transect, 1, start:end] = \
+            transect_info[transect]['raw_positions'][1][start:end]
 
         indices_limit_array[transect] = [start, end]
+
+        shore_array[transect] = shore
 
         coordinates_limits_array[transect] = [ \
             transect_info[transect]['raw_positions'][0][0], \
@@ -394,6 +400,8 @@ def compute_transects(args):
             transect_info[transect]['raw_positions'][0][-1], \
             transect_info[transect]['raw_positions'][1][-1], \
             ]
+
+        transect_info[transect] = None
 
 
 
@@ -431,9 +439,13 @@ def compute_transects(args):
                 if transect % progress_step == 0:
                     print '.',
 
-                start = transect_info[transect]['clip_limits'][0]
-                shore = transect_info[transect]['clip_limits'][1]
-                end = transect_info[transect]['clip_limits'][2]
+                [start, end] = indices_limit_array[transect]
+
+                shore = shore_array[transect]
+
+#                start = transect_info[transect]['clip_limits'][0]
+#                shore = transect_info[transect]['clip_limits'][1]
+#                end = transect_info[transect]['clip_limits'][2]
 
                 #raw_positions = transect_info[transect]['raw_positions']
                 raw_positions = \
@@ -524,20 +536,27 @@ def compute_transects(args):
                     if transect % progress_step == 0:
                         print '.',
 
-                    raw_positions = transect_info[transect]['raw_positions']
-#                    print('raw_positions', raw_positions[0].size)
-                    
+                    [start, end] = indices_limit_array[transect]
+
+                    shore = shore_array[transect]
+
+                    #raw_positions = transect_info[transect]['raw_positions']
+                    raw_positions = \
+                        (positions_array[transect, 0, start:end], \
+                        positions_array[transect, 1, start:end])
+
+
                     source = array[raw_positions]
 
-                    start = transect_info[transect]['clip_limits'][0]
-                    shore = transect_info[transect]['clip_limits'][1]
-                    end = transect_info[transect]['clip_limits'][2]
+#                    start = transect_info[transect]['clip_limits'][0]
+#                    shore = transect_info[transect]['clip_limits'][1]
+#                    end = transect_info[transect]['clip_limits'][2]
 
-                    destination = habitat_properties_array[transect, field_id,:end-start]
+                    destination = \
+                        habitat_properties_array[transect, field_id, start:end]
 
 #                    source = interpolate_transect(source, i_side_fine, \
 #                        args['model_resolution'], kind = 'nearest')
-                    source = source[start:end,]
                     
 #                    if transect in transect_range:
 #                        print('transect', transect)
@@ -548,6 +567,11 @@ def compute_transects(args):
 
                     # Save transect to file
                     mask = mask_dict[transect]
+
+                    if mask.size != source.size:
+                        print('mask', mask.size, \
+                            'source', source.size, \
+                            'destination', destination.size)
 
                     destination[mask] = source[mask]
 
