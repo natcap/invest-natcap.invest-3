@@ -119,7 +119,7 @@ class TestPopulationParamsIO(unittest.TestCase):
 
 class TestMigrationIO(unittest.TestCase):
     def test_parse_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             'migr_cont': True,
             'migration_dir': uri
@@ -132,7 +132,7 @@ class TestMigrationIO(unittest.TestCase):
             mig_dict['adult'].shape[0], mig_dict['adult'].shape[1])
 
     def test_verify_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             "migration_dir": uri,
             "migr_cont": True,
@@ -231,7 +231,7 @@ class TestSingleParamsIO(unittest.TestCase):
 class TestFetchVerifyArgs(unittest.TestCase):
     def test_fetch_verify(self):
         csv_uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
-        mig_uri = os.path.join(data_directory, 'Migration/')
+        mig_uri = os.path.join(data_directory, 'migration/')
         workspace_dir = os.path.join(os.getcwd(), 'test')
         args = {
             'population_csv_uri': csv_uri,
@@ -263,7 +263,7 @@ class TestFetchVerifyArgs(unittest.TestCase):
 
     def test_fetch_verify2(self):
         csv_dir = os.path.join(data_directory, 'CSVs/Multiple_CSV_Test')
-        mig_uri = os.path.join(data_directory, 'Migration/')
+        mig_uri = os.path.join(data_directory, 'migration/')
         workspace_dir = os.path.join(os.getcwd(), 'test')
         args = {
             'population_csv_dir': csv_dir,

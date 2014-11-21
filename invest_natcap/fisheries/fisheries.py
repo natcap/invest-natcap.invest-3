@@ -91,7 +91,7 @@ def execute(args):
     Example Args Dictionary::
 
         args = {
-            'workspace_dir': 'path/to/workspace_dir',
+            'workspace_dir': 'path/to/workspace_dir/',
             'aoi_uri': 'path/to/aoi_uri',
             'total_timesteps': 100,
             'population_type': 'Stage-Based',
@@ -105,7 +105,7 @@ def execute(args):
             'beta': 54.2,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
-            'migration_dir': 'path/to/mig_dir',
+            'migration_dir': 'path/to/mig_dir/',
             'harv_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
