@@ -395,10 +395,10 @@ def compute_transects(args):
         shore_array[transect] = shore
 
         coordinates_limits_array[transect] = [ \
-            transect_info[transect]['raw_positions'][0][0], \
-            transect_info[transect]['raw_positions'][1][0], \
-            transect_info[transect]['raw_positions'][0][-1], \
-            transect_info[transect]['raw_positions'][1][-1], \
+            transect_info[transect]['raw_positions'][0][start], \
+            transect_info[transect]['raw_positions'][1][start], \
+            transect_info[transect]['raw_positions'][0][end-1], \
+            transect_info[transect]['raw_positions'][1][end-1], \
             ]
 
         transect_info[transect] = None
@@ -409,8 +409,6 @@ def compute_transects(args):
     hdf5_files = {}
 
     # Iterate through shapefile types
-    transect_range = range(2)
-
     for shp_type in args['shapefiles']:
 
         hdf5_files[shp_type] = []
@@ -568,12 +566,15 @@ def compute_transects(args):
     # Both the habitat type and the habitat field data are complete, save them
     habitat_type_dataset[...] = habitat_type_array[...]
     habitat_properties_dataset[...] = habitat_properties_array[...]
+    bathymetry_dataset[...] = bathymetry_array[...]
+    positions_dataset[...] = positions_array[...]
+    indices_limit_dataset[...] = indices_limit_array[...]
+    coordinates_limits_dataset[...] = coordinates_limits_array[...]
+    shore_dataset[...] = shore_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
     habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
-    habitat_properties_dataset.attrs.create('transect_spacing', i_side_coarse)
-    habitat_properties_dataset.attrs.create('model_resolution', args['model_resolution'])
     
 
     # Store shore information gathered during the computation
