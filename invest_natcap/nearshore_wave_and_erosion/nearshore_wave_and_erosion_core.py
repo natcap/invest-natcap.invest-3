@@ -311,7 +311,8 @@ def compute_transects(args):
     habitat_type_dataset = \
         transect_data_file.create_dataset('habitat_types', \
             (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
     
     habitat_properties_dataset = \
         transect_data_file.create_dataset('habitat_properties', \
@@ -326,12 +327,14 @@ def compute_transects(args):
     positions_dataset = \
         transect_data_file.create_dataset('ij_positions', \
             (tiles, 2, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
     
     shore_dataset = \
         transect_data_file.create_dataset('shore_index', \
             (tiles, 1), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
@@ -343,12 +346,14 @@ def compute_transects(args):
     indices_limit_dataset = \
         limits_group.create_dataset('indices', \
             (tiles, 2), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
     coordinates_limits_dataset = \
         limits_group.create_dataset('ij_coordinates', \
             (tiles, 4), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
 
 
