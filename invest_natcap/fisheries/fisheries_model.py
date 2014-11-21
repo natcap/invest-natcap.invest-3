@@ -54,12 +54,12 @@ def initialize_vars(vars_dict):
         {
             # (original items in dictionary)
             ...
-            'Survtotalfrac': np.array([...]),  # Index Order: class, sex, region
+            'Survtotalfrac': np.array([...]),  # a,s,x
             'G_survtotalfrac': np.array([...]),  # (same)
             'P_survtotalfrac': np.array([...]),  # (same)
-            'N_tasx': np.array([...]),  # Index Order: time, class, sex, region
-            'H_tx': np.array([...]), # Time, Region
-            'V_tx': np.array([...]), # Time, Region
+            'N_tasx': np.array([...]),  # Index Order: t,a,s,x
+            'H_tx': np.array([...]), # t,x
+            'V_tx': np.array([...]), # t,x
             'Spawners_t': np.array([...]),
         }
     '''
