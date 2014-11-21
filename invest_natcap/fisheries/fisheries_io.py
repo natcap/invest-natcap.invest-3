@@ -88,7 +88,7 @@ def fetch_verify_args(args):
         ]
 
     '''
-    if args['sexsp'] == 'Yes':
+    if args['sexsp'].lower() == 'yes':
         args['sexsp'] = 2
     else:
         args['sexsp'] = 1
