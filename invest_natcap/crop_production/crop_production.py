@@ -847,7 +847,7 @@ def execute(args):
 
     if args["enable_tab_percentile"] == True:
         for percentile in [25, 50, 75, 95]:
-            production_columns.append({'name': '%i%% Yield' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
+            production_columns.append({'name': '%ith Percentile' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
 
     production_data = []
 
@@ -864,36 +864,63 @@ def execute(args):
 
         if args["enable_tab_percentile"] == True:
             for percentile in [25, 50, 75, 95]:
-                record['%i%% Yield' % percentile] = ""
+                record['%ith Percentile' % percentile] = ""
 
         production_data.append(record)
 
-    #nutrition table(s)
-    nutrition_sections = [{'type': 'text',
-                           'section': 'body',
-                           'text': '<h3>Existing Production</h3>'}]
+    #nutrition table
+##    nutrition_sections = [{'type': 'text',
+##                           'section': 'body',
+##                           'text': '<h3>Existing Production</h3>'}]
 
-    nutrition_existing_production_columns = [{'name': 'User Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-                                             {'name': 'InVEST Crop Id', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
-                                             {'name': 'Name', 'total':False, 'td_class' : '\" align=\"center\"'}]
+    nutrient_list = nutrient_selection.keys()
+    nutrient_list.sort()
 
-    nutrition_existing_production_data = []
+    nutrition_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"left\"'},
+                         {'name': 'Nutrient', 'total':False, 'attr' : {'align':'center'}, 'td_class' : '\" align=\"left\"'},
+                         {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
 
-    for crop in invest_crop_counts.keys():
-        record = {'User Crop Id': '', 'InVEST Crop Id': str(crop), 'Name' : ""}
+    if args["enable_tab_percentile"] == True:
+        for percentile in [25, 50, 75, 95]:
+            nutrition_columns.append({'name': '%ith Percentile' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
 
-        nutrition_existing_production_data.append(record)
+    nutrition_data = []
 
-    nutrition_sections.append({'type': 'table',
-                               'section': 'body',
-                                'sortable': True,
-                                'checkbox': True,
-                                'total':True,
-                                'data_type':'dictionary',
-                                'columns':nutrition_existing_production_columns,
-                                'key':'Crop Id',
-                                'data': nutrition_existing_production_data,
-                                'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}})      
+    for nutrient in nutrient_list:
+        record = {'Short Name': nutrient_aliases[nutrient],
+                  'Nutrient': nutrient,
+                  'Existing Yield' : ""}
+
+        if args["enable_tab_percentile"] == True:
+            for percentile in [25, 50, 75, 95]:
+                record['%ith Percentile' % percentile] = ""
+
+        nutrition_data.append(record)
+
+    #economic table
+    economic_component_list = ["Labor", "Machine", "Seed", "Nitrogen", "Phosphorus", "Potassium", "Sale"]
+        
+    economic_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
+                        {'name': 'Component', 'total':False, 'attr' : {'align':'left'}, 'td_class' : '\" align=\"center\"'},
+                        {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
+
+    if args["enable_tab_percentile"] == True:
+        for percentile in [25, 50, 75, 95]:
+            economic_columns.append({'name': '%ith Percentile' % percentile, 'total':True, 'td_class' : '\" align=\"right\"'})
+
+
+    economic_data = []
+
+    for component in economic_component_list:
+        record = {'Short Name': '',
+                  'Component' : component,
+                  'Existing Yield' : ""}
+
+        if args["enable_tab_percentile"] == True:
+            for percentile in [25, 50, 75, 95]:
+                record['%ith Percentile' % percentile] = ""
+
+        economic_data.append(record)
     
     #reporting parameters
     report_args = {
@@ -955,11 +982,11 @@ def execute(args):
                     'columns':summary_columns,
                     'key':'Crop Id',
                     'data': summary_data,
-                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},                
+                    'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Production</h2>'},
+                    'text': "<h2>Production</h2>"},                
                 {
                     'type': 'table',
                     'section': 'body',
@@ -969,22 +996,43 @@ def execute(args):
                     'total':True,
                     'data_type':'dictionary',
                     'columns':production_columns,
-                    'key':'Crop Id',
+##                    'key':'Crop Id',
                     'data': production_data,
                     'attributes': {'id':'User Crop Id', 'border':1, 'style':'border-collapse:collapse;'}},
-                {
-                    'type' : 'text',
-                    'section': 'body',
-                    'text' : existing_yield_nodata},
+##                {
+##                    'type' : 'text',
+##                    'section': 'body',
+##                    'text' : existing_yield_nodata},
                 {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Nutrition Value</h2>'}] + \
-                nutrition_sections + \
-                [{
+                    'text': '<h2>Nutrition Value</h2>'
+                },
+                {   'type': 'table',
+                    'section': 'body',
+                    'sortable': False,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type':'dictionary',
+                    'columns':nutrition_columns,
+##                    'key':'Crop Id',
+                    'data': nutrition_data,
+                    'attributes': {'id':'Short Name', 'border':1, 'style':'border-collapse:collapse;'}},
+                {
                     'type': 'text',
                     'section': 'body',
-                    'text': '<h2>Economic Value</h2>'}                
+                    'text': '<h2>Economic Value</h2>'},
+                {   'type': 'table',
+                    'section': 'body',
+                    'sortable': False,
+                    'checkbox': False,
+                    'total': False,
+                    'data_type':'dictionary',
+                    'columns':economic_columns,
+##                    'key':'Crop Id',
+                    'data': economic_data,
+                    'attributes': {'id':'Short Name', 'border':1, 'style':'border-collapse:collapse;'}},
+                
                 ],
             'out_uri': report_uri}
     

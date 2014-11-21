@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.scenario_generator.scenario_generator",
     "modelName" : "scenario_generator",
     "localDocURI": "../documentation/scenario_generator.html",
-    "height": 600,
+    "height": 850,
     "width" : 700,
     "elements": [
         {

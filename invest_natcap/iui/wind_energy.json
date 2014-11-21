@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.wind_energy.wind_energy",
     "modelName" : "wind_energy",
     "localDocURI": "../documentation/wind_energy.html",
-    "height": 900,
+    "height": 1000,
     "width" : 800,
     "elements": [
         {
@@ -75,7 +75,7 @@
                     "label": "Global Wind Energy Parameters",
                     "defaultValue": "../WindEnergy/input/global_wind_energy_parameters.csv",
                     "required": true,
-                    "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide. We recommend careful consideration before changing these values and to make a new CSV file so that the default one always remains.",
+                    "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide. It is recommended that careful consideration be taken before changing these values and to make a new CSV file so that the default one always remains.",
                     "validateAs": { "type": "CSV"}
                 },
                 {
@@ -104,7 +104,7 @@
                                 "args_id" : "turbine_parameters_uri",
                                 "type": "file",
                                 "label": "Turbine Type",
-                                "defaultValue": "",
+                                "defaultValue": "../WindEnergy/input/3_6_turbine.csv",
                                 "required": true,
                                 "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. You may create a new turbine class (or modifying existing classes) by using the existing file format conventions and filling in your own parameters. It is recommended that you do not overwrite the existing default CSV files.",
                                 "validateAs": { "type": "CSV"}
@@ -114,7 +114,7 @@
                                 "args_id": "number_of_turbines",
                                 "type": "text",
                                 "label": "Number Of Turbines",
-                                "defaultValue": "",
+                                "defaultValue": "80",
                                 "required": true,
                                 "validText": "[0-9]+",
                                 "helpText" : "An integer value indicating the number of wind turbines per wind farm."
@@ -262,10 +262,19 @@
                             "args_id": "wind_schedule",
                             "type": "file",
                             "label": "Wind Energy Price Table",
-                            "defaultValue": "",
+                            "defaultValue": "../WindEnergy/input/price_table_example.csv",
                             "helpText": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm. They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><td>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr><td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td><td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above. In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
                             "enabledBy" : "price_table",
-                            "required" : true
+                            "required" : true,
+                            "validateAs": { "type": "CSV",
+                                            "fieldsExist": ["YEAR", "PRICE"],
+                                            "restrictions": [{"field": "YEAR",
+                                                            "validateAs": {"type": "number",
+                                                                           "allowedValues": {"pattern":"^[0-9]+"}}},
+                                                            {"field": "PRICE",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
+                                                ]}
                         },
                         {
                             "id": "wind_price",

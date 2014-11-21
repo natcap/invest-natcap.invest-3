@@ -22,52 +22,61 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('wave_energy')
 
 def execute(args):
-    """Executes both the biophysical and valuation parts of the
-        wave energy model (WEM). Files will be written on disk to the
-        intermediate and output directories. The outputs computed for
-        biophysical and valuation include: wave energy capacity raster,
-        wave power raster, net present value raster, percentile rasters for the
-        previous three, and a point shapefile of the wave points with
-        attributes.
+    """
+    Executes both the biophysical and valuation parts of the
+    wave energy model (WEM). Files will be written on disk to the
+    intermediate and output directories. The outputs computed for
+    biophysical and valuation include: wave energy capacity raster,
+    wave power raster, net present value raster, percentile rasters for the
+    previous three, and a point shapefile of the wave points with
+    attributes.
 
-        args - a pythong dictionary that houses the inputs for the model
-
-        args['workspace_dir'] - Where the intermediate and output folder/files
+    Args:
+        workspace_dir (string): Where the intermediate and output folder/files
             will be saved. (required)
-
-        args['wave_base_data_uri'] - Directory location of wave base data
+        wave_base_data_uri (string): Directory location of wave base data
             including WW3 data and analysis area shapefile. (required)
-
-        args['analysis_area_uri'] - A string identifying the analysis area of
+        analysis_area_uri (string): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
-
-        args['machine_perf_uri'] - The path of a CSV file that holds the
-            machine performance table. (required)
-
-        args['machine_param_uri'] - The path of a CSV file that holds the
-            machine parameter table. (required)
-
-        args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
-            (required)
-
-        args['aoi_uri'] - A polygon shapefile outlining a more detailed area
+        aoi_uri (string): A polygon shapefile outlining a more detailed area
             within the analysis area. This shapefile should be projected with
             linear units being in meters. (required to run Valuation model)
-
-        args['land_gridPts_uri'] - A CSV file path containing the Landing and
+        machine_perf_uri (string): The path of a CSV file that holds the
+            machine performance table. (required)
+        machine_param_uri (string): The path of a CSV file that holds the
+            machine parameter table. (required)
+        dem_uri (string): The path of the Global Digital Elevation Model (DEM).
+            (required)
+        suffix (string): A python string of characters to append to each output
+            filename (optional)
+        valuation_container (boolean): Indicates whether the model includes
+            valuation
+        land_gridPts_uri (string): A CSV file path containing the Landing and
             Power Grid Connection Points table. (required for Valuation)
-
-        args['machine_econ_uri'] - A CSV file path for the machine economic
+        machine_econ_uri (string): A CSV file path for the machine economic
             parameters table. (required for Valuation)
-
-        args['number_of_machines'] - An integer specifying the number of
+        number_of_machines (int): An integer specifying the number of
             machines for a wave farm site. (required for Valuation)
 
-        args['suffix'] - A python string of characters to append to each output
-            filename (optional)
+    Example Args Dictionary::
 
-        returns nothing."""
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'wave_base_data_uri': 'path/to/base_data_dir',
+            'analysis_area_uri': 'West Coast of North America and Hawaii',
+            'aoi_uri': 'path/to/shapefile',
+            'machine_perf_uri': 'path/to/csv',
+            'machine_param_uri': 'path/to/csv',
+            'dem_uri': 'path/to/raster',
+            'suffix': '_results',
+            'valuation_container': True,
+            'land_gridPts_uri': 'path/to/csv',
+            'machine_econ_uri': 'path/to/csv',
+            'number_of_machines': 28,
+        }
+
+    """
 
     # Create the Output and Intermediate directories if they do not exist.
     workspace = args['workspace_dir']
@@ -1331,6 +1340,17 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                 break
 
         in_feat = in_layer.GetNextFeature()
+
+    # Add in a check to make sure the intersection didn't come back
+    # empty
+    if(shp_layer.GetFeatureCount() == 0):
+        raise Exception('Intersection ERROR: clip_shape found no '
+            'intersection between: file - %s and file - %s. This '
+            'could be caused by the AOI not overlapping any Wave Energy '
+            'Points. '
+            'Suggestions: open workspace/intermediate/projected_wave_data.shp'
+            'and the AOI to make sure AOI overlaps at least on point.' %
+            (shape_to_clip_uri, binding_shape_uri))
 
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
