@@ -311,7 +311,8 @@ def compute_transects(args):
     habitat_type_dataset = \
         transect_data_file.create_dataset('habitat_types', \
             (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
     
     habitat_properties_dataset = \
         transect_data_file.create_dataset('habitat_properties', \
@@ -326,12 +327,14 @@ def compute_transects(args):
     positions_dataset = \
         transect_data_file.create_dataset('ij_positions', \
             (tiles, 2, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
     
     shore_dataset = \
         transect_data_file.create_dataset('shore_index', \
             (tiles, 1), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
@@ -343,12 +346,14 @@ def compute_transects(args):
     indices_limit_dataset = \
         limits_group.create_dataset('indices', \
             (tiles, 2), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
     coordinates_limits_dataset = \
         limits_group.create_dataset('ij_coordinates', \
             (tiles, 4), \
-            compression = 'gzip', fillvalue = habitat_nodata)
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
 
 
 
@@ -395,10 +400,10 @@ def compute_transects(args):
         shore_array[transect] = shore
 
         coordinates_limits_array[transect] = [ \
-            transect_info[transect]['raw_positions'][0][0], \
-            transect_info[transect]['raw_positions'][1][0], \
-            transect_info[transect]['raw_positions'][0][-1], \
-            transect_info[transect]['raw_positions'][1][-1], \
+            transect_info[transect]['raw_positions'][0][start], \
+            transect_info[transect]['raw_positions'][1][start], \
+            transect_info[transect]['raw_positions'][0][end-1], \
+            transect_info[transect]['raw_positions'][1][end-1], \
             ]
 
         transect_info[transect] = None
@@ -409,8 +414,6 @@ def compute_transects(args):
     hdf5_files = {}
 
     # Iterate through shapefile types
-    transect_range = range(2)
-
     for shp_type in args['shapefiles']:
 
         hdf5_files[shp_type] = []
@@ -568,12 +571,15 @@ def compute_transects(args):
     # Both the habitat type and the habitat field data are complete, save them
     habitat_type_dataset[...] = habitat_type_array[...]
     habitat_properties_dataset[...] = habitat_properties_array[...]
+    bathymetry_dataset[...] = bathymetry_array[...]
+    positions_dataset[...] = positions_array[...]
+    indices_limit_dataset[...] = indices_limit_array[...]
+    coordinates_limits_dataset[...] = coordinates_limits_array[...]
+    shore_dataset[...] = shore_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
     habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
-    habitat_properties_dataset.attrs.create('transect_spacing', i_side_coarse)
-    habitat_properties_dataset.attrs.create('model_resolution', args['model_resolution'])
     
 
     # Store shore information gathered during the computation
