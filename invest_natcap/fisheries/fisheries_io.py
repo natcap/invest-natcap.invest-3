@@ -27,7 +27,7 @@ class MissingParameter(Exception):
 
 
 # Fetch and Verify Arguments
-def fetch_verify_args(args):
+def fetch_args(args):
     '''
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
@@ -96,9 +96,9 @@ def fetch_verify_args(args):
     params_dict = _verify_single_params(args)
 
     # Implement Single / Batch Here
-    pop_list = _verify_population_csvs(args)
+    pop_list = read_population_csvs(args)
 
-    mig_dict = _verify_migration_tables(
+    mig_dict = read_migration_tables(
         args, pop_list[0]['Classes'], pop_list[0]['Regions'])
 
     # Create model_list Here
@@ -111,7 +111,7 @@ def fetch_verify_args(args):
     return model_list
 
 
-def _verify_population_csvs(args):
+def read_population_csvs(args):
     '''
     Parses and verifies the Population Parameters CSV files
 
@@ -157,13 +157,13 @@ def _verify_population_csvs(args):
     for uri in population_csv_uri_list:
         ext = os.path.splitext(uri)[1]
         if ext == '.csv':
-            pop_dict = _verify_population_csv(args, uri)
+            pop_dict = read_population_csv(args, uri)
             pop_list.append(pop_dict)
 
     return pop_list
 
 
-def _verify_population_csv(args, uri):
+def read_population_csv(args, uri):
     '''
     Parses and verifies a single Population Parameters CSV file
 
@@ -269,7 +269,7 @@ def _verify_population_csv(args, uri):
         raise ValueError
 
     # Check that information is correct
-    if not np.allclose(pop_dict['Larvaldispersal'], 1):
+    if not np.allclose(pop_dict['Larvaldispersal'].sum(), 1):
         LOGGER.warning("The Larvaldisperal vector does not sum exactly to one\
             . %s" % uri)
 
@@ -302,7 +302,7 @@ def _verify_population_csv(args, uri):
 
 def _parse_population_csv(uri, sexsp):
     '''
-    Parses the given Population Parameters csv file and returns a dictionary
+    Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
 
     Dictionary items containing lists, arrays or matrices are capitalized,
@@ -381,7 +381,7 @@ def _parse_population_csv(uri, sexsp):
     return pop_dict
 
 
-def _verify_migration_tables(args, class_list, region_list):
+def read_migration_tables(args, class_list, region_list):
     '''
     Parses, verifies and orders list of migration matrices necessary for
     program.
