@@ -31,7 +31,7 @@ Fisheries Model
     :show-inheritance:
 
 Fisheries Preprocessor
-------------
+----------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_preprocessor
     :members:
@@ -39,7 +39,7 @@ Fisheries Preprocessor
     :show-inheritance:
 
 Fisheries Preprocessor IO
-------------
+-------------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_preprocessor_io
     :members:
