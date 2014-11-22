@@ -114,7 +114,7 @@ def execute(args):
     '''
 
     # Parse Inputs
-    model_list = io.fetch_verify_args(args)
+    model_list = io.fetch_args(args)
 
     # Run Models
     for model_args_dict in model_list:
