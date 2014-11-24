@@ -30,6 +30,22 @@ Fisheries Model
     :undoc-members:
     :show-inheritance:
 
+Fisheries Preprocessor
+----------------------
+
+.. automodule:: invest_natcap.fisheries.fisheries_preprocessor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Fisheries Preprocessor IO
+-------------------------
+
+.. automodule:: invest_natcap.fisheries.fisheries_preprocessor_io
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Module contents
 ---------------
 
