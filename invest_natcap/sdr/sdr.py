@@ -662,8 +662,8 @@ def _prepare(**args):
             desribed in Cavalli et al., 2013. '''
         slope_copy = slope / 100
         nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.005] = 0.005
-        slope_copy[slope > 1.0] = 1.0
+        slope_copy[slope_copy < 0.005] = 0.005
+        slope_copy[slope_copy > 1.0] = 1.0
         slope_copy[nodata_mask] = slope_nodata
         return slope_copy
     raster_utils.vectorize_datasets(
