@@ -105,7 +105,7 @@ def execute(args):
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
     aligned_erodibility_uri = preprocessed_data['aligned_erodibility_uri']
     dem_offset_uri = preprocessed_data['dem_offset_uri']
-    thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
+    slope_uri = preprocessed_data['slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
@@ -217,7 +217,7 @@ def execute(args):
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
-        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
+        (thresholded_w_factor_uri, w_accumulation_uri), (slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s" % (accumulation_uri))
         routing_utils.route_flux(
             flow_direction_uri, dem_offset_uri, factor_uri,
@@ -265,7 +265,7 @@ def execute(args):
         intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
     ws_nodata = -1.0
     slope_nodata = raster_utils.get_nodata_from_uri(
-        preprocessed_data['thresholded_slope_uri'])
+        preprocessed_data['slope_uri'])
     
     def ws_op(w_factor, s_factor):
         #calculating the inverse so we can use the distance to stream factor function
@@ -274,7 +274,7 @@ def execute(args):
             1.0 / (w_factor * s_factor), ws_nodata)
             
     raster_utils.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
+        [thresholded_w_factor_uri, slope_uri], ws_op, ws_factor_inverse_uri, 
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
@@ -658,11 +658,10 @@ def _prepare(**args):
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
-        '''Threshold slope between 0.001 and 1.0'''
+        '''Threshold slope to 0.00005 in case it is 0'''
         slope_copy = slope.copy()
         nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.001] = 0.001
-        slope_copy[slope > 1.0] = 1.0
+        slope_copy[slope < 0.00005] = 0.00005
         slope_copy[nodata_mask] = slope_nodata
         return slope_copy
     raster_utils.vectorize_datasets(
@@ -693,7 +692,7 @@ def _prepare(**args):
         'aligned_erosivity_uri': aligned_erosivity_uri,
         'aligned_erodibility_uri': aligned_erodibility_uri,
         'dem_offset_uri': dem_offset_uri,
-        'thresholded_slope_uri': thresholded_slope_uri,
+        'slope_uri': original_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri,
         'ls_uri': ls_uri,
