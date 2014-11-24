@@ -658,10 +658,12 @@ def _prepare(**args):
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
-        '''Threshold slope to 0.00005 in case it is 0'''
+        '''Threshold slope to 0.00005 in case it is 0 and clamp at 100\% slope as 
+            desribed in Cavalli et al., 2013. '''
         slope_copy = slope.copy()
         nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.00005] = 0.00005
+        slope_copy[slope < 0.5] = 0.5
+        slope_copy[slope > 100.0] = 100.0
         slope_copy[nodata_mask] = slope_nodata
         return slope_copy
     raster_utils.vectorize_datasets(
@@ -685,7 +687,8 @@ def _prepare(**args):
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
     ls_nodata = -1.0
     calculate_ls_factor(
-        flow_accumulation_uri, original_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
+        flow_accumulation_uri, original_slope_uri, flow_direction_uri, ls_uri,
+        ls_nodata)
     
     return {
         'aligned_dem_uri': aligned_dem_uri,
