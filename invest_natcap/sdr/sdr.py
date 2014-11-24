@@ -105,7 +105,7 @@ def execute(args):
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
     aligned_erodibility_uri = preprocessed_data['aligned_erodibility_uri']
     dem_offset_uri = preprocessed_data['dem_offset_uri']
-    slope_uri = preprocessed_data['slope_uri']
+    thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
@@ -217,7 +217,7 @@ def execute(args):
     w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
     s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
-        (thresholded_w_factor_uri, w_accumulation_uri), (slope_uri, s_accumulation_uri)]:
+        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s" % (accumulation_uri))
         routing_utils.route_flux(
             flow_direction_uri, dem_offset_uri, factor_uri,
@@ -265,7 +265,7 @@ def execute(args):
         intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
     ws_nodata = -1.0
     slope_nodata = raster_utils.get_nodata_from_uri(
-        preprocessed_data['slope_uri'])
+        preprocessed_data['thresholded_slope_uri'])
     
     def ws_op(w_factor, s_factor):
         #calculating the inverse so we can use the distance to stream factor function
@@ -274,7 +274,7 @@ def execute(args):
             1.0 / (w_factor * s_factor), ws_nodata)
             
     raster_utils.vectorize_datasets(
-        [thresholded_w_factor_uri, slope_uri], ws_op, ws_factor_inverse_uri, 
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri, 
         gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
     
@@ -685,14 +685,14 @@ def _prepare(**args):
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
     ls_nodata = -1.0
     calculate_ls_factor(
-        flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
+        flow_accumulation_uri, original_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
     
     return {
         'aligned_dem_uri': aligned_dem_uri,
         'aligned_erosivity_uri': aligned_erosivity_uri,
         'aligned_erodibility_uri': aligned_erodibility_uri,
         'dem_offset_uri': dem_offset_uri,
-        'slope_uri': original_slope_uri,
+        'thresholded_slope_uri': thresholded_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri,
         'ls_uri': ls_uri,
