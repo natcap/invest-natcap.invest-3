@@ -226,7 +226,8 @@ def compute_transects(args):
                         args['max_profile_length'])
 
                     # Interpolate transect to the model resolution
-                    interpolated_depths = raw_depths
+                    interpolated_depths = \
+                        raw_depths if raw_depths.size > 5 else None
 #                        interpolated_depths = \
 #                            interpolate_transect(raw_depths, i_side_fine, \
 #                                args['model_resolution'])
@@ -240,11 +241,9 @@ def compute_transects(args):
                         smooth_transect(interpolated_depths, \
                             args['smoothing_percentage'])
 
-                    # Clip transect
-#                        print('size before', smoothed_depths.size)
+                    # Clip if transect hits land
                     (clipped_transect, (start, shore, end)) = \
                         clip_transect(smoothed_depths)
-#                        print('size after', clipped_transect.size)
 
                     # Transect could be invalid, skip it
                     if clipped_transect is None:
@@ -253,8 +252,11 @@ def compute_transects(args):
                     # At this point, the transect is valid: 
                     # extract remaining information about it
                     transect_info.append( \
-                        {'raw_positions':raw_positions, \
-                        'clip_limits':(start, shore, end)})
+                        {'raw_positions': \
+                            (raw_positions[0][start:end], \
+                            raw_positions[1][start:end]), \
+                        'depths':smoothed_depths[start:end], \
+                        'clip_limits':(0, shore-start, end-start)})
 
                     # Update the logest transect length if necessary
                     if (end - start) > max_transect_length:
@@ -290,41 +292,128 @@ def compute_transects(args):
 
     LOGGER.debug('found %i tiles.' % tiles)
 
+    habitat_nodata = -99999
+
     print('transect_info size', len(transect_info))
 
     # Create a numpy array to store the habitat type
     field_count = args['maximum_field_count']
     transect_count = tiles
 
-    habitat_type_array = np.ones((tiles, max_transect_length)) * -99999.0
-    habitat_properties_array = \
-        np.ones((tiles, field_count, max_transect_length)) * -99999.0
-
     # Creating HDF5 file that will store the transect data
-    habitat_type_uri = \
-        os.path.join(args['intermediate_dir'], 'habitat_type.h5')
-    habitat_properties_uri = \
-        os.path.join(args['intermediate_dir'], 'habitat_properties.h5')
+    transect_data_uri = \
+        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    
+    transect_data_file = h5.File(transect_data_uri, 'w')
+    
 
-    habitat_type_file = h5.File(habitat_type_uri, 'w')
+
     habitat_type_dataset = \
-        habitat_type_file.create_dataset('habitat_types', \
-            habitat_type_array.shape, compression = 'gzip', \
-            fillvalue = -99999.0)
-
-    habitat_properties_file = h5.File(habitat_properties_uri, 'w')
+        transect_data_file.create_dataset('habitat_types', \
+            (transect_count, max_transect_length), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+    
     habitat_properties_dataset = \
-        habitat_properties_file.create_dataset('habitat_properties', \
-            habitat_properties_array.shape, compression = 'gzip', \
-            fillvalue = -99999.0)
+        transect_data_file.create_dataset('habitat_properties', \
+            (transect_count, field_count, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    bathymetry_dataset = \
+        transect_data_file.create_dataset('bathymetry', \
+            (tiles, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+    
+    positions_dataset = \
+        transect_data_file.create_dataset('ij_positions', \
+            (tiles, 2, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
+    
+    shore_dataset = \
+        transect_data_file.create_dataset('shore_index', \
+            (tiles, 1), \
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
+
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (tiles, 4), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    limits_group = transect_data_file.create_group('limits')
+
+    indices_limit_dataset = \
+        limits_group.create_dataset('indices', \
+            (tiles, 2), \
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
+
+    coordinates_limits_dataset = \
+        limits_group.create_dataset('ij_coordinates', \
+            (tiles, 4), \
+            compression = 'gzip', fillvalue = habitat_nodata, \
+            dtype = 'i4')
+
+
+
+    habitat_type_array = \
+        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
+
+    habitat_properties_array = \
+        np.ones(habitat_properties_dataset.shape) * habitat_nodata
+
+    bathymetry_array = \
+        np.ones(bathymetry_dataset.shape) * habitat_nodata
+
+    positions_array = \
+        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
+
+    shore_array = \
+        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
+
+    climatic_forcing_array = \
+        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
+
+    indices_limit_array = \
+        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
+
+    coordinates_limits_array = \
+        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
+
+
+
+    for transect in range(transect_count):
+        (start, shore, end) = transect_info[transect]['clip_limits']
+
+        bathymetry_array[transect, start:end] = \
+            transect_info[transect]['depths'][start:end]
+
+        positions_array[transect, 0, start:end] = \
+            transect_info[transect]['raw_positions'][0][start:end]
+
+        positions_array[transect, 1, start:end] = \
+            transect_info[transect]['raw_positions'][1][start:end]
+
+        indices_limit_array[transect] = [start, end]
+
+        shore_array[transect] = shore
+
+        coordinates_limits_array[transect] = [ \
+            transect_info[transect]['raw_positions'][0][start], \
+            transect_info[transect]['raw_positions'][1][start], \
+            transect_info[transect]['raw_positions'][0][end-1], \
+            transect_info[transect]['raw_positions'][1][end-1], \
+            ]
+
+        transect_info[transect] = None
+
 
 
     # HDF5 file container
     hdf5_files = {}
 
     # Iterate through shapefile types
-    transect_range = range(2)
-
     for shp_type in args['shapefiles']:
 
         hdf5_files[shp_type] = []
@@ -346,68 +435,74 @@ def compute_transects(args):
             LOGGER.info('Extracting priority information from ' + basename)
             
             mask = None
+            mask_dict = {}
+
             progress_step = tiles / 50
             for transect in range(tiles):
                 if transect % progress_step == 0:
                     print '.',
 
-                raw_positions = transect_info[transect]['raw_positions']
-#                print('raw_positions', raw_positions[0].size)
+                [start, end] = indices_limit_array[transect]
+
+                shore = shore_array[transect]
+
+                #raw_positions = transect_info[transect]['raw_positions']
+                raw_positions = \
+                    (positions_array[transect, 0, start:end], \
+                    positions_array[transect, 1, start:end])
                 
-                source = array[raw_positions]
-
-                start = transect_info[transect]['clip_limits'][0]
-                shore = transect_info[transect]['clip_limits'][1]
-                end = transect_info[transect]['clip_limits'][2]
-
+                # Load the habitat type buffer
                 destination = habitat_type_array[transect,:end-start]
 
+                #Load the habitats as sampled from the raster
+                source = array[raw_positions]
+
+                # Interpolate the data to the model resolution 
 #                source = interpolate_transect(source, i_side_fine, \
 #                    args['model_resolution'], kind = 'nearest')
+
                 source = source[start:end,]
 
+                # Apply the habitat constraints
 #                source = \
 #                    apply_habitat_constraints(source, args['habitat_information'])
 #                sys.exit(0)
                 
                 # Compute the mask that will be used to update the values
                 mask = destination < source
-#                print('mask size', np.sum(mask.astype(int)))
-                #if transect in transect_range:
-                #    print('transect', transect)
-                #    print('start, shore, end', (start, shore, end))
-                #    print('source', source)
-                #    print('mask', mask)
-                #    print('destination', destination)
 
-                # Save transect to file
+                mask_dict[transect] = mask
+
+                # Update habitat_types with new type of higher priority
                 destination[mask] = source[mask]
 
-                #if transect in transect_range:
-                #    print('new destination', destination)
-                #    print ''
-
+                # Transect values without nodata
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
-#                print('clipped_positions', clipped_positions[0].size)
 
+                # Transect values to update
                 masked_positions = \
                     (clipped_positions[0][mask], clipped_positions[1][mask])
-#                print('masked_positions', masked_positions[0].size)
 
-                nodata_mask = destination == source_nodata
+                # If source nodata ended up in destination, find it
+                source_nodata_mask = destination == source_nodata
 
-                nodata_positions = (raw_positions[0][nodata_mask], \
-                    raw_positions[1][nodata_mask])
+                # Remove source nodata
+                destination[source_nodata_mask] = habitat_nodata
 
-                
+                # Find where source nodata is in the raster
+                source_nodata_coordinates = \
+                    (raw_positions[0][source_nodata_mask], \
+                    raw_positions[1][source_nodata_mask])
+
+                # Update the values using source
                 transects[masked_positions] = source[mask]
-                transects[nodata_positions] = -2
+                # Update nodata appropriately
+                transects[source_nodata_coordinates] = -2
+                # Leave the transect ID on the transect's shore
                 transects[(raw_positions[0][shore], \
                     raw_positions[1][shore])] = transect
 
-#                print('')
-#                sys.exit(0)
             print('')
 
             # Clean up
@@ -440,45 +535,32 @@ def compute_transects(args):
                     if transect % progress_step == 0:
                         print '.',
 
-                    raw_positions = transect_info[transect]['raw_positions']
-#                    print('raw_positions', raw_positions[0].size)
-                    
+                    [start, end] = indices_limit_array[transect]
+
+                    shore = shore_array[transect]
+
+                    raw_positions = \
+                        (positions_array[transect, 0, start:end], \
+                        positions_array[transect, 1, start:end])
+
+
                     source = array[raw_positions]
 
-                    start = transect_info[transect]['clip_limits'][0]
-                    shore = transect_info[transect]['clip_limits'][1]
-                    end = transect_info[transect]['clip_limits'][2]
-
-                    destination = habitat_properties_array[transect, field_id,:end-start]
-
-#                    source = interpolate_transect(source, i_side_fine, \
-#                        args['model_resolution'], kind = 'nearest')
-                    source = source[start:end,]
-                    
-#                    if transect in transect_range:
-#                        print('transect', transect)
-#                        print('start, shore, end', (start, shore, end))
-#                        print('source', source)
-#                        print('mask', mask)
-#                        print('destination', destination)
+                    destination = \
+                        habitat_properties_array[transect, field_id, start:end]
 
                     # Save transect to file
-#                    destination[mask] = source[mask]
+                    mask = mask_dict[transect]
 
-#                    if transect in transect_range:
-#                        print('new destination', destination)
-#                        print ''
+                    destination[mask] = source[mask]
 
                     clipped_positions = \
                         (raw_positions[0][start:end], raw_positions[1][start:end])
-#                    print('clipped_positions', clipped_positions[0].size)
 
                     masked_positions = \
                         (clipped_positions[0][mask], clipped_positions[1][mask])
-#                    print('masked_positions', masked_positions[0].size)
                     
                     transects[masked_positions] = source[mask]
-#                    print('')
                 print('')
 
                 # Close the raster before proceeding to the next one
@@ -489,12 +571,15 @@ def compute_transects(args):
     # Both the habitat type and the habitat field data are complete, save them
     habitat_type_dataset[...] = habitat_type_array[...]
     habitat_properties_dataset[...] = habitat_properties_array[...]
+    bathymetry_dataset[...] = bathymetry_array[...]
+    positions_dataset[...] = positions_array[...]
+    indices_limit_dataset[...] = indices_limit_array[...]
+    coordinates_limits_dataset[...] = coordinates_limits_array[...]
+    shore_dataset[...] = shore_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
     habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
-    habitat_properties_dataset.attrs.create('transect_spacing', i_side_coarse)
-    habitat_properties_dataset.attrs.create('model_resolution', args['model_resolution'])
     
 
     # Store shore information gathered during the computation
@@ -569,8 +654,7 @@ def compute_transects(args):
     # We're done, we close the file
     #habitat_type_dataset = None
     #habitat_properties_dataset = None
-    habitat_type_file.close()
-    habitat_properties_file.close()
+    transect_data_file.close()
         
     return
 
@@ -887,9 +971,9 @@ def smooth_transect(transect, window_size_pct):
 
 def clip_transect(transect):
     """Clip transect using maximum and minimum heights"""
-    # Return if transect size is 1
-    if transect.size == 1:
-        return (transect, (0, 0, 1))
+    # Transect has to have a minimum size
+    if transect.size < 5:
+         return (None, (None, None, None))
 
     # Return if transect is full of zeros, otherwise break
     uniques = np.unique(transect)

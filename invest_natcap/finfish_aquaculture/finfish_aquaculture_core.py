@@ -1,5 +1,7 @@
-'''Implementation of the aquaculture calculations, and subsequent outputs. This will
-pull from data passed in by finfish_aquaculture'''
+'''
+Implementation of the aquaculture calculations, and subsequent outputs.
+This will pull from data passed in by finfish_aquaculture.
+'''
 
 import collections
 import os
@@ -22,8 +24,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 NUM_HISTOGRAM_BINS = 30
 
+
 def execute(args):
-    ''''Runs the biophysical and valuation parts of the finfish aquaculture model.
+    ''''
+    Runs the biophysical and valuation parts of the finfish aquaculture model.
     This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
         processed weight at that farm, and if valuation is true, total discounted net
@@ -98,7 +102,8 @@ def execute(args):
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
 
-    #This adds the number of cycles completed by each farm to their shapefile feature
+    #This adds the number of cycles completed by each farm to their shapefile
+    #feature
     cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
     layer.CreateField(cycle_field)
 
@@ -110,10 +115,10 @@ def execute(args):
 
         layer.SetFeature(feature)
 
-    #Now want to add the total processed weight of each farm as a second feature on the
-    #outgoing shapefile- abstracting the calculation of this to a separate function,
-    #but it will return a dictionary with a int->float mapping for
-    #farm_ID->processed weight
+    #Now want to add the total processed weight of each farm as a second
+    #feature on the outgoing shapefile- abstracting the calculation of this to
+    #a separate function, but it will return a dictionary with a int->float
+    #mapping for farm_ID->processed weight
     sum_hrv_weight, hrv_weight = calc_hrv_weight(
         args['farm_op_dict'], args['frac_post_process'],
         args['mort_rate_daily'], cycle_history)
@@ -152,7 +157,8 @@ def execute(args):
 
     # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
-        histogram_paths, uncertainty_stats = compute_uncertainty_data(args, output_dir)
+        histogram_paths, uncertainty_stats = compute_uncertainty_data(
+            args, output_dir)
     else:
         histogram_paths, uncertainty_stats = None, None
 
@@ -160,7 +166,9 @@ def execute(args):
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
         value_history, histogram_paths, uncertainty_stats)
 
-def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict, farm_op_dict, dur):
+
+def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
+                     farm_op_dict, dur):
     '''
     Input:
         outplant_buffer: The number of days surrounding the outplant day during which
@@ -189,30 +197,33 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict, farm_op_dict, 
 
     for f in farm_op_dict.keys():
 
-        #Are multiplying by 1000, because a and b are in grams, so need to do the whole
-        #equation in grams. Have to explicit cast to get things in a format that will be
-        #usable later.
+        #Are multiplying by 1000, because a and b are in grams, so need to do
+        #the whole equation in grams. Have to explicit cast to get things in a
+        #format that will be usable later.
         start_day = int(farm_op_dict[f]['start day for growing']) - 1
         fallow_per = int(farm_op_dict[f]['Length of Fallowing period'])
-        start_weight = 1000 * float(farm_op_dict[f]['weight of fish at start (kg)'])
-        tar_weight = 1000 * float(farm_op_dict[f]['target weight of fish at harvest (kg)'])
+        start_weight = 1000 * float(
+            farm_op_dict[f]['weight of fish at start (kg)'])
+        tar_weight = 1000 * float(
+            farm_op_dict[f]['target weight of fish at harvest (kg)'])
 
         fallow_days_left = start_day
         farm_history = []
         fish_weight = 0
         outplant_date = None
-        #Have changed the water temp table to be accessed by keys 0 to 364, so now can just
-        #grab straight from the table without having to deal with change in day
+        #Have changed the water temp table to be accessed by keys 0 to 364, so
+        #now can just grab straight from the table without having to deal with
+        #change in day
 
-        #However, it should be kept in mind that when doing calculations for a given day,
-        #you are using YESTRDAY'S temperatures and weights to get the value for today.
+        #However, it should be kept in mind that when doing calculations for a
+        #given day, you are using YESTRDAY'S temperatures and weights to get
+        #the value for today.
 
-
-        #Are going 1 day beyond on the off-chance that you ended a harvest the day
-        #before, and need to record today. This should not create any false harvest
-        #records, because the fish would be reaching the end growth weight today, not
-        #yesterday.
-        for day in range (0, int((365*dur)) + 1):
+        #Are going 1 day beyond on the off-chance that you ended a harvest the
+        #day before, and need to record today. This should not create any
+        #false harvest records, because the fish would be reaching the end
+        #growth weight today, not yesterday.
+        for day in range(0, int((365*dur)) + 1):
 
             if fallow_days_left > 0:
                 fallow_days_left -= 1
@@ -225,17 +236,18 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict, farm_op_dict, 
 
             elif fish_weight != 0:
                 #Grow 'dem fishies!
-                exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][f]) * tau)
+                exponent = math.exp(
+                    float(water_temp_dict[str((day-1) % 365)][f]) * tau)
 
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
-                                fish_weight
+                    fish_weight
 
                 fish_weight = fish_weight
 
-            #function that maps an incoming day to the same day % 365, then creates a
-            #list to check against +/- buffer days from the start day
+            #function that maps an incoming day to the same day % 365, then
+            #creates a list to check against +/- buffer days from the start day
 
-            elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer,
+            elif (day % 365) in map (lambda x: x % 365, range(start_day - outplant_buffer,
                                                     start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
@@ -243,6 +255,7 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict, farm_op_dict, 
         cycle_history[int(f)] = farm_history
 
     return cycle_history
+
 
 def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
     '''
@@ -267,12 +280,13 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
 
     for f in farm_op_dict:
 
-        #They keys from farm_op_dict are strings, sicne they came from a CSV. So, have to
-        #cast to strings in order to make them usable for refrencing everything else.
+        #They keys from farm_op_dict are strings, since they came from a CSV.
+        #So, have to cast to strings in order to make them usable for
+        #refrencing everything else.
         f = int(f)
 
-        #pre-load farm specific vars, have to cast some because they come out of
-        # a CSV all as strings
+        #pre-load farm specific vars, have to cast some because they come out
+        #of a CSV all as strings
         curr_cycle_totals[f] = 0
         f_num_fish = int(farm_op_dict[str(f)]['number of fish in farm'])
         cycles_comp = len(cycle_history[f])
@@ -280,9 +294,10 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
         mort = float(mort)
         indiv_tpw_totals[f] = []
 
-        #We are starting this range at 0, and going to one less than the number of
-        #cycles, since the list of cycles from the cycle calcs will start at index 0
-        for c in range (0, cycles_comp):
+        #We are starting this range at 0, and going to one less than the
+        #number of cycles, since the list of cycles from the cycle calcs will
+        #start at index 0
+        for c in range(0, cycles_comp):
 
             #this will get the tuple referring to the current cycle
             #the information will be inside the tuple as:
@@ -290,11 +305,11 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
             current_cycle_info = farm_history[c]
             outplant_date, harvest_date, fish_weight = current_cycle_info
 
-            #Now do the computation for each cycle individually, then add it to the total
-            #within the dictionary
+            #Now do the computation for each cycle individually, then add it
+            #to the total within the dictionary
             #Note that we divide by 1000 to make sure the output in in kg
             cycle_length = harvest_date - outplant_date
-            e_exponent =  -mort * cycle_length
+            e_exponent = -mort * cycle_length
 
             #This equation comes from total weight of fish produced per farm
             #from the user's guide
@@ -307,9 +322,11 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
 
     return (curr_cycle_totals, indiv_tpw_totals)
 
-def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_history):
 
-    '''This performs the valuation calculations, and returns tuple containing a
+def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
+              cycle_history):
+    '''
+    This performs the valuation calculations, and returns tuple containing a
     dictionary with a farm-> float mapping, where each float is the net processed
     value of the fish processed on that farm, in $1000s of dollars, and a dictionary
     containing a farm-> list mapping, where each entry in the list is a tuple of
@@ -342,24 +359,28 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
         val_history[f] = []
         valuations[f] = 0.0
 
-        #running from 0 to 1 less than the number of cycles that farm completed,
-        #since the list that each farm ID is mapped to starts at index 0
-        for c in range (0, len(cycle_history[f])):
+        #running from 0 to 1 less than the number of cycles that farm
+        #completed, since the list that each farm ID is mapped to starts at
+        #index 0
+        for c in range(0, len(cycle_history[f])):
 
             tpw = hrv_weight[f][c]
 
-            #the 1 refers to the placement of day of harvest in the tuple for each cycle
+            #the 1 refers to the placement of day of harvest in the tuple for
+            #each cycle
             t = cycle_history[f][c][1]
 
-            net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
+            net_rev = tpw * (price_per_kg * (1 - frac_mrkt_price))
             npv = net_rev * (1 / (1 + discount) ** t)
 
             val_history[f].append((net_rev, npv))
 
-            #divide by 1000, because the number we want to return is in thousands of dollars
+            #divide by 1000, because the number we want to return is in
+            #thousands of dollars
             valuations[f] += npv / 1000
 
     return val_history, valuations
+
 
 def compute_uncertainty_data(args, output_dir):
     '''Does uncertainty analysis via a Monte Carlo simulation.
@@ -391,6 +412,7 @@ def compute_uncertainty_data(args, output_dir):
 
     LOGGER.info('Done with uncertainty analysis.')
     return histogram_paths, uncertainty_stats
+
 
 def do_monte_carlo_simulation(args):
     '''Performs a Monte Carlo simulation and returns the results.'''
@@ -513,9 +535,10 @@ def make_histograms(farm, results, output_dir, total_num_runs):
                                                       results[result_type])
     return histogram_paths
 
-def create_HTML_table(
-    output_dir, args, cycle_history, sum_hrv_weight, hrv_weight,
-    farms_npv, value_history, histogram_paths, uncertainty_stats):
+
+def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
+                      hrv_weight, farms_npv, value_history, histogram_paths,
+                      uncertainty_stats):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which
@@ -550,7 +573,8 @@ def create_HTML_table(
     '''
     html_uri = os.path.join(output_dir,
                             ("Harvest_Results_[%s].html" %
-                             datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")))
+                             datetime.datetime.now().strftime(
+                                 "%Y-%m-%d_%H_%M")))
     doc = html.HTMLDocument(html_uri, 'Marine InVEST',
                             'Aquaculture Model (Finfish Harvest)')
 
@@ -593,7 +617,7 @@ def create_HTML_table(
                  'Net Present Value (Thousands of $)',
                  'Outplant Day (Julian Day)',
                  'Outplant Year'],
-                is_header=True)
+                 is_header=True)
 
     for farm_id in cycle_history:
         for cycle in range(0, len(cycle_history[farm_id])):
@@ -618,15 +642,15 @@ def create_HTML_table(
             else:
                 indiv_rev, indiv_npv = '(no valuation)', '(no valuation)'
 
-            cells = [farm_id, cycle_num, harvest_date, cycle_length, harvest_weight,
-                     indiv_rev, indiv_npv, out_day, out_year]
+            cells = [farm_id, cycle_num, harvest_date, cycle_length,
+                     harvest_weight, indiv_rev, indiv_npv, out_day, out_year]
             harvest_table.add_row(cells)
 
     doc.write_header('Farm Result Totals (output)')
 
     doc.write_paragraph(
-        'All values in the following table were also populated in the attribute '
-        'table of the netpens feature class.')
+        'All values in the following table were also populated in the '
+        'attribute table of the netpens feature class.')
 
     totals_table = doc.add(html.Table(id='totals_table'))
     totals_table.add_row(['Farm ID Number',
@@ -652,10 +676,11 @@ def create_HTML_table(
 
         doc.write_paragraph(
             'These results were obtained by running a Monte Carlo simulation. '
-            'For each run of the simulation, each growth parameter was randomly '
-            'sampled according to the provided normal distribution. '
-            'The simulation involved %d runs of the model, each with different '
-            'values for the growth parameters.' % args['num_monte_carlo_runs'])
+            'For each run of the simulation, each growth parameter was '
+            'randomly sampled according to the provided normal distribution. '
+            'The simulation involved %d runs of the model, each with '
+            'different values for the growth '
+            'parameters.' % args['num_monte_carlo_runs'])
 
         doc.write_paragraph(
             'Results labeled as <i>total results (all farms)</i> '
@@ -699,8 +724,8 @@ def create_HTML_table(
             'represents the probability of the outcome marked by the position'
             'of the bar on the horizontal axis of the histogram.')
         doc.write_paragraph(
-            'Included are histograms for total results across all farms, as well as '
-            'results for each individual farm.')
+            'Included are histograms for total results across all farms, as '
+            'well as results for each individual farm.')
         for farm, paths in histogram_paths.items():
             if farm == 'total':
                 title = 'Histograms for total results (all farms)'
@@ -708,9 +733,11 @@ def create_HTML_table(
                 title = 'Histograms for farm %s' % farm
             doc.write_header(title, level=4)
 
-            # Put the histograms in a collapsible element that defaults to open.
+            # Put the histograms in a collapsible element that defaults to
+            # open.
             collapsible_elem = doc.add(html.Element('details', open=''))
             for path in paths.values():
-                collapsible_elem.add(html.Element('img', src=path, end_tag=False))
+                collapsible_elem.add(
+                    html.Element('img', src=path, end_tag=False))
 
     doc.flush()

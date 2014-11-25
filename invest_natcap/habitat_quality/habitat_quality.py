@@ -1,5 +1,5 @@
 """InVEST Habitat Quality model"""
-import math
+
 import os.path
 import logging
 import numpy
@@ -255,6 +255,8 @@ def execute(args):
                 kernel = make_linear_kernel(dr_pixel)
             elif decay_type == 'exponential':
                 kernel = make_exponential_kernel(dr_pixel)
+            else:
+                raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
 
             # create sensitivity raster based on threat
