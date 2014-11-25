@@ -14,10 +14,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-class MissingParameter(Exception):
+class MissingParameter(StandardError):
     '''
-    A broad exception class that is raised when a necessary parameter is not
-    provided.
+    An exception class that may be raised when a necessary parameter is not
+    provided by the user.
     '''
     def __init__(self, msg):
         self.msg = msg
@@ -38,7 +38,10 @@ def fetch_args(args):
     Returns:
         vars_dict (dictionary): dictionary containing necessary variables
 
-    Example Returned Variables Dictionary::
+    Raises:
+        ValueError: when mismatch between Population and Habitat CSV files
+
+    Example Returns::
 
         vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -47,7 +50,7 @@ def fetch_args(args):
 
             # Pop Vars
             'population_csv_uri': 'path/to/csv_uri',
-            'Survnaturalfrac': np.array(
+            'Surv_nat_xsa': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
             'Classes': np.array([...]),
             'Class_vectors': {
@@ -85,6 +88,23 @@ def fetch_args(args):
     pop_dict = read_population_csv(args)
     habitat_dict = read_habitat_csv(args)
 
+    # CHECK THAT REGIONS AND CLASSES MATCH
+    P_Classes = pop_dict['Classes']
+    H_Classes = habitat_dict['Hab_classes']
+    is_equal_list = map(
+        lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
+    if not all(is_equal_list):
+        LOGGER.error("Mismatch between class names in Population and Habitat CSV files")
+        raise ValueError
+
+    P_Regions = pop_dict['Regions']
+    H_Regions = habitat_dict['Hab_regions']
+    is_equal_list = map(
+        lambda x, y: x.lower() == y.lower(), P_Regions, H_Regions)
+    if not all(is_equal_list):
+        LOGGER.error("Mismatch between region names in Population and Habitat CSV files")
+        raise ValueError
+
     # Combine Data
     vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
 
@@ -110,11 +130,15 @@ def read_population_csv(args):
         pop_dict (dictionary): dictionary containing verified population
             arguments
 
-    Example Returned Population Dictionary::
+    Raises:
+        MissingParameter - required parameter not included
+        ValueError - values are out of bounds or of wrong type
+
+    Example Returns::
 
         pop_dict = {
             'population_csv_uri': 'path/to/csv',
-            'Survnaturalfrac': np.array(
+            'Surv_nat_xsa': np.array(
                 [[...], [...]], [[...], [...]], ...),
 
             # Class Vectors
@@ -134,32 +158,27 @@ def read_population_csv(args):
                 'Larvaldispersal': np.array([...]),
             },
         }
-
-    Raises:
-        MissingParameter - required parameter not included
-        ValueError - values are out of bounds or of wrong type
-
     '''
     uri = args['population_csv_uri']
     pop_dict = _parse_population_csv(uri, args['sexsp'])
 
     # Check that required information exists
     try:
-        pop_dict['Survnaturalfrac']
+        pop_dict['Surv_nat_xsa']
     except:
         LOGGER.error("Population Parameters File does not contain a Survival\
             Matrix")
         raise MissingParameter
 
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
-                        'Survnaturalfrac', 'Vulnfishing']
+                        'Surv_nat_xsa', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
         LOGGER.warning("Population Parameters File does not contain all \
             necessary parameters. %s" % uri)
 
     # Checks that all Survival Matrix elements exist between [0, 1]
-    A = pop_dict['Survnaturalfrac']
+    A = pop_dict['Surv_nat_xsa']
     if any(A[A > 1.0]) or any(A[A < 0.0]):
         LOGGER.error("Surivial Matrix contains values outside [0, 1]")
         raise ValueError
@@ -175,16 +194,16 @@ def _parse_population_csv(uri, sexsp):
     Dictionary items containing lists, arrays or matrices are capitalized,
     while single variables are lowercase.
 
-    Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
+    Keys: Surv_nat_xsa, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
     Returns:
         pop_dict (dictionary): verified population arguments
 
-    Example:
+    Example Returns::
 
         pop_dict = {
-            'Survnaturalfrac': np.array(
+            'Surv_nat_xsa': np.array(
                 [[...], [...]], [[...], [...]], ...),
 
             # Class Vectors
@@ -221,7 +240,7 @@ def _parse_population_csv(uri, sexsp):
     classes = _get_col(
         csv_data, start_rows[0])[0:end_rows[0]+1]
 
-    pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
+    pop_dict["Classes"] = classes[1:]
     if sexsp == 2:
         pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
 
@@ -237,14 +256,14 @@ def _parse_population_csv(uri, sexsp):
 
     if sexsp == 1:
         # Sex Neutral
-        pop_dict['Survnaturalfrac'] = np.array(
+        pop_dict['Surv_nat_xsa'] = np.array(
             [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
 
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        pop_dict['Survnaturalfrac'] = np.array(
+        pop_dict['Surv_nat_xsa'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
     else:
@@ -289,7 +308,12 @@ def read_habitat_csv(args):
     Returns:
         habitat_dict (dictionary): dictionary containing necessary variables
 
-    Example Returned Variables Dictionary::
+    Raises:
+        MissingParameter - required parameter not included
+        ValueError - values are out of bounds or of wrong type
+        IndexError - likely a file formatting issue
+
+    Example Returns::
 
         habitat_dict = {
             'Habitats': ['habitat1', 'habitat2', ...],
@@ -302,11 +326,6 @@ def read_habitat_csv(args):
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
-
-    Raises:
-        MissingParameter - required parameter not included
-        ValueError - values are out of bounds or of wrong type
-        IndexError - likely a file formatting issue
     '''
 
     habitat_dict = _parse_habitat_csv(args)
@@ -317,7 +336,6 @@ def read_habitat_csv(args):
         LOGGER.error("At least one element of the Habitat Dependency by Class \
             vectors is out of bounds. Values must be between [0, 1] inclusive.\
             ")
-        print(habitat_dict['Hab_dep_ha'])
         raise ValueError
 
     A = habitat_dict['Hab_chg_hx']
@@ -359,7 +377,11 @@ def _parse_habitat_csv(args):
     Returns:
         habitat_dict (dictionary): dictionary containing necessary variables
 
-    Example Returned Variables Dictionary::
+    Raises:
+        + MissingParameter - required parameter not included
+        + IndexError - likely a file formatting issue
+
+    Example Returns::
 
         habitat_dict = {
             'Habitats': ['habitat1', 'habitat2', ...],
@@ -370,10 +392,6 @@ def _parse_habitat_csv(args):
             'Hab_dep_ha': np.array(
                 [[[...], [...]], [[...], [...]], ...]),  # h, a
         }
-
-    Raises:
-        + MissingParameter - required parameter not included
-        + IndexError - likely a file formatting issue
     '''
     uri = args['habitat_csv_uri']
     csv_data = []
@@ -403,9 +421,9 @@ def _parse_habitat_csv(args):
         csv_data, start_rows[0]+1, start_cols[1])
 
     # Reformat and add data to dictionary
-    habitat_dict['Habitats'] = map(lambda x: x.lower(), Habitats)
-    habitat_dict['Hab_classes'] = map(lambda x: x.lower(), Hab_classes)
-    habitat_dict['Hab_regions'] = map(lambda x: x.lower(), Hab_regions)
+    habitat_dict['Habitats'] = Habitats
+    habitat_dict['Hab_classes'] = Hab_classes
+    habitat_dict['Hab_regions'] = Hab_regions
     habitat_dict['Hab_chg_hx'] = np.array(Hab_chg_hx, dtype=float)
     habitat_dict['Hab_dep_ha'] = np.array(Hab_dep_ha, dtype=float)
 

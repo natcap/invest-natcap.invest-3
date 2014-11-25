@@ -80,7 +80,7 @@ def execute(args):
             args['harv_cont'] is True)
 
         frac_post_process (float): represents the fraction of the
-            animal remaining after processing of the whole carcass is complete.
+            species remaining after processing of the whole carcass is complete.
             This will exist only if valuation is desired for the particular
             species. (Required if args['harv_cont'] is True)
 
