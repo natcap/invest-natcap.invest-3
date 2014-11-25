@@ -25,6 +25,35 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
     """This is the formula for calculating the transition of soil carbon
+
+    .. math:: (af * cf * df) - \
+           \\frac{1}{(1 + tr)^y} * \
+           [(af * cf * df) - \
+            (ai * ci * di)]
+
+    where
+
+    * :math:`af` is area_final
+    * :math:`cf` is carbon_final
+    * :math:`df` is depth_final
+    * :math:`tr` is transition_rate
+    * :math:`y` is year
+    * :math:`ai` is area_initial
+    * :math:`ci` is carbon_initial
+    * :math:`di` is depth_initial
+
+    Args:
+        area_final (float): The final area of the carbon
+        carbon_final (float): The final amount of carbon per volume
+        depth_final (float): The final depth of carbon
+        transition_rate (float): The rate at which the transition occurs
+        year (float): The amount of time in years overwhich the transition occurs
+        area_initial (float): The intial area of the carbon
+        carbon_initial (float): The iniital amount of carbon per volume
+        depth_initial (float): The initial depth of carbon
+
+    Returns:
+        float: Transition amount of soil carbon
     """
 
     return (area_final * carbon_final * depth_final) - \
@@ -33,29 +62,29 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 class ConstantOp:
-    """A class that allows constants to be added to function calls"""
+    """A class that allows constants to be added to function calls
+
+    Essentially the intent here was to facilitate the ability
+
+    Args:
+        op (types.FunctionType): The callable operator
+        c (list): The list of constants
+
+    Returns:
+        types.InstanceType: Instance of ConstantOp
+    """
 
     def __init__(self, op, *c):
-        """Constructor for ConstantOp class
-
-        :param op: The callable operator
-        :type op: <type 'function'>
-        :param c: The list of constants
-        :type c: list
-
-        :return: instance of ConstantOp
-        :rtype: <type 'instance'>
-        """
         self.op = op
         self.c = c
 
     def __call__(self, *f):
-        """Call to ConstantOp operator
+        """Call to ConstantOp instance invoking call to op
 
-        :param f: The paramters with which to call the operator
-        :type f: list
+        f (list): The paramters with which to call the operator
 
-        :return: return of the operator
+        Returns:
+            float: The return of op
         """
         return apply(self.op, f+self.c)
 
