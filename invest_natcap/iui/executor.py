@@ -333,7 +333,7 @@ class Executor(threading.Thread):
         def pkg_ver(name):
             try:
                 return __import__(name).__version__
-            except ImportError:
+            except (ImportError, AttributeError):
                 return '?'
         packages = [
             ('Cython', pkg_ver('Cython')),
@@ -492,7 +492,7 @@ class Executor(threading.Thread):
         filename = '%s-log-%s.txt' % (model_name, timestamp)
         log_file_uri = os.path.abspath(
             os.path.join(workspace, filename))
-        self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8')
+        self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8', buffering=0)
 
         # Now that the log file is open, write the arguments to it.
         self.print_args(args)

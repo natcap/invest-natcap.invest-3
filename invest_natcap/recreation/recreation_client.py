@@ -108,9 +108,86 @@ def complete_shapefile(shapefile_name):
                                                    file_extension]))
 
     return complete
-            
+
 def execute(args):
-    """The main function called by IUI.
+    """
+    The main function called by IUI.
+
+    Args:
+        workspace_dir (string): directory to be used as the workspace
+        aoi_file_name (string): area of interest where the model will run the
+            analysis.
+        grid (boolean): selects whether the area of interest should be gridded
+        grid_type (int): selects whether the grid should contain rectangular or
+            hexagonal units.
+        cell_size (float): The size of the grid units measured in the
+            projection units of the AOI. For example, UTM projections
+            use meters.
+        comments (string): Any user comments to be included as part of the
+            model run.
+        data_dir (string): Directory containing any data to be included in
+            model run.
+        download (boolean): Includes the processed, unrestricted data in the
+            results, which could be useful for scenarios.
+        global_data (boolean): Indicates whether to use global datasets
+        landscan (boolean): Use landscan's global distribution of ambient
+            population
+        protected (boolean): Use World Database of protected areas
+        osm (boolean): Use Open Street Maps (OSM)
+        osm_1 (boolean): Use OSM Cultural data
+        osm_2 (boolean): Use OSM Industrial data
+        osm_3 (boolean): Use OSM Natural data
+        osm_4 (boolean): Use OSM Superstructure data
+        osm_0 (boolean): Use OSM Miscellaneous data
+        lulc (boolean): Use Land-Use / Land-Cover
+        lulc_1 (boolean): Use LULC Agriculture data
+        lulc_2 (boolean): Use LULC Bare data
+        lulc_3 (boolean): Use LULC Forest data
+        lulc_4 (boolean): Use LULC Grassland data
+        lulc_5 (boolean): Use LULC Shrubland data
+        lulc_6 (boolean): Use LULC Snow and Ice data
+        lulc_7 (boolean): Use LULC Urban data
+        lulc_8 (boolean): Use LULC Water data
+        ouoc (boolean): Use Ocean-Use / Ocean-Cover
+        mangroves (boolean): Use OUOC Mangrove data
+        reefs (boolean): Use OUOC Reef data
+        grass (boolean): Use OUOC Grass data
+
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'aoi_file_name': 'path/to/shapefile',
+            'grid': True,
+            'grid_type': 1,  # hexagonal (rectangular: 0)
+            'cell_size': 5000.0,
+            'comments': 'example',
+            'data_dir': 'example',
+            'download': 'example',
+            'global_data': 'example',
+            'landscan': 'example',
+            'protected': 'example',
+            'osm': True,
+            'osm_1': True,
+            'osm_2': True,
+            'osm_3': True,
+            'osm_4': False,
+            'osm_0': True,
+            'lulc': True,
+            'lulc_1': True,
+            'lulc_2': False,
+            'lulc_3': False,
+            'lulc_4': True,
+            'lulc_5': True,
+            'lulc_6': False,
+            'lulc_7': True,
+            'lulc_8': True,
+            'ouoc': True,
+            'mangroves': True,
+            'reefs': True,
+            'grass': False,
+        }
+
     """
     #multiprocess cleanup
     args.pop("_process_pool")

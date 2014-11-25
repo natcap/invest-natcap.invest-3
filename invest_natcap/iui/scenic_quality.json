@@ -28,7 +28,7 @@
                                 "args_id" : "workspace_dir",
                                 "type": "folder",
                                 "label": "Workspace",
-				"defaultValue": "../ScenicQuality",
+				                "defaultValue": "../ScenicQuality",
                                 "required": true,
                                 "helpText": "Results will be saved to this location." 
                             },

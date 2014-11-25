@@ -18,52 +18,80 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('pollination')
 
+
 class MissingFields(ValueError): pass
 
+
 def execute(args):
-    """Execute the pollination model from the topmost, user-accessible level.
+    """
+    Execute the pollination model from the topmost, user-accessible level.
 
-        args - a python dictionary with the following required inputs:
-            'workspace_dir' - a URI to the workspace folder.  Not required to
-                exist on disk.  Additional folders will be created inside of
-                this folder.  If there are any file name collisions, this model
-                will overwrite those files.
-            'landuse_cur_uri' - a URI to a GDAL raster on disk.
+    Args:
+        workspace_dir (string): a URI to the workspace folder.  Not required to
+            exist on disk.  Additional folders will be created inside of
+            this folder.  If there are any file name collisions, this model
+            will overwrite those files.
+        landuse_cur_uri (string): a URI to a GDAL raster on disk.
             'do_valuation' - A boolean.  Indicates whether valuation should be
-                performed.  This applies to all scenarios.
-            'landuse_attributes_uri' - a URI to a CSV on disk.  See the
-                model's documentation for details on the structure of this
-                table.
-            'guilds_uri' - a URI to a CSV on disk.  See the model's
-                documentation for details on the structure of this table.
+            performed.  This applies to all scenarios.
+        landuse_attributes_uri (string): a URI to a CSV on disk.  See the
+            model's documentation for details on the structure of this
+            table.
+        landuse_fut_uri (string): (Optional) a URI to a GDAL dataset on disk.
+            If this args dictionary entry is provided, this model will process
+            both the current and future scenarios.
+        do_valuation (boolean): Indicates whether the model should include
+            valuation
+        half_saturation (float): a number between 0 and 1 indicating the
+            half-saturation constant. See the pollination documentation for
+            more information.
+        wild_pollination_proportion (float): a number between 0 and 1
+            indicating the proportion of all pollinators that are wild.
+            See the pollination documentation for more information.
+        guilds_uri (string): a URI to a CSV on disk.  See the model's
+            documentation for details on the structure of this table.
+        ag_classes (string): (Optional) a space-separated list of land cover
+            classes that are to be considered as agricultural.  If this
+            input is not provided, all land cover classes are considered to
+            be agricultural.
+        farms_shapefile (string): (Optional) shapefile containing points
+            representing data collection points on the landscape.
+        results_suffix (string): inserted into the URI of each file created by
+            this model, right before the file extension.
 
-        Additionally, the following args dictionary entries are optional, and
-        will affect the behavior of the model if provided:
-            'landuse_fut_uri' - (Optional) a URI to a GDAL dataset on disk.  If
-                this args dictionary entry is provided, this model will process
-                both the current and future scenarios.
-            'ag_classes' - (Optional) a space-separated list of land cover
-                classes that are to be considered as agricultural.  If this
-                input is not provided, all land cover classes are considered to
-                be agricultural.
-            'results_suffix' - (Optional) a string.  If provided, this string
-                will be inserted into the URI of each file created by this
-                model, right before the file extension.
-                Example:
-                    suffix = 'aaaa'
-                    file_uri = 'foo/bar.baz'
-                    file_with_suffix = 'foo/bar_aaaa.baz'
+    Example Args Dictionary::
 
-        If args['do_valuation'] is set to True, the following args dictionary
-        entries are also required:
-            'half_saturation' - a number between 0 and 1 indicating the
-                half-saturation constant.  See the pollination documentation for
-                more information.
-            'wild_pollination_proportion' - a number between 0 and 1 indicating
-                the proportion of all pollinators that are wild.
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'landuse_cur_uri': 'path/to/raster',
+            'landuse_attributes_uri': 'path/to/csv',
+            'landuse_fut_uri': 'path/to/raster',
+            'do_valuation': 'example',
+            'half_saturation': 'example',
+            'wild_pollination_proportion': 'example',
+            'guilds_uri': 'path/to/csv',
+            'ag_classes': 'example',
+            'farms_shapefile': 'example',
+            'results_suffix': 'example',
 
-        This function has no return value, though it does save a number of
-        rasters to disk.  See the user's guide for details."""
+        }
+
+    The following args dictionary entries are optional, and
+    will affect the behavior of the model if provided:
+        1. landuse_fut_uri
+        2. ag_classes
+        3. results_suffix
+        4. farms_shapefile
+
+    If args['do_valuation'] is set to True, the following args dictionary
+    entries are also required:
+        1. half_saturation
+        2. wild_pollination_proportion
+
+    This function has no return value, though it does save a number of
+    rasters to disk.  See the user's guide for details.
+
+    """
 
     workspace = args['workspace_dir']
 

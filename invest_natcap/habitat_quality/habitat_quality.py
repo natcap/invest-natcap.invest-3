@@ -1,5 +1,5 @@
 """InVEST Habitat Quality model"""
-import math
+
 import os.path
 import logging
 import numpy
@@ -16,35 +16,53 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('habitat_quality')
 
-def execute(args):
-    """Open files necessary for the portion of the habitat_quality
-        model.
 
-        args - a python dictionary with at least the following components:
-        args['workspace_dir'] - a uri to the directory that will write output
+def execute(args):
+    """
+    Open files necessary for the portion of the habitat_quality
+    model.
+
+    Args:
+        workspace_dir (string): a uri to the directory that will write output
             and other temporary files during calculation (required)
-        args['landuse_cur_uri'] - a uri to an input land use/land cover raster
+        landuse_cur_uri (string): a uri to an input land use/land cover raster
             (required)
-        args['landuse_bas_uri'] - a uri to an input land use/land cover raster
-            (optional, but required for rarity calculations)
-        args['landuse_fut_uri'] - a uri to an input land use/land cover raster
+        landuse_fut_uri (string): a uri to an input land use/land cover raster
             (optional)
-        args['threats_uri'] - a uri to an input CSV containing data
+        landuse_bas_uri (string): a uri to an input land use/land cover raster
+            (optional, but required for rarity calculations)
+        threats_uri (string): a uri to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
             following names: 'THREAT','MAX_DIST','WEIGHT' (required).
-        args['access_uri'] - a uri to an input polygon shapefile containing
+        access_uri (string): a uri to an input polygon shapefile containing
             data on the relative protection against threats (optional)
-        args['sensitivity_uri'] - a uri to an input CSV file of LULC types,
+        sensitivity_uri (string): a uri to an input CSV file of LULC types,
             whether they are considered habitat, and their sensitivity to each
             threat (required)
-        args['half_saturation_constant'] - a python float that determines
+        half_saturation_constant (float): a python float that determines
             the spread and central tendency of habitat quality scores
             (required)
-        args['suffix'] - a python string that will be inserted into all
+        suffix (string): a python string that will be inserted into all
             raster uri paths just before the file extension.
 
-        returns nothing."""
+    Example Args Dictionary::
+
+        {
+            'workspace_dir': 'path/to/workspace_dir',
+            'landuse_cur_uri': 'path/to/landuse_cur_raster',
+            'landuse_fut_uri': 'path/to/landuse_fut_raster',
+            'landuse_bas_uri': 'path/to/landuse_bas_raster',
+            'threats_uri': 'path/to/threats_csv',
+            'access_uri': 'path/to/access_shapefile',
+            'sensitivity_uri': 'path/to/sensitivity_csv',
+            'half_saturation_constant': 0.5,
+            'suffix': '_results',
+        }
+
+    Returns:
+        none
+    """
 
     workspace = args['workspace_dir']
 
@@ -237,6 +255,8 @@ def execute(args):
                 kernel = make_linear_kernel(dr_pixel)
             elif decay_type == 'exponential':
                 kernel = make_exponential_kernel(dr_pixel)
+            else:
+                raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
 
             # create sensitivity raster based on threat

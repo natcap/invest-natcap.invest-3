@@ -1,7 +1,7 @@
 """
 """
 from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
+#gdal.UseExceptions()
 from invest_natcap import raster_utils
 
 import logging
@@ -25,6 +25,35 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
     """This is the formula for calculating the transition of soil carbon
+
+    .. math:: (af * cf * df) - \
+           \\frac{1}{(1 + tr)^y} * \
+           [(af * cf * df) - \
+            (ai * ci * di)]
+
+    where
+
+    * :math:`af` is area_final
+    * :math:`cf` is carbon_final
+    * :math:`df` is depth_final
+    * :math:`tr` is transition_rate
+    * :math:`y` is year
+    * :math:`ai` is area_initial
+    * :math:`ci` is carbon_initial
+    * :math:`di` is depth_initial
+
+    Args:
+        area_final (float): The final area of the carbon
+        carbon_final (float): The final amount of carbon per volume
+        depth_final (float): The final depth of carbon
+        transition_rate (float): The rate at which the transition occurs
+        year (float): The amount of time in years overwhich the transition occurs
+        area_initial (float): The intial area of the carbon
+        carbon_initial (float): The iniital amount of carbon per volume
+        depth_initial (float): The initial depth of carbon
+
+    Returns:
+        float: Transition amount of soil carbon
     """
 
     return (area_final * carbon_final * depth_final) - \
@@ -32,57 +61,25 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
            ((area_final * carbon_final * depth_final) - \
             (area_initial * carbon_initial * depth_initial))
 
-class ConstantOp:
-    """A class that allows constants to be added to function calls"""
-
-    def __init__(self, op, *c):
-        """Constructor for ConstantOp class
-
-        :param op: The callable operator
-        :type op: <type 'function'>
-        :param c: The list of constants
-        :type c: list
-
-        :return: instance of ConstantOp
-        :rtype: <type 'instance'>
-        """
-        self.op = op
-        self.c = c
-
-    def __call__(self, *f):
-        """Call to ConstantOp operator
-
-        :param f: The paramters with which to call the operator
-        :type f: list
-
-        :return: return of the operator
-        """
-        return apply(self.op, f+self.c)
-
-class DictOp:
-    def __init__(self, d, op, *c):
-        self.d = d
-        self.op = op
-        self.c = c
-
-    def __getitem__(self, key):
-        return apply(self.op, [self.d[key]] + self.c)
-
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
 
-    :param dataset_uri: The uri for the input raster.
-    :type dataset_uri: str
+    Args:
+        dataset_uri (str): The uri for the input raster.
+        datasource_uri (str): The uri for the output shapefile.
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
     LOGGER.debug("Creating extent from: %s", dataset_uri)
     LOGGER.debug("Storing extent in: %s", datasource_uri)
+
+    #getting projection and bounding box information
     geotransform = raster_utils.get_geotransform_uri(dataset_uri)
     bounding_box = raster_utils.get_bounding_box(dataset_uri)
     upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
 
+    #loading shapefile drive and opening output for writing
     driver = ogr.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(datasource_uri):
@@ -96,6 +93,7 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 
     dataset = gdal.Open(dataset_uri)
 
+    #adding arbitrary attribute data
     field_name = "Id"
     field_value = 1
 
@@ -139,11 +137,12 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 def sum_uri(dataset_uri, datasource_uri):
     """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
 
-    :param dataset_uri: The uri for the input raster.
-    :type dataset_uri: str
+    Args:
+        dataset_uri (str): The uri for the input raster.
+        datasource_uri (str): The uri for the input shapefile.
 
-    :return: None
-    :rtype: None
+    Returns:
+        float: The total of the raster values within the shapefile
     """
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())

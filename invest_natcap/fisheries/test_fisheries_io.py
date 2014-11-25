@@ -66,14 +66,14 @@ class TestPopulationParamsIO(unittest.TestCase):
         # Print Dictionary if debugging
         #pp.pprint(pop_dict)
 
-    def test_verify_popu_params(self):
+    def test_read_popu_params(self):
         # Check that throws error when necessary information does not exist
 
         # Test with not all necessary params
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail1.csv')
         args = {'population_csv_uri': population_csv_uri, 'sexsp': 1}
         with self.assertRaises(MissingParameter):
-            fisheries_io._verify_population_csv(args)
+            fisheries_io.read_population_csv(args, population_csv_uri)
 
         # Test Stage-based without Duration vector
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail2.csv')
@@ -81,14 +81,14 @@ class TestPopulationParamsIO(unittest.TestCase):
         args['recruitment_type'] = 'Beverton-Holt'
         args['population_type'] = 'Stage-Based'
         with self.assertRaises(MissingParameter):
-            fisheries_io._verify_population_csv(args)
+            fisheries_io.read_population_csv(args, population_csv_uri)
 
         # Test B-H / Weight without Weight vector
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail3.csv')
         args['population_csv_uri'] = population_csv_uri
         args['spawn_units'] = 'Weight'
         with self.assertRaises(MissingParameter):
-            fisheries_io._verify_population_csv(args)
+            fisheries_io.read_population_csv(args, population_csv_uri)
 
         # Test Fecundity without Fecundity vector
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Syntax_fail3.csv')
@@ -96,30 +96,30 @@ class TestPopulationParamsIO(unittest.TestCase):
         args['recruitment_type'] = 'Fecundity'
         args['harvest_units'] = 'Weight'
         with self.assertRaises(MissingParameter):
-            fisheries_io._verify_population_csv(args)
+            fisheries_io.read_population_csv(args, population_csv_uri)
 
         '''
         # Check that throws error when incorrect information exists
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Semantics_fail1.csv')
         args = {'population_csv_uri': population_csv_uri, 'sexsp': 1}
         self.assertRaises(
-            MissingParameter, fisheries_io._verify_population_csv(args))
+            MissingParameter, fisheries_io.read_population_csv(args))
 
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Semantics_fail2.csv')
         args = {'population_csv_uri': population_csv_uri, 'sexsp': 1}
         self.assertRaises(
-            MissingParameter, fisheries_io._verify_population_csv(args))
+            MissingParameter, fisheries_io.read_population_csv(args))
 
         population_csv_uri = os.path.join(data_directory, 'CSVs/Fail/TestCSV_SN_Semantics_fail3.csv')
         args = {'population_csv_uri': population_csv_uri, 'sexsp': 1}
         self.assertRaises(
-            MissingParameter, fisheries_io._verify_population_csv(args))
+            MissingParameter, fisheries_io.read_population_csv(args))
         '''
 
 
 class TestMigrationIO(unittest.TestCase):
     def test_parse_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             'migr_cont': True,
             'migration_dir': uri
@@ -131,15 +131,15 @@ class TestMigrationIO(unittest.TestCase):
         self.assertEqual(
             mig_dict['adult'].shape[0], mig_dict['adult'].shape[1])
 
-    def test_verify_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+    def test_read_migration(self):
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             "migration_dir": uri,
             "migr_cont": True,
             }
         class_list = ['larva', 'other', 'other2', 'adult']
         region_list = ['Region 1', 'Region 2', '...', 'Region N']
-        mig_dict = fisheries_io._verify_migration_tables(
+        mig_dict = fisheries_io.read_migration_tables(
             args, class_list, region_list)
         test_matrix_dict = fisheries_io._parse_migration_tables(args, ['larva'])
         # pp.pprint(test_matrix_dict)
@@ -157,6 +157,7 @@ class TestSingleParamsIO(unittest.TestCase):
             'aoi_uri': None,
             'population_type': None,
             'sexsp': 1,
+            'do_batch': False,
             'total_init_recruits': -1.0,
             'total_timesteps': -1,
             'recruitment_type': 'Ricker',
@@ -227,10 +228,10 @@ class TestSingleParamsIO(unittest.TestCase):
         os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
-class TestFetchVerifyArgs(unittest.TestCase):
-    def test_fetch_verify(self):
+class TestFetchArgs(unittest.TestCase):
+    def test_fetch_args(self):
         csv_uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
-        mig_uri = os.path.join(data_directory, 'Migration/')
+        mig_uri = os.path.join(data_directory, 'migration/')
         workspace_dir = os.path.join(os.getcwd(), 'test')
         args = {
             'population_csv_uri': csv_uri,
@@ -239,7 +240,8 @@ class TestFetchVerifyArgs(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'aoi_uri': None,
             'population_type': "Stage-Based",
-            'sexsp': 1,
+            'sexsp': 'No',
+            'do_batch': False,
             'total_init_recruits': 1.2,
             'total_timesteps': 100,
             'recruitment_type': 'Ricker',
@@ -253,10 +255,42 @@ class TestFetchVerifyArgs(unittest.TestCase):
             'unit_price': 20.2,
             'harv_cont': True,
         }
-        vars_dict = fisheries_io.fetch_verify_args(args)
+        vars_dict = fisheries_io.fetch_args(args)
         # pp.pprint(vars_dict)
         # with self.assertRaises():
-        #    fisheries_io.fetch_verify_args(args)
+        #    fisheries_io.fetch_args(args)
+        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
+
+    def test_fetch_args2(self):
+        csv_dir = os.path.join(data_directory, 'CSVs/Multiple_CSV_Test')
+        mig_uri = os.path.join(data_directory, 'migration/')
+        workspace_dir = os.path.join(os.getcwd(), 'test')
+        args = {
+            'population_csv_dir': csv_dir,
+            'migr_cont': True,
+            'migration_dir': mig_uri,
+            'workspace_dir': workspace_dir,
+            'aoi_uri': None,
+            'population_type': "Stage-Based",
+            'sexsp': 'No',
+            'do_batch': True,
+            'total_init_recruits': 1.2,
+            'total_timesteps': 100,
+            'recruitment_type': 'Ricker',
+            'spawn_units': 'Individuals',
+            'alpha': 1.0,
+            'beta': 1.2,
+            'total_recur_recruits': 100.0,
+            'migr_cont': True,
+            'harvest_units': "Weight",
+            'frac_post_process': 0.2,
+            'unit_price': 20.2,
+            'harv_cont': True,
+        }
+        model_list = fisheries_io.fetch_args(args)
+        pp.pprint(model_list)
+        # with self.assertRaises():
+        #    fisheries_io.fetch_args(args)
         os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
@@ -269,6 +303,7 @@ class TestGenerateCSV(unittest.TestCase):
             'total_timesteps': 15,
             'population_type': 'Age-Based',
             'sexsp': 2,
+            'do_batch': False,
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
             'recruitment_type': 'Fixed',
@@ -323,6 +358,7 @@ class TestGenerateHTML(unittest.TestCase):
             'total_timesteps': 15,
             'population_type': 'Age-Based',
             'sexsp': 2,
+            'do_batch': False,
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
             'recruitment_type': 'Fixed',

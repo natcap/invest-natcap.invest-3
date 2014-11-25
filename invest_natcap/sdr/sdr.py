@@ -328,17 +328,17 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
     
     LOGGER.info('calculate sediment retention index')
-    def sediment_index_op(rkls, cp_factor, sdr_factor):
-        nodata_mask = (rkls == nodata_rkls) | (cp_factor == nodata_cp) | (sdr_factor == sdr_nodata)
+    def sediment_index_op(rkls, usle, sdr_factor):
+        nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (sdr_factor == sdr_nodata)
         return numpy.where(
-            nodata_mask, nodata_sed_retention_index, rkls * (1 - cp_factor) * sdr_factor)
+            nodata_mask, nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
 
     nodata_sed_retention_index = -1
     sed_retention_index_uri = os.path.join(
         output_dir, 'sed_retention_index%s.tif' % file_suffix)
 
     raster_utils.vectorize_datasets(
-        [usle_uri, cp_factor_uri, sdr_factor_uri], sediment_index_op, sed_retention_index_uri,
+        [rkls_uri, usle_uri, sdr_factor_uri], sediment_index_op, sed_retention_index_uri,
         gdal.GDT_Float32, nodata_sed_retention_index, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
@@ -658,11 +658,12 @@ def _prepare(**args):
     raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
-        '''Threshold slope between 0.001 and 1.0'''
-        slope_copy = slope.copy()
+        '''Convert slope to m/m and clamp at 0.005 and 1.0 as 
+            desribed in Cavalli et al., 2013. '''
+        slope_copy = slope / 100
         nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.001] = 0.001
-        slope_copy[slope > 1.0] = 1.0
+        slope_copy[slope_copy < 0.005] = 0.005
+        slope_copy[slope_copy > 1.0] = 1.0
         slope_copy[nodata_mask] = slope_nodata
         return slope_copy
     raster_utils.vectorize_datasets(
@@ -686,7 +687,8 @@ def _prepare(**args):
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
     ls_nodata = -1.0
     calculate_ls_factor(
-        flow_accumulation_uri, thresholded_slope_uri, flow_direction_uri, ls_uri, ls_nodata)
+        flow_accumulation_uri, original_slope_uri, flow_direction_uri, ls_uri,
+        ls_nodata)
     
     return {
         'aligned_dem_uri': aligned_dem_uri,
