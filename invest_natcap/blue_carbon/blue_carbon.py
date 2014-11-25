@@ -73,10 +73,13 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """
     LOGGER.debug("Creating extent from: %s", dataset_uri)
     LOGGER.debug("Storing extent in: %s", datasource_uri)
+
+    #getting projection and bounding box information
     geotransform = raster_utils.get_geotransform_uri(dataset_uri)
     bounding_box = raster_utils.get_bounding_box(dataset_uri)
     upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
 
+    #loading shapefile drive and opening output for writing
     driver = ogr.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(datasource_uri):
@@ -90,6 +93,7 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 
     dataset = gdal.Open(dataset_uri)
 
+    #adding arbitrary attribute data
     field_name = "Id"
     field_value = 1
 
