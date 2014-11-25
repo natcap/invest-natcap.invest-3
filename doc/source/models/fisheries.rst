@@ -1,45 +1,55 @@
 Fisheries Package
 =================
 
+Table of Contents
+-----------------
+
++ `Model Entry Point`_
++ `Fisheries Module`_
++ `Fisheries IO Module`_
++ `Fisheries Model Module`_
++ `Fisheries Preprocessor Module`_
++ `Fisheries Preprocessor IO Module`_
+
 Model Entry Point
 -----------------
 
 .. autofunction:: invest_natcap.fisheries.fisheries.execute
 
-Fisheries
----------
+Fisheries Module
+----------------
 
 .. automodule:: invest_natcap.fisheries.fisheries
     :members:
     :undoc-members:
     :show-inheritance:
 
-Fisheries IO
-------------
+Fisheries IO Module
+-------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_io
     :members:
     :undoc-members:
     :show-inheritance:
 
-Fisheries Model
----------------
+Fisheries Model Module
+----------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_model
     :members:
     :undoc-members:
     :show-inheritance:
 
-Fisheries Preprocessor
-----------------------
+Fisheries Preprocessor Module
+-----------------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_preprocessor
     :members:
     :undoc-members:
     :show-inheritance:
 
-Fisheries Preprocessor IO
--------------------------
+Fisheries Preprocessor IO Module
+--------------------------------
 
 .. automodule:: invest_natcap.fisheries.fisheries_preprocessor_io
     :members:

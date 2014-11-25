@@ -17,10 +17,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-class MissingParameter(Exception):
+class MissingParameter(StandardError):
     '''
-    A broad exception class that is raised when a necessary parameter is not
-    provided.
+    An exception class that may be raised when a necessary parameter is not
+    provided by the user.
     '''
     def __init__(self, msg):
         self.msg = msg
