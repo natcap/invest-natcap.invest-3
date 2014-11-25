@@ -61,33 +61,6 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
            ((area_final * carbon_final * depth_final) - \
             (area_initial * carbon_initial * depth_initial))
 
-class ConstantOp:
-    """A class that allows constants to be added to function calls
-
-    Essentially the intent here was to facilitate the ability
-
-    Args:
-        op (types.FunctionType): The callable operator
-        c (list): The list of constants
-
-    Returns:
-        types.InstanceType: Instance of ConstantOp
-    """
-
-    def __init__(self, op, *c):
-        self.op = op
-        self.c = c
-
-    def __call__(self, *f):
-        """Call to ConstantOp instance invoking call to op
-
-        f (list): The paramters with which to call the operator
-
-        Returns:
-            float: The return of op
-        """
-        return apply(self.op, f+self.c)
-
 class DictOp:
     def __init__(self, d, op, *c):
         self.d = d
