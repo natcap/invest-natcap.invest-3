@@ -553,6 +553,12 @@ def execute(args):
         ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2}) \
         ]
 
+    # List valid habitat types
+    args['valid_habitat_types'] = set()
+    for habitat_information in args['habitat_information']:
+        args['valid_habitat_types'].add(habitat_information[1]['habitat'])
+#    print('valid_habitat_types', valid_habitat_types)
+
     # List all shapefiles in the habitats directory
     files = []
 
@@ -571,6 +577,15 @@ def execute(args):
     # Process each habitat
     shapefile_required_fields = { \
         'land polygon': ['MHHW', 'MSL', 'MLLW'],
+        'soil type': [ \
+            'DryDensity', \
+            'ErosionCst', \
+            'SedSize', \
+            'ForshrSlop', \
+            'BermLength', \
+            'BermHeight', \
+            'DuneHeight', \
+            'Type'],
         'seagrass':[ \
             'StemHeight', \
             'StemDiam', \
@@ -612,17 +627,25 @@ def execute(args):
     field_values = {} # weight for each field_value
     shapefile_type_checksum = {} # checksum for each shapefile type
     power = 1
+    shapefile_fields = set()
+#    print('----- Computing checksums -----')
     for shapefile_type in shapefile_required_fields:
+#        print('shapefile', shapefile_type)
         required_fields = shapefile_required_fields[shapefile_type]
-        shapefile_fields = set()
         field_signature = 0
         for required_field in required_fields:
+#            print('    field', required_field)
             if required_field not in shapefile_fields:
+#                print('    new field. Set to', power)
                 shapefile_fields.add(required_field)
                 field_values[required_field] = power
-                field_signature += power
                 power *= 2
+            field_signature += field_values[required_field]
+#            print('    Adding', field_values[required_field], 'to checksum', (field_signature))
+
         shapefile_type_checksum[field_signature] = shapefile_type
+
+#    print('checksums', shapefile_type_checksum)
 
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
@@ -642,20 +665,20 @@ def execute(args):
             field_count = layer_def.GetFieldCount()
 
             # Extract field names and build checksum
+#            print('available fields', field_values.keys())
             shapefile_checksum = 0
             for field_id in range(field_count):
                 field_defn = layer_def.GetFieldDefn(field_id)
                 field_name = field_defn.GetName()
 
- #               print('checking field', field_name)
- #               print('against', field_values.keys())
+#                print('checking field', field_name)
                 if field_name in field_values:
- #                   print('found')
+#                    print('found', field_values[field_name])
                     shapefile_checksum += field_values[field_name]
- #               else:
- #                   print('not found')
+#                else:
+#                    print('not found')
 
- #           print('checksum for', file_uri, shapefile_checksum)
+#            print('checksum for', file_uri, shapefile_checksum)
 
             # If checksum corresponds to a known shapefile type, process it
             if shapefile_checksum in shapefile_type_checksum:

@@ -415,6 +415,11 @@ def compute_transects(args):
 
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
+            
+        # Skip if shapefile type is not a valid habitat
+        if not shp_type in args['valid_habitat_types']:
+            print('skipping', shp_type)
+            continue
 
         hdf5_files[shp_type] = []
 
