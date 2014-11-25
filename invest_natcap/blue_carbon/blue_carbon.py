@@ -64,11 +64,12 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
 
-    :param dataset_uri: The uri for the input raster.
-    :type dataset_uri: str
+    Args:
+        dataset_uri (str): The uri for the input raster.
+        datasource_uri (str): The uri for the output shapefile.
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
     LOGGER.debug("Creating extent from: %s", dataset_uri)
     LOGGER.debug("Storing extent in: %s", datasource_uri)
