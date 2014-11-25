@@ -61,15 +61,6 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
            ((area_final * carbon_final * depth_final) - \
             (area_initial * carbon_initial * depth_initial))
 
-class DictOp:
-    def __init__(self, d, op, *c):
-        self.d = d
-        self.op = op
-        self.c = c
-
-    def __getitem__(self, key):
-        return apply(self.op, [self.d[key]] + self.c)
-
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
 
