@@ -137,11 +137,12 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 def sum_uri(dataset_uri, datasource_uri):
     """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
 
-    :param dataset_uri: The uri for the input raster.
-    :type dataset_uri: str
+    Args:
+        dataset_uri (str): The uri for the input raster.
+        datasource_uri (str): The uri for the input shapefile.
 
-    :return: None
-    :rtype: None
+    Returns:
+        float: The total of the raster values within the shapefile
     """
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
