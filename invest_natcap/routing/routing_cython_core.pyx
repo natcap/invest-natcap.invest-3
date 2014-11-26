@@ -30,7 +30,6 @@ LOGGER = logging.getLogger('routing cython core')
 
 cdef double PI = 3.141592653589793238462643383279502884
 
-cdef int MAX_WINDOW_SIZE = 2**12
 cdef double INF = numpy.inf
 
 @cython.boundscheck(False)
@@ -1304,54 +1303,27 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
                     max_downhill_facet = -1
                     lowest_dem = e_0
-                    #we have a special case if we're on the border of the raster
-                    if (e_0_col == 0 or e_0_col == n_cols - 1 or e_0_row == 0 or e_0_row == n_rows - 1):
-                        #loop through the neighbor edges, and manually set a direction
-                        for facet_index in range(8):
-                            e_1_row = row_offsets[facet_index] + global_row
-                            e_1_col = col_offsets[facet_index] + global_col
-                            if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
-                                continue
-                            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
-                            e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
-                            if e_1 == dem_nodata:
-                                continue
-                            if e_1 < lowest_dem:
-                                lowest_dem = e_1
-                                max_downhill_facet = facet_index
-                                
-                        if max_downhill_facet != -1:
-                            flow_direction = 3.14159265 / 4.0 * max_downhill_facet
-                        else:
-                            #we need to point to the left or right
-                            if global_col == 0:
-                                flow_direction = 3.14159265 / 2.0 * 2
-                            elif global_col == n_cols - 1:
-                                flow_direction = 3.14159265 / 2.0 * 0
-                            elif global_row == 0:
-                                flow_direction = 3.14159265 / 2.0 * 1
-                            elif global_row == n_rows - 1:
-                                flow_direction = 3.14159265 / 2.0 * 3
-                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = flow_direction
-                        cache_dirty[e_0_row_index, e_0_col_index] = 1
-                        #done with this pixel, go to the next
-                        continue
-                        
+
                     #Calculate the flow flow_direction for each facet
                     slope_max = 0 #use this to keep track of the maximum down-slope
                     flow_direction_max_slope = 0 #flow direction on max downward slope
                     max_index = 0 #index to keep track of max slope facet
                     
-                    #max_downhill_facet = -1
-                    #lowest_dem = e_0
                     contaminated = False
                     for facet_index in range(8):
                         #This defines the three points the facet
 
                         e_1_row = e_1_offsets[facet_index * 2 + 0] + global_row
                         e_1_col = e_1_offsets[facet_index * 2 + 1] + global_col
+                        #test if on the boundary of the raster
+                        if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
+                            continue
+
                         e_2_row = e_2_offsets[facet_index * 2 + 0] + global_row
                         e_2_col = e_2_offsets[facet_index * 2 + 1] + global_col
+                        #test if on the boundary of the raster
+                        if (e_2_col == -1 or e_2_col == n_cols or e_2_row == -1 or e_2_row == n_rows):
+                            continue
 
                         block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
                         block_cache.update_cache(e_2_row, e_2_col, &e_2_row_index, &e_2_col_index, &e_2_row_block_offset, &e_2_col_block_offset)
