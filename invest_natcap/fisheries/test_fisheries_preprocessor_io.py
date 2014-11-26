@@ -1,5 +1,6 @@
 import unittest
 import os
+import pprint
 
 import numpy as np
 from numpy import testing
@@ -7,7 +8,6 @@ from numpy import testing
 import fisheries_preprocessor_io as io
 from fisheries_preprocessor_io import MissingParameter
 
-import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 workspace_dir = '~/workspace/fisheries_tests'
@@ -329,180 +329,153 @@ class TestFetchArgs(unittest.TestCase):
                 assert(g == c)
 
 
-# class TestGenerateCSV(unittest.TestCase):
-#     def setUp(self):
-#         self.vars_dict = {
-#             # User Args
-#             'workspace_dir': workspace_dir,
-#             'sexsp': 2,
-#             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-#             'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
-#             'gamma': 0.5,
+class TestSavePopCSV(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
+            'sexsp': 'Yes',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/output/pop_params_modified.csv',
+            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/habitat_params.csv',
+            'gamma': 0.5,
+        }
+        self.vars_check = {
+            'Class_vectors': {
+                'Maturity': np.array(
+                  [[ 0.,  0.,  0.,  1.,  1.],
+                   [ 0.,  0.,  0.,  0.,  0.]]),
+                'Vulnfishing': np.array(
+                    [[ 0.,  0.,  0.,  0.,  0.],
+                     [ 0.,  0.,  0.,  0.,  1.]])},
+            'Classes': ['Class0', 'Class1', 'Class2', 'Class3', 'Class4'],
+            'Hab_chg_hx': np.array(
+                [[-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
+                 [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
+                 [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25]]),
+            'Hab_class_mvmt_a': np.array([0, 0, 1, 0, 0]),
+            'Hab_classes': ['Class0', 'Class1', 'Class2', 'Class3', 'Class4'],
+            'Hab_dep_ha': np.array([[ 0.,  0.,  1.,  1.,  1.],
+               [ 1.,  1.,  0.,  0.,  0.],
+               [ 1.,  1.,  0.,  0.,  0.]]),
+            'Hab_dep_num_a': np.array([2, 2, 1, 1, 1]),
+            'Hab_regions': [   'Region1',
+                               'Region2',
+                               'Region3',
+                               'Region4',
+                               'Region5',
+                               'Region6'],
+            'Habitats': ['Habitat1', 'Habitat2', 'Habitat3'],
+            'Region_vectors': {
+                'Exploitationfraction': np.array([ 0.47,  0.47,  0.47,  0.47,  0.47,  0.47]),
+                'Larvaldispersal': np.array([ 0.09,  0.12,  0.18,  0.29,  0.17,  0.15])},
+            'Regions': [   'Region1',
+                           'Region2',
+                           'Region3',
+                           'Region4',
+                           'Region5',
+                           'Region6'],
+            'Surv_nat_xsa': np.array(
+                [[[  1.56916669e-06,   7.25000000e-01,   7.25000000e-01,
+                     7.25000000e-01,   7.25000000e-01],
+                  [  1.56916669e-06,   7.25000000e-01,   7.25000000e-01,
+                     7.25000000e-01,   5.27500000e-01]],
 
-#             # Pop CSV Vars
-#             'Surv_nat_xsa': np.array(
-#                 [[[1.56916669e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                  [1.56916669e-06, 7.25000000e-01, 7.25000000e-01,
-#                   7.25000000e-01, 5.27500000e-01]],
+               [[  2.00204026e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.00204026e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[2.00204026e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.00204026e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  1.46094830e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  1.46094830e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[1.46094830e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [1.46094830e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  1.67738509e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  1.67738509e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[1.67738509e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [1.67738509e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  2.11025866e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.11025866e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[2.11025866e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.11025866e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]]]),
+            'gamma': 0.5,
+            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/habitat_params.csv',
+            'output_dir': '../../test/invest-data/test/data/fisheries/preprocess/output',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/pop_params.csv',
+            'sexsp': 2,
+            'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
 
-#                  [[2.27258625e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.27258625e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]]]),
-#             'Classes': np.array(['Class0', 'Class1', 'Class2', 'Class3', 'Class4']),
-#             'Class_vectors': {
-#                 'Vulnfishing': np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 1]]),
-#                 'Maturity': np.array([[0, 0, 0, 1, 1], [0, 0, 0, 0, 0]]),
-#             },
-#             'Regions': np.array(['Region1',
-#                                  'Region2',
-#                                  'Region3',
-#                                  'Region4',
-#                                  'Region5',
-#                                  'Region6']),
-#             'Region_vectors': {
-#                 'Exploitationfraction': np.array(
-#                     [0.47, 0.47, 0.47, 0.47, 0.47, 0.47]),
-#                 'Larvaldispersal': np.array(
-#                     [0.09, 0.12, 0.18, 0.29, 0.17, 0.15]),
-#             },
+            # Generated Variable
+            'Surv_nat_xsa_mod': np.array(
+                [[[  1.56916669e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  1.56916669e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#             # Habitat CSV Vars
-#             'Habitats': ['Habitat1', 'Habitat2', 'Habitat3'],
-#             'Hab_classes': ['Class0', 'Class1', 'Class2', 'Class3', 'class4'],
-#             'Hab_regions': [
-#                 'Region1',
-#                 'Region2',
-#                 'Region3',
-#                 'Region4',
-#                 'Region5',
-#                 'Region6'],
-#             'Hab_chg_hx': np.array(
-#                 [[-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
-#                  [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
-#                  [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25]]),
-#             'Hab_dep_ha': np.array(
-#                 [[0.0, 0.0, 1.0, 1.0, 1.0],
-#                  [1.0, 1.0, 0.0, 0.0, 0.0],
-#                  [1.0, 1.0, 0.0, 0.0, 0.0]]),
-#             'Hab_class_mvmt_a': np.array([0, 0, 1, 0, 0]),
-#             'Hab_dep_num_a': np.array([2, 2, 1, 1, 1]),
+               [[  2.00204026e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.00204026e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#             # Preprocessor Generated Variables
-#             # ...
-#         }
-#         self.args = {
-#             'workspace_dir': workspace_dir,
-#             'sexsp': 2,
-#             'population_csv_uri': os.path.join(outputs_dir, 'pop_params.csv'),
-#             'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
-#             'gamma': 0.5,
-#         }
-#         self.check = {
-#             # Pop CSV Args
-#             'Surv_nat_xsa': np.array(
-#                 [[[1.56916669e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                  [1.56916669e-06, 7.25000000e-01, 7.25000000e-01,
-#                   7.25000000e-01, 5.27500000e-01]],
+               [[  1.46094830e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  1.46094830e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[2.00204026e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.00204026e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  1.67738509e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  1.67738509e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[1.46094830e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [1.46094830e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  2.11025866e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.11025866e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]],
 
-#                  [[1.67738509e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [1.67738509e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+               [[  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   7.25000000e-01],
+                [  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
+                   7.25000000e-01,   5.27500000e-01]]]),
+        }
 
-#                  [[2.11025866e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.11025866e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]],
+    def test_save_population_csv(self):
+        io.save_population_csv(self.vars_check)
+        guess = io.fetch_args(self.args)
+        # pp.pprint(self.vars_check)
+        # pp.pprint(guess)
 
-#                  [[2.27258625e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 7.25000000e-01],
-#                   [2.27258625e-06, 7.25000000e-01, 7.25000000e-01,
-#                    7.25000000e-01, 5.27500000e-01]]]),
-
-#             'Classes': np.array(['Class0', 'Class1', 'Class2', 'Class3', 'Class4']),
-#             'Class_vectors': {
-#                 'Vulnfishing': np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 1]]),
-#                 'Maturity': np.array([[0, 0, 0, 1, 1], [0, 0, 0, 0, 0]]),
-#             },
-#             'Regions': np.array(['Region1',
-#                                  'Region2',
-#                                  'Region3',
-#                                  'Region4',
-#                                  'Region5',
-#                                  'Region6']),
-
-#             'Region_vectors': {
-#                 'Exploitationfraction': np.array(
-#                     [0.47, 0.47, 0.47, 0.47, 0.47, 0.47]),
-#                 'Larvaldispersal': np.array(
-#                     [0.09, 0.12, 0.18, 0.29, 0.17, 0.15]),
-#             },
-#         }
-
-#     def test_save_population_csv(self):
-#         io.save_population_csv(self.args)
-#         modified_pop_dict = io.read_population_csv(self.args)
-
-#         for k in self.check.keys():
-#             if k not in [
-#                 # User Args not added back to dictionary yet
-#                 'workspace_dir',
-#                 'sexsp',
-#                 'population_csv_uri',
-#                 'habitat_csv_uri',
-#                 'gamma'
-#             ]:
-#                 g = modified_pop_dict[k]
-#                 c = self.check[k]
-#                 if isinstance(g, np.ndarray):
-#                     np.testing.assert_array_almost_equal(g, c)
-#                 elif isinstance(g, list):
-#                     assert(all(map(lambda x, y: x == y, g, c)))
-#                 elif isinstance(g, dict):
-#                     for m in g.keys():
-#                         n = g[m]
-#                         d = c[m]
-#                         if isinstance(n, np.ndarray):
-#                             np.testing.assert_array_almost_equal(n, d)
-#                         elif isinstance(n, list):
-#                             assert(all(map(lambda x, y: x == y, n, d)))
-#                         else:
-#                             assert(n == d)
-#                 else:
-#                     assert(g == c)
+        for k in guess.keys():
+            if k not in [
+                # User Args not added back to dictionary yet
+                'workspace_dir',
+                'sexsp',
+                'population_csv_uri',
+                'habitat_csv_uri',
+                'gamma'
+            ]:
+                g = guess[k]
+                c = self.vars_check[k]
+                if isinstance(g, np.ndarray):
+                    np.testing.assert_array_almost_equal(g, c)
+                elif isinstance(g, list):
+                    assert(all(map(lambda x, y: x == y, g, c)))
+                elif isinstance(g, dict):
+                    for m in g.keys():
+                        n = g[m]
+                        d = c[m]
+                        if isinstance(n, np.ndarray):
+                            np.testing.assert_array_almost_equal(n, d)
+                        elif isinstance(n, list):
+                            assert(all(map(lambda x, y: x == y, n, d)))
+                        else:
+                            assert(n == d)
+                else:
+                    assert(g == c)
 
 
 if __name__ == '__main__':

@@ -41,7 +41,7 @@ Presumed Order of Axes for Given Functions:
 
 def initialize_vars(vars_dict):
     '''
-    Initializes variables
+    Initializes variables for model run
 
     Args:
         vars_dict (dictionary): verified arguments and variables
@@ -49,11 +49,11 @@ def initialize_vars(vars_dict):
     Returns:
         vars_dict (dictionary): modified vars_dict with additional variables
 
-    Example Return Dictionary::
+    Example Returns::
 
-        {
-            # (original items in dictionary)
-            ...
+        vars_dict = {
+            # (original vars)
+
             'Survtotalfrac': np.array([...]),  # a,s,x
             'G_survtotalfrac': np.array([...]),  # (same)
             'P_survtotalfrac': np.array([...]),  # (same)
@@ -104,9 +104,6 @@ def set_recru_func(vars_dict):
         rec_func (lambda function): recruitment function
 
     Example Output of Returned Recruitment Function::
-
-        np.array([1.5, 2.2, 3.6, 4.9])  # Recruitment in each region
-        45  # Number of Spawners
 
         N_next[0], spawners = rec_func(N_prev)
     '''
