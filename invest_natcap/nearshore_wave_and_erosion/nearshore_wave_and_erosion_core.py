@@ -297,7 +297,8 @@ def compute_transects(args):
     print('transect_info size', len(transect_info))
 
     # Create a numpy array to store the habitat type
-    field_count = args['maximum_field_count']
+    habitat_field_count = args['habitat_field_count']
+    soil_field_count = args['soil_field_count']
     transect_count = tiles
 
     # Creating HDF5 file that will store the transect data
@@ -308,6 +309,17 @@ def compute_transects(args):
     
 
 
+    soil_type_dataset = \
+        transect_data_file.create_dataset('soil_types', \
+            (transect_count, max_transect_length), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+
+    soil_properties_dataset = \
+        transect_data_file.create_dataset('soil_properties', \
+            (transect_count, soil_field_count, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
     habitat_type_dataset = \
         transect_data_file.create_dataset('habitat_types', \
             (transect_count, max_transect_length), \
@@ -316,7 +328,7 @@ def compute_transects(args):
     
     habitat_properties_dataset = \
         transect_data_file.create_dataset('habitat_properties', \
-            (transect_count, field_count, max_transect_length), \
+            (transect_count, habitat_field_count, max_transect_length), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
     bathymetry_dataset = \
@@ -356,6 +368,12 @@ def compute_transects(args):
             dtype = 'i4')
 
 
+
+    soil_type_array = \
+        np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
+
+    soil_properties_array = \
+        np.ones(soil_properties_dataset.shape) * habitat_nodata
 
     habitat_type_array = \
         np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
@@ -416,11 +434,6 @@ def compute_transects(args):
     # Iterate through shapefile types
     for shp_type in args['shapefiles']:
             
-        # Skip if shapefile type is not a valid habitat
-        if not shp_type in args['valid_habitat_types']:
-            print('skipping', shp_type)
-            continue
-
         hdf5_files[shp_type] = []
 
         for shp_name in args['shapefiles'][shp_type]:
@@ -456,8 +469,14 @@ def compute_transects(args):
                     (positions_array[transect, 0, start:end], \
                     positions_array[transect, 1, start:end])
                 
-                # Load the habitat type buffer
-                destination = habitat_type_array[transect,:end-start]
+                # Skip if shapefile type is not a valid habitat
+                if shp_type in args['valid_habitat_types']:
+                    # Load the habitat type buffer
+                    destination = habitat_type_array[transect,start:end]
+                elif shp_type == 'soil type':
+                    destination = soil_type_array[transect,start:end]
+                else:
+                    continue
 
                 #Load the habitats as sampled from the raster
                 source = array[raw_positions]
@@ -500,13 +519,14 @@ def compute_transects(args):
                     (raw_positions[0][source_nodata_mask], \
                     raw_positions[1][source_nodata_mask])
 
-                # Update the values using source
-                transects[masked_positions] = source[mask]
-                # Update nodata appropriately
-                transects[source_nodata_coordinates] = -2
-                # Leave the transect ID on the transect's shore
-                transects[(raw_positions[0][shore], \
-                    raw_positions[1][shore])] = transect
+                if shp_type in args['valid_habitat_types']:
+                    # Update the values using source
+                    transects[masked_positions] = source[mask]
+                    # Update nodata appropriately
+                    transects[source_nodata_coordinates] = -2
+                    # Leave the transect ID on the transect's shore
+                    transects[(raw_positions[0][shore], \
+                        raw_positions[1][shore])] = transect
 
             print('')
 
@@ -551,10 +571,16 @@ def compute_transects(args):
 
                     source = array[raw_positions]
 
-                    destination = \
-                        habitat_properties_array[transect, field_id, start:end]
+                    if shp_type in args['valid_habitat_types']:
+                        # Load the habitat type buffer
+                        destination = \
+                                habitat_properties_array[transect, field_id, start:end]
+                    elif shp_type == 'soil type':
+                        destination = soil_properties_array[transect, field_id,start:end]
+                    else:
+                        continue
 
-                    # Save transect to file
+                        # Save transect to file
                     mask = mask_dict[transect]
 
                     destination[mask] = source[mask]
@@ -565,7 +591,8 @@ def compute_transects(args):
                     masked_positions = \
                         (clipped_positions[0][mask], clipped_positions[1][mask])
                     
-                    transects[masked_positions] = source[mask]
+                    if shp_type in args['valid_habitat_types']:
+                        transects[masked_positions] = source[mask]
                 print('')
 
                 # Close the raster before proceeding to the next one
@@ -574,6 +601,8 @@ def compute_transects(args):
                 array = None
 
     # Both the habitat type and the habitat field data are complete, save them
+    soil_type_dataset[...] = soil_type_array[...]
+    soil_properties_dataset[...] = soil_properties_array[...]
     habitat_type_dataset[...] = habitat_type_array[...]
     habitat_properties_dataset[...] = habitat_properties_array[...]
     bathymetry_dataset[...] = bathymetry_array[...]

@@ -619,9 +619,12 @@ def execute(args):
         os.path.join(args['intermediate_dir'], 'field_indices')
     json.dump(args['field_index'], open(field_index_dictionary_uri, 'w'))
 
-    args['maximum_field_count'] = \
+    args['habitat_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
-            for shp in shapefile_required_fields])
+            for shp in shapefile_required_fields \
+                if shp in args['valid_habitat_types']])
+
+    args['soil_field_count'] = len(shapefile_required_fields['soil type'])
 
     # Collect all the different fields and assign a weight to each
     field_values = {} # weight for each field_value
