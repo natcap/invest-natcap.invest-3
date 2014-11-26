@@ -616,7 +616,7 @@ def save_population_csv(vars_dict):
             'sexsp': 2,
             'population_csv_uri': 'path/to/csv',  # original csv file
             'Surv_nat_xsa': np.ndarray([...]),
-            'Surv_nat_xsa_mod': np.ndarray([...])
+            'Surv_nat_xsa_mod': np.ndarray([...]),
 
             # Class Vectors
             'Classes': np.array([...]),
