@@ -34,6 +34,7 @@
           "args_id": "aoi_uri",
           "type": "file",
           "label": "Area(s) of Interest (SHP)",
+          "defaultValue": "../Fisheries/Input/Shapefile_Galveston/Galveston_Subregion.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
@@ -155,7 +156,7 @@
               "dataType": "float",
               "label": "Total Initial Recruits",
               "required": true,
-              "defaultValue": "4686959.42894736",
+              "defaultValue": "200000",
               "validateAs": {
                 "type": "number"
               },
@@ -166,7 +167,7 @@
               "args_id": "recruitment_type",
               "type": "dropdown",
               "label": "Recruitment Function Type",
-              "defaultValue": "Beverton-Holt",
+              "defaultValue": "Ricker",
               "required": true,
               "options": [
                 "Beverton-Holt",
@@ -183,7 +184,7 @@
               "args_id": "spawn_units",
               "type": "dropdown",
               "label": "Spawners by Individuals or Weight (Beverton-Holt / Ricker)",
-              "defaultValue": "Weight",
+              "defaultValue": "Individuals",
               "required": true,
               "options": [
                 "Individuals",
@@ -199,7 +200,7 @@
               "type": "text",
               "dataType": "float",
               "label": "Alpha (Beverton-Holt / Ricker)",
-              "defaultValue": "5770000",
+              "defaultValue": "6050000",
               "required": false,
               "validateAs": {
                 "type": "number"
@@ -212,7 +213,7 @@
               "type": "text",
               "dataType": "float",
               "label": "Beta (Beverton-Holt / Ricker)",
-              "defaultValue": "2885000",
+              "defaultValue": "0.0000000414",
               "required": false,
               "validateAs": {
                 "type": "number"
@@ -294,7 +295,7 @@
               "args_id": "frac_post_process",
               "type": "text",
               "label": "Fraction of Harvest Kept After Processing",
-              "defaultValue": "0.286",
+              "defaultValue": "0.351487513",
               "required": true,
               "dataType": "float",
               "validateAs": {
@@ -307,7 +308,7 @@
               "args_id": "unit_price",
               "type": "text",
               "label": "Unit Price",
-              "defaultValue": "29.93",
+              "defaultValue": "1.0",
               "required": true,
               "dataType": "float",
               "validateAs": {
