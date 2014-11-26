@@ -334,7 +334,7 @@ class TestSavePopCSV(unittest.TestCase):
         self.args = {
             'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
             'sexsp': 'Yes',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/outputs/pop_params_modified.csv',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/output/pop_params_modified.csv',
             'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/habitat_params.csv',
             'gamma': 0.5,
         }
@@ -404,9 +404,9 @@ class TestSavePopCSV(unittest.TestCase):
                 [  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
                    7.25000000e-01,   5.27500000e-01]]]),
             'gamma': 0.5,
-            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/habitat_params.csv',
+            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/habitat_params.csv',
             'output_dir': '../../test/invest-data/test/data/fisheries/preprocess/output',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/pop_params.csv',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/pop_params.csv',
             'sexsp': 2,
             'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
 
@@ -445,37 +445,37 @@ class TestSavePopCSV(unittest.TestCase):
 
     def test_save_population_csv(self):
         io.save_population_csv(self.vars_check)
-        # guess = io.fetch_args(self.args)
-        # pp.pprint(guess)
+        guess = io.fetch_args(self.args)
         # pp.pprint(self.vars_check)
+        # pp.pprint(guess)
 
-        # for k in self.vars_check.keys():
-        #     if k not in [
-        #         # User Args not added back to dictionary yet
-        #         'workspace_dir',
-        #         'sexsp',
-        #         'population_csv_uri',
-        #         'habitat_csv_uri',
-        #         'gamma'
-        #     ]:
-        #         g = guess[k]
-        #         c = self.vars_check[k]
-        #         if isinstance(g, np.ndarray):
-        #             np.testing.assert_array_almost_equal(g, c)
-        #         elif isinstance(g, list):
-        #             assert(all(map(lambda x, y: x == y, g, c)))
-        #         elif isinstance(g, dict):
-        #             for m in g.keys():
-        #                 n = g[m]
-        #                 d = c[m]
-        #                 if isinstance(n, np.ndarray):
-        #                     np.testing.assert_array_almost_equal(n, d)
-        #                 elif isinstance(n, list):
-        #                     assert(all(map(lambda x, y: x == y, n, d)))
-        #                 else:
-        #                     assert(n == d)
-        #         else:
-        #             assert(g == c)
+        for k in guess.keys():
+            if k not in [
+                # User Args not added back to dictionary yet
+                'workspace_dir',
+                'sexsp',
+                'population_csv_uri',
+                'habitat_csv_uri',
+                'gamma'
+            ]:
+                g = guess[k]
+                c = self.vars_check[k]
+                if isinstance(g, np.ndarray):
+                    np.testing.assert_array_almost_equal(g, c)
+                elif isinstance(g, list):
+                    assert(all(map(lambda x, y: x == y, g, c)))
+                elif isinstance(g, dict):
+                    for m in g.keys():
+                        n = g[m]
+                        d = c[m]
+                        if isinstance(n, np.ndarray):
+                            np.testing.assert_array_almost_equal(n, d)
+                        elif isinstance(n, list):
+                            assert(all(map(lambda x, y: x == y, n, d)))
+                        else:
+                            assert(n == d)
+                else:
+                    assert(g == c)
 
 
 if __name__ == '__main__':

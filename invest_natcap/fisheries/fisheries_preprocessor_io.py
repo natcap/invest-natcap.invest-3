@@ -89,19 +89,27 @@ def fetch_args(args):
     pop_dict = read_population_csv(args)
     habitat_dict = read_habitat_csv(args)
 
-    # CHECK THAT REGIONS AND CLASSES MATCH
+    # Check that classes and regions match
     P_Classes = pop_dict['Classes']
     H_Classes = habitat_dict['Hab_classes']
-    is_equal_list = map(
-        lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
+    try:
+        is_equal_list = map(
+            lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
+    except:
+        print "P_Classes", P_Classes
+        print "H_Classes", H_Classes
     if not all(is_equal_list):
         LOGGER.error("Mismatch between class names in Population and Habitat CSV files")
         raise ValueError
 
     P_Regions = pop_dict['Regions']
     H_Regions = habitat_dict['Hab_regions']
-    is_equal_list = map(
-        lambda x, y: x.lower() == y.lower(), P_Regions, H_Regions)
+    try:
+        is_equal_list = map(
+            lambda x, y: x.lower() == y.lower(), P_Regions, H_Regions)
+    except:
+        print "P_Regions", P_Regions
+        print "H_Regions", H_Regions
     if not all(is_equal_list):
         LOGGER.error("Mismatch between region names in Population and Habitat CSV files")
         raise ValueError
@@ -223,9 +231,9 @@ def read_population_csv(args):
             Matrix")
         raise MissingParameter
 
-    Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
-                        'Surv_nat_xsa', 'Vulnfishing']
+    Necessary_Params = ['Classes', 'Regions', 'Surv_nat_xsa']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
+
     if len(Matching_Params) != len(Necessary_Params):
         LOGGER.warning("Population Parameters File does not contain all \
             necessary parameters. %s" % uri)
@@ -641,7 +649,7 @@ def save_population_csv(vars_dict):
     l.append('Class')
     for region in vars_dict['Regions']:
         l.append(region)
-        l.append('')
+    l.append('')
     l = [l]
 
     # Add survival matrix
@@ -651,6 +659,7 @@ def save_population_csv(vars_dict):
         for i in Surv_nat_asx_mod[c-1][0].tolist():
             l[c].append(i)
         l[c].append('')
+    # l[c].append('')
     if vars_dict['sexsp'] == 2:
         for c in range(1, num_classes + 1):
             l.append([])
@@ -658,9 +667,6 @@ def save_population_csv(vars_dict):
             for i in Surv_nat_asx_mod[c-1][1].tolist():
                 l[c + num_classes].append(i)
             l[c + num_classes].append('')
-    l.append([])
-    for i in range(0, len(vars_dict['Regions']) + 2):
-        l[-1].append('')
 
     # Add class vectors
     for key in vars_dict['Class_vectors'].keys():
@@ -668,19 +674,30 @@ def save_population_csv(vars_dict):
         vector = vars_dict['Class_vectors'][key].tolist()
         if vars_dict['sexsp'] == 2:
             vector = vector[0] + vector[1]
-        map(lambda l, v: l.append(v), l[1:-1], vector)
+        else:
+            vector = vector[0]
+        map(lambda l, v: l.append(v), l[1:], vector)
+
+    # Add row of spaces
+    l.append([])
+    while (len(l[-1]) < len(l[0])):
+        l[-1].append('')
 
     # Add region vectors
     for key in vars_dict['Region_vectors'].keys():
-        print key
         l.append([])
         l[-1].append(key)
         vector = vars_dict['Region_vectors'][key].tolist()
         for i in vector:
             l[-1].append(i)
+        while (len(l[-1]) < len(l[0])):
+            l[-1].append('')
 
     # Write List to File
-    output_uri = os.path.join(vars_dict['output_dir'], 'test.txt')
+    basename, ext = os.path.splitext(os.path.basename(
+        vars_dict['population_csv_uri']))
+    filename = basename + '_modified' + ext
+    output_uri = os.path.join(vars_dict['output_dir'], filename)
     f = open(output_uri, 'w')
     wr = csv.writer(f)
     for row in l:

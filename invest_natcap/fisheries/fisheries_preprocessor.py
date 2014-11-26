@@ -9,7 +9,10 @@ import pprint
 
 import numpy as np
 
-import fisheries_preprocessor_io as io
+try:
+    from invest_natcap.fisheries import fisheries_preprocessor_io as io
+except:
+    import fisheries_preprocessor_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -67,7 +70,7 @@ def execute(args):
     vars_dict = convert_survival_matrix(vars_dict)
 
     # Generate Modified Population Parameters CSV File
-    io.generate_outputs(vars_dict)
+    io.save_population_csv(vars_dict)
 
 
 def convert_survival_matrix(vars_dict):
