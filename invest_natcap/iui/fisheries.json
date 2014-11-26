@@ -280,7 +280,7 @@
               "args_id": "harvest_units",
               "type": "dropdown",
               "label": "Harvest by Individuals or Weight",
-              "defaultValue": "Weight",
+              "defaultValue": "Individuals",
               "required": true,
               "options": [
                 "Individuals",
