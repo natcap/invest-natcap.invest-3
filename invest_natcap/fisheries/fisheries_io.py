@@ -32,8 +32,6 @@ def fetch_args(args):
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
 
-    This function receives an unmodified 'args' dictionary from the user
-
     Args:
         args (dictionary): arguments from the user
 
@@ -41,7 +39,7 @@ def fetch_args(args):
         model_list (list): set of variable dictionaries for each
             model
 
-    Example Returned Model List of Verified Arguments::
+    Example Returns::
 
         model_list = [
             {
@@ -87,6 +85,9 @@ def fetch_args(args):
             }
         ]
 
+    Note:
+        This function receives an unmodified 'args' dictionary from the user
+
     '''
     if args['sexsp'].lower() == 'yes':
         args['sexsp'] = 2
@@ -122,7 +123,7 @@ def read_population_csvs(args):
         pop_list (list): list of dictionaries containing verified population
             arguments
 
-    Example Returned Population List::
+    Example Returns::
 
         pop_list = [
             {
@@ -184,7 +185,7 @@ def read_population_csv(args, uri):
         pop_dict (dictionary): dictionary containing verified population
             arguments
 
-    Example Returned Population Dictionary::
+    Example Returns::
 
         pop_dict = {
             'population_csv_uri': 'path/to/csv',
@@ -311,10 +312,14 @@ def _parse_population_csv(uri, sexsp):
     Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
+    Args:
+        uri (string): uri to population parameters csv file
+        sexsp (int): indicates whether classes are distinguished by sex
+
     Returns:
         pop_dict (dictionary): verified population arguments
 
-    Example:
+    Example Returns:
 
         pop_dict = {
             'Survnaturalfrac': np.array(
@@ -386,12 +391,23 @@ def read_migration_tables(args, class_list, region_list):
     Parses, verifies and orders list of migration matrices necessary for
     program.
 
-    If migration matrices are not provided for all classes, the function will
-    generate identity matrices for missing classes
+    Args:
+        args (dictionary): same args as model entry point
+        class_list (list): list of class names
+        region_list (list): list of region names
 
-    Example:
+    Returns:
+        mig_dict (dictionary): see example below
 
-        mig_dict = {'Migration': [np.matrix, np.matrix, ...]}
+    Example Returns:
+
+        mig_dict = {
+            'Migration': [np.matrix, np.matrix, ...]
+        }
+
+    Note:
+        If migration matrices are not provided for all classes, the function will
+        generate identity matrices for missing classes
     '''
     migration_dict = {}
 
@@ -442,9 +458,13 @@ def _parse_migration_tables(args, class_list):
     Returns:
         mig_dict (dictionary)
 
-    Example::
+    Example Returns::
 
-        mig_dict = {{'stage1': np.matrix}, {'stage2': np.matrix}, ...}
+        mig_dict = {
+            {'stage1': np.matrix},
+            {'stage2': np.matrix},
+            # ...
+        }
     '''
     mig_dict = {}
 
@@ -536,7 +556,7 @@ def _verify_single_params(args):
             raise OSError
     params_dict['output_dir'] = output_dir
 
-    # Create output directory
+    # Create intermediate directory
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     if not os.path.isdir(intermediate_dir):
         try:

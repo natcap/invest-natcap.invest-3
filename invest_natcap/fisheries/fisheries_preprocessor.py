@@ -4,13 +4,12 @@ generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
 '''
-import pprint
 import logging
+import pprint
 
 import numpy as np
 
 import fisheries_preprocessor_io as io
-
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -58,8 +57,7 @@ def execute(args):
 
     Note:
 
-        Modified Population Parameters CSV File saved to
-        'workspace_dir/output/'
+        + Modified Population Parameters CSV File saved to 'workspace_dir/output/'
     '''
 
     # Parse, Verify Inputs
@@ -114,36 +112,45 @@ def convert_survival_matrix(vars_dict):
     A = Mod_elements_xha * D_ha
     A[A != 0] = 1
     Mod_elements_xha = A
+
+    # Create element-wise exponents
     Exp_xha = Mod_elements_xha * D_ha * gamma
 
-    pp.pprint(Exp_xha)
+    # Swap Axes in Arrays showing modified elements
     Mod_elements_ahx = Mod_elements_xha.swapaxes(0, 2)
-    print "Mod_elements_ahx"
-    pp.pprint(Mod_elements_ahx)
+
+    # Absolute percent change in habitat size across all elements
     H_chg_all_ahx = (Mod_elements_ahx * H_chg_hx)
-    print "H_chg_all_ahx"
-    pp.pprint(H_chg_all_ahx)
+    nonzero_elements = (H_chg_all_ahx != 0)
+    H_chg_all_ahx[nonzero_elements] += 1
+
+    # Swap Axes
     H_chg_all_xha = H_chg_all_ahx.swapaxes(0, 2)
-    print "H_chg_all_xha"
-    pp.pprint(H_chg_all_xha)
+
+    # Apply sensitivity exponent to habitat area change matrix
     H_xha = (H_chg_all_xha ** Exp_xha)
-    print "H_xha"
-    pp.pprint(H_xha)
+    ones_elements = (H_xha == 1)
+    H_xha[ones_elements] = 0
+
+    # Sum across habitats
     H_xa = H_xha.sum(axis=1)
-    print "H_xa"
-    pp.pprint(H_xa)
-    # Add in one so that original S values are weighed properly
-    H_xa_weighted = H_xa + 1
-    print "H_xa_weighted"
-    pp.pprint(H_xa_weighted)
 
+    # Divide by number of habitats and cancel non-class-transition elements
+    H_xa_weighted = (H_xa / n_a) * t_a
 
-    # Multiply by original S elements
+    # Add unchanged elements back in to matrix
+    zero_elements = (H_xa_weighted == 0)
+    H_xa_weighted[zero_elements] = 1
+    H_coefficient_xa = H_xa_weighted
+
+    # Multiply coefficients by original Survival matrix
+    S_mod_sxa = S_sxa * H_coefficient_xa
 
     # Filter and correct for elements outside [0, 1]
+    S_mod_sxa[S_mod_sxa > 1.0] = 1
+    S_mod_sxa[S_mod_sxa < 0.0] = 0
 
     # Return
-    S_mod = None
-    vars_dict['Surv_nat_xsa_mod'] = S_mod
+    vars_dict['Surv_nat_xsa_mod'] = S_mod_sxa.swapaxes(0, 1)
 
     return vars_dict
