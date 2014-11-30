@@ -269,7 +269,7 @@
       "args_id": "harv_cont",
       "label": "Harvest Parameters",
       "type": "container",
-      "defaultValue": true,
+      "defaultValue": false,
       "elements": [
         {
           "id": "harv_list",

@@ -27,7 +27,7 @@ class MissingParameter(StandardError):
 
 
 # Fetch and Verify Arguments
-def fetch_args(args):
+def fetch_args(args, create_outputs=True):
     '''
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
@@ -94,7 +94,7 @@ def fetch_args(args):
     else:
         args['sexsp'] = 1
 
-    params_dict = _verify_single_params(args)
+    params_dict = _verify_single_params(args, create_outputs=create_outputs)
 
     # Implement Single / Batch Here
     pop_list = read_population_csvs(args)
@@ -498,8 +498,8 @@ def _parse_migration_tables(args, class_list):
                     mig_dict[class_name] = Migration
                 else:
                     # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The %s class in the Migration Directory \
-                        did not match any class in the Population Parameters \
+                    LOGGER.warning("The suffix '%s' in the Migration Directory \
+                        did not match any class name in the Population Parameters \
                         File. This could result in no migration for a class \
                         with expected migration.", class_name.capitalize())
 
@@ -509,7 +509,7 @@ def _parse_migration_tables(args, class_list):
     return mig_dict
 
 
-def _verify_single_params(args):
+def _verify_single_params(args, create_outputs=True):
     '''
     Example Returned Parameters Dictionary::
 
@@ -534,37 +534,39 @@ def _verify_single_params(args):
             'unit_price': 5.0,
             # ...
             'output_dir': 'path/to/output_dir',
+            'intermediate_dir': 'path/to/intermediate_dir',
         }
     '''
     params_dict = args
 
-    # Check that workspace directory exists, if not, try to create directory
-    if not os.path.isdir(args['workspace_dir']):
-        try:
-            os.makedirs(args['workspace_dir'])
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
+    if create_outputs:
+        # Check that workspace directory exists, if not, try to create directory
+        if not os.path.isdir(args['workspace_dir']):
+            try:
+                os.makedirs(args['workspace_dir'])
+            except:
+                LOGGER.error("Cannot create Workspace Directory")
+                raise OSError
 
-    # Create output directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Output Directory")
-            raise OSError
-    params_dict['output_dir'] = output_dir
+        # Create output directory
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        if not os.path.isdir(output_dir):
+            try:
+                os.makedirs(output_dir)
+            except:
+                LOGGER.error("Cannot create Output Directory")
+                raise OSError
+        params_dict['output_dir'] = output_dir
 
-    # Create intermediate directory
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    if not os.path.isdir(intermediate_dir):
-        try:
-            os.makedirs(intermediate_dir)
-        except:
-            LOGGER.error("Cannot create Intermediate Directory")
-            raise OSError
-    params_dict['intermediate_dir'] = intermediate_dir
+        # Create intermediate directory
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+        if not os.path.isdir(intermediate_dir):
+            try:
+                os.makedirs(intermediate_dir)
+            except:
+                LOGGER.error("Cannot create Intermediate Directory")
+                raise OSError
+        params_dict['intermediate_dir'] = intermediate_dir
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
@@ -575,7 +577,13 @@ def _verify_single_params(args):
 
     # Check total_init_recruits for non-negative float
     total_init_recruits = args['total_init_recruits']
-    if type(total_init_recruits) != float or total_init_recruits < 0:
+    if type(total_init_recruits) != float:
+        try:
+            total_timesteps = float(total_init_recruits)
+        except:
+            LOGGER.error("Total Initial Recruits value must be non-negative float")
+            raise ValueError
+    if total_init_recruits < 0:
         LOGGER.error("Total Initial Recruits value must be non-negative float")
         raise ValueError
 
@@ -639,9 +647,6 @@ def _listdir(path):
 
 # Helper functions for navigating CSV files
 def _get_col(lsts, col):
-    # print "LSTS"
-    # print lsts
-    # print "Column:", col
     l = []
     for row in range(0, len(lsts)):
         if lsts[row][col] != '':

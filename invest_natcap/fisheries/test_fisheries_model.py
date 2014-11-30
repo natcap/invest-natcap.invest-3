@@ -318,10 +318,6 @@ class TestSetInitCondFunc(unittest.TestCase):
         init_cond_func = model.set_init_cond_func(vars_dict)
         N_0_guess = init_cond_func()
         N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]],[[25.0*1, 25.0*2], [(25.0*3), (25.0*4)]],[[(25.0*1*5/-8), (25.0*2*6/-9)], [(25.0*3*7/-10), (25.0*4*8/-11)]]])
-        print "N_0 Guess"
-        print N_0_guess
-        print "N_0 Check"
-        print N_0_check
         testing.assert_equal(N_0_guess, N_0_check)
 
 
@@ -377,10 +373,6 @@ class TestSetCycleFunc(unittest.TestCase):
         N_prev = np.ones([2, 2, 2])
         N_cur_guess, spawners = cycle_func(N_prev)
         # N_cur_check = np.array([])
-        # print "N_cur Guess"
-        # print N_cur_guess
-        # print "N_cur Check"
-        # print N_cur_check
         # testing.assert_equal(N_cur_guess, N_cur_check)
 
     def test_age_based(self):
@@ -446,7 +438,7 @@ class TestRunPopulationModel(unittest.TestCase):
         vars_dict = model.run_population_model(
             vars_dict, init_cond_func, cycle_func, harvest_func)
 
-        pp.pprint(vars_dict['N_tasx'])
+        # pp.pprint(vars_dict['N_tasx'])
 
 
 if __name__ == '__main__':

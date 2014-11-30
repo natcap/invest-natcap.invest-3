@@ -11,9 +11,9 @@ import fisheries_preprocessor_io as io
 pp = pprint.PrettyPrinter(indent=4)
 
 workspace_dir = '~/workspace/fisheries_tests'
-data_dir = '../../test/invest-data/test/data/fisheries/'
-inputs_dir = os.path.join(data_dir, 'preprocess/inputs')
-outputs_dir = os.path.join(data_dir, 'preprocess/outputs')
+data_dir = '../../test/invest-data/Fisheries'
+inputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
+outputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
 
 
 class TestConvertSurvivalMatrix(unittest.TestCase):
@@ -22,18 +22,18 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
-                inputs_dir, 'spreadsheet/pop_params.csv'),
+                inputs_dir, 'pop_params.csv'),
             'habitat_csv_uri': os.path.join(
-                inputs_dir, 'spreadsheet/habitat_params.csv'),
+                inputs_dir, 'habitat_params.csv'),
             'gamma': 0.5,
         }
         self.check = {
             'workspace_dir': workspace_dir,
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
-                outputs_dir, 'spreadsheet/pop_params_mod.csv'),
+                outputs_dir, 'pop_params_mod.csv'),
             'habitat_csv_uri': os.path.join(
-                inputs_dir, 'spreadsheet/habitat_params.csv'),
+                inputs_dir, 'habitat_params.csv'),
             'gamma': 0.5,
         }
 

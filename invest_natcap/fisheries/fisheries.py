@@ -13,7 +13,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-def execute(args):
+def execute(args, create_outputs=True):
     '''
     Entry point into the Fisheries Model
 
@@ -114,9 +114,10 @@ def execute(args):
     '''
 
     # Parse Inputs
-    model_list = io.fetch_args(args)
+    model_list = io.fetch_args(args, create_outputs=create_outputs)
 
     # Run Models
+    vars_all_models = []
     for model_args_dict in model_list:
 
         # Setup Model
@@ -131,5 +132,10 @@ def execute(args):
         model_vars_dict = model.run_population_model(
             model_vars_dict, init_cond_func, cycle_func, harvest_func)
 
-        # Generate Outputs
-        io.generate_outputs(model_vars_dict)
+        vars_all_models.append(model_vars_dict)
+
+        if create_outputs:
+            # Generate Outputs
+            io.generate_outputs(model_vars_dict)
+
+    return vars_all_models
