@@ -4,6 +4,7 @@ model
 '''
 
 import logging
+import pprint as pp
 
 import fisheries_io as io
 import fisheries_model as model
@@ -35,6 +36,11 @@ def execute(args, create_outputs=True):
 
         sexsp (string): specifies whether or not the age and stage
             classes are distinguished by sex.
+
+        harvest_units (string): specifies how the user wants to get
+            the harvest data. Options are either "Individuals" or "Weight", and
+            will change the harvest equation used in core. (Required if
+            args['val_cont'] is True)
 
         do_batch (boolean): specifies whether program will perform a
             single model run or a batch (set) of model runs.
@@ -72,21 +78,16 @@ def execute(args, create_outputs=True):
             every age class which migrates. (Required if args['migr_cont'] is
             True)
 
-        harv_cont (bool): if true, model runs harvest computations
-
-        harvest_units (string): specifies how the user wants to get
-            the harvest data. Options are either "Individuals" or "Weight", and
-            will change the harvest equation used in core. (Required if
-            args['harv_cont'] is True)
+        val_cont (bool): if true, model runs valuation computations
 
         frac_post_process (float): represents the fraction of the
             species remaining after processing of the whole carcass is complete.
             This will exist only if valuation is desired for the particular
-            species. (Required if args['harv_cont'] is True)
+            species. (Required if args['val_cont'] is True)
 
         unit_price (float): represents the price for a single unit of
             harvest. Exists only if valuation is desired. (Required if
-            args['harv_cont'] is True)
+            args['val_cont'] is True)
 
     Example Args Dictionary::
 
@@ -96,8 +97,10 @@ def execute(args, create_outputs=True):
             'total_timesteps': 100,
             'population_type': 'Stage-Based',
             'sexsp': 'Yes',
+            'harvest_units': 'Individuals',
             'do_batch': False,
             'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_dir': ''
             'spawn_units': 'Weight',
             'total_init_recruits': 100000.0,
             'recruitment_type': 'Ricker',
@@ -106,8 +109,7 @@ def execute(args, create_outputs=True):
             'total_recur_recruits': 92.1,
             'migr_cont': True,
             'migration_dir': 'path/to/mig_dir/',
-            'harv_cont': True,
-            'harvest_units': 'Individuals',
+            'val_cont': True,
             'frac_post_process': 0.5,
             'unit_price': 5.0,
         }
@@ -135,7 +137,7 @@ def execute(args, create_outputs=True):
         vars_all_models.append(model_vars_dict)
 
         if create_outputs:
-            # Generate Outputs
-            io.generate_outputs(model_vars_dict)
+            # Create Outputs
+            io.create_outputs(model_vars_dict)
 
     return vars_all_models

@@ -167,7 +167,7 @@ class TestSingleParamsIO(unittest.TestCase):
             'harvest_units': None,
             'frac_post_process': None,
             'unit_price': None,
-            'harv_cont': True,
+            'val_cont': True,
             }
 
         # Check that path exists and user has read/write permissions along path
@@ -246,7 +246,7 @@ class TestFetchArgs(unittest.TestCase):
             'harvest_units': "Weight",
             'frac_post_process': 0.2,
             'unit_price': 20.2,
-            'harv_cont': True,
+            'val_cont': True,
         }
         vars_dict = fisheries_io.fetch_args(args, create_outputs=False)
         # pp.pprint(vars_dict)
@@ -277,7 +277,7 @@ class TestFetchArgs(unittest.TestCase):
             'harvest_units': "Weight",
             'frac_post_process': 0.2,
             'unit_price': 20.2,
-            'harv_cont': True,
+            'val_cont': True,
         }
         # model_list = fisheries_io.fetch_args(args)
         # pp.pprint(model_list)
@@ -286,7 +286,7 @@ class TestFetchArgs(unittest.TestCase):
         # os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
-class TestGenerateCSV(unittest.TestCase):
+class TestCreateCSV(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -303,7 +303,7 @@ class TestGenerateCSV(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -336,12 +336,12 @@ class TestGenerateCSV(unittest.TestCase):
         }
         pass
 
-    def test_generate_csv(self):
-        # fisheries_io._generate_csv(self.vars_dict)
+    def test_create_csv(self):
+        # fisheries_io._create_csv(self.vars_dict)
         pass
 
 
-class TestGenerateHTML(unittest.TestCase):
+class TestCreateHTML(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -358,7 +358,7 @@ class TestGenerateHTML(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -391,12 +391,12 @@ class TestGenerateHTML(unittest.TestCase):
         }
         pass
 
-    def test_generate_html(self):
-        # fisheries_io._generate_html(self.vars_dict)
+    def test_create_html(self):
+        # fisheries_io._create_html(self.vars_dict)
         pass
 
 
-class TestGenerateAOI(unittest.TestCase):
+class TestCreateAOI(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -410,8 +410,8 @@ class TestGenerateAOI(unittest.TestCase):
         }
         pass
 
-    def test_generate_aoi(self):
-        # fisheries_io._generate_aoi(self.vars_dict)
+    def test_create_aoi(self):
+        # fisheries_io._create_aoi(self.vars_dict)
         pass
 
 
