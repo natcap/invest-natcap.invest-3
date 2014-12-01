@@ -1,18 +1,20 @@
+import logging
+import os
+import math
+
 from invest_natcap import raster_utils
 from osgeo import gdal
-import numpy
-import os
-
-import logging
-
-import math
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('blue_carbon_preprocessor')
 
+
 def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
+    '''
+
+    '''
     cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
     lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
@@ -115,46 +117,53 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                 transitions[r].pop(lulc_nodata)
 
     return unique_raster_values_count, transitions
-                
+
+
 def execute(args):
-    transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
+    '''
+
+    '''
+    transition_matrix_uri = os.path.join(
+        args["workspace_dir"], "transition.csv")
     values_matrix_uri = args["preprocessor_key_uri"]
     values_matrix_id = "Id"
 
     report_uri = os.path.join(args["workspace_dir"], "preprocessor_report.htm")
-    
-    nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
+
+    nodata = set([raster_utils.get_nodata_from_uri(
+        uri) for uri in args["lulc"]])
 
     LOGGER.debug("Validating LULCs.")
     if len(nodata) > 1:
         msg = "The LULCs contain more than one no data value."
         LOGGER.error(msg)
         raise ValueError, msg
+
     nodata = list(nodata)[0]
     LOGGER.debug("No data value is %i.", nodata)
 
+   # #It might be handy allow for a SetCategoryNames
+   # dataset = gdal.Open(args["lulc"][0])
+   # band = dataset.GetRasterBand(1)
+   # names = band.GetCategoryNames()
+   # band = None
+   # dataset = None
 
-##    #It might be handy allow for a SetCategoryNames
-##    dataset = gdal.Open(args["lulc"][0])
-##    band = dataset.GetRasterBand(1)
-##    names = band.GetCategoryNames()
-##    band = None
-##    dataset = None
-##
-##    if not names == None:
-##        LOGGER.debug("Found category names: %s.", names)
-##    else:
-##        LOGGER.debug("No imbedded category names found.")
+   # if not names == None:
+   #     LOGGER.debug("Found category names: %s.", names)
+   # else:
+   #     LOGGER.debug("No imbedded category names found.")
 
     LOGGER.info("Reading all transitions.")
-    unique_raster_values_count, transition_counts = get_transition_set_count_from_uri(args["lulc"])
+    unique_raster_values_count, transition_counts = \
+        get_transition_set_count_from_uri(args["lulc"])
     count_max = 0
     for key in unique_raster_values_count:
         for value in unique_raster_values_count[key]:
             if unique_raster_values_count[key][value] > count_max:
                 count_max = unique_raster_values_count[key][value]
     count_width = int(math.log10(count_max))
-                
+
     transitions = set()
     original_values = set()
     final_values = set()
@@ -172,10 +181,11 @@ def execute(args):
                 if (orig != nodata) and (dest != nodata):
                     transitions.add((orig, dest))
 
-                width = int(math.log10(transition_counts[transition][orig][dest]))
+                width = int(math.log10(
+                    transition_counts[transition][orig][dest]))
                 if width > transition_width:
                     transition_width = width
-    
+
     LOGGER.info("Creating transition matrix.")
     original_values = list(original_values)
     final_values = list(final_values)
@@ -185,12 +195,12 @@ def execute(args):
     transition_matrix.write("Id,Name,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
 
-
     args["lulc_id"] = "Id"
     args["lulc_name"] = "Name"
     args["lulc_type"] = "Veg Type"
 
     labels_dict = {}
+
     #This will cause problems if the carbon table is missing more than one label.
     if args["labels"] != "":
         LOGGER.info("Reading category names from table.")
@@ -203,7 +213,7 @@ def execute(args):
             transition_matrix.write(",%s" % labels_dict[original][args["lulc_name"]])
         else:
             transition_matrix.write(",")
-            
+
         for final in final_values:
             if (original, final) in transitions:
                 transition_matrix.write(",%s" % values[labels_dict[original][args["lulc_type"]]][str(labels_dict[final][args["lulc_type"]])])
@@ -233,7 +243,7 @@ def execute(args):
                 report.write("<TD>%i</TD>" % 0)
         report.write("</TR>")
     report.write("\n</TABLE>")
-    
+
     #transition count tables
     veg_types = set([labels_dict[k][args["lulc_type"]] for k in labels_dict])
     veg_counts = {}
@@ -250,8 +260,9 @@ def execute(args):
                 if not (dest_veg in veg_counts[transition][orig_veg]):
                     veg_counts[transition][orig_veg][dest_veg] = 0
 
-                veg_counts[transition][orig_veg][dest_veg] += transition_counts[transition][orig][dest]
-                
+                veg_counts[transition][orig_veg][dest_veg] += \
+                    transition_counts[transition][orig][dest]
+
     for transition in transition_counts:
         report.write("\n<P><P><B>LULC Transition %i</B>" % (transition + 1))
         column_name_list = [""] + [str(val).ljust(transition_width, "#").replace("#", "&ensp;") for val in final_values]
@@ -263,23 +274,23 @@ def execute(args):
                     report.write("<TD>%i</TD>" % transition_counts[transition][orig][dest])
                 except KeyError:
                     report.write("<TD><font color=lightgray>%i</font></TD>" % 0)
-                
+
         report.write("\n</TABLE>")
 
         report.write("\n<P><P><B>Vegetation Transition %i</B>" % (transition +1))
         column_name_list = [""] + [str(val).ljust(transition_width, "#").replace("#", "&ensp;") for val in veg_types]
         report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
-        
+
         for orig in veg_types:
             report.write("\n<TR align=\"right\"><TD><B>%i<B></TD>" % orig)
             for dest in veg_types:
                 try:
-                    report.write("<TD>%i</TD>" % veg_counts[transition][orig][dest])
+                    report.write("<TD>%i</TD>" % veg_counts[
+                        transition][orig][dest])
                 except KeyError:
                     report.write("<TD><font color=lightgray>%i</font></TD>" % 0)
-                
+
         report.write("\n</TABLE>")
-        
 
     #close report
     report.close()

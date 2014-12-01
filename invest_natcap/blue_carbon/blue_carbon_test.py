@@ -8,10 +8,14 @@ import numpy as np
 ##if not ('GDAL_PATH' in os.environ):
 ##    os.environ['GDAL_PATH'] = '/usr/share/gdal/1.9/'
 
+
 def matrix_to_dataset_uri(matrix, dataset_uri):
+    '''
+
+    '''
     rows = len(matrix)
     cols = len(matrix[0])
-    
+
     driver = gdal.GetDriverByName("GTiff")
     dataset_type = gdal.GDT_Int16
     dataset = driver.Create(dataset_uri, cols, rows, 1, dataset_type)

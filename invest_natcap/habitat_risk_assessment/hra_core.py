@@ -21,7 +21,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    '''This provides the main calculation functionaility of the HRA model. This
+    '''
+    This provides the main calculation functionaility of the HRA model. This
     will call all parts necessary for calculation of final outputs.
 
     Inputs:
@@ -208,9 +209,9 @@ def execute(args):
         LOGGER.warn(text)
 
 
-def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress,
-                    num_habs):
-    '''This function will produce risk plots when the risk equation is
+def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_habs):
+    '''
+    This function will produce risk plots when the risk equation is
     euclidean.
 
     Input:
@@ -240,9 +241,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress,
 
         A single png that is the "ecosystem plot" where the E's for each AOI
         are the summed
-
-
     '''
+
     def plot_background_circle(max_value):
         circle_stuff = [(6, '#000000'),
                         (5, '#780000'),
@@ -404,7 +404,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress,
 
 
 def make_aoi_tables(out_dir, aoi_pairs):
-    '''This function will take in an shapefile containing multiple AOIs, and
+    '''
+    This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
     Input:
@@ -417,13 +418,13 @@ def make_aoi_tables(out_dir, aoi_pairs):
                 [(HName, SName, E, C, Risk), ...],
                 ....
             }
-     Output:
+    Output:
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
         contain a column for risk %, which is the averaged risk value in that
         area divided by the total potential risk for a given pixel in the map.
 
-     Returns nothing.
+    Returns nothing.
     '''
 
     filename = os.path.join(
@@ -479,7 +480,8 @@ def make_aoi_tables(out_dir, aoi_pairs):
 
 
 def rewrite_avgs_dict(avgs_dict, aoi_names):
-    '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
+    '''
+    Aftermarket rejigger of the avgs_dict setup so that everything is AOI
     centric instead. Should produce something like the following:
 
     {'AOIName':
@@ -508,7 +510,8 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
-    '''This funtion is a helper to make_aoi_tables, and will just handle
+    '''
+    This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
     Input:
@@ -728,8 +731,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     return avgs_dict, name_map.values()
 
 
-def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels,
-                                ignore_value_list=[]):
+def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
     each overlap of raster and AOI.
@@ -830,26 +832,6 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels,
                 layer_overlap_info[aoi_pix_value][layer_name][0] += layer_count
                 layer_overlap_info[aoi_pix_value][layer_name][1] += layer_sum
     return layer_overlap_info
-
-'''
-        for col_index in range(n_cols):
-
-            aoi_pix = aoi_row[(0, col_index)]
-
-            if aoi_pix != nodata:
-                if aoi_pix not in layer_overlap_info:
-                    layer_overlap_info[aoi_pix] = {}
-
-                for layer_name in rast_labels:
-                    if layer_name not in layer_overlap_info[aoi_pix]:
-                        #First in tuple is num of pix, second is sum of val.
-                        layer_overlap_info[aoi_pix][layer_name] = [0, 0.]
-
-                    layer_pix = rows_dict[layer_name][(0, col_index)]
-                    if layer_pix != nodata and layer_pix not in ignore_value_list:
-                        layer_overlap_info[aoi_pix][layer_name][0] += 1
-                        layer_overlap_info[aoi_pix][layer_name][1] += layer_pix
-'''
 
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
@@ -1051,23 +1033,6 @@ def make_ecosys_risk_raster(dir, h_dict):
 
         return numpy.where(all_nodata, -1, value)
 
-        '''all_nodata = True
-        for p in pixels:
-            if p != nodata:
-                all_nodata = False
-        if all_nodata:
-            return nodata
-
-        pixel_sum = 0.0
-
-        for p in pixels:
-
-            if p != nodata:
-
-                pixel_sum += p
-
-        return pixel_sum'''
-
     raster_utils.vectorize_datasets(
         h_list,
         add_e_pixels,
@@ -1083,7 +1048,8 @@ def make_ecosys_risk_raster(dir, h_dict):
 
 
 def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
-    '''This function will take in the current rasterized risk files for each
+    '''
+    This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
     areas.
@@ -1379,7 +1345,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
-    '''This will take in a raster file, and output a shapefile of the same
+    '''
+    This will take in a raster file, and output a shapefile of the same
     area and shape.
 
     Input:
@@ -1439,7 +1406,8 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
 
 
 def make_hab_risk_raster(dir, risk_dict):
-    '''This will create a combined raster for all habitat-stressor pairings
+    '''
+    This will create a combined raster for all habitat-stressor pairings
     within one habitat. It should return a list of open rasters that correspond
     to all habitats within the model.
 
@@ -1563,9 +1531,9 @@ def make_hab_risk_raster(dir, risk_dict):
     return h_rasters, h_s_rasters
 
 
-def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq,
-                      warnings):
-    '''This will combine all of the intermediate criteria rasters that we
+def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
+    '''
+    This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to
     straight add the E/C within themselves. The way in which the E/C rasters
     are combined depends on the risk equation desired.
@@ -1719,7 +1687,8 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq,
 
 
 def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
-    '''Combines the E and C rasters according to the multiplicative combination
+    '''
+    Combines the E and C rasters according to the multiplicative combination
     equation.
 
     Input:
@@ -1778,7 +1747,8 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
 
 
 def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
-    '''Combines the E and C rasters according to the euclidean combination
+    '''
+    Combines the E and C rasters according to the euclidean combination
     equation.
 
     Input:
@@ -1868,7 +1838,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
 
 
 def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
-    '''Should return a raster burned with an 'E' raster that is a combination
+    '''
+    Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
@@ -1967,9 +1938,9 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         vectorize_op=False)
 
 
-def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict,
-                  h_uri, h_s_uri):
-    '''Should return a raster burned with a 'C' raster that is a combination
+def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri):
+    '''
+    Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
@@ -2105,8 +2076,10 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict,
 
 
 def copy_raster(in_uri, out_uri):
-    '''Quick function that will copy the raster in in_raster, and put it
-    into out_raster.'''
+    '''
+    Quick function that will copy the raster in in_raster, and put it
+    into out_raster.
+    '''
 
     raster = gdal.Open(in_uri)
     drv = gdal.GetDriverByName('GTiff')
@@ -2114,7 +2087,8 @@ def copy_raster(in_uri, out_uri):
 
 
 def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
-    '''Want to return two dictionaries in the format of the following:
+    '''
+    Want to return two dictionaries in the format of the following:
     (Note: the individual num raster comes from the crit_ratings
     subdictionary and should be pre-summed together to get the numerator
     for that particular raster. )

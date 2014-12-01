@@ -327,9 +327,9 @@ def execute(args):
     hra_core.execute(hra_args)
 
 
-def make_add_overlap_rasters(dir, habitats, stress_dict,
-                             h_s_c, h_s_e, grid_size):
-    '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat
+def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
+    '''
+    For every pair in h_s_c and h_s_e, want to get the corresponding habitat
     and stressor raster, and return the overlap of the two. Should add that as
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
 
@@ -426,7 +426,8 @@ def make_add_overlap_rasters(dir, habitats, stress_dict,
 
 
 def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
-    '''Creating a simple dictionary that will map stressor name to a rasterized
+    '''
+    Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing
     stressor name, and the value will be the URI of the rasterized shapefile.
 
@@ -560,7 +561,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
 
 
 def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
-    '''Creates a raster in the case of a zero buffer width, where we should
+    '''
+    Creates a raster in the case of a zero buffer width, where we should
     have is land and nodata values.
 
     Input:
@@ -598,7 +600,8 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
 
 
 def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create a raster where the area around land is a function of
+    '''
+    Should create a raster where the area around land is a function of
     linear decay from the values representing the land.
 
     Input:
@@ -640,7 +643,8 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
 
 def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create a raster where the area around the land is a function of
+    '''
+    Should create a raster where the area around the land is a function of
     exponential decay from the land values.
 
     Input:
@@ -687,7 +691,8 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
 
 def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
-    '''Should create a raster where the buffer zone surrounding the land is
+    '''
+    Should create a raster where the buffer zone surrounding the land is
     buffered with the same values as the land, essentially creating an equally
     weighted larger landmass.
 
@@ -729,7 +734,8 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
-    '''Want to get all shapefiles within any directories in hab_list, and burn
+    '''
+    Want to get all shapefiles within any directories in hab_list, and burn
     them to a raster.
 
     Input:
@@ -775,7 +781,8 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
 
 def calc_max_rating(risk_eq, max_rating):
-    ''' Should take in the max possible risk, and return the highest possible
+    '''
+    Should take in the max possible risk, and return the highest possible
     per pixel risk that would be seen on a H-S raster pixel.
 
     Input:
@@ -803,7 +810,8 @@ def calc_max_rating(risk_eq, max_rating):
 
 
 def listdir(path):
-    '''A replacement for the standar os.listdir which, instead of returning
+    '''
+    A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
 
@@ -821,7 +829,8 @@ def listdir(path):
 
 
 def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
-    '''This will take in the dictionary of criteria shapefiles, rasterize them,
+    '''
+    This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
 
     Input:
@@ -1115,7 +1124,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
 
 def unpack_over_dict(csv_uri, args):
-    '''This throws the dictionary coming from the pre-processor into the
+    '''
+    This throws the dictionary coming from the pre-processor into the
     equivalent dictionaries in args so that they can be processed before being
     passed into the core module.
 
