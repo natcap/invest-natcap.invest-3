@@ -125,6 +125,10 @@ class TestLobster(unittest.TestCase):
         harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
         testing.assert_approx_equal(harvest_guess, 963451.0, significant=4)
 
+        # check spawners: 2,847,870
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, 2847870.0, significant=3)
+
 
 class TestShrimp(unittest.TestCase):
     def setUp(self):

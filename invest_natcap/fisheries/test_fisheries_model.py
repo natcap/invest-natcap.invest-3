@@ -281,7 +281,7 @@ class TestSetInitCondFunc(unittest.TestCase):
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
@@ -326,7 +326,7 @@ class TestSetCycleFunc(unittest.TestCase):
         self.sample_vars = {
             # 'workspace_dir': 'path/to/workspace_dir',
             # 'aoi_uri': 'path/to/aoi_uri',
-            'total_timesteps': 100,
+            'total_timesteps': 10,
             'population_type': 'Stage-Based',
             'sexsp': 2,
             'spawn_units': 'Weight',
@@ -356,13 +356,13 @@ class TestSetCycleFunc(unittest.TestCase):
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([10, 2, 2, 2]),  # Index Order: time, class, sex, region
         }
 
     def test_stage_based(self):
@@ -371,6 +371,7 @@ class TestSetCycleFunc(unittest.TestCase):
         cycle_func = model.set_cycle_func(vars_dict, rec_func)
 
         N_prev = np.ones([2, 2, 2])
+
         N_cur_guess, spawners = cycle_func(N_prev)
         # N_cur_check = np.array([])
         # testing.assert_equal(N_cur_guess, N_cur_check)
@@ -414,7 +415,7 @@ class TestRunPopulationModel(unittest.TestCase):
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region

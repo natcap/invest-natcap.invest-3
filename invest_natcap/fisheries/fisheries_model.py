@@ -270,7 +270,7 @@ def set_cycle_func(vars_dict, rec_func):
 
     Example Output of Returned Cycle Function::
 
-        N_asx = np.ndarray([...])
+        N_asx = np.array([...])
         spawners = <int>
 
         N_next, spawners = cycle_func(N_prev)
@@ -327,9 +327,7 @@ def set_cycle_func(vars_dict, rec_func):
         N_next_0_xsa, spawners = rec_func(N_prev_xsa)
         N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
-        # N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
-        N_next[0] = N_next[0] + np.array(map(
-            lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
+        N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
             G_comp = np.array(map(lambda x: Migration[i-1].dot(

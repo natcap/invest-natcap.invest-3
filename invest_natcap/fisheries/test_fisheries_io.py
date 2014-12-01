@@ -256,7 +256,7 @@ class TestFetchArgs(unittest.TestCase):
     def test_fetch_args2(self):
         csv_dir = os.path.join(data_directory, 'CSVs/Multiple_CSV_Test')
         mig_uri = os.path.join(data_directory, 'Migration/')
-        workspace_dir = os.path.join(os.getcwd(), 'test')
+        workspace_dir = ''
         args = {
             'population_csv_dir': csv_dir,
             'migr_cont': True,

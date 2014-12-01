@@ -10,7 +10,7 @@ from fisheries_preprocessor_io import MissingParameter
 
 pp = pprint.PrettyPrinter(indent=4)
 
-workspace_dir = '~/workspace/fisheries_tests'
+workspace_dir = ''
 data_dir = '../../test/invest-data/test/data/fisheries/'
 inputs_dir = os.path.join(data_dir, 'preprocess/inputs')
 outputs_dir = os.path.join(data_dir, 'preprocess/outputs')

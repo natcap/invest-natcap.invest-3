@@ -841,22 +841,25 @@ def _create_results_csv(vars_dict):
         csv_writer.writerow([])
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
+        sum_headers_row = ['Subregion', 'Harvest']
         if vars_dict['val_cont']:
-            sum_headers_row = ['Subregion', 'Harvest', 'Valuation']
-            csv_writer.writerow(sum_headers_row)
-            for i in range(0, len(H_tx[-1])):  # i is a cycle
-                line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
-                csv_writer.writerow(line)
-            line = ['Total', "%.2f" % H_tx[-1].sum(), "%.2f" % V_tx[-1].sum()]
+            sum_headers_row.append('Valuation')
+        csv_writer.writerow(sum_headers_row)
+        for i in range(0, len(H_tx[-1])):  # i is a cycle
+            line = [Regions[i], "%.2f" % H_tx[-1, i]]
+            if vars_dict['val_cont']:
+                line.append("%.2f" % V_tx[-1, i])
             csv_writer.writerow(line)
-            csv_writer.writerow([])
+        line = ['Total', "%.2f" % H_tx[-1].sum()]
+        if vars_dict['val_cont']:
+            line.append("%.2f" % V_tx[-1].sum())
+        csv_writer.writerow(line)
+        csv_writer.writerow([])
 
         # Give Total Harvest for Each Cycle
         csv_writer.writerow(['Time Step Breakdown'])
         csv_writer.writerow([])
-        line = ['Time Step', 'Equilibrated?', 'Spawners']
-        if vars_dict['val_cont']:
-            line.append('Harvest')
+        line = ['Time Step', 'Equilibrated?', 'Spawners', 'Harvest']
         csv_writer.writerow(line)
 
         for i in range(0, len(H_tx)):  # i is a cycle
@@ -866,8 +869,7 @@ def _create_results_csv(vars_dict):
             else:
                 line.append('N')
             line.append("%.2f" % Spawners_t[i])
-            if vars_dict['val_cont']:
-                line.append("%.2f" % H_tx[i].sum())
+            line.append("%.2f" % H_tx[i].sum())
             csv_writer.writerow(line)
 
 
