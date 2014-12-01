@@ -36,7 +36,7 @@ class TestBlueCrab(unittest.TestCase):
             'frac_post_process': 0.0,
             'unit_price': 0.0,
         }
-    
+
     def test_run(self):
         guess = fisheries.execute(self.args, create_outputs=False)
         # pp.pprint(guess[0]['N_tasx'])

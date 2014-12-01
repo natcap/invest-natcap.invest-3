@@ -119,7 +119,7 @@ class TestPopulationParamsIO(unittest.TestCase):
 
 class TestMigrationIO(unittest.TestCase):
     def test_parse_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             'migr_cont': True,
             'migration_dir': uri
@@ -132,7 +132,7 @@ class TestMigrationIO(unittest.TestCase):
             mig_dict['adult'].shape[0], mig_dict['adult'].shape[1])
 
     def test_read_migration(self):
-        uri = os.path.join(data_directory, 'Migration/')
+        uri = os.path.join(data_directory, 'migration/')
         args = {
             "migration_dir": uri,
             "migr_cont": True,
@@ -141,7 +141,8 @@ class TestMigrationIO(unittest.TestCase):
         region_list = ['Region 1', 'Region 2', '...', 'Region N']
         mig_dict = fisheries_io.read_migration_tables(
             args, class_list, region_list)
-        test_matrix_dict = fisheries_io._parse_migration_tables(args, ['larva'])
+        test_matrix_dict = fisheries_io._parse_migration_tables(
+            args, ['larva'])
         # pp.pprint(test_matrix_dict)
         # pp.pprint(mig_dict)
         testing.assert_array_equal(
@@ -225,7 +226,7 @@ class TestSingleParamsIO(unittest.TestCase):
 class TestFetchArgs(unittest.TestCase):
     def test_fetch_args(self):
         csv_uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
-        mig_uri = os.path.join(data_directory, 'Migration/')
+        mig_uri = os.path.join(data_directory, 'migration/')
         args = {
             'population_csv_uri': csv_uri,
             'migr_cont': True,
@@ -255,7 +256,7 @@ class TestFetchArgs(unittest.TestCase):
 
     def test_fetch_args2(self):
         csv_dir = os.path.join(data_directory, 'CSVs/Multiple_CSV_Test')
-        mig_uri = os.path.join(data_directory, 'Migration/')
+        mig_uri = os.path.join(data_directory, 'migration/')
         workspace_dir = ''
         args = {
             'population_csv_dir': csv_dir,
