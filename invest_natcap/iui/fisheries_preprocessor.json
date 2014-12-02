@@ -82,15 +82,6 @@
           "type": "list",
           "elements": [
             {
-              "id": "habitat_csv_uri",
-              "args_id": "habitat_csv_uri",
-              "type": "file",
-              "label": "Habitat Parameters File (CSV)",
-              "defaultValue": "../Fisheries/Input/Preprocessor/habitat_params.csv",
-              "required": true,
-              "helpText": ""
-            },
-            {
               "id": "gamma",
               "args_id": "gamma",
               "type": "text",
@@ -101,6 +92,15 @@
               "validateAs": {
                 "type": "number"
               },
+              "helpText": ""
+            },
+            {
+              "id": "habitat_csv_uri",
+              "args_id": "habitat_csv_uri",
+              "type": "file",
+              "label": "Habitat Parameters File (CSV)",
+              "defaultValue": "../Fisheries/Input/Preprocessor/habitat_params.csv",
+              "required": true,
               "helpText": ""
             }
           ]

@@ -96,7 +96,7 @@ def fetch_args(args):
         is_equal_list = map(
             lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
     except:
-        is_equal_list = False
+        is_equal_list = [False]
         print "P_Classes", P_Classes
         print "H_Classes", H_Classes
     if not all(is_equal_list):

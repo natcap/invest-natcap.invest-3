@@ -10,10 +10,10 @@ import fisheries_preprocessor_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
-workspace_dir = ''
+workspace_dir = '../../test/invest-data/test/data/fisheries/'
 data_dir = '../../test/invest-data/Fisheries'
 inputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
-outputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
+outputs_dir = os.path.join(data_dir, 'output')
 
 
 class TestConvertSurvivalMatrix(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
-                outputs_dir, 'pop_params_mod.csv'),
+                outputs_dir, 'pop_params_modified.csv'),
             'habitat_csv_uri': os.path.join(
                 inputs_dir, 'habitat_params.csv'),
             'gamma': 0.5,
@@ -47,6 +47,9 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
 
         # Run operation
         guess = main.convert_survival_matrix(vars_dict)
+
+        pp.pprint(guess['Surv_nat_xsa_mod'].swapaxes(0, 1))
+        pp.pprint(check['Surv_nat_xsa'].swapaxes(0, 1))
 
         # Check for correctness
         # pp.pprint(guess['Surv_nat_xsa_mod'])

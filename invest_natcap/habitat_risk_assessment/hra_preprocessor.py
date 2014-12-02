@@ -67,7 +67,8 @@ class MissingSensOrResilException(Exception):
 
 
 def execute(args):
-    """Want to read in multiple hab/stressors directories, in addition to named
+    """
+    Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
 
     Input:
@@ -337,7 +338,8 @@ def execute(args):
 
 
 def listdir(path):
-    '''A replacement for the standar os.listdir which, instead of returning
+    '''
+    A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
 
@@ -354,7 +356,8 @@ def listdir(path):
 
 
 def make_crit_shape_dict(crit_uri):
-    '''This will take in the location of the file structure, and will return
+    '''
+    This will take in the location of the file structure, and will return
     a dictionary containing all the shapefiles that we find. Hypothetically, we
     should be able to parse easily through the files, since it should be
     EXACTLY of the specs that we laid out.
@@ -713,7 +716,8 @@ def zero_check(h_s_c, h_s_e, habs):
 
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
-    '''This function will take in a location, and update the dictionaries being
+    '''
+    This function will take in a location, and update the dictionaries being
     passed with the new Hab/Stress subdictionary info that we're getting from
     the CSV at URI.
 
@@ -893,7 +897,8 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
 
 
 def error_check(line, hab_name, stress_name):
-    '''Throwing together a simple error checking function for all of the inputs
+    '''
+    Throwing together a simple error checking function for all of the inputs
     coming from the CSV file. Want to do checks for strings vs floats, as well
     as some explicit string checking for 'E'/'C'.
 
@@ -960,7 +965,8 @@ def error_check(line, hab_name, stress_name):
 
 
 def parse_stress_buffer(uri):
-    '''This will take the stressor buffer CSV and parse it into a dictionary
+    '''
+    This will take the stressor buffer CSV and parse it into a dictionary
     where the stressor name maps to a float of the about by which it should be
     buffered.
 
