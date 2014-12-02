@@ -13,7 +13,7 @@ pp = pprint.PrettyPrinter(indent=4)
 workspace_dir = '../../test/invest-data/test/data/fisheries/'
 data_dir = '../../test/invest-data/Fisheries'
 inputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
-outputs_dir = os.path.join(data_dir, 'output')
+outputs_dir = os.path.join(workspace_dir, 'output')
 
 
 class TestConvertSurvivalMatrix(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
-                outputs_dir, 'pop_params_modified.csv'),
+                outputs_dir, 'pop_params_spreadsheet_mod.csv'),
             'habitat_csv_uri': os.path.join(
                 inputs_dir, 'habitat_params.csv'),
             'gamma': 0.5,
