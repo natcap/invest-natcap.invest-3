@@ -263,7 +263,6 @@ def read_population_csv(args, uri):
         pop_dict['Larvaldispersal'] = (np.array(np.ones(num_regions) /
                                        num_regions))
 
-
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
     if not (pop_dict['Larvaldispersal'].shape == pop_dict[
             'Exploitationfraction'].shape):
@@ -400,7 +399,7 @@ def read_migration_tables(args, class_list, region_list):
     Returns:
         mig_dict (dictionary): see example below
 
-    Example Returns:
+    Example Returns::
 
         mig_dict = {
             'Migration': [np.matrix, np.matrix, ...]

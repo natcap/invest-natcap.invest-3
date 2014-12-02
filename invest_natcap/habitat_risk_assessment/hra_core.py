@@ -345,11 +345,12 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.ylim([-.5, max_risk])
 
             #We still need to plot the element that gets us here.
-            matplotlib.pyplot.plot(element[2],
-                                   element[3],
-                                   'k^',
-                                   markerfacecolor='black',
-                                   markersize=8)
+            matplotlib.pyplot.plot(
+                element[2],
+                element[3],
+                'k^',
+                markerfacecolor='black',
+                markersize=8)
             matplotlib.pyplot.annotate(
                 element[1],
                 xy=(element[2], element[3]),

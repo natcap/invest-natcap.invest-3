@@ -18,78 +18,78 @@ def execute(args, create_outputs=True):
     '''
     Entry point into the Fisheries Model
 
-    Args:
-        workspace_dir (string): location into which all intermediate
-            and output files should be placed.
+    :param str args['workspace_dir']: location into which all intermediate
+        and output files should be placed.
 
-        aoi_uri (string): location of shapefile which will be used as
-            subregions for calculation. Each region must conatin a 'name'
-            attribute which will
+    :param str args['aoi_uri']: location of shapefile which will be used as
+        subregions for calculation. Each region must conatin a 'name'
+        attribute which will
 
-        timesteps (int): represents the number of time steps that
-            the user desires the model to run.
+    :param int args['timesteps']: represents the number of time steps that
+        the user desires the model to run.
 
-        population_type (string): specifies whether the model
-            is age-specific or stage-specific. Options will be either "Age
-            Specific" or "Stage Specific" and will change which equation is
-            used in modeling growth.
+    :param str args['population_type']: specifies whether the model
+        is age-specific or stage-specific. Options will be either "Age
+        Specific" or "Stage Specific" and will change which equation is
+        used in modeling growth.
 
-        sexsp (string): specifies whether or not the age and stage
-            classes are distinguished by sex.
+    :param str args['sexsp']: specifies whether or not the age and stage
+        classes are distinguished by sex.
 
-        harvest_units (string): specifies how the user wants to get
-            the harvest data. Options are either "Individuals" or "Weight", and
-            will change the harvest equation used in core. (Required if
-            args['val_cont'] is True)
+    :param str args['harvest_units']: specifies how the user wants to get
+        the harvest data. Options are either "Individuals" or "Weight", and
+        will change the harvest equation used in core. (Required if
+        args['val_cont'] is True)
 
-        do_batch (boolean): specifies whether program will perform a
-            single model run or a batch (set) of model runs.
+    :param bool args['do_batch']: specifies whether program will perform a
+        single model run or a batch (set) of model runs.
 
-        population_csv_uri (string): location of the population
-            parameters csv. This will contain all age and stage specific
-            parameters. (Required if args['do_batch'] is False)
+    :param str args['population_csv_uri']: location of the population
+        parameters csv. This will contain all age and stage specific
+        parameters. (Required if args['do_batch'] is False)
 
-        population_csv_dir (string): location of the directory that
-            contains the Population Parameters CSV files for batch processing
-            (Required if args['do_batch'] is True)
+    :param str args['population_csv_dir']: location of the directory that
+        contains the Population Parameters CSV files for batch processing
+        (Required if args['do_batch'] is True)
 
-        spawn_units (string): (description)
+    :param str args['spawn_units']: (description)
 
-        total_init_recruits (float): represents the initial number of
-            recruits that will be used in calculation of population on a per
-            area basis.
+    :param float args['total_init_recruits']: represents the initial number
+        of recruits that will be used in calculation of population on a per
+        area basis.
 
-        recruitment_type (string): (description)
+    :param str args['recruitment_type']: (description)
 
-        alpha (float): must exist within args for BH or Ricker.
-            Parameter that will be used in calculation of recruitment.
+    :param float args['alpha']: must exist within args for BH or Ricker.
+        Parameter that will be used in calculation of recruitment.
 
-        beta (float): must exist within args for BH or Ricker.
-            Parameter that will be used in calculation of recruitment.
+    :param float args['beta']: must exist within args for BH or Ricker.
+        Parameter that will be used in calculation of recruitment.
 
-        total_recur_recruits (float): must exist within args for Fixed.
-            Parameter that will be used in calculation of recruitment.
+    :param float args['total_recur_recruits']: must exist within args for
+        Fixed. Parameter that will be used in calculation of recruitment.
 
-        migr_cont (bool): if true, model uses migration
+    :param bool args['migr_cont']: if true, model uses migration
 
-        migration_dir (string): if this parameter exists, it means
-            migration is desired. This is  the location of the parameters
-            folder containing files for migration. There should be one file for
-            every age class which migrates. (Required if args['migr_cont'] is
-            True)
+    :param str args['migration_dir']: if this parameter exists, it means
+        migration is desired. This is  the location of the parameters
+        folder containing files for migration. There should be one file for
+        every age class which migrates. (Required if args['migr_cont'] is
+        True)
 
-        val_cont (bool): if true, model runs valuation computations
+    :param bool args['val_cont']: if true, model runs valuation
+        computations
 
-        frac_post_process (float): represents the fraction of the
-            species remaining after processing of the whole carcass is complete.
-            This will exist only if valuation is desired for the particular
-            species. (Required if args['val_cont'] is True)
+    :param float args['frac_post_process']: represents the fraction of the
+        species remaining after processing of the whole carcass is
+        complete. This will exist only if valuation is desired for the
+        particular species. (Required if args['val_cont'] is True)
 
-        unit_price (float): represents the price for a single unit of
-            harvest. Exists only if valuation is desired. (Required if
-            args['val_cont'] is True)
+    :param float args['unit_price']: represents the price for a single unit
+        of harvest. Exists only if valuation is desired. (Required if
+        args['val_cont'] is True)
 
-    Example Args Dictionary::
+    Example Args::
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
@@ -100,7 +100,7 @@ def execute(args, create_outputs=True):
             'harvest_units': 'Individuals',
             'do_batch': False,
             'population_csv_uri': 'path/to/csv_uri',
-            'population_csv_dir': ''
+            'population_csv_dir': '',
             'spawn_units': 'Weight',
             'total_init_recruits': 100000.0,
             'recruitment_type': 'Ricker',

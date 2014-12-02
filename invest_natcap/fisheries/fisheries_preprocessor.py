@@ -29,21 +29,21 @@ def execute(args):
     with modified survival attributes across classes and regions based on
     habitat area changes and class-level dependencies on those habitats.
 
-    Args:
-        workspace_dir (string): location into which the resultant modified
-            Population Parameters CSV file should be placed.
+    :param str args['workspace_dir']: location into which the resultant
+        modified Population Parameters CSV file should be placed.
 
-        sexsp (string): specifies whether or not the age and stage
-            classes are distinguished by sex. Options: 'Yes' or 'No'
+    :param str args['sexsp']: specifies whether or not the age and stage
+        classes are distinguished by sex. Options: 'Yes' or 'No'
 
-        population_csv_uri (string): location of the population parameters csv
-            file. This file contains all age and stage specific parameters.
+    :param str args['population_csv_uri']: location of the population
+        parameters csv file. This file contains all age and stage specific
+        parameters.
 
-        habitat_csv_uri (string): location of the habitat parameters csv file.
-            This file contains habitat-class dependency and habitat area
-            change information.
+    :param str args['habitat_csv_uri']: location of the habitat parameters
+        csv file. This file contains habitat-class dependency and habitat
+        area change information.
 
-        gamma (float): (desc)
+    :param float args['gamma']: (desc)
 
     Returns:
         None

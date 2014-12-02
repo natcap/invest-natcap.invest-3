@@ -44,7 +44,7 @@ def fetch_args(args):
 
         vars_dict = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/'
+            'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
             'gamma': 0.5,
 
@@ -614,7 +614,7 @@ def save_population_csv(vars_dict):
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/'
+            'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
             'population_csv_uri': 'path/to/csv',  # original csv file
             'Surv_nat_xsa': np.ndarray([...]),
