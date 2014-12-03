@@ -118,7 +118,7 @@ def execute(args, create_outputs=True):
     # Parse Inputs
     model_list = io.fetch_args(args, create_outputs=create_outputs)
 
-    # Run Models
+    # For Each Model:
     vars_all_models = []
     for model_args_dict in model_list:
 
@@ -137,7 +137,7 @@ def execute(args, create_outputs=True):
         vars_all_models.append(model_vars_dict)
 
         if create_outputs:
-            # Create Outputs
+            # Create Model Outputs
             io.create_outputs(model_vars_dict)
 
     return vars_all_models

@@ -90,7 +90,7 @@
               ],
               "returns": "strings",
               "dataType": "string",
-              "helpText": "Specifies whether the classes provided in the Population Parameters CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+              "helpText": "Specifies whether the lifecycle classes provided in the Population Parameters CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
             },
             {
               "id": "sexsp",
@@ -105,7 +105,7 @@
               ],
               "returns": "strings",
               "dataType": "string",
-              "helpText": "Specifies whether or not the population classes provided in the Populaton Parameters CSV file are distinguished by sex."
+              "helpText": "Specifies whether or not the lifecycle classes provided in the Populaton Parameters CSV file are distinguished by sex."
             },
             {
                 "id": "harvest_units",
@@ -139,7 +139,7 @@
               "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
               "required": true,
               "disabledBy": "do_batch",
-              "helpText": "The provided CSV file should contain all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+              "helpText": "The provided CSV file should contain all necessary attributes for the sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
             },
             {
               "id": "population_csv_dir",
@@ -149,7 +149,7 @@
               "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/",
               "required": true,
               "enabledBy": "do_batch",
-              "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>The name of each file will be the name of the folder containing that model run's outputs.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+              "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>The name of each file will serve as the prefix of the outputs created by the model run.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
             }
           ]
         }

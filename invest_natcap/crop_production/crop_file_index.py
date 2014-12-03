@@ -31,14 +31,14 @@ for base_name in os.listdir(fertilizer_dir_uri):
     raster_uri = os.path.join(fertilizer_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(fertilizer_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(1)
             column = "_".join([m.group(2), m.group(3)])
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -48,14 +48,14 @@ for base_name in os.listdir(climate_dir_uri):
     raster_uri = os.path.join(climate_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(climate_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(2)
             column = "_".join([m.group(4), m.group(6)])
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
             bin_matrix_columns.add(column)
         else:
@@ -65,14 +65,14 @@ for base_name in os.listdir(production_dir_uri):
     raster_uri = os.path.join(production_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(production_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(1)
             column = m.group(3)
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -81,14 +81,14 @@ for base_name in os.listdir(cbi_dir_uri):
     raster_uri = os.path.join(cbi_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(cbi_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(3)
             column = m.group(1)
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -97,14 +97,14 @@ for base_name in os.listdir(cbi_yield_dir_uri):
     raster_uri = os.path.join(cbi_yield_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(cbi_yield_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(3)
             column = m.group(1)
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -113,14 +113,14 @@ for base_name in os.listdir(income_climate_dir_uri):
     raster_uri = os.path.join(income_climate_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(income_climate_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(2)
             column = "Income_Climate"
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -129,14 +129,14 @@ for base_name in os.listdir(yield_mod_dir_uri):
     raster_uri = os.path.join(yield_mod_dir_uri, base_name)
     if os.path.isfile(raster_uri):
         m = re.search(yield_mod_pattern, base_name)
-        if m != None:
+        if m is not None:
             crop = m.group(1)
             column = "Yield_mod"
             column_header.add(column)
 
             if not (crop in rasters):
                 rasters[crop] = {}
-                
+
             rasters[crop][column] = raster_uri[len(data_dir_uri)+1:]
         else:
             unknown_files.append(raster_uri)
@@ -170,7 +170,7 @@ for i, crop in enumerate(crops):
     for column in bin_matrix_columns:
         try:
             if rasters[crop][column] != "":
-                if raster == True:
+                if raster is True:
                     print i + 1, " ", crop, " has multiple BinMatrix rasters"
                     break
                 else:
@@ -178,7 +178,7 @@ for i, crop in enumerate(crops):
                     bin_matrix_crops.append(crop)
         except KeyError:
             pass
-    if raster == False:
+    if raster is False:
         print i + 1, " ", crop, " has no BinMatrix rasters"
 
 iui_percentile_crop = """
@@ -193,7 +193,7 @@ iui_percentile_crop = """
 
 for crop in  bin_matrix_crops:
     print iui_percentile_crop % (crop, crop, crop.title()),
-    
+
 
 ##print column_header
 ##print crops

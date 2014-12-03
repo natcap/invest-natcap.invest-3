@@ -1043,8 +1043,10 @@ def _create_results_aoi(vars_dict):
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
     basename = os.path.splitext(os.path.basename(aoi_uri))[0]
+    basename2 = os.path.splitext(os.path.basename(
+        vars_dict['population_csv_uri']))[0]
     output_aoi_uri = os.path.join(
-        vars_dict['output_dir'], basename + '_results_aoi.shp')
+        vars_dict['output_dir'], basename2 + '_' + basename + '_results_aoi.shp')
 
     # Copy AOI file to outputs directory
     raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
