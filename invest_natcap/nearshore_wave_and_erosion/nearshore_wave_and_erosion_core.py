@@ -536,6 +536,26 @@ def compute_transects(args):
             array = None
 
 
+            # Find the habitat ID that corresponds to the shapefile type
+            habitat_id = None
+            # Check if it's a soil type
+            if shp_type == 'soil type':
+                habitat_id = len(args['field_index']) - 1
+            # Else look for a natural habitat
+            else:
+                for hab_id in range(len(args['habitat_information'])):
+                    if args['habitat_information'][hab_id][0] == shp_type:
+                        habitat_id = hab_id
+                        break
+
+            if habitat_id is None:
+                print("Couldn't find habitat ID for", shp_type)
+                print('Available habitats:', \
+                    [args['habitat_information'][hab_id][0] \
+                    for hab_id in range(len(args['habitat_information']))])
+
+                assert habitat_id is not None
+
             for field in args['shapefiles'][shp_type][shp_name]:
 
                 # Skip the field 'type'
@@ -547,7 +567,8 @@ def compute_transects(args):
                     os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
 
                 # Extract data from the current raster field
-                field_id = args['field_index'][shp_type][field]
+                field_id = args['field_index'][habitat_id]['fields'][field]
+
                 uri = args['shapefiles'][shp_type][shp_name][field]
                 raster = gdal.Open(uri)
                 band = raster.GetRasterBand(1)
@@ -580,7 +601,7 @@ def compute_transects(args):
                     else:
                         continue
 
-                        # Save transect to file
+                    # Save transect to file
                     mask = mask_dict[transect]
 
                     destination[mask] = source[mask]

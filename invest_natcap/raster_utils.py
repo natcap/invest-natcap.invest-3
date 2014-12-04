@@ -1338,7 +1338,7 @@ def warp_reproject_dataset_uri(
         options=['BIGTIFF=IF_SAFER'])
 
     # Set the nodata value for the output dataset
-    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
+    output_dataset.GetRasterBand(1).SetNoDataValue(float(out_nodata))
 
     # Calculate the new geotransform
     output_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
