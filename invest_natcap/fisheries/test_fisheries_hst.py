@@ -48,14 +48,7 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
         # Run operation
         guess = main.convert_survival_matrix(vars_dict)
 
-        pp.pprint(guess['Surv_nat_xsa_mod'].swapaxes(0, 1))
-        pp.pprint(check['Surv_nat_xsa'].swapaxes(0, 1))
-
         # Check for correctness
-        # pp.pprint(guess)
-        # pp.pprint(check)
-        # pp.pprint(guess['Surv_nat_xsa_mod'])
-        # pp.pprint(check['Surv_nat_xsa'])
         testing.assert_array_almost_equal(
             guess['Surv_nat_xsa_mod'], check['Surv_nat_xsa'])
 
@@ -91,16 +84,10 @@ class TestConvertSurvivalMatrix2(unittest.TestCase):
         check = io.fetch_args(self.check)
 
         # Run operation
-        guess = main.convert_survival_matrix_2(vars_dict)
+        guess = main.convert_survival_matrix(vars_dict)
 
-        pp.pprint(guess['Surv_nat_xsa_mod'].swapaxes(0, 1))
-        pp.pprint(check['Surv_nat_xsa'].swapaxes(0, 1))
-
-        # Check for correctness
-        pp.pprint(guess)
-        pp.pprint(check)
-        # pp.pprint(guess['Surv_nat_xsa_mod'])
-        # pp.pprint(check['Surv_nat_xsa'])
+        np.set_printoptions(precision=4)
+        pp.pprint(guess['Surv_nat_xsa_mod'] - check['Surv_nat_xsa'])
         testing.assert_array_almost_equal(
             guess['Surv_nat_xsa_mod'], check['Surv_nat_xsa'])
 

@@ -7,6 +7,7 @@ import logging
 import os
 import csv
 import pprint as pp
+import copy
 
 import numpy as np
 
@@ -402,7 +403,6 @@ def read_habitat_csv(args):
             'Hab_dep_num_a': np.array([...]),
         }
     '''
-
     habitat_dict = _parse_habitat_csv(args)
 
     # Verify provided information
@@ -421,7 +421,8 @@ def read_habitat_csv(args):
 
     # Derive additional information
     # TRANSITION BITMAP NEEDS CLEARER DEFINITION
-    A_ah = habitat_dict['Hab_dep_ha'].swapaxes(0, 1)
+    A_ah = copy.copy(habitat_dict['Hab_dep_ha'].swapaxes(0, 1))
+    A_ah[A_ah != 0] = 1
     Hab_class_mvmt_a = [0]
     for i in range(1, len(A_ah)):
         if np.all(A_ah[i] == A_ah[i-1]):
@@ -434,7 +435,6 @@ def read_habitat_csv(args):
     for A_h in A_ah:
         Hab_dep_num_a.append(int(len(np.nonzero(A_h)[0])))
     habitat_dict['Hab_dep_num_a'] = np.array(Hab_dep_num_a)
-    print "Hab_dep_num_a", habitat_dict['Hab_dep_num_a']
 
     return habitat_dict
 
