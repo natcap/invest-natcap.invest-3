@@ -168,7 +168,7 @@ if platform.system() == 'Windows':
          'invest_ndr.py',
          'invest_wind_energy.py',
          'invest_fisheries.py',
-         'invest_fisheries_preprocessor.py',
+         'invest_fisheries_hst.py',
          'invest_pollination.py',
          'invest_ntfp.py',
          'invest_blue_carbon.py',

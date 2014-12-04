@@ -308,13 +308,12 @@ def compute_transects(args):
     
     transect_data_file = h5.File(transect_data_uri, 'w')
     
-    
-#    climatic_forcing_dataset = \
-#        transect_data_file.create_dataset('climatic_forcing', \
-#            (transect_count, len(args['shapefiles']['climatic_forcing']), \
-#                max_transect_lenght), \
-#            compression = 'gzip', fillvalue = 0, \
-#            dtype = 'i4')
+
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (transect_count, climatic_forcing_field_count, max_transect_lenght), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
 
     soil_type_dataset = \
         transect_data_file.create_dataset('soil_types', \
@@ -375,6 +374,9 @@ def compute_transects(args):
             dtype = 'i4')
 
 
+
+    climatic_forcing_array = \
+        np.ones(climatic_forcing_dataset.shape).astype(int) * habitat_nodata
 
     soil_type_array = \
         np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
@@ -629,6 +631,7 @@ def compute_transects(args):
                 array = None
 
     # Both the habitat type and the habitat field data are complete, save them
+    climatic_forcing_dataset[...] = climatic_forcing_array[...]
     soil_type_dataset[...] = soil_type_array[...]
     soil_properties_dataset[...] = soil_properties_array[...]
     habitat_type_dataset[...] = habitat_type_array[...]

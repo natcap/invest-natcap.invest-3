@@ -5,8 +5,8 @@ import pprint
 import numpy as np
 from numpy import testing
 
-import fisheries_preprocessor_io as io
-from fisheries_preprocessor_io import MissingParameter
+import fisheries_hst_io as io
+from fisheries_hst_io import MissingParameter
 
 pp = pprint.PrettyPrinter(indent=4)
 
