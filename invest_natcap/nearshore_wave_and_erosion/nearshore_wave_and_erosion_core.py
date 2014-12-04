@@ -299,6 +299,7 @@ def compute_transects(args):
     # Create a numpy array to store the habitat type
     habitat_field_count = args['habitat_field_count']
     soil_field_count = args['soil_field_count']
+    climatic_forcing_field_count = args['climatic_forcing_field_count']
     transect_count = tiles
 
     # Creating HDF5 file that will store the transect data
@@ -307,7 +308,13 @@ def compute_transects(args):
     
     transect_data_file = h5.File(transect_data_uri, 'w')
     
-
+    
+#    climatic_forcing_dataset = \
+#        transect_data_file.create_dataset('climatic_forcing', \
+#            (transect_count, len(args['shapefiles']['climatic_forcing']), \
+#                max_transect_lenght), \
+#            compression = 'gzip', fillvalue = 0, \
+#            dtype = 'i4')
 
     soil_type_dataset = \
         transect_data_file.create_dataset('soil_types', \
