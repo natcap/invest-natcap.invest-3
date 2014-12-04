@@ -500,6 +500,25 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
+    ## Preprocess Climatic forcing
+    #args['clipped_climatic_forcing_uri'] = \
+    #    os.path.join(args['intermediate_dir'], 'clipped_climatic_forcing')
+    #args['climatic_forcing_raster_uri'] = \
+    #    os.path.join(args['intermediate_dir'], 'climatic_forcing.tif')
+    #if not os.path.isfile(args['climatic_forcing_raster_uri']):
+    #    LOGGER.debug('Pre-processing climatic_forcing...')
+    #    adjust_shapefile_to_aoi(args['climatic_forcing_uri'], args['aoi_uri'], \
+    #        args['clipped_climatic_forcing_uri'])
+
+        # extract all the fields from the shapefile
+        # Burn all the fields one by one to rasters
+        #raster_from_shapefile_uri(shapefile, aoi, cell_size, output, field)
+        
+        #preprocess_polygon_datasource(args['climatic_forcing_uri'], \
+        #    args['aoi_uri'], args['cell_size'], \
+        #    os.path.join(args['intermediate_dir'], 'landmass.tif'))
+
+
 #        # Set data to zero
 #        def set_to_zero(x):
 #            result = numpy.copy(x)
