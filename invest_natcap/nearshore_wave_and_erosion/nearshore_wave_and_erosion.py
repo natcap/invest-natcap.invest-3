@@ -500,24 +500,70 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
-    ## Preprocess Climatic forcing
-    #args['clipped_climatic_forcing_uri'] = \
-    #    os.path.join(args['intermediate_dir'], 'clipped_climatic_forcing')
-    #args['climatic_forcing_raster_uri'] = \
-    #    os.path.join(args['intermediate_dir'], 'climatic_forcing.tif')
-    #if not os.path.isfile(args['climatic_forcing_raster_uri']):
-    #    LOGGER.debug('Pre-processing climatic_forcing...')
-    #    adjust_shapefile_to_aoi(args['climatic_forcing_uri'], args['aoi_uri'], \
-    #        args['clipped_climatic_forcing_uri'])
+    # Preprocess Climatic forcing
+    climatic_forcing_fields = set(['surge', 'windspeed', 'waveperiod', 'waveheight'])
+    
+    args['clipped_climatic_forcing_uri'] = \
+        os.path.join(args['intermediate_dir'], 'clipped_climatic_forcing')
+    
+    args['climatic_forcing_raster_uri'] = \
+        os.path.join(args['intermediate_dir'], 'climatic_forcing.tif')
+
+    basename = os.path.basename(args['climatic_forcing_raster_uri'])
+    basename, ext = os.path.splitext(basename)
+    
+    if not os.path.isfile(args['climatic_forcing_raster_uri']):
+        LOGGER.debug('Pre-processing climatic_forcing...')
+        adjust_shapefile_to_aoi(args['climatic_forcing_uri'], args['aoi_uri'], \
+            args['clipped_climatic_forcing_uri'])
 
         # extract all the fields from the shapefile
-        # Burn all the fields one by one to rasters
-        #raster_from_shapefile_uri(shapefile, aoi, cell_size, output, field)
-        
-        #preprocess_polygon_datasource(args['climatic_forcing_uri'], \
-        #    args['aoi_uri'], args['cell_size'], \
-        #    os.path.join(args['intermediate_dir'], 'landmass.tif'))
+        forcing_dset = ogr.Open(args['clipped_climatic_forcing_uri'])
+        layer = forcing_dset.GetLayer(0)
+        layer_def = layer.GetLayerDefn()
+        field_count = layer_def.GetFieldCount()
 
+        # Extract field names and build checksum
+        field_names = []
+        for field_id in range(field_count):
+            field_defn = layer_def.GetFieldDefn(field_id)
+            field_names.append(field_defn.GetName())
+        
+        layer = None
+        forcing_dset = None
+
+        for field_name in field_names:
+            # Burn all the fields one by one to rasters
+            LOGGER.info('Processing %s...', args['climatic_forcing_uri'])
+            if field_name.lower() in climatic_forcing_fields:
+                # Rasterize the shapefile's field
+                output_uri = os.path.join(args['intermediate_dir'], \
+                    basename + '_' + field_name.lower() + '.tif')
+
+                if not os.path.isfile(output_uri):
+                    # Rasterize the current shapefile field
+                    LOGGER.debug('rasterizing field %s to %s', field_name, output_uri)
+                    
+                    raster_from_shapefile_uri(
+                        args['clipped_climatic_forcing_uri'], 
+                        args['aoi_uri'], 
+                        args['cell_size'], 
+                        output_uri, 
+                        all_touched = True)
+
+                    raster_utils.vectorize_points_uri(
+                        args['clipped_climatic_forcing_uri'],
+                        field_name,
+                        output_uri)
+
+                    raster_utils.calculate_raster_stats_uri(output_uri)
+
+    sys.exit(0)                
+
+                # Keep this raster uri
+                #args['shapefiles']['climatic_forcing'][field_name.lower()] = \
+                #    output_uri
+                #in_raster_list.append(output_uri)
 
 #        # Set data to zero
 #        def set_to_zero(x):
