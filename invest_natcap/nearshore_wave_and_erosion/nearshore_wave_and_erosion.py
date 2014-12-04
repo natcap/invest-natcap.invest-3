@@ -212,7 +212,7 @@ def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
         reprojected_aoi_uri)
 
     # Clip dataset with reprojected AOI
-    clipped_dataset_uri = os.path.join(out_head, out_base + '_unprojected.tif')
+    clipped_dataset_uri = os.path.join(out_head, out_base + '_clipped_unprojected.tif')
     raster_utils.clip_dataset_uri(in_dataset_uri, reprojected_aoi_uri, \
         clipped_dataset_uri, False)
 
@@ -500,6 +500,25 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
+    ## Preprocess Climatic forcing
+    #args['clipped_climatic_forcing_uri'] = \
+    #    os.path.join(args['intermediate_dir'], 'clipped_climatic_forcing')
+    #args['climatic_forcing_raster_uri'] = \
+    #    os.path.join(args['intermediate_dir'], 'climatic_forcing.tif')
+    #if not os.path.isfile(args['climatic_forcing_raster_uri']):
+    #    LOGGER.debug('Pre-processing climatic_forcing...')
+    #    adjust_shapefile_to_aoi(args['climatic_forcing_uri'], args['aoi_uri'], \
+    #        args['clipped_climatic_forcing_uri'])
+
+        # extract all the fields from the shapefile
+        # Burn all the fields one by one to rasters
+        #raster_from_shapefile_uri(shapefile, aoi, cell_size, output, field)
+        
+        #preprocess_polygon_datasource(args['climatic_forcing_uri'], \
+        #    args['aoi_uri'], args['cell_size'], \
+        #    os.path.join(args['intermediate_dir'], 'landmass.tif'))
+
+
 #        # Set data to zero
 #        def set_to_zero(x):
 #            result = numpy.copy(x)
@@ -529,6 +548,7 @@ def execute(args):
         os.path.join(args['intermediate_dir'], 'bathymetry.tif')
     if not os.path.isfile(args['bathymetry_raster_uri']):
         LOGGER.debug('Pre-processing bathymetry...')
+        bathy_nodata = raster_utils.get_nodata_from_uri(args['bathymetry_uri'])
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], args['bathymetry_raster_uri'])
 
@@ -540,17 +560,17 @@ def execute(args):
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
-    args['habitat_information'] = [\
-        ('land polygon',          {'habitat':'land polygon'},                 {}), \
-        ('kelp',                  {'habitat':'seagrass', 'type':1},           {'water':0.}), \
-        ('seagrass',              {'habitat':'seagrass', 'type':2},           {'land':0.}), \
-        ('underwater structures', {'habitat':'underwater structures'},        {'land':0.}), \
-        ('coral reef',            {'habitat':'coral reef'},                   {'land':0.}), \
-        ('levee',                 {'habitat':'man-made structure', 'type':5}, {'land':-50.0}), \
-        ('beach',                 {'habitat':'beach'},                        {'MHHW':1, 'MLLW':1}), \
-        ('seawall',               {'habitat':'man-made structure', 'type':7}, {'land':25.0, 'water':25.0}), \
-        ('marsh',                 {'habitat':'marsh'},                        {'MLLW':2}), \
-        ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2}) \
+    args['habitat_information'] = [
+        ('land polygon',          {'habitat':'land polygon'},                 {}),
+        ('kelp',                  {'habitat':'seagrass', 'type':1},           {'land':0.}), 
+        ('seagrass',              {'habitat':'seagrass', 'type':2},           {'land':0.}), 
+        ('underwater structures', {'habitat':'underwater structures'},        {'land':0.}), 
+        ('coral reef',            {'habitat':'coral reef'},                   {'land':0.}), 
+        ('levee',                 {'habitat':'man-made structure', 'type':5}, {'land':-50.0, 'water':0.}),
+        ('beach',                 {'habitat':'beach'},                        {'MHHW':1, 'MLLW':1}),
+        ('seawall',               {'habitat':'man-made structure', 'type':7}, {'land':25.0, 'water':25.0}),
+        ('marsh',                 {'habitat':'marsh'},                        {'MLLW':2}),
+        ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2})
         ]
 
     # List valid habitat types
@@ -558,6 +578,8 @@ def execute(args):
     for habitat_information in args['habitat_information']:
         args['valid_habitat_types'].add(habitat_information[1]['habitat'])
 #    print('valid_habitat_types', valid_habitat_types)
+
+#    sys.exit(0)
 
     # List all shapefiles in the habitats directory
     files = []
@@ -600,19 +622,46 @@ def execute(args):
                 args['habitat_information'][i][1] else None), i) \
             for i in range(len(args['habitat_information']))])
 
-    # Assign a positional index to every shapefile field
+    # Assign a positional index to every habitat field
     args['field_index'] = {}
     for habitat_type in shapefile_required_fields:
         
-        required_fields = shapefile_required_fields[habitat_type]
+        if habitat_type not in args['valid_habitat_types']:
+            continue
 
-        args['field_index'][habitat_type] = {}
+        for habitat_information in args['habitat_priority']:
+            habitat_name = habitat_information[0]
+            if habitat_name == habitat_type:
+                habitat_id = args['habitat_priority'][habitat_information]
+
+                required_fields = shapefile_required_fields[habitat_type]
+
+                args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
 
 
-        for field_id in range(len(required_fields)):                
-            field_name = required_fields[field_id]
-            # Field name is set to its index in the required fields array
-            args['field_index'][habitat_type][field_name.lower()] = field_id
+                for field_id in range(len(required_fields)):                
+                    field_name = required_fields[field_id]
+                    # Field name is set to its index in the required fields array
+                    args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
+
+    # Append soil type field indices
+    habitat_type = 'soil type'
+    habitat_id = len(args['field_index'])
+
+    required_fields = shapefile_required_fields[habitat_type]
+
+    args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
+
+
+    for field_id in range(len(required_fields)):                
+        field_name = required_fields[field_id]
+        # Field name is set to its index in the required fields array
+        args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
+
+#    print('valid habitat types', args['valid_habitat_types'])
+#    print('habitat priority', args['habitat_priority'])
+#    print('field index', args['field_index'])
+#    sys.exit(0)
 
     # Save the dictionary
     field_index_dictionary_uri = \
@@ -750,8 +799,6 @@ def execute(args):
     bathymetry_nodata, cell_size = \
         extract_raster_information(args['bathymetry_raster_uri'])
 
-
-
     # Keep land and nodata
     def keep_land_and_nodata(x, aoi):
         result = numpy.zeros(x.shape) # Add everything
@@ -781,7 +828,6 @@ def execute(args):
         result[x > 0] = 0 # Add land
 
         return result
-
 
     # Scales a raster inplace by 'scaling_factor'
     def scale_raster_inplace(raster_uri, scaling_factor):
