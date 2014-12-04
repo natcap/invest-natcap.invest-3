@@ -33,7 +33,7 @@ from shapely import speedups
 import shapely.prepared
 
 import raster_cython_utils
-from invest_natcap.invest_core import fileio
+from invest_natcap import fileio
 
 GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Byte: numpy.uint8,

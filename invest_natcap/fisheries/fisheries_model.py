@@ -1,5 +1,11 @@
 '''
 The Fisheries Model module contains functions for running the model
+
+Variable Suffix Notation:
+t: time
+x: area/region
+a: age/class
+s: sex
 '''
 
 import logging
@@ -9,34 +15,6 @@ import numpy as np
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-'''
-**Notes**
-
-Notation:
-x, r: area/region
-a, c: age/class
-s: sex
-t: time
-
-    Example: N_asx (Three-dimensional Numbers matrix)
-        first index: class
-        last index (first degree): region
-
-Presumed Order of Axes for Given Functions:
-
-    Recruitment
-        N:              region, sex, class
-        Class Vectors:  (None), sex, class
-
-    Initial Conditions
-        N:  class, sex, region
-        S:  class, sex, region
-
-    Cycle
-        N:  class, sex, region
-        S:  class, sex, region
-'''
 
 
 def initialize_vars(vars_dict):
@@ -89,6 +67,66 @@ def initialize_vars(vars_dict):
     vars_dict['Spawners_t'] = np.zeros([t])
 
     return vars_dict
+
+
+# Helper functions for initializing derived variables
+def _calc_survtotalfrac(vars_dict):
+    '''
+    Implements the equation
+        S_xsa = surv_xsa * (1 - Exploitationfraction_x * Vulnfishing_sa)
+
+    Args:
+        vars_dict (dictionary)
+
+    Returns:
+        Survtotalfrac (np.ndarray)
+    '''
+    S_nat = vars_dict['Survnaturalfrac']
+    E = vars_dict['Exploitationfraction']
+    V = vars_dict['Vulnfishing']
+
+    I = []
+    for x in E:
+        I.append(x * V)
+    I = np.array(I)
+
+    S_tot = S_nat * (1 - I)
+
+    if np.isnan(S_tot).any():
+        LOGGER.warning("Survival Matrix Contains NaN Values")
+
+    return S_tot
+
+
+def _calc_p_g_survtotalfrac(vars_dict):
+    '''
+    Implements the equations
+        G_xsa = (S_xsa ** D_sa) * ((1 - S_xsa) / (1 - S_xsa ** D_sa))
+
+        P_xsa = S_xsa * ((1 - S_xsa ** (D_sa - 1)) / (1 - S_xsa ** D_sa))
+
+    Args:
+        vars_dict (dictionary)
+
+    Returns:
+        G (np.ndarray)
+
+        P (np.ndarray)
+    '''
+    S_tot = vars_dict['Survtotalfrac']
+    D_sa = vars_dict['Duration']
+
+    I = S_tot ** D_sa
+    G = I * ((1 - S_tot) / (1 - I))
+
+    I_2 = S_tot ** (D_sa - 1)
+    P = S_tot * ((1 - I_2) / (1 - I))
+
+    if (np.isnan(G).any() or np.isnan(P).any()):
+        LOGGER.warning(
+            "Stage-based Survival Matrices Contain NaN Values")
+
+    return G, P
 
 
 def set_recru_func(vars_dict):
@@ -232,7 +270,7 @@ def set_cycle_func(vars_dict, rec_func):
 
     Example Output of Returned Cycle Function::
 
-        N_asx = np.ndarray([...])
+        N_asx = np.array([...])
         spawners = <int>
 
         N_next, spawners = cycle_func(N_prev)
@@ -289,8 +327,7 @@ def set_cycle_func(vars_dict, rec_func):
         N_next_0_xsa, spawners = rec_func(N_prev_xsa)
         N_next[0] = N_next_0_xsa.swapaxes(0, 2)
 
-        N_next[0] = N_next[0] + np.array(map(
-            lambda x: Migration[0].dot(x), N_prev[0])) * S[0]
+        N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
 
         for i in range(1, num_classes):
             G_comp = np.array(map(lambda x: Migration[i-1].dot(
@@ -325,48 +362,47 @@ def set_harvest_func(vars_dict):
         V_x = np.array([6.0, 9.0, 5.0, ...])
 
     '''
-    if True:  # vars_dict['harv_cont']:
+    sexsp = vars_dict['sexsp']
+    frac_post_process = 0.0
+    unit_price = 0
 
-        sexsp = vars_dict['sexsp']
+    if vars_dict['val_cont']:
         frac_post_process = vars_dict['frac_post_process']
-        unit_price = vars_dict['unit_price']
+        unit_price = vars_dict['unit_price']        
 
-        # Initialize Weight vector according to harvest_units
-        if vars_dict['harvest_units'] == "Weight":
-            Weight = vars_dict['Weight']
-        else:
-            Weight = np.ones([sexsp, len(vars_dict['Classes'])])
-
-        E = vars_dict['Exploitationfraction']
-        V = vars_dict['Vulnfishing']
-
-        I = []
-        for x in E:
-            I.append(x * V)
-        I = np.array(I)
-
-        def harv_func(N_asx):
-            '''
-            Compute harvest and valuation
-
-            Args:
-                N_asx (np.ndarray)
-
-            Returns:
-                H_x (np.ndarray): Harvest by region
-
-                V_x (np.ndarray): Value by region
-            '''
-            N_xsa = N_asx.swapaxes(0, 2)
-            H_xsa = N_xsa * I * Weight
-            H_x = np.array(map(lambda x: x.sum(), H_xsa))
-            V_x = H_x * (frac_post_process * unit_price)
-            return H_x, V_x
-
-        return harv_func
-
+    # Initialize Weight vector according to harvest_units
+    if vars_dict['harvest_units'] == "Weight":
+        Weight = vars_dict['Weight']
     else:
-        return None
+        Weight = np.ones([sexsp, len(vars_dict['Classes'])])
+
+    E = vars_dict['Exploitationfraction']
+    V = vars_dict['Vulnfishing']
+
+    I = []
+    for x in E:
+        I.append(x * V)
+    I = np.array(I)
+
+    def harv_func(N_asx):
+        '''
+        Compute harvest and valuation
+
+        Args:
+            N_asx (np.ndarray)
+
+        Returns:
+            H_x (np.ndarray): Harvest by region
+
+            V_x (np.ndarray): Value by region
+        '''
+        N_xsa = N_asx.swapaxes(0, 2)
+        H_xsa = N_xsa * I * Weight
+        H_x = np.array(map(lambda x: x.sum(), H_xsa))
+        V_x = H_x * (frac_post_process * unit_price)
+        return H_x, V_x
+
+    return harv_func
 
 
 def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
@@ -438,66 +474,6 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
     vars_dict['equilibrate_timestep'] = equilibrate_timestep
 
     return vars_dict
-
-
-# Helper functions for initializing derived variables
-def _calc_survtotalfrac(vars_dict):
-    '''
-    Implements the equation
-        S_xsa = surv_xsa * (1 - Exploitationfraction_x * Vulnfishing_sa)
-
-    Args:
-        vars_dict (dictionary)
-
-    Returns:
-        Survtotalfrac (np.ndarray)
-    '''
-    S_nat = vars_dict['Survnaturalfrac']
-    E = vars_dict['Exploitationfraction']
-    V = vars_dict['Vulnfishing']
-
-    I = []
-    for x in E:
-        I.append(x * V)
-    I = np.array(I)
-
-    S_tot = S_nat * (1 - I)
-
-    if np.isnan(S_tot).any():
-        LOGGER.warning("Survival Matrix Contains NaN Values")
-
-    return S_tot
-
-
-def _calc_p_g_survtotalfrac(vars_dict):
-    '''
-    Implements the equations
-        G_xsa = (S_xsa ** D_sa) * ((1 - S_xsa) / (1 - S_xsa ** D_sa))
-
-        P_xsa = S_xsa * ((1 - S_xsa ** (D_sa - 1)) / (1 - S_xsa ** D_sa))
-
-    Args:
-        vars_dict (dictionary)
-
-    Returns:
-        G (np.ndarray)
-
-        P (np.ndarray)
-    '''
-    S_tot = vars_dict['Survtotalfrac']
-    D_sa = vars_dict['Duration']
-
-    I = S_tot ** D_sa
-    G = I * ((1 - S_tot) / (1 - I))
-
-    I_2 = S_tot ** (D_sa - 1)
-    P = S_tot * ((1 - I_2) / (1 - I))
-
-    if (np.isnan(G).any() or np.isnan(P).any()):
-        LOGGER.warning(
-            "Stage-based Survival Matrices Contain NaN Values")
-
-    return G, P
 
 
 # Helper functions for run_population_model

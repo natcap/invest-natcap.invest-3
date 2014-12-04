@@ -18,7 +18,7 @@ from types import StringType
 import invest_natcap
 import invest_natcap.iui
 from invest_natcap.iui import fileio as iui_fileio
-from invest_natcap.invest_core import fileio as fileio
+from invest_natcap import fileio as fileio
 from invest_natcap import raster_utils
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)

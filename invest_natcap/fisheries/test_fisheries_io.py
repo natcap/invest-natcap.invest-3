@@ -141,7 +141,8 @@ class TestMigrationIO(unittest.TestCase):
         region_list = ['Region 1', 'Region 2', '...', 'Region N']
         mig_dict = fisheries_io.read_migration_tables(
             args, class_list, region_list)
-        test_matrix_dict = fisheries_io._parse_migration_tables(args, ['larva'])
+        test_matrix_dict = fisheries_io._parse_migration_tables(
+            args, ['larva'])
         # pp.pprint(test_matrix_dict)
         # pp.pprint(mig_dict)
         testing.assert_array_equal(
@@ -150,10 +151,8 @@ class TestMigrationIO(unittest.TestCase):
 
 class TestSingleParamsIO(unittest.TestCase):
     def test_verify_single_params(self):
-        #home_dir = os.path.expanduser("~")
-        workspace_dir = "/test_workspace"
         args = {
-            'workspace_dir': workspace_dir,
+            'workspace_dir': '',
             'aoi_uri': None,
             'population_type': None,
             'sexsp': 1,
@@ -169,75 +168,70 @@ class TestSingleParamsIO(unittest.TestCase):
             'harvest_units': None,
             'frac_post_process': None,
             'unit_price': None,
-            'harv_cont': True,
+            'val_cont': True,
             }
 
         # Check that path exists and user has read/write permissions along path
         with self.assertRaises(OSError):
             fisheries_io._verify_single_params(args)
-        args['workspace_dir'] = os.path.join(os.getcwd(), 'test')
 
         # Check timesteps positive number
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['total_timesteps'] = 100
 
         # Check total_init_recruits for non-negative float
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['total_init_recruits'] = 1.2
 
         # Check recruitment type's corresponding parameters exist
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['alpha'] = -1.0
         args['beta'] = -1.0
         args['total_recur_recruits'] = -1.0
 
         # If BH or Ricker: Check alpha positive float
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['alpha'] = 1.0
 
         # Check positive beta positive float
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['beta'] = 1.0
 
         # Check total_recur_recruits is non-negative float
         args['recruitment_type'] = 'Fixed'
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['total_recur_recruits'] = 100.0
 
         # If Harvest: Check frac_post_process float between [0,1]
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['frac_post_process'] = 0.2
 
         # If Harvest: Check unit_price non-negative float
         with self.assertRaises(ValueError):
-            fisheries_io._verify_single_params(args)
+            fisheries_io._verify_single_params(args, create_outputs=False)
         args['unit_price'] = 20.2
 
         # Check file extension? (maybe try / except would be better)
         # Check shapefile subregions match regions in population parameters file
         args['aoi_uri'] = None
 
-        # Clean up filesystem
-        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
-
 
 class TestFetchArgs(unittest.TestCase):
     def test_fetch_args(self):
         csv_uri = os.path.join(data_directory, 'CSVs/TestCSV_SN_Syntax.csv')
         mig_uri = os.path.join(data_directory, 'migration/')
-        workspace_dir = os.path.join(os.getcwd(), 'test')
         args = {
             'population_csv_uri': csv_uri,
             'migr_cont': True,
             'migration_dir': mig_uri,
-            'workspace_dir': workspace_dir,
+            'workspace_dir': '',
             'aoi_uri': None,
             'population_type': "Stage-Based",
             'sexsp': 'No',
@@ -253,18 +247,17 @@ class TestFetchArgs(unittest.TestCase):
             'harvest_units': "Weight",
             'frac_post_process': 0.2,
             'unit_price': 20.2,
-            'harv_cont': True,
+            'val_cont': True,
         }
-        vars_dict = fisheries_io.fetch_args(args)
+        vars_dict = fisheries_io.fetch_args(args, create_outputs=False)
         # pp.pprint(vars_dict)
         # with self.assertRaises():
         #    fisheries_io.fetch_args(args)
-        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
     def test_fetch_args2(self):
         csv_dir = os.path.join(data_directory, 'CSVs/Multiple_CSV_Test')
         mig_uri = os.path.join(data_directory, 'migration/')
-        workspace_dir = os.path.join(os.getcwd(), 'test')
+        workspace_dir = ''
         args = {
             'population_csv_dir': csv_dir,
             'migr_cont': True,
@@ -285,16 +278,16 @@ class TestFetchArgs(unittest.TestCase):
             'harvest_units': "Weight",
             'frac_post_process': 0.2,
             'unit_price': 20.2,
-            'harv_cont': True,
+            'val_cont': True,
         }
-        model_list = fisheries_io.fetch_args(args)
-        pp.pprint(model_list)
+        # model_list = fisheries_io.fetch_args(args)
+        # pp.pprint(model_list)
         # with self.assertRaises():
         #    fisheries_io.fetch_args(args)
-        os.removedirs(os.path.join(args['workspace_dir'], 'output'))
+        # os.removedirs(os.path.join(args['workspace_dir'], 'output'))
 
 
-class TestGenerateCSV(unittest.TestCase):
+class TestCreateCSV(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -311,7 +304,7 @@ class TestGenerateCSV(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -344,12 +337,12 @@ class TestGenerateCSV(unittest.TestCase):
         }
         pass
 
-    def test_generate_csv(self):
-        # fisheries_io._generate_csv(self.vars_dict)
+    def test_create_csv(self):
+        # fisheries_io._create_csv(self.vars_dict)
         pass
 
 
-class TestGenerateHTML(unittest.TestCase):
+class TestCreateHTML(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -366,7 +359,7 @@ class TestGenerateHTML(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -399,12 +392,12 @@ class TestGenerateHTML(unittest.TestCase):
         }
         pass
 
-    def test_generate_html(self):
-        # fisheries_io._generate_html(self.vars_dict)
+    def test_create_html(self):
+        # fisheries_io._create_html(self.vars_dict)
         pass
 
 
-class TestGenerateAOI(unittest.TestCase):
+class TestCreateAOI(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
@@ -418,8 +411,8 @@ class TestGenerateAOI(unittest.TestCase):
         }
         pass
 
-    def test_generate_aoi(self):
-        # fisheries_io._generate_aoi(self.vars_dict)
+    def test_create_aoi(self):
+        # fisheries_io._create_aoi(self.vars_dict)
         pass
 
 

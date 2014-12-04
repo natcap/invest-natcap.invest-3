@@ -10,7 +10,7 @@ import struct
 from osgeo import gdal
 from osgeo import ogr
 
-from invest_natcap.invest_core import fileio as fileio
+from invest_natcap import fileio as fileio
 from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \

@@ -5,7 +5,7 @@
   "modelName": "fisheries",
   "localDocURI": "../documentation/habitat_risk_assessment.html",
   "height": 800,
-  "width": 700,
+  "width": 800,
   "elements": [
     {
       "id": "alpha_only",
@@ -90,7 +90,7 @@
               ],
               "returns": "strings",
               "dataType": "string",
-              "helpText": "Specifies whether the classes provided in the Population Parameters CSV file represent ages or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+              "helpText": "Specifies whether the lifecycle classes provided in the Population Parameters CSV file represent ages (uniform duration) or stages (.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
             },
             {
               "id": "sexsp",
@@ -105,7 +105,22 @@
               ],
               "returns": "strings",
               "dataType": "string",
-              "helpText": "Specifies whether or not the population classes provided in the Populaton Parameters CSV file are distinguished by sex."
+              "helpText": "Specifies whether or not the lifecycle classes provided in the Populaton Parameters CSV file are distinguished by sex."
+            },
+            {
+                "id": "harvest_units",
+                "args_id": "harvest_units",
+                "type": "dropdown",
+                "label": "Harvest by Individuals or Weight",
+                "defaultValue": "Individuals",
+                "required": true,
+                "options": [
+                  "Individuals",
+                  "Weight"
+                ],
+                "returns": "strings",
+                "dataType": "string",
+                "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each lifecycle class and sex if model is sex-specific."
             },
             {
               "id": "do_batch",
@@ -124,7 +139,7 @@
               "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
               "required": true,
               "disabledBy": "do_batch",
-              "helpText": "The provided CSV file should contain all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+              "helpText": "The provided CSV file should contain all necessary attributes for the sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
             },
             {
               "id": "population_csv_dir",
@@ -134,7 +149,7 @@
               "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/",
               "required": true,
               "enabledBy": "do_batch",
-              "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>The name of each file will be the name of the folder containing that model run's outputs.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+              "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>The name of each file will serve as the prefix of the outputs created by the model run.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
             }
           ]
         }
@@ -258,38 +273,24 @@
               "validateAs": {
                 "type": "folder"
               },
-              "helpText": "(Optional) The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an age/stage that migrates.  The folder should contain one CSV file for each age/stage that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
+              "helpText": "(Optional) The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an lifecycle class that migrates.  The folder should contain one CSV file for each lifecycle class that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
             }
           ]
         }
       ]
     },
     {
-      "id": "harv_cont",
-      "args_id": "harv_cont",
-      "label": "Harvest Parameters",
+      "id": "val_cont",
+      "args_id": "val_cont",
+      "label": "Valuation Parameters",
       "type": "container",
-      "defaultValue": true,
+      "defaultValue": false,
+      "collapsible": true,
       "elements": [
         {
-          "id": "harv_list",
+          "id": "val_list",
           "type": "list",
           "elements": [
-            {
-              "id": "harvest_units",
-              "args_id": "harvest_units",
-              "type": "dropdown",
-              "label": "Harvest by Individuals or Weight",
-              "defaultValue": "Individuals",
-              "required": true,
-              "options": [
-                "Individuals",
-                "Weight"
-              ],
-              "returns": "strings",
-              "dataType": "string",
-              "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each age/stage and sex if model is sex-specific."
-            },
             {
               "id": "frac_post_process",
               "args_id": "frac_post_process",

@@ -24,7 +24,7 @@ class TestInitializeVars(unittest.TestCase):
             'beta': 54.2,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -102,7 +102,7 @@ class TestSetRecruitmentFunc(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -203,7 +203,7 @@ class TestSetHarvestFunc(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -261,7 +261,7 @@ class TestSetInitCondFunc(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 10.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -277,11 +277,11 @@ class TestSetInitCondFunc(unittest.TestCase):
             'Fecundity': np.array([[0.1, 1.0], [0.1, 2.0]]),
             'Regions': np.array(['r1', 'r2']),
             'Exploitationfraction': np.array([0.25, 0.5]),
-            'Larvaldispersal': np.array([0.75, 0.75]),
+            'Larvaldispersal': np.array([0.5, 0.5]),
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
@@ -318,10 +318,6 @@ class TestSetInitCondFunc(unittest.TestCase):
         init_cond_func = model.set_init_cond_func(vars_dict)
         N_0_guess = init_cond_func()
         N_0_check = np.array([[[25.0, 25.0], [25.0, 25.0]],[[25.0*1, 25.0*2], [(25.0*3), (25.0*4)]],[[(25.0*1*5/-8), (25.0*2*6/-9)], [(25.0*3*7/-10), (25.0*4*8/-11)]]])
-        print "N_0 Guess"
-        print N_0_guess
-        print "N_0 Check"
-        print N_0_check
         testing.assert_equal(N_0_guess, N_0_check)
 
 
@@ -330,7 +326,7 @@ class TestSetCycleFunc(unittest.TestCase):
         self.sample_vars = {
             # 'workspace_dir': 'path/to/workspace_dir',
             # 'aoi_uri': 'path/to/aoi_uri',
-            'total_timesteps': 100,
+            'total_timesteps': 10,
             'population_type': 'Stage-Based',
             'sexsp': 2,
             'spawn_units': 'Weight',
@@ -340,7 +336,7 @@ class TestSetCycleFunc(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -360,13 +356,13 @@ class TestSetCycleFunc(unittest.TestCase):
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]),  # Index Order: class, sex, region
             'G_survtotalfrac': np.ones([2, 2, 2]),  # (same)
             'P_survtotalfrac': np.ones([2, 2, 2]),  # (same)
-            'N_tasx': np.ones([100, 2, 2, 2]),  # Index Order: time, class, sex, region
+            'N_tasx': np.ones([10, 2, 2, 2]),  # Index Order: time, class, sex, region
         }
 
     def test_stage_based(self):
@@ -375,12 +371,9 @@ class TestSetCycleFunc(unittest.TestCase):
         cycle_func = model.set_cycle_func(vars_dict, rec_func)
 
         N_prev = np.ones([2, 2, 2])
+
         N_cur_guess, spawners = cycle_func(N_prev)
         # N_cur_check = np.array([])
-        # print "N_cur Guess"
-        # print N_cur_guess
-        # print "N_cur Check"
-        # print N_cur_check
         # testing.assert_equal(N_cur_guess, N_cur_check)
 
     def test_age_based(self):
@@ -402,7 +395,7 @@ class TestRunPopulationModel(unittest.TestCase):
             'beta': 4.0,
             'total_recur_recruits': 1.0,
             'migr_cont': True,
-            'harv_cont': True,
+            'val_cont': True,
             'harvest_units': 'Individuals',
             'frac_post_process': 0.5,
             'unit_price': 5.0,
@@ -422,7 +415,7 @@ class TestRunPopulationModel(unittest.TestCase):
 
             # Mig Params
             # 'migration_dir': 'path/to/mig_dir',
-            'Migration': [np.eye(2), np.eye(2)],
+            'Migration': [np.matrix(np.eye(2)), np.matrix(np.eye(2))],
 
             # Derived Params
             'Survtotalfrac': np.array([[[0.5, 0.5], [0.5, 0.5]], [[0.5, 0.5], [0.5, 0.5]]]),  # Index Order: class, sex, region
@@ -446,7 +439,7 @@ class TestRunPopulationModel(unittest.TestCase):
         vars_dict = model.run_population_model(
             vars_dict, init_cond_func, cycle_func, harvest_func)
 
-        pp.pprint(vars_dict['N_tasx'])
+        # pp.pprint(vars_dict['N_tasx'])
 
 
 if __name__ == '__main__':

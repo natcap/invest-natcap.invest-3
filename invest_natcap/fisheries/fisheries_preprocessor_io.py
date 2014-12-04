@@ -44,7 +44,7 @@ def fetch_args(args):
 
         vars_dict = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/'
+            'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
             'gamma': 0.5,
 
@@ -96,7 +96,7 @@ def fetch_args(args):
         is_equal_list = map(
             lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
     except:
-        is_equal_list = False
+        is_equal_list = [False]
         print "P_Classes", P_Classes
         print "H_Classes", H_Classes
     if not all(is_equal_list):
@@ -206,6 +206,7 @@ def read_population_csv(args):
 
             # Class Vectors
             'Classes': np.array([...]),
+            'Class_vector_names': [...],
             'Class_vectors': {
                 'Vulnfishing': np.array([...], [...]),
                 'Maturity': np.array([...], [...]),
@@ -216,6 +217,7 @@ def read_population_csv(args):
 
             # Region Vectors
             'Regions': np.array([...]),
+            'Region_vector_names': [...],
             'Region_vectors': {
                 'Exploitationfraction': np.array([...]),
                 'Larvaldispersal': np.array([...]),
@@ -271,6 +273,7 @@ def _parse_population_csv(uri, sexsp):
 
             # Class Vectors
             'Classes': np.array([...]),
+            'Class_vector_names': [...],
             'Class_vectors': {
                 'Vulnfishing': np.array([...], [...]),
                 'Maturity': np.array([...], [...]),
@@ -281,6 +284,7 @@ def _parse_population_csv(uri, sexsp):
 
             # Region Vectors
             'Regions': np.array([...]),
+            'Region_vector_names': [...],
             'Region_vectors': {
                 'Exploitationfraction': np.array([...]),
                 'Larvaldispersal': np.array([...]),
@@ -334,11 +338,19 @@ def _parse_population_csv(uri, sexsp):
         LOGGER.error("Could not parse table given Sex-Specific inputs")
         raise Exception
 
+    Class_vector_names = class_attributes_table[0]
+    for i in range(0, len(Class_vector_names)):
+        Class_vector_names[i] = Class_vector_names[i].capitalize()
+    pop_dict['Class_vector_names'] = Class_vector_names
     pop_dict['Class_vectors'] = {}
     for col in range(0, len(class_attributes_table[0])):
         pop_dict['Class_vectors'].update(_vectorize_attribute(
             _get_col(class_attributes_table, col), sexsp))
 
+    Region_vector_names = []
+    for attribute in region_attributes_table:
+        Region_vector_names.append(attribute[0].capitalize())
+    pop_dict['Region_vector_names'] = Region_vector_names
     pop_dict['Region_vectors'] = {}
     for row in range(0, len(region_attributes_table)):
         pop_dict['Region_vectors'].update(_vectorize_reg_attribute(
@@ -493,6 +505,20 @@ def _parse_habitat_csv(args):
     return habitat_dict
 
 
+def read_habitat_dep_csv(args):
+    '''
+    (Unimplemented)
+    '''
+    pass
+
+
+def read_habitat_chg_csv(args):
+    '''
+    (Unimplemented)
+    '''
+    pass
+
+
 # Helper function
 def _listdir(path):
     '''
@@ -614,7 +640,7 @@ def save_population_csv(vars_dict):
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/'
+            'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
             'population_csv_uri': 'path/to/csv',  # original csv file
             'Surv_nat_xsa': np.ndarray([...]),
@@ -622,6 +648,7 @@ def save_population_csv(vars_dict):
 
             # Class Vectors
             'Classes': np.array([...]),
+            'Class_vector_names': [...],
             'Class_vectors': {
                 'Vulnfishing': np.array([...], [...]),
                 'Maturity': np.array([...], [...]),
@@ -632,6 +659,7 @@ def save_population_csv(vars_dict):
 
             # Region Vectors
             'Regions': np.array([...]),
+            'Region_vector_names': [...],
             'Region_vectors': {
                 'Exploitationfraction': np.array([...]),
                 'Larvaldispersal': np.array([...]),
@@ -671,7 +699,7 @@ def save_population_csv(vars_dict):
             l[c + num_classes].append('')
 
     # Add class vectors
-    for key in vars_dict['Class_vectors'].keys():
+    for key in vars_dict['Class_vector_names']:
         l[0].append(key)
         vector = vars_dict['Class_vectors'][key].tolist()
         if vars_dict['sexsp'] == 2:
@@ -686,7 +714,7 @@ def save_population_csv(vars_dict):
         l[-1].append('')
 
     # Add region vectors
-    for key in vars_dict['Region_vectors'].keys():
+    for key in vars_dict['Region_vector_names']:
         l.append([])
         l[-1].append(key)
         vector = vars_dict['Region_vectors'][key].tolist()
