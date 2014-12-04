@@ -339,6 +339,7 @@ class TestSavePopCSV(unittest.TestCase):
             'gamma': 0.5,
         }
         self.vars_check = {
+            'Class_vector_names': ['Maturity', 'Vulnfishing'],
             'Class_vectors': {
                 'Maturity': np.array(
                   [[ 0.,  0.,  0.,  1.,  1.],
@@ -366,7 +367,9 @@ class TestSavePopCSV(unittest.TestCase):
             'Habitats': ['Habitat1', 'Habitat2', 'Habitat3'],
             'Region_vectors': {
                 'Exploitationfraction': np.array([ 0.47,  0.47,  0.47,  0.47,  0.47,  0.47]),
-                'Larvaldispersal': np.array([ 0.09,  0.12,  0.18,  0.29,  0.17,  0.15])},
+                'Larvaldispersal': np.array([ 0.09,  0.12,  0.18,  0.29,  0.17,  0.15])
+                },
+            'Region_vector_names': ['Exploitationfraction', 'Larvaldispersal'],
             'Regions': [   'Region1',
                            'Region2',
                            'Region3',

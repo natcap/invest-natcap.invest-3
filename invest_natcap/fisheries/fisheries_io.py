@@ -891,7 +891,7 @@ def _create_results_html(vars_dict):
 
     # Set Reporting Arguments
     rep_args = {}
-    rep_args['title'] = "Fishieries Results Page"
+    rep_args['title'] = "Fisheries Results Page"
     rep_args['out_uri'] = uri
     rep_args['sortable'] = True  # JS Functionality
     rep_args['totals'] = True  # JS Functionality
@@ -1073,9 +1073,14 @@ def _create_results_aoi(vars_dict):
 
     # Add Information to Shapefile
     for feature in layer:
-        region_name = str(feature.items()['NAME'])
-        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-        feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
-        layer.SetFeature(feature)
+        try:
+            region_name = str(feature.items()['NAME'])
+            feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+            feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+            layer.SetFeature(feature)
+        except:
+            LOGGER.warning("A feature in the given AOI shapefile either does \
+                not have a 'NAME' attribute or does not match any of the \
+                given sub-regions. Skipping feature.")
 
     layer.ResetReading()
