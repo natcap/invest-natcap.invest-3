@@ -1,6 +1,6 @@
 '''
-The Fisheries Preprocessor IO module contains functions for handling inputs
-and outputs
+The Fisheries Habitat Scenarios Tool IO module contains functions for handling
+inputs and outputs
 '''
 
 import logging
@@ -432,8 +432,9 @@ def read_habitat_csv(args):
 
     Hab_dep_num_a = []
     for A_h in A_ah:
-        Hab_dep_num_a.append(int(A_h.sum()))
+        Hab_dep_num_a.append(int(len(np.nonzero(A_h)[0])))
     habitat_dict['Hab_dep_num_a'] = np.array(Hab_dep_num_a)
+    print "Hab_dep_num_a", habitat_dict['Hab_dep_num_a']
 
     return habitat_dict
 

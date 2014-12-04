@@ -5,8 +5,8 @@ import os
 import numpy as np
 from numpy import testing
 
-import fisheries_preprocessor as main
-import fisheries_preprocessor_io as io
+import fisheries_hst as main
+import fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -52,8 +52,8 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
         pp.pprint(check['Surv_nat_xsa'].swapaxes(0, 1))
 
         # Check for correctness
-        pp.pprint(guess)
-        pp.pprint(check)
+        # pp.pprint(guess)
+        # pp.pprint(check)
         # pp.pprint(guess['Surv_nat_xsa_mod'])
         # pp.pprint(check['Surv_nat_xsa'])
         testing.assert_array_almost_equal(
@@ -91,12 +91,14 @@ class TestConvertSurvivalMatrix2(unittest.TestCase):
         check = io.fetch_args(self.check)
 
         # Run operation
-        guess = main.convert_survival_matrix(vars_dict)
+        guess = main.convert_survival_matrix_2(vars_dict)
 
         pp.pprint(guess['Surv_nat_xsa_mod'].swapaxes(0, 1))
         pp.pprint(check['Surv_nat_xsa'].swapaxes(0, 1))
 
         # Check for correctness
+        pp.pprint(guess)
+        pp.pprint(check)
         # pp.pprint(guess['Surv_nat_xsa_mod'])
         # pp.pprint(check['Surv_nat_xsa'])
         testing.assert_array_almost_equal(

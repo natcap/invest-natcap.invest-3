@@ -1,5 +1,5 @@
 '''
-The Fisheries Preprocessor module contains the high-level code for
+The Fisheries Habitat Scenario Tool module contains the high-level code for
 generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
@@ -10,9 +10,9 @@ import pprint
 import numpy as np
 
 try:
-    from invest_natcap.fisheries import fisheries_preprocessor_io as io
+    from invest_natcap.fisheries import fisheries_hst_io as io
 except:
-    import fisheries_preprocessor_io as io
+    import fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -23,11 +23,12 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 def execute(args):
     '''
-    Entry point into the Fisheries Preprocessor
+    Entry point into the Fisheries Habitat Scenario Tool
 
-    The Fisheries Preprocessor generates a new Population Parameters CSV File
-    with modified survival attributes across classes and regions based on
-    habitat area changes and class-level dependencies on those habitats.
+    The Fisheries Habitat Scenario Tool generates a new Population Parameters
+    CSV File with modified survival attributes across classes and regions
+    based on habitat area changes and class-level dependencies on those
+    habitats.
 
     :param str args['workspace_dir']: location into which the resultant
         modified Population Parameters CSV file should be placed.
