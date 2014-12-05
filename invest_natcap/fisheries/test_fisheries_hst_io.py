@@ -12,8 +12,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 workspace_dir = '../../test/invest-data/test/data/fisheries/'
 data_dir = '../../test/invest-data/test/data/fisheries/'
-inputs_dir = os.path.join(data_dir, 'preprocess/inputs')
-outputs_dir = os.path.join(data_dir, 'preprocess/outputs')
+inputs_dir = os.path.join(data_dir, 'habitat_scenario_tool/inputs')
+outputs_dir = os.path.join(data_dir, 'habitat_scenario_tool/outputs')
 
 All_Parameters = ['Classes', 'Duration', 'Exploitationfraction', 'Fecundity',
                   'Larvaldispersal', 'Maturity', 'Regions', 'Surv_nat_xsa',
@@ -28,7 +28,10 @@ class TestPopulationParamsIO(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 2,
             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
             'gamma': 0.5,
         }
 
@@ -138,13 +141,17 @@ class TestPopulationParamsIO(unittest.TestCase):
         pass
 
 
-class TestHabitatParamsIO(unittest.TestCase):
+class TestHabitatDepParamsIO(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
             'sexsp': 'Yes',
             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
+
             'gamma': 0.5,
         }
 
@@ -153,7 +160,8 @@ class TestHabitatParamsIO(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 'Yes',
             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(inputs_dir, 'habitat_dep_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(inputs_dir, 'habitat_chg_params.csv'),
             'gamma': 0.5,
 
             # Habitat CSV Args
@@ -178,42 +186,104 @@ class TestHabitatParamsIO(unittest.TestCase):
             'Hab_dep_num_a': np.array([]),
         }
 
-    def test_parse_habitat_params(self):
+    def test_parse_habitat_dep_params(self):
         # Demonstrate able to parse the tables correctly
-        guess = io._parse_habitat_csv(self.args)
+        guess = io._parse_habitat_dep_csv(self.args)
         # pp.pprint(guess)
         testing.assert_array_almost_equal(
             guess['Hab_dep_ha'], self.check['Hab_dep_ha'])
-        testing.assert_array_almost_equal(
-            guess['Hab_chg_hx'], self.check['Hab_chg_hx'])
         assert(all(map(
             lambda x, y: x == y, guess['Habitats'], self.check['Habitats'])))
         assert(all(map(
             lambda x, y: x == y,
             guess['Hab_classes'],
             self.check['Hab_classes'])))
+
+    def test_read_habitat_dep_params(self):
+        # Test that it works on correct CSV
+        # guess = io.read_habitat_dep_csv(self.args)
+        # pp.pprint(guess)
+
+        # Test for exceptions
+        args_mod = self.args
+        args_mod['habitat_dep_csv_uri'] = os.path.join(
+            inputs_dir, 'habitat_dep_params_bad_elements.csv')
+
+        # Hab_dep_ha elements must be between [0,1]
+        with self.assertRaises(ValueError):
+            io.read_habitat_dep_csv(args_mod)
+
+
+class TestHabitatChgParamsIO(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'sexsp': 'Yes',
+            'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
+            'gamma': 0.5,
+        }
+
+        self.check = {
+            # User Args
+            'workspace_dir': workspace_dir,
+            'sexsp': 'Yes',
+            'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(inputs_dir, 'habitat_dep_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(inputs_dir, 'habitat_chg_params.csv'),
+            'gamma': 0.5,
+
+            # Habitat CSV Args
+            'Habitats': ['Habitat1', 'Habitat2', 'Habitat3'],
+            'Hab_classes': ['Class0', 'Class1', 'Class2', 'Class3', 'Class4'],
+            'Hab_regions': [
+                'Region1',
+                'Region2',
+                'Region3',
+                'Region4',
+                'Region5',
+                'Region6'],
+            'Hab_chg_hx': np.array(
+                [[-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
+                 [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25],
+                 [-0.25, -0.25, -0.25, -0.25, -0.25, -0.25]]),
+            'Hab_dep_ha': np.array(
+                [[0.0, 0.0, 1.0, 1.0, 1.0],
+                 [1.0, 1.0, 0.0, 0.0, 0.0],
+                 [1.0, 1.0, 0.0, 0.0, 0.0]]),
+            'Hab_class_mvmt_a': np.array([]),
+            'Hab_dep_num_a': np.array([]),
+        }
+
+    def test_parse_habitat_chg_params(self):
+        # Demonstrate able to parse the tables correctly
+        guess = io._parse_habitat_chg_csv(self.args)
+        # pp.pprint(guess)
+        testing.assert_array_almost_equal(
+            guess['Hab_chg_hx'], self.check['Hab_chg_hx'])
+        assert(all(map(
+            lambda x, y: x == y, guess['Habitats'], self.check['Habitats'])))
         assert(all(map(
             lambda x, y: x == y,
             guess['Hab_regions'],
             self.check['Hab_regions'])))
 
-    def test_read_habitat_params(self):
+    def test_read_habitat_chg_params(self):
         # Test that it works on correct CSV
-        # guess = io.read_habitat_csv(self.args)
+        # guess = io.read_habitat_chg_csv(self.args)
         # pp.pprint(guess)
 
         # Test for exceptions
         args_mod = self.args
-        args_mod['habitat_csv_uri'] = os.path.join(
-            inputs_dir, 'habitat_params_bad_elements.csv')
-
-        # Hab_dep_ha elements must be between [0,1]
-        with self.assertRaises(ValueError):
-            io.read_habitat_csv(args_mod)
+        args_mod['habitat_chg_csv_uri'] = os.path.join(
+            inputs_dir, 'habitat_chg_params_bad_elements.csv')
 
         # Hab_chg_hx elements must be between [-1.0, +inf)
         with self.assertRaises(ValueError):
-            io.read_habitat_csv(args_mod)
+            io.read_habitat_chg_csv(args_mod)
 
 
 class TestFetchArgs(unittest.TestCase):
@@ -222,7 +292,10 @@ class TestFetchArgs(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 'Yes',
             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
             'gamma': 0.5,
         }
 
@@ -231,7 +304,10 @@ class TestFetchArgs(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'sexsp': 2,
             'population_csv_uri': os.path.join(inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(inputs_dir, 'habitat_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
             'gamma': 0.5,
 
             # Pop CSV Args
@@ -265,7 +341,8 @@ class TestFetchArgs(unittest.TestCase):
                    7.25000000e-01, 7.25000000e-01],
                   [2.27258625e-06, 7.25000000e-01, 7.25000000e-01,
                    7.25000000e-01, 5.27500000e-01]]]),
-            'Classes': np.array(['Class0', 'Class1', 'Class2', 'Class3', 'Class4']),
+            'Classes': np.array(
+                ['Class0', 'Class1', 'Class2', 'Class3', 'Class4']),
             'Class_vectors': {
                 'Vulnfishing': np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 1]]),
                 'Maturity': np.array([[0, 0, 0, 1, 1], [0, 0, 0, 0, 0]]),
@@ -332,10 +409,11 @@ class TestFetchArgs(unittest.TestCase):
 class TestSavePopCSV(unittest.TestCase):
     def setUp(self):
         self.args = {
-            'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
+            'workspace_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/',
             'sexsp': 'Yes',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/output/pop_params_modified.csv',
-            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/habitat_params.csv',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/output/pop_params_modified.csv',
+            'habitat_chg_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_chg_params.csv',
+            'habitat_dep_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_dep_params.csv',
             'gamma': 0.5,
         }
         self.vars_check = {
@@ -407,11 +485,12 @@ class TestSavePopCSV(unittest.TestCase):
                 [  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
                    7.25000000e-01,   5.27500000e-01]]]),
             'gamma': 0.5,
-            'habitat_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/habitat_params.csv',
-            'output_dir': '../../test/invest-data/test/data/fisheries/preprocess/output',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/preprocess/inputs/spreadsheet/pop_params.csv',
+            'habitat_chg_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_chg_params.csv',
+            'habitat_dep_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_dep_params.csv',
+            'output_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/output',
+            'population_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/pop_params.csv',
             'sexsp': 2,
-            'workspace_dir': '../../test/invest-data/test/data/fisheries/preprocess/',
+            'workspace_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/',
 
             # Generated Variable
             'Surv_nat_xsa_mod': np.array(
@@ -458,7 +537,8 @@ class TestSavePopCSV(unittest.TestCase):
                 'workspace_dir',
                 'sexsp',
                 'population_csv_uri',
-                'habitat_csv_uri',
+                'habitat_chg_csv_uri',
+                'habitat_dep_csv_uri',
                 'gamma'
             ]:
                 g = guess[k]

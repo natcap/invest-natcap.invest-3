@@ -68,6 +68,8 @@ def fetch_args(args):
             },
 
             # Habitat Vars
+            'habitat_chg_csv_uri': 'path/to/csv',
+            'habitat_dep_csv_uri': 'path/to/csv',
             'Habitats': ['habitat1', 'habitat2', ...],
             'Hab_classes': ['class1', 'class2', ...],
             'Hab_regions': ['region1', 'region2', ...],
@@ -88,7 +90,14 @@ def fetch_args(args):
     # Fetch Data
     args = _create_dirs(args)
     pop_dict = read_population_csv(args)
-    habitat_dict = read_habitat_csv(args)
+    habitat_chg_dict = read_habitat_chg_csv(args)
+    habitat_dep_dict = read_habitat_dep_csv(args)
+
+    # Check that habitat names match between habitat parameter files
+    if not habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats']:
+        LOGGER.error("Mismatch between Habitat names in Habitat Paramater CSV files")
+    del habitat_dep_dict['Habitats']
+    habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
 
     # Check that classes and regions match
     P_Classes = pop_dict['Classes']
@@ -360,29 +369,29 @@ def _parse_population_csv(uri, sexsp):
     return pop_dict
 
 
-def read_habitat_csv(args):
+def read_habitat_dep_csv(args):
     '''
-    Parses and verifies a Habitat Parameters CSV file and returns a dictionary
-    of information related to the interaction between a species and the given
-    habitats.
+    Parses and verifies a Habitat Dependency Parameters CSV file and returns a
+    dictionary of information related to the interaction between a species and
+    the given habitats.
 
     Parses the Habitat Parameters CSV file for the following vectors:
 
-        + Names of Habitats, Classes, and Regions
-        + Habitat Area Change
+        + Names of Habitats and Classes
         + Habitat-Class Dependency
 
     The following vectors are derived from the information given in the file:
 
         + Classes where movement between habitats occurs
-        + Number of habitats a particular class depends upon
+        + Number of habitats that a particular class depends upon
 
     Args:
         args (dictionary): arguments from the user (same as Fisheries
-            Preprocessor entry point)
+            HST entry point)
 
     Returns:
-        habitat_dict (dictionary): dictionary containing necessary variables
+        habitat_dep_dict (dictionary): dictionary containing necessary
+            variables
 
     Raises:
         MissingParameter - required parameter not included
@@ -391,37 +400,28 @@ def read_habitat_csv(args):
 
     Example Returns::
 
-        habitat_dict = {
+        habitat_dep_dict = {
             'Habitats': ['habitat1', 'habitat2', ...],
             'Hab_classes': ['class1', 'class2', ...],
-            'Hab_regions': ['region1', 'region2', ...],
-            'Hab_chg_hx': np.array(
-                [[[...], [...]], [[...], [...]], ...]),
             'Hab_dep_ha': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
     '''
-    habitat_dict = _parse_habitat_csv(args)
+    habitat_dep_dict = _parse_habitat_dep_csv(args)
 
     # Verify provided information
-    A = habitat_dict['Hab_dep_ha']
+    A = habitat_dep_dict['Hab_dep_ha']
     if any(A[A < 0.0]) or any(A[A > 1.0]):
         LOGGER.error("At least one element of the Habitat Dependency by Class \
             vectors is out of bounds. Values must be between [0, 1] inclusive.\
             ")
         raise ValueError
 
-    A = habitat_dict['Hab_chg_hx']
-    if any(A[A < -1.0]):
-        LOGGER.error("At least one element of the Habitat Area Change vectors \
-            is out of bounds. Values must be between [-1.0, +inf).")
-        raise ValueError
-
     # Derive additional information
     # TRANSITION BITMAP NEEDS CLEARER DEFINITION
-    A_ah = copy.copy(habitat_dict['Hab_dep_ha'].swapaxes(0, 1))
+    A_ah = copy.copy(habitat_dep_dict['Hab_dep_ha'].swapaxes(0, 1))
     A_ah[A_ah != 0] = 1
     Hab_class_mvmt_a = [0]
     for i in range(1, len(A_ah)):
@@ -429,29 +429,29 @@ def read_habitat_csv(args):
             Hab_class_mvmt_a.append(0)
         else:
             Hab_class_mvmt_a.append(1)
-    habitat_dict['Hab_class_mvmt_a'] = np.array(Hab_class_mvmt_a)
+    habitat_dep_dict['Hab_class_mvmt_a'] = np.array(Hab_class_mvmt_a)
 
     Hab_dep_num_a = []
     for A_h in A_ah:
         Hab_dep_num_a.append(int(len(np.nonzero(A_h)[0])))
-    habitat_dict['Hab_dep_num_a'] = np.array(Hab_dep_num_a)
+    habitat_dep_dict['Hab_dep_num_a'] = np.array(Hab_dep_num_a)
 
-    return habitat_dict
+    return habitat_dep_dict
 
 
-def _parse_habitat_csv(args):
+def _parse_habitat_dep_csv(args):
     '''
-    Parses the Habitat Parameters CSV file for the following vectors
-        + Names of Habitats, Classes, and Regions
-        + Habitat Area Change
+    Parses the Habitat Dependency Parameters CSV file for the following vectors
+        + Names of Habitats and Classes
         + Habitat-Class Dependency
 
     Args:
         args (dictionary): arguments from the user (same as Fisheries
-            Preprocessor entry point)
+            HST entry point)
 
     Returns:
-        habitat_dict (dictionary): dictionary containing necessary variables
+        habitat_dep_dict (dictionary): dictionary containing necessary
+            variables
 
     Raises:
         + MissingParameter - required parameter not included
@@ -459,19 +459,18 @@ def _parse_habitat_csv(args):
 
     Example Returns::
 
-        habitat_dict = {
+        habitat_dep_dict = {
             'Habitats': ['habitat1', 'habitat2', ...],
             'Hab_classes': ['class1', 'class2', ...],
-            'Hab_regions': ['region1', 'region2', ...],
-            'Hab_chg_hx': np.array(
-                [[[...], [...]], [[...], [...]], ...]),  # h, x
             'Hab_dep_ha': np.array(
-                [[[...], [...]], [[...], [...]], ...]),  # h, a
+                [[[...], [...]], [[...], [...]], ...]),
+            'Hab_class_mvmt_a': np.array([...]),
+            'Hab_dep_num_a': np.array([...]),
         }
     '''
-    uri = args['habitat_csv_uri']
+    uri = args['habitat_dep_csv_uri']
     csv_data = []
-    habitat_dict = {}
+    habitat_dep_dict = {}
 
     with open(uri, 'rb') as csvfile:
         reader = csv.reader(csvfile)
@@ -488,36 +487,127 @@ def _parse_habitat_csv(args):
     Habitats = _get_col(
         csv_data, start_rows[0])[start_rows[0]+1:end_rows[0]+1]
     Hab_classes = _get_row(
-        csv_data, start_cols[0])[start_cols[1]:end_cols[1]+1]
-    Hab_regions = _get_row(
         csv_data, start_cols[0])[start_cols[0]+1:end_cols[0]+1]
-    Hab_chg_hx = _get_table(
-        csv_data, start_rows[0]+1, start_cols[0]+1)
     Hab_dep_ha = _get_table(
-        csv_data, start_rows[0]+1, start_cols[1])
+        csv_data, start_rows[0]+1, start_cols[0]+1)
+
+    # Standardize capitalization
+    Habitats = map(lambda x: x.capitalize(), Habitats)
+    Hab_classes = map(lambda x: x.capitalize(), Hab_classes)
 
     # Reformat and add data to dictionary
-    habitat_dict['Habitats'] = Habitats
-    habitat_dict['Hab_classes'] = Hab_classes
-    habitat_dict['Hab_regions'] = Hab_regions
-    habitat_dict['Hab_chg_hx'] = np.array(Hab_chg_hx, dtype=float)
-    habitat_dict['Hab_dep_ha'] = np.array(Hab_dep_ha, dtype=float)
+    habitat_dep_dict['Habitats'] = Habitats
+    habitat_dep_dict['Hab_classes'] = Hab_classes
+    habitat_dep_dict['Hab_dep_ha'] = np.array(Hab_dep_ha, dtype=float)
 
-    return habitat_dict
-
-
-def read_habitat_dep_csv(args):
-    '''
-    (Unimplemented)
-    '''
-    pass
+    return habitat_dep_dict
 
 
 def read_habitat_chg_csv(args):
     '''
-    (Unimplemented)
+    Parses and verifies a Habitat Change Parameters CSV file and returns a
+    dictionary of information related to the interaction between a species
+    and the given habitats.
+
+    Parses the Habitat Change Parameters CSV file for the following vectors:
+
+        + Names of Habitats and Regions
+        + Habitat Area Change
+
+    Args:
+        args (dictionary): arguments from the user (same as Fisheries
+            HST entry point)
+
+    Returns:
+        habitat_chg_dict (dictionary): dictionary containing necessary
+            variables
+
+    Raises:
+        MissingParameter - required parameter not included
+        ValueError - values are out of bounds or of wrong type
+        IndexError - likely a file formatting issue
+
+    Example Returns::
+
+        habitat_chg_dict = {
+            'Habitats': ['habitat1', 'habitat2', ...],
+            'Hab_regions': ['region1', 'region2', ...],
+            'Hab_chg_hx': np.array(
+                [[[...], [...]], [[...], [...]], ...]),
+        }
     '''
-    pass
+    habitat_chg_dict = _parse_habitat_chg_csv(args)
+
+    # Verify provided information
+    A = habitat_chg_dict['Hab_chg_hx']
+    if any(A[A < -1.0]):
+        LOGGER.error("At least one element of the Habitat Area Change vectors \
+            is out of bounds. Values must be between [-1.0, +inf).")
+        raise ValueError
+
+    return habitat_chg_dict
+
+
+def _parse_habitat_chg_csv(args):
+    '''
+    Parses the Habitat Change Parameters CSV file for the following vectors
+        + Names of Habitats and Regions
+        + Habitat Area Change
+
+    Args:
+        args (dictionary): arguments from the user (same as Fisheries
+            HST entry point)
+
+    Returns:
+        habitat_chg_dict (dictionary): dictionary containing necessary
+            variables
+
+    Raises:
+        + MissingParameter - required parameter not included
+        + IndexError - likely a file formatting issue
+
+    Example Returns::
+
+        habitat_chg_dict = {
+            'Habitats': ['habitat1', 'habitat2', ...],
+            'Hab_regions': ['region1', 'region2', ...],
+            'Hab_chg_hx': np.array(
+                [[[...], [...]], [[...], [...]], ...]),
+        }
+    '''
+    uri = args['habitat_chg_csv_uri']
+    csv_data = []
+    habitat_chg_dict = {}
+
+    with open(uri, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            csv_data.append(line)
+
+    # Find Boundary Information
+    start_rows = _get_table_row_start_indexes(csv_data)
+    start_cols = _get_table_col_start_indexes(csv_data, start_rows[0])
+    end_rows = _get_table_row_end_indexes(csv_data)
+    end_cols = _get_table_col_end_indexes(csv_data, start_rows[0])
+
+    # Start Parsing Data
+    Habitats = _get_col(
+        csv_data, start_rows[0])[start_rows[0]+1:end_rows[0]+1]
+    Hab_regions = _get_row(
+        csv_data, start_cols[0])[start_cols[0]+1:end_cols[0]+1]
+    Hab_chg_hx = _get_table(
+        csv_data, start_rows[0]+1, start_cols[0]+1)
+
+    # Standardize capitalization
+    Habitats = map(lambda x: x.capitalize(), Habitats)
+    Hab_regions = map(lambda x: x.capitalize(), Hab_regions)
+
+    # Reformat and add data to dictionary
+    habitat_chg_dict['Habitats'] = Habitats
+    habitat_chg_dict['Hab_regions'] = Hab_regions
+    habitat_chg_dict['Hab_chg_hx'] = np.array(Hab_chg_hx, dtype=float)
+
+    return habitat_chg_dict
 
 
 # Helper function

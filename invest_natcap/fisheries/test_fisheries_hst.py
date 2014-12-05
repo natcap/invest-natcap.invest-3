@@ -12,7 +12,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 workspace_dir = '../../test/invest-data/test/data/fisheries/'
 data_dir = '../../test/invest-data/Fisheries'
-inputs_dir = os.path.join(data_dir, 'Input/Preprocessor')
+inputs_dir = os.path.join(data_dir, 'Input/Habitat_Scenario_Tool')
 outputs_dir = os.path.join(workspace_dir, 'output')
 
 
@@ -23,8 +23,10 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
                 inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(
-                inputs_dir, 'habitat_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
             'gamma': 0.5,
         }
         self.check = {
@@ -32,8 +34,10 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
                 outputs_dir, 'pop_params_spreadsheet_mod.csv'),
-            'habitat_csv_uri': os.path.join(
-                inputs_dir, 'habitat_params.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params.csv'),
             'gamma': 0.5,
         }
 
@@ -60,8 +64,10 @@ class TestConvertSurvivalMatrix2(unittest.TestCase):
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
                 inputs_dir, 'pop_params.csv'),
-            'habitat_csv_uri': os.path.join(
-                inputs_dir, 'habitat_params2.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params2.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params2.csv'),
             'gamma': 0.5,
         }
         self.check = {
@@ -69,8 +75,10 @@ class TestConvertSurvivalMatrix2(unittest.TestCase):
             'sexsp': 'No',
             'population_csv_uri': os.path.join(
                 outputs_dir, 'pop_params_spreadsheet_mod2.csv'),
-            'habitat_csv_uri': os.path.join(
-                inputs_dir, 'habitat_params2.csv'),
+            'habitat_chg_csv_uri': os.path.join(
+                inputs_dir, 'habitat_chg_params2.csv'),
+            'habitat_dep_csv_uri': os.path.join(
+                inputs_dir, 'habitat_dep_params2.csv'),
             'gamma': 0.5,
         }
 
