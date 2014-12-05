@@ -819,7 +819,7 @@ def save_population_csv(vars_dict):
         vars_dict['population_csv_uri']))
     filename = basename + '_modified' + ext
     output_uri = os.path.join(vars_dict['output_dir'], filename)
-    f = open(output_uri, 'w')
+    f = open(output_uri, 'wb')
     wr = csv.writer(f)
     for row in l:
         wr.writerow(row)
