@@ -265,7 +265,7 @@ def execute(args):
                                       subregion_clip_uri,
                                       assert_projections=False)
         #project
-        raster_utils.warp_reproject_dataset_uri(subregion_clip_uri,
+        raster_utils.reproject_dataset_uri(subregion_clip_uri,
                                                 cell_size,
                                                 output_wkt,
                                                 "nearest",

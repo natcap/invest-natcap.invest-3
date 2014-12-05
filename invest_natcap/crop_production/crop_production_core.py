@@ -183,7 +183,7 @@ def crop_production_existing_projected(reclass_crop_cover_uri,
                                   clip_yield_uri,
                                   assert_projections=False)
     #project
-    raster_utils.warp_reproject_dataset_uri(clip_yield_uri,
+    raster_utils.reproject_dataset_uri(clip_yield_uri,
                                             cell_size,
                                             output_wkt,
                                             "nearest",
@@ -206,7 +206,7 @@ def crop_production_existing_projected(reclass_crop_cover_uri,
                                   clip_area_uri,
                                   assert_projections=False)
     #project
-    raster_utils.warp_reproject_dataset_uri(clip_area_uri,
+    raster_utils.reproject_dataset_uri(clip_area_uri,
                                             cell_size,
                                             output_wkt,
                                             "nearest",
@@ -503,7 +503,7 @@ def mosaic_by_attribute_uri(key_uri,
                 clip_prj_uri = raster_utils.temporary_filename()
 
 
-                raster_utils.warp_reproject_dataset_uri(clip_uri,
+                raster_utils.reproject_dataset_uri(clip_uri,
                                                         cell_size,
                                                         output_wkt,
                                                         "nearest",
@@ -669,7 +669,7 @@ def clip_project_align_dataset_uri(unclipped_uri, reference_uri, clipped_uri, al
                                   clip_uri,
                                   assert_projections=False)
     #project
-    raster_utils.warp_reproject_dataset_uri(clip_uri,
+    raster_utils.reproject_dataset_uri(clip_uri,
                                             cell_size,
                                             output_wkt,
                                             align_method,
