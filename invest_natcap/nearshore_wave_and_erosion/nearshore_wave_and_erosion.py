@@ -500,48 +500,6 @@ def execute(args):
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
             args['cell_size'], args['aoi_raster_uri'])
 
-    ## Preprocess Climatic forcing
-    #args['clipped_climatic_forcing_uri'] = \
-    #    os.path.join(args['intermediate_dir'], 'clipped_climatic_forcing')
-    #args['climatic_forcing_raster_uri'] = \
-    #    os.path.join(args['intermediate_dir'], 'climatic_forcing.tif')
-    #if not os.path.isfile(args['climatic_forcing_raster_uri']):
-    #    LOGGER.debug('Pre-processing climatic_forcing...')
-    #    adjust_shapefile_to_aoi(args['climatic_forcing_uri'], args['aoi_uri'], \
-    #        args['clipped_climatic_forcing_uri'])
-
-        # extract all the fields from the shapefile
-        # Burn all the fields one by one to rasters
-        #raster_from_shapefile_uri(shapefile, aoi, cell_size, output, field)
-        
-        #preprocess_polygon_datasource(args['climatic_forcing_uri'], \
-        #    args['aoi_uri'], args['cell_size'], \
-        #    os.path.join(args['intermediate_dir'], 'landmass.tif'))
-
-
-#        # Set data to zero
-#        def set_to_zero(x):
-#            result = numpy.copy(x)
-#            result[x != nodata] = 0.
-#
-#            return result
-#
-#        print('setting AOI values to zero')
-#        cell_size = raster_utils.get_cell_size_from_uri(args['aoi_raster_uri'])
-#        nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
-#        
-#        temporary_filename = raster_utils.temporary_filename(suffix='.tif')
-#        
-#        raster_utils.vectorize_datasets([args['aoi_raster_uri']], set_to_zero, \
-#            temporary_filename, gdal.GDT_Float32, nodata, cell_size, 'union', \
-#            vectorize_op = False)
-#        
-#        print('cleaning up')
-#
-#        os.remove(args['aoi_raster_uri'])
-#        os.rename(temporary_filename, args['aoi_raster_uri'])
-#
-#        raster_utils.calculate_raster_stats_uri(temporary_filename)
 
     # Preprocess bathymetry
     args['bathymetry_raster_uri'] = \
@@ -577,9 +535,6 @@ def execute(args):
     args['valid_habitat_types'] = set()
     for habitat_information in args['habitat_information']:
         args['valid_habitat_types'].add(habitat_information[1]['habitat'])
-#    print('valid_habitat_types', valid_habitat_types)
-
-#    sys.exit(0)
 
     # List all shapefiles in the habitats directory
     files = []
@@ -589,16 +544,23 @@ def execute(args):
     for file_name in habitat_files:
         files.append(os.path.join(args['habitats_directory_uri'], file_name))
 
-    # Collect landmass files
+    # Add additional files
     files.append(args['landmass_uri'])
-
-#    print('files', files)
+    files.append(args['climatic_forcing_uri'])
 
     args['shapefiles'] = {}
 
     # Process each habitat
     shapefile_required_fields = { \
-        'land polygon': ['MHHW', 'MSL', 'MLLW'],
+        'land polygon': [ \
+            'MHHW', \
+            'MSL', \
+            'MLLW'],
+        'climatic forcing':[ \
+            'Surge', \
+            'WindSpeed', \
+            'WavePeriod', \
+            'WaveHeight'], \
         'soil type': [ \
             'DryDensity', \
             'ErosionCst', \
@@ -644,7 +606,8 @@ def execute(args):
                     # Field name is set to its index in the required fields array
                     args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
 
-    # Append soil type field indices
+
+    # Append soil type field indices and assign a positional index to each
     habitat_type = 'soil type'
     habitat_id = len(args['field_index'])
 
@@ -652,22 +615,33 @@ def execute(args):
 
     args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
 
+    for field_id in range(len(required_fields)):                
+        field_name = required_fields[field_id]
+        # Field name is set to its index in the required fields array
+        args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
+
+
+    # Append climatic forcing field indices and assign a positional index to each
+    habitat_type = 'climatic forcing'
+    habitat_id = len(args['field_index'])
+
+    required_fields = shapefile_required_fields[habitat_type]
+
+    args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
 
     for field_id in range(len(required_fields)):                
         field_name = required_fields[field_id]
         # Field name is set to its index in the required fields array
         args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
 
-#    print('valid habitat types', args['valid_habitat_types'])
-#    print('habitat priority', args['habitat_priority'])
-#    print('field index', args['field_index'])
-#    sys.exit(0)
 
     # Save the dictionary
     field_index_dictionary_uri = \
         os.path.join(args['intermediate_dir'], 'field_indices')
     json.dump(args['field_index'], open(field_index_dictionary_uri, 'w'))
 
+
+    # Compute habitat field count
     args['habitat_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
             for shp in shapefile_required_fields \
@@ -675,29 +649,32 @@ def execute(args):
 
     args['soil_field_count'] = len(shapefile_required_fields['soil type'])
 
+    args['climatic_forcing_field_count'] = \
+        len(shapefile_required_fields['climatic forcing'])
+
+
+    # -----------------------------
+    # Detecting shapefile types
+    # -----------------------------
+
     # Collect all the different fields and assign a weight to each
     field_values = {} # weight for each field_value
     shapefile_type_checksum = {} # checksum for each shapefile type
     power = 1
     shapefile_fields = set()
-#    print('----- Computing checksums -----')
+
     for shapefile_type in shapefile_required_fields:
-#        print('shapefile', shapefile_type)
         required_fields = shapefile_required_fields[shapefile_type]
         field_signature = 0
         for required_field in required_fields:
-#            print('    field', required_field)
             if required_field not in shapefile_fields:
-#                print('    new field. Set to', power)
                 shapefile_fields.add(required_field)
                 field_values[required_field] = power
                 power *= 2
             field_signature += field_values[required_field]
-#            print('    Adding', field_values[required_field], 'to checksum', (field_signature))
 
         shapefile_type_checksum[field_signature] = shapefile_type
 
-#    print('checksums', shapefile_type_checksum)
 
     # Looking at fields in shapefiles and compute their checksum to see if 
     # they're of a known type
@@ -708,7 +685,6 @@ def execute(args):
         basename = os.path.basename(file_uri)
         basename, ext = os.path.splitext(basename)
         if ext == '.shp':
-#            print('Checking', file_uri)
             # Find the number of fields in this shapefile
             shapefile = ogr.Open(file_uri)
             assert shapefile, "can't open " + file_uri
@@ -717,20 +693,13 @@ def execute(args):
             field_count = layer_def.GetFieldCount()
 
             # Extract field names and build checksum
-#            print('available fields', field_values.keys())
             shapefile_checksum = 0
             for field_id in range(field_count):
                 field_defn = layer_def.GetFieldDefn(field_id)
                 field_name = field_defn.GetName()
 
-#                print('checking field', field_name)
                 if field_name in field_values:
-#                    print('found', field_values[field_name])
                     shapefile_checksum += field_values[field_name]
-#                else:
-#                    print('not found')
-
-#            print('checksum for', file_uri, shapefile_checksum)
 
             # If checksum corresponds to a known shapefile type, process it
             if shapefile_checksum in shapefile_type_checksum:
@@ -748,7 +717,6 @@ def execute(args):
                     # Rasterize the shapefile's field
                     # If this habitat has subtypes, then the field 'type' 
                     # is used to determine priority.
-#                    print('field_name', field_name)
                     output_uri = os.path.join(args['intermediate_dir'], \
                         basename + '_' + field_name.lower() + '.tif')
 
@@ -760,7 +728,7 @@ def execute(args):
                             field_name = field_name, nodata = -99999.0)
                     
                     # Keep this raster uri
-                    args['shapefiles'][shapefile_type][basename][field_name.lower()] = \
+                    args['shapefiles'][shapefile_type][basename][field_name] = \
                         output_uri
                     in_raster_list.append(output_uri)
 
@@ -788,10 +756,35 @@ def execute(args):
                         band = None
                         raster = None
                     # Add new uri to uri list
-                    args['shapefiles'][shapefile_type][basename]['type'] = output_uri
+                    args['shapefiles'][shapefile_type][basename]['Type'] = output_uri
                     in_raster_list.append(output_uri)
 
+
+    # ----------------------------------
+    # Post-process Climatic forcing
+    # ----------------------------------
+    
+
+    assert 'climatic forcing' in args['shapefiles']
+
+    for basename in args['shapefiles']['climatic forcing']:
+        print('basename', basename)
+        for field_name in args['shapefiles']['climatic forcing'][basename]:
+            file_name = args['shapefiles']['climatic forcing'][basename][field_name]
+            print('file_name for', field_name, file_name)
+
+            raster_utils.vectorize_points_uri(
+                args['climatic_forcing_uri'],
+                field_name,
+                file_name)
+
+            raster_utils.calculate_raster_stats_uri(output_uri)
+    sys.exit(0)
+
+
+    # -----------------------------
     # Detect habitat constraints
+    # -----------------------------
     args['constraints_type'] = {}
 
     # Precompute aoi nodata

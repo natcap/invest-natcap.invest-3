@@ -108,6 +108,22 @@
 				    "helpText": "Single feature polygon shapefile. All outputs will be in the AOI's projection."
 				},
 				{
+				    "label": "IF \"yes\": climatic forcing",
+				    "id": "climatic_forcing",
+				    "args_id": "climatic_forcing_uri",
+				    "type": "file",
+				    "required": true,
+				    "defaultValue":
+				    "../CoastalProtection/Input/Climatic_forcing.shp",
+				    "validateAs":{"type":"OGR",
+				                  "layers": [{"name": {"inheritFrom":"file"},
+				                      "type":"points",
+				                      "projection" : {"units": "meters", "exists": true}
+				                  }]
+				    },
+				    "helpText": "Point shapefile where each feature within the AOI must have the fields Surge, WindSpeed, WavePeriod, and WaveHeight defined."
+				},
+				{
 				    "label": "IF \"yes\": Habitat Data Directory (optional)",
 				    "id":"habitats_directory_uri",
 				    "args_id": "habitats_directory_uri",
@@ -179,8 +195,8 @@
 				},
 				{
 				    "label": "Wave Watch III Model Data (optional)",
-				    "id": "climatic_forcing_uri",
-				    "args_id": "climatic_forcing_uri",
+				    "id": "wave_watch_3_uri",
+				    "args_id": "wave_watch_3_uri",
 				    "type": "file",
 				    "required": false,
 				    "returns" : {"ifEmpty":"pass"},
