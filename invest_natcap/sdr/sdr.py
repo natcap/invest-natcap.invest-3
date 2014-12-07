@@ -480,18 +480,18 @@ def calculate_ls_factor(
     cell_size = raster_utils.get_cell_size_from_uri(flow_accumulation_uri)
     cell_area = cell_size ** 2
 
-    def ls_factor_function(aspect_angle, slope, flow_accumulation):
+    def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
         """Calculate the ls factor
 
             aspect_angle - flow direction in radians
-            slope - slope in terms of percent
+            percent_slope - slope in terms of percent
             flow_accumulation - upstream pixels at this point
 
             returns the ls_factor calculation for this point"""
 
         #Skip the calculation if any of the inputs are nodata
         nodata_mask = (
-            (aspect_angle == aspect_nodata) | (slope == slope_nodata) |
+            (aspect_angle == aspect_nodata) | (percent_slope == slope_nodata) |
             (flow_accumulation == flow_accumulation_nodata))
         
         #Here the aspect direction can range from 0 to 2PI, but the purpose
@@ -503,13 +503,13 @@ def calculate_ls_factor(
 
         contributing_area = (flow_accumulation-1) * cell_area
 
-        #To convert to radians, we need to divide the slope by 100 since
-        #it's a percent. :(
-        slope_in_radians = numpy.arctan(slope / 100.0)
+        #To convert to radians, we need to divide the percent_slope by 100 since
+        #it's a percent.
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
 
         #From Equation 4 in "Extension and validation of a geographic
         #information system ..."
-        slope_factor = numpy.where(slope < 9.0,
+        slope_factor = numpy.where(percent_slope < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03, 
             16.8 * numpy.sin(slope_in_radians) - 0.5)
         
@@ -525,8 +525,8 @@ def calculate_ls_factor(
         #Look up the correct m value from the table
         m_exp = beta/(1+beta)
         for i in range(4):
-            m_exp[slope <= slope_table[i]] = exponent_table[i]
-                
+            m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
+
         #The length part of the ls_factor:
         l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) - 
@@ -536,14 +536,78 @@ def calculate_ls_factor(
         #From the McCool paper "as a final check against excessively long slope
         #length calculations ... cap of 333m"
         l_factor[l_factor > 333] = 333
-            
+
         #This is the ls_factor
         return numpy.where(nodata_mask, ls_nodata, l_factor * slope_factor)
-        
+
     #Call vectorize datasets to calculate the ls_factor
     dataset_uri_list = [aspect_uri, slope_uri, flow_accumulation_uri]
     raster_utils.vectorize_datasets(
         dataset_uri_list, ls_factor_function, ls_factor_uri, gdal.GDT_Float32,
+        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+
+    base_directory = os.path.dirname(ls_factor_uri)
+    xi_uri = os.path.join(base_directory, "xi.tif")
+    s_factor_uri = os.path.join(base_directory, "slope_factor.tif")
+    beta_uri = os.path.join(base_directory, "beta.tif")
+    m_uri = os.path.join(base_directory, "m.tif")
+
+
+    def m_op(aspect_angle, percent_slope, flow_accumulation):
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+        
+        beta = ((numpy.sin(slope_in_radians) / 0.0896) /
+            (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
+
+        #slope table in percent
+        slope_table = [1., 3.5, 5., 9.]
+        exponent_table = [0.2, 0.3, 0.4, 0.5]
+        #Look up the correct m value from the table
+        m_exp = beta/(1+beta)
+        for i in range(4):
+            m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
+
+        return m_exp
+
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, m_op, m_uri, gdal.GDT_Float32,
+        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+
+
+    def beta_op(aspect_angle, percent_slope, flow_accumulation):
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+
+        #Set the m value to the lookup table that's Table 1 in 
+        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
+        #FT Team dropbox
+        return ((numpy.sin(slope_in_radians) / 0.0896) /
+            (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
+
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, beta_op, beta_uri, gdal.GDT_Float32,
+        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+
+    def s_factor_op(aspect_angle, percent_slope, flow_accumulation):
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+
+        #From Equation 4 in "Extension and validation of a geographic
+        #information system ..."
+        return numpy.where(percent_slope < 9.0,
+            10.8 * numpy.sin(slope_in_radians) + 0.03, 
+            16.8 * numpy.sin(slope_in_radians) - 0.5)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, s_factor_op, s_factor_uri, gdal.GDT_Float32,
+        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
+
+    def xi_op(aspect_angle, percent_slope, flow_accumulation):
+        return (numpy.abs(numpy.sin(aspect_angle)) +
+            numpy.abs(numpy.cos(aspect_angle)))
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, xi_op, xi_uri, gdal.GDT_Float32,
         ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
