@@ -40,9 +40,13 @@ def execute(args):
         parameters csv file. This file contains all age and stage specific
         parameters.
 
-    :param str args['habitat_csv_uri']: location of the habitat parameters
-        csv file. This file contains habitat-class dependency and habitat
-        area change information.
+    :param str args['habitat_chg_csv_uri']: location of the habitat change
+        parameters csv file. This file contains habitat area change
+        information.
+
+    :param str args['habitat_dep_csv_uri']: location of the habitat dependency
+        parameters csv file. This file contains habitat-class dependency
+        information.
 
     :param float args['gamma']: describes the relationship between a change
         in habitat area and a change in survival of life stages dependent on
@@ -57,7 +61,8 @@ def execute(args):
             'workspace_dir': 'path/to/workspace_dir/',
             'sexsp': 'Yes',
             'population_csv_uri': 'path/to/csv',
-            'habitat_csv_uri': 'path/to/csv',
+            'habitat_chg_csv_uri': 'path/to/csv',
+            'habitat_dep_csv_uri': 'path/to/csv',
             'gamma': 0.5,
         }
 

@@ -142,12 +142,12 @@ def get_nodata_from_uri(dataset_uri):
     data_type = band.ReadAsArray(0,0,1,1).dtype
     #awkwardly cram this in a 1 element numpy array to get the type correct
     nodata_cast = numpy.array([nodata], dtype=data_type)
-    
+
     #Make sure the dataset is closed and cleaned up
     band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    
+
     #return the first element in the single element array
     return nodata_cast[0]
 
@@ -740,7 +740,7 @@ def aggregate_raster_values_uri(
         #9999 is a classic unknown value
         global_id_value = 9999
         rasterize_layer_args['burn_values'] = [global_id_value]
-    
+
     #loop over the subset of feature layers and rasterize/aggregate each one
     aggregate_dict_values = {}
     aggregate_dict_counts = {}
@@ -1276,7 +1276,7 @@ def get_raster_properties(dataset):
     return dataset_dict
 
 
-def warp_reproject_dataset_uri(
+def reproject_dataset_uri(
         original_dataset_uri, pixel_spacing, output_wkt, resampling_method,
         output_uri):
     """A function to reproject and resample a GDAL dataset given an output
@@ -1920,7 +1920,7 @@ def resize_and_resample_dataset_uri(
     else:
         #this thing is so small or strangely aligned, use the default creation options
         gtiff_creation_options = []
-        
+
     create_directories([os.path.dirname(output_uri)])
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
@@ -2102,7 +2102,7 @@ def align_dataset_list(
             resize_and_resample_dataset_uri(
                 original_dataset_uri, bounding_box, out_pixel_size,
                 out_dataset_uri, resample_method)
-            
+
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
@@ -2371,19 +2371,19 @@ def vectorize_datasets(
             for dataset_index in xrange(len(aligned_bands)):
                 aligned_bands[dataset_index].ReadAsArray(
                     xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                    win_ysize=row_block_width, 
+                    win_ysize=row_block_width,
                     buf_obj=dataset_blocks[dataset_index][0:row_block_width,0:col_block_width])
-                
+
             out_block = dataset_pixel_op(*dataset_blocks)
 
             #Mask out the row if there is a mask
             if aoi_uri != None:
                 mask_band.ReadAsArray(
                     xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                    win_ysize=row_block_width, 
+                    win_ysize=row_block_width,
                     buf_obj=mask_array[0:row_block_width,0:col_block_width])
                 out_block[mask_array == 0] = nodata_out
-    
+
             output_band.WriteArray(
                 out_block[0:row_block_width, 0:col_block_width],
                 xoff=col_offset, yoff=row_offset)
@@ -2642,7 +2642,7 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[outer_keys[0]].keys()
-    
+
     # Create a dictionary to store what variable types the fields are
     type_dict = {}
     for field in field_list:
@@ -2877,7 +2877,7 @@ def distance_transform_edt(
         """converts vector to 1, 0, or nodata value to fit in a byte raster"""
         return numpy.where(
             input_vector == nodata_mask, nodata_out, input_vector != 0)
-    
+
     #64 seems like a reasonable blocksize
     blocksize = 64
     vectorize_datasets(
@@ -2978,7 +2978,7 @@ def convolve_2d(weight_uri, kernel, output_uri):
             weight_array[weight_nodata_mask] = 0.0
 
             result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
-            
+
             left_index_raster = xoff - n_cols_kernel / 2
             right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
             top_index_raster = yoff - n_rows_kernel / 2
@@ -3013,8 +3013,8 @@ def convolve_2d(weight_uri, kernel, output_uri):
                 win_xsize=right_index_raster-left_index_raster,
                 win_ysize=bottom_index_raster-top_index_raster)
             nodata_mask = potential_nodata_weight_array == weight_nodata
-        
-            output_array = result[top_index_result:bottom_index_result, 
+
+            output_array = result[top_index_result:bottom_index_result,
                 left_index_result:right_index_result] + current_output
             output_array[nodata_mask] = output_nodata
 
