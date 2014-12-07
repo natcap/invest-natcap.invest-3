@@ -614,17 +614,13 @@ def execute(args):
             # Find the natural habitat in habitat information
             for habitat_information in args['habitat_priority']:
                 habitat_name = habitat_information[0]
-                print('habitat name', habitat_name)
                 if habitat_name == shapefile:
                     habitat_id = args['habitat_priority'][habitat_information]
 
-                    print('destination 1', destination)
                     destination[habitat_id] = {}
 
-                    print('destination 2', destination)
                     destination = destination[habitat_id]
 
-                    print('destination 3', destination)
                     destination['name'] = shapefile
 
                     break
@@ -644,46 +640,6 @@ def execute(args):
         
                 # Field name is set to its index in the required fields array
                 destination['fields'][field_name.lower()] = field_id
-
-    print('field index entries')
-    for category in args['field_index']:
-        print 'HDF5 category', category,
-        if category == 'natural habitats':
-            for habitat in args['field_index'][category]:
-                print('')
-                print 'habitat', habitat, args['field_index'][category][habitat],
-        else:
-            print args['field_index'][category]
-
-    sys.exit(0)
-
-
-    # Append soil type field indices and assign a positional index to each
-    habitat_type = 'soil type'
-    habitat_id = len(args['field_index'])
-
-    required_fields = shapefile_required_fields[habitat_type]
-
-    args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
-
-    for field_id in range(len(required_fields)):                
-        field_name = required_fields[field_id]
-        # Field name is set to its index in the required fields array
-        args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
-
-
-    # Append climatic forcing field indices and assign a positional index to each
-    habitat_type = 'climatic forcing'
-    habitat_id = len(args['field_index'])
-
-    required_fields = shapefile_required_fields[habitat_type]
-
-    args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
-
-    for field_id in range(len(required_fields)):                
-        field_name = required_fields[field_id]
-        # Field name is set to its index in the required fields array
-        args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
 
 
     # Save the dictionary
@@ -754,13 +710,19 @@ def execute(args):
 
             # If checksum corresponds to a known shapefile type, process it
             if shapefile_checksum in shapefile_type_checksum:
+                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
+
                 shapefile_type = shapefile_type_checksum[shapefile_checksum]
+
+                if shapefile_type in args['valid_habitat_types']:
+                    category = 'natural_habitats'
+                else:
+                    category = shapefile_type
 
                 # If new shapefile type, add it to the dictionary
                 if shapefile_type not in args['shapefiles']:
-                    args['shapefiles'][shapefile_type] = {}
-                    args['shapefiles'][shapefile_type][basename] = {}
-                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
+                    args['shapefiles'][category] = {}
+                    args['shapefiles'][category][basename] = {}
 
                 # Rasterize the known shapefile for each field name
                 LOGGER.info('Processing %s...', file_uri)
@@ -779,7 +741,7 @@ def execute(args):
                             field_name = field_name, nodata = -99999.0)
                     
                     # Keep this raster uri
-                    args['shapefiles'][shapefile_type][basename][field_name] = \
+                    args['shapefiles'][category][basename][field_name] = \
                         output_uri
                     in_raster_list.append(output_uri)
 
@@ -807,28 +769,23 @@ def execute(args):
                         band = None
                         raster = None
                     # Add new uri to uri list
-                    args['shapefiles'][shapefile_type][basename]['Type'] = output_uri
+                    args['shapefiles'][category][basename]['Type'] = output_uri
                     in_raster_list.append(output_uri)
 
 
-    # ----------------------------------
-    # Post-process Climatic forcing
-    # ----------------------------------
-    
+    for category in args['shapefiles']:
+        print('')
+        print 'HDF5 category', category,
+        
+        if category == 'natural habitats':
+            for habitat in args['shapefiles'][category]:
+                print('')
+                print '    habitat', habitat, args['shapefiles'][category][habitat].keys(),
+        else:
+            print('')
+            print 'fields:', args['shapefiles'][category].keys()
 
-    assert 'climatic forcing' in args['shapefiles']
-
-    LOGGER.debug('Post-processing climatic forcing layer...')
-    for basename in args['shapefiles']['climatic forcing']:
-        for field_name in args['shapefiles']['climatic forcing'][basename]:
-            file_name = args['shapefiles']['climatic forcing'][basename][field_name]
-            LOGGER.debug('Vectorizing %s...' % field_name)
-            raster_utils.vectorize_points_uri(
-                args['climatic_forcing_uri'],
-                field_name,
-                file_name)
-
-            raster_utils.calculate_raster_stats_uri(output_uri)
+    sys.exit(0)
 
 
     # -----------------------------
@@ -882,10 +839,8 @@ def execute(args):
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
 
-#    print('habitat_information')
     for habitat_information in args['habitat_information']:
         habitat_constraints = habitat_information[2]
-        print(habitat_constraints)
 
         # Detected a land-related distance constraint
         if 'land' in habitat_constraints:
