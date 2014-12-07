@@ -519,7 +519,6 @@ def execute(args):
     #   -subsequent entries: ('field_name':field_value)
     #
     args['habitat_information'] = [
-        ('land polygon',          {'habitat':'land polygon'},                 {}),
         ('kelp',                  {'habitat':'seagrass', 'type':1},           {'land':0.}), 
         ('seagrass',              {'habitat':'seagrass', 'type':2},           {'land':0.}), 
         ('underwater structures', {'habitat':'underwater structures'},        {'land':0.}), 
@@ -570,12 +569,23 @@ def execute(args):
             'BermHeight', \
             'DuneHeight', \
             'Type'],
-        'seagrass':[ \
+        'seagrass': [ \
             'StemHeight', \
             'StemDiam', \
             'StemDensty', \
             'StemDrag', \
-            'Type']}
+            'Type'],
+        'underwater structures': [ \
+            'ShoreDist', \
+            'Height', \
+            'BaseWidth', \
+            'CrestWidth', \
+            'Type'],
+        'coral reef': [ \
+            'FricCoverd',
+            'FricUncov',
+            'SLRKeepUp',
+            'DegrUncov']}
 
     # Build the habitats name--priority mapping
     args['habitat_priority'] = \
@@ -586,25 +596,66 @@ def execute(args):
 
     # Assign a positional index to every habitat field
     args['field_index'] = {}
-    for habitat_type in shapefile_required_fields:
+    for shapefile in shapefile_required_fields:
         
-        if habitat_type not in args['valid_habitat_types']:
-            continue
+        # Collapse natural habitats together, keep the other fields unchanged
+        if shapefile in args['valid_habitat_types']:
+            if 'natural habitats' not in args['field_index']:
+                args['field_index']['natural habitats'] = {}
 
-        for habitat_information in args['habitat_priority']:
-            habitat_name = habitat_information[0]
-            if habitat_name == habitat_type:
-                habitat_id = args['habitat_priority'][habitat_information]
+            destination = args['field_index']['natural habitats']
+        else:
+            args['field_index'][shapefile] = {}
+            
+            destination = args['field_index'][shapefile]
 
-                required_fields = shapefile_required_fields[habitat_type]
+        # Create priority keys (numerical) for natural habitats:
+        if shapefile in args['valid_habitat_types']:
+            # Find the natural habitat in habitat information
+            for habitat_information in args['habitat_priority']:
+                habitat_name = habitat_information[0]
+                print('habitat name', habitat_name)
+                if habitat_name == shapefile:
+                    habitat_id = args['habitat_priority'][habitat_information]
 
-                args['field_index'][habitat_id] = {'name':habitat_type,'fields':{}}
+                    print('destination 1', destination)
+                    destination[habitat_id] = {}
+
+                    print('destination 2', destination)
+                    destination = destination[habitat_id]
+
+                    print('destination 3', destination)
+                    destination['name'] = shapefile
+
+                    break
 
 
-                for field_id in range(len(required_fields)):                
-                    field_name = required_fields[field_id]
-                    # Field name is set to its index in the required fields array
-                    args['field_index'][habitat_id]['fields'][field_name.lower()] = field_id
+        required_fields = shapefile_required_fields[shapefile]
+
+        
+        # Add the fields
+        destination['fields'] = {}
+
+        for field_id in range(len(required_fields)):                
+            field_name = required_fields[field_id]
+        
+            # Only add if field is not 'type'
+            if field_name.lower() != 'type':
+        
+                # Field name is set to its index in the required fields array
+                destination['fields'][field_name.lower()] = field_id
+
+    print('field index entries')
+    for category in args['field_index']:
+        print 'HDF5 category', category,
+        if category == 'natural habitats':
+            for habitat in args['field_index'][category]:
+                print('')
+                print 'habitat', habitat, args['field_index'][category][habitat],
+        else:
+            print args['field_index'][category]
+
+    sys.exit(0)
 
 
     # Append soil type field indices and assign a positional index to each
@@ -767,19 +818,17 @@ def execute(args):
 
     assert 'climatic forcing' in args['shapefiles']
 
+    LOGGER.debug('Post-processing climatic forcing layer...')
     for basename in args['shapefiles']['climatic forcing']:
-        print('basename', basename)
         for field_name in args['shapefiles']['climatic forcing'][basename]:
             file_name = args['shapefiles']['climatic forcing'][basename][field_name]
-            print('file_name for', field_name, file_name)
-
+            LOGGER.debug('Vectorizing %s...' % field_name)
             raster_utils.vectorize_points_uri(
                 args['climatic_forcing_uri'],
                 field_name,
                 file_name)
 
             raster_utils.calculate_raster_stats_uri(output_uri)
-    sys.exit(0)
 
 
     # -----------------------------
@@ -833,7 +882,7 @@ def execute(args):
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
 
-    print('habitat_information')
+#    print('habitat_information')
     for habitat_information in args['habitat_information']:
         habitat_constraints = habitat_information[2]
         print(habitat_constraints)
@@ -842,11 +891,11 @@ def execute(args):
         if 'land' in habitat_constraints:
             constraint_uri = os.path.join(args['intermediate_dir'], \
                 'land_distance_map.tif')
-            print('Checking land constraint')
+#            print('Checking land constraint')
 
             # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
-                print('Creating land constraint', constraint_uri)
+#                print('Creating land constraint', constraint_uri)
                 
                 land_distance_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
@@ -869,11 +918,11 @@ def execute(args):
         if 'water' in habitat_constraints:
             constraint_uri = os.path.join(args['intermediate_dir'], \
                 'water_distance_map.tif')
-            print('checking water constraint')
+#            print('checking water constraint')
 
             # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
-                print('Creating water constraint', constraint_uri)
+#                print('Creating water constraint', constraint_uri)
 
                 water_distance_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
@@ -897,11 +946,11 @@ def execute(args):
         if 'MHHW' in habitat_constraints:
             constraint_uri = os.path.join(args['intermediate_dir'], \
                 'MHHW_depth_map.tif')
-            print('checking MHHW constraint')
+#            print('checking MHHW constraint')
 
             # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
-                print('Creating MHHW constraint', constraint_uri)
+#                print('Creating MHHW constraint', constraint_uri)
 
                 MHHW_depth_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
@@ -949,11 +998,11 @@ def execute(args):
         if 'MLLW' in habitat_constraints:
             constraint_uri = os.path.join(args['intermediate_dir'], \
                 'MLLW_depth_map.tif')
-            print('checking MLLW constraint')
+#            print('checking MLLW constraint')
 
             # Create the constraint raster if it doesn't exist already
             if not os.path.isfile(constraint_uri):
-                print('Creating MLLW constraint', constraint_uri)
+#                print('Creating MLLW constraint', constraint_uri)
 
                 MLLW_depth_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
