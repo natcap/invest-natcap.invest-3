@@ -358,15 +358,32 @@ def execute(args):
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
+    #when calculating d_dn_bare the c factors are all 1,
+    #so we invert just s, then accumulate it downstream
+    s_factor_inverse_uri = os.path.join(
+        intermediate_dir, 's_factor_inverse%s.tif' % file_suffix)
+    s_nodata = -1.0
+    def s_op(s_factor):
+        #calculating the inverse so we can use the distance to stream factor function
+        return numpy.where(s_factor != slope_nodata, 1.0 / s_factor, s_nodata)
+    raster_utils.vectorize_datasets(
+        [thresholded_slope_uri], s_op, s_factor_inverse_uri, 
+        gdal.GDT_Float32, s_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+    d_dn_bare_soil_uri = os.path.join(intermediate_dir, 'd_dn_bare_soil%s.tif' % file_suffix)
+    d_up_nodata = -1.0
+    routing_cython_core.distance_to_stream(
+        flow_direction_uri, stream_uri, d_dn_bare_soil_uri, factor_uri=s_factor_inverse_uri)
+
     ic_factor_bare_soil_uri = os.path.join(
         intermediate_dir, 'ic_factor_bare_soil%s.tif' % file_suffix)
     ic_bare_soil_nodata = -9999.0
-    def ic_bare_soil_op(d_up_bare_soil, d_dn):
-        nodata_mask = (d_up_bare_soil == d_up_nodata) | (d_dn == d_dn_nodata)
+    def ic_bare_soil_op(d_up_bare_soil, d_dn_bare_soil):
+        nodata_mask = (d_up_bare_soil == d_up_nodata) | (d_dn_bare_soil == d_dn_nodata)
         return numpy.where(
-            nodata_mask, ic_nodata, numpy.log10(d_up_bare_soil/d_dn))
+            nodata_mask, ic_nodata, numpy.log10(d_up_bare_soil/d_dn_bare_soil))
     raster_utils.vectorize_datasets(
-        [d_up_bare_soil_uri, d_dn_uri], ic_bare_soil_op, ic_factor_bare_soil_uri, 
+        [d_up_bare_soil_uri, d_dn_bare_soil_uri], ic_bare_soil_op, ic_factor_bare_soil_uri, 
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
