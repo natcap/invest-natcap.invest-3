@@ -8,8 +8,8 @@ Table of Contents
 + `Fisheries Module`_
 + `Fisheries IO Module`_
 + `Fisheries Model Module`_
-+ `Fisheries Preprocessor Module`_
-+ `Fisheries Preprocessor IO Module`_
++ `Fisheries Habitat Scenario Tool Module`_
++ `Fisheries Habitat Scenario Tool IO Module`_
 
 Model Entry Point
 -----------------
@@ -40,18 +40,18 @@ Fisheries Model Module
     :undoc-members:
     :show-inheritance:
 
-Fisheries Preprocessor Module
------------------------------
+Fisheries Habitat Scenario Tool Module
+--------------------------------------
 
-.. automodule:: invest_natcap.fisheries.fisheries_preprocessor
+.. automodule:: invest_natcap.fisheries.fisheries_hst
     :members:
     :undoc-members:
     :show-inheritance:
 
-Fisheries Preprocessor IO Module
---------------------------------
+Fisheries Habitat Scenario Tool IO Module
+-----------------------------------------
 
-.. automodule:: invest_natcap.fisheries.fisheries_preprocessor_io
+.. automodule:: invest_natcap.fisheries.fisheries_hst_io
     :members:
     :undoc-members:
     :show-inheritance:
