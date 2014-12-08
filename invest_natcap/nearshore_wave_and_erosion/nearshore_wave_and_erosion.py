@@ -733,7 +733,7 @@ def execute(args):
                 shapefile_type = shapefile_type_checksum[shapefile_checksum]
 
                 if shapefile_type in args['valid_habitat_types']:
-                    category = 'natural_habitats'
+                    category = 'natural habitats'
                 else:
                     category = shapefile_type
 
@@ -1004,62 +1004,42 @@ def execute(args):
             args['constraints_type']['MLLW'] = constraint_uri
 
 
-    for category in args['shapefiles']:
-        print('')
-        print 'HDF5 category', category,
-        
-        if category == 'natural habitats':
-            for habitat in args['shapefiles'][category]:
-                for filename in habitat:
-                    print('')
-                    print '    habitat', habitat, 'filename', filename, \
-                        args['shapefiles'][category][habitat][filename].keys(),
-        else:
-            for filename in args['shapefiles'][category]:
-                print('')
-                print 'filename', filename, 'fields:', \
-                    args['shapefiles'][category][filename].keys()
 
-    sys.exit(0)
-
-
-
-
-    LOGGER.debug('Uniformizing the input raster sizes...')
-    # Need to uniformize the size of land and bathymetry rasters
-    in_raster_list.append(args['landmass_raster_uri'])
-    in_raster_list.append(args['bathymetry_raster_uri'])
-
-    # For every input raster, create a corresponding output raster
-    out_raster_list = []
-    for uri in in_raster_list:
-        out_raster_list.append(raster_utils.temporary_filename())
-    # Gather info for aligning rasters properly
-    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
-    resample_method_list = ['bilinear'] * len(out_raster_list)
-    out_pixel_size = cell_size
-    mode = 'dataset'
-    dataset_to_align_index = 0
-    dataset_to_bound_index = 0
-    # Invoke raster alignent function
-    raster_utils.align_dataset_list( \
-        in_raster_list, out_raster_list, resample_method_list,
-        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
-
-    LOGGER.debug('Done')
-    # Now copy the result back to the original files
-    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
-        os.remove(in_uri)
-        os.rename(out_uri, in_uri)
-
-    # Quick sanity test with shape just to make sure
-    landmass_raster_shape = \
-        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
-    bathymetry_raster_shape = \
-        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
-    assert landmass_raster_shape == bathymetry_raster_shape
-    
-    LOGGER.debug('Done')
+#    LOGGER.debug('Uniformizing the input raster sizes...')
+#    # Need to uniformize the size of land and bathymetry rasters
+#    in_raster_list.append(args['landmass_raster_uri'])
+#    in_raster_list.append(args['bathymetry_raster_uri'])
+#
+#    # For every input raster, create a corresponding output raster
+#    out_raster_list = []
+#    for uri in in_raster_list:
+#        out_raster_list.append(raster_utils.temporary_filename())
+#    # Gather info for aligning rasters properly
+#    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
+#    resample_method_list = ['bilinear'] * len(out_raster_list)
+#    out_pixel_size = cell_size
+#    mode = 'dataset'
+#    dataset_to_align_index = 0
+#    dataset_to_bound_index = 0
+#    # Invoke raster alignent function
+#    raster_utils.align_dataset_list( \
+#        in_raster_list, out_raster_list, resample_method_list,
+#        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+#
+#    LOGGER.debug('Done')
+#    # Now copy the result back to the original files
+#    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
+#        os.remove(in_uri)
+#        os.rename(out_uri, in_uri)
+#
+#    # Quick sanity test with shape just to make sure
+#    landmass_raster_shape = \
+#        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
+#    bathymetry_raster_shape = \
+#        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
+#    assert landmass_raster_shape == bathymetry_raster_shape
+#    
+#    LOGGER.debug('Done')
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 
