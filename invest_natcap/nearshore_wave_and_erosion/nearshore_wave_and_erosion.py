@@ -519,21 +519,39 @@ def execute(args):
     #   -subsequent entries: ('field_name':field_value)
     #
     args['habitat_information'] = [
-        ('kelp',                  {'habitat':'seagrass', 'type':1},           {'land':0.}), 
-        ('seagrass',              {'habitat':'seagrass', 'type':2},           {'land':0.}), 
-        ('underwater structures', {'habitat':'underwater structures'},        {'land':0.}), 
-        ('coral reef',            {'habitat':'coral reef'},                   {'land':0.}), 
-        ('levee',                 {'habitat':'man-made structure', 'type':5}, {'land':-50.0, 'water':0.}),
-        ('beach',                 {'habitat':'beach'},                        {'MHHW':1, 'MLLW':1}),
-        ('seawall',               {'habitat':'man-made structure', 'type':7}, {'land':25.0, 'water':25.0}),
-        ('marsh',                 {'habitat':'marsh'},                        {'MLLW':2}),
-        ('mangrove',              {'habitat':'mangrove'},                     {'MLLW':2})
+        ('kelp',
+            {'shapefile type':'seagrass', 'type':1},           
+            {'constraints':{'land':0.}}), 
+        ('seagrass',              
+            {'shapefile type':'seagrass', 'type':2},           
+            {'constraints':{'land':0.}}), 
+        ('underwater structures', 
+            {'shapefile type':'underwater structures'},        
+            {'constraints':{'land':0.}}), 
+        ('coral reef',            
+            {'shapefile type':'coral reef'},                   
+            {'constraints':{'land':0.}}), 
+        ('levee',                 
+            {'shapefile type':'man-made structure', 'type':5}, 
+            {'constraints':{'land':-50.0, 'water':0.}}),
+        ('beach',                 
+            {'shapefile type':'beach'},                        
+            {'constraints':{'MHHW':1, 'MLLW':1}}),
+        ('seawall',               
+            {'shapefile type':'man-made structure', 'type':7}, 
+            {'constraints':{'land':25.0, 'water':25.0}}),
+        ('marsh',                 
+            {'shapefile type':'marsh'},                        
+            {'constraints':{'MLLW':2}}),
+        ('mangrove',              
+            {'shapefile type':'mangrove'},                     
+            {'constraints':{'MLLW':2}})
         ]
 
     # List valid habitat types
     args['valid_habitat_types'] = set()
     for habitat_information in args['habitat_information']:
-        args['valid_habitat_types'].add(habitat_information[1]['habitat'])
+        args['valid_habitat_types'].add(habitat_information[1]['shapefile type'])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -589,7 +607,7 @@ def execute(args):
 
     # Build the habitats name--priority mapping
     args['habitat_priority'] = \
-        dict([((args['habitat_information'][i][1]['habitat'], \
+        dict([((args['habitat_information'][i][1]['shapefile type'], \
                 args['habitat_information'][i][1]['type'] if 'type' in \
                 args['habitat_information'][i][1] else None), i) \
             for i in range(len(args['habitat_information']))])
@@ -773,21 +791,6 @@ def execute(args):
                     in_raster_list.append(output_uri)
 
 
-    for category in args['shapefiles']:
-        print('')
-        print 'HDF5 category', category,
-        
-        if category == 'natural habitats':
-            for habitat in args['shapefiles'][category]:
-                print('')
-                print '    habitat', habitat, args['shapefiles'][category][habitat].keys(),
-        else:
-            print('')
-            print 'fields:', args['shapefiles'][category].keys()
-
-    sys.exit(0)
-
-
     # -----------------------------
     # Detect habitat constraints
     # -----------------------------
@@ -840,7 +843,7 @@ def execute(args):
         os.rename(temp_uri, raster_uri)
 
     for habitat_information in args['habitat_information']:
-        habitat_constraints = habitat_information[2]
+        habitat_constraints = habitat_information[2]['constraints']
 
         # Detected a land-related distance constraint
         if 'land' in habitat_constraints:
@@ -1001,11 +1004,25 @@ def execute(args):
             args['constraints_type']['MLLW'] = constraint_uri
 
 
+    for category in args['shapefiles']:
+        print('')
+        print 'HDF5 category', category,
+        
+        if category == 'natural habitats':
+            for habitat in args['shapefiles'][category]:
+                for filename in habitat:
+                    print('')
+                    print '    habitat', habitat, 'filename', filename, \
+                        args['shapefiles'][category][habitat][filename].keys(),
+        else:
+            for filename in args['shapefiles'][category]:
+                print('')
+                print 'filename', filename, 'fields:', \
+                    args['shapefiles'][category][filename].keys()
 
-        # Detected a water-related distance constraint
-        #if 'water' in habitat_constraints
-        #    constraint_uri = os.path.join(args['intermediate_dir'], \
-        #        'water_distance_map.tif')
+    sys.exit(0)
+
+
 
 
     LOGGER.debug('Uniformizing the input raster sizes...')
