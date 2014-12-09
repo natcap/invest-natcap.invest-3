@@ -18,26 +18,25 @@ is to use the ``GISTest`` class whenever you write a TestCase class for your
 model.  Doing so will grant you access to the GIS assertions provided by
 ``GISTest``.
 
-Example:
-    This example is relatively simplistic, since there will often be many more
-    assertions you may need to make to be able to test your model
-    effectively::
+This example is relatively simplistic, since there will often be many more
+assertions you may need to make to be able to test your model
+effectively::
 
-        import invest_natcap.testing
-        import invest_natcap.example_model
+    import invest_natcap.testing
+    import invest_natcap.example_model
 
-        class ExampleTest(invest_natcap.testing.GISTest):
-            def test_some_model(self):
-                example_args = {
-                    'workspace_dir': './workspace',
-                    'arg_1': 'foo',
-                    'arg_2': 'bar',
-                }
-                invest_natcap.example_model.execute(example_args)
+    class ExampleTest(invest_natcap.testing.GISTest):
+        def test_some_model(self):
+            example_args = {
+                'workspace_dir': './workspace',
+                'arg_1': 'foo',
+                'arg_2': 'bar',
+            }
+            invest_natcap.example_model.execute(example_args)
 
-                # example GISTest assertion
-                self.assertRastersEqual('workspace/raster_1.tif',
-                    'regression_data/raster_1.tif')
+            # example GISTest assertion
+            self.assertRastersEqual('workspace/raster_1.tif',
+                'regression_data/raster_1.tif')
 
 
 .. Writing tests programmatically
