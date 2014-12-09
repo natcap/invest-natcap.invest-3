@@ -17,14 +17,6 @@ Test Writing
     :undoc-members:
     :show-inheritance:
 
-Autocomplete
-------------
-
-.. automodule:: invest_natcap.testing.autocomplete
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Data Storage
 ------------
 
