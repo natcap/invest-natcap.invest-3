@@ -424,15 +424,200 @@ def compute_transects(args):
 
 
 
+    for category in args['shapefiles']:
+        print('')
+        print 'HDF5 category', category,
+        
+        for filename in args['shapefiles'][category]:
+            print('filename', filename, 'fields:', \
+                args['shapefiles'][category][filename].keys())
+
+
     # HDF5 file container
     hdf5_files = {}
 
-    # Iterate through shapefile types
-    for shp_type in args['shapefiles']:
-            
-        hdf5_files[shp_type] = []
+    LOGGER.info('Processing natural habitats...')
 
-        for shp_name in args['shapefiles'][shp_type]:
+    category = 'natural habitats'
+
+    hdf5_files[category] = []
+
+    for shp_name in args['shapefiles'][category]:
+
+        # Find habitat_id that will be used to search field position in field_index:
+        habitat_id = None
+        for habitat in args['field_index']['natural habitats']:
+            if args['field_index']['natural habitats'][habitat]['name'] == habitat:
+                habitat_id = int(habitat)
+                break
+        print('habitat', habitat, habitat_id)
+
+        assert habitat is not None
+
+        mask = None
+        mask_dict = {}
+
+        # Assert if field 'type' doesn't exist
+        field_names_lowercase = \
+            [field_name.lower() for field_name in \
+                args['shapefiles'][category][shp_name].keys()]
+
+        assert 'type' in field_names_lowercase
+
+        type_key = None
+        for key in args['shapefiles'][category][shp_name].keys():
+            if key.lower() == 'type':
+                type_key = key
+                break
+
+        # Get rid of the path and the extension
+        basename = os.path.splitext(os.path.basename( \
+            args['shapefiles'][category][shp_name][type_key]))[0]
+
+        # Extract the type for this shapefile
+        type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
+
+        source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+        raster = gdal.Open(type_shapefile_uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+
+        LOGGER.info('Extracting priority information from ' + basename)
+        
+        progress_step = tiles / 50
+        for transect in range(tiles):
+            if transect % progress_step == 0:
+                print '.',
+
+            [start, end] = indices_limit_array[transect]
+
+            shore = shore_array[transect]
+
+            #raw_positions = transect_info[transect]['raw_positions']
+            raw_positions = \
+                (positions_array[transect, 0, start:end], \
+                positions_array[transect, 1, start:end])
+            
+            #Load the habitats as sampled from the raster
+            source = array[raw_positions]
+
+            # Interpolate the data to the model resolution 
+#                source = interpolate_transect(source, i_side_fine, \
+#                    args['model_resolution'], kind = 'nearest')
+
+
+            source = source[start:end,]
+
+            # Load the habitat type buffer
+            destination = habitat_type_array[transect,start:end]
+
+            # Overriding source_nodata so it doesn't interfere with habitat_nodata
+            source[source == source_nodata] = habitat_nodata
+
+            # Apply the habitat constraints
+#                source = \
+#                    apply_habitat_constraints(source, args['habitat_information'])
+#                sys.exit(0)
+            
+            # Compute the mask that will be used to update the values
+            mask = destination < source
+
+            mask_dict[transect] = mask
+
+            # Update habitat_types with new type of higher priority
+            destination[mask] = source[mask]
+
+            # Remove nodata
+            clipped_positions = \
+                (raw_positions[0][start:end], raw_positions[1][start:end])
+
+            # Positions to update
+            masked_positions = \
+                (clipped_positions[0][mask], clipped_positions[1][mask])
+
+            if category in args['valid_habitat_types']:
+                # Update the values using source
+                transects[masked_positions] = source[mask]
+                # Leave the transect ID on the transect's shore
+                transects[(raw_positions[0][shore], \
+                    raw_positions[1][shore])] = transect
+
+        # Clean up
+        band = None
+        raster = None
+        array = None
+
+
+        for field in args['shapefiles'][category][shp_name]:
+
+            # Skip the field 'type'
+            if field.lower() == 'type':
+                continue
+
+            # Get rid of the path and the extension
+            basename = os.path.splitext( \
+                os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
+
+            # Extract data from the current raster field
+            print "args['field_index']['natural habitats'][" + str(habitat_id) + "]",
+            print(args['field_index']['natural habitats'][str(habitat_id)])
+            field_id = args['field_index']['natural habitats'][habitat_id]['fields'][field.lower()]
+
+            uri = args['shapefiles'][category][shp_name][field]
+            raster = gdal.Open(uri)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+
+            LOGGER.info('Extracting transect information from ' + basename)
+            
+            progress_step = tiles / 50
+            for transect in range(tiles):
+                if transect % progress_step == 0:
+                    print '.',
+
+                [start, end] = indices_limit_array[transect]
+
+                shore = shore_array[transect]
+
+                raw_positions = \
+                    (positions_array[transect, 0, start:end], \
+                    positions_array[transect, 1, start:end])
+
+
+                source = array[raw_positions]
+
+                destination = \
+                    habitat_properties_array[transect, field_id, start:end]
+
+                # Save transect to file
+                mask = mask_dict[transect]
+
+                destination[mask] = source[mask]
+
+                clipped_positions = \
+                    (raw_positions[0][start:end], raw_positions[1][start:end])
+
+                masked_positions = \
+                    (clipped_positions[0][mask], clipped_positions[1][mask])
+                
+            print('')
+
+            # Close the raster before proceeding to the next one
+            band = None
+            raster = None
+            array = None
+
+    sys.exit(0)
+
+
+
+
+    # Iterate through shapefile types
+    for category in args['shapefiles']:
+            
+        hdf5_files[category] = []
+
+        for shp_name in args['shapefiles'][category]:
 
             mask = None
             mask_dict = {}
@@ -440,101 +625,89 @@ def compute_transects(args):
             # Skip field 'type' if it doesn't exist
             field_names_lowercase = \
                 [field_name.lower() for field in \
-                    args['shapefiles'][shp_type][shp_name].keys()]
+                    args['shapefiles'][category][shp_name].keys()]
 
-            if 'type' in field_names_lowercase: #args['shapefiles'][shp_type][shp_name]:
-                print('----- Including', shp_name)
-                # Get rid of the path and the extension
-                basename = os.path.splitext(os.path.basename( \
-                    args['shapefiles'][shp_type][shp_name]['type']))[0]
+            assert 'type' in field_names_lowercase
 
-                # Extract the type for this shapefile
-                type_shapefile_uri = args['shapefiles'][shp_type][shp_name]['type']
+            # Get rid of the path and the extension
+            basename = os.path.splitext(os.path.basename( \
+                args['shapefiles'][category][shp_name]['type']))[0]
 
-                source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-                raster = gdal.Open(type_shapefile_uri)
-                band = raster.GetRasterBand(1)
-                array = band.ReadAsArray()
+            # Extract the type for this shapefile
+            type_shapefile_uri = args['shapefiles'][category][shp_name]['type']
 
-                LOGGER.info('Extracting priority information from ' + basename)
+            source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+            raster = gdal.Open(type_shapefile_uri)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+
+            LOGGER.info('Extracting priority information from ' + basename)
+            
+            mask = None
+            mask_dict = {}
+
+            progress_step = tiles / 50
+            for transect in range(tiles):
+                if transect % progress_step == 0:
+                    print '.',
+
+                [start, end] = indices_limit_array[transect]
+
+                shore = shore_array[transect]
+
+                #raw_positions = transect_info[transect]['raw_positions']
+                raw_positions = \
+                    (positions_array[transect, 0, start:end], \
+                    positions_array[transect, 1, start:end])
                 
-                mask = None
-                mask_dict = {}
+                # Skip if shapefile type is not a valid habitat
+                if category in args['valid_habitat_types']:
+                    # Load the habitat type buffer
+                    destination = habitat_type_array[transect,start:end]
+                elif category == 'soil type':
+                    destination = soil_type_array[transect,start:end]
+                else:
+                    continue
 
-                progress_step = tiles / 50
-                for transect in range(tiles):
-                    if transect % progress_step == 0:
-                        print '.',
+                #Load the habitats as sampled from the raster
+                source = array[raw_positions]
 
-                    [start, end] = indices_limit_array[transect]
+                # Interpolate the data to the model resolution 
+#                source = interpolate_transect(source, i_side_fine, \
+#                    args['model_resolution'], kind = 'nearest')
 
-                    shore = shore_array[transect]
+                source = source[start:end,]
 
-                    #raw_positions = transect_info[transect]['raw_positions']
-                    raw_positions = \
-                        (positions_array[transect, 0, start:end], \
-                        positions_array[transect, 1, start:end])
-                    
-                    # Skip if shapefile type is not a valid habitat
-                    if shp_type in args['valid_habitat_types']:
-                        # Load the habitat type buffer
-                        destination = habitat_type_array[transect,start:end]
-                    elif shp_type == 'soil type':
-                        destination = soil_type_array[transect,start:end]
-                    else:
-                        continue
+                # Overriding source_nodata so it doesn't interfere with habitat_nodata
+                source[source == source_nodata] = habitat_nodata
 
-                    #Load the habitats as sampled from the raster
-                    source = array[raw_positions]
+                # Apply the habitat constraints
+#                source = \
+#                    apply_habitat_constraints(source, args['habitat_information'])
+#                sys.exit(0)
+                
+                # Compute the mask that will be used to update the values
+                mask = destination < source
 
-                    # Interpolate the data to the model resolution 
-    #                source = interpolate_transect(source, i_side_fine, \
-    #                    args['model_resolution'], kind = 'nearest')
+                mask_dict[transect] = mask
 
-                    source = source[start:end,]
+                # Update habitat_types with new type of higher priority
+                destination[mask] = source[mask]
 
-                    # Apply the habitat constraints
-    #                source = \
-    #                    apply_habitat_constraints(source, args['habitat_information'])
-    #                sys.exit(0)
-                    
-                    # Compute the mask that will be used to update the values
-                    mask = destination < source
+                # Remove nodata
+                clipped_positions = \
+                    (raw_positions[0][start:end], raw_positions[1][start:end])
 
-                    mask_dict[transect] = mask
+                # Positions to update
+                masked_positions = \
+                    (clipped_positions[0][mask], clipped_positions[1][mask])
 
-                    # Update habitat_types with new type of higher priority
-                    destination[mask] = source[mask]
-
-                    # Transect values without nodata
-                    clipped_positions = \
-                        (raw_positions[0][start:end], raw_positions[1][start:end])
-
-                    # Transect values to update
-                    masked_positions = \
-                        (clipped_positions[0][mask], clipped_positions[1][mask])
-
-                    # If source nodata ended up in destination, find it
-                    source_nodata_mask = destination == source_nodata
-
-                    # Remove source nodata
-                    destination[source_nodata_mask] = habitat_nodata
-
-                    # Find where source nodata is in the raster
-                    source_nodata_coordinates = \
-                        (raw_positions[0][source_nodata_mask], \
-                        raw_positions[1][source_nodata_mask])
-
-                    if shp_type in args['valid_habitat_types']:
-                        # Update the values using source
-                        transects[masked_positions] = source[mask]
-                        # Update nodata appropriately
-                        transects[source_nodata_coordinates] = -2
-                        # Leave the transect ID on the transect's shore
-                        transects[(raw_positions[0][shore], \
-                            raw_positions[1][shore])] = transect
-            else:
-                print('----- Excluding', shp_name)
+                if category in args['valid_habitat_types']:
+                    # Update the values using source
+                    transects[masked_positions] = source[mask]
+                    # Leave the transect ID on the transect's shore
+                    transects[(raw_positions[0][shore], \
+                        raw_positions[1][shore])] = transect
 
 
             print('')
@@ -548,24 +721,24 @@ def compute_transects(args):
             # Find the habitat ID that corresponds to the shapefile type
             habitat_id = None
             # Check if it's a soil type
-            if shp_type == 'soil type':
+            if category == 'soil type':
                 habitat_id = len(args['field_index']) - 1
             # Else look for a natural habitat
             else:
                 for hab_id in range(len(args['habitat_information'])):
-                    if args['habitat_information'][hab_id][0] == shp_type:
+                    if args['habitat_information'][hab_id][0] == category:
                         habitat_id = hab_id
                         break
 
             if habitat_id is None:
-                print("Couldn't find habitat ID for", shp_type)
+                print("Couldn't find habitat ID for", category)
                 print('Available habitats:', \
                     [args['habitat_information'][hab_id][0] \
                     for hab_id in range(len(args['habitat_information']))])
 
                 assert habitat_id is not None
 
-            for field in args['shapefiles'][shp_type][shp_name]:
+            for field in args['shapefiles'][category][shp_name]:
 
                 # Skip the field 'type'
                 if field.lower() == 'type':
@@ -573,12 +746,12 @@ def compute_transects(args):
 
                 # Get rid of the path and the extension
                 basename = os.path.splitext( \
-                    os.path.basename(args['shapefiles'][shp_type][shp_name][field]))[0]
+                    os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
 
                 # Extract data from the current raster field
                 field_id = args['field_index'][habitat_id]['fields'][field.lower()]
 
-                uri = args['shapefiles'][shp_type][shp_name][field]
+                uri = args['shapefiles'][category][shp_name][field]
                 raster = gdal.Open(uri)
                 band = raster.GetRasterBand(1)
                 array = band.ReadAsArray()
@@ -601,13 +774,13 @@ def compute_transects(args):
 
                     source = array[raw_positions]
 
-                    if shp_type in args['valid_habitat_types']:
+                    if category in args['valid_habitat_types']:
                         # Load the habitat type buffer
                         destination = \
                                 habitat_properties_array[transect, field_id, start:end]
-                    elif shp_type == 'soil type':
+                    elif category == 'soil type':
                         destination = soil_properties_array[transect, field_id,start:end]
-                    elif shp_type == 'climatic forcing':
+                    elif category == 'climatic forcing':
                         destination = climatic_forcing_array[transect, field_id,start:end]
                     else:
                         continue
@@ -623,7 +796,7 @@ def compute_transects(args):
                     masked_positions = \
                         (clipped_positions[0][mask], clipped_positions[1][mask])
                     
-                    if shp_type in args['valid_habitat_types']:
+                    if category in args['valid_habitat_types']:
                         transects[masked_positions] = source[mask]
                 print('')
 
