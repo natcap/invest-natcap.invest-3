@@ -40,48 +40,48 @@ Example:
                     'regression_data/raster_1.tif')
 
 
-Writing tests programmatically
-------------------------------
-
-The testing package also provides a program to create regression archives of
-your content with relative ease.
-
-.. warning::
-
-    **DON'T USE THIS TOOL**
-
-    This tool was built using the old paradigm of creating regression data
-    archives for all inputs and outputs.  This was a very expensive approach to
-    testing, since we sometimes output very large datasets, which were all
-    tracked in mercurial.
-
-    **This tool should not be used** until we figure out the correct project-based
-    way to test all of our inputs and outputs.
-
-
-The tool can be invoked from the command-line like so::
-
-    $ python regression-build.py
-
-Command-line arguments::
-
-    usage: regression-build.py [-h] [-a] [-i] [-o] [-t] [-c] [-f] [-n]
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -a , --arguments      JSON file with input arguments and model data
-      -i , --input-archive  Path to where the archived input data will be
-                            saved
-      -o , --output-archive Path to where the archived output data will be
-                            saved
-      -t , --test-file      The test file to modify
-      -c , --test-class     The test class to write or append to. A new
-                            class will be written if this name does not
-                            already exist.
-      -f , --test-func      The test function to write inside the
-                            designated test class.
-      -n, --no-confirm      Provide this flag if you do not wish to
-                            confirm before running.
+.. Writing tests programmatically
+.. ------------------------------
+..
+.. The testing package also provides a program to create regression archives of
+.. your content with relative ease.
+..
+.. .. warning::
+..
+..     **WRITE YOUR TESTS BY HAND**
+..
+..     This tool was built using the old paradigm of creating regression data
+..     archives for all inputs and outputs.  This was a very expensive approach to
+..     testing, since we sometimes output very large datasets, which were all
+..     tracked in mercurial.
+..
+..     **This tool should not be used** until we figure out the correct project-based
+..     way to test all of our inputs and outputs.
+..
+..
+.. The tool can be invoked from the command-line like so::
+..
+..     $ python regression-build.py
+..
+.. Command-line arguments::
+..
+..     usage: regression-build.py [-h] [-a] [-i] [-o] [-t] [-c] [-f] [-n]
+..
+..     optional arguments:
+..       -h, --help            show this help message and exit
+..       -a , --arguments      JSON file with input arguments and model data
+..       -i , --input-archive  Path to where the archived input data will be
+..                             saved
+..       -o , --output-archive Path to where the archived output data will be
+..                             saved
+..       -t , --test-file      The test file to modify
+..       -c , --test-class     The test class to write or append to. A new
+..                             class will be written if this name does not
+..                             already exist.
+..       -f , --test-func      The test function to write inside the
+..                             designated test class.
+..       -n, --no-confirm      Provide this flag if you do not wish to
+..                             confirm before running.
 
 
 
