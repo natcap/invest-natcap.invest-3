@@ -45,20 +45,24 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float64: numpy.float64
     }
 
+
 class NoDaemonProcess(multiprocessing.Process):
     """A class to make non-deamonic pools in case we want to have pools of
         pools"""
     # make 'daemon' attribute always return False
     def _get_daemon(self):
         return False
+
     def _set_daemon(self, value):
         pass
     daemon = property(_get_daemon, _set_daemon)
+
 
 # We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
 # because the latter is only a wrapper function, not a proper class.
 class PoolNoDaemon(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
+
 
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
@@ -67,6 +71,7 @@ class SpatialExtentOverlapException(Exception):
         in space"""
     pass
 
+
 class UndefinedValue(Exception):
     """Used to indicate values that are not defined in dictionary
         structures"""
@@ -74,13 +79,13 @@ class UndefinedValue(Exception):
 
 from UserDict import DictMixin
 
+
 class OrderedDict(DictMixin):
     """A python dictionary that has fast index and preserves order"""
 
     def __init__(self):
         self._keys = []
         self._data = {}
-
 
     def __setitem__(self, key, value):
         if key not in self._data:
@@ -90,11 +95,9 @@ class OrderedDict(DictMixin):
     def __getitem__(self, key):
         return self._data[key]
 
-
     def __delitem__(self, key):
         del self._data[key]
         self._keys.remove(key)
-
 
     def keys(self):
         return list(self._keys)
@@ -119,12 +122,18 @@ LOGGER = logging.getLogger('raster_utils')
 #until we know what's happening
 #gdal.UseExceptions()
 
+
 def get_nodata_from_uri(dataset_uri):
-    """Returns the nodata value for the first band from a gdal dataset
+    """
+    Returns the nodata value for the first band from a gdal dataset
 
-        dataset_uri - a uri to a gdal dataset
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
 
-        returns nodata value for dataset band 1"""
+    Returns:
+        nodata_cast (?): nodata value for dataset band 1
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
@@ -136,10 +145,9 @@ def get_nodata_from_uri(dataset_uri):
     if band.DataType == gdal.GDT_Byte and nodata is not None:
         nodata = nodata % 256
 
-
     #get the type of the underlying array, i read the array because gdal does
     #not give a reliable type underneath
-    data_type = band.ReadAsArray(0,0,1,1).dtype
+    data_type = band.ReadAsArray(0, 0, 1, 1).dtype
     #awkwardly cram this in a 1 element numpy array to get the type correct
     nodata_cast = numpy.array([nodata], dtype=data_type)
 
@@ -153,11 +161,14 @@ def get_nodata_from_uri(dataset_uri):
 
 
 def get_datatype_from_uri(dataset_uri):
-    """Returns the datatype for the first band from a gdal dataset
+    """
+    Returns the datatype for the first band from a gdal dataset
 
-        dataset_uri - a uri to a gdal dataset
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
 
-        returns the datatype for dataset band 1"""
+    Returns:
+        datatype (?): datatype for dataset band 1"""
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
@@ -170,13 +181,16 @@ def get_datatype_from_uri(dataset_uri):
 
     return datatype
 
+
 def get_row_col_from_uri(dataset_uri):
-    """Returns a tuple of number of rows and columns of that dataset
-        uri.
+    """
+    Returns a tuple of number of rows and columns of that dataset uri.
 
-        dataset_uri - a uri to a gdal dataset
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
 
-        returns (n_row, n_col) tuplie from dataset_uri"""
+    Returns:
+        tuple (tuple): 2-tuple (n_row, n_col) from dataset_uri"""
 
     dataset = gdal.Open(dataset_uri)
     n_rows = dataset.RasterYSize
@@ -191,13 +205,17 @@ def get_row_col_from_uri(dataset_uri):
 
 
 def calculate_raster_stats_uri(dataset_uri):
-    """Calculates and sets the min, max, stdev, and mean for the bands in
-       the raster.
+    """
+    Calculates and sets the min, max, stdev, and mean for the bands in
+    the raster.
 
-       dataset_uri - a uri to a GDAL raster dataset that will be modified by
-            having its band statistics set
+    Args:
+        dataset_uri (string): a uri to a GDAL raster dataset that will be
+            modified by having its band statistics set
 
-        returns nothing"""
+    Returns:
+        nothing
+    """
 
     dataset = gdal.Open(dataset_uri, gdal.GA_Update)
 
@@ -212,11 +230,16 @@ def calculate_raster_stats_uri(dataset_uri):
 
 
 def get_statistics_from_uri(dataset_uri):
-    """Retrieves the min, max, mean, stdev from a GDAL Dataset
+    """
+    Retrieves the min, max, mean, stdev from a GDAL Dataset
 
-        dataset_uri - a uri to a gdal dataset
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
 
-        returns min, max, mean, stddev"""
+    Returns:
+        statistics (?): min, max, mean, stddev
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
@@ -231,13 +254,16 @@ def get_statistics_from_uri(dataset_uri):
 
 
 def get_cell_size_from_uri(dataset_uri):
-    """Returns the cell size of the dataset in meters.  Raises an exception
-        if the raster is not square since this'll break most of the raster_utils
-        algorithms.
+    """
+    Returns the cell size of the dataset in meters.  Raises an exception if the
+    raster is not square since this'll break most of the raster_utils
+    algorithms.
 
-        dataset_uri - uri to a gdal dataset
+    Args:
+        dataset_uri (string): uri to a gdal dataset
 
-        returns cell size of the dataset in meters"""
+    Returns:
+        size_meters (?): cell size of the dataset in meters"""
 
     srs = osr.SpatialReference()
     dataset = gdal.Open(dataset_uri)
@@ -265,16 +291,20 @@ def get_cell_size_from_uri(dataset_uri):
 
 
 def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
-    """A wrapper for pixel_size_based_on_coordinate_transform
-        that takes a dataset uri as an input and opens it before sending it
-        along
+    """
+    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
+    uri as an input and opens it before sending it along
 
-        dataset_uri - a URI to a gdal dataset
+    Args:
+        dataset_uri (string): a URI to a gdal dataset
 
         All other parameters pass along
 
-       returns a tuple containing (pixel width in meters, pixel height in
-           meters)"""
+    Returns:
+        result (tuple): a tuple containing (pixel width in meters, pixel height
+            in meters)
+
+    """
     dataset = gdal.Open(dataset_uri)
     result = pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
 
@@ -284,22 +314,28 @@ def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
 
     return result
 
+
 def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
-    """Calculates the pixel width and height in meters given a coordinate
-        transform and reference point on the dataset that's close to the
-        transform's projected coordinate sytem.  This is only necessary
-        if dataset is not already in a meter coordinate system, for example
-        dataset may be in lat/long (WGS84).
+    """
+    Calculates the pixel width and height in meters given a coordinate
+    transform and reference point on the dataset that's close to the
+    transform's projected coordinate sytem.  This is only necessary
+    if dataset is not already in a meter coordinate system, for example
+    dataset may be in lat/long (WGS84).
 
-        dataset - A projected GDAL dataset in the form of lat/long decimal
+    Args:
+        dataset (?): a projected GDAL dataset in the form of lat/long decimal
             degrees
-        coord_trans - An OSR coordinate transformation from dataset coordinate
-           system to meters
-        point - a reference point close to the coordinate transform coordinate
-           system.  must be in the same coordinate system as dataset.
+        coord_trans (?): an OSR coordinate transformation from dataset
+            coordinate system to meters
+        point (?): a reference point close to the coordinate transform
+            coordinate system.  must be in the same coordinate system as
+            dataset.
 
-        returns a tuple containing (pixel width in meters, pixel height in
-           meters)"""
+    Returns:
+        pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
+            height in meters)
+    """
     #Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
@@ -322,46 +358,59 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
 
 
 def new_raster_from_base_uri(base_uri, *args, **kwargs):
-    """A wrapper for the function new_raster_from_base that opens up
-        the base_uri before passing it to new_raster_from_base.
+    """
+    A wrapper for the function new_raster_from_base that opens up
+    the base_uri before passing it to new_raster_from_base.
 
-        base_uri - a URI to a GDAL dataset on disk.
+    Args:
+        base_uri (string): a URI to a GDAL dataset on disk.
 
         All other arguments to new_raster_from_base are passed in.
 
-        Returns nothing.
-        """
+    Returns:
+        nothing.
+
+    """
 
     raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
+
 
 def new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value=None,
         n_rows=None, n_cols=None, dataset_options=None):
 
-    """Create a new, empty GDAL raster dataset with the spatial references,
-        geotranforms of the base GDAL raster dataset.
+    """
+    Create a new, empty GDAL raster dataset with the spatial references,
+    geotranforms of the base GDAL raster dataset.
 
-        base - a the GDAL raster dataset to base output size, and transforms on
-        output_uri - a string URI to the new output raster dataset.
-        gdal_format - a string representing the GDAL file format of the
+    Args:
+        base (?): a the GDAL raster dataset to base output size, and transforms
+            on
+        output_uri (string): a string URI to the new output raster dataset.
+        gdal_format (string): a string representing the GDAL file format of the
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        nodata - a value that will be set as the nodata value for the
+        nodata (?): a value that will be set as the nodata value for the
             output raster.  Should be the same type as 'datatype'
-        datatype - the pixel datatype of the output raster, for example
+        datatype (?): the pixel datatype of the output raster, for example
             gdal.GDT_Float32.  See the following header file for supported
             pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
-        fill_value - (optional) the value to fill in the raster on creation
-        n_rows - (optional) if set makes the resulting raster have n_rows in it
+
+    Keyword Args:
+        fill_value (?): the value to fill in the raster on creation
+        n_rows (?): if set makes the resulting raster have n_rows in it
             if not, the number of rows of the outgoing dataset are equal to
             the base.
-        n_cols - (optional) similar to n_rows, but for the columns.
-        dataset_options - (optional) a list of dataset options that gets
+        n_cols (?): similar to n_rows, but for the columns.
+        dataset_options (?): a list of dataset options that gets
             passed to the gdal creation driver, overrides defaults
 
-        returns a new GDAL raster dataset."""
+    Returns:
+        dataset (?): a new GDAL raster dataset.
+
+    """
 
     return raster_cython_utils.new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value,
@@ -372,27 +421,32 @@ def new_raster(
         cols, rows, projection, geotransform, format, nodata, datatype,
         bands, outputURI):
 
-    """Create a new raster with the given properties.
+    """
+    Create a new raster with the given properties.
 
-        cols - number of pixel columns
-        rows - number of pixel rows
-        projection - the datum
-        geotransform - the coordinate system
-        format - a string representing the GDAL file format of the
+    Args:
+        cols (int): number of pixel columns
+        rows (int): number of pixel rows
+        projection (?): the datum
+        geotransform (?): the coordinate system
+        format (string): a string representing the GDAL file format of the
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        nodata - a value that will be set as the nodata value for the
+        nodata (?): a value that will be set as the nodata value for the
             output raster.  Should be the same type as 'datatype'
-        datatype - the pixel datatype of the output raster, for example
+        datatype (?): the pixel datatype of the output raster, for example
             gdal.GDT_Float32.  See the following header file for supported
             pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
-        bands - the number of bands in the raster
-        outputURI - the file location for the outputed raster.  If format
-            is 'MEM' this can be an empty string
+        bands (int): the number of bands in the raster
+        outputURI (string): the file location for the outputed raster.  If
+            format is 'MEM' this can be an empty string
 
-        returns a new GDAL raster with the parameters as described above"""
+    Returns:
+        dataset (?): a new GDAL raster with the parameters as described above
+
+    """
 
     driver = gdal.GetDriverByName(format)
     new_raster = driver.Create(
@@ -408,27 +462,38 @@ def new_raster(
 
 
 def calculate_intersection_rectangle(dataset_list, aoi=None):
-    """Return a bounding box of the intersections of all the rasters in the
-        list.
+    """
+    Return a bounding box of the intersections of all the rasters in the
+    list.
 
-        dataset_list - a list of GDAL datasets in the same projection and
+    Args:
+        dataset_list (list): a list of GDAL datasets in the same projection and
             coordinate system
-        aoi - an OGR polygon datasource which may optionally also restrict
+
+    Keyword Args:
+        aoi (?): an OGR polygon datasource which may optionally also restrict
             the extents of the intersection rectangle based on its own
             extents.
 
-        raises a SpatialExtentOverlapException in cases where the dataset
-            list and aoi don't overlap.
+    Returns:
+        bounding_box (list): a 4 element list that bounds the intersection of
+            all the rasters in dataset_list.  [left, top, right, bottom]
 
-        returns a 4 element list that bounds the intersection of all the
-            rasters in dataset_list.  [left, top, right, bottom]"""
+    Raises:
+        SpatialExtentOverlapException: in cases where the dataset list and aoi
+            don't overlap.
+
+    """
 
     def valid_bounding_box(bb):
-        """Check to make sure bounding box doesn't collapse on itself
+        """
+        Check to make sure bounding box doesn't collapse on itself
 
-        bb - a bounding box of the form [left, top, right, bottom]
+        Args:
+            bb (list): a bounding box of the form [left, top, right, bottom]
 
-        returns True if bb is valid, false otherwise"""
+        Returns:
+            is_valid (boolean): True if bb is valid, false otherwise"""
 
         return bb[0] <= bb[2] and bb[3] <= bb[1]
 
@@ -475,19 +540,26 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
 
     return bounding_box
 
+
 def create_raster_from_vector_extents_uri(
         shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
-    """A wrapper for create_raster_from_vector_extents
+    """
+    A wrapper for create_raster_from_vector_extents
 
-        shapefile_uri - uri to an OGR datasource to use as the extents of the
-            raster
-        pixel_size - size of output pixels in the projected units of
+    Args:
+        shapefile_uri (string): uri to an OGR datasource to use as the extents
+            of the raster
+        pixel_size (?): size of output pixels in the projected units of
             shapefile_uri
-        gdal_format - the raster pixel format, something like gdal.GDT_Float32
-        nodata_out_value - the output nodata value
-        output_uri - the URI to write the gdal dataset
+        gdal_format (?): the raster pixel format, something like
+            gdal.GDT_Float32
+        nodata_out_value (?): the output nodata value
+        output_uri (string): the URI to write the gdal dataset
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     datasource = ogr.Open(shapefile_uri)
     create_raster_from_vector_extents(
@@ -497,20 +569,25 @@ def create_raster_from_vector_extents_uri(
 
 def create_raster_from_vector_extents(
         xRes, yRes, format, nodata, rasterFile, shp):
-    """Create a blank raster based on a vector file extent.  This code is
-        adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
+    """
+    Create a blank raster based on a vector file extent.  This code is
+    adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
 
-        xRes - the x size of a pixel in the output dataset must be a positive
-            value
-        yRes - the y size of a pixel in the output dataset must be a positive
-            value
-        format - gdal GDT pixel type
-        nodata - the output nodata value
-        rasterFile - URI to file location for raster
-        shp - vector shapefile to base extent of output raster on
+    Args:
+        xRes (?): the x size of a pixel in the output dataset must be a
+            positive value
+        yRes (?): the y size of a pixel in the output dataset must be a
+            positive value
+        format (?): gdal GDT pixel type
+        nodata (?): the output nodata value
+        rasterFile (string): URI to file location for raster
+        shp (?): vector shapefile to base extent of output raster on
 
-        returns a blank raster whose bounds fit within `shp`s bounding box
-            and features are equivalent to the passed in data"""
+    Returns:
+        raster (?): blank raster whose bounds fit within `shp`s bounding box
+            and features are equivalent to the passed in data
+
+    """
 
     #Determine the width and height of the tiff in pixels based on the
     #maximum size of the combined envelope of all the features
@@ -578,17 +655,25 @@ def create_raster_from_vector_extents(
 def vectorize_points(
         shapefile, datasource_field, dataset, randomize_points=False,
         mask_convex_hull=False, interpolation='nearest'):
-    """Takes a shapefile of points and a field defined in that shapefile
-       and interpolates the values in the points onto the given raster
+    """
+    Takes a shapefile of points and a field defined in that shapefile
+    and interpolates the values in the points onto the given raster
 
-       shapefile - ogr datasource of points
-       datasource_field - a field in shapefile
-       dataset - a gdal dataset must be in the same projection as shapefile
-       interpolation - the interpolation method to use for
+    Args:
+        shapefile (?): ogr datasource of points
+        datasource_field (?): a field in shapefile
+        dataset (?): a gdal dataset must be in the same projection as shapefile
+
+    Keyword Args:
+        randomize_points (boolean): (description)
+        mask_convex_hull (boolean): (description)
+        interpolation (string): the interpolation method to use for
             scipy.interpolate.griddata(). Default is 'nearest'
 
-       returns nothing
-       """
+    Returns:
+       nothing
+
+    """
 
     #Define the initial bounding box
     gt = dataset.GetGeoTransform()
@@ -658,31 +743,36 @@ def aggregate_raster_values_uri(
         threshold_amount_lookup=None, ignore_value_list=[], process_pool=None,
         all_touched=False):
 
-    """Collect all the raster values that lie in shapefile depending on the
-        value of operation
+    """
+    Collect all the raster values that lie in shapefile depending on the
+    value of operation
 
-        raster_uri - a uri to a GDAL dataset
-        shapefile_uri - a uri to a OGR datasource that should overlap raster;
-            raises an exception if not.
-        shapefile_field - a string indicating which key in shapefile to
+    Args:
+        raster_uri (string): a uri to a GDAL dataset
+        shapefile_uri (string): a uri to a OGR datasource that should overlap
+            raster; raises an exception if not.
+
+    Keyword Args:
+        shapefile_field (string): a string indicating which key in shapefile to
             associate the output dictionary values with whose values are
             associated with ints; if None dictionary returns a value over
             the entire shapefile region that intersects the raster.
-        ignore_nodata - (optional) if operation == 'mean' then it does not
+        ignore_nodata (?): if operation == 'mean' then it does not
             account for nodata pixels when determining the pixel_mean,
             otherwise all pixels in the AOI are used for calculation of the
             mean.  This does not affect hectare_mean which is calculated from
             the geometrical area of the feature.
-        threshold_amount_lookup - (optional) a dictionary indexing the
+        threshold_amount_lookup (dict): a dictionary indexing the
             shapefile_field's to threshold amounts to subtract from the
             aggregate value.  The result will be clamped to zero.
-        ignore_value_list - (optional) a list of values to ignore when
+        ignore_value_list (list): a list of values to ignore when
             calculating the stats
-        process_pool - (optional) a process pool for multiprocessing
-        all_touched - (optional) if true will account for any pixel whose
+        process_pool (?): a process pool for multiprocessing
+        all_touched (boolean): if true will account for any pixel whose
             geometry passes through the pixel, not just the center point
 
-        returns a named tuple of the form
+    Returns:
+        result_tuple (tuple): named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
             pixel_min pixel_max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that
@@ -690,7 +780,13 @@ def aggregate_raster_values_uri(
            pixel max, and pixel min of the values under that feature.
            'n_pixels' contains the total number of valid pixels used in that
            calculation.  hectare_mean is None if raster_uri is unprojected.
-        """
+
+    Raises:
+        AttributeError
+        TypeError
+        OSError
+
+    """
 
     raster_nodata = get_nodata_from_uri(raster_uri)
     out_pixel_size = get_cell_size_from_uri(raster_uri)
@@ -794,7 +890,6 @@ def aggregate_raster_values_uri(
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()
-
 
     #Loop over each polygon and aggregate
     minimal_polygon_sets = calculate_disjoint_polygon_set(
@@ -976,30 +1071,36 @@ def aggregate_raster_values_uri(
 def reclassify_by_dictionary(
         dataset, rules, output_uri, format, nodata, datatype,
         default_value=None):
-    """Convert all the non-nodata values in dataset to the values mapped to
-        by rules.  If there is no rule for an input value it is replaced by
-        default_value.  If default_value is None, nodata is used.
+    """
+    Convert all the non-nodata values in dataset to the values mapped to
+    by rules.  If there is no rule for an input value it is replaced by
+    default_value.  If default_value is None, nodata is used.
 
-        If default_value is None, the default_value will only be used if a pixel
-        is not nodata and the pixel does not have a rule defined for its value.
-        If the user wishes to have nodata values also mapped to the default
-        value, this can be achieved by defining a rule such as:
+    If default_value is None, the default_value will only be used if a pixel
+    is not nodata and the pixel does not have a rule defined for its value.
+    If the user wishes to have nodata values also mapped to the default
+    value, this can be achieved by defining a rule such as:
 
-            rules[dataset_nodata] = default_value
+        rules[dataset_nodata] = default_value
 
-        Doing so will override the default nodata behaviour.
+    Doing so will override the default nodata behaviour.
 
-        dataset - GDAL raster dataset
-        rules - a dictionary of the form:
+    Args:
+        dataset (?): GDAL raster dataset
+        rules (dict): a dictionary of the form:
             {'dataset_value1' : 'output_value1', ...
              'dataset_valuen' : 'output_valuen'}
              used to map dataset input types to output
-        output_uri - The location to hold the output raster on disk
-        format - either 'MEM' or 'GTiff'
-        nodata - output raster dataset nodata value
-        datatype - a GDAL output type
-        default=None - the value to be used if a reclass rule is not defined.
+        output_uri (string): the location to hold the output raster on disk
+        format (string): either 'MEM' or 'GTiff'
+        nodata (?): output raster dataset nodata value
+        datatype (?): a GDAL output type
 
+    Keyword Args:
+        default_value (?): the value to be used if a reclass rule is not
+            defined.
+
+    Returns:
         return the mapped raster as a GDAL dataset"""
 
     # If a default value is not set, assume that the default value is the
@@ -1027,15 +1128,22 @@ def reclassify_by_dictionary(
 
 def calculate_slope(
         dem_dataset_uri, slope_uri, aoi_uri=None, process_pool=None):
-    """Generates raster maps of slope.  Follows the algorithm described here:
-        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works
+    """
+    Generates raster maps of slope.  Follows the algorithm described here:
+    http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works
 
-        dem_dataset_uri - (input) a URI to a  single band raster of z values.
-        slope_uri - (input) a path to the output slope uri in percent.
-        aoi_uri - (optional) a uri to an AOI input
-        process_pool - (optional) a process pool for multiprocessing
+    Args:
+        dem_dataset_uri (string): a URI to a  single band raster of z values.
+        slope_uri (string): a path to the output slope uri in percent.
 
-        returns nothing"""
+    Keyword Args:
+        aoi_uri (string): a uri to an AOI input
+        process_pool (?): a process pool for multiprocessing
+
+    Returns:
+        nothing
+
+    """
 
     out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     dem_nodata = get_nodata_from_uri(dem_dataset_uri)
@@ -1062,18 +1170,25 @@ def calculate_slope(
 def clip_dataset_uri(
         source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
         assert_projections=True, process_pool=None):
-    """This function will clip source_dataset to the bounding box of the
-        polygons in aoi_datasource and mask out the values in source_dataset
-        outside of the AOI with the nodata values in source_dataset.
+    """
+    This function will clip source_dataset to the bounding box of the
+    polygons in aoi_datasource and mask out the values in source_dataset
+    outside of the AOI with the nodata values in source_dataset.
 
-        source_dataset_uri - uri to single band GDAL dataset to clip
-        aoi_datasource_uri - uri to ogr datasource
-        out_dataset_uri - path to disk for the clipped datset
-        assert_projections - a boolean value for whether the dataset needs to be
-            projected
-        process_pool - (optional) a process pool for multiprocessing
+    Args:
+        source_dataset_uri (string): uri to single band GDAL dataset to clip
+        aoi_datasource_uri (string): uri to ogr datasource
+        out_dataset_uri (string): path to disk for the clipped datset
 
-        returns nothing"""
+    Keyword Args:
+        assert_projections (boolean): a boolean value for whether the dataset
+            needs to be projected
+        process_pool (?): a process pool for multiprocessing
+
+    Returns:
+        nothing
+
+    """
     #NOTE: I have altered the signature of this function compared to the
     # previous one because I want to be able to use vectorize_datasets to clip
     # two sources that are not projected
@@ -1104,13 +1219,21 @@ def clip_dataset_uri(
 
 
 def extract_band_and_nodata(dataset, get_array=False):
-    """It's often useful to get the first band and corresponding nodata value
-        for a dataset.  This function does that.
+    """
+    It's often useful to get the first band and corresponding nodata value
+    for a dataset.  This function does that.
 
-        dataset - a GDAL dataset
-        get_array - if True also returns the dataset as a numpy array
+    Args:
+        dataset (?): a GDAL dataset
 
-        returns (first GDAL band in dataset, nodata value for that band"""
+    Keyword Args:
+        get_array (boolean): if True also returns the dataset as a numpy array
+
+    Returns:
+        band (?): first GDAL band in dataset
+        nodata (?: nodata value for that band
+
+    """
 
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -1128,12 +1251,17 @@ def extract_band_and_nodata(dataset, get_array=False):
 
 
 def calculate_value_not_in_dataset_uri(dataset_uri):
-    """Calcualte a value not contained in a dataset.  Useful for calculating
-        nodata values.
+    """
+    Calculate a value not contained in a dataset.  Useful for calculating
+    nodata values.
 
-        dataset - a GDAL dataset
+    Args:
+        dataset (?): a GDAL dataset
 
-        returns a number not contained in the dataset"""
+    Returns:
+        value (?): number not contained in the dataset
+
+    """
     dataset = gdal.Open(dataset_uri)
     value = calculate_value_not_in_dataset(dataset)
 
@@ -1145,26 +1273,36 @@ def calculate_value_not_in_dataset_uri(dataset_uri):
 
 
 def calculate_value_not_in_dataset(dataset):
-    """Calcualte a value not contained in a dataset.  Useful for calculating
-        nodata values.
+    """
+    Calculate a value not contained in a dataset.  Useful for calculating
+    nodata values.
 
-        dataset - a GDAL dataset
+    Args:
+        dataset (?): a GDAL dataset
 
-        returns a number not contained in the dataset"""
+    Returns:
+        value (?): number not contained in the dataset
+
+    """
 
     _, _, array = extract_band_and_nodata(dataset, get_array=True)
     return calculate_value_not_in_array(array)
 
 
 def calculate_value_not_in_array(array):
-    """This function calcualtes a number that is not in the given array, if
-        possible.
+    """
+    This function calculates a number that is not in the given array, if
+    possible.
 
-        array - a numpy array
+    Args:
+        array (np.array): a numpy array
 
-        returns a number not in array that is not "close" to any value in array
-            calculated in the middle of the maximum delta between any two
-            consecutive numbers in the array"""
+    Returns:
+        value (?): a number not in array that is not "close" to any value in
+            array calculated in the middle of the maximum delta between any two
+            consecutive numbers in the array
+
+    """
 
     sorted_array = numpy.sort(numpy.unique(array.flatten()))
     #Make sure we don't have a single unique value, if we do just go + or -
@@ -1190,7 +1328,16 @@ def calculate_value_not_in_array(array):
 
 
 def create_rat_uri(dataset_uri, attr_dict, column_name):
-    """URI wrapper for create_rat"""
+    """
+    URI wrapper for create_rat
+
+    Args:
+        dataset_uri (string): a GDAL raster dataset to create the RAT for (...)
+        attr_dict (dict): a dictionary with keys that point to a primitive type
+           {integer_id_1: value_1, ... integer_id_n: value_n}
+        column_name (string): a string for the column name that maps the values
+
+    """
     dataset = gdal.Open(dataset_uri, gdal.GA_Update)
     create_rat(dataset, attr_dict, column_name)
 
@@ -1199,17 +1346,20 @@ def create_rat_uri(dataset_uri, attr_dict, column_name):
     dataset = None
 
 
-
 def create_rat(dataset, attr_dict, column_name):
-    """Create a raster attribute table
+    """
+    Create a raster attribute table
 
-        dataset - a GDAL raster dataset to create the RAT for
-        attr_dict - a dictionary with keys that point to a primitive type
+    Args:
+        dataset (?): a GDAL raster dataset to create the RAT for (...)
+        attr_dict (dict): a dictionary with keys that point to a primitive type
            {integer_id_1: value_1, ... integer_id_n: value_n}
-        column_name - a string for the column name that maps the values
+        column_name (string): a string for the column name that maps the values
 
-        returns - a GDAL raster dataset with an updated RAT
-        """
+    Returns:
+        dataset (?): a GDAL raster dataset with an updated RAT
+
+    """
 
     band = dataset.GetRasterBand(1)
 
@@ -1235,15 +1385,18 @@ def create_rat(dataset, attr_dict, column_name):
 
 
 def get_raster_properties_uri(dataset_uri):
-    """Wrapper function for get_raster_properties() that passes in the dataset
-        URI instead of the datasets itself
+    """
+    Wrapper function for get_raster_properties() that passes in the dataset
+    URI instead of the datasets itself
 
-        dataset_uri - a URI to a GDAL raster dataset
+    Args:
+        dataset_uri (string): a URI to a GDAL raster dataset
 
-       returns - a dictionary with the properties stored under relevant keys.
-           The current list of things returned is:
-           width (w-e pixel resolution), height (n-s pixel resolution),
-           XSize, YSize
+    Returns:
+        value (dictionary): a dictionary with the properties stored under
+            relevant keys. The current list of things returned is:
+            width (w-e pixel resolution), height (n-s pixel resolution),
+            XSize, YSize
     """
     dataset = gdal.Open(dataset_uri)
     value = get_raster_properties(dataset)
@@ -1256,16 +1409,19 @@ def get_raster_properties_uri(dataset_uri):
 
 
 def get_raster_properties(dataset):
-    """Get the width, height, X size, and Y size of the dataset and return the
-        values in a dictionary.
-        *This function can be expanded to return more properties if needed*
+    """
+    Get the width, height, X size, and Y size of the dataset and return the
+    values in a dictionary.
+    *This function can be expanded to return more properties if needed*
 
-       dataset - a GDAL raster dataset to get the properties from
+    Args:
+       dataset (?): a GDAL raster dataset to get the properties from
 
-       returns - a dictionary with the properties stored under relevant keys.
-           The current list of things returned is:
-           width (w-e pixel resolution), height (n-s pixel resolution),
-           XSize, YSize
+    Returns:
+        dataset_dict (dictionary): a dictionary with the properties stored
+            under relevant keys. The current list of things returned is:
+            width (w-e pixel resolution), height (n-s pixel resolution),
+            XSize, YSize
     """
     dataset_dict = {}
     geo_transform = dataset.GetGeoTransform()
@@ -1279,22 +1435,26 @@ def get_raster_properties(dataset):
 def reproject_dataset_uri(
         original_dataset_uri, pixel_spacing, output_wkt, resampling_method,
         output_uri):
-    """A function to reproject and resample a GDAL dataset given an output
-        pixel size and output reference. Will use the datatype and nodata value
-        from the original dataset.
+    """
+    A function to reproject and resample a GDAL dataset given an output
+    pixel size and output reference. Will use the datatype and nodata value
+    from the original dataset.
 
-        original_dataset_uri - a URI to a gdal Dataset to written to disk
+    Args:
+        original_dataset_uri (string): a URI to a gdal Dataset to written to
+            disk
+        pixel_spacing (?): output dataset pixel size in projected linear units
+        output_wkt (?): output project in Well Known Text
+        resampling_method (string): a string representing the one of the
+            following resampling methods:
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
+        output_uri (string): location on disk to dump the reprojected dataset
 
-        pixel_spacing - output dataset pixel size in projected linear units
-
-        output_wkt - output project in Well Known Text
-
-        resampling_method - a String representing the one of the following
-            resampling methods: "nearest|bilinear|cubic|cubic_spline|lanczos"
-
-        output_uri - location on disk to dump the reprojected dataset
-
-        return projected dataset"""
+    Returns:
+        projected_dataset (?): reprojected dataset
+            (Note from Will: I possibly mislabeled this: looks like it's
+                saved to file, with nothing returned)
+    """
 
     # A dictionary to map the resampling method input string to the gdal type
     resample_dict = {
@@ -1362,36 +1522,42 @@ def reproject_dataset_uri(
 
 
 def reproject_datasource_uri(original_dataset_uri, output_wkt, output_uri):
-    """URI wrapper for reproject_datasource that takes in the uri for the
-        datasource that is to be projected instead of the datasource itself.
-        This function directly calls reproject_datasource.
+    """
+    URI wrapper for reproject_datasource that takes in the uri for the
+    datasource that is to be projected instead of the datasource itself.
+    This function directly calls reproject_datasource.
 
-        original_dataset_uri - a uri to an ogr datasource
-
-        output_wkt - the desired projection as Well Known Text
+    Args:
+        original_dataset_uri (string): a uri to an ogr datasource
+        output_wkt (?): the desired projection as Well Known Text
             (by layer.GetSpatialRef().ExportToWkt())
-
-        output_uri - The path to where the new shapefile should be
+        output_uri (string): the path to where the new shapefile should be
             written to disk.
 
-        returns - Nothing."""
+    Return:
+        nothing
+
+    """
 
     original_dataset = ogr.Open(original_dataset_uri)
     _ = reproject_datasource(original_dataset, output_wkt, output_uri)
 
 
 def reproject_datasource(original_datasource, output_wkt, output_uri):
-    """Changes the projection of an ogr datasource by creating a new
-        shapefile based on the output_wkt passed in.  The new shapefile
-        then copies all the features and fields of the original_datasource
-        as its own.
+    """
+    Changes the projection of an ogr datasource by creating a new
+    shapefile based on the output_wkt passed in.  The new shapefile
+    then copies all the features and fields of the original_datasource
+    as its own.
 
-        original_datasource - a ogr datasource
-        output_wkt - the desired projection as Well Known Text
+    Args:
+        original_datasource (?): an ogr datasource
+        output_wkt (?): the desired projection as Well Known Text
             (by layer.GetSpatialRef().ExportToWkt())
-        output_uri - The filepath to the output shapefile
+        output_uri (string): the filepath to the output shapefile
 
-        returns - The reprojected shapefile.
+    Returns:
+        output_datasource (?): the reprojected shapefile.
     """
     # if this file already exists, then remove it
     if os.path.isfile(output_uri):
@@ -1465,11 +1631,15 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
 
 
 def unique_raster_values_uri(dataset_uri):
-    """Returns a list of the unique integer values on the given dataset
+    """
+    Returns a list of the unique integer values on the given dataset
 
-        dataset_uri - a uri to a gdal dataset of some integer type
+    Args:
+        dataset_uri (string): a uri to a gdal dataset of some integer type
 
-        returns a list of dataset's unique non-nodata values"""
+    Returns:
+        value (list): a list of dataset's unique non-nodata values
+    """
 
     dataset = gdal.Open(dataset_uri)
     value = unique_raster_values(dataset)
@@ -1482,11 +1652,16 @@ def unique_raster_values_uri(dataset_uri):
 
 
 def unique_raster_values(dataset):
-    """Returns a list of the unique integer values on the given dataset
+    """
+    Returns a list of the unique integer values on the given dataset
 
-        dataset - a gdal dataset of some integer type
+    Args:
+        dataset (?): a gdal dataset of some integer type
 
-        returns a list of dataset's unique non-nodata values"""
+    Returns:
+        unique_list (list): a list of dataset's unique non-nodata values
+
+    """
 
     band, nodata = extract_band_and_nodata(dataset)
     n_rows = band.YSize
@@ -1503,13 +1678,18 @@ def unique_raster_values(dataset):
 
 
 def get_rat_as_dictionary_uri(dataset_uri):
-    """Returns the RAT of the first band of dataset as a dictionary.
+    """
+    Returns the RAT of the first band of dataset as a dictionary.
 
-        dataset - a GDAL dataset that has a RAT associated with the first
+    Args:
+        dataset (?): a GDAL dataset that has a RAT associated with the first
             band
 
-        returns a 2D dictionary where the first key is the column name and
-            second is the row number"""
+    Returns:
+        value (dictionary): a 2D dictionary where the first key is the column
+            name and second is the row number
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     value = get_rat_as_dictionary(dataset)
@@ -1522,13 +1702,18 @@ def get_rat_as_dictionary_uri(dataset_uri):
 
 
 def get_rat_as_dictionary(dataset):
-    """Returns the RAT of the first band of dataset as a dictionary.
+    """
+    Returns the RAT of the first band of dataset as a dictionary.
 
-        dataset - a GDAL dataset that has a RAT associated with the first
+    Args:
+        dataset (?): a GDAL dataset that has a RAT associated with the first
             band
 
-        returns a 2D dictionary where the first key is the column name and
-            second is the row number"""
+    Returns:
+        rat_dictionary (dictionary): a 2D dictionary where the first key is the
+            column name and second is the row number
+
+    """
 
     band = dataset.GetRasterBand(1)
     rat = band.GetDefaultRAT()
@@ -1565,28 +1750,38 @@ def get_rat_as_dictionary(dataset):
 def reclassify_dataset_uri(
         dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
         exception_flag='none', assert_dataset_projected=True):
-    """A function to reclassify values in dataset
-        to any output type.  If there are values in the dataset that are not in
-        value map, they will be mapped to out_nodata.
+    """
+    A function to reclassify values in dataset to any output type. If there are
+    values in the dataset that are not in value map, they will be mapped to
+    out_nodata.
 
-        dataset_uri - a uri to a gdal dataset
-        value_map - a dictionary of values of {source_value: dest_value, ...}
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
+        value_map (dictionary): a dictionary of values of
+            {source_value: dest_value, ...}
             where source_value's type is a postive integer type and dest_value
             is of type out_datatype.
-        raster_out_uri - the uri for the output raster
-        out_datatype - the type for the output dataset
-        out_nodata - the nodata value for the output raster.  Must be the same
-            type as out_datatype
-        exception_flag - either 'none' or 'values_required'.
+        raster_out_uri (string): the uri for the output raster
+        out_datatype (?): the type for the output dataset
+        out_nodata (?): the nodata value for the output raster.  Must be the
+            same type as out_datatype
+
+    Keyword Args:
+        exception_flag (string): either 'none' or 'values_required'.
             If 'values_required' raise an exception if there is a value in the
             raster that is not found in value_map
-        assert_dataset_projected - (optional) if True this operation will
+        assert_dataset_projected (boolean): if True this operation will
             test if the input dataset is not projected and raise an exception
             if so.
 
-       returns the new reclassified dataset GDAL raster, or raises an Exception
-           if exception_flag == 'values_required' and the value from
-           'key_raster' is not a key in 'attr_dict'"""
+    Returns:
+        reclassified_dataset (?): the new reclassified dataset GDAL raster
+
+    Raises:
+        Exception: if exception_flag == 'values_required' and the value from
+           'key_raster' is not a key in 'attr_dict'
+
+    """
 
     nodata = get_nodata_from_uri(dataset_uri)
 
@@ -1621,25 +1816,34 @@ def reclassify_dataset(
         dataset, value_map, raster_out_uri, out_datatype, out_nodata,
         exception_flag='none'):
 
-    """An efficient function to reclassify values in a positive int dataset type
-        to any output type.  If there are values in the dataset that are not in
-        value map, they will be mapped to out_nodata.
+    """
+    An efficient function to reclassify values in a positive int dataset type
+    to any output type.  If there are values in the dataset that are not in
+    value map, they will be mapped to out_nodata.
 
-        dataset - a gdal dataset of some int type
-        value_map - a dictionary of values of {source_value: dest_value, ...}
+    Args:
+        dataset (?): a gdal dataset of some int type
+        value_map (dict): a dictionary of values of
+            {source_value: dest_value, ...}
             where source_value's type is a postive integer type and dest_value
             is of type out_datatype.
-        raster_out_uri - the uri for the output raster
-        out_datatype - the type for the output dataset
-        out_nodata - the nodata value for the output raster.  Must be the same
-            type as out_datatype
-        exception_flag - either 'none' or 'values_required'.
+        raster_out_uri (string): the uri for the output raster
+        out_datatype (?): the type for the output dataset
+        out_nodata (?): the nodata value for the output raster.  Must be the
+            same type as out_datatype
+
+    Keyword Args:
+        exception_flag (string): either 'none' or 'values_required'.
             If 'values_required' raise an exception if there is a value in the
             raster that is not found in value_map
 
-       returns the new reclassified dataset GDAL raster, or raises an Exception
-           if exception_flag == 'values_required' and the value from
-           'key_raster' is not a key in 'attr_dict'"""
+    Returns:
+        reclassified_dataset (?): the new reclassified dataset GDAL raster
+
+    Raises:
+        Exception: if exception_flag == 'values_required' and the value from
+           'key_raster' is not a key in 'attr_dict'
+    """
 
     out_dataset = new_raster_from_base(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
@@ -1688,18 +1892,26 @@ def reclassify_dataset(
 
 
 def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
-    """This function loads the first band of a dataset into a memory mapped
-        array.
+    """
+    This function loads the first band of a dataset into a memory mapped
+    array.
 
-        dataset_uri - the GDAL dataset to load into a memory mapped array
-        memory_uri - a path to a file OR a file-like object that will be used
-            to hold the memory map. It is up to the caller to create and delete
-            this file.
-        array_type - the type of the resulting array, if None defaults
+    Args:
+        dataset_uri (string): the GDAL dataset to load into a memory mapped
+            array
+        memory_uri (string): a path to a file OR a file-like object that will
+            be used to hold the memory map. It is up to the caller to create
+            and delete this file.
+
+    Keyword Args:
+        array_type (?): the type of the resulting array, if None defaults
             to the type of the raster band in the dataset
 
-        returns a memmap numpy array of the data contained in the first band
-            of dataset_uri"""
+    Returns:
+        memory_array (memmap numpy array): a memmap numpy array of the data
+            contained in the first band of dataset_uri
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
@@ -1728,10 +1940,17 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
 
 
 def temporary_filename(suffix=''):
-    """Returns a temporary filename using mkstemp. The file is deleted
-        on exit using the atexit register.
+    """
+    Returns a temporary filename using mkstemp. The file is deleted
+    on exit using the atexit register.
 
-        returns a unique temporary filename"""
+    Keyword Args:
+        suffix (string): the suffix to be appended to the temporary file
+
+    Returns:
+        fname (?): a unique temporary filename
+
+    """
 
     file_handle, path = tempfile.mkstemp(suffix=suffix)
     os.close(file_handle)
@@ -1751,10 +1970,14 @@ def temporary_filename(suffix=''):
 
 
 def temporary_folder():
-    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
-        using the atexit register.
+    """
+    Returns a temporary folder using mkdtemp.  The folder is deleted on exit
+    using the atexit register.
 
-        Returns an absolute, unique and temporary folder path."""
+    Returns:
+        path (string): an absolute, unique and temporary folder path.
+
+    """
 
     path = tempfile.mkdtemp()
 
@@ -1778,14 +2001,22 @@ class DifferentProjections(Exception):
 
 
 def assert_datasets_in_same_projection(dataset_uri_list):
-    """Tests if datasets represented by their uris are projected and in
-        the same projection and raises an exception if not.
+    """
+    Tests if datasets represented by their uris are projected and in
+    the same projection and raises an exception if not.
 
-        raises DatasetUnprojected if one of the datasets is unprojected.
-        raises DifferentProjections if at least one of the datasets is in
+    Args:
+        dataset_uri_list (list): (description)
+
+    Returns:
+        is_true (boolean): True (otherwise exception raised)
+
+    Raises:
+        DatasetUnprojected: if one of the datasets is unprojected.
+        DifferentProjections: if at least one of the datasets is in
             a different projection
 
-        otherwise, returns True"""
+    """
 
     dataset_list = [gdal.Open(dataset_uri) for dataset_uri in dataset_uri_list]
     dataset_projections = []
@@ -1824,12 +2055,18 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
 
 def get_bounding_box(dataset_uri):
-    """Returns a bounding box where coordinates are in projected units.
+    """
+    Returns a bounding box where coordinates are in projected units.
 
-        dataset_uri - a uri to a GDAL dataset
+    Args:
+        dataset_uri (string): a uri to a GDAL dataset
 
-        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
-            projected coordinates"""
+    Returns:
+        bounding_box (list):
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
+            projected coordinates
+
+    """
 
     dataset = gdal.Open(dataset_uri)
 
@@ -1850,12 +2087,18 @@ def get_bounding_box(dataset_uri):
 
 
 def get_datasource_bounding_box(datasource_uri):
-    """Returns a bounding box where coordinates are in projected units.
+    """
+    Returns a bounding box where coordinates are in projected units.
 
-        dataset_uri - a uri to a GDAL dataset
+    Args:
+        dataset_uri (string): a uri to a GDAL dataset
 
-        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
-            projected coordinates"""
+    Returns:
+        bounding_box (list):
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
+            projected coordinates
+
+    """
 
     datasource = ogr.Open(datasource_uri)
     layer = datasource.GetLayer(0)
@@ -1871,17 +2114,22 @@ def get_datasource_bounding_box(datasource_uri):
 def resize_and_resample_dataset_uri(
         original_dataset_uri, bounding_box, out_pixel_size, output_uri,
         resample_method):
-    """A function to  a datsaet to larger or smaller pixel sizes
+    """
+    A function to  a datsaet to larger or smaller pixel sizes
 
-        original_dataset_uri - a GDAL dataset
-        bounding_box - [upper_left_x, upper_left_y, lower_right_x,
+    Args:
+        original_dataset_uri (string): a GDAL dataset
+        bounding_box (list): [upper_left_x, upper_left_y, lower_right_x,
             lower_right_y]
-        out_pixel_size - the pixel size in projected linear units
-        output_uri - the location of the new resampled GDAL dataset
-        resample_method - the resampling technique, one of
+        out_pixel_size (?): the pixel size in projected linear units
+        output_uri (string): the location of the new resampled GDAL dataset
+        resample_method (string): the resampling technique, one of
             "nearest|bilinear|cubic|cubic_spline|lanczos"
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     resample_dict = {
         "nearest": gdal.GRA_NearestNeighbour,
@@ -1975,35 +2223,42 @@ def align_dataset_list(
         out_pixel_size, mode, dataset_to_align_index,
         dataset_to_bound_index=None, aoi_uri=None,
         assert_datasets_projected=True, process_pool=None):
-    """Take a list of dataset uris and generates a new set that is completely
-        aligned with identical projections and pixel sizes.
+    """
+    Take a list of dataset uris and generates a new set that is completely
+    aligned with identical projections and pixel sizes.
 
-        dataset_uri_list - a list of input dataset uris
-        dataset_out_uri_list - a parallel dataset uri list whose positions
-            correspond to entries in dataset_uri_list
-        resample_method_list - a list of resampling methods for each output uri
-            in dataset_out_uri list.  Each element must be one of
+    Args:
+        dataset_uri_list (list): a list of input dataset uris
+        dataset_out_uri_list (list): a parallel dataset uri list whose
+            positions correspond to entries in dataset_uri_list
+        resample_method_list (list): a list of resampling methods for each
+            output uri in dataset_out_uri list.  Each element must be one of
             "nearest|bilinear|cubic|cubic_spline|lanczos"
-        out_pixel_size - the output pixel size
-        mode - one of "union", "intersection", or "dataset" which defines how
-            the output output extents are defined as either the union or
-            intersection of the input datasets or to have the same bounds as an
-            existing raster.  If mode is "dataset" then dataset_to_bound_index
-            must be defined
-        dataset_to_align_index - an int that corresponds to the position in
-            one of the dataset_uri_lists that, if positive aligns the output
+        out_pixel_size (?): the output pixel size
+        mode (string): one of "union", "intersection", or "dataset" which
+            defines how the output output extents are defined as either the
+            union or intersection of the input datasets or to have the same
+            bounds as an existing raster.  If mode is "dataset" then
+            dataset_to_bound_index must be defined
+        dataset_to_align_index (int): an int that corresponds to the position
+            in one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
-        dataset_to_bound_index - if mode is "dataset" then this index is used
-            to indicate which dataset to define the output bounds of the
+
+    Keyword Args:
+        dataset_to_bound_index (?): if mode is "dataset" then this index is
+            used to indicate which dataset to define the output bounds of the
             dataset_out_uri_list
-        aoi_uri - (optional) a URI to an OGR datasource to be used for the
+        aoi_uri (string): a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
-        process_pool - (optional) a process pool for multiprocessing
+        process_pool (?): a process pool for multiprocessing
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
@@ -2156,12 +2411,21 @@ def align_dataset_list(
 
 
 def assert_file_existance(dataset_uri_list):
-    """Verify that the uris passed in the argument exist on the filesystem
-        if not, raise an exeception indicating which files do not exist
+    """
+    Verify that the uris passed in the argument exist on the filesystem
+    if not, raise an exeception indicating which files do not exist
 
-        dataset_uri_list - a list of relative or absolute file paths to validate
+    Args:
+        dataset_uri_list (list): a list of relative or absolute file paths to
+            validate
 
-        returns nothing, but raises an IOError if any files are not found"""
+    Returns:
+        nothing
+
+    Raises:
+        IOError: if any files are not found
+
+    """
 
     not_found_uris = []
     for uri in dataset_uri_list:
@@ -2183,19 +2447,21 @@ def vectorize_datasets(
         assert_datasets_projected=True, process_pool=None, vectorize_op=True,
         datasets_are_pre_aligned=False, dataset_options=None):
 
-    """This function applies a user defined function across a stack of
-        datasets.  It has functionality align the output dataset grid
-        with one of the input datasets, output a dataset that is the union
-        or intersection of the input dataset bounding boxes, and control
-        over the interpolation techniques of the input datasets, if
-        necessary.  The datasets in dataset_uri_list must be in the same
-        projection; the function will raise an exception if not.
+    """
+    This function applies a user defined function across a stack of
+    datasets.  It has functionality align the output dataset grid
+    with one of the input datasets, output a dataset that is the union
+    or intersection of the input dataset bounding boxes, and control
+    over the interpolation techniques of the input datasets, if
+    necessary.  The datasets in dataset_uri_list must be in the same
+    projection; the function will raise an exception if not.
 
-        dataset_uri_list - a list of file uris that point to files that
+    Args:
+        dataset_uri_list (list): a list of file uris that point to files that
             can be opened with gdal.Open.
-        dataset_pixel_op - a function that must take in as many arguments as
-            there are elements in dataset_uri_list.  The arguments can
-            be treated as interpolated or actual pixel values from the
+        dataset_pixel_op (function) a function that must take in as many
+            arguments as there are elements in dataset_uri_list.  The arguments
+            can be treated as interpolated or actual pixel values from the
             input datasets and the function should calculate the output
             value for that pixel stack.  The function is a parallel
             paradigmn and does not know the spatial position of the
@@ -2206,51 +2472,60 @@ def vectorize_datasets(
             bug: if dataset_pixel_op does not return a value in some cases
             the output dataset values are undefined even if the function
             does not crash or raise an exception.
-        dataset_out_uri - the uri of the output dataset.  The projection
-            will be the same as the datasets in dataset_uri_list.
-        datatype_out - the GDAL output type of the output dataset
-        nodata_out - the nodata value of the output dataset.
-        pixel_size_out - the pixel size of the output dataset in
+        dataset_out_uri (string): the uri of the output dataset.  The
+            projection will be the same as the datasets in dataset_uri_list.
+        datatype_out (?): the GDAL output type of the output dataset
+        nodata_out (?): the nodata value of the output dataset.
+        pixel_size_out (?): the pixel size of the output dataset in
             projected coordinates.
-        bounding_box_mode - one of "union" or "intersection", "dataset". If
-            union the output dataset bounding box will be the union of the
-            input datasets.  Will be the intersection otherwise. An
-            exception is raised if the mode is "intersection" and the
-            input datasets have an empty intersection. If dataset it will make a
-            bounding box as large as the given dataset, if given
+        bounding_box_mode (string): one of "union" or "intersection",
+            "dataset". If union the output dataset bounding box will be the
+            union of the input datasets.  Will be the intersection otherwise.
+            An exception is raised if the mode is "intersection" and the
+            input datasets have an empty intersection. If dataset it will make
+            a bounding box as large as the given dataset, if given
             dataset_to_bound_index must be defined.
-        resample_method_list - (optional) a list of resampling methods
+
+    Keyword Args:
+        resample_method_list (list): a list of resampling methods
             for each output uri in dataset_out_uri list.  Each element
             must be one of "nearest|bilinear|cubic|cubic_spline|lanczos".
             If None, the default is "nearest" for all input datasets.
-        dataset_to_align_index - an int that corresponds to the position in
-            one of the dataset_uri_lists that, if positive aligns the output
+        dataset_to_align_index (int): an int that corresponds to the position
+            in one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
-        dataset_to_bound_index - if mode is "dataset" this indicates which
+        dataset_to_bound_index (?): if mode is "dataset" this indicates which
             dataset should be the output size.
-        aoi_uri - (optional) a URI to an OGR datasource to be used for the
+        aoi_uri (string): a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
-        assert_datasets_projected - (optional) if True this operation will
+        assert_datasets_projected (boolean): if True this operation will
             test if any datasets are not projected and raise an exception
             if so.
-        process_pool - (optional) a process pool for multiprocessing
-        vectorize_op - (optional) if true the model will try to numpy.vectorize
+        process_pool (?): a process pool for multiprocessing
+        vectorize_op (boolean): if true the model will try to numpy.vectorize
             dataset_pixel_op.  If dataset_pixel_op is designed to use maximize
             array broadcasting, set this parameter to False, else it may
             inefficiently invoke the function on individual elements.
-        datasets_are_pre_aligned - (optional) If this value is set to False
+        datasets_are_pre_aligned (boolean): If this value is set to False
             this operation will first align and interpolate the input datasets
             based on the rules provided in bounding_box_mode,
             resample_method_list, dataset_to_align_index, and
             dataset_to_bound_index, if set to True the input dataset list must
             be aligned, probably by raster_utils.align_dataset_list
-        dataset_options - (optional) this is an argument list that will be
+        dataset_options (?): this is an argument list that will be
             passed to the GTiff driver.  Useful for blocksizes, compression,
             etc.
-            """
+
+    Returns:
+        nothing?
+
+    Raises:
+        ValueError: invalid input provided
+
+    """
     if type(dataset_uri_list) != list:
         raise ValueError(
             "dataset_uri_list was not passed in as a list, maybe a single "
@@ -2419,15 +2694,21 @@ def vectorize_datasets(
 
 
 def get_lookup_from_table(table_uri, key_field):
-    """Creates a python dictionary to look up the rest of the fields in a
-       table file table indexed by the given key_field
+    """
+    Creates a python dictionary to look up the rest of the fields in a
+    table file table indexed by the given key_field
 
-        table_uri - a URI to a dbf or csv file containing at
+    Args:
+        table_uri (string): a URI to a dbf or csv file containing at
             least the header key_field
+        key_field (?): (description)
 
-        returns a dictionary of the form {key_field_0:
+    Returns:
+        lookup_dict (dict): a dictionary of the form {key_field_0:
             {header_1: val_1_0, header_2: val_2_0, etc.}
-            depending on the values of those fields"""
+            depending on the values of those fields
+
+    """
 
     table_object = fileio.TableHandler(table_uri)
     raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
@@ -2443,15 +2724,21 @@ def get_lookup_from_table(table_uri, key_field):
 
 
 def get_lookup_from_csv(csv_table_uri, key_field):
-    """Creates a python dictionary to look up the rest of the fields in a
-        csv table indexed by the given key_field
+    """
+    Creates a python dictionary to look up the rest of the fields in a
+    csv table indexed by the given key_field
 
-        csv_table_uri - a URI to a csv file containing at
+    Args:
+        csv_table_uri (string): a URI to a csv file containing at
             least the header key_field
+        key_field (?): (description)
 
-        returns a dictionary of the form {key_field_0:
+    Returns:
+        lookup_dict (dict): returns a dictionary of the form {key_field_0:
             {header_1: val_1_0, header_2: val_2_0, etc.}
-            depending on the values of those fields"""
+            depending on the values of those fields
+
+    """
 
     def u(string):
         if type(string) is StringType:
@@ -2482,15 +2769,20 @@ def get_lookup_from_csv(csv_table_uri, key_field):
 
 
 def extract_datasource_table_by_key(datasource_uri, key_field):
-    """Create a dictionary lookup table of the features in the attribute table
-        of the datasource referenced by datasource_uri.
+    """
+    Create a dictionary lookup table of the features in the attribute table
+    of the datasource referenced by datasource_uri.
 
-        datasource_uri - a uri to an OGR datasource
-        key_field - a field in datasource_uri that refers to a key value
+    Args:
+        datasource_uri (string): a uri to an OGR datasource
+        key_field (?): a field in datasource_uri that refers to a key value
             for each row such as a polygon id.
 
-        returns a dictionary of the form {key_field_0:
-            {field_0: value0, field_1: value1}...}"""
+    Returns:
+        attribute_dictionary (dict): returns a dictionary of the
+            form {key_field_0: {field_0: value0, field_1: value1}...}
+
+    """
 
     #Pull apart the datasource
     datasource = ogr.Open(datasource_uri)
@@ -2521,11 +2813,16 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
 
 
 def get_geotransform_uri(dataset_uri):
-    """Get the geotransform from a gdal dataset
+    """
+    Get the geotransform from a gdal dataset
 
-        dataset_uri - A URI for the dataset
+    Args:
+        dataset_uri (string): a URI for the dataset
 
-        returns - a dataset geotransform list"""
+    Returns:
+        geotransform (?): a dataset geotransform list
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     geotransform = dataset.GetGeoTransform()
@@ -2534,11 +2831,16 @@ def get_geotransform_uri(dataset_uri):
 
 
 def get_spatial_ref_uri(datasource_uri):
-    """Get the spatial reference of an OGR datasource
+    """
+    Get the spatial reference of an OGR datasource
 
-        datasource_uri - A URI to an ogr datasource
+    Args:
+        datasource_uri (string): a URI to an ogr datasource
 
-        returns - a spatial reference"""
+    Returns:
+        spat_ref (?): a spatial reference
+
+    """
 
     shape_datasource = ogr.Open(datasource_uri)
     layer = shape_datasource.GetLayer()
@@ -2547,13 +2849,19 @@ def get_spatial_ref_uri(datasource_uri):
 
 
 def copy_datasource_uri(shape_uri, copy_uri):
-    """Create a copy of an ogr shapefile
+    """
+    Create a copy of an ogr shapefile
 
-        shape_uri - a uri path to the ogr shapefile that is to be copied
-        copy_uri - a uri path for the destination of the copied
+    Args:
+        shape_uri (string): a uri path to the ogr shapefile that is to be
+            copied
+        copy_uri (string): a uri path for the destination of the copied
             shapefile
 
-        returns - Nothing"""
+    Returns:
+        nothing
+
+    """
     if os.path.isfile(copy_uri):
         os.remove(copy_uri)
 
@@ -2564,16 +2872,21 @@ def copy_datasource_uri(shape_uri, copy_uri):
 
 def vectorize_points_uri(
         shapefile_uri, field, output_uri, interpolation='nearest'):
-    """A wrapper function for raster_utils.vectorize_points, that allows for uri
-        passing
+    """
+    A wrapper function for raster_utils.vectorize_points, that allows for uri
+    passing
 
-        shapefile_uri - a uri path to an ogr shapefile
-        field - a String for the field name
-        output_uri - a uri path for the output raster
-        interpolation - interpolation method to use on points, default is
-            nearest
+    Args:
+        shapefile_uri (string): a uri path to an ogr shapefile
+        field (string): a string for the field name
+        output_uri (string): a uri path for the output raster
+        interpolation (string): interpolation method to use on points, default
+            is 'nearest'
 
-        returns - Nothing"""
+    Returns:
+        nothing
+
+    """
 
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
@@ -2582,13 +2895,18 @@ def vectorize_points_uri(
 
 
 def create_directories(directory_list):
-    """This function will create any of the directories in the directory list
-        if possible and raise exceptions if something exception other than
-        the directory previously existing occurs.
+    """
+    This function will create any of the directories in the directory list
+    if possible and raise exceptions if something exception other than
+    the directory previously existing occurs.
 
-        directory_list - a list of string uri paths
+    Args:
+        directory_list (list): a list of string uri paths
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     for dir_name in directory_list:
         try:
@@ -2601,25 +2919,29 @@ def create_directories(directory_list):
 
 
 def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
-    """Creates a point shapefile from a dictionary. The point shapefile created
-        is not projected and uses latitude and longitude for its geometry.
+    """
+    Creates a point shapefile from a dictionary. The point shapefile created
+    is not projected and uses latitude and longitude for its geometry.
 
-        dict_data - a python dictionary with keys being unique id's that point
-            to sub-dictionarys that have key-value pairs. These inner key-value
-            pairs will represent the field-value pair for the point features.
-            At least two fields are required in the sub-dictionaries, All the
-            keys in the sub dictionary should have the same name and order. All
-            the values in the sub dictionary should have the same type
-            'lati' and 'long'. These fields determine the geometry of the point
+    Args:
+        dict_data (dict): a python dictionary with keys being unique id's that
+            point to sub-dictionarys that have key-value pairs. These inner
+            key-value pairs will represent the field-value pair for the point
+            features. At least two fields are required in the sub-dictionaries,
+            All the keys in the sub dictionary should have the same name and
+            order. All the values in the sub dictionary should have the same
+            type 'lati' and 'long'. These fields determine the geometry of the
+            point
             0 : {'lati':97, 'long':43, 'field_a':6.3, 'field_b':'Forest',...},
             1 : {'lati':55, 'long':51, 'field_a':6.2, 'field_b':'Crop',...},
             2 : {'lati':73, 'long':47, 'field_a':6.5, 'field_b':'Swamp',...}
+        layer_name (string): a python string for the name of the layer
+        output_uri (string): a uri for the output path of the point shapefile
 
-        layer_name - a python string for the name of the layer
+    Returns:
+        nothing
 
-        output_uri - a uri for the output path of the point shapefile
-
-        return - Nothing"""
+    """
 
     # If the output_uri exists delete it
     if os.path.isfile(output_uri):
@@ -2690,11 +3012,16 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
 
 def get_dataset_projection_wkt_uri(dataset_uri):
-    """Get the projection of a GDAL dataset as well known text (WKT)
+    """
+    Get the projection of a GDAL dataset as well known text (WKT)
 
-        dataset_uri - A URI for the GDAL dataset
+    Args:
+        dataset_uri (string): a URI for the GDAL dataset
 
-        returns - a string for the WKT"""
+    Returns:
+        proj_wkt (string): WKT describing the GDAL dataset project
+
+    """
 
     dataset = gdal.Open(dataset_uri)
     proj_wkt = dataset.GetProjection()
@@ -2704,13 +3031,18 @@ def get_dataset_projection_wkt_uri(dataset_uri):
 
 
 def unique_raster_values_count(dataset_uri, ignore_nodata=True):
-    """Return a dict from unique int values in the dataset to their frequency.
+    """
+    Return a dict from unique int values in the dataset to their frequency.
 
-    dataset_uri - uri to a gdal dataset of some integer type
-    ignore_nodata - if set to false, the nodata count is also included in the
-        result
+    Args:
+        dataset_uri (string): uri to a gdal dataset of some integer type
 
-    returns dictionary of values to count.
+    Keyword Args:
+        ignore_nodata (boolean): if set to false, the nodata count is also
+            included in the result
+
+    Returns:
+        itemfreq (dict): values to count.
     """
 
     dataset = gdal.Open(dataset_uri)
@@ -2733,21 +3065,25 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
 
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_values=[], option_list=[]):
-    """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
-        Will burn 'burn_value' onto the raster unless 'field' is not None,
-        in which case it will burn the value from shapefiles field.
+    """
+    Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
+    Will burn 'burn_value' onto the raster unless 'field' is not None,
+    in which case it will burn the value from shapefiles field.
 
-        raster_uri - a URI to a gdal dataset
+    Args:
+        raster_uri (string): a URI to a gdal dataset
+        shapefile_uri (string): a URI to an ogr datasource
 
-        shapefile_uri - a URI to an ogr datasource
-
-        burn_values - (optional) the equivalent value for burning
+    Keyword Args:
+        burn_values (list): the equivalent value for burning
             into a polygon.  If empty uses the Z values.
+        option_list (list): a Python list of options for the operation.
+            Example: ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
 
-        option_list - a Python list of options for the operation. Example:
-            ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
+    Returns:
+        nothing
 
-        returns - Nothing"""
+    """
 
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
@@ -2764,18 +3100,25 @@ def rasterize_layer_uri(
 def make_constant_raster_from_base_uri(
         base_dataset_uri, constant_value, out_uri, nodata_value=None,
         dataset_type=gdal.GDT_Float32):
-    """A helper function that creates a new gdal raster from base, and fills
-        it with the constant value provided.
+    """
+    A helper function that creates a new gdal raster from base, and fills
+    it with the constant value provided.
 
-        base_dataset_uri - the gdal base raster
-        constant_value - the value to set the new base raster to
-        out_uri - the uri of the output raster
-        nodata_value - (optional) the value to set the constant raster's nodata
+    Args:
+        base_dataset_uri (string): the gdal base raster
+        constant_value (?): the value to set the new base raster to
+        out_uri (string): the uri of the output raster
+
+    Keyword Args:
+        nodata_value (?): the value to set the constant raster's nodata
             value to.  If not specified, it will be set to constant_value - 1.0
-        dataset_type - (optional) the datatype to set the dataset to, default
+        dataset_type (?): the datatype to set the dataset to, default
             will be a float 32 value.
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     if nodata_value == None:
         nodata_value = constant_value - 1.0
@@ -2792,13 +3135,18 @@ def make_constant_raster_from_base_uri(
 
 
 def calculate_disjoint_polygon_set(shapefile_uri):
-    """Calculates a list of sets of polygons that don't overlap.  Determining
-        the minimal number of those sets is an np-complete problem so this is
-        an approximation that builds up sets of maximal subsets.
+    """
+    Calculates a list of sets of polygons that don't overlap.  Determining
+    the minimal number of those sets is an np-complete problem so this is
+    an approximation that builds up sets of maximal subsets.
 
-        shapefile_uri - a uri to an OGR shapefile to process
+    Args:
+        shapefile_uri (string): a uri to an OGR shapefile to process
 
-        returns a list of sets of FIDs from shapefile_uri"""
+    Returns:
+        subset_list (list): list of sets of FIDs from shapefile_uri
+
+    """
 
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
@@ -2856,23 +3204,31 @@ def calculate_disjoint_polygon_set(shapefile_uri):
 
 def distance_transform_edt(
         input_mask_uri, output_distance_uri, process_pool=None):
-    """Calculate the Euclidean distance transform on input_mask_uri and output
-        the result into an output raster
+    """
+    Calculate the Euclidean distance transform on input_mask_uri and output
+    the result into an output raster
 
-        input_mask_uri - a gdal raster to calculate distance from the non 0
-            value pixels
+    Args:
+        input_mask_uri (string): a gdal raster to calculate distance from
+            the non 0 value pixels
+        output_distance_uri (string): will make a float raster w/ same
+            dimensions and projection as input_mask_uri where all zero values
+            of input_mask_uri are equal to the euclidean distance to the
+            closest non-zero pixel.
 
-        output_distance_uri - will make a float raster w/ same dimensions and
-            projection as input_mask_uri where all zero values of
-            input_mask_uri are equal to the euclidean distance to the closest
-            non-zero pixel.
+    Keyword Args:
+        process_pool (?): (description)
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     mask_as_byte_uri = temporary_filename(suffix='.tif')
     nodata_mask = get_nodata_from_uri(input_mask_uri)
     out_pixel_size = get_cell_size_from_uri(input_mask_uri)
     nodata_out = 255
+
     def to_byte(input_vector):
         """converts vector to 1, 0, or nodata value to fit in a byte raster"""
         return numpy.where(
@@ -2899,20 +3255,28 @@ def distance_transform_edt(
 
 
 def email_report(message, email_address):
-    """A simple wrapper around an SMTP call.  Can be used to send text messages
-        if the email address is constructed as the following:
+    """
+    A simple wrapper around an SMTP call.  Can be used to send text messages
+    if the email address is constructed as the following:
 
-        Alltel [10-digit phone number]@message.alltel.com
-        AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
-        Boost Mobile [10-digit phone number]@myboostmobile.com
-        Nextel (now Sprint Nextel) [10-digit telephone number]@messaging.nextel.com
-        Sprint PCS (now Sprint Nextel) [10-digit phone number]@messaging.sprintpcs.com
-        T-Mobile [10-digit phone number]@tmomail.net
-        US Cellular [10-digit phone number]email.uscc.net (SMS)
-        Verizon [10-digit phone number]@vtext.com
-        Virgin Mobile USA [10-digit phone number]@vmobl.com
+    Alltel [10-digit phone number]@message.alltel.com
+    AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
+    Boost Mobile [10-digit phone number]@myboostmobile.com
+    Nextel (now Sprint Nextel) [10-digit telephone number]@messaging.nextel.com
+    Sprint PCS (now Sprint Nextel) [10-digit phone number]@messaging.sprintpcs.com
+    T-Mobile [10-digit phone number]@tmomail.net
+    US Cellular [10-digit phone number]email.uscc.net (SMS)
+    Verizon [10-digit phone number]@vtext.com
+    Virgin Mobile USA [10-digit phone number]@vmobl.com
 
-        returns nothing"""
+    Args:
+        message (string): the message to send
+        email_address (string): where to send the message
+
+    Returns:
+        nothing
+
+    """
 
     try:
         server = smtplib.SMTP('smtp.gmail.com:587')
@@ -2925,14 +3289,20 @@ def email_report(message, email_address):
 
 
 def convolve_2d(weight_uri, kernel, output_uri):
-    """Does a direct convolution on a predefined kernel with the values in weight_uri
+    """
+    Does a direct convolution on a predefined kernel with the values in
+    weight_uri
 
-        weight_uri - this is the source raster
-        kernel - 2d numpy integrating kernel
-        output_uri - the raster output of same size and projection of
+    Args:
+        weight_uri (string): this is the source raster
+        kernel (?): 2d numpy integrating kernel
+        output_uri (string): the raster output of same size and projection of
             weight_uri
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     output_nodata = -9999
 
@@ -3028,7 +3398,15 @@ def convolve_2d(weight_uri, kernel, output_uri):
 
 
 def _smart_cast(value):
-    """Attempts to cast value to a float, int, or leave it as string"""
+    """
+    Attempts to cast value to a float, int, or leave it as string
+
+    Args:
+        value (?): (description)
+
+    Returns:
+        value (?): (description)
+    """
     #If it's not a string, don't try to cast it because i got a bug
     #where all my floats were happily cast to ints
     if type(value) != str:
@@ -3048,15 +3426,20 @@ def _smart_cast(value):
 
 
 def tile_dataset_uri(in_uri, out_uri, blocksize):
-    """Takes an existing gdal dataset and resamples it into a tiled raster with
-        blocks of blocksize X blocksize.
+    """
+    Takes an existing gdal dataset and resamples it into a tiled raster with
+    blocks of blocksize X blocksize.
 
-        in_uri - dataset to base data from
-        out_uri - output dataset
-        blocksize - defines the side of the square for the raster, this seems
-            to have a lower limit of 16, but is untested
+    Args:
+        in_uri (string): dataset to base data from
+        out_uri (string): output dataset
+        blocksize (int): defines the side of the square for the raster, this
+            seems to have a lower limit of 16, but is untested
 
-        returns nothing"""
+    Returns:
+        nothing
+
+    """
 
     dataset = gdal.Open(in_uri)
     band = dataset.GetRasterBand(1)

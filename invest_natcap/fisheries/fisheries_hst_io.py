@@ -454,8 +454,8 @@ def _parse_habitat_dep_csv(args):
             variables
 
     Raises:
-        + MissingParameter - required parameter not included
-        + IndexError - likely a file formatting issue
+        MissingParameter: required parameter not included
+        IndexError: likely a file formatting issue
 
     Example Returns::
 
@@ -523,9 +523,9 @@ def read_habitat_chg_csv(args):
             variables
 
     Raises:
-        MissingParameter - required parameter not included
-        ValueError - values are out of bounds or of wrong type
-        IndexError - likely a file formatting issue
+        MissingParameter: required parameter not included
+        ValueError: values are out of bounds or of wrong type
+        IndexError: likely a file formatting issue
 
     Example Returns::
 
@@ -563,8 +563,8 @@ def _parse_habitat_chg_csv(args):
             variables
 
     Raises:
-        + MissingParameter - required parameter not included
-        + IndexError - likely a file formatting issue
+        MissingParameter: required parameter not included
+        IndexError: likely a file formatting issue
 
     Example Returns::
 
