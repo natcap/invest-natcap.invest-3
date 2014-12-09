@@ -1,5 +1,92 @@
 """The invest_natcap.testing package defines core testing routines and
-functionality."""
+functionality.
+
+Rationale
+---------
+
+While the python standard library's ``unittest`` package provides valuable
+resources for testing, GIS applications such as the various InVEST models
+output GIS data that require more in-depth testing to verify equality.  For
+cases such as this, ``invest_natcap.testing`` provides a ``GISTest`` class that
+provides assertions for common data formats.
+
+Writing Tests with ``invest_natcap.testing``
+--------------------------------------------
+
+The easiest way to take advantage of the functionality in invest_natcap.testing
+is to use the ``GISTest`` class whenever you write a TestCase class for your
+model.  Doing so will grant you access to the GIS assertions provided by
+``GISTest``.
+
+Example:
+    This example is relatively simplistic, since there will often be many more
+    assertions you may need to make to be able to test your model
+    effectively::
+
+        import invest_natcap.testing
+        import invest_natcap.example_model
+
+        class ExampleTest(invest_natcap.testing.GISTest):
+            def test_some_model(self):
+                example_args = {
+                    'workspace_dir': './workspace',
+                    'arg_1': 'foo',
+                    'arg_2': 'bar',
+                }
+                invest_natcap.example_model.execute(example_args)
+
+                # example GISTest assertion
+                self.assertRastersEqual('workspace/raster_1.tif',
+                    'regression_data/raster_1.tif')
+
+
+Writing tests programmatically
+------------------------------
+
+The testing package also provides a program to create regression archives of
+your content with relative ease.
+
+.. warning::
+
+    **DON'T USE THIS TOOL**
+
+    This tool was built using the old paradigm of creating regression data
+    archives for all inputs and outputs.  This was a very expensive approach to
+    testing, since we sometimes output very large datasets, which were all
+    tracked in mercurial.
+
+    **This tool should not be used** until we figure out the correct project-based
+    way to test all of our inputs and outputs.
+
+
+The tool can be invoked from the command-line like so::
+
+    $ python regression-build.py
+
+Command-line arguments::
+
+    usage: regression-build.py [-h] [-a] [-i] [-o] [-t] [-c] [-f] [-n]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -a , --arguments      JSON file with input arguments and model data
+      -i , --input-archive  Path to where the archived input data will be
+                            saved
+      -o , --output-archive Path to where the archived output data will be
+                            saved
+      -t , --test-file      The test file to modify
+      -c , --test-class     The test class to write or append to. A new
+                            class will be written if this name does not
+                            already exist.
+      -f , --test-func      The test function to write inside the
+                            designated test class.
+      -n, --no-confirm      Provide this flag if you do not wish to
+                            confirm before running.
+
+
+
+
+"""
 
 import csv
 import filecmp
