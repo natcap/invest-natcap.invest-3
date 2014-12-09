@@ -30,9 +30,11 @@ def get_hash(uri):
     """Get the MD5 hash for a single file.  The file is read in a
         memory-efficient fashion.
 
-        uri - a string uri to the file to be tested.
+        Args:
+            uri (string): a string uri to the file to be tested.
 
-        Returns a string hash for the file."""
+        Returns:
+            An md5sum of the input file"""
 
     block_size = 2**20
     file_handler = open(uri)
@@ -46,7 +48,35 @@ def get_hash(uri):
 
 
 def save_workspace(new_workspace):
-    """Decorator to save a workspace to a new location."""
+    """Decorator to save a workspace to a new location.
+
+        If `new_workspace` already exists on disk, it will be recursively
+        removed.
+
+        Example usage with a test case::
+
+            import invest_natcap.testing
+
+            @invest_natcap.testing.save_workspace('/path/to/workspace')
+            def test_workspaces(self):
+                model.execute(self.args)
+
+        Note:
+            + Target workspace folder must be saved to ``self.workspace_dir``
+                This decorator is only designed to work with test functions
+                from subclasses of ``unittest.TestCase`` such as
+                ``invest_natcap.testing.GISTest``.
+
+            + If ``new_workspace`` exists, it will be removed.
+                So be careful where you save things.
+
+        Args:
+            new_workspace (string): a URI to the where the workspace should be
+                copied.
+
+        Returns:
+            A composed test case function which will execute and then save your
+            workspace to the specified location."""
 
     # item is the function being decorated
     def test_inner_func(item):
@@ -76,9 +106,21 @@ def regression(input_archive, workspace_archive):
     """Decorator to unzip input data, run the regression test and compare the
         outputs against the outputs on file.
 
-        input_archive - the path to a .tar.gz archive with the input data.
-        workspace_archive - the path to a .tar.gz archive with the workspace to
-            assert.
+        Example usage with a test case::
+
+            import invest_natcap.testing
+
+            @invest_natcap.testing.regression('/data/input.tar.gz', /data/output.tar.gz')
+            def test_workspaces(self):
+                model.execute(self.args)
+
+        Args:
+            input_archive (string): The path to a .tar.gz archive with the input data.
+            workspace_archive (string): The path to a .tar.gz archive with the workspace to
+                assert.
+
+        Returns:
+            Composed function with regression testing.
          """
 
     # item is the function being decorated
