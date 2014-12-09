@@ -145,6 +145,46 @@ def regression(input_archive, workspace_archive):
 
 
 def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
+    """Build regression archives for a target model run.
+
+        With a properly formatted JSON configuration file at `file_uri`, all
+        input files and parameters are collected and compressed into a single
+        gzip.  Then, the target model is executed and the output workspace is
+        zipped up into another gzip.  These could then be used for regression
+        testing, such as with the ``invest_natcap.testing.regression`` decorator.
+
+        Example configuration file contents (serialized to JSON)::
+
+            {
+                    "model": "invest_natcap.pollination.pollination",
+                    "arguments": {
+                        # the full set of model arguments here
+                    }
+            }
+
+        Example function usage::
+
+            import invest_natcap.testing
+
+            file_uri = "/path/to/config.json"
+            input_archive_uri = "/path/to/archived_inputs.tar.gz"
+            output_archive_uri = "/path/to/archived_outputs.tar.gz"
+            invest_natcap.testing.build_regression_archives(file_uri,
+                input_archive_uri, output_archive_uri)
+
+        Args:
+            file_uri (string): a URI to a json file on disk containing the
+            above configuration options.
+
+            input_archive_uri (string): the URI to where the gzip archive
+            of inputs should be saved once it is created.
+
+            output_archive_uri (string): the URI to where the gzip output
+            archive of output should be saved once it is created.
+
+        Returns:
+            Nothing.
+        """
     file_handler = fileio.JSONHandler(file_uri)
 
     saved_data = file_handler.get_attributes()
@@ -178,16 +218,61 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
 
 
 class GISTest(unittest.TestCase):
-    """A test class for our GIS testing functions."""
+    """A test class with an emphasis on testing GIS outputs.
+
+    The ``GISTest`` class provides many functions for asserting the equality of
+    various GIS files.  This is particularly useful for GIS tool outputs, when
+    we wish to assert the accuracy of very detailed outputs.
+
+    ``GISTest`` is a subclass of ``unittest.TestCase``, so all members that
+    exist in ``unittest.TestCase`` also exist here.  Read the python
+    documentation on ``unittest`` for more information about these test
+    fixtures and their usage.  The important thing to note is that ``GISTest``
+    merely provides more assertions for the more specialized testing and
+    assertions that GIS outputs require.
+
+    Example usage of ``GISTest``::
+
+        import invest_natcap.testing
+
+        class ModelTest(invest_natcap.testing.GISTest):
+            def test_some_function(self):
+                # perform your tests here.
+
+
+    Note that to take advantage of these additional assertions, you need only
+    to create a subclass of ``GISTest`` in your test file to gain access to the
+    ``GISTest`` assertions.
+    """
 
     def assertRastersEqual(self, a_uri, b_uri):
         """Tests if datasets a and b are 'almost equal' to each other on a per
-            pixel basis
+        pixel basis
 
-            aUri - a URI to a gdal dataset
-            bUri - a URI to a  gdal dataset
+        This assertion method asserts the equality of these raster
+        characteristics:
+            + Raster height and width
 
-            returns True if a and b are equal to each other"""
+            + The number of layers in the raster
+
+            + Each pixel value, out to a precision of 7 decimal places if the\
+            pixel value is a float.
+
+
+        Args:
+            a_uri (string): a URI to a GDAL dataset
+            b_uri (string): a URI to a GDAL dataset
+
+        Returns:
+            Nothing.
+
+        Raises:
+            IOError: Raised when one of the input files is not found on disk.
+
+            AssertionError: Raised when the two rasters are found to be not\
+            equal to each other.
+
+        """
 
         LOGGER.debug('Asserting datasets A: %s, B: %s', a_uri, b_uri)
 
@@ -225,13 +310,35 @@ class GISTest(unittest.TestCase):
                             (pixel_a, pixel_b, row_index))
 
     def assertVectorsEqual(self, aUri, bUri):
-        """Tests if shapes a and b are equal to each other on a
-           layer, feature, and field basis
+        """
+        Tests if vector datasources are equal to each other.
 
-           aUri - a URI to a ogr shapefile
-           bUri - a URI to a ogr shapefile
+        This assertion method asserts the equality of these vector
+        characteristics:
+            + Number of layers in the vector
 
-           returns True if a and b are equal to each other"""
+            + Number of features in each layer
+
+            + Feature geometry type
+
+            + Number of fields in each feature
+
+            + Name of each field
+
+            + Field values for each feature
+
+        Args:
+            aUri (string): a URI to an OGR vector
+            bUri (string): a URI to an OGR vector
+
+        Raises:
+            IOError: Raised if one of the input files is not found on disk.
+            AssertionError: Raised if the vectors are not found to be equal to\
+            one another.
+
+        Returns
+           Nothing.
+        """
 
         for uri in [aUri, bUri]:
             if not os.path.exists(uri):
@@ -308,12 +415,20 @@ class GISTest(unittest.TestCase):
 
     def assertCSVEqual(self, aUri, bUri):
         """Tests if csv files a and b are 'almost equal' to each other on a per
-            cell basis
+        cell basis.  Numeric cells are asserted to be equal out to 7 decimal
+        places.  Other cell types are asserted to be equal.
 
-            aUri - a URI to a csv file
-            bUri - a URI to a csv file
+        Args:
+            aUri (string): a URI to a csv file
+            bUri (string): a URI to a csv file
 
-            returns True if a and b are equal to each other"""
+        Raises:
+            AssertionError: Raised when the two CSV files are found to be\
+            different.
+
+        Returns:
+            Nothing.
+        """
 
         a = open(aUri)
         b = open(bUri)
@@ -342,26 +457,72 @@ class GISTest(unittest.TestCase):
                             (index, col_index, a_element, b_element)))
 
     def assertMD5(self, uri, regression_hash):
-        """Tests if the input file has the same hash as the regression hash
-            provided.
+        """Assert the MD5sum of a file against a regression MD5sum.
 
-            uri - a string URI to the file to be tested.
-            regression_hash - a string hash to be tested."""
+        This method is a convenience method that uses
+        ``invest_natcap.testing.get_hash()`` to determine the MD5sum of the
+        file located at `uri`.  It is functionally equivalent to calling::
+
+            self.assertEqual(get_hash(uri), '<some md5sum>')
+
+        Regression MD5sums can be calculated for you by using
+        ``invest_natcap.testing.get_hash()`` or a system-level md5sum program.
+
+        Args:
+            uri (string): a string URI to the file to be tested.
+            regression_hash (string) a string md5sum to be tested against.
+
+        Raises:
+            AssertionError: Raised when the MD5sum of  the file at `uri` \
+            differs from the provided regression md5sum hash.
+
+        Returns:
+            Nothing.
+        """
 
         self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
     def assertMatrixes(self, matrix_a, matrix_b, decimal=6):
-        """Tests if the input numpy matrices are equal up to decimal places.
+        """Tests if the input numpy matrices are equal up to `decimal` places.
 
-            matrix_a - a numpy matrix
-            matrix_b - a numpy matrix
-            decimal - an integer of the desired precision."""
+        This is a convenience function that wraps up required functionality in
+        ``numpy.testing``.
+
+        Args:
+            matrix_a (numpy.ndarray): a numpy matrix
+            matrix_b (numpy.ndarray): a numpy matrix
+            decimal (int): an integer of the desired precision.
+
+        Raises:
+            AssertionError: Raised when the two matrices are determined to be\
+            different.
+
+        Returns:
+            Nothing.
+        """
 
         numpy.testing.assert_array_almost_equal(matrix_a, matrix_b, decimal)
 
     def assertArchives(self, archive_1_uri, archive_2_uri):
-        """Unzip the two archives and compare its contents.  Archives must be
-            tar.gz."""
+        """
+        Compare the contents of two archived workspaces against each other.
+
+        Takes two archived workspaces, each generated from
+        ``build_regression_archives()``, unzips them and
+        compares the resulting workspaces against each other.
+
+        Args:
+            archive_1_uri (string): a URI to a .tar.gz workspace archive
+            archive_2_uri (string): a URI to a .tar.gz workspace archive
+
+        Raises:
+            AssertionError: Raised when the two workspaces are found to be\
+            different.
+
+        Returns:
+            Nothing.
+
+            """
 
         archive_1_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_1_folder, archive_1_uri)
@@ -373,11 +534,31 @@ class GISTest(unittest.TestCase):
 
     def assertWorkspace(self, archive_1_folder, archive_2_folder,
             glob_exclude=''):
-        """Check the contents of two folders against each other.
+        """
+        Check the contents of two folders against each other.
 
-        archive_1_folder - a uri to a folder on disk
-        archive_2_folder - a uri to a folder on disk
-        glob_exclude='' - a string in glob format representing files to ignore"""
+        This method iterates through the contents of each workspace folder and
+        verifies that all files exist in both folders.  If this passes, then
+        each file is compared against each other using
+        ``GISTest.assertFiles()``.
+
+        If one of these workspaces includes files that are known to be
+        different between model runs (such as logs, or other files that include
+        timestamps), you may wish to specify a glob pattern matching those
+        filenames and passing it to `glob_exclude`.
+
+        Args:
+            archive_1_folder (string): a uri to a folder on disk
+            archive_2_folder (string): a uri to a folder on disk
+            glob_exclude (string): a string in glob format representing files to ignore
+
+        Raises:
+            AssertionError: Raised when the two folders are found to have\
+            different contents.
+
+        Returns:
+            Nothing.
+        """
 
         # uncompress the two archives
 
@@ -420,10 +601,22 @@ class GISTest(unittest.TestCase):
                 self.assertFiles(file_1_uri, file_2_uri)
 
     def assertJSON(self, json_1_uri, json_2_uri):
-        """Assert two JSON objects against each other.
+        """Assert two JSON files against each other.
 
-            json_1_uri - a uri to a JSON object in a file.
-            json_2_uri - a uri to a JSON object in a file."""
+        The two JSON files provided will be opened, read, and their
+        contents will be asserted to be equal.  If the two are found to be
+        different, the diff of the two files will be printed.
+
+        Args:
+            json_1_uri (string): a uri to a JSON file.
+            json_2_uri (string): a uri to a JSON file.
+
+        Raises:
+            AssertionError: Raised when the two JSON objects differ.
+
+        Returns:
+            Nothing.
+        """
 
         dict_1 = json.loads(open(json_1_uri).read())
         dict_2 = json.loads(open(json_2_uri).read())
@@ -432,14 +625,22 @@ class GISTest(unittest.TestCase):
         self.assertEqual(dict_1, dict_2)
 
     def assertTextEqual(self, text_1_uri, text_2_uri):
-        """Assert that two text files are equal.  This is done by looping
-        through each line in the text files and asserting that each line matches
-        the other.  If a mismatch occurs, an AssertionError will be raised.
+        """Assert that two text files are equal
 
-        text_1_uri - a python string uri to a text file.  Considered the file to
-            be tested.
-        text_2_uri - a python string uri to a text file.  Considered the
-            regression file."""
+        This comparison is done line-by-line.
+
+        Args:
+            text_1_uri (string): a python string uri to a text file. \
+                Considered the file to be tested.
+            text_2_uri (string): a python string uri to a text file. \
+                Considered the regression file.
+
+        Raises:
+            AssertionError: Raised when a line differs in the two files.
+
+        Returns:
+            Nothing.
+        """
 
         lines = lambda f: [line for line in open(f)]
         for index, (a_line, b_line) in enumerate(zip(lines(text_1_uri), lines(text_2_uri))):
@@ -448,9 +649,28 @@ class GISTest(unittest.TestCase):
                 text_1_uri, a_line, b_line))
 
     def assertFiles(self, file_1_uri, file_2_uri):
-        """Assert two files are equal.  We try to determine the filetype based
-        on the input URI extensions (which are assumed to be the same). If we do
-        not recognize the filetypes, check the file's MD5sum."""
+        """Assert two files are equal.
+
+        If the extension of the provided file is recognized, the relevant
+        filetype-specific function is called and a more detailed check of the
+        file can be done.  If the extension is not recognized, the MD5sums of
+        the two files are compared instead.
+
+        Known extensions: ``.json``, ``.tif``, ``.shp``, ``.csv``, ``.txt.``,
+        ``.html``
+
+        Args:
+            file_1_uri (string): a string URI to a file on disk.
+            file_2_uru (string): a string URI to a file on disk.
+
+        Raises:
+            AssertionError: Raised when one of the input files does not exist,\
+            when the extensions of the input files differ, or if the two files\
+            are found to differ.
+
+        Returns:
+            Nothing.
+        """
 
         for uri in [file_1_uri, file_2_uri]:
             self.assertEqual(os.path.exists(uri), True,
