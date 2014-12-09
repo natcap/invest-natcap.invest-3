@@ -94,7 +94,7 @@
               "id": "habitat_chg_csv_uri",
               "args_id": "habitat_chg_csv_uri",
               "type": "file",
-              "label": "Habitat Change Parameters File (CSV)",
+              "label": "Habitat Area Change File (CSV)",
               "defaultValue": "../Fisheries/Input/Habitat_Scenario_Tool/habitat_chg_params.csv",
               "required": true,
               "helpText": "The provided CSV file should contain the percent changes in habitat area by subregion (if applicable). The habitats included should be those which the population depends on at any life stage.<br><br>See the documentation for help on how to format this file."
