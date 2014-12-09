@@ -565,8 +565,6 @@ def execute(args):
     files.append(args['landmass_uri'])
     files.append(args['climatic_forcing_uri'])
 
-    args['shapefiles'] = {}
-
     # Process each habitat
     shapefile_required_fields = { \
         'land polygon': [ \
@@ -682,6 +680,9 @@ def execute(args):
     # Detecting shapefile types
     # -----------------------------
 
+    args['shapefiles'] = {}         # Shapefile names, grouped in categories
+    args['shapefile types'] = {}    # Shapefile types, grouped in categories
+
     # Collect all the different fields and assign a weight to each
     field_values = {} # weight for each field_value
     shapefile_type_checksum = {} # checksum for each shapefile type
@@ -741,6 +742,10 @@ def execute(args):
                 if shapefile_type not in args['shapefiles']:
                     args['shapefiles'][category] = {}
                     args['shapefiles'][category][basename] = {}
+
+                    args['shapefile types'][category] = {}
+                    args['shapefile types'][category][basename] = \
+                        shapefile_type
 
                 # Rasterize the known shapefile for each field name
                 LOGGER.info('Processing %s...', file_uri)

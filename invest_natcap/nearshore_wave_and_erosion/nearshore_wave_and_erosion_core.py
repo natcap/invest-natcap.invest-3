@@ -445,12 +445,14 @@ def compute_transects(args):
     for shp_name in args['shapefiles'][category]:
 
         # Find habitat_id that will be used to search field position in field_index:
+        habitat_type = args['shapefile types'][category][shp_name]
         habitat_id = None
         for habitat in args['field_index']['natural habitats']:
-            if args['field_index']['natural habitats'][habitat]['name'] == habitat:
+            if args['field_index']['natural habitats'][habitat]['name'] == \
+                habitat_type:
                 habitat_id = int(habitat)
                 break
-        print('habitat', habitat, habitat_id)
+        print('habitat type', habitat_type, habitat_id)
 
         assert habitat is not None
 
@@ -482,7 +484,7 @@ def compute_transects(args):
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 
-        LOGGER.info('Extracting priority information from ' + basename)
+        LOGGER.info('Extracting priority information from ' + shp_name)
         
         progress_step = tiles / 50
         for transect in range(tiles):
@@ -541,6 +543,8 @@ def compute_transects(args):
                 # Leave the transect ID on the transect's shore
                 transects[(raw_positions[0][shore], \
                     raw_positions[1][shore])] = transect
+        
+        print('')
 
         # Clean up
         band = None
@@ -559,8 +563,8 @@ def compute_transects(args):
                 os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
 
             # Extract data from the current raster field
-            print "args['field_index']['natural habitats'][" + str(habitat_id) + "]",
-            print(args['field_index']['natural habitats'][str(habitat_id)])
+#            print "args['field_index']['natural habitats'][" + str(habitat_id) + "]",
+#            print(args['field_index']['natural habitats'][habitat_id])
             field_id = args['field_index']['natural habitats'][habitat_id]['fields'][field.lower()]
 
             uri = args['shapefiles'][category][shp_name][field]
@@ -568,7 +572,7 @@ def compute_transects(args):
             band = raster.GetRasterBand(1)
             array = band.ReadAsArray()
 
-            LOGGER.info('Extracting transect information from ' + basename)
+#            LOGGER.info('Extracting transect information from ' + basename)
             
             progress_step = tiles / 50
             for transect in range(tiles):
