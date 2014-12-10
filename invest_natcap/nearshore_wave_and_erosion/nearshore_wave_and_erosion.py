@@ -670,7 +670,8 @@ def execute(args):
             for shp in shapefile_required_fields \
                 if shp in args['valid_habitat_types']])
 
-    args['soil_field_count'] = len(shapefile_required_fields['soil type'])
+    # Exclude the field 'Type'
+    args['soil_field_count'] = len(shapefile_required_fields['soil type']) - 1
 
     args['climatic_forcing_field_count'] = \
         len(shapefile_required_fields['climatic forcing'])

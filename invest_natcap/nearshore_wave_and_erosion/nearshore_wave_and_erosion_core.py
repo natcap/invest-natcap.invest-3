@@ -312,7 +312,7 @@ def compute_transects(args):
             dtype = 'i4')
 
     soil_type_dataset = \
-        transect_data_file.create_dataset('soil_types', \
+        transect_data_file.create_dataset('soil_type', \
             (transect_count, max_transect_length), \
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
@@ -323,7 +323,7 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata)
 
     habitat_type_dataset = \
-        transect_data_file.create_dataset('habitat_types', \
+        transect_data_file.create_dataset('habitat_type', \
             (transect_count, max_transect_length), \
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
@@ -450,6 +450,7 @@ def compute_transects(args):
 
 
     combine_natural_habitats(args, hdf5_files, habitat_nodata)
+    combine_soil_types(args, hdf5_files, habitat_nodata)
 
 
     sys.exit(0)
@@ -759,16 +760,211 @@ def compute_transects(args):
         
     return
 
+def combine_soil_types(args, hdf5_files, habitat_nodata):
+
+    LOGGER.info('Processing soil types...')
+
+    # soil types
+    soil_types = { \
+        'mud':0, \
+        'sand':1, \
+        'gravel':2 \
+    }
+
+
+    # List of habitats that must absolutely have mud under them
+    mud_only_habitat_names = ['marsh', 'mangrove']
+
+    # Mapping habitat names <=> habitat IDs
+    habitat_name_to_ID = dict(zip( \
+        [habitat[0] for habitat in args['habitat_information']], \
+        range(len(args['habitat_information'])))
+    )
+
+    # IDs of habitats that must have mud under them
+    mud_only_habitat_ids = \
+        [habitat_name_to_ID[name] for name in mud_only_habitat_names]
+    
+    # Create 'soil types' category
+    category = 'soil type'
+
+    hdf5_files[category] = []
+
+    filenames = args['shapefiles'][category].keys()
+
+    assert len(filenames) == 1, 'Detected more than one soil type file'
+
+    shp_name = filenames[0]     
+
+    mask = None
+    mask_dict = {}
+
+    # Assert if field 'type' doesn't exist
+    field_names_lowercase = \
+        [field_name.lower() for field_name in \
+            args['shapefiles'][category][shp_name].keys()]
+
+    assert 'type' in field_names_lowercase
+
+    type_key = None
+    for key in args['shapefiles'][category][shp_name].keys():
+        if key.lower() == 'type':
+            type_key = key
+            break
+
+    # Get rid of the path and the extension
+    basename = os.path.splitext(os.path.basename( \
+        args['shapefiles'][category][shp_name][type_key]))[0]
+
+    # Extract the type for this shapefile
+    type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
+
+    source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+    raster = gdal.Open(type_shapefile_uri)
+    band = raster.GetRasterBand(1)
+    array = band.ReadAsArray()
+
+    LOGGER.info('Extracting priority information from ' + shp_name)
+    
+    tiles = args['tiles']
+
+    indices_limit_array = args['indices_limit_array']
+    shore_array = args['shore_array']
+    positions_array = args['positions_array']
+    soil_type_array = args['soil_type_array']
+    soil_properties_array = args['soil_properties_array']
+
+
+    progress_step = tiles / 50
+    for transect in range(tiles):
+        if transect % progress_step == 0:
+            print '.',
+
+        [start, end] = indices_limit_array[transect]
+
+        #raw_positions = transect_info[transect]['raw_positions']
+        raw_positions = \
+            (positions_array[transect, 0, start:end], \
+            positions_array[transect, 1, start:end])
+        
+        #Load the habitats as sampled from the raster
+        source = array[raw_positions]
+
+        # Interpolate the data to the model resolution 
+#                source = interpolate_transect(source, i_side_fine, \
+#                    args['model_resolution'], kind = 'nearest')
+
+
+        source = source[start:end,]
+
+        # Load the soil type buffer
+        destination = soil_type_array[transect,start:end]
+
+        # Overriding source_nodata so it doesn't interfere with habitat_nodata
+        source[source == source_nodata] = habitat_nodata
+
+        # Apply the habitat constraints
+#                source = \
+#                    apply_habitat_constraints(source, args['habitat_information'])
+#                sys.exit(0)
+        
+        # Copy soil type directly to destination
+        destination = source
+
+        # Apply the soil type constraints
+        for mud_only_habitat in mud_only_habitat_ids:
+            replace_with_mud = np.where(destination == mud_only_habitat)
+
+            if replace_with_mud[0].size:
+                destination[replace_with_mud] = soil_types['mud']
+    
+    print('')
+
+    # Clean up
+    band = None
+    raster = None
+    array = None
+
+    print("args['field_index']['" + category + "']['fields']", \
+        args['field_index'][category]['fields'])
+
+    for field in args['shapefiles'][category][shp_name]:
+        if field.lower() == 'type':
+            continue
+
+        field_id = args['field_index'][category]['fields'][field.lower()]
+        print('field', field)
+        print('field ID', field_id)
+
+    for field in args['shapefiles'][category][shp_name]:
+
+        # Skip the field 'type'
+        if field.lower() == 'type':
+            continue
+
+        # Get rid of the path and the extension
+        basename = os.path.splitext( \
+            os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
+
+        # Extract data from the current raster field
+        field_id = args['field_index'][category]['fields'][field.lower()]
+
+        uri = args['shapefiles'][category][shp_name][field]
+        raster = gdal.Open(uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+
+
+        progress_step = tiles / 50
+        for transect in range(tiles):
+            if transect % progress_step == 0:
+                print '.',
+
+            [start, end] = indices_limit_array[transect]
+
+            shore = shore_array[transect]
+
+            raw_positions = \
+                (positions_array[transect, 0, start:end], \
+                positions_array[transect, 1, start:end])
+
+
+            source = array[raw_positions]
+
+            # Interpolate the data to the model resolution 
+#                source = interpolate_transect(source, i_side_fine, \
+#                    args['model_resolution'], kind = 'nearest')
+
+            source = source[start:end,]
+
+            destination = \
+                soil_properties_array[transect, field_id, start:end]
+
+            destination = source
+
+            
+        print('')
+
+        # Close the raster before proceeding to the next one
+        band = None
+        raster = None
+        array = None
+
+
+
 def combine_natural_habitats(args, hdf5_files, habitat_nodata):
 
     LOGGER.info('Processing natural habitats...')
 
     category = 'natural habitats'
 
+    # Create hdf5 category for natural habitats
     hdf5_files[category] = []
 
     for shp_name in args['shapefiles'][category]:
 
+        LOGGER.info('Extracting priority information from ' + shp_name)
+        
         # Find habitat_id that will be used to search field position in field_index:
         habitat_type = args['shapefile types'][category][shp_name]
         habitat_id = None
@@ -784,13 +980,15 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         mask = None
         mask_dict = {}
 
-        # Assert if field 'type' doesn't exist
+        # Build the list of field names in lower case 
         field_names_lowercase = \
             [field_name.lower() for field_name in \
                 args['shapefiles'][category][shp_name].keys()]
 
+        # Assert if field 'type' doesn't exist
         assert 'type' in field_names_lowercase
 
+        # Store the key 'type' in its original case
         type_key = None
         for key in args['shapefiles'][category][shp_name].keys():
             if key.lower() == 'type':
@@ -809,15 +1007,7 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 
-        LOGGER.info('Extracting priority information from ' + shp_name)
-        
         tiles = args['tiles']
-
-        #climatic_forcing_array = args['climatic_forcing_array']
-        #soil_type_array = args['soil_type_array']
-        #args['soil_properties_array'] = soil_properties_array
-        #args['bathymetry_array'] = bathymetry_array
-        #args['coordinates_limits_array'] = coordinates_limits_array
 
         indices_limit_array = args['indices_limit_array']
         shore_array = args['shore_array']
@@ -956,8 +1146,6 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
             band = None
             raster = None
             array = None
-
-    return mask_dict
 
 
 
