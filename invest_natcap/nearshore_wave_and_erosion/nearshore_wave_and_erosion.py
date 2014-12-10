@@ -566,7 +566,7 @@ def execute(args):
     files.append(args['climatic_forcing_uri'])
 
     # Process each habitat
-    shapefile_required_fields = { \
+    args['shapefile_required_fields'] = { \
         'land polygon': [ \
             'MHHW', \
             'MSL', \
@@ -602,6 +602,8 @@ def execute(args):
             'FricUncov',
             'SLRKeepUp',
             'DegrUncov']}
+
+    shapefile_required_fields = args['shapefile_required_fields']
 
     # Build the habitats name--priority mapping
     args['habitat_priority'] = \

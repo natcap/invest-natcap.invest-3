@@ -290,8 +290,6 @@ def compute_transects(args):
 
     habitat_nodata = -99999
 
-    print('transect_info size', len(transect_info))
-
     # Create a numpy array to store the habitat type
     habitat_field_count = args['habitat_field_count']
     soil_field_count = args['soil_field_count']
@@ -307,7 +305,7 @@ def compute_transects(args):
 
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
-            (transect_count, climatic_forcing_field_count, max_transect_length), \
+            (transect_count, climatic_forcing_field_count), \
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
 
@@ -436,13 +434,13 @@ def compute_transects(args):
 
 
 
-    for category in args['shapefiles']:
-        print('')
-        print 'HDF5 category', category,
-        
-        for filename in args['shapefiles'][category]:
-            print('filename', filename, 'fields:', \
-                args['shapefiles'][category][filename].keys())
+#    for category in args['shapefiles']:
+#        print('')
+#        print 'HDF5 category', category,
+#        
+#        for filename in args['shapefiles'][category]:
+#            print('filename', filename, 'fields:', \
+#                args['shapefiles'][category][filename].keys())
 
 
     # HDF5 file container
@@ -451,221 +449,8 @@ def compute_transects(args):
 
     combine_natural_habitats(args, hdf5_files, habitat_nodata)
     combine_soil_types(args, hdf5_files, habitat_nodata)
+    store_climatic_forcing(args, hdf5_files, habitat_nodata)
 
-
-    sys.exit(0)
-
-
-
-
-    # Iterate through shapefile types
-    for category in args['shapefiles']:
-            
-        hdf5_files[category] = []
-
-        for shp_name in args['shapefiles'][category]:
-
-            # Get rid of the path and the extension
-            basename = os.path.splitext( \
-                os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
-
-            # Extract data from the current raster field
-            field_id = args['field_index'][habitat_id]['fields'][field.lower()]
-
-            uri = args['shapefiles'][category][shp_name][field]
-            raster = gdal.Open(uri)
-            band = raster.GetRasterBand(1)
-            array = band.ReadAsArray()
-
-            LOGGER.info('Extracting transect information from ' + basename)
-            
-            progress_step = tiles / 50
- 
-            mask = None
-            mask_dict = {}
-
-            # Skip field 'type' if it doesn't exist
-            field_names_lowercase = \
-                [field_name.lower() for field in \
-                    args['shapefiles'][category][shp_name].keys()]
-
-            assert 'type' in field_names_lowercase
-
-            # Get rid of the path and the extension
-            basename = os.path.splitext(os.path.basename( \
-                args['shapefiles'][category][shp_name]['type']))[0]
-
-            # Extract the type for this shapefile
-            type_shapefile_uri = args['shapefiles'][category][shp_name]['type']
-
-            source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-            raster = gdal.Open(type_shapefile_uri)
-            band = raster.GetRasterBand(1)
-            array = band.ReadAsArray()
-
-            LOGGER.info('Extracting priority information from ' + basename)
-            
-            mask = None
-            mask_dict = {}
-
-            progress_step = tiles / 50
-            for transect in range(tiles):
-                if transect % progress_step == 0:
-                    print '.',
-
-                [start, end] = indices_limit_array[transect]
-
-                shore = shore_array[transect]
-
-                #raw_positions = transect_info[transect]['raw_positions']
-                raw_positions = \
-                    (positions_array[transect, 0, start:end], \
-                    positions_array[transect, 1, start:end])
-                
-                # Skip if shapefile type is not a valid habitat
-                if category in args['valid_habitat_types']:
-                    # Load the habitat type buffer
-                    destination = habitat_type_array[transect,start:end]
-                elif category == 'soil type':
-                    destination = soil_type_array[transect,start:end]
-                else:
-                    continue
-
-                #Load the habitats as sampled from the raster
-                source = array[raw_positions]
-
-                # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-                source = source[start:end,]
-
-                # Overriding source_nodata so it doesn't interfere with habitat_nodata
-                source[source == source_nodata] = habitat_nodata
-
-                # Apply the habitat constraints
-#                source = \
-#                    apply_habitat_constraints(source, args['habitat_information'])
-#                sys.exit(0)
-                
-                # Compute the mask that will be used to update the values
-                mask = destination < source
-
-                mask_dict[transect] = mask
-
-                # Update habitat_types with new type of higher priority
-                destination[mask] = source[mask]
-
-                # Remove nodata
-                clipped_positions = \
-                    (raw_positions[0][start:end], raw_positions[1][start:end])
-
-                # Positions to update
-                masked_positions = \
-                    (clipped_positions[0][mask], clipped_positions[1][mask])
-
-                if category in args['valid_habitat_types']:
-                    # Update the values using source
-                    transects[masked_positions] = source[mask]
-                    # Leave the transect ID on the transect's shore
-                    transects[(raw_positions[0][shore], \
-                        raw_positions[1][shore])] = transect
-
-
-            print('')
-
-            # Clean up
-            band = None
-            raster = None
-            array = None
-
-
-            # Find the habitat ID that corresponds to the shapefile type
-            habitat_id = None
-            # Check if it's a soil type
-            if category == 'soil type':
-                habitat_id = len(args['field_index']) - 1
-            # Else look for a natural habitat
-            else:
-                for hab_id in range(len(args['habitat_information'])):
-                    if args['habitat_information'][hab_id][0] == category:
-                        habitat_id = hab_id
-                        break
-
-            if habitat_id is None:
-                print("Couldn't find habitat ID for", category)
-                print('Available habitats:', \
-                    [args['habitat_information'][hab_id][0] \
-                    for hab_id in range(len(args['habitat_information']))])
-
-                assert habitat_id is not None
-
-            for field in args['shapefiles'][category][shp_name]:
-
-                # Skip the field 'type'
-                if field.lower() == 'type':
-                    continue
-
-                # Get rid of the path and the extension
-                basename = os.path.splitext( \
-                    os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
-
-                # Extract data from the current raster field
-                field_id = args['field_index'][habitat_id]['fields'][field.lower()]
-
-                uri = args['shapefiles'][category][shp_name][field]
-                raster = gdal.Open(uri)
-                band = raster.GetRasterBand(1)
-                array = band.ReadAsArray()
-
-                LOGGER.info('Extracting transect information from ' + basename)
-                
-                progress_step = tiles / 50
-                for transect in range(tiles):
-                    if transect % progress_step == 0:
-                        print '.',
-
-                    [start, end] = indices_limit_array[transect]
-
-                    shore = shore_array[transect]
-
-                    raw_positions = \
-                        (positions_array[transect, 0, start:end], \
-                        positions_array[transect, 1, start:end])
-
-
-                    source = array[raw_positions]
-
-                    if category in args['valid_habitat_types']:
-                        # Load the habitat type buffer
-                        destination = \
-                                habitat_properties_array[transect, field_id, start:end]
-                    elif category == 'soil type':
-                        destination = soil_properties_array[transect, field_id,start:end]
-                    elif category == 'climatic forcing':
-                        destination = climatic_forcing_array[transect, field_id,start:end]
-                    else:
-                        continue
-
-                    # Save transect to file
-                    mask = mask_dict[transect]
-
-                    destination[mask] = source[mask]
-
-                    clipped_positions = \
-                        (raw_positions[0][start:end], raw_positions[1][start:end])
-
-                    masked_positions = \
-                        (clipped_positions[0][mask], clipped_positions[1][mask])
-                    
-                    if category in args['valid_habitat_types']:
-                        transects[masked_positions] = source[mask]
-                print('')
-
-                # Close the raster before proceeding to the next one
-                band = None
-                raster = None
-                array = None
 
     # Both the habitat type and the habitat field data are complete, save them
     climatic_forcing_dataset[...] = climatic_forcing_array[...]
@@ -760,6 +545,61 @@ def compute_transects(args):
         
     return
 
+def store_climatic_forcing(args, hdf5_files, habitat_nodata):
+
+    LOGGER.info('Processing climatic forcing...')
+    
+    # Create 'climatic forcing' category
+    category = 'climatic forcing'
+
+    hdf5_files[category] = []
+
+    filenames = args['shapefiles'][category].keys()
+
+    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
+
+    shp_name = filenames[0]
+
+    
+    for field in args['shapefiles'][category][shp_name]:
+
+        # Retreive the index for this field
+        field_id = args['field_index'][category]['fields'][field.lower()]
+
+        # Extract the type for this shapefile
+        shapefile_uri = args['shapefiles'][category][shp_name][field]
+
+        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
+        raster = gdal.Open(shapefile_uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+
+        tiles = args['tiles']
+
+        indices_limit_array = args['indices_limit_array']
+        positions_array = args['positions_array']
+        climatic_forcing_array = args['climatic_forcing_array']
+
+
+        progress_step = tiles / 50
+        for transect in range(tiles):
+            if transect % progress_step == 0:
+                print '.',
+
+            [_, end] = indices_limit_array[transect]
+
+            # The climatic data is taken as much offshore as possible
+            position = \
+                (positions_array[transect, 0, end-1], \
+                positions_array[transect, 1, end-1])
+            
+            # Copy directly to destination
+            climatic_forcing_array[transect, field_id] = array[position]
+        
+        print('')
+
+
+
 def combine_soil_types(args, hdf5_files, habitat_nodata):
 
     LOGGER.info('Processing soil types...')
@@ -824,7 +664,7 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     band = raster.GetRasterBand(1)
     array = band.ReadAsArray()
 
-    LOGGER.info('Extracting priority information from ' + shp_name)
+#    LOGGER.info('Extracting priority information from ' + shp_name)
     
     tiles = args['tiles']
 
@@ -885,22 +725,14 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     raster = None
     array = None
 
-    print("args['field_index']['" + category + "']['fields']", \
-        args['field_index'][category]['fields'])
-
-    for field in args['shapefiles'][category][shp_name]:
-        if field.lower() == 'type':
-            continue
-
-        field_id = args['field_index'][category]['fields'][field.lower()]
-        print('field', field)
-        print('field ID', field_id)
-
     for field in args['shapefiles'][category][shp_name]:
 
         # Skip the field 'type'
         if field.lower() == 'type':
             continue
+
+        # Retreive the index for this field
+        field_id = args['field_index'][category]['fields'][field.lower()]
 
         # Get rid of the path and the extension
         basename = os.path.splitext( \
@@ -963,7 +795,7 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
 
     for shp_name in args['shapefiles'][category]:
 
-        LOGGER.info('Extracting priority information from ' + shp_name)
+        LOGGER.info('Extracting information from ' + shp_name)
         
         # Find habitat_id that will be used to search field position in field_index:
         habitat_type = args['shapefile types'][category][shp_name]
@@ -973,7 +805,6 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
                 habitat_type:
                 habitat_id = int(habitat)
                 break
-        print('habitat type', habitat_type, habitat_id)
 
         assert habitat is not None
 
