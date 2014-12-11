@@ -123,7 +123,7 @@ def get_hash(uri):
             An md5sum of the input file"""
 
     block_size = 2**20
-    file_handler = open(uri)
+    file_handler = open(uri, 'rb')
     md5 = hashlib.md5()
     while True:
         data = file_handler.read(block_size)
