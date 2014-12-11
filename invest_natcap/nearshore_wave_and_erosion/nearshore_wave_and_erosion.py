@@ -567,7 +567,7 @@ def execute(args):
 
     # Process each habitat
     args['shapefile_required_fields'] = { \
-        'land polygon': [ \
+        'tidal information': [ \
             'MHHW', \
             'MSL', \
             'MLLW'],
@@ -678,6 +678,9 @@ def execute(args):
     args['climatic_forcing_field_count'] = \
         len(shapefile_required_fields['climatic forcing'])
 
+    args['tidal_forcing_field_count'] = \
+        len(shapefile_required_fields['tidal information'])
+
 
     # -----------------------------
     # Detecting shapefile types
@@ -732,9 +735,9 @@ def execute(args):
 
             # If checksum corresponds to a known shapefile type, process it
             if shapefile_checksum in shapefile_type_checksum:
-                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
-
                 shapefile_type = shapefile_type_checksum[shapefile_checksum]
+
+                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
 
                 if shapefile_type in args['valid_habitat_types']:
                     category = 'natural habitats'

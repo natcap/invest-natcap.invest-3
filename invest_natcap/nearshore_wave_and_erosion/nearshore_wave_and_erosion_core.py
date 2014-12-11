@@ -220,6 +220,10 @@ def compute_transects(args):
                         args['max_land_profile_height'], \
                         args['max_profile_length'])
 
+                    # The index positions might be outside of valid bathimetry
+                    if raw_depths is None:
+                        continue
+
                     # Interpolate transect to the model resolution
                     interpolated_depths = \
                         raw_depths if raw_depths.size > 5 else None
@@ -294,6 +298,7 @@ def compute_transects(args):
     habitat_field_count = args['habitat_field_count']
     soil_field_count = args['soil_field_count']
     climatic_forcing_field_count = args['climatic_forcing_field_count']
+    tidal_forcing_field_count = args['tidal_forcing_field_count']
     transect_count = tiles
 
     # Creating HDF5 file that will store the transect data
@@ -302,6 +307,12 @@ def compute_transects(args):
     
     transect_data_file = h5.File(transect_data_uri, 'w')
     
+
+    tidal_forcing_dataset = \
+        transect_data_file.create_dataset('tidal forcing', \
+            (transect_count, tidal_forcing_field_count), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
 
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
@@ -364,6 +375,9 @@ def compute_transects(args):
 
 
 
+    tidal_forcing_array = \
+        np.ones(tidal_forcing_dataset.shape) * habitat_nodata
+
     climatic_forcing_array = \
         np.ones(climatic_forcing_dataset.shape) * habitat_nodata
 
@@ -395,6 +409,7 @@ def compute_transects(args):
         np.ones(coordinates_limits_dataset.shape) * habitat_nodata
 
 
+    args['tidal_forcing_array'] = tidal_forcing_array
     args['climatic_forcing_array'] = climatic_forcing_array
     args['soil_type_array'] = soil_type_array
     args['soil_properties_array'] = soil_properties_array
@@ -450,9 +465,10 @@ def compute_transects(args):
     combine_natural_habitats(args, hdf5_files, habitat_nodata)
     combine_soil_types(args, hdf5_files, habitat_nodata)
     store_climatic_forcing(args, hdf5_files, habitat_nodata)
-
+    store_tidal_information(args, hdf5_files, habitat_nodata)
 
     # Both the habitat type and the habitat field data are complete, save them
+    tidal_forcing_dataset[...] = tidal_forcing_array[...]
     climatic_forcing_dataset[...] = climatic_forcing_array[...]
     soil_type_dataset[...] = soil_type_array[...]
     soil_properties_dataset[...] = soil_properties_array[...]
@@ -467,6 +483,7 @@ def compute_transects(args):
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
     habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
+    habitat_type_dataset.attrs.create('bathymetry_resolution', args['model_resolution'])
     
 
     # Store shore information gathered during the computation
@@ -544,6 +561,72 @@ def compute_transects(args):
     transect_data_file.close()
         
     return
+
+def store_tidal_information(args, hdf5_files, habitat_nodata):
+
+    LOGGER.info('Processing tidal information...')
+    
+    # Create new category
+    category = 'tidal information'
+
+    hdf5_files[category] = []
+
+    filenames = args['shapefiles'][category].keys()
+
+    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
+
+    shp_name = filenames[0]
+
+    
+    for field in args['shapefiles'][category][shp_name]:
+
+        # Retreive the index for this field
+        field_id = args['field_index'][category]['fields'][field.lower()]
+
+        # Extract the type for this shapefile
+        shapefile_uri = args['shapefiles'][category][shp_name][field]
+
+        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
+        raster = gdal.Open(shapefile_uri)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+
+        tiles = args['tiles']
+
+        indices_limit_array = args['indices_limit_array']
+        positions_array = args['positions_array']
+        positions_array = args['positions_array']
+        tidal_forcing_array = args['tidal_forcing_array']
+
+
+        progress_step = tiles / 50
+        for transect in range(tiles):
+            if transect % progress_step == 0:
+                print '.',
+
+            [start, end] = indices_limit_array[transect]
+
+            # The climatic data is taken as much offshore as possible
+            positions = \
+                (positions_array[transect, 0, start:end], \
+                positions_array[transect, 1, start:end])
+            
+            source = array[positions]
+
+            source = source[source != habitat_nodata]
+
+            if source.size:
+                tidal_value = np.average(source)
+            else:
+#                LOGGER.warning('No ' + field + ' information for transect ' + str(transect))
+                tidal_value = habitat_nodata
+
+            # Copy directly to destination
+            tidal_forcing_array[transect, field_id] = tidal_value
+        
+        print('')
+
+
 
 def store_climatic_forcing(args, hdf5_files, habitat_nodata):
 
@@ -1145,7 +1228,15 @@ def compute_raw_transect_depths(shore_point, \
     J = np.ones(depths.size) * -1
 
     p_i = shore_point[0]
+    
+    if (p_i < 0) or (p_i >= bathymetry_shape[0]):
+        return (None, None)
+
     p_j = shore_point[1]
+
+    if (p_j < 0) or (p_j >= bathymetry_shape[0]):
+        return (None, None)
+
     d_i = direction_vector[0]
     d_j = direction_vector[1]
 
