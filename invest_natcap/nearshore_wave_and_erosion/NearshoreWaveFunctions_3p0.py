@@ -1,6 +1,5 @@
 import sys, os, string, time, datetime, json
 from datetime import datetime
-from arcpy import env
 from math import *
 import numpy as num
 from scipy import optimize

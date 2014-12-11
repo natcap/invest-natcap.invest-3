@@ -21,6 +21,8 @@ import cProfile, pstats
 from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core as core
 
+from NearshoreWaveFunctions_3p0 import*
+
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
 LOGGER = logging.getLogger('coastal_vulnerability_core')
@@ -483,7 +485,7 @@ def compute_transects(args):
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
     habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
-    habitat_type_dataset.attrs.create('bathymetry_resolution', args['model_resolution'])
+    habitat_type_dataset.attrs.create('bathymetry_resolution', i_side_fine)
     
 
     # Store shore information gathered during the computation
