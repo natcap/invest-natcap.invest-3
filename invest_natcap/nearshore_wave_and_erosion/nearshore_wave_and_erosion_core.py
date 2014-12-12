@@ -302,6 +302,10 @@ def compute_transects(args):
     landmass_band = None
     landmass_raster = None
 
+    transect_count = tiles
+
+#    transect_count = 50
+#    tiles = 50
     
     args['tiles'] = tiles
 
@@ -314,7 +318,6 @@ def compute_transects(args):
     soil_field_count = args['soil_field_count']
     climatic_forcing_field_count = args['climatic_forcing_field_count']
     tidal_forcing_field_count = args['tidal_forcing_field_count']
-    transect_count = tiles
 
     # Creating HDF5 file that will store the transect data
     transect_data_uri = \
@@ -574,6 +577,8 @@ def compute_transects(args):
     #habitat_type_dataset = None
     #habitat_properties_dataset = None
     transect_data_file.close()
+
+    return transect_data_uri
     
 
 
@@ -586,6 +591,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
     print('Loading HDF5 files...')
+
+    assert os.path.isfile(transect_data_uri)
 
     f = h5py.File(transect_data_uri) # Open the HDF5 file
 
@@ -691,28 +698,28 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     indices_limit = numpy.array((transect_length, 2))
     coordinates_limits = numpy.array((transect_length, 4))
 
-    print('Number of transects', transect_count)
-    print('Maximum number of habitat fields', habitat_fields)
-    print('Maximum number of soil fields', soil_fields)
-    print('Maximum transect length', transect_length)
+#    print('Number of transects', transect_count)
+#    print('Maximum number of habitat fields', habitat_fields)
+#    print('Maximum number of soil fields', soil_fields)
+#    print('Maximum transect length', transect_length)
 
     # Open field indices file, so that we can access a specific field by name
     field_indices_uri = os.path.join(args['intermediate_dir'], 'field_indices')
     field_indices = json.load(open(field_indices_uri)) # Open field indices info
 
     # Field indices
-    print('')
-    print('')
+#    print('')
+#    print('')
 
     for habitat_type in field_indices:
         habitat = field_indices[habitat_type]
-        print('habitat', habitat)
+#        print('habitat', habitat)
         #print('habitat ' + str(habitat_type) + ' has ' + \
         #      str(len(habitat['fields'])) + ' fields:')
 
         #for field in habitat['fields']:
         #    print('field ' + str(field) + ' is ' + str(habitat['fields'][field]))
-        print('')
+#        print('')
 
 
     #--------------------------------------------------------------
@@ -732,9 +739,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(3500,3600): #transect_count):
-        print('')
-        print('transect', transect_count - transect)
+    for transect in range(transect_count):
+#        print('')
+        print('Computing nearshore waves and erosion on transect', transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -742,13 +749,13 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
         # Note: For bad data, the most landard point could be in the ocean or the most
         #   seaward point could be on land!!!
         Length=end-start;Start=start;End=end;
-        print('index limits (start, end):', (Start, End))
+#        print('index limits (start, end):', (Start, End))
         
         # Extracting the valid portion (Start:End) of habitat properties
         hab_properties = habitat_properties_dataset[transect,:,Start:End]
         # The resulting matrix is of shape transect_count x 5 x max_transect_length
         # The middle index (1) is the maximum number of habitat fields:
-        print('maximum habitat property fields:', hab_properties.shape[1])
+#        print('maximum habitat property fields:', hab_properties.shape[1])
         
         unique_types = numpy.unique(hab_types)  # Compute the unique habitats
 
@@ -758,7 +765,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
         min_depth = numpy.amin(bathymetry)
         Shore=Indexed(bathymetry,0) #locate zero
         MinDepth=Indexed(bathymetry,min_depth)
-        print('bathymetry (min, max)', (min_depth, max_depth))
+#        print('bathymetry (min, max)', (min_depth, max_depth))
 
         if min_depth>-1 or abs(MinDepth-Shore)<2: #If min depth is too small and there aren't enough points, we don't run
                 H=num.zeros(len(bathymetry))
@@ -777,9 +784,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
             end = [positions[-1][0]]
             end.append(positions[-1][1])
             coordinates_limits = coordinates_limits_dataset[transect,:]
-            print('coord limits:', \
-                  (coordinates_limits[0], coordinates_limits[1]), \
-                  (coordinates_limits[2], coordinates_limits[3]))
+#            print('coord limits:', \
+#                  (coordinates_limits[0], coordinates_limits[1]), \
+#                  (coordinates_limits[2], coordinates_limits[3]))
         
             #--Collect vegetation properties 
             #Zero the phys. char
@@ -802,33 +809,33 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
                         Sg_diameter_id = field_indices[str(seagrass)]['fields']['stemdiam']
                         Sg_diameters = hab_properties[Sg_diameter_id][seagrass_location]
                         mean_stem_diameter = numpy.average(Sg_diameters)
-                        print('   Seagrass detected. Mean stem diameter: ' + \
-                            str(mean_stem_diameter) + ' m')
+#                        print('   Seagrass detected. Mean stem diameter: ' + \
+#                            str(mean_stem_diameter) + ' m')
                 
                         Sg_height_id = field_indices[str(seagrass)]['fields']['stemheight']
                         Sg_height = hab_properties[Sg_height_id][seagrass_location]
                         mean_stem_height = numpy.average(Sg_height)
-                        print('                                    Mean stem height: ' + \
-                            str(mean_stem_height) + ' m')
+#                        print('                                    Mean stem height: ' + \
+#                            str(mean_stem_height) + ' m')
                         
                         Sg_density_id = field_indices[str(seagrass)]['fields']['stemdensty']
                         Sg_density = hab_properties[Sg_density_id][seagrass_location]
                         mean_stem_density = numpy.average(Sg_density)
-                        print('                                    Mean stem density: ' + \
-                              str(mean_stem_density) + ' #/m^2')
+#                        print('                                    Mean stem density: ' + \
+#                              str(mean_stem_density) + ' #/m^2')
                         
                         Sg_drag_id = field_indices[str(seagrass)]['fields']['stemdrag']
                         Sg_drag = hab_properties[Sg_drag_id][seagrass_location]
                         mean_stem_drag = numpy.average(Sg_drag)
-                        print('                                    Mean stem drag: ' + \
-                            str(mean_stem_drag) )
+#                        print('                                    Mean stem drag: ' + \
+#                            str(mean_stem_drag) )
                         
                         RootDiam[seagrass_location]=Sg_diameters
                         RootHeight[seagrass_location]=Sg_height
                         RootDens[seagrass_location]=Sg_density
                         RootCd[seagrass_location]=Sg_drag
                         
-                print('unique habitat types:', HabType)
+#                print('unique habitat types:', HabType)
                     
             #Collect reef properties
             
@@ -838,8 +845,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
             #Soil types and properties   
             soil_types = soil_types_dataset[transect,Start:End]
             soil_properties = soil_properties_dataset[transect,:,Start:End]
-            print('maximum soil property fields:', soil_properties.shape[1])
-            print('soil types', numpy.unique(soil_types)) #, soil_types)
+#            print('maximum soil property fields:', soil_properties.shape[1])
+#            print('soil types', numpy.unique(soil_types)) #, soil_types)
             
             #Prepare to run the model
             dx=20;
@@ -1102,7 +1109,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     (transect_count, max_transect_length) = wave_dataset.shape
 
     
-    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
+#    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
 
    
     wave_coordinates = np.zeros(coordinates_dataset.shape[1])
@@ -1118,7 +1125,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     intersecting_transect_count = 0
 
     for transect in range(transect_count):
-        print('transect', transect_count - transect)
+#        print('transect', transect_count - transect)
 
         # Extract and clean the transect from nan values
         start = indices_limit_dataset[transect,0]
@@ -1252,7 +1259,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         corrected_transect_values = \
             interpolated_delta_y + wave_dataset[transect,start:end]
 
-        print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+#        print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
 
 
         if np.isnan(corrected_transect_values).any():
