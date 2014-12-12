@@ -11,7 +11,7 @@ import scipy as sp
 from scipy import interpolate
 from scipy import ndimage
 from scipy import sparse
-import h5py as h5
+import h5py
 
 from osgeo import ogr
 from osgeo import gdal
@@ -36,23 +36,34 @@ def execute(args):
         
         returns nothing"""
     logging.info('executing coastal_protection_core')
-    logging.info('Computing transects...')
 
-    #transects_uri = compute_transects(args)
-    #p = 
-    p = cProfile.Profile()
-    transects_uri = p.runctx('compute_transects(args)', globals(), locals())
-    print('transects_uri', transects_uri)
-    s = pstats.Stats(p)
-    s.sort_stats('time').print_stats(20)
+    # Profile generator
+#    transect_data_uri = compute_transects(args)
+    transect_data_uri = \
+        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+
+    # Stop there if the user only wants to run the profile generator 
+    if args['modules_to_run'] == 'Profile generator only':
+        return
+
+    # Nearshore wave and erosion model
+    biophysical_data_uri = \
+        compute_nearshore_and_wave_erosion(transect_data_uri, args)
+
+    # Reconstruct 2D shore maps from biophysical data 
+#    reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri)
+
+    # Debug purposes
+#    p = cProfile.Profile()
+#    transects_uri = p.runctx('compute_transects(args)', globals(), locals())
+#    transects_uri = p.runctx('compute_transects(args)', globals(), locals())
+#    s = pstats.Stats(p)
+#    s.sort_stats('time').print_stats(20)
 
 
 # Compute the shore transects
 def compute_transects(args):
     LOGGER.debug('Computing transects...')
-    #print('arguments:')
-    #for key in args:
-    #    print('entry', key, args[key])
 
     # Store shore and transect information
     shore_nodata = -20000.0
@@ -307,7 +318,7 @@ def compute_transects(args):
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
     
-    transect_data_file = h5.File(transect_data_uri, 'w')
+    transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
     tidal_forcing_dataset = \
@@ -561,8 +572,175 @@ def compute_transects(args):
     #habitat_type_dataset = None
     #habitat_properties_dataset = None
     transect_data_file.close()
-        
-    return
+    
+
+
+
+
+# ----------------------------------------------
+# Nearshore wave and erosion model
+# ----------------------------------------------
+def compute_nearshore_and_wave_erosion(transect_data_uri, args):
+    LOGGER.debug('Computing nearshore wave and erosion...')
+
+    biophysical_data_uri = \
+        os.path.join(args['intermediate_dir'], 'output.h5')
+
+    print('Loading HDF5 files...')
+
+    f = h5py.File(transect_data_uri) # Open the HDF5 file
+
+    # Average spatial resolution of all transects
+    transect_spacing = f['habitat_type'].attrs['transect_spacing']
+    # Distance between transect samples
+    model_resolution = f['habitat_type'].attrs['model_resolution']
+
+    print('average space between transects:', transect_spacing, 'm')
+    print('model resolution:', model_resolution, 'm')
+
+    # ------------------------------------------------
+    # Define file contents
+    # ------------------------------------------------
+    # Values on the transects are that of the closest shapefile point feature
+
+    #--Climatic forcing
+    # 5 Fields: Surge, WindSpeed, WavePeriod, WaveHeight
+    # Matrix format: transect_count x 5 x max_transect_length  
+    climatic_forcing_dataset = f['climatic_forcing']
+
+    #--Soil type
+    #mud=0, sand=1, gravel=2, unknown=-1
+    # Matrix size: transect_count x max_transect_length
+    soil_types_dataset = f['soil_type']
+
+    #--Soil properties:
+    # 0-mud: DryDensty, ErosionCst
+    # 1-sand: SedSize, DuneHeight, BermHeight, BermLength, ForshrSlop
+    # 2-gravel: same as sand
+    # Matrix size: transect_count x 5 x max_transect_length
+    soil_properties_dataset = f['soil_properties']
+
+    #--Habitat types:  !! This is different from the sheet and the content of the file. 2 is seagrass, not reef!!
+    #   <0 = no habitats
+    #   0 = kelp #   1 = eelgrass #   2 = underwater structure/oyster reef
+    #   3 = coral reef #   4 = levee #   5 = beach #   6 = seawall
+    #   7 = marsh #   8 = mangrove #   9 = terrestrial structure
+    # Matrix size: transect_count x max_transect_length
+    habitat_types_dataset = f['habitat_type']
+
+    #--Habitat properties for each habitat type:
+    #   <0: no data
+    #   0: StemHeight=0, StemDiam=1, StemDensty=2, StemDrag=3, Type=4
+    #   1: same as 1
+    #   2: ShoreDist=2, Height=3, BaseWidth=4, CrestWidth=5
+    #   3: FricCoverd=1, FricUncov=2, SLRKeepUp=3, DegrUncov=4
+    #   4: Type=1, Height=2, SideSlope=3, OvertopLim=4
+    #   5: SedSize=1, ForshrSlop=2, BermLength=3, BermHeight=4, DuneHeight=5
+    #   6: same as 5
+    #   7: SurfRough=1, SurRedFact=2, StemHeight=3, StemDiam=4, StemDensty=5, StemDrag=6
+    #   8: a lot...
+    #   9: Type=1, TransParam=2, Height=3habitat_properties_dataset = f['habitat_properties']
+    habitat_properties_dataset = f['habitat_properties']
+
+    #--Bathymetry in meters
+    # Matrix size: transect_count x max_transect_length
+    bathymetry_dataset = f['bathymetry']
+    # row, column (I, J resp.) position of each transect point in the raster matrix when extracted as a numpy array
+    # Matrix size: transect_count x 2 (1st index is I, 2nd is J) x max_transect_length
+
+    #--Index of the datapoint that corresponds to the shore pixel
+    positions_dataset = f['ij_positions']
+    # Matrix size: transect_count x max_transect_length
+
+    # Name of the "subdirectory" that contains the indices and coordinate limits described below
+    shore_dataset = f['shore_index']
+
+    # First and last indices of the valid transect points (that are not nodata)
+    limit_group = f['limits']
+    # First index should be 0, and second is the last index before a nodata point.
+    # Matrix size: transect_count x 2 (start, end) x max_transect_length
+    indices_limit_dataset = limit_group['indices']
+
+    #--Coordinates of the first transect point (index 0, start point) and the last valid transect point (end point)
+    coordinates_limits_dataset = limit_group['ij_coordinates']
+
+    # ------------------------------------------------
+    # Extract content
+    # ------------------------------------------------
+
+    #-- Climatic forcing
+    #transect_count, forcing, transect_length = climatic_forcing_dataset.shape
+    Ho=8;To=12;Uo=0;Surge=0; #Default inputs for now
+
+    # 5 Fields: Surge, WindSpeed, WavePeriod, WaveHeight
+    # Matrix format: transect_count x 5 x max_transect_length
+
+    #   transect_count: number of transects
+    #   max_transect_length: maximum possible length of a transect in pixels
+    #   max_habitat_field_count: maximum number of fields for habitats
+    #   max_soil_field_count: maximum number of fields for soil types
+    transect_count, habitat_fields, transect_length = habitat_properties_dataset.shape
+    transect_count, soil_fields, transect_length = soil_properties_dataset.shape
+
+    # Creating the numpy arrays that will store all the information for a single transect
+    hab_types = numpy.array(transect_length)
+    hab_properties = numpy.array((habitat_fields, transect_length))
+    bathymetry = numpy.array(transect_length)
+    positions = numpy.array((transect_length, 2))
+    soil_types = numpy.array(transect_length)
+    soil_properties = numpy.array((soil_fields, transect_length))
+    indices_limit = numpy.array((transect_length, 2))
+    coordinates_limits = numpy.array((transect_length, 4))
+
+    print('Number of transects', transect_count)
+    print('Maximum number of habitat fields', habitat_fields)
+    print('Maximum number of soil fields', soil_fields)
+    print('Maximum transect length', transect_length)
+
+    # Open field indices file, so that we can access a specific field by name
+    field_indices_uri = os.path.join(args['intermediate_dir'], 'field_indices')
+    field_indices = json.load(open(field_indices_uri)) # Open field indices info
+
+    # Field indices
+    print('')
+    print('')
+
+    for habitat_type in field_indices:
+        habitat = field_indices[habitat_type]
+        print('habitat', habitat)
+        #print('habitat ' + str(habitat_type) + ' has ' + \
+        #      str(len(habitat['fields'])) + ' fields:')
+
+        #for field in habitat['fields']:
+        #    print('field ' + str(field) + ' is ' + str(habitat['fields'][field]))
+        print('')
+
+
+    #--------------------------------------------------------------
+    #Run the loop
+    #--------------------------------------------------------------
+
+    nodata = -99999.0
+
+    #Initialize matrices
+    Depth=numpy.zeros((transect_count,transect_length))+nodata
+    Wave =numpy.zeros((transect_count,transect_length))+nodata
+    WaterLevel=numpy.zeros((transect_count,transect_length))+nodata
+    WaterLevel_NoVegetation=numpy.zeros((transect_count,transect_length))+nodata
+    VeloBottom=numpy.zeros((transect_count,transect_length))+nodata
+    Undertow=numpy.zeros((transect_count,transect_length))+nodata
+    SedTrsprt=numpy.zeros((transect_count,transect_length))+nodata
+
+
+
+    return biophysical_data_uri
+
+
+#def reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri):
+#    LOGGER.debug('Reconstructing 2D shore maps...')
+#    pass
+
+
 
 def store_tidal_information(args, hdf5_files, habitat_nodata):
 
