@@ -583,9 +583,6 @@ def compute_transects(args):
 def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
-    biophysical_data_uri = \
-        os.path.join(args['intermediate_dir'], 'output.h5')
-
     print('Loading HDF5 files...')
 
     f = h5py.File(transect_data_uri) # Open the HDF5 file
@@ -732,6 +729,353 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     SedTrsprt=numpy.zeros((transect_count,transect_length))+nodata
 
 
+    #Read data for each transect, one at a time
+    for transect in range(transect_count):
+        print('')
+        print('transect', transect_count - transect)
+
+        # Extract first and last index of the valid portion of the current transect
+        start = indices_limit_dataset[transect,0]   # First index is the most landward point
+        end = indices_limit_dataset[transect,1] # Second index is the most seaward point
+        # Note: For bad data, the most landard point could be in the ocean or the most
+        #   seaward point could be on land!!!
+        Length=end-start;Start=start;End=end;
+        print('index limits (start, end):', (Start, End))
+        
+        # Extracting the valid portion (Start:End) of habitat properties
+        hab_properties = habitat_properties_dataset[transect,:,Start:End]
+        # The resulting matrix is of shape transect_count x 5 x max_transect_length
+        # The middle index (1) is the maximum number of habitat fields:
+        print('maximum habitat property fields:', hab_properties.shape[1])
+        
+        unique_types = numpy.unique(hab_types)  # Compute the unique habitats
+
+        #Bathymetry
+        bathymetry = bathymetry_dataset[transect,Start:End]
+        max_depth = numpy.amax(bathymetry)
+        min_depth = numpy.amin(bathymetry)
+        Shore=Indexed(bathymetry,0) #locate zero
+        MinDepth=Indexed(bathymetry,min_depth)
+        print('bathymetry (min, max)', (min_depth, max_depth))
+
+        if min_depth>-1 or abs(MinDepth-Shore)<2: #If min depth is too small and there aren't enough points, we don't run
+                H=num.zeros(len(bathymetry))
+        else: #Run the model
+            #------Read habitat
+            seagrass = 2
+            
+            # Load the habitat types along the valid portion (Start:End) of the current transect
+            hab_types = habitat_types_dataset[transect,Start:End]
+            habitat_types = numpy.unique(hab_types)#Different types of habitats
+            habitat_types = habitat_types[habitat_types>=0]#Remove 'nodata' where theres no habitat
+            
+            positions = positions_dataset[transect,Start:End]
+            start = [positions[0][0]]
+            start.append(positions[0][1])
+            end = [positions[-1][0]]
+            end.append(positions[-1][1])
+            coordinates_limits = coordinates_limits_dataset[transect,:]
+            print('coord limits:', \
+                  (coordinates_limits[0], coordinates_limits[1]), \
+                  (coordinates_limits[2], coordinates_limits[3]))
+        
+            #--Collect vegetation properties 
+            #Zero the phys. char
+            RootDiam=numpy.zeros(Length);    RootHeight=numpy.zeros(Length);
+            RootDens=numpy.zeros(Length);    RootCd=numpy.zeros(Length);
+            TrunkDiam=numpy.zeros(Length);    TrunkHeight=numpy.zeros(Length);
+            TrunkDens=numpy.zeros(Length);    TrunkCd=numpy.zeros(Length);
+            CanopDiam=numpy.zeros(Length);    CanopHeight=numpy.zeros(Length);
+            CanopDens=numpy.zeros(Length);    CanopCd=numpy.zeros(Length)
+        
+            if habitat_types.size: #If there is a habitat in the profile
+                seagrass=2
+                HabType=[];#Collect the names of the different habitats
+                if seagrass in habitat_types:
+                    HabType.append('Seagrass')
+                    seagrass_location = numpy.where(hab_types == seagrass)
+                
+                    #Seagrass physical parameters - 'field_indices' dictionary
+                    if seagrass_location[0].size:
+                        Sg_diameter_id = field_indices[str(seagrass)]['fields']['stemdiam']
+                        Sg_diameters = hab_properties[Sg_diameter_id][seagrass_location]
+                        mean_stem_diameter = numpy.average(Sg_diameters)
+                        print('   Seagrass detected. Mean stem diameter: ' + \
+                            str(mean_stem_diameter) + ' m')
+                
+                        Sg_height_id = field_indices[str(seagrass)]['fields']['stemheight']
+                        Sg_height = hab_properties[Sg_height_id][seagrass_location]
+                        mean_stem_height = numpy.average(Sg_height)
+                        print('                                    Mean stem height: ' + \
+                            str(mean_stem_height) + ' m')
+                        
+                        Sg_density_id = field_indices[str(seagrass)]['fields']['stemdensty']
+                        Sg_density = hab_properties[Sg_density_id][seagrass_location]
+                        mean_stem_density = numpy.average(Sg_density)
+                        print('                                    Mean stem density: ' + \
+                              str(mean_stem_density) + ' #/m^2')
+                        
+                        Sg_drag_id = field_indices[str(seagrass)]['fields']['stemdrag']
+                        Sg_drag = hab_properties[Sg_drag_id][seagrass_location]
+                        mean_stem_drag = numpy.average(Sg_drag)
+                        print('                                    Mean stem drag: ' + \
+                            str(mean_stem_drag) )
+                        
+                        RootDiam[seagrass_location]=Sg_diameters
+                        RootHeight[seagrass_location]=Sg_height
+                        RootDens[seagrass_location]=Sg_density
+                        RootCd[seagrass_location]=Sg_drag
+                        
+                print('unique habitat types:', HabType)
+                    
+            #Collect reef properties
+            
+            #Collect Oyster Reef properties
+            Oyster={}
+            
+            #Soil types and properties   
+            soil_types = soil_types_dataset[transect,Start:End]
+            soil_properties = soil_properties_dataset[transect,:,Start:End]
+            print('maximum soil property fields:', soil_properties.shape[1])
+            print('soil types', numpy.unique(soil_types)) #, soil_types)
+            
+            #Prepare to run the model
+            dx=20;
+            import CPf_SignalSmooth as SignalSmooth
+            smoothing_pct=10.0
+            smoothing_pct=smoothing_pct/100;
+            
+            #Resample the input data
+            Xold=range(0,dx*len(bathymetry),dx)
+            Xnew=range(0,Xold[-1]+1)
+            length=len(Xnew)
+            from scipy import interpolate
+            fintp=interpolate.interp1d(Xold,bathymetry, kind='linear')
+            bath=fintp(Xnew)
+            bath_sm=SignalSmooth.smooth(bath,len(bath)*smoothing_pct,'hanning') 
+            shore=Indexed(bath_sm,0) #Locate zero in the new vector
+            
+            fintp=interpolate.interp1d(Xold,RootDiam, kind='nearest')
+            RtDiam=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,RootHeight, kind='nearest')
+            RtHeight=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,RootDens, kind='nearest')
+            RtDens=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,RootCd, kind='nearest')
+            RtCd=fintp(Xnew)
+            
+            fintp=interpolate.interp1d(Xold,TrunkDiam, kind='nearest')
+            TkDiam=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,TrunkHeight, kind='nearest')
+            TkHeight=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,TrunkDens, kind='nearest')
+            TkDens=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,TrunkCd, kind='nearest')
+            TkCd=fintp(Xnew)
+        
+            fintp=interpolate.interp1d(Xold,CanopDiam, kind='nearest')
+            CpDiam=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,CanopHeight, kind='nearest')
+            CpHeight=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,CanopDens, kind='nearest')
+            CpDens=fintp(Xnew)
+            fintp=interpolate.interp1d(Xold,CanopCd, kind='nearest')
+            CpCd=fintp(Xnew)
+        
+            hab_types[hab_types==nodata]=-1
+            fintp=interpolate.interp1d(Xold,hab_types, kind='nearest')
+            Sr=fintp(Xnew)
+            
+            #Check to see if we need to flip the data
+            flip=0
+            if bath_sm[0]>bath_sm[-1]:
+                bath_sm=bath_sm[::-1];        flip=1
+                RtDiam=RtDiam[::-1];        RtHeight=RtHeight[::-1]
+                RtDens=RtDens[::-1];        RtCd=RtCd[::-1]
+                TkDiam=TkDiam[::-1];        TkHeight=TkHeight[::-1]
+                TkDens=TkDens[::-1];        TkCd=TkCd[::-1]
+                CpDiam=CpDiam[::-1];        CpHeight=CpHeight[::-1]
+                CpDens=CpDens[::-1];        CpCd=CpCd[::-1]
+                Sr=Sr[::-1]
+                
+            #Store hab char. into dic
+            PlantsPhysChar={};Roots={};Trunks={};Canops={}
+            Roots["RootDiam"]=RtDiam;    Roots["RootHeight"]=RtHeight
+            Roots["RootDens"]=RtDens;    Roots["RootCd"]=RtCd
+            Trunks["TrunkDiam"]=TkDiam;    Trunks["TrunkHeight"]=TkHeight
+            Trunks["TrunkDens"]=TkDens;    Trunks["TrunkCd"]=TkCd
+            Canops["CanopDiam"]=CpDiam;    Canops["CanopHeight"]=CpHeight
+            Canops["CanopDens"]=CpDens;    Canops["CanopCd"]=CpCd
+            #Final dictionary
+            PlantsPhysChar['Roots']=Roots.copy()
+            PlantsPhysChar['Trunks']=Trunks.copy()
+            PlantsPhysChar['Canops']=Canops.copy()
+            PlantsPhysChar['Oyster']=Oyster.copy()
+            
+            #Define friction coeff
+            #   0 = kelp #   1 = eelgrass #   2 = underwater structure/oyster reef
+            #   3 = coral reef #   4 = levee #   5 = beach #   6 = seawall
+            #   7 = marsh #   8 = mangrove #   9 = terrestrial structure
+            Cf=numpy.zeros(length)+.01
+            if flip==1:
+                Cf=Cf[::-1]
+                
+            #Compute Wave Height        
+            Xnew=num.array(Xnew)
+            H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
+        
+            #Compute maximum wave height
+            k,C,Cg=Fast_k(To,-bath_sm)
+            Hmx=0.1*(2.0*pi/k)*tanh((-bath_sm+Surge)*k);#Max wave height - Miche criterion
+        
+            #Wave Breaking information
+            temp,temp,xb,hb,Hb,temp,temp=Runup_ErCoral(Xnew,-bath_sm,H,Ho,H*0,H*0,To,.2,1.0/10,Sr)
+            loc,Hb=FindBreaker(Xnew,-bath_sm,H,To,Sr)
+            Transport=nanmean(Ic[loc:-1])
+            
+            #Flip the vectors back
+            if flip==1:
+                H=H[::-1];Eta=Eta[::-1];Etanv=Etanv[::-1];
+                Ubot=Ubot[::-1];Ur=Ur[::-1];Ic=Ic[::-1]
+                h=bath_sm[::-1];X=Xnew[::-1]
+                
+            #Interpolate back to dx and save in matrix
+            lx=len(Xold)
+            fintp=interpolate.interp1d(X,h, kind='linear')
+            h_save=fintp(Xold)
+            Depth[transect,0:lx]=h_save
+            
+            fintp=interpolate.interp1d(X,H, kind='linear')
+            H_save=fintp(Xold)
+            Wave[transect,0:lx]=H_save
+
+            fintp=interpolate.interp1d(X,Eta, kind='linear')
+            Eta_save=fintp(Xold)
+            WaterLevel[transect,0:lx]=Eta_save
+
+            fintp=interpolate.interp1d(X,Etanv, kind='linear')
+            Etanv_save=fintp(Xold)
+            WaterLevel_NoVegetation[transect,0:lx]=Etanv_save
+
+            fintp=interpolate.interp1d(X,Ubot, kind='linear')
+            Ubot_save=fintp(Xold)
+            VeloBottom[transect,0:lx]=Ubot_save
+
+            fintp=interpolate.interp1d(X,Ur, kind='linear')
+            Ur_save=fintp(Xold)
+            Undertow[transect,0:lx]=Ur_save
+
+            fintp=interpolate.interp1d(X,Ic, kind='linear')
+            Ic_save=fintp(Xold)
+            SedTrsprt[transect,0:lx]=Ic_save
+            
+            #Compute beach erosion
+            Beach=-1;Struct=-1
+            if Beach==1:
+                g=9.81;rho=1024.0;Gam=0.78;
+                TD=Dur;Lo=g*To**2.0/(2.0*pi);
+                Co=g*To/(2.0*pi);#deep water phase speed with period
+                
+                Rs0,Rs1,xb,hb,Hb,Etapr,Hpr=Runup_ErCoral(Xnew,-bath_sm,H,Ho,Eta,Eta,To,A,m,Sr)
+                #Quick Estimate
+                TS=(320.0*(Hb**(3.0/2)/(g**.5*A**3.0))/(1.0+hb/(BermH_P+DuneH_P)+(m*xb)/hb))/3600.0;#erosion response time scale ).
+                BetaKD=2.0*pi*(TS/TD)
+                expr="num.exp(-2.0*x/BetaKD)-num.cos(2.0*x)+(1.0/BetaKD)*num.sin(2.0*x)" # solve this numerically
+                fn=eval("lambda x: "+expr)
+                z=FindRootKD(fn,pi,pi/2,BetaKD) # find zero in function,initial guess from K&D
+                Ro,Rinfo,m0=Erosion_Quick(Ho,To,Surge[-1]+Rs0,BermH_P,DuneH_P,BermW_P,Dur,m,A,z) #Quick estimate
+                
+                #Erosion using waves
+                TS=(320.0*(Hb**(3.0/2)/(g**.5*A**3.0))/(1.0+hb/(BermH_P+DuneH_P)+(m*xb)/hb))/3600.0;#erosion response time scale ).
+                BetaKD=2.0*pi*(TS/TD)
+                z=FindRootKD(fn,pi,pi/2,BetaKD) # find zero in function,initial guess from K&D
+                R,Rinf,mo=ErosionFunction(A,m,xb,hb,Hb,Surge1[-1]+Rs0,BermH_P,DuneH_P,BermW_P,Dur,z)
+                
+                #Present
+                Rsp0,Rsp1,xb1,hb1,Hb1,Etapr1,Hpr1=Runup_ErCoral(X1,-Z1,Hp,Ho,Eta0,Etap,To,A,m,Sr1)
+                TS=(320.0*(Hb1**(3.0/2)/(g**.5*A**3.0))/(1.0+hb1/(BermH_P+DuneH_P)+(m*xb1)/hb1))/3600.0;#erosion response time scale ).
+                BetaKD=2.0*pi*(TS/TD)
+                z=FindRootKD(fn,pi,pi/2,BetaKD) # find zero in function,initial guess from K&D
+                R1,Rinf1,m1=ErosionFunction(A,m,xb1,hb1,Hb1,Surge1[-1]+Rsp1,BermH_P,DuneH_P,BermW_P,Dur,z)
+        
+                Ro=round(Ro,2);R=round(R,2);R1=round(R1,2);
+                
+            #Compute mud scour
+            if Beach==0:
+                if Mgloc1.any(): #If there is any mangroves present at the site
+                    temp1=Mgloc1[0];
+                else:
+                    temp1=-1
+                
+                Mudy1=[];#Location of the muddy bed
+                if (temp1)>=0 or (temp2)>=0:
+                    MudBeg=min(temp1,temp2)
+                    Mudy1=arange(MudBeg,Xend1)
+                    
+                MErodeVol1=-1; #No mud erosion        
+                if len(Mudy1)>0:#Calculate mud erosion if there's a muddy bed
+                    Ubp=array(Ubp);
+                    Retreat1,Trms1,Tc1,Tw1,Te=MudErosion(Ubp[Mudy1]*0,Ubp[Mudy1],-Z1[Mudy1],To,me,Cm)
+                    ErodeLoc=find(Trms1>Te[0]); # indices where erosion rate greater than Threshold
+                    MErodeLen1=len(ErodeLoc) # erosion rate greater than threshold at each location shoreward of the shoreline (pre-management)
+                    if any(ErodeLoc)>0:
+                        MErodeVol1=trapz(Retreat1[ErodeLoc]/100.0,Mudy1[ErodeLoc],1.) # volume of mud eroded shoreward of the shoreline (m^3/m)
+                    else:
+                        MErodeVol1=0
+                    MErodeVol1=round(MErodeVol1,2)
+                    gp.addmessage('MudScour_Present='+str(MErodeVol1)+' m^3/m')
+        
+            if Struct==1:
+                #Current conditions
+                Qp=150;htoe=round(-Z1[-1]+Etap[-1],1);Hwp=htoe
+                while Qp>10:
+                    Hwp=Hwp+.1;
+                    temp,Qp,msg=SeawallOvertop(Hp[-1],To,htoe,Hwp)
+                Fp=ForceSeawall(Hp[-1],To,-Z1[-1])
+                Fp=round(Fp,2);Hwp=round(Hwp,2)
+                gp.addmessage('Wall_Present='+str(Hwp)+' m; Force on wall='+str(Fp)+' kN/m')
+        
+
+    # Saving data in HDF5
+    biophysical_data_uri = \
+        os.path.join(args['intermediate_dir'], 'output.h5')
+
+    f = h5py.File(biophysical_data_uri, 'w') # Create new HDF5 file
+
+    # Creating the placeholders that will hold the matrices
+    Depth_dataset = \
+        f.create_dataset("Depth", Depth.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    Wave_dataset = \
+        f.create_dataset("Wave", Wave.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    WaterLevel_dataset = \
+        f.create_dataset("WaterLevel", WaterLevel.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    WaterLevel_NoVegetation_dataset = \
+        f.create_dataset("WaterLevel_NoVegetation", WaterLevel_NoVegetation.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    VeloBottom_dataset = \
+        f.create_dataset("VeloBottom", VeloBottom.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    Undertow_dataset = \
+        f.create_dataset("Undertow", Undertow.shape, \
+            compression = 'gzip', fillvalue = nodata)
+    SedTrsprt_dataset = \
+        f.create_dataset("SedTrsprt", SedTrsprt.shape, \
+            compression = 'gzip', fillvalue = nodata)
+
+    # Saving the matrices on file
+    Depth_dataset[...] = Depth[...]
+    Wave_dataset[...] = Wave[...]
+    WaterLevel_dataset[...] = WaterLevel[...]
+    WaterLevel_NoVegetation_dataset[...] = WaterLevel_NoVegetation[...]
+    VeloBottom_dataset[...] = VeloBottom[...]
+    Undertow_dataset[...] = Undertow[...]
+    SedTrsprt_dataset[...] = SedTrsprt[...]
+
+    # Close your file at the end, or it could be invalid.
+    f.close()
 
     return biophysical_data_uri
 
