@@ -47,11 +47,13 @@ def execute(args):
         return
 
     # Nearshore wave and erosion model
+#    biophysical_data_uri = \
+#        compute_nearshore_and_wave_erosion(transect_data_uri, args)
     biophysical_data_uri = \
-        compute_nearshore_and_wave_erosion(transect_data_uri, args)
+        os.path.join(args['intermediate_dir'], 'output.h5')
 
     # Reconstruct 2D shore maps from biophysical data 
-#    reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri)
+    reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri)
 
     # Debug purposes
 #    p = cProfile.Profile()
@@ -730,7 +732,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(transect_count):
+    for transect in range(3500,3600): #transect_count):
         print('')
         print('transect', transect_count - transect)
 
@@ -1080,9 +1082,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     return biophysical_data_uri
 
 
-#def reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri):
-#    LOGGER.debug('Reconstructing 2D shore maps...')
-#    pass
+def reconstruct_2D_shore_map(transect_data_uri, biophysical_data_uri):
+    LOGGER.debug('Reconstructing 2D shore maps...')
 
 
 
