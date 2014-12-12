@@ -38,19 +38,19 @@ def execute(args):
     logging.info('executing coastal_protection_core')
 
     # Profile generator
-#    transect_data_uri = compute_transects(args)
-    transect_data_uri = \
-        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    transect_data_uri = compute_transects(args)
+#    transect_data_uri = \
+#        os.path.join(args['intermediate_dir'], 'transect_data.h5')
 
     # Stop there if the user only wants to run the profile generator 
     if args['modules_to_run'] == 'Profile generator only':
         return
 
     # Nearshore wave and erosion model
-#    biophysical_data_uri = \
-#        compute_nearshore_and_wave_erosion(transect_data_uri, args)
     biophysical_data_uri = \
-        os.path.join(args['intermediate_dir'], 'output.h5')
+        compute_nearshore_and_wave_erosion(transect_data_uri, args)
+#    biophysical_data_uri = \
+#        os.path.join(args['intermediate_dir'], 'output.h5')
 
     # Reconstruct 2D shore maps from biophysical data 
     reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri)
@@ -1192,9 +1192,9 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
 
     # Build the interpolation structures
-    X = np.array([])
-    Y = np.array([])
-    Z = np.array([])
+    X = []
+    Y = []
+    Z = []
 
     transect_footprint.clear() # used to remove coordinate duplicates
 
@@ -1206,6 +1206,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
         start = indices_limit_dataset[transect,0]
         end = indices_limit_dataset[transect,1]
+
+        # Clip the reansect at the first occurence of NaN
+        wave_array = wave_dataset[transect,start:end]
+        first_nan = np.where(np.isnan(wave_array))[0]
+        if first_nan.size:
+            end = first_nan[0]
 
         # Interpolate delta_y: add key values for x and y
         # First value is 0
@@ -1232,15 +1238,30 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         delta_y = np.array(delta_y)
         x = np.array(x)
 
+        assert not np.isnan(delta_y).any()
+
         # Run the interpolation:
         f = interpolate.interp1d(x, delta_y, 'linear')
 
         inerpolation_range = range(start, end)
         interpolated_delta_y = f(inerpolation_range)
 
+        assert not np.isnan(interpolated_delta_y).any()
+
         # Compute new transect values:
         corrected_transect_values = \
             interpolated_delta_y + wave_dataset[transect,start:end]
+
+        print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+
+
+        if np.isnan(corrected_transect_values).any():
+            print('interpolated_delta_y', interpolated_delta_y)
+            print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('corrected_transect_values', corrected_transect_values)
+            print('any', np.isnan(corrected_transect_values).any(), \
+                'count', np.sum(np.isnan(corrected_transect_values).any()))
+            assert not np.isnan(corrected_transect_values).any()
 
         # Put the values in structures for 2d interpolation:
         coordinates = coordinates_dataset[transect,:]
@@ -1252,10 +1273,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
 
         # Remove coordinate duplicates
-        unique_X = []
-        unique_Y = []
-        unique_Z = []
-
         for index in range(coordinates[0].size):
             coord = (coordinates[0][index], coordinates[1][index])
 
@@ -1264,58 +1281,69 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
                 # Check if it's a new point
                 if coord not in transect_footprint:
-                    unique_X.append(coordinates[0][index])
-                    unique_Y.append(coordinates[1][index])
-                    unique_Z.append(corrected_transect_values[index])
+                    X.append(coordinates[0][index])
+                    Y.append(coordinates[1][index])
+                    assert not math.isnan(corrected_transect_values[index])
+                    Z.append(corrected_transect_values[index])
 
                     transect_footprint.add(coord)
 
-        unique_X = np.array(unique_X)
-        unique_Y = np.array(unique_Y)
-        unique_Z = np.array(unique_Z)
-
-        X = np.concatenate([X, unique_X])
-        Y = np.concatenate([Y, unique_Y])
-        Z = np.concatenate([Z, unique_Z])
-
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
 
     # Now, we're ready to invoke the interpolation function
-    print('X', X.size, 'Y', Y.size, 'Z', Z.size)
+    # TODO: Fix that...
+    print('Building the interpolation function for', X.size, 'points...')
+    assert not np.isnan(Z).any()
     F = interpolate.interp2d(X, Y, Z, kind='linear')
 
-#    # Build the array of points onto which the function will interpolate:
-#    # For now, all the points with bathymetry between 1 and 10 meters:
-#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-#    band = bathymetry.GetRasterBand(1)
-#    bathymetry_array = band.ReadAsArray()
-#
-#    min_depth = 1   # Minimum interpolation depth
-#    max_depth = 10  # Maximum interpolation depth
-#    
-#    interp_I, interp_J = \
-#        np.where((bathymetry_array>=min_depth) & \
-#            (bathymetry_array<=max_depth))
-#
-#    # Compute the actual interpolation
-#    surface = F(interp_I, interp_J)
-#
-#    # Save the values in a raster
-#    wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
-#        'wave_interpolation.tif')
-#    
-#    bathymetry_nodata = \
-#        raster_utils.get_nodata_from_uri(args['bathymetry_raster_uri'])
-#    
-#    raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
-#        wave_interpolation_uri, 'GTIFF', shore_nodata, gdal.GDT_Float64)
-#    
-#    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
-#    wave_band = wave_raster.GetRasterBand(1)
-#    wave_array = wave_band.ReadAsArray()
-#
-#    wave_array[(interp_I, interp_J)] = surface
-#
-#    wave_band.WriteArray(wave_array)
+    # Build the array of points onto which the function will interpolate:
+    # For now, all the points with bathymetry between 1 and 10 meters:
+    interp_I, interp_J = np.where(transect_mask)
+
+    interp_I = np.unique(interp_I)
+    interp_J = np.unique(interp_J)
+
+    # Compute the actual interpolation
+    print('Interpolating for', interp_I.size * interp_J.size, 'points...')
+    surface = F(interp_I, interp_J)
+
+    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
+
+    # Save the values in a raster
+    wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
+        'wave_interpolation.tif')
+    
+    print('Saving data to', wave_interpolation_uri)
+
+    bathymetry_nodata = \
+        raster_utils.get_nodata_from_uri(args['bathymetry_raster_uri'])
+    
+    raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
+        wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
+
+    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
+    wave_band = wave_raster.GetRasterBand(1)
+    wave_array = wave_band.ReadAsArray()
+
+    II, JJ = np.meshgrid(interp_I, interp_J)
+
+    wave_array[(II, JJ)] = surface
+
+    wave_array[~transect_mask] = bathymetry_nodata
+
+    wave_array[([0], [0])] = 1.
+
+    wave_band.WriteArray(wave_array)
+
+    wave_array = None
+    wave_band = None
+    wave_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(wave_raster)
+    wave_raster = None
+
+    raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
 
 
 
