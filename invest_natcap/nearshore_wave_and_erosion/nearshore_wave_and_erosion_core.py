@@ -1143,16 +1143,22 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
                 intersection_count += 1
 
                 # Already an intersection: append to existing list
-                if transect in intersection:
+                if coord in intersection:
                     intersection[coord].append(wave_array[index])
-                    intersected_transects.append( \
-                        (coord, index, wave_array[index], start, end))
+                    
+                    if transect in intersected_transects:
+                        intersected_transects[transect].append( \
+                            (coord, index, wave_array[index]))
+                    else:
+                        intersected_transects[transect] = \
+                            [(coord, index, wave_array[index])]                        
+                        intersecting_transect_count += 1
 
                 # Otherwise, create a new list
                 else: 
                     intersection[coord] = [wave_array[index]]
-                    intersected_transects = \
-                        [(coord, index, wave_array[index], start, end)]
+                    intersected_transects[transect] = \
+                        [(coord, index, wave_array[index])]
                     intersecting_transect_count += 1
 
             # No intersection here, update footprint
@@ -1169,50 +1175,114 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         intersection[i] = \
             sum(intersection[i]) / len(intersection[i])
 
-#    # Build the interpolation structures
-#    X = np.array([])
-#    Y = np.array([])
-#    Z = np.array([])
-#    for transect in intersected_transects:
-#
-#        current_transect = intersected_transects[transect]
-#
-#        coord, index, value, start, end = current_transect[i]
-#
-#        # Interpolate delta_y: add key values for x and y
-#        # First value is 0
-#        delta_y = [0.]  # y
-#        x = [start] # x
-#        
-#        # Fill in subsequent values using intersection data
-#        for i in current_transect:
-#            delta_y.append(intersection[coord] - value)
-#            x.append(index)
-#
-#        # Append last value if necessary
-#        if x[-1] != end-1:
-#            delta_y.append(0.)
-#            x.append(end-1)
-#
-#        delta_y = np.array(delta_y)
-#        x = np.array(x)
-#
-#        # Run the interpolation:
-#        f = interpolation.interp1d(x, delta_y, 'linear')
-#
-#        corrected_transect_values = f(range(start, end))
-#
-#        # Compute new transect values:
-#        corrected_transect_values = delta_y + wave_dataset[transect,start:end]
-#
-#        # Put the values in structures for 2d interpolation:
-#        X = np.concatenate(X, x)
-#        Y = np.concatenate(Y, delta_y)
-#        Z = np.concatenate(Z, corrected_transect_values)
-#
-#    # Now, we're ready to invoke the interpolation function
-#    F = interpolate.interp2d(X, Y, Z, kind='linear')
-#
+
+    # Build mask to remove transect portions that are too far 
+    # from the area we're interested in
+    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
+    band = bathymetry.GetRasterBand(1)
+    transect_mask = band.ReadAsArray()
+
+    min_bathy = -10   # Minimum interpolation depth
+    max_bathy = 1  # Maximum interpolation depth
+
+    transect_mask[transect_mask <= min_bathy] = min_bathy - 1
+    transect_mask[transect_mask >= max_bathy] = min_bathy - 1
+
+    transect_mask = transect_mask != min_bathy - 1
+
+
+    # Build the interpolation structures
+    X = np.array([])
+    Y = np.array([])
+    Z = np.array([])
+
+    transect_footprint.clear() # used to remove coordinate duplicates
+
+    for transect in intersected_transects:
+
+#        print('intersected transect', transect)
+
+        current_transect = intersected_transects[transect]
+
+        start = indices_limit_dataset[transect,0]
+        end = indices_limit_dataset[transect,1]
+
+        # Interpolate delta_y: add key values for x and y
+        # First value is 0
+        delta_y = [0.]  # y
+        x = [start] # x
+            
+#        print('current_transect', current_transect)
+
+        for i in range(len(current_transect)):
+
+            # Fill in subsequent values using intersection data
+            coord, index, value = current_transect[i]
+
+#            print('    ', i, index, value)
+
+            delta_y.append(intersection[coord] - value)
+            x.append(index)
+
+        # Append last value if necessary
+        if x[-1] != end-1:
+            delta_y.append(0.)
+            x.append(end-1)
+
+        delta_y = np.array(delta_y)
+        x = np.array(x)
+
+        # Run the interpolation:
+        f = interpolate.interp1d(x, delta_y, 'linear')
+
+        inerpolation_range = range(start, end)
+        interpolated_delta_y = f(inerpolation_range)
+
+        # Compute new transect values:
+        corrected_transect_values = \
+            interpolated_delta_y + wave_dataset[transect,start:end]
+
+        # Put the values in structures for 2d interpolation:
+        coordinates = coordinates_dataset[transect,:]
+        coordinates = (coordinates[0][start:end], coordinates[1][start:end])
+
+#        print('start, end', start, end)
+#        print('X size', X.size, 'X coordinates size', coordinates[0].size)
+#        print('corrected_transect_values', corrected_transect_values.size)
+
+
+        # Remove coordinate duplicates
+        unique_X = []
+        unique_Y = []
+        unique_Z = []
+
+        for index in range(coordinates[0].size):
+            coord = (coordinates[0][index], coordinates[1][index])
+
+            # Check if the point is not too far off
+            if transect_mask[coord]:
+
+                # Check if it's a new point
+                if coord not in transect_footprint:
+                    unique_X.append(coordinates[0][index])
+                    unique_Y.append(coordinates[1][index])
+                    unique_Z.append(corrected_transect_values[index])
+
+                    transect_footprint.add(coord)
+
+        unique_X = np.array(unique_X)
+        unique_Y = np.array(unique_Y)
+        unique_Z = np.array(unique_Z)
+
+        X = np.concatenate([X, unique_X])
+        Y = np.concatenate([Y, unique_Y])
+        Z = np.concatenate([Z, unique_Z])
+
+
+    # Now, we're ready to invoke the interpolation function
+    print('X', X.size, 'Y', Y.size, 'Z', Z.size)
+    F = interpolate.interp2d(X, Y, Z, kind='linear')
+
 #    # Build the array of points onto which the function will interpolate:
 #    # For now, all the points with bathymetry between 1 and 10 meters:
 #    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
