@@ -38,19 +38,19 @@ def execute(args):
     logging.info('executing coastal_protection_core')
 
     # Profile generator
-#    transect_data_uri = compute_transects(args)
-    transect_data_uri = \
-        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+    transect_data_uri = compute_transects(args)
+#    transect_data_uri = \
+#        os.path.join(args['intermediate_dir'], 'transect_data.h5')
 
     # Stop there if the user only wants to run the profile generator 
     if args['modules_to_run'] == 'Profile generator only':
         return
 
     # Nearshore wave and erosion model
-#    biophysical_data_uri = \
-#        compute_nearshore_and_wave_erosion(transect_data_uri, args)
     biophysical_data_uri = \
-        os.path.join(args['intermediate_dir'], 'output.h5')
+        compute_nearshore_and_wave_erosion(transect_data_uri, args)
+#    biophysical_data_uri = \
+#        os.path.join(args['intermediate_dir'], 'output.h5')
 
     # Reconstruct 2D shore maps from biophysical data 
     reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri)
@@ -302,6 +302,10 @@ def compute_transects(args):
     landmass_band = None
     landmass_raster = None
 
+    transect_count = tiles
+
+#    transect_count = 50
+#    tiles = 50
     
     args['tiles'] = tiles
 
@@ -314,7 +318,6 @@ def compute_transects(args):
     soil_field_count = args['soil_field_count']
     climatic_forcing_field_count = args['climatic_forcing_field_count']
     tidal_forcing_field_count = args['tidal_forcing_field_count']
-    transect_count = tiles
 
     # Creating HDF5 file that will store the transect data
     transect_data_uri = \
@@ -574,6 +577,8 @@ def compute_transects(args):
     #habitat_type_dataset = None
     #habitat_properties_dataset = None
     transect_data_file.close()
+
+    return transect_data_uri
     
 
 
@@ -586,6 +591,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
     print('Loading HDF5 files...')
+
+    assert os.path.isfile(transect_data_uri)
 
     f = h5py.File(transect_data_uri) # Open the HDF5 file
 
@@ -691,28 +698,28 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     indices_limit = numpy.array((transect_length, 2))
     coordinates_limits = numpy.array((transect_length, 4))
 
-    print('Number of transects', transect_count)
-    print('Maximum number of habitat fields', habitat_fields)
-    print('Maximum number of soil fields', soil_fields)
-    print('Maximum transect length', transect_length)
+#    print('Number of transects', transect_count)
+#    print('Maximum number of habitat fields', habitat_fields)
+#    print('Maximum number of soil fields', soil_fields)
+#    print('Maximum transect length', transect_length)
 
     # Open field indices file, so that we can access a specific field by name
     field_indices_uri = os.path.join(args['intermediate_dir'], 'field_indices')
     field_indices = json.load(open(field_indices_uri)) # Open field indices info
 
     # Field indices
-    print('')
-    print('')
+#    print('')
+#    print('')
 
     for habitat_type in field_indices:
         habitat = field_indices[habitat_type]
-        print('habitat', habitat)
+#        print('habitat', habitat)
         #print('habitat ' + str(habitat_type) + ' has ' + \
         #      str(len(habitat['fields'])) + ' fields:')
 
         #for field in habitat['fields']:
         #    print('field ' + str(field) + ' is ' + str(habitat['fields'][field]))
-        print('')
+#        print('')
 
 
     #--------------------------------------------------------------
@@ -732,9 +739,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(3500,3600): #transect_count):
-        print('')
-        print('transect', transect_count - transect)
+    for transect in range(transect_count):
+#        print('')
+        print('Computing nearshore waves and erosion on transect', transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -742,13 +749,13 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
         # Note: For bad data, the most landard point could be in the ocean or the most
         #   seaward point could be on land!!!
         Length=end-start;Start=start;End=end;
-        print('index limits (start, end):', (Start, End))
+#        print('index limits (start, end):', (Start, End))
         
         # Extracting the valid portion (Start:End) of habitat properties
         hab_properties = habitat_properties_dataset[transect,:,Start:End]
         # The resulting matrix is of shape transect_count x 5 x max_transect_length
         # The middle index (1) is the maximum number of habitat fields:
-        print('maximum habitat property fields:', hab_properties.shape[1])
+#        print('maximum habitat property fields:', hab_properties.shape[1])
         
         unique_types = numpy.unique(hab_types)  # Compute the unique habitats
 
@@ -758,7 +765,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
         min_depth = numpy.amin(bathymetry)
         Shore=Indexed(bathymetry,0) #locate zero
         MinDepth=Indexed(bathymetry,min_depth)
-        print('bathymetry (min, max)', (min_depth, max_depth))
+#        print('bathymetry (min, max)', (min_depth, max_depth))
 
         if min_depth>-1 or abs(MinDepth-Shore)<2: #If min depth is too small and there aren't enough points, we don't run
                 H=num.zeros(len(bathymetry))
@@ -777,9 +784,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
             end = [positions[-1][0]]
             end.append(positions[-1][1])
             coordinates_limits = coordinates_limits_dataset[transect,:]
-            print('coord limits:', \
-                  (coordinates_limits[0], coordinates_limits[1]), \
-                  (coordinates_limits[2], coordinates_limits[3]))
+#            print('coord limits:', \
+#                  (coordinates_limits[0], coordinates_limits[1]), \
+#                  (coordinates_limits[2], coordinates_limits[3]))
         
             #--Collect vegetation properties 
             #Zero the phys. char
@@ -802,33 +809,33 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
                         Sg_diameter_id = field_indices[str(seagrass)]['fields']['stemdiam']
                         Sg_diameters = hab_properties[Sg_diameter_id][seagrass_location]
                         mean_stem_diameter = numpy.average(Sg_diameters)
-                        print('   Seagrass detected. Mean stem diameter: ' + \
-                            str(mean_stem_diameter) + ' m')
+#                        print('   Seagrass detected. Mean stem diameter: ' + \
+#                            str(mean_stem_diameter) + ' m')
                 
                         Sg_height_id = field_indices[str(seagrass)]['fields']['stemheight']
                         Sg_height = hab_properties[Sg_height_id][seagrass_location]
                         mean_stem_height = numpy.average(Sg_height)
-                        print('                                    Mean stem height: ' + \
-                            str(mean_stem_height) + ' m')
+#                        print('                                    Mean stem height: ' + \
+#                            str(mean_stem_height) + ' m')
                         
                         Sg_density_id = field_indices[str(seagrass)]['fields']['stemdensty']
                         Sg_density = hab_properties[Sg_density_id][seagrass_location]
                         mean_stem_density = numpy.average(Sg_density)
-                        print('                                    Mean stem density: ' + \
-                              str(mean_stem_density) + ' #/m^2')
+#                        print('                                    Mean stem density: ' + \
+#                              str(mean_stem_density) + ' #/m^2')
                         
                         Sg_drag_id = field_indices[str(seagrass)]['fields']['stemdrag']
                         Sg_drag = hab_properties[Sg_drag_id][seagrass_location]
                         mean_stem_drag = numpy.average(Sg_drag)
-                        print('                                    Mean stem drag: ' + \
-                            str(mean_stem_drag) )
+#                        print('                                    Mean stem drag: ' + \
+#                            str(mean_stem_drag) )
                         
                         RootDiam[seagrass_location]=Sg_diameters
                         RootHeight[seagrass_location]=Sg_height
                         RootDens[seagrass_location]=Sg_density
                         RootCd[seagrass_location]=Sg_drag
                         
-                print('unique habitat types:', HabType)
+#                print('unique habitat types:', HabType)
                     
             #Collect reef properties
             
@@ -838,8 +845,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
             #Soil types and properties   
             soil_types = soil_types_dataset[transect,Start:End]
             soil_properties = soil_properties_dataset[transect,:,Start:End]
-            print('maximum soil property fields:', soil_properties.shape[1])
-            print('soil types', numpy.unique(soil_types)) #, soil_types)
+#            print('maximum soil property fields:', soil_properties.shape[1])
+#            print('soil types', numpy.unique(soil_types)) #, soil_types)
             
             #Prepare to run the model
             dx=20;
@@ -1102,7 +1109,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     (transect_count, max_transect_length) = wave_dataset.shape
 
     
-    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
+#    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
 
    
     wave_coordinates = np.zeros(coordinates_dataset.shape[1])
@@ -1118,7 +1125,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     intersecting_transect_count = 0
 
     for transect in range(transect_count):
-        print('transect', transect_count - transect)
+#        print('transect', transect_count - transect)
 
         # Extract and clean the transect from nan values
         start = indices_limit_dataset[transect,0]
@@ -1143,16 +1150,22 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
                 intersection_count += 1
 
                 # Already an intersection: append to existing list
-                if transect in intersection:
+                if coord in intersection:
                     intersection[coord].append(wave_array[index])
-                    intersected_transects.append( \
-                        (coord, index, wave_array[index], start, end))
+                    
+                    if transect in intersected_transects:
+                        intersected_transects[transect].append( \
+                            (coord, index, wave_array[index]))
+                    else:
+                        intersected_transects[transect] = \
+                            [(coord, index, wave_array[index])]                        
+                        intersecting_transect_count += 1
 
                 # Otherwise, create a new list
                 else: 
                     intersection[coord] = [wave_array[index]]
-                    intersected_transects = \
-                        [(coord, index, wave_array[index], start, end)]
+                    intersected_transects[transect] = \
+                        [(coord, index, wave_array[index])]
                     intersecting_transect_count += 1
 
             # No intersection here, update footprint
@@ -1169,83 +1182,175 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         intersection[i] = \
             sum(intersection[i]) / len(intersection[i])
 
-#    # Build the interpolation structures
-#    X = np.array([])
-#    Y = np.array([])
-#    Z = np.array([])
-#    for transect in intersected_transects:
-#
-#        current_transect = intersected_transects[transect]
-#
-#        coord, index, value, start, end = current_transect[i]
-#
-#        # Interpolate delta_y: add key values for x and y
-#        # First value is 0
-#        delta_y = [0.]  # y
-#        x = [start] # x
-#        
-#        # Fill in subsequent values using intersection data
-#        for i in current_transect:
-#            delta_y.append(intersection[coord] - value)
-#            x.append(index)
-#
-#        # Append last value if necessary
-#        if x[-1] != end-1:
-#            delta_y.append(0.)
-#            x.append(end-1)
-#
-#        delta_y = np.array(delta_y)
-#        x = np.array(x)
-#
-#        # Run the interpolation:
-#        f = interpolation.interp1d(x, delta_y, 'linear')
-#
-#        corrected_transect_values = f(range(start, end))
-#
-#        # Compute new transect values:
-#        corrected_transect_values = delta_y + wave_dataset[transect,start:end]
-#
-#        # Put the values in structures for 2d interpolation:
-#        X = np.concatenate(X, x)
-#        Y = np.concatenate(Y, delta_y)
-#        Z = np.concatenate(Z, corrected_transect_values)
-#
-#    # Now, we're ready to invoke the interpolation function
-#    F = interpolate.interp2d(X, Y, Z, kind='linear')
-#
-#    # Build the array of points onto which the function will interpolate:
-#    # For now, all the points with bathymetry between 1 and 10 meters:
-#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-#    band = bathymetry.GetRasterBand(1)
-#    bathymetry_array = band.ReadAsArray()
-#
-#    min_depth = 1   # Minimum interpolation depth
-#    max_depth = 10  # Maximum interpolation depth
-#    
-#    interp_I, interp_J = \
-#        np.where((bathymetry_array>=min_depth) & \
-#            (bathymetry_array<=max_depth))
-#
-#    # Compute the actual interpolation
-#    surface = F(interp_I, interp_J)
-#
-#    # Save the values in a raster
-#    wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
-#        'wave_interpolation.tif')
-#    
-#    bathymetry_nodata = \
-#        raster_utils.get_nodata_from_uri(args['bathymetry_raster_uri'])
-#    
-#    raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
-#        wave_interpolation_uri, 'GTIFF', shore_nodata, gdal.GDT_Float64)
-#    
-#    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
-#    wave_band = wave_raster.GetRasterBand(1)
-#    wave_array = wave_band.ReadAsArray()
-#
-#    wave_array[(interp_I, interp_J)] = surface
-#
-#    wave_band.WriteArray(wave_array)
+
+    # Build mask to remove transect portions that are too far 
+    # from the area we're interested in
+    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
+    band = bathymetry.GetRasterBand(1)
+    transect_mask = band.ReadAsArray()
+
+    min_bathy = -10   # Minimum interpolation depth
+    max_bathy = 1  # Maximum interpolation depth
+
+    transect_mask[transect_mask <= min_bathy] = min_bathy - 1
+    transect_mask[transect_mask >= max_bathy] = min_bathy - 1
+
+    transect_mask = transect_mask != min_bathy - 1
+
+
+    # Build the interpolation structures
+    X = []
+    Y = []
+    Z = []
+
+    transect_footprint.clear() # used to remove coordinate duplicates
+
+    for transect in intersected_transects:
+
+#        print('intersected transect', transect)
+
+        current_transect = intersected_transects[transect]
+
+        start = indices_limit_dataset[transect,0]
+        end = indices_limit_dataset[transect,1]
+
+        # Clip the reansect at the first occurence of NaN
+        wave_array = wave_dataset[transect,start:end]
+        first_nan = np.where(np.isnan(wave_array))[0]
+        if first_nan.size:
+            end = first_nan[0]
+
+        # Interpolate delta_y: add key values for x and y
+        # First value is 0
+        delta_y = [0.]  # y
+        x = [start] # x
+            
+#        print('current_transect', current_transect)
+
+        for i in range(len(current_transect)):
+
+            # Fill in subsequent values using intersection data
+            coord, index, value = current_transect[i]
+
+#            print('    ', i, index, value)
+
+            delta_y.append(intersection[coord] - value)
+            x.append(index)
+
+        # Append last value if necessary
+        if x[-1] != end-1:
+            delta_y.append(0.)
+            x.append(end-1)
+
+        delta_y = np.array(delta_y)
+        x = np.array(x)
+
+        assert not np.isnan(delta_y).any()
+
+        # Run the interpolation:
+        f = interpolate.interp1d(x, delta_y, 'linear')
+
+        inerpolation_range = range(start, end)
+        interpolated_delta_y = f(inerpolation_range)
+
+        assert not np.isnan(interpolated_delta_y).any()
+
+        # Compute new transect values:
+        corrected_transect_values = \
+            interpolated_delta_y + wave_dataset[transect,start:end]
+
+#        print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+
+
+        if np.isnan(corrected_transect_values).any():
+            print('interpolated_delta_y', interpolated_delta_y)
+            print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('corrected_transect_values', corrected_transect_values)
+            print('any', np.isnan(corrected_transect_values).any(), \
+                'count', np.sum(np.isnan(corrected_transect_values).any()))
+            assert not np.isnan(corrected_transect_values).any()
+
+        # Put the values in structures for 2d interpolation:
+        coordinates = coordinates_dataset[transect,:]
+        coordinates = (coordinates[0][start:end], coordinates[1][start:end])
+
+#        print('start, end', start, end)
+#        print('X size', X.size, 'X coordinates size', coordinates[0].size)
+#        print('corrected_transect_values', corrected_transect_values.size)
+
+
+        # Remove coordinate duplicates
+        for index in range(coordinates[0].size):
+            coord = (coordinates[0][index], coordinates[1][index])
+
+            # Check if the point is not too far off
+            if transect_mask[coord]:
+
+                # Check if it's a new point
+                if coord not in transect_footprint:
+                    X.append(coordinates[0][index])
+                    Y.append(coordinates[1][index])
+                    assert not math.isnan(corrected_transect_values[index])
+                    Z.append(corrected_transect_values[index])
+
+                    transect_footprint.add(coord)
+
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
+
+    # Now, we're ready to invoke the interpolation function
+    # TODO: Fix that...
+    print('Building the interpolation function for', X.size, 'points...')
+    assert not np.isnan(Z).any()
+    F = interpolate.interp2d(X, Y, Z, kind='linear')
+
+    # Build the array of points onto which the function will interpolate:
+    # For now, all the points with bathymetry between 1 and 10 meters:
+    interp_I, interp_J = np.where(transect_mask)
+
+    interp_I = np.unique(interp_I)
+    interp_J = np.unique(interp_J)
+
+    # Compute the actual interpolation
+    print('Interpolating for', interp_I.size * interp_J.size, 'points...')
+    surface = F(interp_I, interp_J)
+
+    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
+
+    # Save the values in a raster
+    wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
+        'wave_interpolation.tif')
+    
+    print('Saving data to', wave_interpolation_uri)
+
+    bathymetry_nodata = \
+        raster_utils.get_nodata_from_uri(args['bathymetry_raster_uri'])
+    
+    raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
+        wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
+
+    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
+    wave_band = wave_raster.GetRasterBand(1)
+    wave_array = wave_band.ReadAsArray()
+
+    II, JJ = np.meshgrid(interp_I, interp_J)
+
+    wave_array[(II, JJ)] = surface
+
+    wave_array[~transect_mask] = bathymetry_nodata
+
+    wave_array[([0], [0])] = 1.
+
+    wave_band.WriteArray(wave_array)
+
+    wave_array = None
+    wave_band = None
+    wave_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(wave_raster)
+    wave_raster = None
+
+    raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
 
 
 
