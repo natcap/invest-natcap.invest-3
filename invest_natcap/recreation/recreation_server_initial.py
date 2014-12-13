@@ -1,28 +1,31 @@
-"""Recreation server intial run.
 """
-import sys, os, psycopg2, copy
-
+Recreation server intial run.
+"""
+import sys
+import os
+import copy
 import logging
 import json
-
 import subprocess
 import datetime
+import traceback
 
-import recreation_server_core
-
+import psycopg2
 from osgeo import osr
 from osgeo import ogr
 
-import traceback
+import recreation_server_core as rs_core
 
 #logging.basic_config(format = '%(asctime)s %(name)-20s %(levelname)-8s \
 #%(message)s', level = logging.DEBUG, datefmt = '%m/%d/%Y %H:%M:%S ')
 #
 #LOGGER = logging.get_logger('recreation')
 
+
 def execute(args, config):
-    """This function invokes the recreation model.
-    
+    """
+    This function invokes the recreation model.
+
     args - a python dictionary with at the following possible entries:
     args['aoi_file_name'] - A shapefile for the area of interest (required)
     args['cell_size'] - The cell size for the grid in meters (required)
@@ -33,61 +36,61 @@ def execute(args, config):
     config['max_grid_size'] - The maximum total size for a grid
     """
     LOGGER.debug("Beginning execute(args).")
-    
+
     geometry_column_name = "way"
     grid_column_name = "cell"
-      
-    
-    standard_predictors = [config["postgis"]["table"]["names"]["landscan_name"],
-                          config["postgis"]["table"]["names"]["point_name"],
-                          config["postgis"]["table"]["names"]["line_name"],
-                          config["postgis"]["table"]["names"]["poly_name"],
-                          config["postgis"]["table"]["names"]["protected_name"],
-                          config["postgis"]["table"]["names"]["lulc_1_name"],
-                          config["postgis"]["table"]["names"]["lulc_2_name"],
-                          config["postgis"]["table"]["names"]["lulc_3_name"],
-                          config["postgis"]["table"]["names"]["lulc_4_name"],
-                          config["postgis"]["table"]["names"]["lulc_5_name"],
-                          config["postgis"]["table"]["names"]["lulc_6_name"],
-                          config["postgis"]["table"]["names"]["lulc_7_name"],
-                          config["postgis"]["table"]["names"]["lulc_8_name"],                           
-                          config["postgis"]["table"]["names"]["mangrove_name"],
-                          config["postgis"]["table"]["names"]["reef_name"],
-                          config["postgis"]["table"]["names"]["seagrass_name"]]
 
-    simple_predictors = [config["postgis"]["table"]["names"]["landscan_name"],
-                        config["postgis"]["table"]["names"]["protected_name"],
-                        config["postgis"]["table"]["names"]["lulc_1_name"],
-                        config["postgis"]["table"]["names"]["lulc_2_name"],
-                        config["postgis"]["table"]["names"]["lulc_3_name"],
-                        config["postgis"]["table"]["names"]["lulc_4_name"],
-                        config["postgis"]["table"]["names"]["lulc_5_name"],
-                        config["postgis"]["table"]["names"]["lulc_6_name"],
-                        config["postgis"]["table"]["names"]["lulc_7_name"],
-                        config["postgis"]["table"]["names"]["lulc_8_name"],                                                    
-                        config["postgis"]["table"]["names"]["mangrove_name"],
-                        config["postgis"]["table"]["names"]["reef_name"],
-                        config["postgis"]["table"]["names"]["seagrass_name"]]
+    standard_predictors = [
+        config["postgis"]["table"]["names"]["landscan_name"],
+        config["postgis"]["table"]["names"]["point_name"],
+        config["postgis"]["table"]["names"]["line_name"],
+        config["postgis"]["table"]["names"]["poly_name"],
+        config["postgis"]["table"]["names"]["protected_name"],
+        config["postgis"]["table"]["names"]["lulc_1_name"],
+        config["postgis"]["table"]["names"]["lulc_2_name"],
+        config["postgis"]["table"]["names"]["lulc_3_name"],
+        config["postgis"]["table"]["names"]["lulc_4_name"],
+        config["postgis"]["table"]["names"]["lulc_5_name"],
+        config["postgis"]["table"]["names"]["lulc_6_name"],
+        config["postgis"]["table"]["names"]["lulc_7_name"],
+        config["postgis"]["table"]["names"]["lulc_8_name"],
+        config["postgis"]["table"]["names"]["mangrove_name"],
+        config["postgis"]["table"]["names"]["reef_name"],
+        config["postgis"]["table"]["names"]["seagrass_name"]]
 
-    column_alias = {config["postgis"]["table"]["names"]
-                   ["landscan_name"] : "landscan",
-                   config["postgis"]["table"]["names"]
-                   ["protected_name"] : "protected",
-                   config["postgis"]["table"]["names"]
-                   ["mangrove_name"] : "mangrove",
-                   config["postgis"]["table"]["names"]
-                   ["reef_name"] : "reef",
-                   config["postgis"]["table"]["names"]
-                   ["seagrass_name"] : "seagrass"}
-    
-    compound_predictors = [config["postgis"]["table"]["names"]["point_name"],
-                          config["postgis"]["table"]["names"]["line_name"],
-                          config["postgis"]["table"]["names"]["poly_name"]]
+    simple_predictors = [
+        config["postgis"]["table"]["names"]["landscan_name"],
+        config["postgis"]["table"]["names"]["protected_name"],
+        config["postgis"]["table"]["names"]["lulc_1_name"],
+        config["postgis"]["table"]["names"]["lulc_2_name"],
+        config["postgis"]["table"]["names"]["lulc_3_name"],
+        config["postgis"]["table"]["names"]["lulc_4_name"],
+        config["postgis"]["table"]["names"]["lulc_5_name"],
+        config["postgis"]["table"]["names"]["lulc_6_name"],
+        config["postgis"]["table"]["names"]["lulc_7_name"],
+        config["postgis"]["table"]["names"]["lulc_8_name"],
+        config["postgis"]["table"]["names"]["mangrove_name"],
+        config["postgis"]["table"]["names"]["reef_name"],
+        config["postgis"]["table"]["names"]["seagrass_name"]]
 
-    compound_predictor_classes = [4,
-                               4,
-                               4,
-                               8]
+    column_alias = {
+        config["postgis"]["table"]["names"]
+              ["landscan_name"]: "landscan",
+        config["postgis"]["table"]["names"]
+              ["protected_name"]: "protected",
+        config["postgis"]["table"]["names"]
+              ["mangrove_name"]: "mangrove",
+        config["postgis"]["table"]["names"]
+              ["reef_name"]: "reef",
+        config["postgis"]["table"]["names"]
+              ["seagrass_name"]: "seagrass"}
+
+    compound_predictors = [
+        config["postgis"]["table"]["names"]["point_name"],
+        config["postgis"]["table"]["names"]["line_name"],
+        config["postgis"]["table"]["names"]["poly_name"]]
+
+    compound_predictor_classes = [4, 4, 4, 8]
 
     osm_srid = 900913
     flickr_srid = 4326
@@ -121,7 +124,7 @@ def execute(args, config):
                    ["lulc_7_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
                    ["lulc_8_name"]] = 4326
-    
+
     predictor_srid[config["postgis"]["table"]["names"]
                    ["mangrove_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
@@ -130,20 +133,22 @@ def execute(args, config):
                    ["seagrass_name"]] = 4326
     predictor_srid[config["postgis"]["table"]["names"]
                    ["protected_name"]] = 4326
-    
+
     LOGGER.debug("Parsing database connection string.")
     #database definitions
-    dbase_file_name = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
-                              "postgis.db")
+    dbase_file_name = os.path.join(
+        os.path.abspath(os.path.dirname(sys.argv[0])),
+        "postgis.db")
     dbase_file = open(dbase_file_name, "r")
     dbase_post_gis = dbase_file.read().strip().replace("\n", " ")
     dbase_file.close()
-    
+
     LOGGER.debug("Assigning user parameters locally.")
     #parameters
     aoi_file_name = str(args["aoi_file_name"])
 
-    LOGGER.debug("Getting linear units of shapefile %s." % repr(aoi_file_name).replace(".","||"))
+    LOGGER.debug(
+        "Getting linear units of shapefile %s." % repr(aoi_file_name).replace(".","||"))
     datasource = ogr.Open(aoi_file_name)
     layer = datasource.GetLayer()
     srs = osr.SpatialReference()
@@ -153,7 +158,8 @@ def execute(args, config):
     layer = None
     datasource = None
 
-    LOGGER.info("The map unit coversion to meters is %s." % str(linear_units).replace(".","||"))
+    LOGGER.info(
+        "The map unit coversion to meters is %s." % str(linear_units).replace(".","||"))
 
     units = {
         'kilometre': 1000,
@@ -175,19 +181,19 @@ def execute(args, config):
         #'grad':,
         #'link':
         }
-        
+
     if args["grid"]:
         cell_size = args["cell_size"]
-        
+
         if (cell_size * linear_units) < config["min_cell_size"]:
             LOGGER.info("Your sepecified cell size in meters is approximately %i." % (cell_size * linear_units))
             err_msg = ("The cell size of %i is less than the minimum "
                        "allowed size of %i.") % (cell_size, config["min_cell_size"])
             LOGGER.error(err_msg)
-            raise ValueError, err_msg
+            raise ValueError(err_msg)
     else:
         LOGGER.debug("The customized grid will be checked for cell size after insertion.")
-                               
+
     grid_file_name = args["grid_file_name"]
     flickr_file_name = args["flickr_file_name"]
     data_dir = args["data_dir"]
@@ -199,26 +205,27 @@ def execute(args, config):
     mangroves = args["mangroves"]
     reefs = args["reefs"]
     grass = args["grass"]
-    
-    standard_mask = [landscan,
-                    osm_point,
-                    osm_line,
-                    osm_poly,
-                    protected,
-                    args["lulc_1"],
-                    args["lulc_2"],
-                    args["lulc_3"],
-                    args["lulc_4"],
-                    args["lulc_5"],
-                    args["lulc_6"],
-                    args["lulc_7"],
-                    args["lulc_8"],                     
-                    mangroves,
-                    reefs,
-                    grass]
+
+    standard_mask = [
+        landscan,
+        osm_point,
+        osm_line,
+        osm_poly,
+        protected,
+        args["lulc_1"],
+        args["lulc_2"],
+        args["lulc_3"],
+        args["lulc_4"],
+        args["lulc_5"],
+        args["lulc_6"],
+        args["lulc_7"],
+        args["lulc_8"],
+        mangroves,
+        reefs,
+        grass]
 
     LOGGER.debug("Stadard mask: %s", repr(standard_mask).replace(", ", "|"))
-    
+
     LOGGER.debug("Setting intermediate table suffixes.")
     #intermediate table names
     aoi_name = "aoi"
@@ -232,7 +239,7 @@ def execute(args, config):
 
     #column names
     result_column = "result"
-    
+
     #suffixes
     union = "_union"
     clip = "_clip"
@@ -248,7 +255,6 @@ def execute(args, config):
     clip_format = "%s" + clip
     projected_format = "%s_%i"
     results_format = "%s" + results
-
 
     try:
         database = psycopg2.connect(dbase_post_gis)
@@ -274,12 +280,13 @@ def execute(args, config):
                     else:
                         LOGGER.info("Predictor %s is missing file(s).", data_dir+file_name)
                         LOGGER.error("Predictor %s is missing file(s).", file_name)
-                        raise ValueError, "Predictor %s is missing file(s)." % (file_name)
+                        raise ValueError("Predictor %s is missing file(s)." % (file_name))
 
         #creating list of model predictors
         model_simple_predictors = copy.copy(user_simple_predictors)
         model_compound_predictors = copy.copy(user_compound_predictors)
-        LOGGER.debug("Standard predictor mask %s.", repr(standard_mask).replace(", ", "|"))
+        LOGGER.debug("Standard predictor mask %s.", repr(
+            standard_mask).replace(", ", "|"))
         for include, predictor in zip(standard_mask, standard_predictors):
             if include:
                 try:
@@ -290,7 +297,8 @@ def execute(args, config):
                     LOGGER.info("Incuding compound predictor %s.", predictor)
                     model_compound_predictors.append(predictor)
 
-        LOGGER.info("Checking for custom categorization for standard predictors.")
+        LOGGER.info(
+            "Checking for custom categorization for standard predictors.")
         LOGGER.debug("Actually checking for all categorization tables.")
         user_categorization = []
         user_categorization_dict = {}
@@ -317,7 +325,7 @@ def execute(args, config):
                 LOGGER.info("Validating categorization tables.")
                 for tsv in user_categorization:
                     LOGGER.info("Validating categorization table %s.", tsv)
-                    categories, classes = recreation_server_core.category_dict(
+                    categories, classes = rs_core.category_dict(
                         "%s%s.tsv" % (data_dir, tsv))
                     user_categorization_dict[tsv] = categories
                     user_class_dict[tsv] = classes
@@ -333,29 +341,30 @@ def execute(args, config):
         else:
             LOGGER.info("User provided simple and compound predictors found.")
 
-
-        #loading data into tables        
+        #loading data into tables
         LOGGER.debug("Processing user data.")
         LOGGER.info("Importing AOI %s.", aoi_file_name)
-        aoi_srid = recreation_server_core.temp_shapefile_db(cur, aoi_file_name,
-                                                            aoi_name)
-        if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
+        aoi_srid = rs_core.temp_shapefile_db(cur, aoi_file_name, aoi_name)
+        if rs_core.not_valid_count_execute(
+                cur, aoi_name, geometry_column_name) > 0:
             msg = "The AOI contains invalid geometry."
             LOGGER.warning(msg)
 
             msg = "Attempting to fix the AOI geometry."
             LOGGER.warning(msg)
 
-            recreation_server_core.make_valid_execute(cur, aoi_name, geometry_column_name)
+            rs_core.make_valid_execute(
+                cur, aoi_name, geometry_column_name)
 
-            if recreation_server_core.not_valid_count_execute(cur, aoi_name, geometry_column_name) > 0:
+            if rs_core.not_valid_count_execute(
+                    cur, aoi_name, geometry_column_name) > 0:
                 msg = "The AOI contains invalid geometry that could not be automatically fixed."
                 LOGGER.error(msg)
-                raise ValueError, msg
+                raise ValueError(msg)
             else:
                 msg = "AOI geometry now valid."
                 LOGGER.info(msg)
-        
+
         LOGGER.info("Imported AOI.")
         LOGGER.debug("Imported AOI with SRID %i", aoi_srid)
 
@@ -367,10 +376,10 @@ def execute(args, config):
             if area * (linear_units ** 2) < area_hex:
                 msg = "The custom grid contains cells smaller than %i square meters." % area_hex
                 LOGGER.error(msg)
-                raise ValueError, msg
+                raise ValueError(msg)
             else:
                 LOGGER.info("All cells in the custom grid meet the minimum area requirement.")
-            
+
             sql = "SELECT COUNT(*) FROM %s" % aoi_name
             cur.execute(sql)
             count, = cur.fetchone()
@@ -381,33 +390,38 @@ def execute(args, config):
                 msg = "Custom grids cannot have overlapping polygons."
                 LOGGER.info("The custom grid contains %i intersections." % (intersects - count))
                 LOGGER.error(msg)
-                raise ValueError, msg 
+                raise ValueError(msg) 
 
-        #create tables            
+        #create tables
         LOGGER.info("Importing user supplied predictor variables.")
         for table_name in user_simple_predictors:
             table_file_name = data_dir+table_name+".shp"
-            LOGGER.debug("Creating table %s from %s.", table_name, table_file_name)
-            predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
+            LOGGER.debug(
+                "Creating table %s from %s.", table_name, table_file_name)
+            predictor_srid[table_name] = rs_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
 
         LOGGER.info("Importing user supplied compound variables.")
         for table_name in user_compound_predictors:
             table_file_name = data_dir+table_name+".shp"
-            LOGGER.debug("Creating table %s from %s.", table_name, table_file_name)
-            predictor_srid[table_name] = recreation_server_core.temp_shapefile_db(
+            LOGGER.debug(
+                "Creating table %s from %s.", table_name, table_file_name)
+            predictor_srid[table_name] = rs_core.temp_shapefile_db(
                 cur, table_file_name, table_name)
 
         halt = False
         for table_name in user_simple_predictors + user_compound_predictors:
-            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+            if rs_core.not_valid_count_execute(
+                    cur, table_name, geometry_column_name) > 0:
                 LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
 
                 msg = "Attempting to fix the geometry of predictor %s."
                 LOGGER.warn(msg, table_name)
 
-                recreation_server_core.make_valid_execute(cur, table_name, geometry_column_name)
-                if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
+                rs_core.make_valid_execute(
+                    cur, table_name, geometry_column_name)
+                if rs_core.not_valid_count_execute(
+                        cur, table_name, geometry_column_name) > 0:
                     msg = "Predictor %s contains geometry that could ot be automatically fixed."
                     LOGGER.error(msg, table_name)
                     halt = True
@@ -415,28 +429,31 @@ def execute(args, config):
                 else:
                     msg = "Predictor %s geometry now valid."
                     LOGGER.info(msg, table_name)
-                
+
         if halt:
             msg = "One or more predictors contain invalid geometry that could not be automatically fixed."
             LOGGER.error(msg)
-            raise ValueError, msg
+            raise ValueError(msg)
 
         #processing AOI
         #merge multiple parts
         LOGGER.info("Merging AOI if multiple parts.")
-        recreation_server_core.union_execute(cur, aoi_name, aoi_union_name,
-                                             geometry_column_name)
+        rs_core.union_execute(
+            cur, aoi_name, aoi_union_name, geometry_column_name)
         aoi_transformed_name = aoi_union_name
 
         #find location
         LOGGER.info("Transforming AOI to Latitude and Longitude.")
-        recreation_server_core.transform_execute(cur, aoi_union_name, aoi4326_name,
-                                                 geometry_column_name, 4326)
+        rs_core.transform_execute(
+            cur, aoi_union_name, aoi4326_name,
+            geometry_column_name, 4326)
 
         #count intersection and coverage with administrative areas
-        intersects, covers = recreation_server_core.get_intersects_covers(
-            cur,aoi4326_name, config["postgis"]["table"]["names"]["borders_name"])
-        
+        intersects, covers = rs_core.get_intersects_covers(
+            cur,
+            aoi4326_name,
+            config["postgis"]["table"]["names"]["borders_name"])
+
         if intersects == 1 and covers == 1:
             LOGGER.info(("The AOI is ideally located completely within one "
                          "administrative area."))
@@ -445,28 +462,34 @@ def execute(args, config):
                          "administrative area(s)."), intersects, covers)
 
         sql = "SELECT ST_SRID(%s) FROM %s LIMIT 1" % (geometry_column_name,
-                                                       aoi_union_name)
+                                                      aoi_union_name)
         cur.execute(sql)
         output_srid, = cur.fetchone()
 
-        
         #create grid
         if args["grid"]:
             if args["rectangular_grid"]:
                 LOGGER.info(("Creating recatangular grid %s from %s using "
-                              "cell size %s."), grid_name, aoi_transformed_name,
-                             str(cell_size))
-                recreation_server_core.temp_grid_db(cur, aoi_transformed_name,
-                                                    geometry_column_name,
-                                                    grid_name, grid_column_name,
-                                                    cell_size)
+                             "cell size %s."), grid_name, aoi_transformed_name,
+                            str(cell_size))
+                rs_core.temp_grid_db(
+                    cur,
+                    aoi_transformed_name,
+                    geometry_column_name,
+                    grid_name,
+                    grid_column_name,
+                    cell_size)
             else:
                 LOGGER.info(("Creating hexagonal grid %s from %s using "
-                              "cell size %s."), grid_name, aoi_transformed_name,
-                             str(cell_size))
-                recreation_server_core.hex_grid(cur, aoi_transformed_name,
-                                                geometry_column_name, grid_name,
-                                                grid_column_name, cell_size)
+                             "cell size %s."), grid_name, aoi_transformed_name,
+                            str(cell_size))
+                rs_core.hex_grid(
+                    cur,
+                    aoi_transformed_name,
+                    geometry_column_name,
+                    grid_name,
+                    grid_column_name,
+                    cell_size)
         else:
             LOGGER.debug("Duplicating table to allow for custom grids.")
             sql = "CREATE TEMPORARY TABLE %s AS (SELECT row_number() OVER (ORDER BY ST_YMin(box2d(way)), ST_XMin(box2d(way)) ASC) AS id, way AS cell FROM %s)" % (grid_name, aoi_name)
@@ -479,7 +502,7 @@ def execute(args, config):
         cells, = cur.fetchone()
         if cells < 4:
             LOGGER.error("%i cells is too few for the grid.", cells)
-            raise ValueError, ("%i cells is too few for the grid." % cells)
+            raise ValueError("%i cells is too few for the grid." % cells)
         else:
             LOGGER.info("The grid contains %i cells.", cells)
 
@@ -487,46 +510,52 @@ def execute(args, config):
         predictors = 0
         predictors += len(model_simple_predictors)
 
-##        LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace(".","||"))
-##        LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace(".","||"))
-        
+       # LOGGER.debug("Standard mask: %s", str(standard_mask).replace(",","|").replace(".","||"))
+       # LOGGER.debug("Compound predictors: %s", str(compound_predictors).replace(",","|").replace(".","||"))
         if standard_mask[1] and not compound_predictors[0] in user_categorization_dict:
             predictors += compound_predictor_classes[0]
         if standard_mask[2] and not user_categorization_dict.has_key(compound_predictors[1]):
             predictors += compound_predictor_classes[1]
         if standard_mask[3] and not user_categorization_dict.has_key(compound_predictors[2]):
             predictors += compound_predictor_classes[2]
-##        if standard_mask[5] and not user_categorization_dict.has_key(compound_predictors[3]):
-##            predictors += compound_predictor_classes[3]            
+       # if standard_mask[5] and not user_categorization_dict.has_key(compound_predictors[3]):
+       #     predictors += compound_predictor_classes[3]            
         predictors += sum([len(user_categorization_dict[category_key]) for category_key in user_categorization_dict])
         if cells <= predictors:
-            LOGGER.debug("There are %i grid cells and %i predictors.", cells, predictors)
+            LOGGER.debug(
+                "There are %i grid cells and %i predictors.", cells, predictors)
             msg = "The number of predictors exceeds the number of grid cells and will likely result in invalid estimations."
             LOGGER.error(msg)
-            raise ValueError, msg
+            raise ValueError(msg)
 
         grid_union_name = union_format % (grid_name)
-        recreation_server_core.union_execute(cur, grid_name, grid_union_name, grid_column_name)
+        rs_core.union_execute(
+            cur, grid_name, grid_union_name, grid_column_name)
 
-        #check grid size        
-        if recreation_server_core.single_area_execute(cur, grid_union_name, grid_column_name) > config["max_grid_size"]:
+        #check grid size
+        if rs_core.single_area_execute(
+                cur, grid_union_name, grid_column_name) > config["max_grid_size"]:
             LOGGER.error("The grid is too large please use a smailler AOI.")
-            raise ValueError, "The grid is too large please use a smaller AOI."
+            raise ValueError("The grid is too large please use a smaller AOI.")
         else:
             LOGGER.info("The AOI meets the maximum size requirement.")
 
         #project grid for clips
         LOGGER.info("Projecting the grid for clips.")
-        LOGGER.debug("predictor_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
+        LOGGER.debug(
+            "predictor_srid dictionary: %s", repr(predictor_srid).replace(", ", "|").replace(".", "||"))
         for srid in set([predictor_srid[predictor_key] for predictor_key in predictor_srid]):
-            LOGGER.debug("Projecting grid to SRID %i.", srid)
-            recreation_server_core.transform_execute(cur, grid_union_name, projected_format % (grid_union_name, srid), grid_column_name, srid)
+            LOGGER.debug(
+                "Projecting grid to SRID %i.", srid)
+            rs_core.transform_execute(
+                cur, grid_union_name, projected_format % (grid_union_name, srid), grid_column_name, srid)
 
         #clipping predictors
         LOGGER.info("Clipping simple predictors.")
         for predictor in model_simple_predictors:
             LOGGER.info("Clipping %s.", predictor)
-            recreation_server_core.clip_execute(cur, predictor, geometry_column_name, projected_format % (grid_union_name, predictor_srid[predictor]), grid_column_name, clip_format % (predictor))
+            rs_core.clip_execute(
+                cur, predictor, geometry_column_name, projected_format % (grid_union_name, predictor_srid[predictor]), grid_column_name, clip_format % (predictor))
 
         LOGGER.info("Clipping compound predictors.")
         for predictor in model_compound_predictors:
@@ -535,22 +564,36 @@ def execute(args, config):
                 extra_columns = ["osm_id"]
             else:
                 extra_columns = ["id"]
-            #append categorization columns if needed                
+            #append categorization columns if needed
             if user_categorization_dict.has_key(predictor):
                 cat_columns = user_categorization_dict[predictor].keys()
                 cat_columns.sort()
                 #remove default category value
                 cat_columns.pop(0)
                 extra_columns.extend(cat_columns)
-            LOGGER.debug("Including columns: %s.", str(extra_columns).replace(", ", "|"))
-            recreation_server_core.clip_execute(cur, predictor, geometry_column_name, projected_format % (grid_union_name, predictor_srid[predictor]), grid_column_name, clip_format % (predictor), extra_columns)
+            LOGGER.debug("Including columns: %s.", str(
+                extra_columns).replace(", ", "|"))
+            rs_core.clip_execute(
+                cur,
+                predictor,
+                geometry_column_name,
+                projected_format % (
+                    grid_union_name, predictor_srid[predictor]),
+                grid_column_name,
+                clip_format % (predictor), extra_columns)
 
         #categorizing compound predictors
         for predictor in user_categorization_dict.keys():
             LOGGER.info("Categorizing %s.", predictor)
-            recreation_server_core.categorize_execute(cur, clip_format % predictor, user_categorization_dict[predictor], user_class_dict[predictor], category_format, class_format)            
+            rs_core.categorize_execute(
+                cur,
+                clip_format % predictor,
+                user_categorization_dict[predictor],
+                user_class_dict[predictor],
+                category_format,
+                class_format)
 
-        #splitting compound predictors            
+        #splitting compound predictors
         LOGGER.info("Converting compound predictors to simple predictors.")
         model_split_predictors = []
         cat_column = "cat"
@@ -563,7 +606,8 @@ def execute(args, config):
             sql = "SELECT %s, field FROM %s"
             try:
                 user_categorization.index(predictor)
-                sql = sql % (id_column, class_format % (clip_format % predictor))
+                sql = sql % (id_column, class_format % (
+                    clip_format % predictor))
             except ValueError:
                 LOGGER.info("Using default classification for %s.", predictor)
                 sql = sql % (id_column, standard_class_format % predictor)
@@ -579,18 +623,22 @@ def execute(args, config):
                     sql = sql % (clip_format % table_name.lower(), geometry_column_name, clip_format % predictor, standard_category_format % predictor, id_column, id_column, cat_column, category)
                 cur.execute(sql)
                 model_split_predictors.append(table_name.lower())
-        
+
         #transforming predictors
         LOGGER.info("Projecting simple predictors.")
         for predictor in model_simple_predictors+model_split_predictors:
             LOGGER.info("Projecting %s.", predictor)
-            recreation_server_core.transform_execute(cur, clip_format % (predictor), projected_format % (predictor, output_srid), geometry_column_name, output_srid)
+            rs_core.transform_execute(
+                cur, clip_format % (predictor), projected_format % (predictor, output_srid), geometry_column_name, output_srid)
 
         #aggregating simple predictors
         join_tables = []
         for predictor in model_simple_predictors+model_split_predictors:
             LOGGER.info("Aggregating %s.", predictor)
-            geo_type = recreation_server_core.dimension_execute(cur, projected_format % (predictor, output_srid), geometry_column_name)
+            geo_type = rs_core.dimension_execute(
+                cur,
+                projected_format % (predictor, output_srid),
+                geometry_column_name)
             LOGGER.debug("Predictor %s has dimensionality %i.", predictor, geo_type)
             projected_name = projected_format % (predictor, output_srid)
             results_name = results_format % predictor
@@ -602,21 +650,30 @@ def execute(args, config):
                 cur.execute(sql)
             elif geo_type == 0:
                 LOGGER.info("Processing point predictor %s.", predictor)
-                recreation_server_core.grid_point_execute(cur, grid_name, projected_name, results_name)
+                rs_core.grid_point_execute(
+                    cur, grid_name, projected_name, results_name)
             elif geo_type == 1:
                 LOGGER.info("Processing line predictor %s.", predictor)
-                recreation_server_core.grid_line_execute(cur, grid_name, projected_name, results_name)
+                rs_core.grid_line_execute(
+                    cur, grid_name, projected_name, results_name)
             elif geo_type == 2:
                 LOGGER.info("Processing polygon predictor %s.", predictor)
-                recreation_server_core.grid_polygon_execute(cur, grid_name, projected_name, results_name)
+                rs_core.grid_polygon_execute(
+                    cur, grid_name, projected_name, results_name)
             else:
-                raise ValueError, ("Predictor %s has an unknown geometry type." % predictor)
+                raise ValueError("Predictor %s has an unknown geometry type." % predictor)
 
             join_tables.append(predictor+results)
-        
+
         #joining results
         LOGGER.info("Joining results.")
-        recreation_server_core.join_results_execute(cur, model_simple_predictors+model_split_predictors, grid_name, results_format, result_column, join_name)
+        rs_core.join_results_execute(
+            cur,
+            model_simple_predictors+model_split_predictors,
+            grid_name,
+            results_format,
+            result_column,
+            join_name)
 
         ignore_category = set()
 
@@ -632,7 +689,8 @@ def execute(args, config):
                 cur.execute(sql % ("results", "polyCult"))
                 ignore_category.add("polycult")
             if not args["osm_2"]:
-                LOGGER.debug("Removing OSM information for industrial features.")
+                LOGGER.debug(
+                    "Removing OSM information for industrial features.")
                 cur.execute(sql % ("results", "pointIndus"))
                 ignore_category.add("pointindus")
                 cur.execute(sql % ("results", "lineIndus"))
@@ -648,7 +706,8 @@ def execute(args, config):
                 cur.execute(sql % ("results", "polyNat"))
                 ignore_category.add("polynat")
             if not args["osm_4"]:
-                LOGGER.debug("Removing OSM information for superstructure featrues.")
+                LOGGER.debug(
+                    "Removing OSM information for superstructure featrues.")
                 cur.execute(sql % ("results", "pointStruc"))
                 ignore_category.add("pointstruc")
                 cur.execute(sql % ("results", "lineStruc"))
@@ -656,7 +715,8 @@ def execute(args, config):
                 cur.execute(sql % ("results", "polyStruc"))
                 ignore_category.add("polystruc")
             if not args["osm_0"]:
-                LOGGER.debug("Removing OSM information for miscellaneous features.")
+                LOGGER.debug(
+                    "Removing OSM information for miscellaneous features.")
                 cur.execute(sql % ("results", "pointMisc"))
                 ignore_category.add("pointmisc")
                 cur.execute(sql % ("results", "lineMisc"))
@@ -664,15 +724,17 @@ def execute(args, config):
                 cur.execute(sql % ("results", "polyMisc"))
                 ignore_category.add("polymisc")
 
-        #writing predictor table            
+        #writing predictor table
         LOGGER.info("Creating data shapefile.")
-        recreation_server_core.dump_execute(cur, join_name, grid_file_name, column_alias)
+        rs_core.dump_execute(
+            cur, join_name, grid_file_name, column_alias)
 
         #save data for download
         if args["download"]:
             LOGGER.info("Saving predictors to disk.")
             downloads = set(model_simple_predictors+model_split_predictors)
-            downloads.discard(config["postgis"]["table"]["names"]["landscan_name"])
+            downloads.discard(
+                config["postgis"]["table"]["names"]["landscan_name"])
             downloads.difference_update(ignore_category)
             for predictor in downloads:
                 LOGGER.info("Saving predictor %s for downloading.", predictor)
@@ -680,33 +742,44 @@ def execute(args, config):
                     predictor_file_name = os.path.abspath(os.path.join(os.path.dirname(grid_file_name),os.path.join("download","%s.shp") % column_alias[predictor]))
                 else:
                     predictor_file_name = os.path.abspath(os.path.join(os.path.dirname(grid_file_name),os.path.join("download","%s.shp") % predictor))
-                recreation_server_core.dump_execute(cur, projected_format % (predictor, output_srid), predictor_file_name)
+                rs_core.dump_execute(
+                    cur,
+                    projected_format % (predictor, output_srid),
+                    predictor_file_name)
 
         #Flickr
         LOGGER.info("Transforming grid to Flickr projection.")
-        recreation_server_core.grid_transform(cur, grid_name, projected_format % (grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]]), predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]])
+        rs_core.grid_transform(
+            cur,
+            grid_name,
+            projected_format % (
+                grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]]),
+            predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]])
         LOGGER.info("Creating Flickr summary table.")
         LOGGER.debug("Saving Flickr summary table to %s.", flickr_file_name)
-        recreation_server_core.flickr_grid_table(cur, projected_format % (grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]]), config["postgis"]["table"]["names"]["flickr_name"], flickr_file_name)
-
+        rs_core.flickr_grid_table(
+            cur,
+            projected_format % (grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]]), config["postgis"]["table"]["names"]["flickr_name"],
+            flickr_file_name)
 
         #house keeping
         LOGGER.info("Dropping intermediate tables.")
         temp_tables = [aoi_name,
-                      #aoi_union_name,
-                      aoi4326_name,
-                      aoi_transformed_name,
-                      union_format % (grid_name),
-                      join_name,
-                      grid_name,
-                      projected_format % (grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]])]
+                       #aoi_union_name,
+                       aoi4326_name,
+                       aoi_transformed_name,
+                       union_format % (grid_name),
+                       join_name,
+                       grid_name,
+                       projected_format % (grid_name, predictor_srid[config["postgis"]["table"]["names"]["flickr_name"]])]
 
         for srid in set([predictor_srid[predictor_key] for predictor_key in predictor_srid]):
-            temp_tables.append(projected_format % (union_format % grid_name, srid))
+            temp_tables.append(
+                projected_format % (union_format % grid_name, srid))
 
         for predictor in user_simple_predictors:
             temp_tables.append(predictor)
-            
+
         for predictor in model_simple_predictors:
             temp_tables.append(clip_format % predictor)
             temp_tables.append(projected_format % (predictor, output_srid))
@@ -721,18 +794,18 @@ def execute(args, config):
 
         for predictor in model_compound_predictors:
             temp_tables.append(clip_format % predictor)
-            
+
         for predictor in model_split_predictors:
             temp_tables.append(clip_format % predictor)
             temp_tables.append(projected_format % (predictor, output_srid))
-            temp_tables.append(results_format % predictor)            
+            temp_tables.append(results_format % predictor)
 
         LOGGER.debug("Dropping tables: %s.", str(temp_tables).replace(", ", "|"))
-        
+
         for table_name in temp_tables:
             cur.execute("DROP TABLE %s" % (table_name))
             LOGGER.debug("Dropped table %s.", table_name)
-        
+
         LOGGER.info("Dropped intermediate tables.")
 
         cur.close()
@@ -750,77 +823,97 @@ def execute(args, config):
         msg = msg.replace(",", "").replace(".", "")
         if msg[-1] != ".":
             msg = msg + "."
-            
+
         LOGGER.error(msg)
         raise e
 
-    
-if __name__ == "__main__":    
+
+if __name__ == "__main__":
     LOGGER = logging.getLogger("recreation_server_init")
     #LOGGER.remove_handler(LOGGER.handlers[0])
-    formatter = logging.Formatter("%(asctime)s, %(levelname)s, %(message)s", "%m/%d/%Y %H:%M:%S")
+    formatter = logging.Formatter(
+        "%(asctime)s, %(levelname)s, %(message)s", "%m/%d/%Y %H:%M:%S")
     LOGGER.setLevel(logging.DEBUG)
 
     #load configuration
     LOGGER.info("Loading server configuration file.")
-    config_file = open(os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"recreation_server_config.json", 'r')
+    config_file = open(
+        os.path.abspath(os.path.dirname(
+            sys.argv[0]))+os.sep+"recreation_server_config.json", 'r')
     config = json.loads(config_file.read())
     config_file.close()
 
     #load model paramters
     LOGGER.info("The length of sys argv is %i.", len(sys.argv))
-    if len(sys.argv)>1:
+    if len(sys.argv) > 1:
         model_file = open(sys.argv[1], 'r')
     else:
-        model_file = open(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "default_init.json")))
+        model_file = open(os.path.abspath(
+            os.path.join(os.path.dirname(sys.argv[0]), "default_init.json")))
 
     model = json.loads(model_file.read())
-    model_file.close()        
-    session_path = os.path.join(config["paths"]["absolute"]["userroot"], config["paths"]["relative"]["data"]+model["sessid"])
+    model_file.close()
+    session_path = os.path.join(
+        config["paths"]["absolute"]["userroot"], config["paths"]["relative"]["data"] + model["sessid"])
 
     if model["sessid"] == "init":
         os.system("rm %s*" % session_path)
-        os.system("rm %s*" % os.path.join(session_path, config["paths"]["relative"]["predictors"]))
-        os.system("rm %s*" % os.path.join(session_path, config["paths"]["relative"]["download"]))
+        os.system("rm %s*" % os.path.join(
+            session_path, config["paths"]["relative"]["predictors"]))
+        os.system("rm %s*" % os.path.join(
+            session_path, config["paths"]["relative"]["download"]))
         os.system("mkdir %s" % session_path)
-        os.system("mkdir %s" % os.path.join(session_path, config["paths"]["relative"]["predictors"]))
-        os.system("mkdir %s" % os.path.join(session_path, config["paths"]["relative"]["download"]))
-        os.system("cp %s %s" % (model["aoi_file_name"], os.path.join(session_path, config["files"]["aoi"]["shp"])))
-        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"shx", os.path.join(session_path, config["files"]["aoi"]["shx"])))
-        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"dbf", os.path.join(session_path, config["files"]["aoi"]["dbf"])))
-        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"prj", os.path.join(session_path, config["files"]["aoi"]["prj"])))
-        os.system("cp %s* %s" % (model["data_dir"], os.path.join(session_path, config["paths"]["relative"]["data"])))
+        os.system("mkdir %s" % os.path.join(
+            session_path, config["paths"]["relative"]["predictors"]))
+        os.system("mkdir %s" % os.path.join(
+            session_path, config["paths"]["relative"]["download"]))
+        os.system("cp %s %s" % (model["aoi_file_name"], os.path.join(
+            session_path, config["files"]["aoi"]["shp"])))
+        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"shx",
+                                os.path.join(session_path, config["files"]["aoi"]["shx"])))
+        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"dbf",
+                                os.path.join(session_path, config["files"]["aoi"]["dbf"])))
+        os.system("cp %s %s" % (model["aoi_file_name"][:-3]+"prj",
+                                os.path.join(session_path, config["files"]["aoi"]["prj"])))
+        os.system("cp %s* %s" % (model["data_dir"], os.path.join(
+            session_path, config["paths"]["relative"]["data"])))
 
     #log to file
-    handler = logging.FileHandler(os.path.join(session_path, config["files"]["log"]))
+    handler = logging.FileHandler(os.path.join(
+        session_path, config["files"]["log"]))
     handler.setFormatter(formatter)
-    LOGGER.addHandler(handler) 
+    LOGGER.addHandler(handler)
 
     LOGGER.info("Running server side model with user provided parameters.")
-    LOGGER.debug("Running server side model with parameters: %s.", repr(sys.argv).replace(", ", "|").replace(".", "||"))
+    LOGGER.debug("Running server side model with parameters: %s.", repr(
+        sys.argv).replace(", ", "|").replace(".", "||"))
 
     args = {}
-    args["aoi_file_name"] = os.path.join(session_path, config["files"]["aoi"]["shp"])
+    args["aoi_file_name"] = os.path.join(
+        session_path, config["files"]["aoi"]["shp"])
     args["grid"] = model["grid"]
     if model["grid"]:
         args["rectangular_grid"] = (model["grid_type"] == "0")
         args["cell_size"] = float(model["cell_size"])
-    args["grid_file_name"] = os.path.join(session_path, config["files"]["grid"]["shp"])
-    args["flickr_file_name"] = os.path.join(session_path, config["files"]["flickr"])
-    args["data_dir"] = os.path.join(session_path, config["paths"]["relative"]["predictors"])
+    args["grid_file_name"] = os.path.join(
+        session_path, config["files"]["grid"]["shp"])
+    args["flickr_file_name"] = os.path.join(
+        session_path, config["files"]["flickr"])
+    args["data_dir"] = os.path.join(
+        session_path, config["paths"]["relative"]["predictors"])
     args["download"] = model["download"]
-    
+
     #check for landscan categoirization
     if os.path.exists(args["data_dir"]+"landscan.tsv"):
         LOGGER.error("The categorization of the Landscan data is not allowed.")
-        raise ValueError, ("The categorization of the Landscan data "
-                           "is not allowed.")
+        raise ValueError("The categorization of the Landscan data "
+                         "is not allowed.")
 
     #change dev version to release version
     if not model["is_release"]:
         model["is_release"] = True
         model["version_info"] = "2.5.5"
-    
+
     if model["is_release"]:
 
         args["version_info"] = model["version_info"]
@@ -851,7 +944,7 @@ if __name__ == "__main__":
                     args["lulc_6"] = False
                     args["lulc_7"] = False
                     args["lulc_8"] = False
-                    
+
                 args["mangroves"] = model["mangroves"]
                 args["reefs"] = model["reefs"]
                 args["grass"] = model["grass"]
@@ -871,7 +964,7 @@ if __name__ == "__main__":
                 args["lulc_6"] = False
                 args["lulc_7"] = False
                 args["lulc_8"] = False
-                
+
                 args["mangroves"] = False
                 args["reefs"] = False
                 args["grass"] = False
@@ -924,7 +1017,7 @@ if __name__ == "__main__":
                 else:
                     args["mangroves"] = False
                     args["reefs"] = False
-                    args["grass"] = False                    
+                    args["grass"] = False
 
             else:
                 args["landscan"] = False
@@ -945,26 +1038,27 @@ if __name__ == "__main__":
                 args["lulc_6"] = False
                 args["lulc_7"] = False
                 args["lulc_8"] = False
-                
+
                 args["mangroves"] = False
                 args["reefs"] = False
                 args["grass"] = False
-            
+
         else:
             LOGGER.error("Unsupported version.")
-            raise ValueError, "Unsupported version."
+            raise ValueError("Unsupported version.")
     else:
         LOGGER.info("Getting timestamp of developer version.")
-        revision=model["version_info"].split("[")[-1][:-1]
+        revision = model["version_info"].split(
+            "[")[-1][:-1]
         LOGGER.debug("Revison %s.", revision)
-        pipe = subprocess.Popen("hg log -R ~/workspace/invest3/ -r ffa218dbe978", stdout=subprocess.PIPE, shell=True).communicate()[0]
+        pipe = subprocess.Popen(
+            "hg log -R ~/workspace/invest3/ -r ffa218dbe978", stdout=subprocess.PIPE, shell=True).communicate()[0]
         stamp = pipe.strip().split("\n")[-2][5:-5].strip()
         LOGGER.debug("Developer version committed on %s.", str(stamp))
         when = datetime.datetime.strptime(stamp, "%a %b %d %H:%M:%S %Y")
         if when < datetime.datetime.now():
             LOGGER.error("Developer version.")
-            raise ValueError, "Developer version not supported."
-        
+            raise ValueError("Developer version not supported.")
 
     LOGGER.debug("Calling execute(%s).",
                  repr(args).replace(", ", "|").replace(".", "||"))

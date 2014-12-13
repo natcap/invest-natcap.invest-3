@@ -220,7 +220,7 @@
               "validateAs": {
                 "type": "number"
               },
-              "helpText": "Specifies the maximum recruits per spawner at low spawner levels (i.e. the initial slope of the stock-recruit curve).<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+              "helpText": "Specifies the shape of the stock-recruit curve. Used only for the Beverton-Holt and Ricker recruitment functions.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
             },
             {
               "id": "beta",
@@ -233,7 +233,7 @@
               "validateAs": {
                 "type": "number"
               },
-              "helpText": "Specifies the rate of decline in recruits as there are more spawners (i.e. the degree to which the curve bends downwards as spawner abundance increases).<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+              "helpText": "Specifies the shape of the stock-recruit curve.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
             },
             {
               "id": "total_recur_recruits",

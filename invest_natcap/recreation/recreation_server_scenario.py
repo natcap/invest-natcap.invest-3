@@ -3,14 +3,33 @@ import os
 import psycopg2
 import logging
 import json
-import recreation_server_core
+import recreation_server_core as rs_core
 
 
 def loggify(string):
+    '''
+    Args:
+        arg1 (?): (desc)
+
+    Returns:
+    '''
     return string.replace(", ", "|").replace(".", "||")
 
 
 def execute(args):
+    '''
+    Args:
+        args (dictionary): (desc)
+
+    Returns:
+
+    Example Args::
+
+        args = {
+            '': '',
+        }
+
+    '''
     #parameters
     LOGGER.debug("Processing parameters.")
     grid_file_name = args["grid_file_name"]
@@ -20,18 +39,18 @@ def execute(args):
     geometry_column_name = "way"
     grid_column_name = "cell"
 
-##    #OSM
-##    point_osm_name = "planet_osm_point"
-##    line_osm_name = "planet_osm_line"
-##    poly_osm_name = "planet_osm_polygon"
-##
-##    #OSM classification
-##    point_category_name = "category_point"
-##    line_category_name = "category_line"
-##    poly_category_name = "category_polygon"
-##
-##    #social media
-##    flickr_name = "photos_gis"
+    # #OSM
+    # point_osm_name = "planet_osm_point"
+    # line_osm_name = "planet_osm_line"
+    # poly_osm_name = "planet_osm_polygon"
+
+    # #OSM classification
+    # point_category_name = "category_point"
+    # line_category_name = "category_line"
+    # poly_category_name = "category_polygon"
+
+    # #social media
+    # flickr_name = "photos_gis"
 
     #population
     landscan_name = "predictor_landscan"
@@ -41,8 +60,8 @@ def execute(args):
     line_name = "planet_osm_line"
     polygon_name = "planet_osm_polygon"
 
-##    #areas
-##    borders_name = "borders"
+   # #areas
+   # borders_name = "borders"
     protected_name = "predictor_protected"
 
     #coverages
@@ -53,51 +72,54 @@ def execute(args):
     reef_name = "predictor_reef"
     seagrass_name = "predictor_seagrass"
 
-##    standard_predictors = [landscan_name,
-##                          point_name,
-##                          line_name,
-##                          polygon_name,
-##                          protected_name,
-##                          lulc_name,
-##                          mangrove_name,
-##                          reef_name,
-##                          seagrass_name]
+    # standard_predictors = [landscan_name,
+    #                       point_name,
+    #                       line_name,
+    #                       polygon_name,
+    #                       protected_name,
+    #                       lulc_name,
+    #                       mangrove_name,
+    #                       reef_name,
+    #                       seagrass_name]
 
     osm_srid = 900913
     world = 4326
 
-    standard_srid = {landscan_name: world,
-                    point_name: osm_srid,
-                    line_name: osm_srid,
-                    polygon_name: osm_srid,
-                    protected_name: osm_srid,
-                    lulc_name: world,
-                    mangrove_name: world,
-                    reef_name: world,
-                    seagrass_name: world}
+    standard_srid = {
+        landscan_name: world,
+        point_name: osm_srid,
+        line_name: osm_srid,
+        polygon_name: osm_srid,
+        protected_name: osm_srid,
+        lulc_name: world,
+        mangrove_name: world,
+        reef_name: world,
+        seagrass_name: world}
 
-    simple_predictors = [landscan_name,
-                        protected_name,
-                        mangrove_name,
-                        reef_name,
-                        seagrass_name]
+    simple_predictors = [
+        landscan_name,
+        protected_name,
+        mangrove_name,
+        reef_name,
+        seagrass_name]
 
-##    column_alias = {landscan_name: "landscan",
-##                   protected_name: "protected",
-##                   mangrove_name: "mangrove",
-##                   reef_name: "reef",
-##                   seagrass_name: "seagrass"}
-##
-##    table_alias = {"landscan": landscan_name,
-##                  "protected": protected_name,
-##                  "mangrove": mangrove_name,
-##                  "reef": reef_name,
-##                  "seagrass": seagrass_name}
+    # column_alias = {landscan_name: "landscan",
+    #                protected_name: "protected",
+    #                mangrove_name: "mangrove",
+    #                reef_name: "reef",
+    #                seagrass_name: "seagrass"}
 
-    compound_predictors = [point_name,
-                          line_name,
-                          polygon_name,
-                          lulc_name]
+    # table_alias = {"landscan": landscan_name,
+    #               "protected": protected_name,
+    #               "mangrove": mangrove_name,
+    #               "reef": reef_name,
+    #               "seagrass": seagrass_name}
+
+    compound_predictors = [
+        point_name,
+        line_name,
+        polygon_name,
+        lulc_name]
 
     #intermediate table names
     grid_name = "grid"
@@ -113,13 +135,13 @@ def execute(args):
     #suffixes
     union = "_union"
     clip = "_clip"
-##    tansform = "_transform"
+   # tansform = "_transform"
     results = "_result"
     category = "_user_category"
 
-##    #table names
-##    standard_class_format = "%s_class"
-##    standard_category_format = "%s_category"
+   # #table names
+   # standard_class_format = "%s_class"
+   # standard_category_format = "%s_category"
     class_format = "%s_user_class"
     category_format = "%s" + category
     union_format = "%s" + union
@@ -144,10 +166,11 @@ def execute(args):
         LOGGER.info("Loading grid.")
         LOGGER.debug("Loading grid from %s.",
                      loggify(grid_file_name))
-        grid_srid = recreation_server_core.temp_shapefile_db(cur,
-                                                             grid_file_name,
-                                                             grid_name,
-                                                             True)
+        grid_srid = rs_core.temp_shapefile_db(
+            cur,
+            grid_file_name,
+            grid_name,
+            True)
 
         #rename id column
         sql = "ALTER TABLE %s RENAME COLUMN %s to %s"
@@ -176,11 +199,11 @@ def execute(args):
         user_simple_predictors = []
         user_compound_predictors = []
         model_compound_predictors = []
-##        user_categorization = []
+        # user_categorization = []
         user_categorization_dict = {}
         user_class_dict = {}
         predictor_srid = {}
-##        predictorList= copy.copy(grid_predictors)
+        # predictorList= copy.copy(grid_predictors)
         if not data_dir == "":
             for file_name in os.listdir(data_dir):
                 file_stem, file_extension = os.path.splitext(file_name)
@@ -192,7 +215,8 @@ def execute(args):
                         LOGGER.info("Found compound predictor %s.", file_stem)
                         include = False
                         LOGGER.info("Processing categorization table.")
-                        categories, classes = recreation_server_core.category_dict(data_dir + file_stem + ".tsv")
+                        categories, classes = rs_core.category_dict(
+                            data_dir + file_stem + ".tsv")
                         user_categorization_dict[file_stem] = categories
                         user_class_dict[file_stem] = classes
                         for predictor in classes.keys():
@@ -203,32 +227,40 @@ def execute(args):
                                             file_stem)
                                 include = True
                             except ValueError:
-                                LOGGER.warn("Simple predictor %s from %s in not in the grid.",
-                                            predictor,
-                                            file_stem)
+                                LOGGER.warn(
+                                    "Simple predictor %s from %s in not in the grid.",
+                                    predictor,
+                                    file_stem)
                         if include:
-                            LOGGER.info("Adding compound predictor %s to processing queue.",
-                                        file_stem)
+                            LOGGER.info(
+                                "Adding compound predictor %s to processing queue.",
+                                file_stem)
                             user_compound_predictors.append(file_stem)
                             LOGGER.info("Importing compound predictor %s.",
                                         file_stem)
-                            predictor_srid[file_stem] = recreation_server_core.temp_shapefile_db(cur, data_dir + file_stem + ".shp", file_stem, True)
+                            predictor_srid[file_stem] = rs_core.temp_shapefile_db(
+                                cur,
+                                data_dir + file_stem + ".shp",
+                                file_stem,
+                                True)
                         else:
-                            LOGGER.warn("_compound predictor %s does not contain any simple predictors in the grid.")
+                            LOGGER.warn(
+                                "_compound predictor %s does not contain any simple predictors in the grid.")
                     else:
                         LOGGER.info("Found simple predictor %s.", file_stem)
                         try:
                             grid_predictors.index(file_stem)
                             LOGGER.debug("Found predictor %s in grid.",
                                          file_stem)
-                            LOGGER.info("Adding simple predictor %s to processing queue.",
-                                        file_stem)
+                            LOGGER.info(
+                                "Adding simple predictor %s to processing queue.",
+                                file_stem)
                             user_simple_predictors.append(file_stem)
                             LOGGER.info("Importing simple predictor %s.",
                                         file_stem)
                             LOGGER.debug("Importing simple predictor %s.",
                                          (data_dir + file_stem + ".shp"))
-                            predictor_srid[file_stem] = recreation_server_core.temp_shapefile_db(cur, data_dir + file_stem + ".shp", file_stem)
+                            predictor_srid[file_stem] = rs_core.temp_shapefile_db(cur, data_dir + file_stem + ".shp", file_stem)
                         except ValueError:
                             LOGGER.warn("Predictor %s is not in the grid.",
                                         file_stem)
@@ -240,8 +272,9 @@ def execute(args):
                         try:
                             #this should never be reached, right?
                             grid_predictors.index(file_stem)
-                            LOGGER.info("Adding simple predictor %s to processing queue.",
-                                        file_stem)
+                            LOGGER.info(
+                                "Adding simple predictor %s to processing queue.",
+                                file_stem)
                             user_simple_predictors.append(file_stem)
                             predictor_srid[file_stem] = standard_srid[file_stem]
                         except ValueError:
@@ -252,42 +285,50 @@ def execute(args):
                             compound_predictors.index(file_stem)
                             include = False
                             LOGGER.info("Processing categorization table.")
-                            categories, classes = recreation_server_core.category_dict(data_dir + file_stem + ".tsv")
+                            categories, classes = rs_core.category_dict(
+                                data_dir + file_stem + ".tsv")
                             user_categorization_dict[file_stem] = categories
                             user_class_dict[file_stem] = classes
                             for predictor in classes.keys():
                                 try:
                                     grid_predictors.index(predictor)
-                                    LOGGER.info("Found simple predictor %s in %s.",
-                                                predictor, file_stem)
+                                    LOGGER.info(
+                                        "Found simple predictor %s in %s.",
+                                        predictor, file_stem)
                                     include = True
                                 except ValueError:
-                                    LOGGER.warn("Simple predictor %s from %s in not in the grid.",
-                                                predictor, file_stem)
+                                    LOGGER.warn(
+                                        "Simple predictor %s from %s in not in the grid.",
+                                        predictor, file_stem)
                             if include:
-                                LOGGER.info("Adding compound predictor %s to processing queue.",
-                                            file_stem)
+                                LOGGER.info(
+                                    "Adding compound predictor %s to processing queue.",
+                                    file_stem)
                                 model_compound_predictors.append(file_stem)
                                 predictor_srid[file_stem] = standard_srid[file_stem]
                             else:
-                                LOGGER.warn("Compound predictor %s does not contain any simple predictors in the grid.",
-                                            file_stem)
+                                LOGGER.warn(
+                                    "Compound predictor %s does not contain any simple predictors in the grid.",
+                                    file_stem)
                         except ValueError:
-                            LOGGER.warn("Categorization table %s is not part of the grid.",
-                                        file_stem)
+                            LOGGER.warn(
+                                "Categorization table %s is not part of the grid.",
+                                file_stem)
         else:
             LOGGER.error("Scenario runs must have additional data.")
-            raise ValueError, "Scenario runs must have additional data."
+            raise ValueError("Scenario runs must have additional data.")
 
         halt = False
         for table_name in user_simple_predictors + user_compound_predictors:
-            if recreation_server_core.not_valid_count_execute(cur, table_name, geometry_column_name) > 0:
-                LOGGER.warn("Predictor %s contains invalid geometry." % table_name)
+            if rs_core.not_valid_count_execute(
+                    cur, table_name, geometry_column_name) > 0:
+                LOGGER.warn(
+                    "Predictor %s contains invalid geometry." % table_name)
                 halt = True
         if halt:
             msg = "One or more predictors contain invalid geometry."
             LOGGER.error(msg)
-            raise ValueError, msg        
+            raise ValueError(msg)
 
         LOGGER.debug("The following simple predictors will be updated: %s.",
                      loggify(repr(user_simple_predictors)))
@@ -296,8 +337,11 @@ def execute(args):
 
         #union grid
         grid_union_name = union_format % (grid_name)
-        recreation_server_core.union_execute(cur, grid_name, grid_union_name,
-                                             grid_column_name)
+        rs_core.union_execute(
+            cur,
+            grid_name,
+            grid_union_name,
+            grid_column_name)
 
         #project grid for clips
         LOGGER.info("Projecting the grid for clips.")
@@ -305,22 +349,25 @@ def execute(args):
                      loggify(repr(predictor_srid)))
         for srid in set([predictor_srid[key] for key in predictor_srid.keys()]):
             LOGGER.debug("Projecting grid to srid %i.", srid)
-            recreation_server_core.transform_execute(cur,
-                                                     grid_union_name,
-                                                     projected_format % (grid_union_name, srid),
-                                                     grid_column_name,
-                                                     srid)
+            rs_core.transform_execute(
+                cur,
+                grid_union_name,
+                projected_format % (grid_union_name, srid),
+                grid_column_name,
+                srid)
 
         #clipping predictors
         LOGGER.info("Clipping simple predictors.")
         for predictor in user_simple_predictors:
             LOGGER.debug("Clipping %s.", predictor)
-            recreation_server_core.clip_execute(cur,
-                                                predictor,
-                                                geometry_column_name,
-                                                projected_format % (grid_union_name, predictor_srid[predictor]),
-                                                grid_column_name,
-                                                clip_format % (predictor))
+            rs_core.clip_execute(
+                cur,
+                predictor,
+                geometry_column_name,
+                projected_format % (
+                    grid_union_name, predictor_srid[predictor]),
+                grid_column_name,
+                clip_format % (predictor))
 
         LOGGER.info("Clipping compound predictors.")
         for predictor in user_compound_predictors + model_compound_predictors:
@@ -338,23 +385,26 @@ def execute(args):
                 extra_columns.extend(cat_columns)
             LOGGER.debug("Including columns: %s.",
                          loggify(repr(extra_columns)))
-            recreation_server_core.clip_execute(cur,
-                                                predictor,
-                                                geometry_column_name,
-                                                projected_format % (grid_union_name, predictor_srid[predictor]),
-                                                grid_column_name,
-                                                clip_format % (predictor),
-                                                extra_columns)
+            rs_core.clip_execute(
+                cur,
+                predictor,
+                geometry_column_name,
+                projected_format % (
+                    grid_union_name, predictor_srid[predictor]),
+                grid_column_name,
+                clip_format % (predictor),
+                extra_columns)
 
         #categorizing compound predictors
         for predictor in user_compound_predictors + model_compound_predictors:
             LOGGER.debug("Categorizing %s.", predictor)
-            recreation_server_core.categorize_execute(cur,
-                                                      clip_format % predictor,
-                                                      user_categorization_dict[predictor],
-                                                      user_class_dict[predictor],
-                                                      category_format,
-                                                      class_format)
+            rs_core.categorize_execute(
+                cur,
+                clip_format % predictor,
+                user_categorization_dict[predictor],
+                user_class_dict[predictor],
+                category_format,
+                class_format)
 
         #splitting compound predictors
         LOGGER.info("Converting compound predictors to simple predictors.")
@@ -384,18 +434,26 @@ def execute(args):
                              id_column, id_column, cat_column, category)
                 cur.execute(sql)
                 model_split_predictors.append(table_name.lower())
-        
+
         #transforming predictors
         LOGGER.info("Projecting simple predictors.")
         for predictor in user_simple_predictors + model_split_predictors:
             LOGGER.debug("Projecting %s.", predictor)
-            recreation_server_core.transform_execute(cur, clip_format % (predictor), projected_format % (predictor, grid_srid), geometry_column_name, grid_srid)
+            rs_core.transform_execute(
+                cur,
+                clip_format % (predictor),
+                projected_format % (predictor, grid_srid),
+                geometry_column_name,
+                grid_srid)
 
         #aggregating simple predictors
         join_tables = []
         for predictor in user_simple_predictors + model_split_predictors:
             LOGGER.debug("Aggregating %s.", predictor)
-            geo_type = recreation_server_core.dimension_execute(cur, projected_format % (predictor, grid_srid), geometry_column_name)
+            geo_type = rs_core.dimension_execute(
+                cur,
+                projected_format % (predictor, grid_srid),
+                geometry_column_name)
             LOGGER.debug("Predictor %s has dimensionality %i.", predictor,
                          geo_type)
             projected_name = projected_format % (predictor, grid_srid)
@@ -407,25 +465,28 @@ def execute(args):
                 cur.execute(sql)
             elif geo_type == 0:
                 LOGGER.debug("Processing point predictor %s.", predictor)
-                recreation_server_core.grid_point_execute(cur,
-                                                          grid_name,
-                                                          projected_name,
-                                                          results_name)
+                rs_core.grid_point_execute(
+                    cur,
+                    grid_name,
+                    projected_name,
+                    results_name)
             elif geo_type == 1:
                 LOGGER.debug("Processing line predictor %s.", predictor)
-                recreation_server_core.grid_line_execute(cur,
-                                                         grid_name,
-                                                         projected_name,
-                                                         results_name)
+                rs_core.grid_line_execute(
+                    cur,
+                    grid_name,
+                    projected_name,
+                    results_name)
             elif geo_type == 2:
                 LOGGER.debug("Processing polygon predictor %s.", predictor)
-                recreation_server_core.grid_polygon_execute(cur,
-                                                            grid_name,
-                                                            projected_name,
-                                                            results_name)
+                rs_core.grid_polygon_execute(
+                    cur,
+                    grid_name,
+                    projected_name,
+                    results_name)
             else:
-                raise ValueError, ("Predictor %s has an unknown geometry type.",
-                                   predictor)
+                raise ValueError("Predictor %s has an unknown geometry type.",
+                                 predictor)
 
             join_tables.append(predictor + results)
 
@@ -436,9 +497,11 @@ def execute(args):
             LOGGER.error("There will be no modified predictors in the scenario.")
 
         grid_predictors = set(grid_predictors)
-        grid_predictors.difference_update(set(user_simple_predictors + model_split_predictors))
-        LOGGER.info("Old data for columns %s.",
-                     loggify(repr(grid_predictors)))
+        grid_predictors.difference_update(
+            set(user_simple_predictors + model_split_predictors))
+        LOGGER.info(
+            "Old data for columns %s.",
+            loggify(repr(grid_predictors)))
 
         LOGGER.info("Preserving old columns.")
         if not len(grid_predictors):
@@ -449,28 +512,30 @@ def execute(args):
         cur.execute(sql)
 
         LOGGER.info("Joining new columns.")
-        recreation_server_core.join_results_execute(cur,
-                                                    user_simple_predictors + model_split_predictors,
-                                                    "newgrid",
-                                                    results_format,
-                                                    result_column,
-                                                    join_name,
-                                                    grid_predictors)
+        rs_core.join_results_execute(
+            cur,
+            user_simple_predictors + model_split_predictors,
+            "newgrid",
+            results_format,
+            result_column,
+            join_name,
+            grid_predictors)
 
         #writing predictor table
         LOGGER.info("Creating data shapefile.")
-        recreation_server_core.dump_execute(cur,
-                                            join_name,
-                                            args["scenario_file_name"],
-                                            {})
+        rs_core.dump_execute(
+            cur,
+            join_name,
+            args["scenario_file_name"],
+            {})
 
         LOGGER.debug("Shapefile written to disk.")
-        
+
         #drop
         temp_tables = [grid_name,
-                      "newgrid",
-                      grid_union_name,
-                      "results"]
+                       "newgrid",
+                       grid_union_name,
+                       "results"]
 
         LOGGER.debug("Appending projected table names.")
         for srid in set([predictor_srid[key] for key in predictor_srid.keys()]):
@@ -537,8 +602,10 @@ if __name__ == "__main__":
         scenario_file = open(sys.argv[1], 'r')
         initial_file = open(sys.argv[2], 'r')
     else:
-        scenario_file = open(os.path.join(dir_name, "default_scenario.json"), 'r')
-        initial_file = open(os.path.join(dir_name, "default_initial.json"), 'r')
+        scenario_file = open(os.path.join(
+            dir_name, "default_scenario.json"), 'r')
+        initial_file = open(os.path.join(
+            dir_name, "default_initial.json"), 'r')
 
     #load scenario parameters
     scenario = json.loads(scenario_file.read())
@@ -577,25 +644,39 @@ if __name__ == "__main__":
     #construct directory structure for default runs
     if scenario["sessid"] == "scenario":
         os.system("rm %s*" % session_path)
-        os.system("rm %s*" % (session_path + config["paths"]["relative"]["predictors"]))
-        os.system("rm %s*" % (session_path + config["paths"]["relative"]["download"]))
+        os.system("rm %s*" % (
+            session_path + config["paths"]["relative"]["predictors"]))
+        os.system("rm %s*" % (
+            session_path + config["paths"]["relative"]["download"]))
         os.system("mkdir %s" % session_path)
-        os.system("mkdir %s" % (session_path + config["paths"]["relative"]["predictors"]))
-        os.system("mkdir %s" % (session_path + config["paths"]["relative"]["download"]))
-        os.system("cp %s %s" % (scenario["grid_file_name"],
-                               os.path.join(session_path,
-                                            config["files"]["grid"]["shp"])))
-        file_stem, file_extension = os.path.splitext(scenario["grid_file_name"])
-        os.system("cp %s %s" % (file_stem + ".shx",
-                               os.path.join(session_path,
-                                            config["files"]["grid"]["shx"])))
-        os.system("cp %s %s" % (file_stem + ".dbf",
-                               os.path.join(session_path,
-                                            config["files"]["grid"]["dbf"])))
-        os.system("cp %s %s" % (file_stem + ".prj",
-                               os.path.join(session_path,
-                                            config["files"]["grid"]["prj"])))
-        os.system("cp %s* %s" % (scenario["data_dir"], session_path + config["paths"]["relative"]["data"]))
+        os.system("mkdir %s" % (
+            session_path + config["paths"]["relative"]["predictors"]))
+        os.system("mkdir %s" % (
+            session_path + config["paths"]["relative"]["download"]))
+        os.system("cp %s %s" % (
+            scenario["grid_file_name"], os.path.join(
+                session_path,
+                config["files"]["grid"]["shp"])))
+        file_stem, file_extension = os.path.splitext(
+            scenario["grid_file_name"])
+        os.system("cp %s %s" % (
+            file_stem + ".shx",
+            os.path.join(
+                session_path,
+                config["files"]["grid"]["shx"])))
+        os.system("cp %s %s" % (
+            file_stem + ".dbf",
+            os.path.join(
+                session_path,
+                config["files"]["grid"]["dbf"])))
+        os.system("cp %s %s" % (
+            file_stem + ".prj",
+            os.path.join(
+                session_path,
+                config["files"]["grid"]["prj"])))
+        os.system("cp %s* %s" % (
+            scenario["data_dir"],
+            session_path + config["paths"]["relative"]["data"]))
 
     #log to file
     hdlr = logging.FileHandler(str(session_path + config["files"]["log"]))
@@ -616,7 +697,7 @@ if __name__ == "__main__":
     if os.path.exists(args["data_dir"] + "landscan.tsv"):
         msg = "The categorization of the Landscan data is not allowed."
         LOGGER.error(msg)
-        raise ValueError, msg
+        raise ValueError(msg)
 
     args["scenario_file_name"] = os.path.join(session_path,
                                               config["files"]["grid"]["shp"])
