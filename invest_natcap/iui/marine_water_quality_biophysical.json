@@ -109,7 +109,7 @@
                     "id" : "advection_uv",
                     "args_id": "adv_uv_points_uri",
                     "type": "file",
-                    "label": "(Optional) Advection Vectors (UV as point data)",
+                    "label": "Advection Vectors (UV as point data) (Optional)",
                     "defaultValue": "../MarineWaterQuality/input/ADVuv_WGS1984_BCAlbers.shp",
                     "required": false,
                     "validateAs": {"type": "OGR"},

@@ -90,7 +90,7 @@
                     "id" : "sub_watersheds",
                     "args_id": "sub_watersheds_uri",
                     "type": "file",
-                    "label": "Sub-Watersheds (optional)",
+                    "label": "Sub-Watersheds (Optional)",
                     "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
                     "required": false,
                     "validateAs": {"type": "OGR",
@@ -143,7 +143,7 @@
                     "id" : "results_suffix",
                     "args_id" : "results_suffix",
                     "type": "text",
-                    "label": "Results Suffix (optional)",
+                    "label": "Results Suffix (Optional)",
                     "defaultValue": "",
                     "required": false,
                     "helpText":"A String that will be added to the end of the output uris."

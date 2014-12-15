@@ -182,7 +182,7 @@
           "id": "valuation",
           "args_id": "do_valuation",
           "type": "checkbox",
-          "label": "Run valuation? (optional)",
+          "label": "Run valuation? (Optional)",
           "required": true,
           "defaultValue": false,
           "helpText": "By checking this box, you are requesting valuation analysis."

@@ -46,7 +46,7 @@
                             "validText": "[0-9]+",
                             "dataType": "float",
                             "args_id": "output_cell_size",
-                            "label": "Output Cell Size (optional)",
+                            "label": "Output Cell Size (Optional)",
                             "required": false,
                             "defaultValue": "",
                             "helpText": "The output cell size of the suitability masks.  If left blank will default to the smallest cell size of the input biophysical layers."

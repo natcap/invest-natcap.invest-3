@@ -25,7 +25,7 @@
                     "args_id" : "results_suffix",
                     "type": "text",
                     "dataType": "string",
-                    "label": "Results Suffix (optional)",
+                    "label": "Results Suffix (Optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
                     "required": false,

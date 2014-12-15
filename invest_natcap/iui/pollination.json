@@ -96,7 +96,7 @@
             {
               "id": "fut_lulc_raster",
               "type": "hideableFileEntry",
-              "label": "Calculate future scenario",
+              "label": "Calculate future scenario (Optional)",
               "args_id": "landuse_fut_uri",
               "required": false,
               "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
@@ -163,7 +163,7 @@
         {
           "id": "guilds",
           "type": "file",
-          "label": "Guilds table",
+          "label": "Guilds table (Optional)",
           "defaultValue": "../Pollination/Input/Guild.csv",
           "args_id": "guilds_uri",
           "required": true,
@@ -229,7 +229,7 @@
         {
           "id": "ag_classes",
           "type": "text",
-          "label": "Agricultural classes (space-separated)",
+          "label": "Agricultural classes (space-separated) (Optional)",
           "args_id": "ag_classes",
           "required": false,
           "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
@@ -248,7 +248,7 @@
           "args_id": "farms_shapefile",
           "type": "hideableFileEntry",
           "defaultValue": "../Pollination/Input/farms.shp",
-          "label": "Aggregate results by farm sites",
+          "label": "Aggregate results by farm sites (Optional)",
           "returns": {
             "ifEmpty": "pass"
           },
@@ -285,12 +285,12 @@
         {
           "id": "results_suffix",
           "type": "text",
-          "label": "Results suffix",
+          "label": "Results suffix (Optional)",
           "args_id": "results_suffix",
           "required": false,
           "width": 120,
           "dataType": "string",
-          "helpText": "Optional.  If provided, it must be alphanumeric.  The results suffix will be appended to the end of all output filenames."
+          "helpText": "If provided, it must be alphanumeric.  The results suffix will be appended to the end of all output filenames."
         }
       ]
     }

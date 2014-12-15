@@ -36,7 +36,7 @@
           "id": "aoi",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "Area Of Interest (AOI)",
+          "label": "Area Of Interest (AOI) (Optional)",
           "defaultValue": "../WindEnergy/input/New_England_US_Aoi.shp",
           "requiredIf": [
             "valuation_container",
@@ -110,7 +110,7 @@
           "id": "results_suffix",
           "args_id": "suffix",
           "type": "text",
-          "label": "Results Suffix (optional)",
+          "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"
@@ -279,7 +279,7 @@
               "id": "grid_points",
               "args_id": "grid_points_uri",
               "type": "file",
-              "label": "Grid Connection Points",
+              "label": "Grid Connection Points (Optional)",
               "defaultValue": "",
               "required": false,
               "returns": {

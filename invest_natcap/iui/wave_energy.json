@@ -147,7 +147,7 @@
           "id": "results_suffix",
           "args_id": "suffix",
           "type": "text",
-          "label": "Results Suffix (optional)",
+          "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"

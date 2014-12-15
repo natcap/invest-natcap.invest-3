@@ -1,3 +1,4 @@
+
 {
   "id": "window",
   "label": "InVEST Carbon Model (Biophysical and Valuation)",
@@ -25,7 +26,7 @@
           "args_id": "suffix",
           "type": "text",
           "dataType": "string",
-          "label": "Results Suffix (optional)",
+          "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"
@@ -209,7 +210,7 @@
             {
               "id": "cur_harvest_map",
               "type": "file",
-              "label": "Current harvest rate map",
+              "label": "Current harvest rate map (Optional)",
               "args_id": "hwp_cur_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_cur.shp",
@@ -242,7 +243,7 @@
             {
               "id": "fut_harvest_map",
               "type": "file",
-              "label": "Future harvest rate map",
+              "label": "Future harvest rate map (Optional)",
               "args_id": "hwp_fut_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_fut.shp",

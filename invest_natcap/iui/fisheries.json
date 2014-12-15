@@ -33,7 +33,7 @@
           "id": "aoi_uri",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "Area(s) of Interest (SHP)",
+          "label": "Area(s) of Interest (SHP) (Optional)",
           "defaultValue": "../Fisheries/Input/Shapefile_Galveston/Galveston_Subregion.shp",
           "required": false,
           "validateAs": {
@@ -50,7 +50,7 @@
               "NAME"
             ]
           },
-          "helpText": "(Optional) The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
+          "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
         },
         {
           "id": "total_timesteps",
@@ -267,13 +267,13 @@
               "id": "migration_dir",
               "args_id": "migration_dir",
               "type": "folder",
-              "label": "Migration Matrix CSV Folder",
+              "label": "Migration Matrix CSV Folder (Optional)",
               "defaultValue": "../Fisheries/Input/MigrationFolder/",
               "required": false,
               "validateAs": {
                 "type": "folder"
               },
-              "helpText": "(Optional) The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an lifecycle class that migrates.  The folder should contain one CSV file for each lifecycle class that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
+              "helpText": "The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an lifecycle class that migrates.  The folder should contain one CSV file for each lifecycle class that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
             }
           ]
         }
