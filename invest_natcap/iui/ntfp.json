@@ -34,7 +34,7 @@
           "type": "file",
           "label": "LULC Time 1",
           "defaultValue": "../BlueCarbon/input/GBJC_2004_mean.tif",
-          "helpText": "The land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+          "helpText": "The land use land cover raster for time 1. <p>For more information see 'Data Needs' section in the model's documentation</a>",
           "required": true
         }
       ]
