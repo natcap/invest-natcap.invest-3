@@ -21,7 +21,7 @@
           "id": "workspace_dir",
           "args_id": "workspace_dir",
           "type": "folder",
-          "label": "Workspace Folder",
+          "label": "Workspace",
           "defaultValue": "../Fisheries",
           "required": true,
           "validateAs": {

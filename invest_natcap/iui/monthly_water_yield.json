@@ -17,8 +17,9 @@
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "",
-                    "required": true
-                },          
+                    "required": true,
+                    "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+                },
 		        {
                     "id" : "precip_data",
                     "args_id": "precip_data_uri",

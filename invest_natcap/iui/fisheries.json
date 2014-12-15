@@ -21,7 +21,7 @@
           "id": "workspace_dir",
           "args_id": "workspace_dir",
           "type": "folder",
-          "label": "Workspace Folder",
+          "label": "Workspace",
           "defaultValue": "../Fisheries",
           "required": true,
           "validateAs": {
@@ -108,19 +108,19 @@
               "helpText": "Specifies whether or not the lifecycle classes provided in the Populaton Parameters CSV file are distinguished by sex."
             },
             {
-                "id": "harvest_units",
-                "args_id": "harvest_units",
-                "type": "dropdown",
-                "label": "Harvest by Individuals or Weight",
-                "defaultValue": "Individuals",
-                "required": true,
-                "options": [
-                  "Individuals",
-                  "Weight"
-                ],
-                "returns": "strings",
-                "dataType": "string",
-                "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each lifecycle class and sex if model is sex-specific."
+              "id": "harvest_units",
+              "args_id": "harvest_units",
+              "type": "dropdown",
+              "label": "Harvest by Individuals or Weight",
+              "defaultValue": "Individuals",
+              "required": true,
+              "options": [
+                "Individuals",
+                "Weight"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each lifecycle class and sex if model is sex-specific."
             },
             {
               "id": "do_batch",
