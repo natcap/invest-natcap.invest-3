@@ -91,7 +91,7 @@
                   }
                 ]
               },
-              "helpText": "Select your land use attribute table here.  It must be a CSV."
+              "helpText": "The land use attribute table must be provided as a CSV."
             },
             {
               "id": "fut_lulc_raster",
@@ -103,7 +103,7 @@
               "validateAs": {
                 "type": "GDAL"
               },
-              "helpText": "Optional.<br/><br/>Providing a future land cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  Your future land cover raster should use the same land cover attribute table as your current scenario.  If provided, this must be a raster that GDAL can open."
+              "helpText": "Optional.<br/><br/>Providing a future land cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  The future scenario land cover raster should use the same land cover attribute table as the current land cover raster.  If provided, this must be a raster that GDAL can open."
             }
           ]
         }
@@ -224,7 +224,7 @@
               }
             ]
           },
-          "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If you are aggregating by crops, your table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
+          "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
         },
         {
           "id": "ag_classes",
@@ -241,7 +241,7 @@
             }
           },
           "dataType": "string",
-          "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If you do not provide agricultural classes here, the entire land cover raster will be considered to be agricultural."
+          "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land cover raster will be considered as agricultural."
         },
         {
           "id": "aggregate_by_farms",

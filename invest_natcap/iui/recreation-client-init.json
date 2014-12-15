@@ -44,7 +44,7 @@
                     "type" : "checkbox",
                     "label" : "Grid AOI",
                     "defaultValue" : true,
-                    "helpText": "Select if you want the area of interest to be gridded. If unselected, the AOI must contain multiple shapes."
+                    "helpText": "Checked box indicates for the area of interest to be gridded. If unselected, the AOI must contain multiple shapes."
                 },
                 {
                     "id": "grid_type",
@@ -77,7 +77,7 @@
                     "type": "text",
                     "label": "Comments",
                     "required": false,
-                    "helpText": "Any comments for yourself that you would like to have as part of the model run."
+                    "helpText": "Any comments to be included as part of the model run."
                 },
                 {
                     "id" : "data_dir",
@@ -86,7 +86,7 @@
                     "label": "Data Directory",
                     "required": false,
                     "defaultValue": "../Recreation/input/initial/predictors",
-                    "helpText": "A directory that contains any data you would like included in the model run."
+                    "helpText": "A directory that contains any data to be included in the model run."
                 },
                 {
                     "id" : "download",

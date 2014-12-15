@@ -33,7 +33,7 @@
             "type": "OGR"
           },
           "required": true,
-          "helpText": "If you are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, you wish to use gridding in order to separate the area, this can be a single polygon shapefile."
+          "helpText": "If Management Zones is being used to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, gridding is being used in order to separate the area, this can be a single polygon shapefile."
         },
         {
           "id": "grid_size",
@@ -66,7 +66,7 @@
           "label": "Intra-Activity Weighting?",
           "defaultValue": false,
           "required": true,
-          "helpText": "By checking this box, you are indicating that you would like to use intra-activity valuation of the data. These weights will be retrieved from the column in the attribute table of the shapefile specified in 'Analysis Zones Layer' that bears the name specified in the 'Intra-Activity Field Name' field below."
+          "helpText": "Checking this box indicates that intra-activity valuation of the data should be used. These weights will be retrieved from the column in the attribute table of the shapefile specified in 'Analysis Zones Layer' that bears the name specified in the 'Intra-Activity Field Name' field below."
         },
         {
           "id": "IS_field_name",
@@ -88,7 +88,7 @@
           "label": "Inter-Activity Weighting?",
           "defaultValue": false,
           "required": true,
-          "helpText": "By checking this box, you are indicating that you would like to use inter-activity valuation of the data. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
+          "helpText": "Checking this box indicates that inter-activity valuation of the data should be used. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
         },
         {
           "id": "IS_tbl",
@@ -113,7 +113,7 @@
           "label": "Human Use Hubs?",
           "defaultValue": "False",
           "required": false,
-          "helpText": "By checking this box, you are indicating that you would like to use a layer of human use hubs to weight the raster file output. This input should be in the form of a point shapefile."
+          "helpText": "Checking this box indicates taht a layer of human use hubs should be used to weight the raster file output. This input should be in the form of a point shapefile."
         },
         {
           "id": "HU_Hub_URI",

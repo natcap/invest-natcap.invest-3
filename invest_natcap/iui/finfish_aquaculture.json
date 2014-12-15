@@ -163,7 +163,7 @@
           "validateAs": {
             "type": "CSV"
           },
-          "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model. If you would like to use your own dataset, you can modify values for farm operations (applied to all farms) and/or add new farms (beginning with row 32). However, do not modify the location of cells in this template. If for example, you choose to run the model for three farms only, they should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
+          "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model.<br><br>The values for 'farm operations' (applied to all farms) and 'add new farms' (beginning with row 32) may be modified according to the user's needs . However, the location of cells in this template must not be modified. If for example, if the model is to run for three farms only, the farms should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
         },
         {
           "id": "outplant_buffer",
@@ -185,7 +185,7 @@
           "label": "Run valuation? (Optional)",
           "required": true,
           "defaultValue": false,
-          "helpText": "By checking this box, you are requesting valuation analysis."
+          "helpText": "By checking this box, a valuation analysis will be run on the model."
         },
         {
           "id": "market_price",

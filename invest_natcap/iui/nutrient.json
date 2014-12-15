@@ -39,7 +39,7 @@
             "defaultValue": "../Base_Data/Freshwater/dem",
             "required": true,
             "validateAs": {"type": "GDAL"},
-            "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
+            "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
         },
         {
             "id" : "precipitation",

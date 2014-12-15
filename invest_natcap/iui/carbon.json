@@ -43,7 +43,7 @@
         {
           "id": "top_label",
           "type": "label",
-          "label": "You can choose to run the biophysical model, the valuation model, or both. In order to run the valuation model, you must either run the biophysical model with sequestration analysis, or provide your own carbon sequestration map."
+          "label": "The biophysical model and valuation model may be run independently or together. In order to run the valuation model, either the biophysical model must be run with 'Calculate Sequestration' checked, or inputs must be provided under the 'Sequestration Data' section below."
         }
       ]
     },
@@ -397,7 +397,7 @@
             {
               "id": "valuation_label",
               "type": "label",
-              "label": "In order to run valuation, you must either run the biophysical model with sequestration analysis, or provide your own sequestration data above."
+              "label": "In order to run valuation, either the biophysical model must be run with 'Calculate Sequestration' checked, or inputs must be provided under the 'Sequestration Data' section above."
             }
           ]
         },

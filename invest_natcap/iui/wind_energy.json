@@ -136,7 +136,7 @@
               "label": "Turbine Type",
               "defaultValue": "../WindEnergy/input/3_6_turbine.csv",
               "required": true,
-              "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. You may create a new turbine class (or modifying existing classes) by using the existing file format conventions and filling in your own parameters. It is recommended that you do not overwrite the existing default CSV files.",
+              "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. A new turbine class may be created by using the existing file format conventions and filling in new parameters. Likewise an existing class may be modified according to the user's needs. It is recommended that the existing default CSV files are not overwritten.",
               "validateAs": {
                 "type": "CSV"
               }
@@ -273,7 +273,7 @@
                 }
               },
               "required": true,
-              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?). Please consult the User's Guide for guidance on selecting this value."
+              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). Please consult the User's Guide for guidance on selecting this value."
             },
             {
               "id": "grid_points",

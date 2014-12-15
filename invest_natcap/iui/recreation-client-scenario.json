@@ -43,7 +43,7 @@
                             "label": "Data Directory",
                             "defaultValue": "../Recreation/input/scenario/predictors",
                             "required": true,
-                            "helpText": "A directory that contains all the new data for the scenario that you would like to include in the model run."
+                            "helpText": "A directory that contains all the new data for the scenario to be included in the model run."
 		        },
 		        {
                             "id" : "comments",
@@ -51,7 +51,7 @@
                             "type": "text",
                             "label": "Comments",
                             "required": false,
-                            "helpText": "Any comments for yourself that you would like to have as part of the model run."                            
+                            "helpText": "Any comments to be included as part of the model run."                            
 		        }
 		   ]
 		   }

@@ -172,7 +172,7 @@
           "dataType": "float",
           "validText": "-?([0-9]+)?\\.[0-9]+",
           "defaultValue": "7",
-          "helpText": "The market discount rate reflects societys preference for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?)."
+          "helpText": "The market discount rate reflects society's preference for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?)."
         }
       ]
     }
