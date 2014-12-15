@@ -73,7 +73,7 @@
           "id": "landuse_uri",
           "args_id": "landuse_uri",
           "type": "file",
-          "label": "LULC Raster",
+          "label": ":Land-Use/Land-Cover Raster",
           "defaultValue": "../Base_Data/Freshwater/landuse_90",
           "required": true,
           "validateAs": {

@@ -27,7 +27,7 @@
           "id": "farm_location",
           "args_id": "ff_farm_loc",
           "type": "file",
-          "label": "Finfish farm location",
+          "label": "Finfish Farm Location",
           "defaultValue": "../Aquaculture/Input/Finfish_Netpens.shp",
           "required": true,
           "validateAs": {
@@ -40,7 +40,7 @@
           "args_id": "farm_ID",
           "type": "OGRFieldDropdown",
           "enabledBy": "farm_location",
-          "label": "Farm identifier name",
+          "label": "Farm Identifier Name",
           "defaultValue": "FarmID",
           "required": true,
           "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
@@ -49,7 +49,7 @@
           "id": "param_a",
           "args_id": "g_param_a",
           "type": "text",
-          "label": "Fish growth parameter (a)",
+          "label": "Fish Growth Parameter (a)",
           "defaultValue": "0.038",
           "required": true,
           "validateAs": {
@@ -62,7 +62,7 @@
           "id": "param_b",
           "args_id": "g_param_b",
           "type": "text",
-          "label": "Fish growth parameter (b)",
+          "label": "Fish Growth Parameter (b)",
           "defaultValue": "0.6667",
           "required": true,
           "validateAs": {
@@ -75,7 +75,7 @@
           "id": "param_tau",
           "args_id": "g_param_tau",
           "type": "text",
-          "label": "Fish growth parameter (tau)",
+          "label": "Fish Growth Parameter (tau)",
           "defaultValue": "0.08",
           "required": true,
           "validateAs": {
@@ -91,7 +91,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "use_uncertainty",
-      "label": "Enable uncertainty analysis",
+      "label": "Enable Uncertainty Analysis",
       "elements": [
         {
           "id": "uncertainty_list",
@@ -101,7 +101,7 @@
               "id": "param_a_sd",
               "args_id": "g_param_a_sd",
               "type": "text",
-              "label": "Standard deviation for parameter (a)",
+              "label": "Standard Deviation for Parameter (a)",
               "validateAs": {
                 "type": "number"
               },
@@ -113,7 +113,7 @@
               "id": "param_b_sd",
               "args_id": "g_param_b_sd",
               "type": "text",
-              "label": "Standard deviation for parameter (b)",
+              "label": "Standard Deviation for Parameter (b)",
               "defaultValue": "0.05",
               "validateAs": {
                 "type": "number"
@@ -125,7 +125,7 @@
               "id": "num_monte_carlo_runs",
               "args_id": "num_monte_carlo_runs",
               "type": "text",
-              "label": "Number of Monte Carlo simulation runs",
+              "label": "Number of Monte Carlo Simulation Runs",
               "validateAs": {
                 "type": "number"
               },
@@ -145,7 +145,7 @@
           "id": "water_temperature",
           "args_id": "water_temp_tbl",
           "type": "file",
-          "label": "Table of daily water temperature at farm",
+          "label": "Table of Daily Water Temperature at Farm",
           "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
           "required": true,
           "validateAs": {
@@ -157,7 +157,7 @@
           "id": "farm_operations",
           "args_id": "farm_op_tbl",
           "type": "file",
-          "label": "Farm operations table",
+          "label": "Farm Operations Table",
           "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
           "required": true,
           "validateAs": {
@@ -169,7 +169,7 @@
           "id": "outplant_buffer",
           "args_id": "outplant_buffer",
           "type": "text",
-          "label": "Outplant date buffer",
+          "label": "Outplant Date Buffer",
           "defaultValue": "3",
           "required": true,
           "validateAs": {
@@ -182,7 +182,7 @@
           "id": "valuation",
           "args_id": "do_valuation",
           "type": "checkbox",
-          "label": "Run valuation? (Optional)",
+          "label": "Run Valuation?",
           "required": true,
           "defaultValue": false,
           "helpText": "By checking this box, a valuation analysis will be run on the model."
@@ -190,7 +190,7 @@
         {
           "id": "market_price",
           "type": "text",
-          "label": "Market price per kilogram of processed fish",
+          "label": "Market Price per Kilogram of Processed Fish",
           "args_id": "p_per_kg",
           "required": false,
           "enabledBy": "valuation",
@@ -207,7 +207,7 @@
         {
           "id": "fraction_price",
           "type": "text",
-          "label": "Fraction of price that accounts to costs",
+          "label": "Fraction of Price that Accounts to Costs",
           "args_id": "frac_p",
           "required": false,
           "enabledBy": "valuation",
@@ -224,7 +224,7 @@
         {
           "id": "discount_rate",
           "type": "text",
-          "label": "Daily market discount rate",
+          "label": "Daily Market Discount Rate",
           "args_id": "discount",
           "required": false,
           "enabledBy": "valuation",

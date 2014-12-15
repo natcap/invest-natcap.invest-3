@@ -43,7 +43,7 @@
                 {
                     "id" : "pixel_size",
                     "type": "text",
-                    "label": "Output pixel Size in meters",
+                    "label": "Output Pixel Size (meters)",
                     "args_id": "pixel_size",
                     "required": true,
                     "defaultValue": "100",
@@ -109,7 +109,7 @@
                     "id" : "advection_uv",
                     "args_id": "adv_uv_points_uri",
                     "type": "file",
-                    "label": "Advection Vectors (UV as point data) (Optional)",
+                    "label": "Advection Vectors (UV as Point Data) (Optional)",
                     "defaultValue": "../MarineWaterQuality/input/ADVuv_WGS1984_BCAlbers.shp",
                     "required": false,
                     "validateAs": {"type": "OGR"},

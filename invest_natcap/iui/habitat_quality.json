@@ -27,7 +27,7 @@
           "id": "current_landcover",
           "args_id": "landuse_cur_uri",
           "type": "file",
-          "label": "Current land cover map",
+          "label": "Current Land Cover Map",
           "defaultValue": "../HabitatQuality/Input/lc_samp_cur_b/w001001.adf",
           "required": true,
           "validateAs": {
@@ -39,7 +39,7 @@
           "id": "future_landcover",
           "args_id": "landuse_fut_uri",
           "type": "file",
-          "label": "Future land cover map (Optional)",
+          "label": "Future Land Cover Map (Optional)",
           "defaultValue": "",
           "required": false,
           "validateAs": {
@@ -54,7 +54,7 @@
           "id": "baseline_landcover",
           "args_id": "landuse_bas_uri",
           "type": "file",
-          "label": "Baseline land cover map (Optional)",
+          "label": "Baseline Land Cover Map (Optional)",
           "defaultValue": "",
           "required": false,
           "validateAs": {
@@ -69,7 +69,7 @@
           "id": "threats_data",
           "args_id": "threats_uri",
           "type": "file",
-          "label": "Threats data",
+          "label": "Threats Data",
           "defaultValue": "../HabitatQuality/Input/threats_samp.csv",
           "required": true,
           "validateAs": {
@@ -122,7 +122,7 @@
           "id": "accessibility_threats",
           "args_id": "access_uri",
           "type": "file",
-          "label": "Accessibility to threats (Optional)",
+          "label": "Accessibility to Threats (Optional)",
           "defaultValue": "../HabitatQuality/Input/access_samp.shp",
           "required": false,
           "validateAs": {
@@ -148,7 +148,7 @@
           "id": "sensitivity_data",
           "args_id": "sensitivity_uri",
           "type": "file",
-          "label": "Sensitivity of land cover types to each threat",
+          "label": "Sensitivity of Land Cover Types to Each Threat",
           "defaultValue": "../HabitatQuality/Input/sensitivity_samp.csv",
           "required": true,
           "validateAs": {
@@ -191,7 +191,7 @@
               "pattern": "^[0-9]*\\.?[0-9]+$"
             }
           },
-          "label": "Half-saturation constant",
+          "label": "Half-Saturation Constant",
           "defaultValue": "0.5",
           "required": true,
           "helpText": "A positive floating point value that is defaulted at 0.5. This is the value of the parameter k in equation (4). In general, set k to half of the highest grid cell degradation value on the landscape. To perform this model calibration the model must be run once in order to find the highest degradation value and set k for the provided landscape. Note that the choice of k only determines the spread and central tendency of habitat quality cores and does not affect the rank."

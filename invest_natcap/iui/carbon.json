@@ -53,7 +53,7 @@
       "collapsible": true,
       "defaultValue": true,
       "args_id": "do_biophysical",
-      "label": "Run biophysical model",
+      "label": "Run Biophysical Model",
       "elements": [
         {
           "id": "biophysical_first_list",
@@ -62,7 +62,7 @@
             {
               "id": "calc_sequestration",
               "type": "checkbox",
-              "label": "Calculate sequestration",
+              "label": "Calculate Sequestration",
               "helpText": "Check to enable sequestration analysis. This requires inputs of LULC maps for both current and future scenarios.",
               "defaultValue": false,
               "required": false
@@ -70,7 +70,7 @@
             {
               "id": "redd",
               "type": "checkbox",
-              "label": "REDD scenario analysis",
+              "label": "REDD Scenario Analysis",
               "enabledBy": "calc_sequestration",
               "helpText": "Check to enable REDD scenario analysis. This requires three LULC maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
               "defaultValue": false,
@@ -82,7 +82,7 @@
           "id": "cur_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Current land use/land cover",
+          "label": "Current Land-Use/Land-Cover",
           "elements": [
             {
               "id": "cur_lulc_list",
@@ -92,7 +92,7 @@
                   "id": "cur_lulc_raster",
                   "args_id": "lulc_cur_uri",
                   "type": "file",
-                  "label": "Raster location",
+                  "label": "Raster Location",
                   "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                   "required": true,
                   "validateAs": {
@@ -107,7 +107,7 @@
                   "validText": "-?[0-9]+",
                   "dataType": "int",
                   "args_id": "lulc_cur_year",
-                  "label": "Year of land cover",
+                  "label": "Year of Land Cover",
                   "required": false,
                   "enabledBy": "calc_sequestration",
                   "requiredIf": [
@@ -125,7 +125,7 @@
           "id": "fut_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Future land use/land cover",
+          "label": "Future Land-Use/Land-Cover",
           "elements": [
             {
               "id": "fut_lulc_list",
@@ -134,7 +134,7 @@
                 {
                   "id": "fut_lulc_raster",
                   "type": "file",
-                  "label": "Baseline raster",
+                  "label": "Baseline Raster",
                   "args_id": "lulc_fut_uri",
                   "required": false,
                   "enabledBy": "calc_sequestration",
@@ -150,7 +150,7 @@
                 {
                   "id": "redd_lulc_raster",
                   "type": "file",
-                  "label": "REDD policy raster",
+                  "label": "REDD Policy Raster",
                   "args_id": "lulc_redd_uri",
                   "required": false,
                   "enabledBy": "redd",
@@ -169,7 +169,7 @@
                   "width": 70,
                   "validText": "-?[0-9]+",
                   "dataType": "int",
-                  "label": "Year of land cover",
+                  "label": "Year of Land Cover",
                   "args_id": "lulc_fut_year",
                   "required": false,
                   "defaultValue": "2030",
@@ -190,7 +190,7 @@
             {
               "id": "carbon_pools",
               "type": "file",
-              "label": "Carbon pools",
+              "label": "Carbon Pools",
               "defaultValue": "../Carbon/Input/carbon_pools_samp.csv",
               "args_id": "carbon_pools_uri",
               "required": true,
@@ -210,7 +210,7 @@
             {
               "id": "cur_harvest_map",
               "type": "file",
-              "label": "Current harvest rate map (Optional)",
+              "label": "Current Harvest Rate Map (Optional)",
               "args_id": "hwp_cur_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_cur.shp",
@@ -243,7 +243,7 @@
             {
               "id": "fut_harvest_map",
               "type": "file",
-              "label": "Future harvest rate map (Optional)",
+              "label": "Future Harvest Rate Map (Optional)",
               "args_id": "hwp_fut_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_fut.shp",
@@ -279,7 +279,7 @@
           "type": "container",
           "collapsible": true,
           "args_id": "do_uncertainty",
-          "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
+          "label": "Data for Uncertainty Analysis (enable to trigger uncertainty analysis)",
           "elements": [
             {
               "id": "uncertainty_list",
@@ -316,7 +316,7 @@
                   "defaultValue": "90",
                   "dataType": "float",
                   "args_id": "confidence_threshold",
-                  "label": "Confidence threshold",
+                  "label": "Confidence Threshold",
                   "requiredIf": [
                     "carbon_pools_uncertain"
                   ],
@@ -341,7 +341,7 @@
             {
               "id": "sequest_uri",
               "type": "file",
-              "label": "Sequestration raster",
+              "label": "Sequestration Raster",
               "args_id": "sequest_uri",
               "validateAs": {
                 "type": "GDAL"
@@ -354,7 +354,7 @@
               "args_id": "yr_cur",
               "type": "text",
               "width": 70,
-              "label": "Start year of sequestration measurement",
+              "label": "Start Year of Sequestration Measurement",
               "required": true,
               "dataType": "int",
               "validText": "-?[0-9]+",
@@ -369,7 +369,7 @@
               "args_id": "yr_fut",
               "type": "text",
               "width": 70,
-              "label": "Final year of sequestration measurement",
+              "label": "Final Year of Sequestration Measurement",
               "required": true,
               "dataType": "int",
               "validText": "-?[0-9]+",
@@ -388,7 +388,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "do_valuation",
-      "label": "Run valuation model",
+      "label": "Run Valuation Model",
       "elements": [
         {
           "id": "valuation_label_list",
@@ -409,7 +409,7 @@
               "id": "carbon_price_units",
               "args_id": "carbon_price_units",
               "type": "dropdown",
-              "label": "Price in terms of metric tons of",
+              "label": "Price in Terms of Metric Tons of",
               "options": [
                 "Carbon (C)",
                 "Carbon Dioxide (CO2)"
@@ -423,7 +423,7 @@
               "args_id": "V",
               "type": "text",
               "width": 70,
-              "label": "Value of Carbon (USD/metric ton)",
+              "label": "Value of Carbon (USD/Metric Ton)",
               "required": true,
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
@@ -438,7 +438,7 @@
               "args_id": "r",
               "type": "text",
               "width": 70,
-              "label": "Market discount in price of Carbon (%)",
+              "label": "Market Discount in Price of Carbon (%)",
               "required": true,
               "dataType": "int",
               "validText": "-?([0-9]+)?\\.[0-9]+",
@@ -453,7 +453,7 @@
               "args_id": "c",
               "type": "text",
               "width": 70,
-              "label": "Annual rate of change in price of Carbon (%)",
+              "label": "Annual Rate of Change in Price of Carbon (%)",
               "required": true,
               "dataType": "float",
               "validText": "-?([0-9]+)?\\.[0-9]+",

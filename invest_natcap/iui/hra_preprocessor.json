@@ -100,7 +100,7 @@
           "id": "sens_crit",
           "type": "multi",
           "args_id": "sensitivity_crits",
-          "label": "Consequence- Sensitivity",
+          "label": "Consequence: Sensitivity",
           "sampleElement": {
             "id": "sample_id",
             "type": "text",
@@ -121,7 +121,7 @@
           "id": "res_crit",
           "type": "multi",
           "args_id": "resilience_crits",
-          "label": "Consequence- Resilience",
+          "label": "Consequence: Resilience",
           "sampleElement": {
             "id": "sample_id",
             "type": "text",

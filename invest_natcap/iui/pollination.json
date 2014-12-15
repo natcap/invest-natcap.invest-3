@@ -40,7 +40,7 @@
               "id": "cur_lulc_raster",
               "args_id": "landuse_cur_uri",
               "type": "file",
-              "label": "Current land cover scenario raster",
+              "label": "Current Land Cover Scenario Raster",
               "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
               "required": true,
               "validateAs": {
@@ -51,7 +51,7 @@
             {
               "id": "landcover_attribute_table",
               "type": "file",
-              "label": "Landcover attribute table",
+              "label": "Landcover Attribute Table",
               "args_id": "landuse_attributes_uri",
               "required": true,
               "defaultValue": "../Pollination/Input/LU.csv",
@@ -96,7 +96,7 @@
             {
               "id": "fut_lulc_raster",
               "type": "hideableFileEntry",
-              "label": "Calculate future scenario (Optional)",
+              "label": "Calculate Future Scenario (Optional)",
               "args_id": "landuse_fut_uri",
               "required": false,
               "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
@@ -114,7 +114,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "do_valuation",
-      "label": "Valuation options (enable to trigger valuation)",
+      "label": "Valuation Options (enable to trigger valuation)",
       "elements": [
         {
           "id": "valuation_list",
@@ -139,7 +139,7 @@
             {
               "id": "wild_pollination_proportion",
               "type": "text",
-              "label": "Proportion of total yield due to wild pollinators",
+              "label": "Proportion of Total Yield Due to Wild Pollinators",
               "args_id": "wild_pollination_proportion",
               "required": true,
               "width": 60,
@@ -163,7 +163,7 @@
         {
           "id": "guilds",
           "type": "file",
-          "label": "Guilds table (Optional)",
+          "label": "Guilds Table (Optional)",
           "defaultValue": "../Pollination/Input/Guild.csv",
           "args_id": "guilds_uri",
           "required": true,
@@ -229,7 +229,7 @@
         {
           "id": "ag_classes",
           "type": "text",
-          "label": "Agricultural classes (space-separated) (Optional)",
+          "label": "Agricultural Classes (space-separated) (Optional)",
           "args_id": "ag_classes",
           "required": false,
           "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
@@ -248,7 +248,7 @@
           "args_id": "farms_shapefile",
           "type": "hideableFileEntry",
           "defaultValue": "../Pollination/Input/farms.shp",
-          "label": "Aggregate results by farm sites (Optional)",
+          "label": "Aggregate Results by Farm Sites (Optional)",
           "returns": {
             "ifEmpty": "pass"
           },
@@ -285,7 +285,7 @@
         {
           "id": "results_suffix",
           "type": "text",
-          "label": "Results suffix (Optional)",
+          "label": "Results Suffix (Optional)",
           "args_id": "results_suffix",
           "required": false,
           "width": 120,

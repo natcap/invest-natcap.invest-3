@@ -27,7 +27,7 @@
           "id": "shapefile",
           "args_id": "timber_shape_uri",
           "type": "file",
-          "label": "Managed area map",
+          "label": "Managed Area Map",
           "validateAs": {
             "type": "OGR"
           },
@@ -39,7 +39,7 @@
           "id": "attr_table",
           "args_id": "attr_table_uri",
           "type": "file",
-          "label": "Plantation production table",
+          "label": "Plantation Production Table",
           "required": true,
           "defaultValue": "../timber/input/plant_table.dbf",
           "validateAs": {
@@ -167,7 +167,7 @@
           "args_id": "market_disc_rate",
           "type": "text",
           "width": 70,
-          "label": "Market discount rate (%)",
+          "label": "Market Discount Rate (%)",
           "required": true,
           "dataType": "float",
           "validText": "-?([0-9]+)?\\.[0-9]+",

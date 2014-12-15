@@ -148,7 +148,7 @@
             "id" : "calc_p",
             "args_id": "calc_p",
             "type": "checkbox",
-            "label": "Calculate phosphorous retention",
+            "label": "Calculate Phosphorous Retention",
             "defaultValue": true,
             "required": false,
             "helpText": "Select to calculate phosphorous export."
@@ -157,7 +157,7 @@
             "id" : "calc_n",
             "args_id": "calc_n",
             "type": "checkbox",
-            "label": "Calculate nitrogen retention",
+            "label": "Calculate Nitrogen Retention",
             "defaultValue": true,
             "required": false,
             "helpText": "Select to calculate nitrogen export."
@@ -202,7 +202,7 @@
                 "id" : "water_purification_valuation_table_uri",
                 "args_id" : "water_purification_valuation_table_uri",
                 "type": "file",
-                "label": "Water Purification valuation table",
+                "label": "Water Purification Valuation Table",
                 "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_valuation.csv",
                 "required": true,
                 "validateAs": {"type": "CSV"},

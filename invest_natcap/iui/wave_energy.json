@@ -270,7 +270,7 @@
               "id": "number_of_machines",
               "args_id": "number_of_machines",
               "type": "text",
-              "label": "Number Of Machines",
+              "label": "Number of Machines",
               "defaultValue": "28",
               "required": true,
               "validText": "[0-9]+",

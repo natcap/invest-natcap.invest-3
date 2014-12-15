@@ -217,7 +217,7 @@
               "id": "start",
               "args_id": "start",
               "type": "text",
-              "label": "Start year",
+              "label": "Start Year",
               "validateAs": {
                 "type": "number"
               },
@@ -232,7 +232,7 @@
               "id": "step",
               "args_id": "step",
               "type": "text",
-              "label": "Years between snapshots",
+              "label": "Years Between Snapshots",
               "validateAs": {
                 "type": "number"
               },
@@ -247,7 +247,7 @@
               "id": "stop",
               "args_id": "stop",
               "type": "text",
-              "label": "Stop year",
+              "label": "Stop Year",
               "validateAs": {
                 "type": "number"
               },
@@ -278,7 +278,7 @@
               "id": "carbon_units",
               "args_id": "carbon_units",
               "type": "dropdown",
-              "label": "Price in terms of metric tons of",
+              "label": "Price in Terms of Metric Tons of",
               "options": [
                 "Carbon (C)",
                 "Carbon Dioxide (CO2)"
@@ -292,7 +292,7 @@
               "args_id": "discount_rate",
               "type": "text",
               "width": 70,
-              "label": "Discount rate for Carbon (%)",
+              "label": "Discount Rate for Carbon (%)",
               "required": true,
               "dataType": "int",
               "validText": "-?([0-9]+)?\\.[0-9]+",
@@ -324,7 +324,7 @@
               "args_id": "carbon_value",
               "type": "text",
               "width": 70,
-              "label": "Value of Carbon (USD/metric ton)",
+              "label": "Value of Carbon (USD/Metric Ton)",
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
               "defaultValue": "43.00",
@@ -340,7 +340,7 @@
               "args_id": "rate_change",
               "type": "text",
               "width": 70,
-              "label": "Annual rate of change in price of Carbon (%)",
+              "label": "Annual Rate of Change in Price of Carbon (%)",
               "required": true,
               "dataType": "float",
               "validText": "-?([0-9]+)?\\.[0-9]+",

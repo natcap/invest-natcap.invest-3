@@ -24,7 +24,7 @@
           "id": "preprocessor_key_uri",
           "args_id": "preprocessor_key_uri",
           "type": "file",
-          "label": "Preprocessor key",
+          "label": "Preprocessor Key",
           "defaultValue": "../BlueCarbon/input/preprocessor.csv",
           "helpText": "The preprocessor key contains the default values for transitions between all vegetation types.",
           "required": true

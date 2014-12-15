@@ -23,7 +23,7 @@
           "id": "in_raster",
           "args_id": "in_raster",
           "type": "file",
-          "label": "DEM",
+          "label": "Digital Elevation Model Raster",
           "validateAs": {
             "type": "GDAL",
             "mustExist": true
@@ -45,7 +45,7 @@
           "id": "z_factor",
           "args_id": "z_factor",
           "type": "text",
-          "label": "Z factor",
+          "label": "Z Factor",
           "defaultValue": "1",
           "validText": "[0-9]+(\\.[0-9][0-9])?",
           "dataType": "float",

@@ -52,7 +52,7 @@
                   "id": "reclass_table",
                   "args_id": "reclass_table",
                   "type": "file",
-                  "label": "Crop Reclass Table",
+                  "label": "Crop Reclass Table (CSV)",
                   "defaultValue": "../CropProduction/input/reclass_table.csv",
                   "validateAs": {
                     "type": "CSV"
@@ -63,7 +63,7 @@
                   "id": "enable_tab_existing",
                   "args_id": "enable_tab_existing",
                   "type": "checkbox",
-                  "label": "Existing yields",
+                  "label": "Existing Yields",
                   "defaultValue": true
                 }
               ]
@@ -72,7 +72,7 @@
               "id": "enable_tab_percentile",
               "args_id": "enable_tab_percentile",
               "type": "container",
-              "label": "Percentile yields",
+              "label": "Percentile Yields",
               "defaultValue": false,
               "collapsible": true,
               "elements": [
@@ -84,7 +84,7 @@
                       "id": "income_raster",
                       "args_id": "income_raster",
                       "type": "file",
-                      "label": "Income raster",
+                      "label": "Income Raster",
                       "defaultValue": "../CropProduction/input/OECDIncomeData.tif",
                       "validateAs": {
                         "type": "GDAL"
@@ -100,7 +100,7 @@
               "id": "calculate_nutrition",
               "args_id": "calculate_nutrition",
               "type": "container",
-              "label": "Calculate nutrition",
+              "label": "Calculate Nutrition",
               "collapsible": true,
               "helpText": "Nutrition help text.",
               "elements": [
@@ -129,7 +129,7 @@
               "args_id": "calculate_valuation",
               "type": "container",
               "collapsible": true,
-              "label": "Calculate valuation",
+              "label": "Calculate Valuation",
               "defaultValue": true,
               "helpText": "Valuation help text.",
               "elements": [
@@ -141,7 +141,7 @@
                       "id": "region_raster",
                       "args_id": "valuation_raster",
                       "type": "file",
-                      "label": "Region raster",
+                      "label": "Region Raster",
                       "defaultValue": "../CropProduction/input/subregion.tif",
                       "validateAs": {
                         "type": "GDAL"
@@ -153,7 +153,7 @@
                       "id": "valuation_table",
                       "args_id": "valuation_table",
                       "type": "file",
-                      "label": "Economic value",
+                      "label": "Economic Value",
                       "defaultValue": "../CropProduction/input/Agcost_data_Data.csv",
                       "validateAs": {
                         "type": "CSV"
@@ -165,7 +165,7 @@
                       "id": "field_machine",
                       "args_id": "field_machine",
                       "type": "dropdown",
-                      "label": "Machine cost",
+                      "label": "Machine Cost",
                       "options": [
                         "low_mach",
                         "actual_mach",
@@ -179,7 +179,7 @@
                       "id": "field_seed",
                       "args_id": "field_seed",
                       "type": "dropdown",
-                      "label": "Seed cost",
+                      "label": "Seed Cost",
                       "options": [
                         "low_seed",
                         "actual_seed",
@@ -201,7 +201,7 @@
                   "id": "raster_table",
                   "args_id": "raster_table",
                   "type": "file",
-                  "label": "Crop files index",
+                  "label": "Crop Files Index",
                   "defaultValue": "../CropProduction/input/file_index.csv",
                   "validateAs": {
                     "type": "CSV"
@@ -234,7 +234,7 @@
                       "id": "nitrogen_uri",
                       "args_id": "nitrogen_uri",
                       "type": "file",
-                      "label": "Nitrogen quantity raster",
+                      "label": "Nitrogen Quantity Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -245,7 +245,7 @@
                       "id": "phosphorus_uri",
                       "args_id": "phosphorus_uri",
                       "type": "file",
-                      "label": "Phosphorus quantity raster",
+                      "label": "Phosphorus Quantity Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -256,7 +256,7 @@
                       "id": "potasssium_uri",
                       "args_id": "potassium_uri",
                       "type": "file",
-                      "label": "Potassium quantity raster",
+                      "label": "Potassium Quantity Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -267,7 +267,7 @@
                       "id": "irrigation_uri",
                       "args_id": "irrigation_uri",
                       "type": "file",
-                      "label": "Irrigation quantity raster",
+                      "label": "Irrigation Quantity Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -281,7 +281,7 @@
             {
               "id": "valuation_override_prices",
               "args_id": "valuation_override_prices",
-              "label": "Use spatially explicit prices",
+              "label": "Use Spatially Explicit Prices",
               "type": "container",
               "collapsible": true,
               "helpText": "",
@@ -294,7 +294,7 @@
                       "id": "labor_uri",
                       "args_id": "labor_uri",
                       "type": "file",
-                      "label": "Labor price raster",
+                      "label": "Labor Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -305,7 +305,7 @@
                       "id": "machine_uri",
                       "args_id": "machine_uri",
                       "type": "file",
-                      "label": "Machine price raster",
+                      "label": "Machine Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -316,7 +316,7 @@
                       "id": "seed_uri",
                       "args_id": "seed_uri",
                       "type": "file",
-                      "label": "Seed price raster",
+                      "label": "Seed Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -327,7 +327,7 @@
                       "id": "nitrogen_price_uri",
                       "args_id": "nitrogen_price_uri",
                       "type": "file",
-                      "label": "Nitrogen price raster",
+                      "label": "Nitrogen Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -338,7 +338,7 @@
                       "id": "phosphorus_price_uri",
                       "args_id": "phosphorus_price_uri",
                       "type": "file",
-                      "label": "Phosphorus price raster",
+                      "label": "Phosphorus Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"
@@ -349,7 +349,7 @@
                       "id": "potasssium_price_uri",
                       "args_id": "potassium_price_uri",
                       "type": "file",
-                      "label": "Potassium price raster",
+                      "label": "Potassium Price Raster",
                       "defaultValue": "",
                       "validateAs": {
                         "type": "GDAL"

@@ -24,7 +24,7 @@
           "id": "calc_sequestration",
           "args_id": "sequestration_checkbox",
           "type": "checkbox",
-          "label": "Calculate sequestration",
+          "label": "Calculate Sequestration",
           "defaultValue": false,
           "required": false
         },

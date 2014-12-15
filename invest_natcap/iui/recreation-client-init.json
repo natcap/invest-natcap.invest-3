@@ -51,7 +51,7 @@
           "id": "grid_type",
           "args_id": "grid_type",
           "type": "dropdown",
-          "label": "Grid type",
+          "label": "Grid Type",
           "options": [
             "rectangular",
             "hexagonal"
@@ -71,7 +71,7 @@
           "id": "cell_size",
           "args_id": "cell_size",
           "type": "text",
-          "label": "Cell size",
+          "label": "Cell Size",
           "validText": "[0-9]+(\\.[0-9][0-9])?",
           "dataType": "float",
           "required": true,
@@ -112,7 +112,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "global_data",
-      "label": "Use global datasets.",
+      "label": "Use Global Datasets.",
       "defaultValue": false,
       "helpText": "For more information, see the 'Default Predictors' section in the model's documentation</a>",
       "elements": [
