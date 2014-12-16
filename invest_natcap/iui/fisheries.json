@@ -34,7 +34,7 @@
           "args_id": "aoi_uri",
           "type": "file",
           "label": "Area of Interest (Vector) (Optional)",
-          "defaultValue": "../Fisheries/Input/Shapefile_Galveston/Galveston_Subregion.shp",
+          "defaultValue": "../Fisheries/input/shapefile_galveston/Galveston_Subregion.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
@@ -136,7 +136,7 @@
               "args_id": "population_csv_uri",
               "type": "file",
               "label": "Population Parameters File (CSV)",
-              "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
+              "defaultValue": "../Fisheries/input/input_blue_crab/population_params.csv",
               "required": true,
               "disabledBy": "do_batch",
               "validateAs": {
@@ -149,7 +149,7 @@
               "args_id": "population_csv_dir",
               "type": "folder",
               "label": "Population Parameters CSV Folder",
-              "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/",
+              "defaultValue": "../Fisheries/input/input_blue_crab/",
               "required": true,
               "enabledBy": "do_batch",
               "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>The name of each file will serve as the prefix of the outputs created by the model run.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
@@ -271,7 +271,7 @@
               "args_id": "migration_dir",
               "type": "folder",
               "label": "Migration Matrix CSV Folder (Optional)",
-              "defaultValue": "../Fisheries/Input/MigrationFolder/",
+              "defaultValue": "../Fisheries/input/migration_folder/",
               "required": false,
               "validateAs": {
                 "type": "folder"
