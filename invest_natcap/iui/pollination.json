@@ -46,7 +46,7 @@
               "validateAs": {
                 "type": "GDAL"
               },
-              "helpText": "A GDAL-supported vector file"
+              "helpText": "A GDAL-supported vector file."
             },
             {
               "id": "landcover_attribute_table",
@@ -74,8 +74,8 @@
                     },
                     "validateAs": {
                       "type": "number",
-                      "gteq": 0.0,
-                      "lteq": 1.0
+                      "gteq": 0,
+                      "lteq": 1
                     }
                   },
                   {
@@ -85,13 +85,13 @@
                     },
                     "validateAs": {
                       "type": "number",
-                      "gteq": 0.0,
-                      "lteq": 1.0
+                      "gteq": 0,
+                      "lteq": 1
                     }
                   }
                 ]
               },
-              "helpText": "The land cover attributes table must be provided as a CSV."
+              "helpText": "A CSV table of land-cover attributes."
             },
             {
               "id": "fut_lulc_raster",
@@ -103,7 +103,7 @@
               "validateAs": {
                 "type": "GDAL"
               },
-              "helpText": "Optional.<br/><br/>Providing a future land cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  The future scenario land cover raster should use the same land cover attribute table as the current land cover raster.  If provided, this must be a raster that GDAL can open."
+              "helpText": "Optional. An GDAL-supported raster file representing a future land-cover scenario.<br/><br/>Providing a future land-cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  The future scenario land cover raster should use the same land cover attribute table as the current land cover raster."
             }
           ]
         }
@@ -206,8 +206,8 @@
                 },
                 "validateAs": {
                   "type": "number",
-                  "gteq": 0.0,
-                  "lteq": 1.0
+                  "gteq": 0,
+                  "lteq": 1
                 }
               },
               {
@@ -224,7 +224,7 @@
               }
             ]
           },
-          "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
+          "helpText": "A CSV table containing information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
         },
         {
           "id": "ag_classes",
@@ -241,7 +241,7 @@
             }
           },
           "dataType": "string",
-          "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land cover raster will be considered as agricultural."
+          "helpText": "A space-separated list of agricultural land-cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land-cover raster will be considered as agricultural."
         },
         {
           "id": "aggregate_by_farms",
@@ -290,7 +290,7 @@
           "required": false,
           "width": 120,
           "dataType": "string",
-          "helpText": "If provided, it must be alphanumeric.  The results suffix will be appended to the end of all output filenames."
+          "helpText": "Optional.  The results suffix will be appended to the end of all output filenames. If provided, it must be alphanumeric."
         }
       ]
     }

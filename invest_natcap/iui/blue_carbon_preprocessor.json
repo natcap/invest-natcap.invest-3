@@ -26,7 +26,7 @@
           "type": "file",
           "label": "Preprocessor Key File (CSV)",
           "defaultValue": "../BlueCarbon/input/preprocessor.csv",
-          "helpText": "The preprocessor key contains the default values for transitions between all vegetation types.",
+          "helpText": "The preprocessor key file contains the default values for transitions between all vegetation types.",
           "required": true
         },
         {
@@ -44,7 +44,7 @@
       "id": "lulc",
       "type": "multi",
       "args_id": "lulc",
-      "label": "LULC Rasters (GDAL-supported)",
+      "label": "Land Use/Land Cover Rasters (GDAL-supported)",
       "sampleElement": {
         "id": "sample_id",
         "type": "file",

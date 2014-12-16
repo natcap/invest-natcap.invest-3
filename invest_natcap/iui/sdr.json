@@ -43,7 +43,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST user's guide for more information."
+          "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
         },
         {
           "id": "erosivity_uri",
@@ -122,7 +122,7 @@
               "usle_p"
             ]
           },
-          "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST sediment user's guide for more information about these fields."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
         },
         {
           "id": "threshold_flow_accumulation",

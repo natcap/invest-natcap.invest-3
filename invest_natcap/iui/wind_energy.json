@@ -27,7 +27,7 @@
           "id": "wind_data",
           "args_id": "wind_data_uri",
           "type": "file",
-          "label": "Wind Data Points",
+          "label": "Wind Data Points (BIN)",
           "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
           "required": true,
           "helpText": "A binary file that represents the wind input data (Weibull parameters). Please see the User's Guide for a description of how this file was generated."
@@ -60,7 +60,7 @@
               }
             ]
           },
-          "helpText": "An optional OGR-supported vector file containing a single polygon defining the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly. An AOI is required for valuation."
+          "helpText": "Optional. An OGR-supported vector file containing a single polygon defining the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly. An AOI is required for valuation."
         },
         {
           "id": "bathymetry",
@@ -116,7 +116,7 @@
             "ifEmpty": "pass"
           },
           "required": false,
-          "helpText": "A String that will be added to the end of the output file paths."
+          "helpText": "A string that will be added to the end of the output file paths."
         }
       ]
     },
@@ -273,7 +273,7 @@
                 }
               },
               "required": true,
-              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). Please consult the User's Guide for guidance on selecting this value."
+              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). See the User's Guide for guidance on selecting this value."
             },
             {
               "id": "grid_points",
@@ -285,7 +285,7 @@
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "An optional CSV file with grid and land points to determine cable distances from. An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point. The <b>TYPE</b> column relates to whether it is a land or grid point. The <b>ID</b> column is a simple unique integer. The shortest distance between respective points is used for calculations. Please see the User's Guide for more information. ",
+              "helpText": "An optional CSV file with grid and land points to determine cable distances from. An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point. The <b>TYPE</b> column relates to whether it is a land or grid point. The <b>ID</b> column is a simple unique integer. The shortest distance between respective points is used for calculations. See the User's Guide for more information. ",
               "validateAs": {
                 "type": "CSV",
                 "fieldsExist": [
@@ -411,7 +411,7 @@
                   "pattern": "^[0-9]*\\.?[0-9]+$"
                 }
               },
-              "helpText": "The price of energy per kilowatt hour. This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below. Please consult the User's Guide for determining this value.",
+              "helpText": "The price of energy per kilowatt hour. This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below. See the User's Guide for guidance about determining this value.",
               "disabledBy": "price_table",
               "required": true
             },
@@ -431,7 +431,7 @@
                   "pattern": "[-+]?[0-9]*\\.?[0-9]+$"
                 }
               },
-              "helpText": "The annual rate of change in the price of wind energy. This should be expressed as a decimal percentage. I.e. 0.1 for a 10% annual price change.",
+              "helpText": "The annual rate of change in the price of wind energy. This should be expressed as a decimal percentage. For example, 0.1 for a 10% annual price change.",
               "disabledBy": "price_table"
             }
           ]

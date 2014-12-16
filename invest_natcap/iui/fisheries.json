@@ -90,7 +90,7 @@
               ],
               "returns": "strings",
               "dataType": "string",
-              "helpText": "Specifies whether the lifecycle classes provided in the Population Parameters CSV file represent ages (uniform duration) or stages (.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+              "helpText": "Specifies whether the lifecycle classes provided in the Population Parameters CSV file represent ages (uniform duration) or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
             },
             {
               "id": "sexsp",

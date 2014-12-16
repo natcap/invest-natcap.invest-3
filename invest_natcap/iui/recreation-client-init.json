@@ -37,7 +37,7 @@
             "type": "OGR"
           },
           "required": true,
-          "helpText": "An OGR-supported vector file.  Select an area of interest where the model will run the analysis."
+          "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
         },
         {
           "id": "grid",
@@ -45,7 +45,7 @@
           "type": "checkbox",
           "label": "Grid AOI",
           "defaultValue": true,
-          "helpText": "Checked box indicates for the area of interest to be gridded. If unselected, the AOI must contain multiple shapes."
+          "helpText": "Checked box indicates for the area of interest to be gridded. If unchecked, the AOI must contain multiple shapes."
         },
         {
           "id": "grid_type",

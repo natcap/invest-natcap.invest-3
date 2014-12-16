@@ -55,7 +55,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GDAL-supported raster file, with an erosivity index value for each cell. This variable depends on the intensity and duration of rainfall in the area of interest. The greater the intensity and duration of the rain storm, the higher the erosion potential. The erosivity index is widely used, but in case of its absence, there are methods and equations to help generate a grid using climatic data. The units are MJ*mm/(ha*h*yr)."
+          "helpText": "A GDAL-supported raster file that contains an erosivity index value for each cell. This variable depends on the intensity and duration of rainfall in the area of interest. The greater the intensity and duration of the rain storm, the higher the erosion potential. The erosivity index is widely used, but in case of its absence, there are methods and equations to help generate a grid using climatic data. The units are MJ*mm/(ha*h*yr)."
         },
         {
           "id": "erodibility_uri",
@@ -67,7 +67,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GDAL-supported raster file, with a soil erodibility value for each cell which is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
+          "helpText": "A GDAL-supported raster file that contains a soil erodibility value for each cell.  The value is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
         },
         {
           "id": "landuse_uri",
@@ -79,7 +79,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
+          "helpText": "A GDAL-supported raster file that contains an integer LULC code for each cell."
         },
         {
           "id": "watersheds_uri",
@@ -123,7 +123,7 @@
               "usle_p"
             ]
           },
-          "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment User's Guide for more information about these fields."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment User's Guide for more information about these fields."
         },
         {
           "id": "threshold_flow_accumulation",
@@ -145,7 +145,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "An optional GDAL-supported raster file mask, that indicates areas that drain to the watershed.  Format is that 1's indicate drainage areas and 0's or nodata indicate areas with no additional drainage.  This model is most accurate when the drainage raster aligns with the DEM."
+          "helpText": "Optional. A GDAL-supported raster file mask that indicates areas that drain to the watershed.  Format is that 1's indicate drainage areas and 0's or nodata indicate areas with no additional drainage.  This model is most accurate when the drainage raster aligns with the DEM."
         },
         {
           "id": "sediment_threshold_table_uri",
@@ -163,7 +163,7 @@
               "wq_annload"
             ]
           },
-          "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the User's Guide for the meaning of these fields."
+          "helpText": "A CSV table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the User's Guide for the meaning of these fields."
         }
       ]
     },
@@ -189,7 +189,7 @@
               "validateAs": {
                 "type": "CSV"
               },
-              "helpText": "A table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the User's Guide for the meaning of these fields."
+              "helpText": "A CSV table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the User's Guide for the meaning of these fields."
             }
           ]
         }

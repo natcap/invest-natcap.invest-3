@@ -29,7 +29,7 @@
             "mustExist": true
           },
           "required": true,
-          "helpText": "A GDAL-supported raster file representing the digital elevation model."
+          "helpText": "A GDAL-supported raster file containing a digital elevation model over the area of interest."
         },
         {
           "id": "in_observer_features",

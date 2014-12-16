@@ -205,7 +205,7 @@
           "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "required": false,
-          "helpText": "A String that will be added to the end of the output uris."
+          "helpText": "A string that will be added to the end of the output uris."
         }
       ]
     },
@@ -255,7 +255,7 @@
                   }
                 ]
               },
-              "helpText": "A CSV table of LULC classes, showing consumptive water use for each land-use / land-cover type. The table requires two column fields: 'lucode' and 'demand'. The demand values should be the estimated average consumptive water use for each land-use / land-cover type. Water use should be given in cubic meters per year for a pixel in the land-use/land-cover map. NOTE: the accounting for pixel area is important since larger areas will consume more water for the same land-cover type."
+              "helpText": "A CSV table of LULC classes, showing consumptive water use for each land-use/land-cover type. The table requires two column fields: 'lucode' and 'demand'. The demand values should be the estimated average consumptive water use for each land-use/land-cover type. Water use should be given in cubic meters per year for a pixel in the land-use/land-cover map. NOTE: the accounting for pixel area is important since larger areas will consume more water for the same land-cover type."
             }
           ]
         }

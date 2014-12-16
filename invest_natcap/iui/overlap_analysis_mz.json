@@ -33,7 +33,7 @@
             "type": "OGR"
           },
           "required": true,
-          "helpText": "Since we are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons."
+          "helpText": "An OGR-supported vector file. This should be a vector file containing multiple polygons since the Management Zones tool is used to analyze overlap data."
         },
         {
           "id": "data_dir",
@@ -45,7 +45,7 @@
             "type": "folder"
           },
           "required": true,
-          "helpText": "Users are required to specify the path on their system to a folder containing only the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
+          "helpText": "The path to a folder containing ONLY the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
         }
       ]
     }

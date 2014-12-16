@@ -79,7 +79,7 @@
           "returns": {
             "ifEmpty": "pass"
           },
-          "helpText": "An OGR-supported vector containing a single polygon representing the area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
+          "helpText": "An OGR-supported vector file containing a single polygon representing the area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
         },
         {
           "id": "machine_perf_table",
@@ -91,7 +91,7 @@
           "validateAs": {
             "type": "CSV"
           },
-          "helpText": "A Comma Separated Values (CSV) table that has the performance of a particular wave energy machine at certain sea state conditions."
+          "helpText": "A CSV Table that has the performance of a particular wave energy machine at certain sea state conditions."
         },
         {
           "id": "machine_param_table",
@@ -129,7 +129,7 @@
               }
             ]
           },
-          "helpText": "A Comma Separated Values (CSV) table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
+          "helpText": "A CSV Table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
         },
         {
           "id": "dem",
@@ -141,7 +141,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GDAL digital elevation model dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
+          "helpText": "A GDAL-supported raster file containing a digital elevation model dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
         },
         {
           "id": "results_suffix",
@@ -226,7 +226,7 @@
                   }
                 ]
               },
-              "helpText": "A Comma Separated Values (CSV) table that has the landing points and grid points locations for computing cable distances."
+              "helpText": "A CSV Table that has the landing points and grid points locations for computing cable distances."
             },
             {
               "id": "machine_econ_table",
@@ -264,7 +264,7 @@
                   }
                 ]
               },
-              "helpText": "A Comma Separated Values (CSV) table that has the economic parameters for the wave energy machine."
+              "helpText": "A CSV Table that has the economic parameters for the wave energy machine."
             },
             {
               "id": "number_of_machines",

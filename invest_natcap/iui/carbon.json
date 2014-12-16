@@ -1,4 +1,3 @@
-
 {
   "id": "window",
   "label": "InVEST Carbon Model (Biophysical and Valuation)",
@@ -19,7 +18,7 @@
           "label": "Workspace",
           "defaultValue": "../Carbon",
           "required": true,
-          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+          "helpText": "This is a test <br><br>The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
           "id": "results_suffix",
@@ -63,7 +62,7 @@
               "id": "calc_sequestration",
               "type": "checkbox",
               "label": "Calculate Sequestration",
-              "helpText": "Check to enable sequestration analysis. This requires inputs of LULC maps for both current and future scenarios.",
+              "helpText": "Check to enable sequestration analysis. This requires inputs of Land Use/Land Cover maps for both current and future scenarios.",
               "defaultValue": false,
               "required": false
             },
@@ -72,7 +71,7 @@
               "type": "checkbox",
               "label": "REDD Scenario Analysis",
               "enabledBy": "calc_sequestration",
-              "helpText": "Check to enable REDD scenario analysis. This requires three LULC maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
+              "helpText": "Check to enable REDD scenario analysis. This requires three Land Use/Land Cover maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
               "defaultValue": false,
               "required": false
             }
@@ -82,7 +81,7 @@
           "id": "cur_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Current Land-Use/Land-Cover",
+          "label": "Current Land Use/Land Cover",
           "elements": [
             {
               "id": "cur_lulc_list",
@@ -92,13 +91,13 @@
                   "id": "cur_lulc_raster",
                   "args_id": "lulc_cur_uri",
                   "type": "file",
-                  "label": "Current LULC (Raster)",
+                  "label": "Current Land Use/Land Cover (Raster)",
                   "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                   "required": true,
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "A GDAL-supported raster representing the landcover of the current scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the current scenario."
                 },
                 {
                   "id": "cur_lulc_year",
@@ -125,7 +124,7 @@
           "id": "fut_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Future Land-Use/Land-Cover",
+          "label": "Future Land Use/Land Cover",
           "elements": [
             {
               "id": "fut_lulc_list",
@@ -145,7 +144,7 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "A GDAL-supported raster representing the landcover of the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the future scenario. <br><br>If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
                 },
                 {
                   "id": "redd_lulc_raster",
@@ -161,7 +160,7 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "A GDAL-supported raster representing the landcover of the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
                 },
                 {
                   "id": "fut_lulc_year",
@@ -205,7 +204,7 @@
                   "C_Dead"
                 ]
               },
-              "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
+              "helpText": "A table that maps the land-cover IDs to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the User's Guide.  The values in LULC must at least include the LULC IDs in the land cover maps."
             },
             {
               "id": "cur_harvest_map",
@@ -306,7 +305,7 @@
                       "C_dead_sd"
                     ]
                   },
-                  "helpText": "A table that maps the land cover ids to probability distributions for carbon pools. Each probability distribution must be specified by a mean and a standard deviation. The table must contain columns of 'LULC', 'C_above_mean', 'C_above_sd', 'C_below_mean', 'C_below_sd', 'C_soil_mean', 'C_soil_sd', 'C_dead_mean', and 'C_dead_sd' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
+                  "helpText": "A table that maps the land cover ids to probability distributions for carbon pools. Each probability distribution must be specified by a mean and a standard deviation. The table must contain columns of 'LULC', 'C_above_mean', 'C_above_sd', 'C_below_mean', 'C_below_sd', 'C_soil_mean', 'C_soil_sd', 'C_dead_mean', and 'C_dead_sd' as described in the user's guide.  The values in LULC must at least include the LULC IDs in the land cover maps."
                 },
                 {
                   "id": "confidence_threshold",
@@ -423,7 +422,7 @@
               "args_id": "V",
               "type": "text",
               "width": 70,
-              "label": "Value of Carbon (USD/Metric Ton)",
+              "label": "Value of Carbon (Price/Metric Ton)",
               "required": true,
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
