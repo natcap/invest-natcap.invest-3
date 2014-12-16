@@ -24,11 +24,11 @@
                     "id": "dem",
                     "args_id": "dem_uri",
                     "type": "file",
-                    "label": "DEM",
+                    "label": "Digital Elevation Model (Raster)",
                     "validateAs": {"type": "GDAL"},
                     "required": true,
                     "defaultValue": "../Base_Data/Freshwater/dem",
-                    "helpText": "A base DEM to execute the routing functionality across."
+                    "helpText": "A GDAL-supported raster file containing a base Digital Elevation Model to execute the routing functionality across."
                 },
                 {        
                     "id": "pit_filled_filename",

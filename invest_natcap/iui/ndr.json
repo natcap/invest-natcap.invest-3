@@ -37,31 +37,31 @@
           "id": "dem_uri",
           "args_id": "dem_uri",
           "type": "file",
-          "label": "DEM Raster",
+          "label": "DEM (Raster)",
           "defaultValue": "../Base_Data/Freshwater/dem",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST User's Guide for more information."
+          "helpText": "A GDAL-supported raster file containing elevation values for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST User's Guide for more information."
         },
         {
           "id": "land_use",
           "args_id": "lulc_uri",
           "type": "file",
-          "label": "Land Use",
+          "label": "Land Use (Raster)",
           "defaultValue": "../Base_Data/Freshwater/landuse_90",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A GIS raster dataset, with an integer LULC code for each cell. The LULC code should be an integer."
+          "helpText": "A GDAL-supported raster file containing integer values representing the LULC code for each cell. The LULC code should be an integer."
         },
         {
           "id": "watersheds_uri",
           "args_id": "watersheds_uri",
           "type": "file",
-          "label": "Watershed Polygons",
+          "label": "Watersheds (Vector)",
           "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
           "required": true,
           "validateAs": {
@@ -81,13 +81,13 @@
               "ws_id"
             ]
           },
-          "helpText": "This is a layer of watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
+          "helpText": "An OGR-supported vector file containing watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
         },
         {
           "id": "biophysical_table_uri",
           "args_id": "biophysical_table_uri",
           "type": "file",
-          "label": "Biophysical Table",
+          "label": "Biophysical Table (CSV)",
           "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
           "required": true,
           "validateAs": {
@@ -137,7 +137,7 @@
               }
             ]
           },
-          "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
         },
         {
           "id": "calc_p",
@@ -152,7 +152,7 @@
           "id": "calc_n",
           "args_id": "calc_n",
           "type": "checkbox",
-          "label": "Calculate nitrogen retention",
+          "label": "Calculate Nitrogen Retention",
           "defaultValue": false,
           "required": false,
           "helpText": "Select to calcualte nitrogen export."
@@ -171,7 +171,7 @@
           "id": "k_param",
           "args_id": "k_param",
           "type": "text",
-          "label": "Borselli k parameter",
+          "label": "Borselli k Parameter",
           "defaultValue": "2",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
@@ -181,7 +181,7 @@
           "id": "subsurface_critical_length_n",
           "args_id": "subsurface_critical_length_n",
           "type": "text",
-          "label": "Subsurface Critical Length (nitrogen)",
+          "label": "Subsurface Critical Length (Nitrogen)",
           "defaultValue": "150",
           "required": true,
           "validText": "^[0-9]+$",
@@ -192,7 +192,7 @@
           "id": "subsurface_critical_length_p",
           "args_id": "subsurface_critical_length_p",
           "type": "text",
-          "label": "Subsurface Critical Length (phosphorous)",
+          "label": "Subsurface Critical Length (Phosphorous)",
           "defaultValue": "150",
           "required": true,
           "validText": "^[0-9]+$",
@@ -203,7 +203,7 @@
           "id": "subsurface_eff_n",
           "args_id": "subsurface_eff_n",
           "type": "text",
-          "label": "Subsurface Maximum Retention Efficiency (nitrogen)",
+          "label": "Subsurface Maximum Retention Efficiency (Nitrogen)",
           "defaultValue": "0.8",
           "required": true,
           "validText": "^[0-9]\\.?[0-9]*$",
@@ -214,7 +214,7 @@
           "id": "subsurface_eff_p",
           "args_id": "subsurface_eff_p",
           "type": "text",
-          "label": "Subsurface Maximum Retention Efficiency (phosphorous)",
+          "label": "Subsurface Maximum Retention Efficiency (Phosphorous)",
           "defaultValue": "0.8",
           "required": true,
           "validText": "^[0-9]\\.?[0-9]*$",

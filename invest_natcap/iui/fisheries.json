@@ -33,7 +33,7 @@
           "id": "aoi_uri",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "Area(s) of Interest (SHP) (Optional)",
+          "label": "Area of Interest (Vector) (Optional)",
           "defaultValue": "../Fisheries/Input/Shapefile_Galveston/Galveston_Subregion.shp",
           "required": false,
           "validateAs": {
@@ -50,7 +50,7 @@
               "NAME"
             ]
           },
-          "helpText": "The provided shapefile is used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
+          "helpText": "An OGR-supported vector file used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
         },
         {
           "id": "total_timesteps",
@@ -139,6 +139,9 @@
               "defaultValue": "../Fisheries/Input/Inputs_BlueCrab/population_params.csv",
               "required": true,
               "disabledBy": "do_batch",
+              "validateAs": {
+                "type": "CSV"
+              },
               "helpText": "The provided CSV file should contain all necessary attributes for the sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
             },
             {

@@ -112,7 +112,7 @@
           "id": "aoi_tables",
           "args_id": "aoi_tables",
           "type": "file",
-          "label": "Subregions Shapefile",
+          "label": "Subregions (Vector)",
           "required": true,
           "validateAs": {
             "type": "OGR",
@@ -129,7 +129,7 @@
             ]
           },
           "defaultValue": "../HabitatRiskAssess/Input/subregions.shp",
-          "helpText": "This input will take in a shapefile conatining feature subregions, and create additional summary outputs across each one."
+          "helpText": "An OGR-supported vector file containing feature subregions. The program will create additional summary outputs across each subregion."
         }
       ]
     }

@@ -40,18 +40,18 @@
               "id": "cur_lulc_raster",
               "args_id": "landuse_cur_uri",
               "type": "file",
-              "label": "Current Land Cover Scenario Raster",
+              "label": "Current Land Cover Scenario (Raster)",
               "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
               "required": true,
               "validateAs": {
                 "type": "GDAL"
               },
-              "helpText": "This must be a raster dataset that GDAL can open."
+              "helpText": "A GDAL-supported vector file"
             },
             {
               "id": "landcover_attribute_table",
               "type": "file",
-              "label": "Landcover Attribute Table",
+              "label": "Land Cover Attributes Table (CSV)",
               "args_id": "landuse_attributes_uri",
               "required": true,
               "defaultValue": "../Pollination/Input/LU.csv",
@@ -91,12 +91,12 @@
                   }
                 ]
               },
-              "helpText": "The land use attribute table must be provided as a CSV."
+              "helpText": "The land cover attributes table must be provided as a CSV."
             },
             {
               "id": "fut_lulc_raster",
               "type": "hideableFileEntry",
-              "label": "Calculate Future Scenario (Optional)",
+              "label": "Calculate Future Scenario (Raster) (Optional)",
               "args_id": "landuse_fut_uri",
               "required": false,
               "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
@@ -163,7 +163,7 @@
         {
           "id": "guilds",
           "type": "file",
-          "label": "Guilds Table (Optional)",
+          "label": "Guilds Table (CSV) (Optional)",
           "defaultValue": "../Pollination/Input/Guild.csv",
           "args_id": "guilds_uri",
           "required": true,
@@ -248,7 +248,7 @@
           "args_id": "farms_shapefile",
           "type": "hideableFileEntry",
           "defaultValue": "../Pollination/Input/farms.shp",
-          "label": "Aggregate Results by Farm Sites (Optional)",
+          "label": "Aggregate Results by Farm Sites (Vector) (Optional)",
           "returns": {
             "ifEmpty": "pass"
           },
@@ -280,7 +280,7 @@
               }
             ]
           },
-          "helpText": "This shapefile input is optional.  If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
+          "helpText": "Optional. An OGR-supported vector file. If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
         },
         {
           "id": "results_suffix",

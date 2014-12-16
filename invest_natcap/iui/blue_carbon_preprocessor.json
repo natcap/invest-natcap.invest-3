@@ -24,7 +24,7 @@
           "id": "preprocessor_key_uri",
           "args_id": "preprocessor_key_uri",
           "type": "file",
-          "label": "Preprocessor Key",
+          "label": "Preprocessor Key File (CSV)",
           "defaultValue": "../BlueCarbon/input/preprocessor.csv",
           "helpText": "The preprocessor key contains the default values for transitions between all vegetation types.",
           "required": true
@@ -33,7 +33,7 @@
           "id": "labels",
           "type": "file",
           "args_id": "labels",
-          "label": "Labels",
+          "label": "Labels File (CSV)",
           "defaultValue": "../BlueCarbon/input/carbon.csv",
           "helpText": "",
           "required": true
@@ -44,7 +44,7 @@
       "id": "lulc",
       "type": "multi",
       "args_id": "lulc",
-      "label": "LULC",
+      "label": "LULC Rasters (GDAL-supported)",
       "sampleElement": {
         "id": "sample_id",
         "type": "file",

@@ -27,13 +27,13 @@
           "id": "aoi",
           "args_id": "zone_layer_uri",
           "type": "file",
-          "label": "Analysis Zones Layer",
+          "label": "Analysis Zones Layer (Vector)",
           "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",
           "validateAs": {
             "type": "OGR"
           },
           "required": true,
-          "helpText": "If Management Zones is being used to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, gridding is being used in order to separate the area, this can be a single polygon shapefile."
+          "helpText": "An OGR-supported vector file.  If Management Zones is being used to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, gridding is being used in order to separate the area, this can be a single polygon shapefile."
         },
         {
           "id": "grid_size",
@@ -94,7 +94,7 @@
           "id": "IS_tbl",
           "args_id": "overlap_layer_tbl",
           "type": "file",
-          "label": "Inter-Activity Weight Table",
+          "label": "Inter-Activity Weight Table (CSV)",
           "defaultValue": "../OverlapAnalysis/Input/Fisheries_Inputs.csv",
           "required": false,
           "requiredIf": [
@@ -119,7 +119,7 @@
           "id": "HU_Hub_URI",
           "args_id": "hubs_uri",
           "type": "file",
-          "label": "Points Layer of Human Use Hubs",
+          "label": "Points Layer of Human Use Hubs (Vector)",
           "defaultValue": "../OverlapAnalysis/Input/PopulatedPlaces_WCVI.shp",
           "required": false,
           "requiredIf": [
@@ -129,7 +129,7 @@
           "validateAs": {
             "type": "OGR"
           },
-          "helpText": "If human use hubs are desired, this is the file that shows the hubs themselves. This should be a shapefile of points where each point is a hub."
+          "helpText": "An OGR-supported vector file.  If human use hubs are desired, this is the file that shows the hubs themselves. This should be a shapefile of points where each point is a hub."
         },
         {
           "id": "hub_decay",

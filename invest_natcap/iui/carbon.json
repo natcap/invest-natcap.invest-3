@@ -92,13 +92,13 @@
                   "id": "cur_lulc_raster",
                   "args_id": "lulc_cur_uri",
                   "type": "file",
-                  "label": "Raster Location",
+                  "label": "Current LULC (Raster)",
                   "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                   "required": true,
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the current scenario."
+                  "helpText": "A GDAL-supported raster representing the landcover of the current scenario."
                 },
                 {
                   "id": "cur_lulc_year",
@@ -134,7 +134,7 @@
                 {
                   "id": "fut_lulc_raster",
                   "type": "file",
-                  "label": "Baseline Raster",
+                  "label": "Baseline (Raster)",
                   "args_id": "lulc_fut_uri",
                   "required": false,
                   "enabledBy": "calc_sequestration",
@@ -145,12 +145,12 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
+                  "helpText": "A GDAL-supported raster representing the landcover of the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
                 },
                 {
                   "id": "redd_lulc_raster",
                   "type": "file",
-                  "label": "REDD Policy Raster",
+                  "label": "REDD Policy (Raster)",
                   "args_id": "lulc_redd_uri",
                   "required": false,
                   "enabledBy": "redd",
@@ -161,7 +161,7 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
+                  "helpText": "A GDAL-supported raster representing the landcover of the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
                 },
                 {
                   "id": "fut_lulc_year",
@@ -238,7 +238,7 @@
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "A shapefile to indicate harvested wood products for the current scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+              "helpText": "An OGR-supported shapefile containing information about harvested wood products for the current scenario.  The field is optional.  If supplied, the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
             },
             {
               "id": "fut_harvest_map",
@@ -270,7 +270,7 @@
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+              "helpText": "An OGR-supported shapefile containing information about harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
             }
           ]
         },

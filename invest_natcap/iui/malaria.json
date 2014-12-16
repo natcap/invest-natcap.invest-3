@@ -35,37 +35,37 @@
 		    "id" : "dem_uri",
 		    "args_id" : "dem_uri",
 		    "type": "file",
-		    "label": "DEM Raster",
+		    "label": "DEM (Raster)",
 		    "defaultValue": "../Base_Data/Freshwater/dem",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
-		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST User's Guide for more information."
+		    "helpText": "A GDAL-supported raster file containing elevation values for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST User's Guide for more information."
 		},
 		{        
 		    "id" : "lulc_uri",
 		    "args_id" : "lulc_uri",
 		    "type": "file",
-		    "label": "LULC Raster",
+		    "label": "LULC (Raster)",
 		    "defaultValue": "../Base_Data/Freshwater/landuse_90",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
-		    "helpText": "A GIS raster dataset, with an integer LULC code for each cell."
+		    "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
 		},
 		{        
 		    "id" : "population_uri",
 		    "args_id" : "population_uri",
 		    "type": "file",
-		    "label": "Human Population Density Raster",
+		    "label": "Human Population Density (Raster)",
 		    "defaultValue": "../Base_Data/Marine/Population/global_pop",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
-		    "helpText": "A GIS raster dataset that has population data."
+		    "helpText": "A GDAL-support raster file that has population data."
 		},
 		{        
 		    "id" : "breeding_suitability_table_uri",
 		    "args_id" : "breeding_suitability_table_uri",
 		    "type": "file",
-		    "label": "Biophysical Table",
+		    "label": "Biophysical Table (CSV)",
 		    "defaultValue": "../Malaria/Input/breeding_suitability_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
@@ -92,8 +92,7 @@
 		    "required": true,
 		    "validText": "^[0-9]+$",
 		    "helpText": "The mean distance a mosquito will fly from its breeding site to feed."
-		}
-	    ]
+		}]
 	},
 	{
 	    "id" : "land_optimization_container",

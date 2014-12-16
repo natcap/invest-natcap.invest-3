@@ -27,13 +27,13 @@
           "id": "farm_location",
           "args_id": "ff_farm_loc",
           "type": "file",
-          "label": "Finfish Farm Location",
+          "label": "Finfish Farm Location (Vector)",
           "defaultValue": "../Aquaculture/Input/Finfish_Netpens.shp",
           "required": true,
           "validateAs": {
             "type": "OGR"
           },
-          "helpText": "A GIS polygon or point dataset, with a latitude and longitude value and a numerical identifier for each farm. File can be named anything, but no spaces in the name.<br><br>File type: polygon shapefile or .gdb<br>Rows: each row is a specific netpen or entire aquaculture farm<br>Columns: columns contain attributes about each netpen (area, location, etc.).<br>Sample data set: \\InVEST\\Aquaculture\\Input\\Finfish_Netpens.shp"
+          "helpText": "An OGR-supported vector containing polygon or point, with a latitude and longitude value and a numerical identifier for each farm. File can be named anything, but no spaces in the name.<br><br>File type: polygon shapefile or .gdb<br>Rows: each row is a specific netpen or entire aquaculture farm<br>Columns: columns contain attributes about each netpen (area, location, etc.).<br>Sample data set: \\InVEST\\Aquaculture\\Input\\Finfish_Netpens.shp"
         },
         {
           "id": "farm_identifier",
@@ -145,7 +145,7 @@
           "id": "water_temperature",
           "args_id": "water_temp_tbl",
           "type": "file",
-          "label": "Table of Daily Water Temperature at Farm",
+          "label": "Table of Daily Water Temperature at Farm (CSV)",
           "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
           "required": true,
           "validateAs": {
@@ -157,7 +157,7 @@
           "id": "farm_operations",
           "args_id": "farm_op_tbl",
           "type": "file",
-          "label": "Farm Operations Table",
+          "label": "Farm Operations Table (CSV)",
           "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
           "required": true,
           "validateAs": {

@@ -32,9 +32,9 @@
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/landcover.tif",
                     "validateAs": {"type": "GDAL"},
-                    "label": "Landcover",
+                    "label": "Land Cover (Raster)",
                     "required": true,
-                    "helpText": "The landuse landcover raster."
+                    "helpText": "A GDAL-supported raster file representing land-use/land-cover."
                 },
                 {
                     "id": "transition",
@@ -42,7 +42,7 @@
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
                     "validateAs": {"type": "CSV"},
-                    "label": "Transiton table",
+                    "label": "Transiton Table (CSV)",
                     "required": true
                 }   
             ]

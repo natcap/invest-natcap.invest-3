@@ -49,6 +49,9 @@
               "label": "Population Parameters File (CSV)",
               "defaultValue": "../Fisheries/Input/Habitat_Scenario_Tool/pop_params.csv",
               "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
               "helpText": "The provided CSV file should contain all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>See the documentation for help on how to format this file."
             },
             {

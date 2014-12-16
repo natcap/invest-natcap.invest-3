@@ -31,13 +31,13 @@
           "id": "aoi_file_name",
           "args_id": "aoi_file_name",
           "type": "file",
-          "label": "Area of Interest",
+          "label": "Area of Interest (Vector)",
           "defaultValue": "../Recreation/input/initial/BC_AOI.shp",
           "validateAs": {
             "type": "OGR"
           },
           "required": true,
-          "helpText": "Select an area of interest where the model will run the analysis."
+          "helpText": "An OGR-supported vector file.  Select an area of interest where the model will run the analysis."
         },
         {
           "id": "grid",

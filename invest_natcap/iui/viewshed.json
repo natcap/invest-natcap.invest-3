@@ -23,23 +23,25 @@
           "id": "in_raster",
           "args_id": "in_raster",
           "type": "file",
-          "label": "Digital Elevation Model Raster",
+          "label": "Digial Elevation Model (Raster)",
           "validateAs": {
             "type": "GDAL",
             "mustExist": true
           },
-          "required": true
+          "required": true,
+          "helpText": "A GDAL-supported raster file representing the digital elevation model."
         },
         {
           "id": "in_observer_features",
           "args_id": "in_observer_features",
           "type": "file",
-          "label": "Features",
+          "label": "Features (Vector)",
           "validateAs": {
             "type": "OGR",
             "mustExist": true
           },
-          "required": true
+          "required": true,
+          "helpText": "An OGR-supported vector file."
         },
         {
           "id": "z_factor",

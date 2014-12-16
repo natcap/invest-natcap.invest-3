@@ -52,7 +52,7 @@
         {
           "id": "stressor_dir",
           "type": "folder",
-          "label": "Directory for Stressors Layers",
+          "label": "Stressors Layers Folder",
           "required": true,
           "validateAs": {
             "type": "folder",
@@ -149,7 +149,7 @@
           "id": "crit_dir",
           "args_id": "criteria_dir",
           "type": "hideableFileEntry",
-          "label": "Use Spatially Explicit Risk Score (shapefiles)",
+          "label": "Use Spatially Explicit Risk Score in Shapefiles",
           "defaultValue": "../HabitatRiskAssess/Input/Spatially_Explicit_Criteria",
           "validateAs": {
             "type": "folder",

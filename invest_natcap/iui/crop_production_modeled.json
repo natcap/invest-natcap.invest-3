@@ -40,7 +40,7 @@
                   "id": "crop_file_name",
                   "args_id": "crop_file_name",
                   "type": "file",
-                  "label": "Crop Map",
+                  "label": "Crop Map (Raster)",
                   "defaultValue": "../CropProduction/input/lulc_samp_cur.tif",
                   "validateAs": {
                     "type": "GDAL"

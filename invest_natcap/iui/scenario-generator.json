@@ -35,16 +35,16 @@
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/landcover.tif",
                     "validateAs": {"type": "GDAL"},
-                    "label": "Land Cover",
+                    "label": "Land Cover (Raster)",
                     "required": true,
-                    "helpText": "The landuse landcover raster."
+                    "helpText": "A GDAL-supported raster file representing land-use/land-cover."
                 },
                 {
                     "id": "transition",
                     "args_id": "transition",
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
-                    "label": "Transition Table",
+                    "label": "Transition Table (CSV)",
                     "required": false,
                     "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
                 },
@@ -60,7 +60,7 @@
                 {
                     "id": "priorities_csv_uri",
                     "args_id": "priorities_csv_uri",
-                    "label": "Priorities Table",
+                    "label": "Priorities Table (CSV)",
                     "type": "file",
                     "required": true,
                     "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
@@ -303,12 +303,12 @@
                         {
                             "id": "constraints",
                             "args_id": "constraints",
-                            "label": "Constraints Layer",
+                            "label": "Constraints Layer (Vector)",
                             "type": "file",
                             "defaultValue": "../ScenarioGenerator/input/constraints.shp",
                             "validateAs": {"type": "OGR"},
                             "required": false,
-                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+                            "helpText": "An OGR-supported vector file.  This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
                         },
                         {
                             "id": "constraints_field",
@@ -338,12 +338,12 @@
                         {
                             "id": "override",
                             "args_id": "override",
-                            "label": "Override Layer",
+                            "label": "Override Layer (Vector)",
                             "type": "file",
                             "defaultValue": "../ScenarioGenerator/input/override.shp",
                             "validateAs": {"type": "OGR"},
                             "required": false,
-                            "helpText": "This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
+                            "helpText": "An OGR-supported vector file. This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
                         },
                         {
                             "id": "override_field",

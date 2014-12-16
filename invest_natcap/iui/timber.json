@@ -27,19 +27,19 @@
           "id": "shapefile",
           "args_id": "timber_shape_uri",
           "type": "file",
-          "label": "Managed Area Map",
+          "label": "Managed Area Map (Vector)",
           "validateAs": {
             "type": "OGR"
           },
           "required": true,
           "defaultValue": "../timber/input/plantation.shp",
-          "helpText": "A required polygon shapefile that is projected in meters. This shapefile should have polygons that represent the timber parcles and every polygon should have a unique ID under the field 'Parcl_ID'."
+          "helpText": "An OGR-supported vector file projected in meters. This vector should contain polygons that represent the timber parcles and every polygon should have a unique ID under the field 'Parcl_ID'."
         },
         {
           "id": "attr_table",
           "args_id": "attr_table_uri",
           "type": "file",
-          "label": "Plantation Production Table",
+          "label": "Plantation Production Table (CSV)",
           "required": true,
           "defaultValue": "../timber/input/plant_table.dbf",
           "validateAs": {

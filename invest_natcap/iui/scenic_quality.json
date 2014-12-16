@@ -34,13 +34,13 @@
                   "id": "aoi_uri",
                   "args_id": "aoi_uri",
                   "type": "file",
-                  "label": "Area of Interest",
+                  "label": "Area of Interest (Vector)",
                   "defaultValue": "../ScenicQuality/Input/AOI_WCVI.shp",
                   "validateAs": {
                     "type": "OGR"
                   },
                   "required": true,
-                  "helpText": "This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
+                  "helpText": "An OGR-supported vector file.  This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
                 },
                 {
                   "id": "cell_size",
@@ -60,25 +60,25 @@
                   "id": "structure_uri",
                   "args_id": "structure_uri",
                   "type": "file",
-                  "label": "Features Impacting Scenic Quality",
+                  "label": "Features Impacting Scenic Quality (Vector)",
                   "defaultValue": "../ScenicQuality/Input/AquaWEM_points.shp",
                   "validateAs": {
                     "type": "OGR"
                   },
                   "required": true,
-                  "helpText": "The user must specify a point feature layer that indicates locations of objects that contribute to negative scenic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
+                  "helpText": "An OGR-supported vector file.  The user must specify a point feature layer that indicates locations of objects that contribute to negative scenic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
                 },
                 {
                   "id": "dem_uri",
                   "args_id": "dem_uri",
                   "type": "file",
-                  "label": "Digital Elevation Model (DEM)",
+                  "label": "Digital Elevation Model (Raster)",
                   "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
                   "validateAs": {
                     "type": "GDAL"
                   },
                   "required": true,
-                  "helpText": "An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
+                  "helpText": "A GDAL-supported raster file. An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
                 },
                 {
                   "id": "refraction",
@@ -95,7 +95,7 @@
                   "id": "pop_uri",
                   "args_id": "pop_uri",
                   "type": "file",
-                  "label": "Population Raster",
+                  "label": "Population (Raster)",
                   "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
                   "validateAs": {
                     "type": "GDAL"
@@ -104,13 +104,13 @@
                   "returns": {
                     "ifEmpty": "pass"
                   },
-                  "helpText": "A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative scenic quality are visible and not visible."
+                  "helpText": "A GDAL-supported raster file.  A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative scenic quality are visible and not visible."
                 },
                 {
                   "id": "overlap_uri",
                   "args_id": "overlap_uri",
                   "type": "file",
-                  "label": "Overlap Analysis Features",
+                  "label": "Overlap Analysis Features (Vector)",
                   "defaultValue": "../ScenicQuality/Input/BC_parks.shp",
                   "validateAs": {
                     "type": "OGR"
@@ -119,7 +119,7 @@
                   "returns": {
                     "ifEmpty": "pass"
                   },
-                  "helpText": "The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting scenic quality."
+                  "helpText": "An OGR-supported vector file.  The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting scenic quality."
                 }
               ]
             }

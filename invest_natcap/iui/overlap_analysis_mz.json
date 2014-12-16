@@ -27,7 +27,7 @@
           "id": "aoi",
           "args_id": "zone_layer_loc",
           "type": "file",
-          "label": "Analysis Zones Layer",
+          "label": "Analysis Zones Layer (Vector)",
           "defaultValue": "../OverlapAnalysis/Input/ManagementZones_WCVI.shp",
           "validateAs": {
             "type": "OGR"
