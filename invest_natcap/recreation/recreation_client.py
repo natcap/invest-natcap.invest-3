@@ -26,16 +26,16 @@ def urlopen(url, request, tries=3, delay=15, log=LOGGER):
     An error tolerant URL opener with retries and delays.
 
     Args:
-        url (?): (desc)
-        request (?): (desc)
+        url (string): url to remote server file
+        request (urllib2.Request or string): urllib2 request object or string
 
     Keyword Args:
-        tries (int): (desc)
-        delay (int): (desc)
-        log (logger object): (desc)
+        tries (int): the number of request attempts to be made before quitting
+        delay (float): number of seconds before each attempt
+        log (logging.Logger): logger object
 
     Returns:
-        msg
+        msg (string): response message from remote server
     """
     for attempt in range(tries):
         log.info("Trying URL: %s.", url)
@@ -58,15 +58,16 @@ def relogger(log, msg_type, msg):
     Logs a message to a logger using the method named by a string.
 
     Args:
-        log (?): (desc)
-        msg_type (?): (desc)
-        msg (?): (desc)
+        log (logger object): client-side logger
+        msg_type (string): the type of logger message
+        msg (string): the message to be logged
 
     Returns:
         nothing
 
     Raises:
-        IOError: (desc)
+        IOError: triggered when msg_type == "Error", indicating that an error
+            has occurred on the remote server
 
     """
     msg_type = msg_type.strip()
@@ -88,16 +89,19 @@ def log_check(url, flag="Dropped intermediate tables.", delay=15, log=LOGGER, li
     Echoes a remote log until the flag message is found.
 
     Args:
-        url (string): (desc)
+        url (string): url to server session log
 
     Keyword Args:
-        flag (string): (desc)
-        delay (int?): (desc)
-        log (logger object): (desc)
-        line (int): (desc)
+        flag (string): the line that this function waits for in the remote
+            server's log file that triggers the function to complete.
+        delay (float): number of seconds to wait before reading next line in
+            log file
+        log (logger object): client-side logger
+        line (int): the first line to read in the log file
 
     Returns:
-        line (?): (desc)
+        line (int): the first line in the remote server's log that has not
+            yet been read
 
     """
     log.debug("Begin log check at line %i.", line)
@@ -145,7 +149,7 @@ def complete_shapefile(shapefile_name):
         shapefile_name (string): (desc)
 
     Returns:
-        complete (?): (desc)
+        complete (boolean): indicates whether shapefile has all required files
 
     """
     file_name_base = os.path.splitext(shapefile_name)[0]

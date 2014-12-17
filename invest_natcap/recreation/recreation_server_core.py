@@ -33,11 +33,20 @@ def stats_box(points):
     """
     Returns the extrema and dimensions for a box enclosing the points
 
-    :param points: a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
-    :type points: list
+    Args:
+        points (list): a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
 
-    :return: min_x, min_y, max_x, max_y, width, height
-    :rtype: list
+    Returns:
+        min_x (float): minimum x coordinate
+        min_y (float): minimum y coordinate
+        max_x (float): maximum x coordinate
+        max_y (float): maximum y coordinate
+        width (float): width across x-coordinates
+        height (float): width across y-coordinates
+
+    Example Returns::
+
+        min_x, min_y, max_x, max_y, width, height = stats_box(points)
     """
 
     x_coordinates = []
@@ -58,12 +67,15 @@ def bounding_box(points):
     """
     Returns a bounding box for the points
 
-    :param points: a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
-    :type points: list
+    Args:
+        points (list): a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
 
-    :return: a closed coordinate list for the bounding box in
-    [(x1, y1),(x2, y2),(xN, yN)] form
-    :rtype: list"""
+    Returns:
+        bounding_box (tuple): a 5-tuple of 2-tuples representing a closed
+            coordinate list for the bounding box. Starts and finishes at:
+            (min_x, min_y)
+
+    """
 
     min_x, min_y, max_x, max_y = stats_box(points)[:-2]
 
@@ -79,11 +91,13 @@ def format_points_sql(points):
     """
     Returns a list of points in the PostGIS sql format
 
-    :param points: a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
-    :type points: list
+    Args:
+        points (list): a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
 
-    :return: a sql fragment
-    :rtype: str"""
+    Returns:
+        sql (string): an sql fragment
+
+    """
 
     sql = ", ".join(["%i %i" % point for point in points])
 
@@ -94,13 +108,13 @@ def format_polygon_sql(points, srid=900913):
     """
     Returns a polygon in a PostGIS sql format
 
-    :param points: a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
-    :type points: list
-    :param srid: the PostGIS spatial reference identifier, defaults to OSM's
-    :type srid: int
+    Args:
+        points (list): a list of points in [(x1, y1),(x2, y2),(xN, yN)] form
+        srid (int): the PostGIS spatial reference identifier, defaults to OSM's
 
-    :return: a sql fragment
-    :rtype: str"""
+    Returns:
+        sql (string): a sql fragment
+    """
 
     sql = "ST_GeomFromText(\'POLYGON((%s))\', %i)"
     sql = sql % (format_points_sql(points), srid)
@@ -112,11 +126,14 @@ def format_feature_sql(feature):
     """
     Returns a feature type in the OSM PostGIS sql format
 
-    :param feature: the name of a feature tag and value in "tag_value" format
-    :type feature: str
+    Args:
+        feature (string): the name of a feature tag and value in "tag_value"
+            format
 
-    :return: a sql fragment
-    :rtype: str"""
+    Returns:
+        sql (string): a sql fragment
+
+    """
 
     sql = "osm.%s = \'%s\'"
     sql = sql % tuple(feature.split('_'))
@@ -126,13 +143,14 @@ def format_feature_sql(feature):
 
 def category_table(osm_table_name):
     """
-    Returns a OSM category table definition
+    Returns an OSM category table definition
 
-    :param osm_table_name: a OSM PostGIS table name
-    :type osm_table_name: str
+    Args:
+        osm_table_name (string): an OSM PostGIS table name
 
-    :return: a sql statement
-    :rtype: str"""
+    Returns:
+        sql (string): a sql statement
+    """
 
     sql = ("CREATE TEMPORARY TABLE category_%s "
            "(osm_id integer, "
@@ -145,13 +163,14 @@ def category_table(osm_table_name):
 
 def category_table_build(osm_table_name, categorysql):
     """
-    Returns a SQL OSM category table builder
+    Returns an SQL OSM category table builder
 
-    :param osm_table_name: a OSM PostGIS table name
-    :type osm_table_name: str
+    Args:
+        osm_table_name (string): a OSM PostGIS table name
 
-    :return: a sql statement
-    :rtype: str"""
+    Returns:
+        sql (string): a sql statement
+    """
 
     sql = ("INSERT INTO category_%s (osm_id, cat) "
            "SELECT DISTINCT osm_id, "
@@ -167,13 +186,16 @@ def category_dict(tsv_file_name):
     Returns the category definitions and class numbering derived from
     a categorization table
 
-    :param tsv_file_name: the file name for categorization table
-    :type tsv_file_name: str
+    Args:
+        tsv_file_name (string): the file name for categorization table
 
-    :return: a tuple containing a category dictionary in
-    [column][value]=class number form and a class dictionary in
-    [category name]=class number?
-    :rtype: tuple
+    Returns:
+        categories (dict): [column][value]=class number form ??
+        classes (dict): [category name]=class number ??
+
+    Example Returns::
+
+        categories, classes = category_dict(tsv_file_name)
     """
     tsv_file = open(tsv_file_name, 'r')
     tsv_file.readline()
@@ -221,7 +243,18 @@ def categorize_execute(
     cur, table_name, category_dictionary,
         classes_dictionary, category_format, class_format):
     """
-    Generates tables with the categorization schema
+    Generates tables with the categorization schema.
+
+    Args:
+        cur ():
+        table_name ():
+        category_dictionary ():
+        classes_dictionary ():
+        category_format ():
+        class_format ():
+
+    Returns:
+        None
     """
     LOGGER.info("Checking column types.")
     delimiter = {}
@@ -306,16 +339,18 @@ def categorize_execute(
 
 def format_categories_sql(tsv_file_name, custom_sql="see code"):
     """
-    Returns a sql fragment with OSM PostGIS category definitions
+    Returns an sql fragment with OSM PostGIS category definitions
 
-    :param tsv_file_name: the tab delimited string quoted category definitions
-    :type tsv_file_name: str
-    :param custom_sql: a sql case statement fragment containing additional
-    category definitions
-    :type custom_sql: str
+    Args:
+        tsv_file_name (string): the tab delimited string quoted category
+            definitions
 
-    :return: a sql fragment
-    :rtype: str
+    Keyword Args:
+        custom_sql (string): a sql case statement fragment containing
+            additional category definitions
+
+    Returns:
+        sql (string): an sql fragment
     """
 
     # custom sql classifies features with values not explicitly categorized
@@ -378,20 +413,16 @@ def calculate_grid(origin_x, origin_y, column, row, cell_size):
     """
     Returns the Cartesian coordinates for the specified cell in the grid
 
-    :param origin_x: the lower left X coordinate of the origin of the grid
-    :type origin_x: float
-    :param origin_y: the lower left Y coordinate of the origin of the grid
-    :type origin_y: float
-    :param column: the column number desired
-    :type column: int
-    :param row: the row number desired
-    :type row: int
-    :param cell_size: the size of a grid cell in map units
-    :type cell_size: float
+    Args:
+        origin_x (float): the lower left X coordinate of the origin of the grid
+        origin_y (float): the lower left Y coordinate of the origin of the grid
+        column (int): the column number desired
+        row (int): the row number desired
+        cell_size (float): the size of a grid cell in map units
 
-    :return: a closed coordinate list for the grid cell in
-    [(x1, y1),(x2, y2),(xN, yN)] form
-    :rtype: list
+    Returns:
+        coords (list): a closed coordinate list for the grid cell in
+            [(x1, y1),(x2, y2),(xN, yN)] form
     """
 
     return bounding_box([(origin_x + (column * cell_size),
@@ -406,16 +437,15 @@ def create_polygon_feature_ogr(layer, points, results):
     Returns a OGR polygon feature from the specified points with the
     specified values
 
-    :param layer: a OGR layer
-    :type layer: object
-    :param points: a closed coordinate list in [(x1, y1),(x2, y2),(xN, yN)]
-        form
-    :type points: list
-    :param results: the values for the fields in [(field name, value)] form
-    :type results: list
+    Args:
+        layer (object): a OGR layer
+        points (list): a closed coordinate list in [(x1, y1),(x2, y2),(xN, yN)]
+            form
+        results (list): the values for the fields in [(field name, value)] form
 
-    :return: a OGR polygon feature
-    :rtype: object
+    Returns:
+        feature (object): a OGR polygon feature
+            (NOTE: is this really returned?)
     """
     # create a new point object
     polygon = ogr.Geometry(ogr.wkbPolygon)
@@ -443,35 +473,28 @@ def create_polygon_feature_ogr(layer, points, results):
     feature.Destroy()
 
 
-def pixel_coordinate(
-    origin_x, scale_x, theta_y, origin_y, theta_x, scale_y,
-        i, j):
+def pixel_coordinate(origin_x, scale_x, theta_y, origin_y, theta_x, scale_y, i, j):
     """
     Returns the Cartesian coordinate for a pixel
 
     http://www.gdal.org/gdal_datamodel.html
 
-    :param origin_x: the X dimension of the spatial coordinate for the top left
-    pixel
-    :type origin_x: float
-    :param scale_x: the spatial width of pixels in the X dimension
-    :type scale_x: float
-    :param theta_y: the spatial offset in the Y dimension caused by rotation
-    :type theta_y: float
-    :param origin_y: the Y dimension of the spatial coordinate for the top left
-    pixel
-    :type origin_y: float
-    :param theta_x: the spatial offset in the X dimension caused by rotation
-    :type theta_x: float
-    :param scale_y: the spatial height of pixels in the Y dimension
-    :type scale_y: float
-    :param i: the X dimension grid index for the desired pixel
-    :type i: int
-    :param j: the Y dimension grid index for the desired pixel
-    :type j: int
+    Args:
+        origin_x (float): the X dimension of the spatial coordinate for the top
+            left pixel
+        scale_x (float): the spatial width of pixels in the X dimension
+        theta_y (float): the spatial offset in the Y dimension caused by
+            rotation
+        origin_y (float): the Y dimension of the spatial coordinate for the top
+            left pixel
+        theta_x (float): the spatial offset in the X dimension caused by
+            rotation
+        scale_y (float): the spatial height of pixels in the Y dimension
+        i (int): the X dimension grid index for the desired pixel
+        j (int): the Y dimension grid index for the desired pixel
 
-    :return: the Cartesian coordinate for the pixel in (x, y) form
-    :rtype: tuple
+    Returns:
+        coord (tuple): the Cartesian coordinate for the pixel in (x, y) form
     """
 
     x_coordinate = origin_x + (i * scale_x) + (j * theta_y)
@@ -483,14 +506,14 @@ def pixel_coordinate(
 ###Pyscopg2 calls###
 def category_builder_osm():
     """
-    Returns a sql statement the builds a feature type list to be categorized
+    Returns an sql statement the builds a feature type list to be categorized
 
     The function reads in the list of OSM columns to check from the osm.txt
     file and generates a sql statement the will select the distinct values for
     those columns.
 
-    :return: a sql statement
-    :rtype: str
+    Returns:
+        sql (string): an sql statement
     """
 
     in_file_name = os.sys.argv[0][:-10] + "osm.txt"
@@ -524,19 +547,20 @@ def temp_shapefile_db(cur, shapefile_name, table_name, attributes=False, srid=0)
     """
     Loads the shapefile into a PostGIS table
 
-    :param cur: a PostGIS database cursor
-    :type cur: object
-    :param shapefile_name: the full path and file name for the shapefile
-    :type shapefile_name: str
-    :param attributes: boolean to include attribute table
-    :type attributes: bool
-    :param srid: the srid value
-    :type srid: int
+    Args:
+        cur (object): a PostGIS database cursor
+        shapefile_name (string): the full path and file name for the shapefile
+        table_name (string): a PostGIS table name
 
-    :return: a PostGIS table name
-    :rtype: str
+    Keyword Args:
+        attributes (boolean): boolean to include attribute table
+        srid (int): the srid value
 
-    :raise: ValueError when no projection definition
+    Returns:
+        srid (int): the srid value
+
+    Raises:
+        ValueError: when there is no projection definition
     """
 
     shapefile_name = str(shapefile_name)
@@ -646,17 +670,16 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name, out_column_
     """
     Creates a PostGIS table with the AOI grid
 
-    :param cur: A PostGIS database cursor
-    :type cur: object
-    :param aoi_name: the AOI PostGIS table name
-    :type aoi_name: str
-    :param grid_name: the desired grid PostGIS table name
-    :type grid_name: str
-    :param cell_size: the size of grid cells
-    :type cell_size: float
+    Args:
+        cur (object): A PostGIS database cursor
+        in_table_name (?): a PostGIS table name
+        in_column_name (?): descr
+        out_table_name (?): a PostGIS table name
+        out_column_name (?): descr
+        cell_size (float): the size of grid cells
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     #get spatial extent of AOI
@@ -716,6 +739,17 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name, out_column_
 def hex_grid(cur, in_table_name, in_column_name, out_table_name, out_column_name, cell_size):
     """
     Creates a table with a hexagonal grid contained within an AOI
+
+    Args:
+        cur (object): A PostGIS database cursor
+        in_table_name (?): a PostGIS table name
+        in_column_name (?): (descr)
+        out_table_name (?): a PostGIS table name
+        out_column_name (?): (descr)
+        cell_size (float): the size of grid cells
+
+    Returns:
+        None
     """
     #get spatial extent of AOI
     sql = "SELECT Box2D(ST_Union(%s)) from %s"
@@ -790,6 +824,14 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name, out_column_name
 def sort_grid(cur, out_table_name, out_column_name):
     """
     Renumbers a table by spatial order.
+
+    Args:
+        cur (object): A PostGIS database cursor
+        out_table_name (?): a PostGIS table name
+        out_column_name (?): (descr)
+
+    Returns:
+        None
     """
     sql = ("SELECT %s, "
            "row_number() OVER (ORDER BY ST_YMin(box2d(%s)), "
@@ -829,21 +871,19 @@ def table_shapefile(cur, sql, column_names, ogr_type_list, out_file_name, srid=0
     """
     Creates a shapefile from the specified table and columns
 
-    :param cur: A PostGIS database cursor
-    :type cur: object
-    :param sql: a sql statement that selects the appropriate rows
-    :type sql: str
-    :param column_names: the names as they should appear in the shapefile
-    :type column_names: list
-    :param ogr_type_list: the data types as they should appear in the shapefile
-    :type ogr_type_list: list
-    :param out_file_name: the full path and file name for the shapefile
-    :type out_file_name: str
+    Args:
+        cur (object): A PostGIS database cursor
+        sql (string): a sql statement that selects the appropriate rows
+        column_names (list): the names as they should appear in the shapefile
+        ogr_type_list (list): the data types as they should appear in the
+            shapefile
+        out_file_name (string): the full path and file name for the shapefile
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
 
-    :raise: IOError when file cannot be created
+    Raises:
+        IOError: when file cannot be created
     """
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -901,6 +941,15 @@ def table_shapefile(cur, sql, column_names, ogr_type_list, out_file_name, srid=0
 def dump_execute(cur, in_table_name, out_file_name, column_alias={}):
     """
     Creates a shapefile from a PostGIS table.
+
+    Args:
+        cur (?): (des)
+        in_table_name (?): (des)
+        out_file_name (?): (des)
+        column_alias (?): (des)
+
+    Returns:
+        None
     """
 
     out_file_name = str(out_file_name)
@@ -1081,13 +1130,16 @@ def raster_table(cur, in_file_name, table_name, srid=-1):
     """
     Creates a PostGIS table from a raster
 
-    :param cur: a PostGIS database cursor
-    :type cur: object
-    :param in_file_name: the full path and file name for a GeoTiff
-    :type in_file_name: str
+    Args:
+        cur (object): a PostGIS database cursor
+        in_file_name (string): the full path and file name for a GeoTiff
 
-    :raise: ValueError when raster has more than 1 band
-    :raise: IOError when raster cannot be opened
+    Returns:
+        None
+
+    Raises:
+        ValueError: when raster has more than 1 band
+        IOError: when raster cannot be opened
     """
 
     #Python register all drivers by default
@@ -1157,13 +1209,12 @@ def lulc_area_sql(grid_name, lulc_name):
     Returns a sql statement that intersects a grid with the LULC table and
     sums the areas
 
-    :param grid_name: the PostGIS table name for the grid
-    :type grid_name: str
-    :param lulc_name: the PostGIS table name for the LULC table
-    :type lulc_name: str
+    Args:
+        grid_name (string): the PostGIS table name for the grid
+        lulc_name (string): the PostGIS table name for the LULC table
 
-    :return: a sql statement
-    :rtype: str
+    Returns:
+        sql (string): a sql statement
     """
 
     sql = ("SELECT grid.i, "
@@ -1206,15 +1257,13 @@ def grid_union(cur, grid_name, grid_union_name):
     """
     Creates a table from a dissolved grid
 
-    :param cur: a PostGIS database cursor
-    :type cur: object
-    :param  grid_name: the table name of the grid to dissolve
-    :type grid_name: str
-    :param grid_union_name: the table name to contain the dissolved grid
-    :type grid_union_name: str
+    Args:
+        cur (object): a PostGIS database cursor
+        grid_name (string): the table name of the grid to dissolve
+        grid_union_name (string): the table name to contain the dissolved grid
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     grid_union_name = grid_name + "_union"
@@ -1232,18 +1281,16 @@ def grid_transform(cur, grid_name, grid_transform_name, srid):
     """
     Creates a table with a reprojected grid
 
-    :param cur: a PostGIS database cursor
-    :type cur: object
-    :param grid_name: the table name of the grid to project
-    :type grid_name: str
-    :param gridTansform_name: the table name to contain the projected grid
-    :type gridTansform_name: str
-    :param srid: the Spatial Reference Identification for the destination
-    projection
-    :type srid: int
+    Args:
+        cur (object): a PostGIS database cursor
+        grid_name (string): the table name of the grid to project
+        gridTansform_name (string): the table name to contain the projected
+            grid
+        srid (int): the Spatial Reference Identification for the destination
+            projection
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     sql = ("SELECT EXISTS "
@@ -1274,17 +1321,16 @@ def transform(cur, osm_name, transform_name, srid):
     """
     Creates a table with reprojected OSM data
 
-    :param cur: a PostGIS database cursor
-    :type cur: object
-    :param osm_name: the table name of the OSM data
-    :type osm_name: str
-    :param transform_name: the table name to contain the reprojected OSM data
-    :param srid: the Spatial Reference Identification for the destination
-    projection
-    :type srid: int
+    Args:
+        cur (object): a PostGIS database cursor
+        osm_name (string): the table name of the OSM data
+        transform_name (string): the table name to contain the reprojected
+            OSM data
+        srid (int): the Spatial Reference Identification for the destination
+            projection
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     sql = ("CREATE TEMPORARY TABLE %s AS "
@@ -1300,6 +1346,18 @@ def transform(cur, osm_name, transform_name, srid):
 def transform_sql(in_table_name, out_table_name, geometry_column, srid, extra_columns=[]):
     """
     Constructs a SQL query to do a spatial transform using PostGIS.
+
+    Args:
+        in_table_name (?): (descr)
+        out_table_name (?): (descr)
+        geometry_column (?): (descr)
+        srid (?): (descr)
+
+    Keyword Args:
+        extra_columns (list): extra columns
+
+    Returns:
+        sql (string): an sql statement
     """
     columnsql = ",".join(["ST_Transform(%s.%s,%i) AS %s"] + extra_columns)
     sql = "CREATE TEMPORARY TABLE %s AS (SELECT " + columnsql + " FROM %s)"
@@ -1311,7 +1369,17 @@ def transform_sql(in_table_name, out_table_name, geometry_column, srid, extra_co
 
 def transform_execute(cur, in_table_name, out_table_name, geometry_column, srid, extra_columns=[]):
     """
-    Executes a SQL query to do a spatial transform using PostGIS.
+    Executes an SQL query to do a spatial transform using PostGIS.
+
+    Args:
+        cur (?): (descr)
+        in_table_name (?): (descr)
+        out_table_name (?): (descr)
+        geometry_column (?): (descr)
+        srid (?): (descr)
+
+    Keyword Args:
+        extra_columns (list): extra columns
     """
     sql = transform_sql(in_table_name, out_table_name, geometry_column, srid,
                         extra_columns)
@@ -1320,7 +1388,17 @@ def transform_execute(cur, in_table_name, out_table_name, geometry_column, srid,
 
 
 def union_execute(cur, in_table_name, out_table_name, geometry_column):
-    """Executes a SQL query to do a spatial dissolve using PostGIS.
+    """
+    Executes an SQL query to do a spatial dissolve using PostGIS.
+
+    Args:
+        cur (?): (descr)
+        in_table_name (?): (descr)
+        out_table_name (?): (descr)
+        geometry_column (?): (descr)
+
+    Returns:
+        sql (string): an sql statement
     """
     sql = "CREATE TEMPORARY TABLE %s AS (SELECT ST_Union(%s.%s) as %s FROM %s)"
     sql = sql % (out_table_name, in_table_name, geometry_column,
@@ -1332,7 +1410,21 @@ def union_execute(cur, in_table_name, out_table_name, geometry_column):
 
 def clip_sql(in_table_name, in_table_column, mask_name, mask_column, out_table_name, extra_columns=[]):
     """
-    Constructs a SQL query to do a spatial clip using PostGIS.
+    Constructs an SQL query to do a spatial clip using PostGIS.
+
+    Args:
+        in_table_name (?): (descr)
+        in_table_column (?): (descr)
+        mask_name (?): (descr)
+        mask_column (?): (descr)
+        out_table_name (?): (descr)
+
+    Keyword Args:
+        extra_columns (list): extra columns
+
+    Returns:
+        sql (string): an sql statement
+
     """
     columnsql = ",".join(["ST_Intersection(%s.%s,%s.%s) AS %s"] + extra_columns)
     LOGGER.debug("Constructing SQL query for clip.")
@@ -1354,7 +1446,21 @@ def clip_sql(in_table_name, in_table_column, mask_name, mask_column, out_table_n
 
 def clip_execute(cur, in_table_name, in_table_column, mask_name, mask_column, out_table_name, extra_columns=[]):
     """
-    Executes a SQL query to do a spatial clip using PostGIS.
+    Executes an SQL query to do a spatial clip using PostGIS.
+
+    Args:
+        cur (?): (descr)
+        in_table_name (?): (descr)
+        in_table_column (?): (descr)
+        mask_name (?): (descr)
+        mask_column (?): (descr)
+        out_table_name (?): (descr)
+
+    Keyword Args:
+        extra_columns (list): extra columns
+
+    Returns:
+        None
     """
     sql = clip_sql(in_table_name, in_table_column, mask_name, mask_column,
                    out_table_name, extra_columns)
@@ -1367,15 +1473,15 @@ def osm_point_clip(cur, aoi_name, point_name):
     """
     Creates a table with the OSM point features cliped by an AOI
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param aoi_name: a PostGIS table name containing the AOI
-    :type aoi_name: str
-    :param point_name: a PostGIS table name containg the OSM point features
-    :type point_name: str
+    Args:
+        cur (object): a PostGIS cursor
+        aoi_name (string): a PostGIS table name containing the AOI
+        point_name (string): a PostGIS table name containg the OSM point
+            features
 
-    :return: None
-    :rtype: None"""
+    Returns:
+        None
+    """
     sql = ("CREATE TEMPORARY TABLE %s AS"
            " (SELECT osm.osm_id, osm.way"
            " FROM planet_osm_point as osm, %s as aoi"
@@ -1390,15 +1496,13 @@ def osm_line_clip(cur, aoi_name, line_name):
     """
     Creates a table with the OSM line features cliped by an AOI
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param aoi_name: a PostGIS table name containing the AOI
-    :type aoi_name: str
-    :param line_name: a PostGIS table name containg the OSM line features
-    :type line_name: str
+    Args:
+        cur (object): a PostGIS cursor
+        aoi_name (string): a PostGIS table name containing the AOI
+        line_name (string): a PostGIS table name containg the OSM line features
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     sql = ("CREATE TEMPORARY TABLE %s AS"
@@ -1415,15 +1519,14 @@ def osm_poly_clip(cur, aoi_name, poly_name):
     """
     Creates a table with the OSM polygon features cliped by an AOI
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param aoi_name: a PostGIS table name containing the AOI
-    :type aoi_name: str
-    :param poly_name: a PostGIS table name containg the OSM polygon features
-    :type poly_name: str
+    Args:
+        cur (object): a PostGIS cursor
+        aoi_name (string): a PostGIS table name containing the AOI
+        poly_name (string): a PostGIS table name containg the OSM polygon
+            features
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     sql = ("CREATE TEMPORARY TABLE %s AS"
@@ -1441,15 +1544,14 @@ def osm_count_sql(grid, osm, cat):
     Returns a sql fragment that counts OSM point features per grid cell by
     category
 
-    :param grid: a PostGIS table name containing the grid
-    :type grid: str
-    :param osm: a PostGIS table name containing the OSM point features
-    :type osm: str
-    :param cat: a PostGIS table containing the OSM point features' categories
-    :type cat: str
+    Args:
+        grid (string): a PostGIS table name containing the grid
+        osm (string): a PostGIS table name containing the OSM point features
+        cat (string): a PostGIS table containing the OSM point features'
+            categories
 
-    :return: a sql fragment
-    :rtype: str
+    Returns:
+        sql (string): an sql fragment
     """
 
     sql = ("SELECT"
@@ -1474,15 +1576,14 @@ def osm_length_sql(grid, osm, cat):
     Returns a sql fragment that sums the length of OSM line features per grid
     cell by category
 
-    :param grid: a PostGIS table name containing the grid
-    :type grid: str
-    :param osm: a PostGIS table name containing the OSM line features
-    :type osm: str
-    :param cat: a PostGIS table containing the OSM line features' categories
-    :type cat: str
+    Args:
+        grid (string): a PostGIS table name containing the grid
+        osm (string): a PostGIS table name containing the OSM line features
+        cat (string): a PostGIS table containing the OSM line features'
+            categories
 
-    :return: a sql fragment
-    :rtype: str
+    Returns:
+        sql (string): an sql fragment
     """
 
     sql = ("SELECT "
@@ -1515,15 +1616,14 @@ def osm_area_sql(grid, osm, cat):
     Returns a sql fragment that sums the total area by category of a grid
     cell coverd by OSM polygon features
 
-    :param grid: a PostGIS table name containing the grid
-    :type grid: str
-    :param osm: a PostGIS table name containing the OSM polygon features
-    :type osm: str
-    :param cat: a PostGIS table containing the OSM polygon features' categories
-    :type cat: str
+    Args:
+        grid (string): a PostGIS table name containing the grid
+        osm (string): a PostGIS table name containing the OSM polygon features
+        cat (string): a PostGIS table containing the OSM polygon features'
+            categories
 
-    :return: a sql fragment
-    :rtype: str
+    Returns
+        sql (string): an sql fragment
     """
 
     sql = ("SELECT polyunion.id, "
@@ -1557,6 +1657,19 @@ def osm_area_sql(grid, osm, cat):
 def join_results_sql(predictors, grid, results_format, result_column, results_name, attributes=[]):
     """
     Constructs a SQL query to do a table join on recreation model results.
+
+    Args:
+        predictors (?): (descr)
+        grid (?): (descr)
+        results_format (?): (descr)
+        result_column (?): (descr)
+        results_name (?): (descr)
+
+    Keyword Args:
+        attributes (list): (descr)
+
+    Returns:
+        sql (string): an sql fragment
     """
     create = "CREATE TEMPORARY TABLE %s AS (SELECT" % results_name
     create = create + " grid.cell AS cell, grid.id AS \"cellID\","
@@ -1588,6 +1701,17 @@ def join_results_sql(predictors, grid, results_format, result_column, results_na
 def join_results_execute(cur, predictors, grid, results_format, result_column, results_name, attributes=[]):
     """
     Executes a SQL query to do a table join on recreation model results.
+
+    Args:
+        cur (object): a PostGIS cursor
+        predictors (?): (descr)
+        grid (?): (descr)
+        results_format (?): (descr)
+        result_column (?): (descr)
+        results_name (?): (descr)
+
+    Returns:
+        None
     """
     sql = join_results_sql(predictors, grid, results_format, result_column,
                            results_name, attributes)
@@ -1600,21 +1724,17 @@ def grid_osm_sql(grid_name, point_sql, line_sql, polygon_sql):
     Returns a sql statement that counts points, sums lengths, and sums areas
     of OSM features by catergory per grid cell
 
-    :param grid_name: a PostGIS table name containing the grid
-    :type grid_name: str
-    :param point_sql: a sql fragment counting OSM point features by category
-        per
-    grid cell
-    :type point_sql: str
-    :param line_sql: a sql fragment summing OSM line features' lengths by
-    category per grid cell
-    :type line_sql: str
-    :param polygon_sql: a sql fragment summing OSM polygon features' areas
-    coverd by category per grid cell
-    :type polygon_sql: str
+    Args:
+        grid_name (string): a PostGIS table name containing the grid
+        point_sql (string): a sql fragment counting OSM point features by
+            category per grid cell
+        line_sql (string): a sql fragment summing OSM line features' lengths by
+            category per grid cell
+        polygon_sql (string): a sql fragment summing OSM polygon features'
+            areas covered by category per grid cell
 
-    :return: a sql fragment
-    :rtype: str
+    Returns:
+        sql (string): a sql fragment
     """
 
     sql = ("SELECT"
@@ -1657,17 +1777,17 @@ def flickr_grid_table(cur, grid_name, flickr_name, out_file_name, before_year=20
     """
     Creates a CSV file with the daily grid cell visitation by Flickr users
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param grid_name: a PostGIS table name for a grid
-    :type grid_name: str
-    :param flickr_name: a PostGIS table name for the Flickr data
-    :type flickr_name: str
-    :param out_file_name: the full path and file name for the output CSV
-    :type out_file_name: str
+    Args:
+        cur (object): a PostGIS cursor
+        grid_name (string): a PostGIS table name for a grid
+        flickr_name (string): a PostGIS table name for the Flickr data
+        out_file_name (string): the full path and file name for the output CSV
 
-    :return: None
-    :rtype: None
+    Keyword Args:
+        before_year (int): (descr)
+
+    Returns:
+        None
     """
 
     sql = ("SELECT \"gridID\", date_taken, count(owner_name)"
@@ -1696,13 +1816,12 @@ def wkt_to_srid(cur, wkt):
     """
     Retreive srid srid from Esri Shapefile PRJ file
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param wkt: a WKT projection
-    :type wkt: str
+    Args:
+        cur (object): a PostGIS cursor
+        wkt (string): a WKT projection
 
-    :return: a Spatial Reference Identification
-    :rtype: int
+    Returns:
+        srid (int): a Spatial Reference Identification
     """
 
     LOGGER.debug("Checking for srid of WKT %s", repr(wkt).replace(",", "|").replace(".", "||"))
@@ -1784,13 +1903,12 @@ def srid2sql(cur, auth_srid):
     Checks for srid srid entry in spatial_ref_sys and scrapes from web
     if needed
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param auth_srid: a srid Spatial Reference Identification
-    :type auth_srid: int
+    Args:
+        cur (object): a PostGIS cursor
+        auth_srid (int): a srid Spatial Reference Identification
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
 
     sql = "SELECT COUNT(*) FROM spatial_ref_sys WHERE auth_srid = %i"
@@ -1812,11 +1930,11 @@ def utm_geography_table(cur):
     """
     Creates a table with the srid and geographic bounds of the UTM zones
 
-    :param cur: a PostGIS cursor
-    :type cur: object
+    Args:
+        cur (object): a PostGIS cursor
 
-    :return: None
-    :rtype: None
+    Returns:
+        None
     """
     geography_srid = 4326
     LOGGER.debug(
@@ -1854,13 +1972,12 @@ def destination_srid(cur, aoi_name):
     """
     Returns the srid for the UTM zone that covers the AOI
 
-    :param cur: a PostGIS cursor
-    :type cur: object
-    :param aoi_name: a PostGIS table name
-    :type aoi_name: str
+    Args:
+        cur (object): a PostGIS cursor
+        aoi_name (string): a PostGIS table name
 
-    :return: the Spatial Reference Identification
-    :rtype: int
+    Returns:
+        srid (int): the Spatial Reference Identification
     """
     sql = ("SELECT srid FROM "
            "%s AS projections, "
@@ -1876,8 +1993,17 @@ def destination_srid(cur, aoi_name):
 
 
 def get_utm_srid(cur, aoi_table, geom_table):
-    """Returns the list or SRIDs for the UTM zones with which a PostGIS
+    """
+    Returns the list or SRIDs for the UTM zones with which a PostGIS
     table intersects.
+
+    Args:
+        cur (?): descr
+        aoi_table (?): descr
+        geom_table (?): descr
+
+    Returns:
+        utmsrid (?): descr
     """
     sql = ("SELECT srid FROM "
            "%s as zones, "
@@ -1895,6 +2021,15 @@ def get_utm_srid(cur, aoi_table, geom_table):
 def get_intersects_covers(cur, aoi_name, borders_name):
     """
     Returns the number of objects that cover and interesect with the AOI
+
+    Args:
+        cur (?): (descr)
+        aoi_table (?): (descr)
+        borders_name (?): (descr)
+
+    Returns:
+        intersects (?): (descr)
+        covers (?): (descr)
     """
     sql = ("SELECT COUNT(*) FROM "
            "%s AS aoi, "
@@ -1920,6 +2055,15 @@ def get_intersects_covers(cur, aoi_name, borders_name):
 def grid_point_execute(cur, grid, point_name, results_name):
     """
     Executes the SQL to count the number of points in a grid cell.
+
+    Args:
+        cur (?): (descr)
+        grid (?): (descr)
+        point_name (?): (descr)
+        results_name (?): (descr)
+
+    Returns:
+        None
     """
     sql = ("CREATE TEMPORARY TABLE %s AS"
            " (SELECT grid.id AS id,"
@@ -1954,6 +2098,15 @@ def grid_line_execute(cur, grid, line_name, results_name):
 def grid_polygon_execute(cur, grid, polygon_name, results_name):
     """
     Executes the SQL to add up the areas of polygons in a grid cell.
+
+    Args:
+        cur (?): (descr)
+        grid (?): (descr)
+        polygon_name (?): (descr)
+        results_name (?): (descr)
+
+    Returns:
+        None
     """
     sql = ("CREATE TEMPORARY TABLE %s AS"
            " (SELECT grid.id AS id,"
@@ -1971,6 +2124,14 @@ def dimension_execute(cur, table_name, geo_column_name):
     """
     Executes the SQL to get the number of dimensions of a geometry object
     in a table
+
+    Args:
+        cur (?): (descr)
+        table_name (?): (descr)
+        geo_column_name (?): (descr)
+
+    Returns:
+        dim (int): the number of dimensions of the geometry object in the table
     """
     sql = "SELECT ST_Dimension(%s) FROM %s LIMIT 1"
     sql = sql % (geo_column_name, table_name)
@@ -1989,6 +2150,14 @@ def dimension_execute(cur, table_name, geo_column_name):
 def single_area_execute(cur, table_name, geo_column_name):
     """
     Executes the SQL to get the area of PostGIS objects in a table.
+
+    Args:
+        cur (?): (descr)
+        table_name (?): (descr)
+        geo_column_name (?): (descr)
+
+    Returns:
+        area (int): the area of the PostGIS objects in the table
     """
     sql = "SELECT ST_Area(%s) FROM %s"
     sql = sql % (geo_column_name, table_name)
@@ -2001,8 +2170,9 @@ def single_area_execute(cur, table_name, geo_column_name):
 
 
 def raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name):
-    '''
-    '''
+    """
+    Not fully implemented?
+    """
     sql = "CREATE TEMPORARY TABLE %s AS"
     " (SELECT (ST_Intersection(%s.%s, %s.%s)).*"
     " FROM %s, %s WHERE ST_Intersects(%s.%s, %s.%s))"
@@ -2013,12 +2183,16 @@ def raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, cl
 
 
 def raster_clip_execute(cur, raster_name, rast_column_name, aoi_name, geo_column_name, clip_name):
+    """
+    """
     sql = raster_clip_sql(raster_name, rast_column_name, aoi_name, geo_column_name, clip_name)
     LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
 def not_valid_count_sql(table_name, geo_column_name):
+    """
+    """
     sql = "SELECT COUNT(*) FROM %s WHERE NOT ST_IsValid(%s)"
 
     sql = sql % (table_name, geo_column_name)
@@ -2027,6 +2201,8 @@ def not_valid_count_sql(table_name, geo_column_name):
 
 
 def not_valid_count_execute(cur, table_name, geo_column_name):
+    """
+    """
     sql = not_valid_count_sql(table_name, geo_column_name)
     LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
@@ -2036,12 +2212,16 @@ def not_valid_count_execute(cur, table_name, geo_column_name):
 
 
 def make_valid_execute(cur, table_name, geometry_column_name):
+    """
+    """
     sql = make_valid_sql(table_name, geometry_column_name)
     LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
 
 
 def make_valid_sql(table_name, geometry_column_name):
+    """
+    """
     sql = "UPDATE %s SET %s=ST_MakeValid(%s)"
 
     sql = sql % (table_name, geometry_column_name, geometry_column_name)
