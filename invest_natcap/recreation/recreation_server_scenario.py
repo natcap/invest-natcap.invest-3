@@ -8,25 +8,35 @@ import recreation_server_core as rs_core
 
 def loggify(string):
     '''
+    Replaces commas and periods with vertical bars
+
     Args:
-        arg1 (?): (desc)
+        string (string): string with periods and commas
 
     Returns:
+        string (string): string with vertical bars in place of any periods and
+            commas
     '''
     return string.replace(", ", "|").replace(".", "||")
 
 
 def execute(args):
     '''
-    Args:
-        args (dictionary): (desc)
+    Entry point into Recreation Server Scenario program
+
+    :param str args['data_dir']:
+    :param str args['grid_file_name']:
+    :param str args['scenario_file_name']:
 
     Returns:
+        None
 
     Example Args::
 
         args = {
-            '': '',
+            'data_dir': '/path/to/data_dir/',
+            'grid_file_name': 'filename',
+            'scenario_file_name': 'filename',
         }
 
     '''

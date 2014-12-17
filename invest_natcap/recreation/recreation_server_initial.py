@@ -26,14 +26,33 @@ def execute(args, config):
     """
     This function invokes the recreation model.
 
-    args - a python dictionary with at the following possible entries:
-    args['aoi_file_name'] - A shapefile for the area of interest (required)
-    args['cell_size'] - The cell size for the grid in meters (required)
-    args['grid_file_name'] - A shapefile for the area of interest (required)
-    args['flickr_file_name'] - A path for the Flickr summary
+    :param string args['aoi_file_name']: a shapefile for the area of interest
+        (required)
+    :param float? args['cell_size']: the cell size for the grid in meters
+        (required)
+    :param string args['grid_file_name']: a shapefile for the area of
+        interest (required)
+    :param string args['flickr_file_name']: a path for the Flickr summary
+    :param float? config['min_cell_size']: the minimum cell size allowed in a
+        grid
+    :param float? config['max_grid_size']: the maximum total size for a grid
 
-    config['min_cell_size'] - The minimum cell size allowed in a grid
-    config['max_grid_size'] - The maximum total size for a grid
+    Returns:
+        None
+
+    Example Args::
+
+        args = {
+            'aoi_file_name': 'filename',
+            'cell_size': '1',
+            'grid_file_name': 'filename',
+            'flickr_file_name': 'filename',
+        }
+
+        config = {
+            'min_cell_size': '1.2',
+            'max_grid_size': '3.4',
+        }
     """
     LOGGER.debug("Beginning execute(args).")
 

@@ -246,12 +246,12 @@ def categorize_execute(
     Generates tables with the categorization schema.
 
     Args:
-        cur ():
-        table_name ():
-        category_dictionary ():
-        classes_dictionary ():
-        category_format ():
-        class_format ():
+        cur (object): a PostGIS cursor
+        table_name (string): desc
+        category_dictionary (dict): desc
+        classes_dictionary (dict): desc
+        category_format (string): desc
+        class_format (string): desc
 
     Returns:
         None
@@ -672,10 +672,10 @@ def temp_grid_db(cur, in_table_name, in_column_name, out_table_name, out_column_
 
     Args:
         cur (object): A PostGIS database cursor
-        in_table_name (?): a PostGIS table name
-        in_column_name (?): descr
-        out_table_name (?): a PostGIS table name
-        out_column_name (?): descr
+        in_table_name (string): a PostGIS table name
+        in_column_name (string): descr
+        out_table_name (string): a PostGIS table name
+        out_column_name (string): descr
         cell_size (float): the size of grid cells
 
     Returns:
@@ -742,10 +742,10 @@ def hex_grid(cur, in_table_name, in_column_name, out_table_name, out_column_name
 
     Args:
         cur (object): A PostGIS database cursor
-        in_table_name (?): a PostGIS table name
-        in_column_name (?): (descr)
-        out_table_name (?): a PostGIS table name
-        out_column_name (?): (descr)
+        in_table_name (string): a PostGIS table name
+        in_column_name (string): (descr)
+        out_table_name (string): a PostGIS table name
+        out_column_name (string): (descr)
         cell_size (float): the size of grid cells
 
     Returns:
@@ -827,8 +827,8 @@ def sort_grid(cur, out_table_name, out_column_name):
 
     Args:
         cur (object): A PostGIS database cursor
-        out_table_name (?): a PostGIS table name
-        out_column_name (?): (descr)
+        out_table_name (string): a PostGIS table name
+        out_column_name (string): (descr)
 
     Returns:
         None
@@ -943,10 +943,10 @@ def dump_execute(cur, in_table_name, out_file_name, column_alias={}):
     Creates a shapefile from a PostGIS table.
 
     Args:
-        cur (?): (des)
-        in_table_name (?): (des)
-        out_file_name (?): (des)
-        column_alias (?): (des)
+        cur (object): a PostGIS cursor
+        in_table_name (string): (des)
+        out_file_name (string): (des)
+        column_alias (list?): (des)
 
     Returns:
         None
@@ -1348,10 +1348,10 @@ def transform_sql(in_table_name, out_table_name, geometry_column, srid, extra_co
     Constructs a SQL query to do a spatial transform using PostGIS.
 
     Args:
-        in_table_name (?): (descr)
-        out_table_name (?): (descr)
-        geometry_column (?): (descr)
-        srid (?): (descr)
+        in_table_name (string): (descr)
+        out_table_name (string): (descr)
+        geometry_column (string): (descr)
+        srid (int): (descr)
 
     Keyword Args:
         extra_columns (list): extra columns
@@ -1372,11 +1372,11 @@ def transform_execute(cur, in_table_name, out_table_name, geometry_column, srid,
     Executes an SQL query to do a spatial transform using PostGIS.
 
     Args:
-        cur (?): (descr)
-        in_table_name (?): (descr)
-        out_table_name (?): (descr)
-        geometry_column (?): (descr)
-        srid (?): (descr)
+        cur (object): a PostGIS cursor
+        in_table_name (string): (descr)
+        out_table_name (string): (descr)
+        geometry_column (string): (descr)
+        srid (int): (descr)
 
     Keyword Args:
         extra_columns (list): extra columns
@@ -1392,10 +1392,10 @@ def union_execute(cur, in_table_name, out_table_name, geometry_column):
     Executes an SQL query to do a spatial dissolve using PostGIS.
 
     Args:
-        cur (?): (descr)
-        in_table_name (?): (descr)
-        out_table_name (?): (descr)
-        geometry_column (?): (descr)
+        cur (object): a PostGIS cursor
+        in_table_name (string): (descr)
+        out_table_name (string): (descr)
+        geometry_column (string): (descr)
 
     Returns:
         sql (string): an sql statement
@@ -1413,11 +1413,11 @@ def clip_sql(in_table_name, in_table_column, mask_name, mask_column, out_table_n
     Constructs an SQL query to do a spatial clip using PostGIS.
 
     Args:
-        in_table_name (?): (descr)
-        in_table_column (?): (descr)
-        mask_name (?): (descr)
-        mask_column (?): (descr)
-        out_table_name (?): (descr)
+        in_table_name (string): (descr)
+        in_table_column (string): (descr)
+        mask_name (string): (descr)
+        mask_column (string): (descr)
+        out_table_name (string): (descr)
 
     Keyword Args:
         extra_columns (list): extra columns
@@ -1449,12 +1449,12 @@ def clip_execute(cur, in_table_name, in_table_column, mask_name, mask_column, ou
     Executes an SQL query to do a spatial clip using PostGIS.
 
     Args:
-        cur (?): (descr)
-        in_table_name (?): (descr)
-        in_table_column (?): (descr)
-        mask_name (?): (descr)
-        mask_column (?): (descr)
-        out_table_name (?): (descr)
+        cur (object): a PostGIS cursor
+        in_table_name (string): (descr)
+        in_table_column (string): (descr)
+        mask_name (string): (descr)
+        mask_column (string): (descr)
+        out_table_name (string): (descr)
 
     Keyword Args:
         extra_columns (list): extra columns
@@ -1659,11 +1659,11 @@ def join_results_sql(predictors, grid, results_format, result_column, results_na
     Constructs a SQL query to do a table join on recreation model results.
 
     Args:
-        predictors (?): (descr)
-        grid (?): (descr)
-        results_format (?): (descr)
-        result_column (?): (descr)
-        results_name (?): (descr)
+        predictors (list?): (descr)
+        grid (string): (descr)
+        results_format (string): (descr)
+        result_column (string): (descr)
+        results_name (string): (descr)
 
     Keyword Args:
         attributes (list): (descr)
@@ -1704,11 +1704,11 @@ def join_results_execute(cur, predictors, grid, results_format, result_column, r
 
     Args:
         cur (object): a PostGIS cursor
-        predictors (?): (descr)
-        grid (?): (descr)
-        results_format (?): (descr)
-        result_column (?): (descr)
-        results_name (?): (descr)
+        predictors (list?): (descr)
+        grid (string): (descr)
+        results_format (string): (descr)
+        result_column (string): (descr)
+        results_name (string): (descr)
 
     Returns:
         None
@@ -1998,12 +1998,12 @@ def get_utm_srid(cur, aoi_table, geom_table):
     table intersects.
 
     Args:
-        cur (?): descr
-        aoi_table (?): descr
-        geom_table (?): descr
+        cur (object): a PostGIS cursor
+        aoi_table (string): descr
+        geom_table (string): descr
 
     Returns:
-        utmsrid (?): descr
+        utmsrid (list): list of tuples
     """
     sql = ("SELECT srid FROM "
            "%s as zones, "
@@ -2023,13 +2023,13 @@ def get_intersects_covers(cur, aoi_name, borders_name):
     Returns the number of objects that cover and interesect with the AOI
 
     Args:
-        cur (?): (descr)
-        aoi_table (?): (descr)
-        borders_name (?): (descr)
+        cur (object): a PostGIS cursor
+        aoi_table (string): (descr)
+        borders_name (string): (descr)
 
     Returns:
-        intersects (?): (descr)
-        covers (?): (descr)
+        intersects (tuple): (descr)
+        covers (tuple): (descr)
     """
     sql = ("SELECT COUNT(*) FROM "
            "%s AS aoi, "
@@ -2057,10 +2057,10 @@ def grid_point_execute(cur, grid, point_name, results_name):
     Executes the SQL to count the number of points in a grid cell.
 
     Args:
-        cur (?): (descr)
-        grid (?): (descr)
-        point_name (?): (descr)
-        results_name (?): (descr)
+        cur (object): a PostGIS cursor
+        grid (string): (descr)
+        point_name (string): (descr)
+        results_name (string): (descr)
 
     Returns:
         None
@@ -2081,6 +2081,15 @@ def grid_point_execute(cur, grid, point_name, results_name):
 def grid_line_execute(cur, grid, line_name, results_name):
     """
     Executes the SQL to add up the length of lines in a grid cell.
+
+    Args:
+        cur (object): a PostGIS cursor
+        grid (string): (descr)
+        line_name (string): (descr)
+        results_name (string): (descr)
+
+    Returns:
+        None
     """
     sql = ("CREATE TEMPORARY TABLE %s AS"
            " (SELECT grid.id AS id,"
@@ -2100,10 +2109,10 @@ def grid_polygon_execute(cur, grid, polygon_name, results_name):
     Executes the SQL to add up the areas of polygons in a grid cell.
 
     Args:
-        cur (?): (descr)
-        grid (?): (descr)
-        polygon_name (?): (descr)
-        results_name (?): (descr)
+        cur (object): a PostGIS cursor
+        grid (string): (descr)
+        polygon_name (string): (descr)
+        results_name (string): (descr)
 
     Returns:
         None
@@ -2126,9 +2135,9 @@ def dimension_execute(cur, table_name, geo_column_name):
     in a table
 
     Args:
-        cur (?): (descr)
-        table_name (?): (descr)
-        geo_column_name (?): (descr)
+        cur (object): a PostGIS cursor
+        table_name (string): (descr)
+        geo_column_name (string): (descr)
 
     Returns:
         dim (int): the number of dimensions of the geometry object in the table
@@ -2152,9 +2161,9 @@ def single_area_execute(cur, table_name, geo_column_name):
     Executes the SQL to get the area of PostGIS objects in a table.
 
     Args:
-        cur (?): (descr)
-        table_name (?): (descr)
-        geo_column_name (?): (descr)
+        cur (object): a PostGIS cursor
+        table_name (string): (descr)
+        geo_column_name (string): (descr)
 
     Returns:
         area (int): the area of the PostGIS objects in the table
