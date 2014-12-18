@@ -63,7 +63,7 @@ def relogger(log, msg_type, msg):
         msg (string): the message to be logged
 
     Returns:
-        nothing
+        None
 
     Raises:
         IOError: triggered when msg_type == "Error", indicating that an error

@@ -726,7 +726,7 @@ def execute(args, config):
                 ignore_category.add("polynat")
             if not args["osm_4"]:
                 LOGGER.debug(
-                    "Removing OSM information for superstructure featrues.")
+                    "Removing OSM information for superstructure features.")
                 cur.execute(sql % ("results", "pointStruc"))
                 ignore_category.add("pointstruc")
                 cur.execute(sql % ("results", "lineStruc"))
