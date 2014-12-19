@@ -951,7 +951,9 @@ def execute(args):
                 MHHW_raster = gdal.Open(MHHW_uri)
                 MHHW_band = MHHW_raster.GetRasterBand(1)
                 (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
-
+                MHHW_band = None
+                MHHW_raster = None
+                
                 mean_MHHW = (MHHW_min + MHHW_max) / 2.
 
                 assert mean_MHHW > 0, "Mean High High Water can't be negative"
@@ -1003,6 +1005,8 @@ def execute(args):
                 MLLW_raster = gdal.Open(MLLW_uri)
                 MLLW_band = MLLW_raster.GetRasterBand(1)
                 (MLLW_min, MLLW_max) = MLLW_band.ComputeRasterMinMax()
+                MLLW_band = None
+                MLLW_raster = None
 
                 mean_MLLW = (MLLW_min + MLLW_max) / 2.
 
