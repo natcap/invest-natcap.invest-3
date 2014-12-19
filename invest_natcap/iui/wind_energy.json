@@ -21,13 +21,13 @@
           "validateAs": {
             "type": "folder"
           },
-          "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
           "id": "wind_data",
           "args_id": "wind_data_uri",
           "type": "file",
-          "label": "Wind Data Points",
+          "label": "Wind Data Points (BIN)",
           "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
           "required": true,
           "helpText": "A binary file that represents the wind input data (Weibull parameters). Please see the User's Guide for a description of how this file was generated."
@@ -36,7 +36,7 @@
           "id": "aoi",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "Area Of Interest (AOI)",
+          "label": "Area Of Interest (Vector) (Optional)",
           "defaultValue": "../WindEnergy/input/New_England_US_Aoi.shp",
           "requiredIf": [
             "valuation_container",
@@ -60,25 +60,25 @@
               }
             ]
           },
-          "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly. An AOI is required for valuation."
+          "helpText": "Optional. An OGR-supported vector file containing a single polygon defining the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly. An AOI is required for valuation."
         },
         {
           "id": "bathymetry",
           "args_id": "bathymetry_uri",
           "type": "file",
-          "label": "Bathymetry (DEM)",
+          "label": "Bathymetric Digital Elevation Model (Raster)",
           "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "helpText": "A raster dataset for the elevation values in meters of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+          "helpText": "A GDAL-supported raster file containing elevation values represented in meters for the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
         },
         {
           "id": "land_polygon",
           "args_id": "land_polygon_uri",
           "type": "file",
-          "label": "Land Polygon for Distance Calculation",
+          "label": "Land Polygon for Distance Calculation (Vector)",
           "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
           "enabledBy": "aoi",
           "requiredIf": [
@@ -92,13 +92,13 @@
           "validateAs": {
             "type": "OGR"
           },
-          "helpText": "A polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission. This input is required for masking by distance values and for valuation."
+          "helpText": "An OGR-supported polygon vector that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission. This input is required for masking by distance values and for valuation."
         },
         {
           "id": "global_wind_parameters",
           "args_id": "global_wind_parameters_uri",
           "type": "file",
-          "label": "Global Wind Energy Parameters",
+          "label": "Global Wind Energy Parameters (CSV)",
           "defaultValue": "../WindEnergy/input/global_wind_energy_parameters.csv",
           "required": true,
           "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide. It is recommended that careful consideration be taken before changing these values and to make a new CSV file so that the default one always remains.",
@@ -110,13 +110,13 @@
           "id": "results_suffix",
           "args_id": "suffix",
           "type": "text",
-          "label": "Results Suffix (optional)",
+          "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"
           },
           "required": false,
-          "helpText": "A String that will be added to the end of the output file paths."
+          "helpText": "A string that will be added to the end of the output file paths."
         }
       ]
     },
@@ -133,10 +133,10 @@
               "id": "turbine_parameters",
               "args_id": "turbine_parameters_uri",
               "type": "file",
-              "label": "Turbine Type",
+              "label": "Turbine Type Parameters File (CSV)",
               "defaultValue": "../WindEnergy/input/3_6_turbine.csv",
               "required": true,
-              "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. You may create a new turbine class (or modifying existing classes) by using the existing file format conventions and filling in your own parameters. It is recommended that you do not overwrite the existing default CSV files.",
+              "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. A new turbine class may be created by using the existing file format conventions and filling in new parameters. Likewise an existing class may be modified according to the user's needs. It is recommended that the existing default CSV files are not overwritten.",
               "validateAs": {
                 "type": "CSV"
               }
@@ -155,7 +155,7 @@
               "id": "min_depth",
               "args_id": "min_depth",
               "type": "text",
-              "label": "Minimum Depth for Offshore Wind Farm Installation (m)",
+              "label": "Minimum Depth for Offshore Wind Farm Installation (meters)",
               "defaultValue": "3",
               "validText": "^[0-9]*\\.?[0-9]+$",
               "validateAs": {
@@ -171,7 +171,7 @@
               "id": "max_depth",
               "args_id": "max_depth",
               "type": "text",
-              "label": "Maximum Depth for Offshore Wind Farm Installation (m)",
+              "label": "Maximum Depth for Offshore Wind Farm Installation (meters)",
               "defaultValue": "60",
               "validText": "^[0-9]*\\.?[0-9]+$",
               "validateAs": {
@@ -187,7 +187,7 @@
               "id": "min_distance",
               "args_id": "min_distance",
               "type": "text",
-              "label": "Minimum Distance for Offshore Wind Farm Installation (m)",
+              "label": "Minimum Distance for Offshore Wind Farm Installation (meters)",
               "defaultValue": "0",
               "validText": "^[0-9]*\\.?[0-9]+$",
               "validateAs": {
@@ -209,7 +209,7 @@
               "id": "max_distance",
               "args_id": "max_distance",
               "type": "text",
-              "label": "Maximum Distance for Offshore Wind Farm Installation (m)",
+              "label": "Maximum Distance for Offshore Wind Farm Installation (meters)",
               "defaultValue": "200000",
               "validText": "^[0-9]*\\.?[0-9]+$",
               "validateAs": {
@@ -248,7 +248,7 @@
               "id": "foundation_cost",
               "args_id": "foundation_cost",
               "type": "text",
-              "label": "Cost of the Foundation Type (millions of dollars)",
+              "label": "Cost of the Foundation Type (USD, in Millions)",
               "defaultValue": "",
               "required": true,
               "helpText": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice. Please see the User's Guide for guidance on properly selecting this value.",
@@ -273,19 +273,19 @@
                 }
               },
               "required": true,
-              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?). Please consult the User's Guide for guidance on selecting this value."
+              "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). See the User's Guide for guidance on selecting this value."
             },
             {
               "id": "grid_points",
               "args_id": "grid_points_uri",
               "type": "file",
-              "label": "Grid Connection Points",
+              "label": "Grid Connection Points (Optional)",
               "defaultValue": "",
               "required": false,
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "An optional CSV file with grid and land points to determine cable distances from. An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point. The <b>TYPE</b> column relates to whether it is a land or grid point. The <b>ID</b> column is a simple unique integer. The shortest distance between respective points is used for calculations. Please see the User's Guide for more information. ",
+              "helpText": "An optional CSV file with grid and land points to determine cable distances from. An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point. The <b>TYPE</b> column relates to whether it is a land or grid point. The <b>ID</b> column is a simple unique integer. The shortest distance between respective points is used for calculations. See the User's Guide for more information. ",
               "validateAs": {
                 "type": "CSV",
                 "fieldsExist": [
@@ -339,7 +339,7 @@
               "id": "avg_grid_dist",
               "args_id": "avg_grid_distance",
               "type": "text",
-              "label": "Average Shore to Grid Distance (km)",
+              "label": "Average Shore to Grid Distance (Kilometers)",
               "defaultValue": "4",
               "validText": "^[0-9]*\\.?[0-9]+$",
               "validateAs": {
@@ -363,7 +363,7 @@
               "id": "wind_schedule",
               "args_id": "wind_schedule",
               "type": "file",
-              "label": "Wind Energy Price Table",
+              "label": "Wind Energy Price Table (CSV)",
               "defaultValue": "../WindEnergy/input/price_table_example.csv",
               "helpText": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm. They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><td>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr><td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td><td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above. In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
               "enabledBy": "price_table",
@@ -411,7 +411,7 @@
                   "pattern": "^[0-9]*\\.?[0-9]+$"
                 }
               },
-              "helpText": "The price of energy per kilowatt hour. This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below. Please consult the User's Guide for determining this value.",
+              "helpText": "The price of energy per kilowatt hour. This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below. See the User's Guide for guidance about determining this value.",
               "disabledBy": "price_table",
               "required": true
             },
@@ -431,7 +431,7 @@
                   "pattern": "[-+]?[0-9]*\\.?[0-9]+$"
                 }
               },
-              "helpText": "The annual rate of change in the price of wind energy. This should be expressed as a decimal percentage. I.e. 0.1 for a 10% annual price change.",
+              "helpText": "The annual rate of change in the price of wind energy. This should be expressed as a decimal percentage. For example, 0.1 for a 10% annual price change.",
               "disabledBy": "price_table"
             }
           ]

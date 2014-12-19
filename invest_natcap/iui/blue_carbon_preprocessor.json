@@ -3,7 +3,7 @@
   "label": "Blue Carbon Preprocessor",
   "targetScript": "invest_natcap.blue_carbon.blue_carbon_preprocessor",
   "modelName": "blue_carbon_preprocessor",
-  "localDocURI": "../documentation/blue_carbon_preprocessor.html",
+  "localDocURI": "../documentation/blue_carbon.html",
   "height": 600,
   "width": 700,
   "elements": [
@@ -17,23 +17,23 @@
           "type": "folder",
           "label": "Workspace",
           "defaultValue": "../BlueCarbon/output",
-          "helpText": "The directory to hold output from a particular model run. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b> <p>For more information, see 'Data Needs' section in the model's documentation",
           "required": true
         },
         {
           "id": "preprocessor_key_uri",
           "args_id": "preprocessor_key_uri",
           "type": "file",
-          "label": "Preprocessor key",
+          "label": "Preprocessor Key File (CSV)",
           "defaultValue": "../BlueCarbon/input/preprocessor.csv",
-          "helpText": "The preprocessor key contains the default values for transitions between all vegetation types.",
+          "helpText": "The preprocessor key file contains the default values for transitions between all vegetation types.",
           "required": true
         },
         {
           "id": "labels",
           "type": "file",
           "args_id": "labels",
-          "label": "Labels",
+          "label": "Labels File (CSV)",
           "defaultValue": "../BlueCarbon/input/carbon.csv",
           "helpText": "",
           "required": true
@@ -44,7 +44,7 @@
       "id": "lulc",
       "type": "multi",
       "args_id": "lulc",
-      "label": "LULC",
+      "label": "Land Use/Land Cover Rasters (GDAL-supported)",
       "sampleElement": {
         "id": "sample_id",
         "type": "file",

@@ -590,6 +590,13 @@ class Executor(threading.Thread):
             #Quit the rest of the function
             return
 
+        # clean up the temporary folder, but only if we've completed the model
+        # successfully.
+        try:
+            shutil.rmtree(temporary_path)
+        except Exception as error:
+            LOGGER.warn(error)
+
         if workspace != None:
             #Try opening up a file explorer to see the results.
             try:

@@ -21,7 +21,7 @@
           "id": "workspace_dir",
           "args_id": "workspace_dir",
           "type": "folder",
-          "label": "Workspace Folder",
+          "label": "Workspace",
           "defaultValue": "../Fisheries",
           "required": true,
           "validateAs": {
@@ -47,9 +47,12 @@
               "args_id": "population_csv_uri",
               "type": "file",
               "label": "Population Parameters File (CSV)",
-              "defaultValue": "../Fisheries/Input/Habitat_Scenario_Tool/pop_params.csv",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/pop_params.csv",
               "required": true,
-              "helpText": "The provided CSV file should contain all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>See the documentation for help on how to format this file."
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV file containing all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>See the 'Running the Model >> Core Model >> Population Parameters' section in the model's documentation for help on how to format this file."
             },
             {
               "id": "sexsp",
@@ -86,18 +89,18 @@
               "args_id": "habitat_dep_csv_uri",
               "type": "file",
               "label": "Habitat Dependency Parameters File (CSV)",
-              "defaultValue": "../Fisheries/Input/Habitat_Scenario_Tool/habitat_dep_params.csv",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/habitat_dep_params.csv",
               "required": true,
-              "helpText": "The provided CSV file should contain the habitat dependencies (0-1) for each life stage or age and for each habitat type included in the Habitat Change CSV File.<br><br>See the documentation for help on how to format this file."
+              "helpText": "A CSV file containing the habitat dependencies (0-1) for each life stage or age and for each habitat type included in the Habitat Change CSV File.<br><br>See the 'Running the Model >> Habitat Scenario Tool >> Habitat Parameters' section in the model's documentation for help on how to format this file."
             },
             {
               "id": "habitat_chg_csv_uri",
               "args_id": "habitat_chg_csv_uri",
               "type": "file",
               "label": "Habitat Area Change File (CSV)",
-              "defaultValue": "../Fisheries/Input/Habitat_Scenario_Tool/habitat_chg_params.csv",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/habitat_chg_params.csv",
               "required": true,
-              "helpText": "The provided CSV file should contain the percent changes in habitat area by subregion (if applicable). The habitats included should be those which the population depends on at any life stage.<br><br>See the documentation for help on how to format this file."
+              "helpText": "A CSV file containing the percent changes in habitat area by subregion (if applicable). The habitats included should be those which the population depends on at any life stage.<br><br>See the 'Running the Model >> Habitat Scenario Tool >> Habitat Parameters' section in the model's documentation for help on how to format this file."
             },
             {
               "id": "gamma",

@@ -24,7 +24,7 @@
                     "defaultValue": "../ScenarioGenerator/output",
                     "label": "Workspace",
                     "required": true,
-                    "helpText": "Select a folder to be used as your workspace."                    
+                    "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {
                     "id": "landcover",
@@ -32,9 +32,9 @@
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/landcover.tif",
                     "validateAs": {"type": "GDAL"},
-                    "label": "Landcover",
+                    "label": "Land Cover (Raster)",
                     "required": true,
-                    "helpText": "The landuse landcover raster."
+                    "helpText": "A GDAL-supported raster file representing land-use/land-cover."
                 },
                 {
                     "id": "transition",
@@ -42,7 +42,7 @@
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
                     "validateAs": {"type": "CSV"},
-                    "label": "Transiton table",
+                    "label": "Transiton Table (CSV)",
                     "required": true
                 }   
             ]

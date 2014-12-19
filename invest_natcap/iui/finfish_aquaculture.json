@@ -21,26 +21,26 @@
           "validateAs": {
             "type": "folder"
           },
-          "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
           "id": "farm_location",
           "args_id": "ff_farm_loc",
           "type": "file",
-          "label": "Finfish farm location",
+          "label": "Finfish Farm Location (Vector)",
           "defaultValue": "../Aquaculture/Input/Finfish_Netpens.shp",
           "required": true,
           "validateAs": {
             "type": "OGR"
           },
-          "helpText": "A GIS polygon or point dataset, with a latitude and longitude value and a numerical identifier for each farm. File can be named anything, but no spaces in the name.<br><br>File type: polygon shapefile or .gdb<br>Rows: each row is a specific netpen or entire aquaculture farm<br>Columns: columns contain attributes about each netpen (area, location, etc.).<br>Sample data set: \\InVEST\\Aquaculture\\Input\\Finfish_Netpens.shp"
+          "helpText": "An OGR-supported vector file containing polygon or point, with a latitude and longitude value and a numerical identifier for each farm. File can be named anything, but no spaces in the name.<br><br>File type: polygon shapefile or .gdb<br>Rows: each row is a specific netpen or entire aquaculture farm<br>Columns: columns contain attributes about each netpen (area, location, etc.).<br>Sample data set: \\InVEST\\Aquaculture\\Input\\Finfish_Netpens.shp"
         },
         {
           "id": "farm_identifier",
           "args_id": "farm_ID",
           "type": "OGRFieldDropdown",
           "enabledBy": "farm_location",
-          "label": "Farm identifier name",
+          "label": "Farm Identifier Name",
           "defaultValue": "FarmID",
           "required": true,
           "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
@@ -49,7 +49,7 @@
           "id": "param_a",
           "args_id": "g_param_a",
           "type": "text",
-          "label": "Fish growth parameter (a)",
+          "label": "Fish Growth Parameter (a)",
           "defaultValue": "0.038",
           "required": true,
           "validateAs": {
@@ -62,7 +62,7 @@
           "id": "param_b",
           "args_id": "g_param_b",
           "type": "text",
-          "label": "Fish growth parameter (b)",
+          "label": "Fish Growth Parameter (b)",
           "defaultValue": "0.6667",
           "required": true,
           "validateAs": {
@@ -75,7 +75,7 @@
           "id": "param_tau",
           "args_id": "g_param_tau",
           "type": "text",
-          "label": "Fish growth parameter (tau)",
+          "label": "Fish Growth Parameter (tau)",
           "defaultValue": "0.08",
           "required": true,
           "validateAs": {
@@ -91,7 +91,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "use_uncertainty",
-      "label": "Enable uncertainty analysis",
+      "label": "Enable Uncertainty Analysis",
       "elements": [
         {
           "id": "uncertainty_list",
@@ -101,7 +101,7 @@
               "id": "param_a_sd",
               "args_id": "g_param_a_sd",
               "type": "text",
-              "label": "Standard deviation for parameter (a)",
+              "label": "Standard Deviation for Parameter (a)",
               "validateAs": {
                 "type": "number"
               },
@@ -113,7 +113,7 @@
               "id": "param_b_sd",
               "args_id": "g_param_b_sd",
               "type": "text",
-              "label": "Standard deviation for parameter (b)",
+              "label": "Standard Deviation for Parameter (b)",
               "defaultValue": "0.05",
               "validateAs": {
                 "type": "number"
@@ -125,7 +125,7 @@
               "id": "num_monte_carlo_runs",
               "args_id": "num_monte_carlo_runs",
               "type": "text",
-              "label": "Number of Monte Carlo simulation runs",
+              "label": "Number of Monte Carlo Simulation Runs",
               "validateAs": {
                 "type": "number"
               },
@@ -145,7 +145,7 @@
           "id": "water_temperature",
           "args_id": "water_temp_tbl",
           "type": "file",
-          "label": "Table of daily water temperature at farm",
+          "label": "Table of Daily Water Temperature at Farm (CSV)",
           "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
           "required": true,
           "validateAs": {
@@ -157,19 +157,19 @@
           "id": "farm_operations",
           "args_id": "farm_op_tbl",
           "type": "file",
-          "label": "Farm operations table",
+          "label": "Farm Operations Table (CSV)",
           "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
           "required": true,
           "validateAs": {
             "type": "CSV"
           },
-          "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model. If you would like to use your own dataset, you can modify values for farm operations (applied to all farms) and/or add new farms (beginning with row 32). However, do not modify the location of cells in this template. If for example, you choose to run the model for three farms only, they should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
+          "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model.<br><br>The values for 'farm operations' (applied to all farms) and 'add new farms' (beginning with row 32) may be modified according to the user's needs . However, the location of cells in this template must not be modified. If for example, if the model is to run for three farms only, the farms should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
         },
         {
           "id": "outplant_buffer",
           "args_id": "outplant_buffer",
           "type": "text",
-          "label": "Outplant date buffer",
+          "label": "Outplant Date Buffer",
           "defaultValue": "3",
           "required": true,
           "validateAs": {
@@ -182,15 +182,15 @@
           "id": "valuation",
           "args_id": "do_valuation",
           "type": "checkbox",
-          "label": "Run valuation? (optional)",
+          "label": "Run Valuation?",
           "required": true,
           "defaultValue": false,
-          "helpText": "By checking this box, you are requesting valuation analysis."
+          "helpText": "By checking this box, a valuation analysis will be run on the model."
         },
         {
           "id": "market_price",
           "type": "text",
-          "label": "Market price per kilogram of processed fish",
+          "label": "Market Price per Kilogram of Processed Fish",
           "args_id": "p_per_kg",
           "required": false,
           "enabledBy": "valuation",
@@ -207,7 +207,7 @@
         {
           "id": "fraction_price",
           "type": "text",
-          "label": "Fraction of price that accounts to costs",
+          "label": "Fraction of Price that Accounts to Costs",
           "args_id": "frac_p",
           "required": false,
           "enabledBy": "valuation",
@@ -224,7 +224,7 @@
         {
           "id": "discount_rate",
           "type": "text",
-          "label": "Daily market discount rate",
+          "label": "Daily Market Discount Rate",
           "args_id": "discount",
           "required": false,
           "enabledBy": "valuation",

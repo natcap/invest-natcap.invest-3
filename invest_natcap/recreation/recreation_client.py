@@ -1,29 +1,41 @@
-"""The front end to the recreation server side model.
+"""
+The front end to the recreation server side model.
 """
 import os
-from poster.encode import multipart_encode
-from poster.streaminghttp import register_openers
 import urllib2
 import time
-
 import json
 import logging
-
 import datetime
-
 import zipfile
 import imp
-from invest_natcap.raster_utils import temporary_filename
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers
 
+from invest_natcap.raster_utils import temporary_filename
 import invest_natcap
 
-logging.basicConfig(format = '%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level = logging.DEBUG, datefmt = '%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('recreation_client_init')
 
-def urlopen(url, request, tries = 3, delay = 15, log = LOGGER):
-    """An error tolerant URL opener with retries and delays.
+
+def urlopen(url, request, tries=3, delay=15, log=LOGGER):
+    """
+    An error tolerant URL opener with retries and delays.
+
+    Args:
+        url (string): url to remote server file
+        request (urllib2.Request or string): urllib2 request object or string
+
+    Keyword Args:
+        tries (int): the number of request attempts to be made before quitting
+        delay (float): number of seconds before each attempt
+        log (logging.Logger): logger object
+
+    Returns:
+        msg (string): response message from remote server
     """
     for attempt in range(tries):
         log.info("Trying URL: %s.", url)
@@ -40,8 +52,23 @@ def urlopen(url, request, tries = 3, delay = 15, log = LOGGER):
 
     return msg
 
+
 def relogger(log, msg_type, msg):
-    """Logs a message to a logger using the method named by a string.
+    """
+    Logs a message to a logger using the method named by a string.
+
+    Args:
+        log (logger object): client-side logger
+        msg_type (string): the type of logger message
+        msg (string): the message to be logged
+
+    Returns:
+        None
+
+    Raises:
+        IOError: triggered when msg_type == "Error", indicating that an error
+            has occurred on the remote server
+
     """
     msg_type = msg_type.strip()
     if msg_type == "INFO":
@@ -52,18 +79,35 @@ def relogger(log, msg_type, msg):
         log.warn(msg)
     elif msg_type == "ERROR":
         log.error(msg)
-        raise IOError, "Error on server: %s" % (msg)
+        raise IOError("Error on server: %s" % (msg))
     else:
-        log.warn("Unknown logging message type %s: %s" % (msg_type, msg))    
+        log.warn("Unknown logging message type %s: %s" % (msg_type, msg))
 
-def log_check(url, flag = "Dropped intermediate tables.", delay = 15,
-              log = LOGGER, line = 0):
-    """Echoes a remote log until the flag message is found.
+
+def log_check(url, flag="Dropped intermediate tables.", delay=15, log=LOGGER, line=0):
+    """
+    Echoes a remote log until the flag message is found.
+
+    Args:
+        url (string): url to server session log
+
+    Keyword Args:
+        flag (string): the line that this function waits for in the remote
+            server's log file that triggers the function to complete.
+        delay (float): number of seconds to wait before reading next line in
+            log file
+        log (logger object): client-side logger
+        line (int): the first line to read in the log file
+
+    Returns:
+        line (int): the first line in the remote server's log that has not
+            yet been read
+
     """
     log.debug("Begin log check at line %i.", line)
     complete = False
     count = 0
-    
+
     while not complete:
         server_log = urllib2.urlopen(url).read()
         server_log = server_log.strip().split("\n")
@@ -72,7 +116,7 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15,
            (server_log[-1] != "") and \
            (server_log[-1][-1] != "."):
             server_log.pop(-1)
-        
+
         if (len(server_log[line + count:]) > 0) and \
            (server_log[line + count:] != [""]):
             for entry in server_log[line + count:]:
@@ -86,7 +130,7 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15,
                     if len(server_log[line + count:]) > 0:
                         log.warn("Unwritten messages on the remote log.")
                     break
-            
+
         else:
             log.info("Please wait.")
             time.sleep(delay)
@@ -96,8 +140,17 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15,
 
     return line
 
+
 def complete_shapefile(shapefile_name):
-    """Checks that there is a .shp, .shx, .dbf, and .prj file by the same name.
+    """
+    Checks that there is a .shp, .shx, .dbf, and .prj file by the same name.
+
+    Args:
+        shapefile_name (string): (desc)
+
+    Returns:
+        complete (boolean): indicates whether shapefile has all required files
+
     """
     file_name_base = os.path.splitext(shapefile_name)[0]
 
@@ -108,6 +161,7 @@ def complete_shapefile(shapefile_name):
                                                    file_extension]))
 
     return complete
+
 
 def execute(args):
     """
@@ -191,13 +245,13 @@ def execute(args):
     """
     #multiprocess cleanup
     args.pop("_process_pool")
-    
+
     #disabling protected predictor
     args["protected"] = False
     args["ouoc"] = False
-    
+
     LOGGER.setLevel(logging.INFO)
-    
+
     # Register the streaming http handlers with urllib2
     register_openers()
 
@@ -213,11 +267,11 @@ def execute(args):
     args["is_release"] = invest_natcap.is_release()
 
     #constructing model parameters
-    attachments = {"version_info" : args["version_info"],
+    attachments = {"version_info": args["version_info"],
                    "is_release": args["is_release"]}
-    
+
     datagen, headers = multipart_encode(attachments)
-    
+
     #constructing server side version
     if args["mode"] == "scenario":
         init = json.loads(open(args["json"], "r").read())
@@ -226,10 +280,11 @@ def execute(args):
     url = config["server"] + config["files"]["PHP"]["version"]
     LOGGER.info("URL: %s.", url)
     request = urllib2.Request(url, datagen, headers)
-    
+
     #opening request and comparing session id
     try:
-        sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
+        sessid = urlopen(
+            url, request, config["tries"], config["delay"], LOGGER)
     except urllib2.URLError, msg:
         if args["mode"] == "initial":
             LOGGER.info("Attempting to retrieve list of alternative servers.")
@@ -239,11 +294,14 @@ def execute(args):
                 server_list = json.load(response)
                 LOGGER.info("Retrieved list of alternative servers.")
             except urllib2.URLError:
-                LOGGER.info("Alternative list of servers could not be retrieved.")
-                server_list_uri = os.path.join(os.path.dirname(config_file_name), "server_list.json")
-                LOGGER.info("Attempting to read local copy of alternative servers from %s.", server_list_uri)
+                LOGGER.info(
+                    "Alternative list of servers could not be retrieved.")
+                server_list_uri = os.path.join(
+                    os.path.dirname(config_file_name), "server_list.json")
+                LOGGER.info(
+                    "Attempting to read local copy of alternative servers from %s.", server_list_uri)
                 server_list = json.loads(open(server_list_uri, 'r').read())
-    
+
             success = False
             for key in server_list.keys():
                 try:
@@ -255,22 +313,24 @@ def execute(args):
                         LOGGER.info("URL: %s.", url)
                         request = urllib2.Request(url, datagen, headers)
 
-                        sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
+                        sessid = urlopen(
+                            url, request, config["tries"], config["delay"], LOGGER)
                         success = True
                         break
 
                 except urllib2.URLError:
                     LOGGER.warn("Failed to use server %s.", key)
 
-            if not success:        
+            if not success:
                 LOGGER.error("No alternative servers available.")
                 raise urllib2.URLError, msg
 
         else:
-            LOGGER.info("Scenario runs have to use the same server as the initial run.")
-            LOGGER.error("Please try again later or repeat the inital run on a new server.")
+            LOGGER.info(
+                "Scenario runs have to use the same server as the initial run.")
+            LOGGER.error(
+                "Please try again later or repeat the inital run on a new server.")
             raise urllib2.URLError, msg
-        
 
     #saving session id to model parameters
     LOGGER.info("Assigned server session id %s.", sessid)
@@ -280,32 +340,30 @@ def execute(args):
     session_path = config["server"] + "/" + config["paths"]["relative"]["data"] + "/" + args["sessid"] + "/"
     log_url = session_path + config["files"]["log"]
     log_line = 0
-    
+
     LOGGER.info("Checking version.")
     log_line = log_check(log_url, "End version PHP script.", 15, LOGGER,
                          log_line)
-    
     LOGGER.info("Finished checking version.")
 
-       
     #VALIDATING MODEL PARAMETERS
     LOGGER.debug("Processing parameters.")
     if not args["mode"] in ["initial", "scenario"]:
         msg = "The mode must be specified as \'initial\' or \'scenario\'."
-        raise ValueError, msg
+        raise ValueError(msg)
 
     #adding os separator to paths if needed
     if args["workspace_dir"][-1] != os.sep:
         args["workspace_dir"] = args["workspace_dir"] + os.sep
 
     if args["data_dir"] != "" and args["data_dir"][-1] != os.sep:
-        args["data_dir"] = args["data_dir"] + os.sep  
+        args["data_dir"] = args["data_dir"] + os.sep
 
     #validating shapefile
     if args["mode"] == "initial":
         LOGGER.info("Validating AOI.")
         if not complete_shapefile(args["aoi_file_name"]):
-            raise ValueError, "The AOI shapefile is missing a component."
+            raise ValueError("The AOI shapefile is missing a component.")
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")
@@ -322,7 +380,7 @@ def execute(args):
                     predictors.append(file_name_stem)
                     if len(file_name_stem) > 10:
                         LOGGER.error("Due to shapefile limitations the predictor name must be no longer than 10 characters to be an attribure for the grid.")
-                        raise ValueError, "Predictor %s exceeds the maximum name length of 10." % file_name_stem
+                        raise ValueError("Predictor %s exceeds the maximum name length of 10." % file_name_stem)
                 else:
                     LOGGER.error("Predictor %s is missing file(s).",
                                  file_name_stem)
@@ -331,20 +389,20 @@ def execute(args):
                 LOGGER.info("Found %s categorization.", file_name_stem)
                 user_categorization.append(file_name_stem)
 
-##    for cat_table in set(user_categorization).difference(predictors):
-##        msg = "Categorization table %s has no predictor and will be ignored."
-##        LOGGER.warn(msg, cat_table)
-##        user_categorization.pop(user_categorization.index(cat_table))
+    # for cat_table in set(user_categorization).difference(predictors):
+    #     msg = "Categorization table %s has no predictor and will be ignored."
+    #     LOGGER.warn(msg, cat_table)
+    #     user_categorization.pop(user_categorization.index(cat_table))
 
     #making sure there is not landscan categorization
     if "landscan" in user_categorization:
         msg = "The categorization of the Landscan data is not allowed."
         LOGGER.error(msg)
-        raise ValueError, msg
+        raise ValueError(msg)
 
     #UPLOADING PREDICTORS
     LOGGER.info("Opening predictors for uploading.")
-    
+
     #opening shapefiles
     attachments = {}
     attachments["sessid"] = sessid
@@ -359,7 +417,7 @@ def execute(args):
     except ImportError:
         compression = zipfile.ZIP_STORED
         LOGGER.debug("Predictors will not be compressed.")
-    
+
     for predictor in predictors:
         predictor_base = args["data_dir"] + predictor
         zip_file.write(predictor_base + ".shp", predictor + ".shp",
@@ -370,7 +428,7 @@ def execute(args):
                        compression)
         zip_file.write(predictor_base + ".prj", predictor + ".prj",
                        compression)
-        
+
     #opening categorization table
     for tsv in user_categorization:
         zip_file.write(args["data_dir"] + tsv + ".tsv", tsv + ".tsv",
@@ -382,15 +440,15 @@ def execute(args):
     if os.path.getsize(zip_file_uri) >  20e6:
         msg = "The upload size exceeds the maximum."
         LOGGER.error(msg)
-        raise ValueError, msg
-    
+        raise ValueError(msg)
+
     attachments["zip_file"] = open(zip_file_uri, 'rb')
 
     args["user_predictors"] = len(predictors)
     args["user_tables"] = len(user_categorization)
 
     #count up standard predictors
-    args["global_predictors"] = 0    
+    args["global_predictors"] = 0
     if args["mode"] == "initial" and args["global_data"]:
         args["global_predictors"] += args["landscan"]
         args["global_predictors"] += args["protected"]
@@ -423,7 +481,7 @@ def execute(args):
     if args["user_predictors"] + args["global_predictors"] == 0:
         msg = "You must include predictors for the analysis."
         LOGGER.error(msg)
-        raise ValueError, msg   
+        raise ValueError(msg)
 
     #constructing upload predictors request
     LOGGER.debug("Uploading predictors.")
@@ -436,7 +494,7 @@ def execute(args):
 
     #opening request and saving session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-        
+
     LOGGER.debug("Server session %s.", sessid)
 
     #wait for server to finish saving predictors.
@@ -445,7 +503,7 @@ def execute(args):
 
     #EXECUTING SERVER SIDE PYTHON SCRIPT
     LOGGER.info("Running server side processing.")
-    
+
     #constructing model parameters
     attachments = {}
 
@@ -460,14 +518,14 @@ def execute(args):
         attachments["aoiPRJ"] = open(os.extsep.join([base_file_name, "prj"]),
                                      "rb")
     elif args["mode"] == "scenario":
-        attachments["init"] = open(args["json"],'rb')
+        attachments["init"] = open(args["json"], 'rb')
     else:
-        raise ValueError, "A valid mode was not detected."
-    
-    attachments["json"] = json.dumps(args, indent = 4)
+        raise ValueError("A valid mode was not detected.")
+
+    attachments["json"] = json.dumps(args, indent=4)
 
     datagen, headers = multipart_encode(attachments)
-    
+
     #constructing server side recreation python script request
     if args["mode"] == "initial":
         LOGGER.debug("Recreation intial run mode.")
@@ -475,10 +533,10 @@ def execute(args):
     else:
         LOGGER.debug("Scenario run mode.")
         url = config["server"] + config["files"]["PHP"]["scenario"]
-        
+
     LOGGER.info("URL: %s.", url)
     request = urllib2.Request(url, datagen, headers)
-    
+
     #opening request and comparing session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
@@ -486,7 +544,7 @@ def execute(args):
     LOGGER.info("Model running.")
     log_line = log_check(log_url, "Dropped intermediate tables.", 15, LOGGER,
                          log_line)
-    
+
     LOGGER.info("Finished processing data.")
 
     #EXECUTING SERVER SIDE R SCRIPT
@@ -497,7 +555,7 @@ def execute(args):
 
     attachments = {}
     attachments = {"sessid": args["sessid"]}
-    
+
     datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
@@ -513,13 +571,13 @@ def execute(args):
 
     attachments = {}
     attachments = {"sessid": sessid}
-    
+
     datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
     #opening request and comparing session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-    
+
     #download results
     url = session_path + config["files"]["results"]
     LOGGER.info("URL: %s.", url)
@@ -535,5 +593,5 @@ def execute(args):
             if not chunk:
                 break
             zip_file.write(chunk)
-        
+
     LOGGER.info("Transaction complete")
