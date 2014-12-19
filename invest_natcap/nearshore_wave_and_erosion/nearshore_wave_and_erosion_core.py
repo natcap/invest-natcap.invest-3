@@ -1132,7 +1132,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         end = indices_limit_dataset[transect,1]
 
         wave_array = wave_dataset[transect,start:end]
-
+        
+        # Invalid wave data is not supposed to show up.
+        invalid_data_count = np.where(wave_array == -99999.)[0].size
+        if invalid_data_count:
+            continue
+        
         coordinates_array = coordinates_dataset[transect,start:end]
 
         # Clip the reansect at the first occurence of NaN
@@ -1235,6 +1240,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 #            print('    ', i, index, value)
 
             delta_y.append(intersection[coord] - value)
+            assert not math.isnan(delta_y[-1]), 'detected nan: ' + str(i)
             x.append(index)
 
         # Append last value if necessary
@@ -1245,7 +1251,13 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         delta_y = np.array(delta_y)
         x = np.array(x)
 
-        assert not np.isnan(delta_y).any()
+        if np.isnan(delta_y).any():
+            print('current_transect', current_transect)
+            print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('delta_y', delta_y)
+            print('any', np.isnan(delta_y).any(), \
+                'count', np.sum(np.isnan(delta_y).any()))
+            assert not np.isnan(delta_y).any()
 
         # Run the interpolation:
         f = interpolate.interp1d(x, delta_y, 'linear')
@@ -1253,7 +1265,14 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         inerpolation_range = range(start, end)
         interpolated_delta_y = f(inerpolation_range)
 
-        assert not np.isnan(interpolated_delta_y).any()
+        if np.isnan(interpolated_delta_y).any():
+            print('current_transect', current_transect)
+            print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('delta_y', delta_y)
+            print('interpolated_delta_y', interpolated_delta_y)
+            print('any', np.isnan(interpolated_delta_y).any(), \
+                'count', np.sum(np.isnan(interpolated_delta_y).any()))
+            assert not np.isnan(interpolated_delta_y).any()
 
         # Compute new transect values:
         corrected_transect_values = \
@@ -1263,8 +1282,10 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
 
         if np.isnan(corrected_transect_values).any():
-            print('interpolated_delta_y', interpolated_delta_y)
+            print('current_transect', current_transect)
             print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('delta_y', delta_y)
+            print('interpolated_delta_y', interpolated_delta_y)
             print('corrected_transect_values', corrected_transect_values)
             print('any', np.isnan(corrected_transect_values).any(), \
                 'count', np.sum(np.isnan(corrected_transect_values).any()))
