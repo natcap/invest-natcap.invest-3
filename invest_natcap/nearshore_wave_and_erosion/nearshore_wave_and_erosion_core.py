@@ -296,6 +296,7 @@ def compute_transects(args):
                     tiles += 1
 
     # Cleanup
+    bathymetry = None
     landmass = None
     aoi_band = None
     aoi_raster = None
