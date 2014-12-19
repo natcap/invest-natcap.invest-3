@@ -941,7 +941,10 @@ def execute(args):
                     if 'mhhw' in raster_uri:
                         MHHW_uri = raster_uri
                         break
-                assert MHHW_uri
+                if not MHHW_uri:
+                    print("Can't find MHHW raster in raster list")
+                    print('Files are:', in_raster_list)
+                    assert MHHW_uri
 
                 # Compute the average MHHW
                 MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
