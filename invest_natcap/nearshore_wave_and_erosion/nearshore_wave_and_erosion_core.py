@@ -143,10 +143,11 @@ def compute_transects(args):
     i_max_fine = (i_end - i_start) / i_side_fine
     j_max_fine = (j_end - j_start) / j_side_fine
     
-    # Size of a tile. The + 4 at the end ensure the tiles overlap, 
-    # leaving no gap in the shoreline
-    i_offset = i_side_coarse/i_side_fine + 4
-    j_offset = j_side_coarse/j_side_fine + 4
+    # Size of a tile. The + 6 at the end ensure the tiles overlap, 
+    # leaving no gap in the shoreline, and allows a buffer big enough for
+    # computing shore orientation
+    i_offset = i_side_coarse/i_side_fine + 6
+    j_offset = j_side_coarse/j_side_fine + 6
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
@@ -165,7 +166,7 @@ def compute_transects(args):
             str((i_end - i)/i_side_coarse))
 
         # Top of the current tile
-        i_base = max((i - i_start) / i_side_fine - 2, 0)
+        i_base = max((i - i_start) / i_side_fine - 3, 0)
 
         # Adjust offset so it doesn't get outside raster bounds
         # TODO: Allow to use fractional tile size
@@ -175,7 +176,7 @@ def compute_transects(args):
         for j in range(j_start, j_end, j_side_coarse):
  
             # Left coordinate of the current tile
-            j_base = max((j - j_start) / j_side_fine - 2, 0)
+            j_base = max((j - j_start) / j_side_fine - 3, 0)
 
             # Adjust offset so it doesn't get outside raster bounds
             # TODO: Allow to use fractional tile size
@@ -188,7 +189,7 @@ def compute_transects(args):
             # Look for landmass cover on tile
             #tile = landmass[i_base:i_base+i_offset, :j_base+j_offset]
             tile = landmass_band.ReadAsArray(j_base, i_base, j_offset, i_offset)
-            
+
             land = np.sum(tile)
 
             # If land and sea, we have a shore: detect it and store
@@ -204,7 +205,7 @@ def compute_transects(args):
                     shore_orientations = \
                         compute_shore_orientation(shore_patch, \
                             shore_pts, i_base, j_base)
-                      
+
                     # Skip if no shore orientation
                     if not shore_orientations:
                         continue
@@ -212,7 +213,7 @@ def compute_transects(args):
                     # Pick transect position among valid shore points
                     assert len(shore_pts) == 2, str((i, j)) + ' ' + str(shore_pts)
                     transect_position = select_transect(shore_orientations.keys())
-                    
+
                     # Skip tile if no valid shore points
                     if not transect_position:
                         continue
@@ -1901,7 +1902,6 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
         Returns a dictionary of {(shore ij):(orientation vector ij)} pairs"""
     shore = np.copy(shore) # Creating a copy in-place
     max_i, max_j = shore.shape
-    mask = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
 
     updated_shore = shore.astype(int)
 
