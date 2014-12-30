@@ -30,11 +30,12 @@ LOGGER = logging.getLogger('routing cython core')
 
 cdef double PI = 3.141592653589793238462643383279502884
 
+cdef int MAX_WINDOW_SIZE = 2**12
 cdef double INF = numpy.inf
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+#@cython.cdivision(True)
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri=None):
@@ -116,6 +117,7 @@ def calculate_transport(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (n_block_rows, n_block_cols), dtype=numpy.int8)
 
@@ -205,7 +207,7 @@ def calculate_transport(
         #see if we need to update the row cache
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         
-        #Ensure we are working on a valid pixel
+        #Ensure we are working on a valid pixel, if not set everything to 0
         if source_block[row_index, col_index, row_block_offset, col_block_offset] == source_nodata:
             flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
@@ -248,17 +250,19 @@ def calculate_transport(
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
-            if (inflow_offsets[direction_index] != neighbor_direction and inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
+            #check if the cell flows directly, or is one index off
+            if (inflow_offsets[direction_index] != neighbor_direction and
+                    ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
                 #then neighbor doesn't inflow into current cell
                 continue
 
             #Calculate the outflow weight
             outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
             
-            if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
+            if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
                 outflow_weight = 1.0 - outflow_weight
 
-            if outflow_weight < 0.001:
+            if outflow_weight <= 0.0:
                 continue
             in_flux = flux_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
@@ -421,19 +425,12 @@ def calculate_flow_weights(
                             else:
                                 outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
 
-                            #This will handle cases where almost all flow is going in
-                            #one direction, or is supposed to go in one direction,
-                            #but because of machine error splits insignificantly
-                            #between two cells. The 0.999 is a little overkill but works
-                            if outflow_weight > 0.999:
+                            # clamping the outflow weight in case it's too large or small
+                            if outflow_weight >= 1.0:
                                 outflow_weight = 1.0
-
-                            #If the outflow is nearly 0, make push it all
-                            #to the next neighbor
-                            if outflow_weight < 0.001:
+                            if outflow_weight <= 0.0:
                                 outflow_weight = 1.0
                                 neighbor_direction_index = (neighbor_direction_index + 1) % 8
-
                             outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset] = neighbor_direction_index
                             outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset] = outflow_weight
                             cache_dirty[row_index, col_index] = 1
@@ -1303,27 +1300,54 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
                     max_downhill_facet = -1
                     lowest_dem = e_0
-
+                    #we have a special case if we're on the border of the raster
+                    if (e_0_col == 0 or e_0_col == n_cols - 1 or e_0_row == 0 or e_0_row == n_rows - 1):
+                        #loop through the neighbor edges, and manually set a direction
+                        for facet_index in range(8):
+                            e_1_row = row_offsets[facet_index] + global_row
+                            e_1_col = col_offsets[facet_index] + global_col
+                            if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
+                                continue
+                            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+                            e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
+                            if e_1 == dem_nodata:
+                                continue
+                            if e_1 < lowest_dem:
+                                lowest_dem = e_1
+                                max_downhill_facet = facet_index
+                                
+                        if max_downhill_facet != -1:
+                            flow_direction = 3.14159265 / 4.0 * max_downhill_facet
+                        else:
+                            #we need to point to the left or right
+                            if global_col == 0:
+                                flow_direction = 3.14159265 / 2.0 * 2
+                            elif global_col == n_cols - 1:
+                                flow_direction = 3.14159265 / 2.0 * 0
+                            elif global_row == 0:
+                                flow_direction = 3.14159265 / 2.0 * 1
+                            elif global_row == n_rows - 1:
+                                flow_direction = 3.14159265 / 2.0 * 3
+                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = flow_direction
+                        cache_dirty[e_0_row_index, e_0_col_index] = 1
+                        #done with this pixel, go to the next
+                        continue
+                        
                     #Calculate the flow flow_direction for each facet
                     slope_max = 0 #use this to keep track of the maximum down-slope
                     flow_direction_max_slope = 0 #flow direction on max downward slope
                     max_index = 0 #index to keep track of max slope facet
                     
+                    #max_downhill_facet = -1
+                    #lowest_dem = e_0
                     contaminated = False
                     for facet_index in range(8):
                         #This defines the three points the facet
 
                         e_1_row = e_1_offsets[facet_index * 2 + 0] + global_row
                         e_1_col = e_1_offsets[facet_index * 2 + 1] + global_col
-                        #test if on the boundary of the raster
-                        if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
-                            continue
-
                         e_2_row = e_2_offsets[facet_index * 2 + 0] + global_row
                         e_2_col = e_2_offsets[facet_index * 2 + 1] + global_col
-                        #test if on the boundary of the raster
-                        if (e_2_col == -1 or e_2_col == n_cols or e_2_row == -1 or e_2_row == n_rows):
-                            continue
 
                         block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
                         block_cache.update_cache(e_2_row, e_2_col, &e_2_row_index, &e_2_col_index, &e_2_row_block_offset, &e_2_col_block_offset)
@@ -1477,6 +1501,7 @@ def find_sinks(dem_uri):
                 continue
             for neighbor_index in range(8):
                 neighbor_row_index = local_y_offset + row_offsets[neighbor_index]
+                #greater than 2 because we're reading by rows
                 if neighbor_row_index < 0 or neighbor_row_index > 2:
                     continue
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
