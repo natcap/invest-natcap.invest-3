@@ -35,7 +35,7 @@ cdef double INF = numpy.inf
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+#@cython.cdivision(True)
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri=None):
@@ -117,6 +117,7 @@ def calculate_transport(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
+
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (n_block_rows, n_block_cols), dtype=numpy.int8)
 
@@ -206,7 +207,7 @@ def calculate_transport(
         #see if we need to update the row cache
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         
-        #Ensure we are working on a valid pixel
+        #Ensure we are working on a valid pixel, if not set everything to 0
         if source_block[row_index, col_index, row_block_offset, col_block_offset] == source_nodata:
             flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
@@ -249,17 +250,19 @@ def calculate_transport(
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
-            if (inflow_offsets[direction_index] != neighbor_direction and inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
+            #check if the cell flows directly, or is one index off
+            if (inflow_offsets[direction_index] != neighbor_direction and
+                    ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
                 #then neighbor doesn't inflow into current cell
                 continue
 
             #Calculate the outflow weight
             outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
             
-            if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
+            if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
                 outflow_weight = 1.0 - outflow_weight
 
-            if outflow_weight < 0.001:
+            if outflow_weight <= 0.0:
                 continue
             in_flux = flux_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
@@ -422,19 +425,12 @@ def calculate_flow_weights(
                             else:
                                 outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
 
-                            #This will handle cases where almost all flow is going in
-                            #one direction, or is supposed to go in one direction,
-                            #but because of machine error splits insignificantly
-                            #between two cells. The 0.999 is a little overkill but works
-                            if outflow_weight > 0.999:
+                            # clamping the outflow weight in case it's too large or small
+                            if outflow_weight >= 1.0:
                                 outflow_weight = 1.0
-
-                            #If the outflow is nearly 0, make push it all
-                            #to the next neighbor
-                            if outflow_weight < 0.001:
+                            if outflow_weight <= 0.0:
                                 outflow_weight = 1.0
                                 neighbor_direction_index = (neighbor_direction_index + 1) % 8
-
                             outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset] = neighbor_direction_index
                             outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset] = outflow_weight
                             cache_dirty[row_index, col_index] = 1
@@ -1505,6 +1501,7 @@ def find_sinks(dem_uri):
                 continue
             for neighbor_index in range(8):
                 neighbor_row_index = local_y_offset + row_offsets[neighbor_index]
+                #greater than 2 because we're reading by rows
                 if neighbor_row_index < 0 or neighbor_row_index > 2:
                     continue
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
