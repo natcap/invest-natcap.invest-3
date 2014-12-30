@@ -922,11 +922,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #Add the final offsets to the dem array
     def offset_dem(dem_sink_offset_array, dem_edge_offset_array, dem_array):
-        mask_array = ((dem_sink_offset_array != INF) &
-                      (dem_edge_offset_array != INF) &
-                      (dem_sink_offset_array != MAX_DISTANCE) &
-                      (dem_edge_offset_array != MAX_DISTANCE))
-
         offset_array = numpy.where(
             (dem_sink_offset_array != INF) & 
             (dem_sink_offset_array != MAX_DISTANCE), 
@@ -935,7 +930,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         offset_array = numpy.where(
             (dem_edge_offset_array != INF) & 
             (dem_edge_offset_array != MAX_DISTANCE), 
-            max_distance+1-dem_edge_offset_array+offset_array, 0.0)
+            max_distance+1-dem_edge_offset_array+offset_array, offset_array)
 
         dem_array += offset_array / 10000.0
         return dem_array
