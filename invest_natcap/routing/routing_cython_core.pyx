@@ -1,6 +1,5 @@
-# cython: profile=False
+#cython: profile=False
 
-import time
 import logging
 import os
 
@@ -19,6 +18,10 @@ from libc.math cimport atan2
 from libc.math cimport tan
 from libc.math cimport sqrt
 from libc.math cimport ceil
+
+cdef extern from "time.h" nogil:
+    ctypedef int time_t
+    time_t time(time_t*)
 
 from invest_natcap import raster_utils
 
@@ -78,7 +81,8 @@ def calculate_transport(
     #Calculate flow graph
 
     #Pass transport
-    start = time.clock()
+    cdef time_t start
+    time(&start)
 
     #Create output arrays for loss and flux
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
@@ -193,9 +197,10 @@ def calculate_transport(
     
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
-    last_time = time.time()
+    cdef time_t last_time, current_time
+    time(&last_time)
     while cells_to_process.size() > 0:
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info('calculate transport cells_to_process.size() = %d' % (cells_to_process.size()))
             last_time = current_time
@@ -321,7 +326,8 @@ def calculate_flow_weights(
 
         returns nothing"""
 
-    start = time.clock()
+    cdef time_t start
+    time(&start)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri)
     cdef double flow_direction_nodata
@@ -395,9 +401,10 @@ def calculate_flow_weights(
     cdef long current_index
     cdef double flow_direction, flow_angle_to_neighbor, outflow_weight
 
-    last_time = time.time()        
+    cdef time_t last_time, current_time
+    time(&last_time)
     for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("calculate_flow_weights %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
@@ -691,10 +698,11 @@ cdef _build_flat_set(
     cdef BlockCache block_cache = BlockCache(
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
     
-    last_time = time.time()
+    cdef time_t last_time, current_time
+    time(&last_time)
     #not flat on the edges of the raster, could be a sink
     for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("_build_flat_set %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
@@ -915,7 +923,8 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     
     cdef Row_Col_Weight_Tuple t
     cdef int weight, region_count = 0
-    last_time = time.time()
+    cdef time_t last_time, current_time
+    time(&last_time)
 
     while flat_set_for_looping.size() > 0:
         #This pulls the flat index out for looping
@@ -938,7 +947,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
         cache_dirty[row_index, col_index] = 1 #just changed dem_sink_offset, we're dirty
         flat_region_queue.push(flat_index)
         region_count += 1
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info('working on plateau #%d (reports every 5 seconds) number of flat cells remaining %d' % (region_count, flat_set_for_looping.size()))
             last_time = current_time
@@ -1272,14 +1281,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int y_offset, local_y_offset
     cdef int max_downhill_facet
     cdef double lowest_dem, dem_value, flow_direction_value
-    cdef float current_time, last_time
 
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
-    last_time = time.time()
+    cdef time_t last_time, current_time
+    time(&last_time)
     #flow not defined on the edges, so just go 1 row in 
     for global_block_row in xrange(n_global_block_rows):
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("flow_direction_inf %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
@@ -1636,9 +1645,10 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
     cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
 
     #build up the stream pixel indexes
-    last_time = time.time()
+    cdef time_t last_time, current_time
+    time(&last_time)
     for global_block_row in xrange(n_global_block_rows):
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("find_sinks %.1f%% complete", (global_block_row + 1.0) / n_global_block_rows * 100)
             last_time = current_time
@@ -1659,6 +1669,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
     cdef int it_flows_here
     cdef int step_count = 0
     cdef int downstream_index, downstream_uncalculated
+
     while visit_stack.size() > 0:
         flat_index = visit_stack.top()
         visit_stack.pop()
@@ -1667,7 +1678,7 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
         global_col = flat_index % n_cols
 
         step_count += 1
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             last_time = current_time
             LOGGER.info(
@@ -1860,10 +1871,11 @@ def cache_block_experiment(ds_uri, out_uri):
 
     cdef float current_value
     LOGGER.info('starting iteration through blocks')
-    last_time = time.time()
-
+    
+    cdef time_t last_time, current_time
+    time(&last_time)
     for global_block_row in xrange(int(numpy.ceil(float(n_rows) / block_row_size))):
-        current_time = time.time()
+        time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("cache_block_experiment %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
@@ -1926,7 +1938,8 @@ def percent_to_sink(
         returns nothing"""
 
     LOGGER.info("calculating percent to sink")
-    start_time = time.clock()
+    cdef time_t start_time
+    time(&start_time)
 
     sink_pixels_dataset = gdal.Open(sink_pixels_uri)
     sink_pixels_band = sink_pixels_dataset.GetRasterBand(1)
@@ -2086,8 +2099,10 @@ def percent_to_sink(
                 cache_dirty[neighbor_row_index, neighbor_col_index] = 1
 
     block_cache.flush_cache()
+    cdef time_t end_time
+    time(&end_time)
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
-                    (time.clock() - start_time))
+                    (end_time - start_time))
 
 
 cdef class BlockCache:
