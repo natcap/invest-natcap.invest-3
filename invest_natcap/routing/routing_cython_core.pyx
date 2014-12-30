@@ -38,7 +38,6 @@ cdef double INF = numpy.inf
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-#@cython.cdivision(True)
 def calculate_transport( 
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri=None):
@@ -194,7 +193,7 @@ def calculate_transport(
     cdef double outflow_weight
     cdef double in_flux
     cdef int current_neighbor_index
-    
+    cdef int current_index
     cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
     cdef time_t last_time, current_time
@@ -207,8 +206,9 @@ def calculate_transport(
     
         current_index = cells_to_process.top()
         cells_to_process.pop()
-        global_row = current_index / n_cols
-        global_col = current_index % n_cols
+        with cython.cdivision(True):
+            global_row = current_index / n_cols
+            global_col = current_index % n_cols
         #see if we need to update the row cache
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         
