@@ -448,209 +448,11 @@ def calculate_flow_weights(
                         LOGGER.warn('no flow direction found for %s %s' % \
                                          (row_index, col_index))
     block_cache.flush_cache()
-        
-
-'''def percent_to_sink(
-    sink_pixels_uri, export_rate_uri, outflow_direction_uri,
-    outflow_weights_uri, effect_uri):
-    """This function calculates the amount of load from a single pixel
-        to the source pixels given the percent export rate per pixel.
-        
-        sink_pixels_uri - the pixels of interest that will receive flux.
-            This may be a set of stream pixels, or a single pixel at a
-            watershed outlet.
-
-        export_rate_uri - a GDAL floating point dataset that has a percent
-            of flux exported per pixel
-
-        outflow_direction_uri - a uri to a byte dataset that indicates the
-            first counter clockwise outflow neighbor as an index from the
-            following diagram
-
-            3 2 1
-            4 x 0
-            5 6 7
-
-        outflow_weights_uri - a uri to a float32 dataset whose elements
-            correspond to the percent outflow from the current cell to its
-            first counter-clockwise neighbor
-
-        effect_uri - the output GDAL dataset that shows the percent of flux
-            emanating per pixel that will reach any sink pixel
-
-        returns nothing"""
-
-    LOGGER.info("calculating percent to sink")
-    start_time = time.clock()
-
-    cdef double effect_nodata = -1.0
-    raster_utils.new_raster_from_base_uri(
-        sink_pixels_uri, effect_uri, 'GTiff', effect_nodata,
-        gdal.GDT_Float32, fill_value=effect_nodata)
-    effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
-    effect_band = effect_dataset.GetRasterBand(1)
-
-    cdef int n_block_rows = 3
-    cdef int n_block_cols = 3
-    cdef int block_col_size, block_row_size
-    block_col_size, block_row_size = effect_band.GetBlockSize()
-
-    #center point of global index
-    cdef int global_row, global_col #index into the overall raster
-    cdef int row_index, col_index #the index of the cache block
-    cdef int row_block_offset, col_block_offset #index into the cache block
-    cdef int global_block_row, global_block_col #used to walk the global blocks
-
-    #neighbor sections of global index
-    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
-    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
-    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
-    
-    #define all the caches
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] effect_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_int8, ndim=4] sink_pixels_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] export_rate_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int8)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
-        (n_block_rows, n_block_cols), dtype=numpy.int8)
-
-    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
-    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    cdef int outflow_weights_nodata = raster_utils.get_nodata_from_uri(
-        outflow_weights_uri)
-
-    cdef int n_cols = effect_dataset.RasterXSize
-    cdef int n_rows = effect_dataset.RasterYSize
-    
-    sink_pixels_dataset = gdal.Open(sink_pixels_uri)
-    sink_pixels_band = sink_pixels_dataset.GetRasterBand(1)
-    cdef int sink_pixels_nodata = raster_utils.get_nodata_from_uri(
-        sink_pixels_uri)
-    
-    export_rate_dataset = gdal.Open(export_rate_uri)
-    export_rate_band = export_rate_dataset.GetRasterBand(1)
-    cdef float export_rate_nodata = raster_utils.get_nodata_from_uri(
-        export_rate_uri)
-    
-    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
-    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
-    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
-        outflow_direction_uri)
-    
-    #####################################
-    cache_dirty[:] = 0
-    band_list = [effect_band, sink_pixels_band, export_rate_band, outflow_direction_band, outflow_weights_band]
-    block_list = [effect_block, sink_pixels_block, export_rate_block, outflow_direction_block, outflow_weights_block]
-    update_list = [False, False, False, False, True, True]
-    
-    cdef BlockCache block_cache = BlockCache(
-        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
-
-
-    #Diagonal offsets are based off the following index notation for neighbors
-    #    3 2 1
-    #    4 p 0
-    #    5 6 7
-
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
-
-    cdef int flat_index, neighbor_index, neighbor_outflow_direction
-    cdef double outflow_weight, neighbor_outflow_weight
-    
-    #initially nothing is loaded in the cache, use -1 to indicate that as a tag
-    
-    cdef queue[int] process_queue
-    #Queue the sinks
-    for global_row in xrange(n_rows):
-        for global_col in xrange(n_cols):
-            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-            if sink_pixels_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-                effect_block[row_index, col_index, row_block_offset, col_block_offset] = 1.0
-                cache_dirty[row_index, col_index] = 1
-                process_queue.push(global_row * n_cols + global_col)
-        
-    while process_queue.size() > 0:
-        flat_index = process_queue.front()
-        process_queue.pop()
-        global_row = flat_index / n_cols
-        global_col = flat_index % n_cols
-        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-        
-        if export_rate_block[row_index, col_index, row_block_offset, col_block_offset] == export_rate_nodata:
-            continue
-
-        #if the outflow weight is nodata, then not a valid pixel
-        outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
-        if outflow_weight == outflow_weights_nodata:
-            continue
-
-        for neighbor_index in range(8):
-            neighbor_row = global_row + row_offsets[neighbor_index]
-            neighbor_col = global_col = col_offsets[neighbor_index]
-            if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col_index >= n_cols:
-                #out of bounds
-                continue
-            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
-            
-            if sink_pixels_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == 1:
-                #it's already a sink
-                continue
-
-            neighbor_outflow_direction = (
-                outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset])
-            #if the neighbor is no data, don't try to set that
-            if neighbor_outflow_direction == outflow_direction_nodata:
-                continue
-
-            neighbor_outflow_weight = (
-                outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset])
-            #if the neighbor is no data, don't try to set that
-            if neighbor_outflow_weight == outflow_direction_nodata:
-                continue
-
-            it_flows_here = False
-            if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
-                #the neighbor flows into this cell
-                it_flows_here = True
-
-            if (neighbor_outflow_direction - 1) % 8 == inflow_offsets[neighbor_index]:
-                #the offset neighbor flows into this cell
-                it_flows_here = True
-                neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
-
-            if it_flows_here:
-                #If we haven't processed that effect yet, set it to 0 and append to the queue
-                if effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == effect_nodata:
-                    process_queue.push(neighbor_row_index * n_cols + neighbor_col_index)
-                    effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] = 0.0
-
-                #the percent of the pixel upstream equals the current percent 
-                #times the percent flow to that pixels times the 
-                effect_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] += (
-                    effect_block[row_index, col_index, row_block_offset, col_block_offset] *
-                    neighbor_outflow_weight *
-                    export_rate_block[row_index, col_index, row_block_offset, col_block_offset])
-                cache_dirty[neighbor_row_index, neighbor_col_index] = 1
-
-    cache_dirty.flush_cache()
-    LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
-                    (time.clock() - start_time))
-'''
-
 
 cdef struct Row_Col_Weight_Tuple:
     int row_index
     int col_index
     int weight
-
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -701,12 +503,14 @@ cdef _build_flat_set(
     cdef time_t last_time, current_time
     time(&last_time)
     #not flat on the edges of the raster, could be a sink
-    for global_block_row in xrange(int(ceil(float(n_rows) / block_row_size))):
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+    for global_block_row in xrange(n_global_block_rows):
         time(&current_time)
         if current_time - last_time > 5.0:
             LOGGER.info("_build_flat_set %.1f%% complete", (global_row + 1.0) / n_rows * 100)
             last_time = current_time
-        for global_block_col in xrange(int(ceil(float(n_cols) / block_col_size))):
+        for global_block_col in xrange(n_global_block_cols):
             for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
                 for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
 
@@ -1906,7 +1710,6 @@ def cache_block_experiment(ds_uri, out_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
 def percent_to_sink(
     sink_pixels_uri, export_rate_uri, outflow_direction_uri,
     outflow_weights_uri, effect_uri):
@@ -1969,8 +1772,6 @@ def percent_to_sink(
         gdal.GDT_Float32, fill_value=effect_nodata)
     effect_dataset = gdal.Open(effect_uri, gdal.GA_Update)
     effect_band = effect_dataset.GetRasterBand(1)
-
-
 
     cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
 
@@ -2036,8 +1837,9 @@ def percent_to_sink(
     while process_queue.size() > 0:
         flat_index = process_queue.front()
         process_queue.pop()
-        global_row = flat_index / n_cols
-        global_col = flat_index % n_cols
+        with cython.cdivision(True):
+            global_row = flat_index / n_cols
+            global_col = flat_index % n_cols
 
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         if export_rate_block[row_index, col_index, row_block_offset, col_block_offset] == export_rate_nodata:
