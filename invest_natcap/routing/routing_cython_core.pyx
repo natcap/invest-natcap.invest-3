@@ -910,7 +910,6 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     update_list = [False, True, True]
     cdef BlockCache block_cache = BlockCache(
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
-
     cdef Row_Col_Weight_Tuple current_cell_tuple
     
     cdef Row_Col_Weight_Tuple t
@@ -1021,7 +1020,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 neighbor_row = global_row + row_offsets[neighbor_index]
                 neighbor_col = global_col + col_offsets[neighbor_index]
 
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows or neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
                     continue
                 
                 flat_index = neighbor_row * n_cols + neighbor_col
@@ -1062,7 +1061,7 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
                 neighbor_row = global_row + row_offsets[neighbor_index]
                 neighbor_col = global_col + col_offsets[neighbor_index]
 
-                if neighbor_row_index < 0 or neighbor_row_index >= n_rows or neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
                     continue
                 block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
                 
@@ -1109,19 +1108,18 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
     #Add the final offsets to the dem array
     def offset_dem(dem_sink_offset_array, dem_edge_offset_array, dem_array):
+        #ensure the final division is a 64 float bit calculation
+        offset_array = numpy.zeros(dem_sink_offset_array.shape, dtype=numpy.float64)
         offset_array = numpy.where(
             (dem_sink_offset_array != INF) & 
             (dem_sink_offset_array != MAX_DISTANCE), 
-            2.0*dem_sink_offset_array, 0.0)
+            2.0*dem_sink_offset_array, offset_array)
             
         offset_array = numpy.where(
             (dem_edge_offset_array != INF) & 
             (dem_edge_offset_array != MAX_DISTANCE), 
             max_distance+1-dem_edge_offset_array+offset_array, offset_array)
-
-        dem_array += offset_array / 10000.0
-        return dem_array
-
+        return dem_array + offset_array / 10000.0
     
     block_cache.flush_cache()
     
@@ -1132,11 +1130,13 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     gdal.Dataset.__swig_destroy__(dem_out_ds)
     gdal.Dataset.__swig_destroy__(dem_sink_offset_ds)
     gdal.Dataset.__swig_destroy__(dem_edge_offset_ds)
-    
+    #The float64 on the ouput is important here because we're dividing by small 32 bit floats and we had
+    #a bug once where the / 10000.0 constant didn't capture the precision between relatively large offset values of
+    #147 and 146.
     raster_utils.vectorize_datasets(
-        [dem_sink_offset_uri, dem_edge_offset_uri, dem_tmp_fill_uri], offset_dem, dem_out_uri, gdal.GDT_Float32,
+        [dem_sink_offset_uri, dem_edge_offset_uri, dem_tmp_fill_uri], offset_dem, dem_out_uri, gdal.GDT_Float64,
         nodata_value, pixel_size, 'intersection',
-        vectorize_op=False, datasets_are_pre_aligned=True)
+        vectorize_op=False)
 
     for ds_uri in [dem_sink_offset_uri, dem_edge_offset_uri, dem_tmp_fill_uri, ]:
         try:
@@ -1251,8 +1251,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     #define all the caches
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] flow_block = numpy.zeros(
         (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
-        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    #DEM block is a 64 bit float so it can capture the resolution of small DEM offsets
+    #from the plateau resolution algorithm.
+    cdef numpy.ndarray[numpy.npy_float64, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float64)
     
     #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
     band_list = [dem_band, flow_band]
@@ -1413,35 +1415,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
-
-
-'''
-    while unresolved_cells_defer.size() > 0:
-        flat_index = unresolved_cells_defer.front()
-        unresolved_cells_defer.pop()
-    
-        global_row = flat_index / n_cols
-        global_col = flat_index % n_cols
-        #We load 3 rows at a time and we know unresolved directions can only
-        #occur in the middle of the raster
-        if global_row == 0 or global_row == n_rows - 1 or global_col == 0 or global_col == n_cols - 1:
-            raise Exception('When resolving unresolved direction cells, encountered a pixel on the edge (%d, %d)' % (row_index, col_index))
-        if y_offset != row_index - 1:
-            if dirty_cache:
-                flow_band.WriteArray(flow_array, 0, y_offset)
-                dirty_cache = 0
-            local_y_offset = 1
-            y_offset = row_index - 1
-            flow_array = flow_band.ReadAsArray(
-                xoff=0, yoff=y_offset, win_xsize=n_cols, win_ysize=3)
-                
-            flow_array[1, col_index] = flow_nodata
-            dirty_cache = 1
-            
-    if dirty_cache:
-        flow_band.WriteArray(flow_array, 0, y_offset)
-        dirty_cache = 0
-'''
 
 
 @cython.boundscheck(False)
