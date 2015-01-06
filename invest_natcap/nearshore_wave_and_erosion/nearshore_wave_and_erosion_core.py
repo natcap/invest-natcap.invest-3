@@ -741,7 +741,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(transect_count):
+    for transect in range(1000,2000): #transect_count):
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect_count - transect)
 
@@ -1264,13 +1264,15 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         # Run the interpolation:
         f = interpolate.interp1d(x, delta_y, 'linear')
 
-        inerpolation_range = range(start, end)
-        interpolated_delta_y = f(inerpolation_range)
+        interpolation_range = range(start, end)
+        interpolated_delta_y = f(interpolation_range)
 
         if np.isnan(interpolated_delta_y).any():
             print('current_transect', current_transect)
             print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('x', x)
             print('delta_y', delta_y)
+            print('interpolation_range', interpolation_range)
             print('interpolated_delta_y', interpolated_delta_y)
             print('any', np.isnan(interpolated_delta_y).any(), \
                 'count', np.sum(np.isnan(interpolated_delta_y).any()))
