@@ -741,9 +741,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(1000,2000): #transect_count):
+    for transect in range(1000,1500): #transect_count):
 #        print('')
-        print('Computing nearshore waves and erosion on transect', transect_count - transect)
+        print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -1228,13 +1228,18 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
             end = first_nan[0]
 
         # Interpolate delta_y: add key values for x and y
-        # First value is 0
+        # First value is 0 (no correction)
         delta_y = [0.]  # y
         x = [start] # x
-            
-#        print('current_transect', current_transect)
 
-        for i in range(len(current_transect)):
+
+        # Special case for first entry
+        coord, index, value = current_transect[0]
+        
+        if index == 0:
+            delta_y = [intersection[coord] - value]  # y
+
+        for i in range(1, len(current_transect)):
 
             # Fill in subsequent values using intersection data
             coord, index, value = current_transect[i]
