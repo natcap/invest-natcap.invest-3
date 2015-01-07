@@ -771,9 +771,13 @@ def _create_intermediate_csv(vars_dict):
     Creates an intermediate output that gives the number of
     individuals within each area for each time step for each age/stage.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_population_by_time_step.csv'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = basename + '_population_by_time_step.csv'
+    else:
+        filename = 'population_by_time_step.csv'
     uri = os.path.join(
         vars_dict['intermediate_dir'], filename)
 
@@ -818,9 +822,13 @@ def _create_results_csv(vars_dict):
     Generates a CSV file that contains a summary of all harvest totals
     for each subregion.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_results_table.csv'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = basename + '_results_table.csv'
+    else:
+        filename = 'results_table.csv'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
     recruitment_type = vars_dict['recruitment_type']
@@ -884,9 +892,13 @@ def _create_results_html(vars_dict):
     Creates an HTML file that contains a summary of all harvest totals
     for each subregion.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_results_page.html'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = basename + '_results_page.html'
+    else:
+        filename = 'results_page.html'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
     recruitment_type = vars_dict['recruitment_type']
@@ -1059,10 +1071,15 @@ def _create_results_aoi(vars_dict):
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
     basename = os.path.splitext(os.path.basename(aoi_uri))[0]
-    basename2 = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    output_aoi_uri = os.path.join(
-        vars_dict['output_dir'], basename2 + '_' + basename + '_results_aoi.shp')
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename2 = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        output_aoi_uri = os.path.join(
+            vars_dict['output_dir'], basename2 + '_' + basename + '_results_aoi.shp')
+    else:
+        output_aoi_uri = os.path.join(
+            vars_dict['output_dir'], basename + '_results_aoi.shp')
 
     # Copy AOI file to outputs directory
     raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
