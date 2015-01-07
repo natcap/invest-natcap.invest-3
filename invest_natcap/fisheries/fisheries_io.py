@@ -1032,6 +1032,15 @@ def _create_results_html(vars_dict):
             'input_type': 'Text'
         }]
 
+    equilibrium_warning = [{
+        'type': 'text',
+        'section': 'body',
+        'text': '<h2 style="color:red">Warning: Population Did Not Reach Equilibrium State</h2>'
+    }]
+
+    if not bool(vars_dict['equilibrate_timestep']):
+        elements = equilibrium_warning + elements
+
     rep_args['elements'] = elements
 
     reporting.generate_report(rep_args)
