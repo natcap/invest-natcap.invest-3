@@ -741,7 +741,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(1000,1500): #transect_count):
+    for transect in range(2000, 2500): #transect_count):
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
@@ -1214,7 +1214,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     for transect in intersected_transects:
 
-#        print('intersected transect', transect)
+        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
@@ -1254,6 +1254,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         if x[-1] != end-1:
             delta_y.append(0.)
             x.append(end-1)
+
+        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+            str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
+
+        if len(delta_y) == 1:
+            continue
 
         delta_y = np.array(delta_y)
         x = np.array(x)
