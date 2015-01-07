@@ -557,7 +557,7 @@ def create_raster_from_vector_extents_uri(
         output_uri (string): the URI to write the gdal dataset
 
     Returns:
-        nothing
+        
 
     """
 
