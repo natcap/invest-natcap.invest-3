@@ -22,8 +22,9 @@ def execute(args, create_outputs=True):
         and output files should be placed.
 
     :param str args['aoi_uri']: location of shapefile which will be used as
-        subregions for calculation. Each region must conatin a 'name'
-        attribute which will
+        subregions for calculation. Each region must conatin a 'Name'
+        attribute (case-sensitive) matching the given name in the population
+        parameters csv file.
 
     :param int args['timesteps']: represents the number of time steps that
         the user desires the model to run.

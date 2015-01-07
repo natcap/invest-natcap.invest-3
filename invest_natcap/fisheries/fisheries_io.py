@@ -81,7 +81,8 @@ def fetch_args(args, create_outputs=True):
                 'Migration': [np.matrix, np.matrix, ...]
             },
             {
-                ...
+                ...  # additional dictionary doesn't exist when 'do_batch'
+                     # is false
             }
         ]
 
@@ -822,6 +823,7 @@ def _create_results_csv(vars_dict):
     filename = basename + '_results_table.csv'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
+    recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -867,7 +869,12 @@ def _create_results_csv(vars_dict):
                 line.append('Y')
             else:
                 line.append('N')
-            line.append("%.2f" % Spawners_t[i])
+            if i == 0:
+                line.append("(none)")
+            elif recruitment_type == 'Fixed':
+                line.append("(fixed recruitment)")
+            else:
+                line.append("%.2f" % Spawners_t[i])
             line.append("%.2f" % H_tx[i].sum())
             csv_writer.writerow(line)
 
@@ -1033,9 +1040,9 @@ def _create_results_html(vars_dict):
 def _create_results_aoi(vars_dict):
     '''
     Appends the final harvest and valuation values for each region to an
-    input shapefile.  The 'NAME' attributes of each region in the input
-    shapefile must exactly match the names of each region in the population
-    parameters file.
+    input shapefile.  The 'Name' attributes (case-sensitive) of each region
+    in the input shapefile must exactly match the names of each region in the
+    population parameters file.
 
     '''
     aoi_uri = vars_dict['aoi_uri']
@@ -1064,8 +1071,9 @@ def _create_results_aoi(vars_dict):
         harv_reg_dict[Regions[i]] = H_tx[-1][i]
 
     # Set Valuation
-    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
-    layer.CreateField(val_field)
+    if vars_dict['val_cont']:
+        val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        layer.CreateField(val_field)
 
     val_reg_dict = {}
     for i in range(0, len(Regions)):
@@ -1074,13 +1082,14 @@ def _create_results_aoi(vars_dict):
     # Add Information to Shapefile
     for feature in layer:
         try:
-            region_name = str(feature.items()['NAME'])
+            region_name = str(feature.items()['Name'])
             feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-            feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+            if vars_dict['val_cont']:
+                feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
             layer.SetFeature(feature)
         except:
             LOGGER.warning("A feature in the given AOI shapefile either does \
-                not have a 'NAME' attribute or does not match any of the \
-                given sub-regions. Skipping feature.")
+                not have a 'Name' attribute (case-sensitive) or does not match \
+                any of the given sub-regions. Skipping feature.")
 
     layer.ResetReading()
