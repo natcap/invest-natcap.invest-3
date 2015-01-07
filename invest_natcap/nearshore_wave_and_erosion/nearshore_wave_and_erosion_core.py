@@ -325,6 +325,8 @@ def compute_transects(args):
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
     
+    LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
+
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
@@ -395,6 +397,8 @@ def compute_transects(args):
 
 
     # TODO: Break this up so we don't use so much memory
+    LOGGER.debug('Creating arrays')
+
     tidal_forcing_array = \
         np.ones(tidal_forcing_dataset.shape) * habitat_nodata
 
@@ -441,6 +445,8 @@ def compute_transects(args):
     args['indices_limit_array'] = indices_limit_array
     args['coordinates_limits_array'] = coordinates_limits_array
 
+
+    LOGGER.debug('Storing transect_info data')
 
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
