@@ -823,6 +823,7 @@ def _create_results_csv(vars_dict):
     filename = basename + '_results_table.csv'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
+    recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -868,7 +869,12 @@ def _create_results_csv(vars_dict):
                 line.append('Y')
             else:
                 line.append('N')
-            line.append("%.2f" % Spawners_t[i])
+            if i == 0:
+                line.append("(none)")
+            elif recruitment_type == 'Fixed':
+                line.append("(fixed recruitment)")
+            else:
+                line.append("%.2f" % Spawners_t[i])
             line.append("%.2f" % H_tx[i].sum())
             csv_writer.writerow(line)
 
