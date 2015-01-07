@@ -325,6 +325,8 @@ def compute_transects(args):
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
     
+    LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
+
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
@@ -395,6 +397,8 @@ def compute_transects(args):
 
 
     # TODO: Break this up so we don't use so much memory
+    LOGGER.debug('Creating arrays')
+
     tidal_forcing_array = \
         np.ones(tidal_forcing_dataset.shape) * habitat_nodata
 
@@ -441,6 +445,8 @@ def compute_transects(args):
     args['indices_limit_array'] = indices_limit_array
     args['coordinates_limits_array'] = coordinates_limits_array
 
+
+    LOGGER.debug('Storing transect_info data')
 
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
@@ -741,7 +747,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(1000,1500): #transect_count):
+    for transect in range(2000, 2500): #transect_count):
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
@@ -1214,7 +1220,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     for transect in intersected_transects:
 
-#        print('intersected transect', transect)
+        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
@@ -1254,6 +1260,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         if x[-1] != end-1:
             delta_y.append(0.)
             x.append(end-1)
+
+        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+            str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
+
+        if len(delta_y) == 1:
+            continue
 
         delta_y = np.array(delta_y)
         x = np.array(x)
