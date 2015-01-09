@@ -254,7 +254,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
     raster_utils.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
-    
+    os.remove(kernel_uri)
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
     # Rickett's reply to see if this is correct.
@@ -308,6 +308,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     
     LOGGER.debug('Calculating foraging/farm abundance index')
     raster_utils.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
+    os.remove(kernel_uri)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
     LOGGER.debug('Using nodata value %s from species abundance raster', nodata)
@@ -454,7 +455,8 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
     LOGGER.debug('Exponetial decay on ratio raster')
     raster_utils.convolve_2d_uri(
         out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
-
+    os.remove(kernel_uri)
+    
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
