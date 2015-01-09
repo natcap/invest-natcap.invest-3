@@ -3403,10 +3403,13 @@ def convolve_2d_uri(signal_uri, kernel_uri, output_uri):
     signal_uri
 
     Args:
-        signal_uri (string): this is the source raster
-        kernel (?): 2d numpy integrating kernel
-        output_uri (string): the raster output of same size and projection of
-            signal_uri
+        signal_uri (string): a filepath to a gdal dataset that's the 
+            souce input.
+        kernel_uri (string): a filepath to a gdal dataset that's the 
+            souce input.
+        output_uri (string): a filepath to the gdal dataset 
+            that's the convolution output of signal and kernel
+            that is the same size and projection of signal_uri.
 
     Returns:
         nothing
