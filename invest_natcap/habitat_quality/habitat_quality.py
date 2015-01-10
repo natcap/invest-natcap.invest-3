@@ -251,14 +251,15 @@ def execute(args):
             # blur the threat raster based on the effect of the threat over
             # distance
             decay_type = threat_data['DECAY']
+            kernel_uri = raster_utils.temporary_filename()
             if decay_type == 'linear':
-                kernel = make_linear_kernel(dr_pixel)
+                make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                kernel = make_exponential_kernel(dr_pixel)
+                kernel = make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
-            raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
-
+            raster_utils.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
+            os.remove(kernel_uri)
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
@@ -677,24 +678,74 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
         exception_flag=raise_error)
 
 
-def make_distance_kernel(max_distance):
+def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
+    max_distance = expected_distance * 5
     kernel_size = int(numpy.round(max_distance * 2 + 1))
-    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
+    
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
     for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            distance_kernel[row_index, col_index] = numpy.sqrt(
-                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
-    return distance_kernel
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-def make_linear_kernel(max_distance):
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, 1 - distance_kernel / max_distance)
-    return kernel / numpy.sum(kernel)
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-def make_exponential_kernel(max_distance):
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, numpy.exp(-2.99 / max_distance * distance_kernel))
-    return kernel / numpy.sum(kernel)
+def make_linear_decay_kernel_uri(max_distance, kernel_uri):
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, (max_distance - distance_kernel_row) / max_distance)
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)

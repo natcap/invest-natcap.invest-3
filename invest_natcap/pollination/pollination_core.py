@@ -1,17 +1,16 @@
 """InVEST Pollination model core function  module"""
 
-from invest_natcap import raster_utils
-
-from osgeo import gdal
-
 import shutil
 import os
 import logging
 
+import gdal
+import osr
 import numpy
 
-LOGGER = logging.getLogger('pollination_core')
+from invest_natcap import raster_utils
 
+LOGGER = logging.getLogger('pollination_core')
 
 def execute_model(args):
     """Execute the biophysical component of the pollination model.
@@ -246,15 +245,16 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     pixel_size = abs(lulc_ds.GetGeoTransform()[1])
     lulc_ds = None
     expected_distance = guild['alpha'] / pixel_size
-    kernel = make_exponential_kernel(expected_distance)
+    kernel_uri = raster_utils.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('expected distance: %s ', expected_distance)
 
     # Fetch the floral resources raster and matrix from the args dictionary
     # apply an exponential convolution filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    raster_utils.convolve_2d(floral_raster_temp_uri, kernel, uris['floral'])
-    
+    raster_utils.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
+    os.remove(kernel_uri)
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
     # Rickett's reply to see if this is correct.
@@ -302,10 +302,13 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     expected_distance = alpha / pixel_size
-    kernel = make_exponential_kernel(expected_distance)
+    
+    kernel_uri = raster_utils.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     
     LOGGER.debug('Calculating foraging/farm abundance index')
-    raster_utils.convolve_2d(species_abundance_uri, kernel, farm_abundance_temp_uri)
+    raster_utils.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
+    os.remove(kernel_uri)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
     LOGGER.debug('Using nodata value %s from species abundance raster', nodata)
@@ -447,12 +450,13 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
         vectorize_op=False)
 
     expected_distance = alpha / min_pixel_size
-    kernel = make_exponential_kernel(expected_distance)
-    
+    kernel_uri = raster_utils.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('Exponetial decay on ratio raster')
-    raster_utils.convolve_2d(
-        out_uris['species_value'], kernel, out_uris['species_value_blurred'])
-
+    raster_utils.convolve_2d_uri(
+        out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
+    os.remove(kernel_uri)
+    
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
@@ -600,19 +604,38 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
 
 
-def make_distance_kernel(max_distance):
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
-    for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            distance_kernel[row_index, col_index] = numpy.sqrt(
-                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
-    return distance_kernel
-
-
-def make_exponential_kernel(expected_distance):
+def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     max_distance = expected_distance * 5
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, numpy.exp(-distance_kernel / expected_distance))
-    return kernel / numpy.sum(kernel)
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
