@@ -3436,6 +3436,10 @@ def convolve_2d_uri(signal_uri, kernel_uri, output_uri):
     kernel_ds = gdal.Open(tmp_kernel_uri)
     kernel_band = kernel_ds.GetRasterBand(1)
     kernel_block_col_size, kernel_block_row_size = kernel_band.GetBlockSize()
+    #make kernel block size a little larger if possible
+    kernel_block_col_size *= 3
+    kernel_block_row_size *= 3
+    
     kernel_nodata = kernel_band.GetNoDataValue()
 
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
