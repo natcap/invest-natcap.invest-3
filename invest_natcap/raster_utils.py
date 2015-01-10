@@ -3288,115 +3288,6 @@ def email_report(message, email_address):
         LOGGER.warn("Can't connect to email server, no report will be sent.")
 
 
-def convolve_2d(weight_uri, kernel, output_uri):
-    """
-    Does a direct convolution on a predefined kernel with the values in
-    weight_uri
-
-    Args:
-        weight_uri (string): this is the source raster
-        kernel (?): 2d numpy integrating kernel
-        output_uri (string): the raster output of same size and projection of
-            weight_uri
-
-    Returns:
-        nothing
-
-    """
-
-    output_nodata = -9999
-
-    tmp_weight_uri = temporary_filename()
-    tile_dataset_uri(weight_uri, tmp_weight_uri, 256)
-
-    new_raster_from_base_uri(
-        weight_uri, output_uri, 'GTiff', output_nodata, gdal.GDT_Float32,
-        fill_value=0)
-
-    weight_ds = gdal.Open(tmp_weight_uri)
-    weight_band = weight_ds.GetRasterBand(1)
-    block_col_size, block_row_size = weight_band.GetBlockSize()
-    weight_nodata = weight_band.GetNoDataValue()
-
-    output_ds = gdal.Open(output_uri, gdal.GA_Update)
-    output_band = output_ds.GetRasterBand(1)
-
-    n_rows = weight_band.YSize
-    n_cols = weight_band.XSize
-
-    n_rows_kernel = kernel.shape[1]
-    n_cols_kernel = kernel.shape[0]
-
-    n_global_block_rows = int(math.ceil(float(n_rows) / block_row_size))
-    n_global_block_cols = int(math.ceil(float(n_cols) / block_col_size))
-
-    last_time = time.time()
-    for global_block_row in xrange(n_global_block_rows):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info("convolution %.1f%% complete", global_block_row / float(n_global_block_rows) * 100)
-            last_time = current_time
-        for global_block_col in xrange(n_global_block_cols):
-            xoff = global_block_col * block_col_size
-            yoff = global_block_row * block_row_size
-            win_xsize = min(block_col_size, n_cols - xoff)
-            win_ysize = min(block_row_size, n_rows - yoff)
-
-            weight_array = weight_band.ReadAsArray(
-                xoff=xoff, yoff=yoff, win_xsize=win_xsize, win_ysize=win_ysize)
-            weight_nodata_mask = weight_array == weight_nodata
-            weight_array[weight_nodata_mask] = 0.0
-
-            result = scipy.signal.fftconvolve(weight_array, kernel, 'full')
-
-            left_index_raster = xoff - n_cols_kernel / 2
-            right_index_raster = xoff + block_col_size + (n_cols_kernel - 1) / 2
-            top_index_raster = yoff - n_rows_kernel / 2
-            bottom_index_raster = yoff + block_row_size + (n_rows_kernel - 1) / 2
-
-            left_index_result = 0
-            right_index_result = block_col_size + n_cols_kernel - 1
-            top_index_result = 0
-            bottom_index_result = block_row_size + n_rows_kernel - 1
-
-            #we might abut the edge of the raster, clip if so
-            if left_index_raster < 0:
-                left_index_result = -left_index_raster
-                left_index_raster = 0
-            if top_index_raster < 0:
-                top_index_result = -top_index_raster
-                top_index_raster = 0
-
-            if right_index_raster > n_cols:
-                right_index_result -= right_index_raster - n_cols
-                right_index_raster = n_cols
-            if bottom_index_raster > n_rows:
-                bottom_index_result -= bottom_index_raster - n_rows
-                bottom_index_raster = n_rows
-
-            current_output = output_band.ReadAsArray(
-                xoff=left_index_raster, yoff=top_index_raster,
-                win_xsize=right_index_raster-left_index_raster,
-                win_ysize=bottom_index_raster-top_index_raster)
-            potential_nodata_weight_array = weight_band.ReadAsArray(
-                xoff=left_index_raster, yoff=top_index_raster,
-                win_xsize=right_index_raster-left_index_raster,
-                win_ysize=bottom_index_raster-top_index_raster)
-            nodata_mask = potential_nodata_weight_array == weight_nodata
-
-            output_array = result[top_index_result:bottom_index_result,
-                left_index_result:right_index_result] + current_output
-            output_array[nodata_mask] = output_nodata
-
-            output_band.WriteArray(
-                output_array, xoff=left_index_raster, yoff=top_index_raster)
-
-    weight_band = None
-    gdal.Dataset.__swig_destroy__(weight_ds)
-    weight_ds = None
-    os.remove(tmp_weight_uri)
-
-
 def convolve_2d_uri(signal_uri, kernel_uri, output_uri):
     """
     Does a direct convolution on a predefined kernel with the values in
@@ -3439,7 +3330,7 @@ def convolve_2d_uri(signal_uri, kernel_uri, output_uri):
     #make kernel block size a little larger if possible
     kernel_block_col_size *= 3
     kernel_block_row_size *= 3
-    
+
     kernel_nodata = kernel_band.GetNoDataValue()
 
     output_ds = gdal.Open(output_uri, gdal.GA_Update)
