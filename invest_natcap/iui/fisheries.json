@@ -3,7 +3,7 @@
   "label": "Fisheries",
   "targetScript": "invest_natcap.fisheries.fisheries",
   "modelName": "fisheries",
-  "localDocURI": "../documentation/habitat_risk_assessment.html",
+  "localDocURI": "../documentation/fisheries.html",
   "height": 800,
   "width": 800,
   "elements": [

@@ -557,7 +557,7 @@ def create_raster_from_vector_extents_uri(
         output_uri (string): the URI to write the gdal dataset
 
     Returns:
-        nothing
+        
 
     """
 
@@ -884,9 +884,14 @@ def aggregate_raster_values_uri(
         (shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
     aggregate_dict_values = current_iteration_shapefiles.copy()
     aggregate_dict_counts = current_iteration_shapefiles.copy()
-    #Populate the pixel mean dictionary with something, -9999 seems to make sense
+    #Populate the means and totals with something in case the underlying raster
+    #doesn't exist for those features.  we use -9999 as a recognizable nodata
+    #value.
     for shapefile_id in shapefile_table:
         result_tuple.pixel_mean[shapefile_id] = -9999
+        result_tuple.total[shapefile_id] = -9999
+        result_tuple.hectare_mean[shapefile_id] = -9999
+
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()

@@ -103,7 +103,9 @@ def compute_transects(args):
     assert landmass_raster is not None, message
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
-    landmass = landmass_band.ReadAsArray()
+    landmass = \
+        sp.sparse.lil_matrix((landmass_band.XSize, landmass_band.YSize))
+#    landmass = landmass_band.ReadAsArray()
     
 #    print('past landmass')
 
@@ -120,7 +122,9 @@ def compute_transects(args):
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
     assert raster is not None, message
     band = raster.GetRasterBand(1)
-    bathymetry = band.ReadAsArray()
+    bathymetry = \
+        sp.sparse.lil_matrix((bathymetry_band.XSize, bathymetry_band.YSize))
+#    bathymetry = band.ReadAsArray()
     band = None
     raster = None
 
@@ -150,6 +154,118 @@ def compute_transects(args):
     j_offset = j_side_coarse/j_side_fine + 6
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
+
+    # Maximum extent of a transect
+    max_land_len = args['max_land_profile_len'] / model_resolution
+    max_sea_len = 1000 * args['max_profile_length'] / model_resolution
+
+    # Limits on maximum coordinates
+    bathymetry_shape = bathymetry.shape
+
+    depths = np.ones((max_land_len + max_sea_len + 1)) * -20000
+
+    land_info = np.ones(depths.size) * -1
+
+    I = np.ones(depths.size) * -1
+    J = np.ones(depths.size) * -1
+
+    sys.exit(0)
+
+
+    p_i = shore_point[0]
+    
+    # Shore point outside bathymetry
+    if (p_i < 0) or (p_i >= bathymetry_shape[0]):
+        return (None, None)
+
+    p_j = shore_point[1]
+
+    # Shore point outside bathymetry
+    if (p_j < 0) or (p_j >= bathymetry_shape[0]):
+        return (None, None)
+
+    d_i = direction_vector[0]
+    d_j = direction_vector[1]
+
+    initial_elevation = bathymetry[p_i, p_j]
+    depths[max_land_len] = 0
+
+    I[max_land_len] = p_i
+    J[max_land_len] = p_j
+
+
+    # Compute the landward part of the transect (go backward)
+    start_i = p_i - d_i
+    start_j = p_j - d_j
+
+    # If no land behind the piece of land, stop there and report 0
+    if not landmass[int(round(start_i)), int(round(start_j))]:
+        inland_steps = 0
+    # Else, count from 1
+    else:
+        # Stop when maximum inland distance is reached
+        for inland_steps in range(1, max_land_len):
+            elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+            # Hit either nodata, or some bad data
+            if elevation <= -12000:
+                inland_steps -= 1
+                break
+            # Stop if shore is reached
+            if not landmass[int(round(start_i)), int(round(start_j))]:
+                inland_steps -= 1
+                break
+            # Stop at maximum elevation
+            if elevation > 20:
+                break
+            # We can store the depth at this point
+            depths[max_land_len - inland_steps] = elevation
+            I[max_land_len - inland_steps] = start_i
+            J[max_land_len - inland_steps] = start_j
+
+            # Move backward (inland)
+            start_i -= d_i
+            start_j -= d_j
+
+            # Stop if outside raster limits
+            if (start_i < 0) or (start_j < 0) or \
+                (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
+                break
+
+    # Compute the seaward part of the transect
+    start_i = p_i + d_i
+    start_j = p_j + d_j
+
+    # Stop when maximum offshore distance is reached
+    offshore_steps = 0
+    for offshore_steps in range(1, max_sea_len):
+        # Stop if shore is reached
+        if landmass[int(round(start_i)), int(round(start_j))]:
+            offshore_steps -= 1
+            break
+        elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+        # Hit either nodata, or some bad data
+        if elevation <= -12000:
+            offshore_steps -= 1
+            break
+        # We can store the depth at this point
+        depths[max_land_len + offshore_steps] = elevation
+        I[max_land_len + offshore_steps] = start_i
+        J[max_land_len + offshore_steps] = start_j
+
+        # Move forward (offshore)
+        start_i += d_i
+        start_j += d_j
+
+        # Stop if outside raster limits
+        if (start_i < 0) or (start_j < 0) or \
+            (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
+            break
+
+    # If shore borders nodata, offshore_step is -1, set it to 0
+    offshore_steps = max(0, offshore_steps)
+
+
+    return (depths[I >= 0], (I[I >= 0].astype(int), J[J >= 0].astype(int)))
 
     tiles = 0 # Number of valid tiles
 
@@ -227,74 +343,78 @@ def compute_transects(args):
                     if transect_orientation is None:
                         continue
 
-                    # Compute raw transect depths
-                    raw_depths, raw_positions = \
-                        compute_raw_transect_depths(transect_position, \
-                        transect_orientation, bathymetry, \
-                        landmass, i_side_fine, \
-                        args['max_land_profile_len'], \
-                        args['max_land_profile_height'], \
-                        args['max_profile_length'])
 
-                    # The index positions might be outside of valid bathimetry
-                    if raw_depths is None:
-                        continue
+    # Stop here for the moment
+    sys.exit(0)
 
-                    # Interpolate transect to the model resolution
-                    interpolated_depths = \
-                        raw_depths if raw_depths.size > 5 else None
-#                        interpolated_depths = \
-#                            interpolate_transect(raw_depths, i_side_fine, \
-#                                args['model_resolution'])
-
-                    # Not enough values for interpolation
-                    if interpolated_depths is None:
-                        continue
-
-                    # Smooth transect
-                    smoothed_depths = \
-                        smooth_transect(interpolated_depths, \
-                            args['smoothing_percentage'])
-
-                    # Clip if transect hits land
-                    (clipped_transect, (start, shore, end)) = \
-                        clip_transect(smoothed_depths)
-
-                    # Transect could be invalid, skip it
-                    if clipped_transect is None:
-                        continue
-                   
-                    # At this point, the transect is valid: 
-                    # extract remaining information about it
-                    transect_info.append( \
-                        {'raw_positions': \
-                            (raw_positions[0][start:end], \
-                            raw_positions[1][start:end]), \
-                        'depths':smoothed_depths[start:end], \
-                        'clip_limits':(0, shore-start, end-start)})
-
-                    # Update the logest transect length if necessary
-                    if (end - start) > max_transect_length:
-                        max_transect_length = end - start
-                    
-                    # Store transect information
-#                        transects[transect_position] = tiles
-                    #position1 = \
-                    #    (transect_position + \
-                    #        transect_orientation).astype(int)
-                    #position3 = \
-                    #    (transect_position + \
-                    #        transect_orientation * 3).astype(int)
-                    #transects[position1[0], position1[1]] = 6
-                    #transects[position3[0], position3[1]] = 8
-                    #transects[raw_positions] = 100 + tiles #raw_depths
-#                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
-#                            tiles #raw_depths
-
-                    ## Will reconstruct the shore from this information
-                    #shore_profile[raw_positions] = raw_depths
-                    
-                    tiles += 1
+#                    # Compute raw transect depths
+#                    raw_depths, raw_positions = \
+#                        compute_raw_transect_depths(transect_position, \
+#                        transect_orientation, bathymetry, \
+#                        landmass, i_side_fine, \
+#                        args['max_land_profile_len'], \
+#                        args['max_land_profile_height'], \
+#                        args['max_profile_length'])
+#
+#                    # The index positions might be outside of valid bathymetry
+#                    if raw_depths is None:
+#                        continue
+#
+#                    # Interpolate transect to the model resolution
+#                    interpolated_depths = \
+#                        raw_depths if raw_depths.size > 5 else None
+##                        interpolated_depths = \
+##                            interpolate_transect(raw_depths, i_side_fine, \
+##                                args['model_resolution'])
+#
+#                    # Not enough values for interpolation
+#                    if interpolated_depths is None:
+#                        continue
+#
+#                    # Smooth transect
+#                    smoothed_depths = \
+#                        smooth_transect(interpolated_depths, \
+#                            args['smoothing_percentage'])
+#
+#                    # Clip if transect hits land
+#                    (clipped_transect, (start, shore, end)) = \
+#                        clip_transect(smoothed_depths)
+#
+#                    # Transect could be invalid, skip it
+#                    if clipped_transect is None:
+#                        continue
+#                   
+#                    # At this point, the transect is valid: 
+#                    # extract remaining information about it
+#                    transect_info.append( \
+#                        {'raw_positions': \
+#                            (raw_positions[0][start:end], \
+#                            raw_positions[1][start:end]), \
+#                        'depths':smoothed_depths[start:end], \
+#                        'clip_limits':(0, shore-start, end-start)})
+#
+#                    # Update the logest transect length if necessary
+#                    if (end - start) > max_transect_length:
+#                        max_transect_length = end - start
+#                    
+#                    # Store transect information
+##                        transects[transect_position] = tiles
+#                    #position1 = \
+#                    #    (transect_position + \
+#                    #        transect_orientation).astype(int)
+#                    #position3 = \
+#                    #    (transect_position + \
+#                    #        transect_orientation * 3).astype(int)
+#                    #transects[position1[0], position1[1]] = 6
+#                    #transects[position3[0], position3[1]] = 8
+#                    #transects[raw_positions] = 100 + tiles #raw_depths
+##                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
+##                            tiles #raw_depths
+#
+#                    ## Will reconstruct the shore from this information
+#                    #shore_profile[raw_positions] = raw_depths
+#                    
+#                    tiles += 1
 
     # Cleanup
     bathymetry = None
@@ -325,6 +445,8 @@ def compute_transects(args):
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
     
+    LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
+
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
@@ -395,6 +517,8 @@ def compute_transects(args):
 
 
     # TODO: Break this up so we don't use so much memory
+    LOGGER.debug('Creating arrays')
+
     tidal_forcing_array = \
         np.ones(tidal_forcing_dataset.shape) * habitat_nodata
 
@@ -441,6 +565,8 @@ def compute_transects(args):
     args['indices_limit_array'] = indices_limit_array
     args['coordinates_limits_array'] = coordinates_limits_array
 
+
+    LOGGER.debug('Storing transect_info data')
 
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
@@ -741,9 +867,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(transect_count):
+    for transect in range(2000, 2500): #transect_count):
 #        print('')
-        print('Computing nearshore waves and erosion on transect', transect_count - transect)
+        print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -1214,7 +1340,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     for transect in intersected_transects:
 
-#        print('intersected transect', transect)
+        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
@@ -1228,13 +1354,18 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
             end = first_nan[0]
 
         # Interpolate delta_y: add key values for x and y
-        # First value is 0
+        # First value is 0 (no correction)
         delta_y = [0.]  # y
         x = [start] # x
-            
-#        print('current_transect', current_transect)
 
-        for i in range(len(current_transect)):
+
+        # Special case for first entry
+        coord, index, value = current_transect[0]
+        
+        if index == 0:
+            delta_y = [intersection[coord] - value]  # y
+
+        for i in range(1, len(current_transect)):
 
             # Fill in subsequent values using intersection data
             coord, index, value = current_transect[i]
@@ -1250,6 +1381,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
             delta_y.append(0.)
             x.append(end-1)
 
+        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+            str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
+
+        if len(delta_y) == 1:
+            continue
+
         delta_y = np.array(delta_y)
         x = np.array(x)
 
@@ -1264,13 +1401,15 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         # Run the interpolation:
         f = interpolate.interp1d(x, delta_y, 'linear')
 
-        inerpolation_range = range(start, end)
-        interpolated_delta_y = f(inerpolation_range)
+        interpolation_range = range(start, end)
+        interpolated_delta_y = f(interpolation_range)
 
         if np.isnan(interpolated_delta_y).any():
             print('current_transect', current_transect)
             print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('x', x)
             print('delta_y', delta_y)
+            print('interpolation_range', interpolation_range)
             print('interpolated_delta_y', interpolated_delta_y)
             print('any', np.isnan(interpolated_delta_y).any(), \
                 'count', np.sum(np.isnan(interpolated_delta_y).any()))
@@ -2043,11 +2182,13 @@ def compute_raw_transect_depths(shore_point, \
 
     p_i = shore_point[0]
     
+    # Shore point outside bathymetry
     if (p_i < 0) or (p_i >= bathymetry_shape[0]):
         return (None, None)
 
     p_j = shore_point[1]
 
+    # Shore point outside bathymetry
     if (p_j < 0) or (p_j >= bathymetry_shape[0]):
         return (None, None)
 
