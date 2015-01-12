@@ -446,32 +446,44 @@ def compute_transects(args):
     print('5')
 
     habitat_properties_array = \
-        np.ones(habitat_properties_dataset.shape) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=habitat_properties_dataset.shape)
+#        np.ones(habitat_properties_dataset.shape) * habitat_nodata
 
     print('6')
 
     bathymetry_array = \
-        np.ones(bathymetry_dataset.shape) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=bathymetry_dataset.shape)
+#        np.ones(bathymetry_dataset.shape) * habitat_nodata
 
     print('7')
 
     positions_array = \
-        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=positions_dataset.shape)
+#        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
 
     print('8')
 
     shore_array = \
-        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=shore_dataset.shape)
+#        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
 
     print('9')
 
     indices_limit_array = \
-        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=indices_limit_dataset.shape)
+#        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
 
     print('10')
 
     coordinates_limits_array = \
-        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=coordinates_limits_dataset.shape)
+#        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
 
 
     args['tidal_forcing_array'] = tidal_forcing_array
@@ -1794,7 +1806,9 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
         raster = gdal.Open(type_shapefile_uri)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        #array = band.ReadAsArray()
+        array = raster_utils.load_memory_mapped_array( \
+            type_shapefile_uri, raster_utils.temporary_filename())
 
         tiles = args['tiles']
 
@@ -1818,6 +1832,14 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
             raw_positions = \
                 (positions_array[transect, 0, start:end], \
                 positions_array[transect, 1, start:end])
+            
+            if raw_positions is None:
+                print('trnsect', transect)
+                print('start, end', start, end)
+                print('positions_array[0]', positions_array[transect, 0, start:end])
+                print('positions_array[1]', positions_array[transect, 1, start:end])
+                print('positions_array', positions_array)
+                assert raw_positions is not None
             
             #Load the habitats as sampled from the raster
             source = array[raw_positions]
