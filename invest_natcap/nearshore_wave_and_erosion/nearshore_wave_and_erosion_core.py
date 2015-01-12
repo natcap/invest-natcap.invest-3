@@ -414,32 +414,52 @@ def compute_transects(args):
     tidal_forcing_array = \
         np.ones(tidal_forcing_dataset.shape) * habitat_nodata
 
+    print('1')
+
     climatic_forcing_array = \
         np.ones(climatic_forcing_dataset.shape) * habitat_nodata
+
+    print('2')
 
     soil_type_array = \
         np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
 
+    print('3')
+
     soil_properties_array = \
         np.ones(soil_properties_dataset.shape) * habitat_nodata
+
+    print('4')
 
     habitat_type_array = \
         np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
 
+    print('5')
+
     habitat_properties_array = \
         np.ones(habitat_properties_dataset.shape) * habitat_nodata
+
+    print('6')
 
     bathymetry_array = \
         np.ones(bathymetry_dataset.shape) * habitat_nodata
 
+    print('7')
+
     positions_array = \
         np.ones(positions_dataset.shape).astype(int) * habitat_nodata
+
+    print('8')
 
     shore_array = \
         np.ones(shore_dataset.shape).astype(int) * habitat_nodata
 
+    print('9')
+
     indices_limit_array = \
         np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
+
+    print('10')
 
     coordinates_limits_array = \
         np.ones(coordinates_limits_dataset.shape) * habitat_nodata
