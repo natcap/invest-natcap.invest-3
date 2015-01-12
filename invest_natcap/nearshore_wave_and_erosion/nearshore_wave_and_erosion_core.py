@@ -413,34 +413,34 @@ def compute_transects(args):
 
     tidal_forcing_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', tidal_forcing_dataset.shape)
+            mode='w+', shape=tidal_forcing_dataset.shape)
 
     print('1')
 
     climatic_forcing_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', climatic_forcing_dataset.shape)
+            mode='w+', shape=climatic_forcing_dataset.shape)
 #        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
 
     print('2')
 
     soil_type_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', soil_type_dataset.shape)
+            mode='w+', shape=soil_type_dataset.shape)
 #        np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
 
     print('3')
 
     soil_properties_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', soil_properties_dataset.shape)
+            mode='w+', shape=soil_properties_dataset.shape)
 #        np.ones(soil_properties_dataset.shape) * habitat_nodata
 
     print('4')
 
     habitat_type_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', habitat_type_dataset.shape)
+            mode='w+', shape=habitat_type_dataset.shape)
 #        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
 
     print('5')
