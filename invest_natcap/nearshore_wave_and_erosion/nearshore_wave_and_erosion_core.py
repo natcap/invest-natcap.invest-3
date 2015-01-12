@@ -78,7 +78,6 @@ def compute_transects(args):
     block_size = transect_band.GetBlockSize()
     transects = \
         sp.sparse.lil_matrix((transect_band.YSize, transect_band.XSize))
-#    transects = transect_band.ReadAsArray()
     
 #    print('past transects. size', \
 #        (transect_band.YSize, transect_band.XSize), \
@@ -93,24 +92,16 @@ def compute_transects(args):
     shore_band = shore_raster.GetRasterBand(1)
     shore = \
         sp.sparse.lil_matrix((shore_band.XSize, shore_band.YSize))
-#    shore_profile = shore_band.ReadAsArray()
-
-#    print('past shore')
 
     # Landmass
+    landmass = raster_utils.load_memory_mapped_array( \
+        args['landmass_raster_uri'], raster_utils.temporary_filename())
+    
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
     message = 'Cannot open file ' + args['landmass_raster_uri']
     assert landmass_raster is not None, message
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
-#    landmass = \
-#        sp.sparse.lil_matrix((landmass_band.XSize, landmass_band.YSize))
-#    landmass = landmass_band.ReadAsArray()
-    mem_file = raster_utils.temporary_filename()
-    landmass = raster_utils.load_memory_mapped_array( \
-        args['landmass_raster_uri'], mem_file)
-    
-#    print('past landmass')
 
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
@@ -118,29 +109,21 @@ def compute_transects(args):
     assert aoi_raster is not None, message
     aoi_band = aoi_raster.GetRasterBand(1)
     
-#    print('past AOI')
-
     # Bathymetry
+    bathymetry = raster_utils.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+
     raster = gdal.Open(args['bathymetry_raster_uri'])
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
     assert raster is not None, message
     band = raster.GetRasterBand(1)
-#    bathymetry = \
-#        sp.sparse.lil_matrix((band.XSize, band.YSize))
-#    bathymetry = band.ReadAsArray()
     band = None
     raster = None
-
-    mem_file = raster_utils.temporary_filename()
-    bathymetry = raster_utils.load_memory_mapped_array( \
-        args['bathymetry_raster_uri'], mem_file)
 
     row_count = landmass_band.YSize 
     col_count = landmass_band.XSize
 
-#    print('past bathymetry')
-
-   # Get the fine and coarse raster cell sizes, making sure the signs are consistent
+   # Get the fine and coarse raster cell sizes, ensure consistent signs
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
@@ -409,6 +392,8 @@ def compute_transects(args):
 
 
     # TODO: Break this up so we don't use so much memory
+    # On a second thought, this might be the best option: the model
+    # can run optimally with enough memory, or use the HD otherwise...
     LOGGER.debug('Creating arrays')
 
     tidal_forcing_array = \
@@ -1251,9 +1236,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     # Build mask to remove transect portions that are too far 
     # from the area we're interested in
-    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-    band = bathymetry.GetRasterBand(1)
-    transect_mask = band.ReadAsArray()
+    transect_mask = raster_utils.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+
+#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
+#    band = bathymetry.GetRasterBand(1)
+#    transect_mask = band.ReadAsArray()
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1425,9 +1413,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
 
-    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
-    wave_band = wave_raster.GetRasterBand(1)
-    wave_array = wave_band.ReadAsArray()
+    wave_array = raster_utils.load_memory_mapped_array( \
+        wave_interpolation_uri, raster_utils.temporary_filename())
+
+#    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
+#    wave_band = wave_raster.GetRasterBand(1)
+#    wave_array = wave_band.ReadAsArray()
 
     II, JJ = np.meshgrid(interp_I, interp_J)
 
@@ -1437,13 +1428,13 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     wave_array[([0], [0])] = 1.
 
-    wave_band.WriteArray(wave_array)
+#    wave_band.WriteArray(wave_array)
 
     wave_array = None
-    wave_band = None
-    wave_raster.FlushCache()
-    gdal.Dataset.__swig_destroy__(wave_raster)
-    wave_raster = None
+#    wave_band = None
+#    wave_raster.FlushCache()
+#    gdal.Dataset.__swig_destroy__(wave_raster)
+#    wave_raster = None
 
     raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
 
@@ -1471,12 +1462,16 @@ def store_tidal_information(args, hdf5_files, habitat_nodata):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         # Extract the type for this shapefile
-        shapefile_uri = args['shapefiles'][category][shp_name][field]
+        tidal_file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
-        raster = gdal.Open(shapefile_uri)
-        band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        source_nodata = raster_utils.get_nodata_from_uri(tidal_file_uri)
+
+        array = raster_utils.load_memory_mapped_array( \
+            tidal_file_uri, raster_utils.temporary_filename())
+
+#        raster = gdal.Open(tidal_file_uri)
+#        band = raster.GetRasterBand(1)
+#        array = band.ReadAsArray()
 
         tiles = args['tiles']
 
@@ -1537,12 +1532,16 @@ def store_climatic_forcing(args, hdf5_files, habitat_nodata):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         # Extract the type for this shapefile
-        shapefile_uri = args['shapefiles'][category][shp_name][field]
+        file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
-        raster = gdal.Open(shapefile_uri)
-        band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        source_nodata = raster_utils.get_nodata_from_uri(file_uri)
+
+        array = raster_utils.load_memory_mapped_array( \
+            file_uri, raster_utils.temporary_filename())
+
+#        raster = gdal.Open(file_uri)
+#        band = raster.GetRasterBand(1)
+#        array = band.ReadAsArray()
 
         tiles = args['tiles']
 
@@ -1630,9 +1629,12 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
     source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-    raster = gdal.Open(type_shapefile_uri)
-    band = raster.GetRasterBand(1)
-    array = band.ReadAsArray()
+    array = raster_utils.load_memory_mapped_array( \
+        type_shapefile_uri, raster_utils.temporary_filename())
+
+#    raster = gdal.Open(type_shapefile_uri)
+#    band = raster.GetRasterBand(1)
+#    array = band.ReadAsArray()
 
 #    LOGGER.info('Extracting priority information from ' + shp_name)
     
@@ -1691,8 +1693,8 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     print('')
 
     # Clean up
-    band = None
-    raster = None
+#    band = None
+#    raster = None
     array = None
 
     for field in args['shapefiles'][category][shp_name]:
@@ -1712,10 +1714,12 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         uri = args['shapefiles'][category][shp_name][field]
-        raster = gdal.Open(uri)
-        band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
+        array = raster_utils.load_memory_mapped_array( \
+            uri, raster_utils.temporary_filename())
 
+#        raster = gdal.Open(uri)
+#        band = raster.GetRasterBand(1)
+#        array = band.ReadAsArray()
 
         progress_step = tiles / 50
         for transect in range(tiles):
@@ -1748,8 +1752,8 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
         print('')
 
         # Close the raster before proceeding to the next one
-        band = None
-        raster = None
+#        band = None
+#        raster = None
         array = None
 
 
@@ -1804,11 +1808,12 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
         source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-        raster = gdal.Open(type_shapefile_uri)
-        band = raster.GetRasterBand(1)
-        #array = band.ReadAsArray()
         array = raster_utils.load_memory_mapped_array( \
             type_shapefile_uri, raster_utils.temporary_filename())
+
+#        raster = gdal.Open(type_shapefile_uri)
+#        band = raster.GetRasterBand(1)
+#        array = band.ReadAsArray()
 
         tiles = args['tiles']
 
@@ -1888,8 +1893,8 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         print('')
 
         # Clean up
-        band = None
-        raster = None
+#        band = None
+#        raster = None
         array = None
 
 
@@ -1909,9 +1914,12 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
             field_id = args['field_index']['natural habitats'][habitat_id]['fields'][field.lower()]
 
             uri = args['shapefiles'][category][shp_name][field]
-            raster = gdal.Open(uri)
-            band = raster.GetRasterBand(1)
-            array = band.ReadAsArray()
+            array = raster_utils.load_memory_mapped_array( \
+                uri, raster_utils.temporary_filename())
+
+#            raster = gdal.Open(uri)
+#            band = raster.GetRasterBand(1)
+#            array = band.ReadAsArray()
 
 #            LOGGER.info('Extracting transect information from ' + basename)
             
@@ -1954,8 +1962,8 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
             print('')
 
             # Close the raster before proceeding to the next one
-            band = None
-            raster = None
+#            band = None
+#            raster = None
             array = None
 
 
