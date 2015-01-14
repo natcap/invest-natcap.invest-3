@@ -1494,16 +1494,16 @@ def store_tidal_information(args, transect_data_file):
             if transect % progress_step == 0:
                 print '.',
 
-            indices_limit_array = args['indices_limit_array']
-            positions_array = args['positions_array']
+#            indices_limit_array = args['indices_limit_array']
+#            positions_array = args['positions_array']
             tidal_forcing_array = args['tidal_forcing_array']
 
-            [start, end] = indices_limit_array[transect]
+            [start, end] = indices_limit_dataset[transect]
 
             # The climatic data is taken as much offshore as possible
             positions = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
             
             source = array[positions]
 
