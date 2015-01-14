@@ -59,18 +59,27 @@ def execute(args, create_outputs=True):
         of recruits that will be used in calculation of population on a per
         area basis.
 
-    :param str args['recruitment_type']: (description)
+    :param str args['recruitment_type']: Name corresponding to one of the
+        built-in recruitment functions {'Beverton-Holt', 'Ricker', 'Fecundity',
+        Fixed}, or 'Other', meaning that the user is passing in their own
+        recruitment function as an anonymous python function via the
+        optional dictionary argument 'recruitment_func'.
 
-    :param float args['alpha']: must exist within args for BH or Ricker.
-        Parameter that will be used in calculation of recruitment.
+    :param function args['recruitment_func']: Required if
+        args['recruitment_type'] is set to 'Other'.  See below for
+        instructions on how to create a user-defined recruitment function.
 
-    :param float args['beta']: must exist within args for BH or Ricker.
-        Parameter that will be used in calculation of recruitment.
+    :param float args['alpha']: must exist within args for BH or Ricker
+        Recruitment. Parameter that will be used in calculation of recruitment.
+
+    :param float args['beta']: must exist within args for BH or Ricker
+        Recruitment. Parameter that will be used in calculation of recruitment.
 
     :param float args['total_recur_recruits']: must exist within args for
-        Fixed. Parameter that will be used in calculation of recruitment.
+        Fixed Recruitment. Parameter that will be used in calculation of
+        recruitment.
 
-    :param bool args['migr_cont']: if true, model uses migration
+    :param bool args['migr_cont']: if True, model uses migration
 
     :param str args['migration_dir']: if this parameter exists, it means
         migration is desired. This is  the location of the parameters
@@ -78,8 +87,7 @@ def execute(args, create_outputs=True):
         every age class which migrates. (Required if args['migr_cont'] is
         True)
 
-    :param bool args['val_cont']: if true, model runs valuation
-        computations
+    :param bool args['val_cont']: if True, model computes valuation
 
     :param float args['frac_post_process']: represents the fraction of the
         species remaining after processing of the whole carcass is
@@ -114,12 +122,71 @@ def execute(args, create_outputs=True):
             'frac_post_process': 0.5,
             'unit_price': 5.0,
         }
+
+    **Creating a User-Defined Recruitment Function**
+
+    An optional argument has been created in the Fisheries Model to allow users proficient in Python to pass their own recruitment function into the program via the args dictionary.
+
+    Using the Beverton-Holt recruitment function as an example, here's how a user might create and pass in their own recruitment function::
+
+        import invest_natcap
+        import numpy as np
+
+        # define input data
+        Matu = np.array([...])  # the Maturity vector in the Population Parameters File
+        Weight = np.array([...])  # the Weight vector in the Population Parameters File
+        LarvDisp = np.array([...])  # the LarvalDispersal vector in the Population Parameters File
+        alpha = 2.0  # scalar value
+        beta = 10.0  # scalar value
+        sexsp = 2   # 1 = not sex-specific, 2 = sex-specific
+
+        # create recruitment function
+        def spawners(N_prev):
+            return (N_prev * Matu * Weight).sum()
+
+        def rec_func_BH(N_prev):
+            N_0 = (LarvDisp * ((alpha * spawners(
+                N_prev) / (beta + spawners(N_prev)))) / sexsp)
+            return (N_0, spawners(N_prev))
+
+        # fill out args dictionary
+        args = {}
+        # ... define other arguments ...
+        args['recruitment_type'] = 'Other'  # lets program know to use user-defined function
+        args['recruitment_func'] = rec_func_BH  # pass recruitment function as 'anonymous' Python function
+
+        # run model
+        invest_natcap.fisheries.fisheries.execute(args)
+
+    Conditions that a new recruitment function must meet to run properly:
+
+    + **The function must accept as an argument:** a single numpy three-dimensional array (N_prev) representing the state of the population at the previous time step. N_prev has three dimensions: the indicies of the first dimension represent age/stage in ascending order, the indices of the second dimension represent the sex if it is specific (i.e. two indices representing female, then male if the model is 'sex-specific', else just a single zero index representing the female and male populations aggregated together), and the indices of the third dimension correspond to the region (must be in same order as provided in the Population Parameters File)
+
+    + **The function must return:** a tuple of two values. The first value (N_0) being a single numpy one-dimensional array representing the youngest age of the population for the next time step. The indices of the array correspond to the regions of the population (outputted in same order as provided). If the model is sex-specific, it is currently assumed that males and females are produced in equal number and that the returned array has been already been divided by 2 in the recruitment function.   The second value (spawners) is the number or weight of the spawners created by the population from the previous time step, provided as a scalar float value (non-negative).
+
+    Example of How Recruitment Function Operates within Fisheries Model::
+
+        # input data
+        N_prev = [[[age0-female-region0, age0-female-region1],
+                   [age0-male-region0, age0-male-region1]],
+                  [[age1-female-region0, age1-female-region1],
+                   [age1-male-region0], [age1-male-region1]]]
+
+        # execute function
+        N_0, spawners = rec_func(N_prev)
+
+        # output data - where N_0 contains information about the youngest
+        #     age/stage of the population for the next time step:
+        N_0 = [age0-region0, age0-region1] # if sex-specific, rec_func should divide by two before returning
+        type(spawners) is float
+
+
     '''
 
     # Parse Inputs
     model_list = io.fetch_args(args, create_outputs=create_outputs)
 
-    # For Each Model:
+    # For Each Model in Set:
     vars_all_models = []
     for model_args_dict in model_list:
 
