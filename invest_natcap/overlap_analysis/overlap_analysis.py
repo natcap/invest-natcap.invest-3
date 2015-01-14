@@ -277,22 +277,19 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
         #different result from the "no activities within that AOI area" result 
         #of 0.
 
-        aoi_pixel = activity_pixels[0]
-
-        if aoi_pixel == aoi_nodata:
-            return aoi_nodata
-
-        sum_pixel = 0
+        aoi_pixel_vector = activity_pixels[0]
+        aoi_nodata_mask = aoi_pixel_vector == aoi_nodata
+        
+        sum_pixel = numpy.zeros(aoi_pixel_vector.shape)
 
         for activ in activity_pixels[1::]:
-            if activ == 1:
-                sum_pixel += 1
-
-        return sum_pixel   
+            sum_pixel[activ == 1] += 1
+        
+        return numpy.where(aoi_nodata_mask, aoi_nodata, sum_pixel)
 
     raster_utils.vectorize_datasets(
         raster_files_uri, get_raster_sum, activities_uri, gdal.GDT_Int32,
-        aoi_nodata, aoi_pixel_size, "intersection")
+        aoi_nodata, aoi_pixel_size, "intersection", vectorize_op=False)
 
 
 def create_weighted_raster(
@@ -413,14 +410,17 @@ def create_weighted_raster(
     #use 1 in our equation.
 
     def combine_weighted_pixels(*pixel_parameter_list):
-        aoi_pixel = pixel_parameter_list[0]
-        curr_pix_sum = 0
-        if aoi_pixel == aoi_nodata:
-            return aoi_nodata
+        aoi_pixel_vector = pixel_parameter_list[0]
+        curr_pix_sum_vector = numpy.zeros(aoi_pixel_vector.shape)
+        #curr_pix_sum = 0
+        aoi_nodata_mask = aoi_pixel_vector == aoi_nodata
+        #if aoi_pixel == aoi_nodata:
+        #    return aoi_nodata
         for i in range(1, n+1):
             #This will either be a 0 or 1, since the burn value for the 
             #unweighted raster files was a 1.
-            U = pixel_parameter_list[i]
+            U_vector = pixel_parameter_list[i]
+            #U = pixel_parameter_list[i]
             I = None
             if do_inter:
                 layer_name = raster_names[i]
@@ -432,24 +432,25 @@ def create_weighted_raster(
             #This is coming from the documentation, refer to additional info in
             #the docstring. n gets cast to a float so that it can be used 
             #in division.
-            curr_pix_sum += ((1/float(n)) * U * I)
-        return curr_pix_sum
+            curr_pix_sum_vector += ((1/float(n)) * U_vector * I)
+        return numpy.where(aoi_nodata_mask, aoi_nodata, curr_pix_sum_vector)
 
     def combine_weighted_pixels_intra(*pixel_parameter_list):
-        aoi_pixel = pixel_parameter_list[0]
-        curr_pix_sum = 0.0
-        if aoi_pixel == aoi_nodata:
-            return aoi_nodata
+        aoi_pixel_vector = pixel_parameter_list[0]
+        curr_pix_sum_vector = numpy.zeros(aoi_pixel_vector.shape)
+        aoi_nodata_mask = aoi_pixel_vector == aoi_nodata
+        #if aoi_pixel == aoi_nodata:
+        #    return aoi_nodata
         for i in range(1, n+1):
 
             #Can assume that if we have gotten here, that intra-activity 
             #weighting is desired. Compute U for that weighting, assuming the
             #raster pixels are the intra weights.
             layer_name = weighted_raster_names[i]
-            X = pixel_parameter_list[i]
+            X_vector = pixel_parameter_list[i]
             X_max = max_intra_weights[layer_name]
 
-            U = X / X_max
+            U_vector = X_vector / X_max
             I = None
 
             if do_inter:
@@ -463,19 +464,19 @@ def create_weighted_raster(
             #the docstring.
             #n is getting cast to a float so that we can use non-integer
             #division in the calculations.
-            curr_pix_sum += ((1/float(n)) * U * I)
-        return curr_pix_sum
+            curr_pix_sum_vector += ((1/float(n)) * U_vector * I)
+        return numpy.where(aoi_nodata_mask, aoi_nodata, curr_pix_sum_vector)
 
     if do_intra:
         raster_utils.vectorize_datasets(
             weighted_raster_uris, combine_weighted_pixels_intra, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
-            dataset_to_align_index=0)
+            dataset_to_align_index=0, vectorize_op=False)
     else:
         raster_utils.vectorize_datasets(
             raster_uris, combine_weighted_pixels, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
-            dataset_to_align_index=0)
+            dataset_to_align_index=0, vectorize_op=False)
 
     #Now want to check if hu_impscore exists. If it does, use that as the
     #multiplier against the hubs raster. If not, use the hu_freq raster and
@@ -511,7 +512,8 @@ def create_weighted_raster(
         LOGGER.debug("this is the list %s" % h_rast_uri_list)
         raster_utils.vectorize_datasets(
             h_rast_uri_list, combine_hubs_raster, outgoing_uri,
-            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection")
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
+            vectorize_op=False)
 
         try:
             os.remove(temp_uri)
