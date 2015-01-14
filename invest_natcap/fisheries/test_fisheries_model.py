@@ -187,9 +187,6 @@ class TestSetRecruitmentFunc(unittest.TestCase):
         # pp.pprint(guess)
         testing.assert_equal(guess, check)
 
-    def test_user_set_recru_func(self):
-        pass
-
 
 class TestSetHarvestFunc(unittest.TestCase):
     def setUp(self):
