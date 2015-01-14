@@ -9,7 +9,7 @@ import numpy as np
 import fisheries
 
 workspace_dir = '../../test/invest-data/Fisheries'
-input_dir = '../../test/invest-data/Fisheries/Input'
+input_dir = '../../test/invest-data/Fisheries/input'
 pp = pprint.PrettyPrinter(indent=4)
 
 
@@ -17,13 +17,13 @@ class TestBlueCrab(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
-            'aoi_uri': os.path.join(input_dir, 'Shapefile_Galveston/Galveston_Subregion.shp'),
+            'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
             'sexsp': 'No',
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_uri': os.path.join(input_dir, 'Inputs_BlueCrab/population_params.csv'),
+            'population_csv_uri': os.path.join(input_dir, 'input_blue_crab/population_params.csv'),
             'spawn_units': 'Individuals',
             'total_init_recruits': 200000.0,
             'recruitment_type': 'Ricker',
@@ -44,7 +44,7 @@ class TestBlueCrab(unittest.TestCase):
         # check harvest: 24,798,419
         harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
         testing.assert_approx_equal(harvest_guess, 24798419.0, significant=3)
-        
+
         # check spawners: 42,644,460
         spawners_check = 42644460.0
         spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
@@ -55,13 +55,13 @@ class TestDungenessCrab(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
-            'aoi_uri': os.path.join(input_dir, 'Shapefile_HoodCanal/DC_HoodCanal_Subregions.shp'),
+            'aoi_uri': os.path.join(input_dir, 'shapefile_hood_canal/DC_HoodCanal_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
             'sexsp': 'Yes',
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_uri': os.path.join(input_dir, 'Inputs_DungenessCrab/population_params.csv'),
+            'population_csv_uri': os.path.join(input_dir, 'input_dungeness_crab/population_params.csv'),
             'spawn_units': 'Individuals',
             'total_init_recruits': 2249339326901,
             'recruitment_type': 'Ricker',
@@ -77,7 +77,7 @@ class TestDungenessCrab(unittest.TestCase):
         self.check = {
 
         }
-    
+
     def test_run(self):
         guess = fisheries.execute(self.args, create_outputs=False)
         # pp.pprint(guess)
@@ -97,13 +97,13 @@ class TestLobster(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
-            'aoi_uri': os.path.join(input_dir, 'Shapefile_Belize/Lob_Belize_Subregions.shp'),
+            'aoi_uri': os.path.join(input_dir, 'shapefile_belize/Lob_Belize_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
             'sexsp': 'No',
             'harvest_units': 'Weight',
             'do_batch': False,
-            'population_csv_uri': os.path.join(input_dir, 'Inputs_Lobster/population_params.csv'),
+            'population_csv_uri': os.path.join(input_dir, 'input_lobster/population_params.csv'),
             'spawn_units': 'Weight',
             'total_init_recruits': 4686959.0,
             'recruitment_type': 'Beverton-Holt',
@@ -116,7 +116,7 @@ class TestLobster(unittest.TestCase):
             'frac_post_process': 0.28633258,
             'unit_price': 29.93,
         }
-    
+
     def test_run(self):
         guess = fisheries.execute(self.args, create_outputs=False)
         # pp.pprint(guess)
@@ -134,13 +134,13 @@ class TestShrimp(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
-            'aoi_uri': os.path.join(input_dir, 'Shapefile_Galveston/Galveston_Subregion.shp'),
+            'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
             'total_timesteps': 300,
             'population_type': 'Stage-Based',
             'sexsp': 'No',
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_uri': os.path.join(input_dir, 'Inputs_Shrimp/population_params.csv'),
+            'population_csv_uri': os.path.join(input_dir, 'input_shrimp/population_params.csv'),
             'spawn_units': 'Weight',
             'total_init_recruits': 100000.0,
             'recruitment_type': 'Fixed',
@@ -153,7 +153,7 @@ class TestShrimp(unittest.TestCase):
             'frac_post_process': 0.0,
             'unit_price': 0.0,
         }
-    
+
     def test_run(self):
         guess = fisheries.execute(self.args, create_outputs=False)
 

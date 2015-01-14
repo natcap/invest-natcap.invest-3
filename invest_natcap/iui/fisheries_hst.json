@@ -3,7 +3,7 @@
   "label": "Fisheries Habitat Scenario Tool",
   "targetScript": "invest_natcap.fisheries.fisheries_hst",
   "modelName": "fisheries_hst",
-  "localDocURI": "../documentation/habitat_risk_assessment.html",
+  "localDocURI": "../documentation/fisheries.html",
   "height": 650,
   "width": 700,
   "elements": [
