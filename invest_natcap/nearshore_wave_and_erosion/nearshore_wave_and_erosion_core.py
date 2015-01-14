@@ -325,12 +325,6 @@ def compute_transects(args):
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
-    tidal_forcing_dataset = \
-        transect_data_file.create_dataset('tidal forcing', \
-            (transect_count, tidal_forcing_field_count), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
             (transect_count, climatic_forcing_field_count), \
@@ -395,12 +389,6 @@ def compute_transects(args):
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
     LOGGER.debug('Creating arrays')
-
-    tidal_forcing_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=tidal_forcing_dataset.shape)
-
-    print('1')
 
     climatic_forcing_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
@@ -471,7 +459,6 @@ def compute_transects(args):
 #        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
 
 
-    args['tidal_forcing_array'] = tidal_forcing_array
     args['climatic_forcing_array'] = climatic_forcing_array
     args['soil_type_array'] = soil_type_array
     args['soil_properties_array'] = soil_properties_array
@@ -523,16 +510,16 @@ def compute_transects(args):
 
 
     # HDF5 file container
-    hdf5_files = {}
+    args['hdf5_files'] = {}
+    args['habitat_nodata'] = habitat_nodata
 
 
-    combine_natural_habitats(args, hdf5_files, habitat_nodata)
-    combine_soil_types(args, hdf5_files, habitat_nodata)
-    store_climatic_forcing(args, hdf5_files, habitat_nodata)
-    store_tidal_information(args, hdf5_files, habitat_nodata)
+    combine_natural_habitats(args)
+    combine_soil_types(args)
+    store_climatic_forcing(args)
+    store_tidal_information(args, transect_data_file)
 
     # Both the habitat type and the habitat field data are complete, save them
-    tidal_forcing_dataset[...] = tidal_forcing_array[...]
     climatic_forcing_dataset[...] = climatic_forcing_array[...]
     soil_type_dataset[...] = soil_type_array[...]
     soil_properties_dataset[...] = soil_properties_array[...]
@@ -1440,12 +1427,37 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
 
 
-def store_tidal_information(args, hdf5_files, habitat_nodata):
+def store_tidal_information(args, transect_data_file):
 
     LOGGER.info('Processing tidal information...')
+
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
     
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
+
     # Create new category
     category = 'tidal information'
+
+
+
+    tidal_forcing_dataset = \
+        transect_data_file.create_dataset('tidal forcing', \
+            (args['tiles'], args['tidal_forcing_field_count']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+
+
+    tidal_forcing_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=tidal_forcing_dataset.shape)
+
+    args['tidal_forcing_array'] = tidal_forcing_array
+    
+
 
     hdf5_files[category] = []
 
@@ -1475,16 +1487,16 @@ def store_tidal_information(args, hdf5_files, habitat_nodata):
 
         tiles = args['tiles']
 
-        indices_limit_array = args['indices_limit_array']
-        positions_array = args['positions_array']
-        positions_array = args['positions_array']
-        tidal_forcing_array = args['tidal_forcing_array']
-
+    
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
+
+            indices_limit_array = args['indices_limit_array']
+            positions_array = args['positions_array']
+            tidal_forcing_array = args['tidal_forcing_array']
 
             [start, end] = indices_limit_array[transect]
 
@@ -1505,15 +1517,18 @@ def store_tidal_information(args, hdf5_files, habitat_nodata):
 
             # Copy directly to destination
             tidal_forcing_array[transect, field_id] = tidal_value
-        
-        print('')
+
+    tidal_forcing_dataset[...] = tidal_forcing_array[...]
 
 
 
-def store_climatic_forcing(args, hdf5_files, habitat_nodata):
+def store_climatic_forcing(args):
 
     LOGGER.info('Processing climatic forcing...')
     
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+
     # Create 'climatic forcing' category
     category = 'climatic forcing'
 
@@ -1569,10 +1584,13 @@ def store_climatic_forcing(args, hdf5_files, habitat_nodata):
 
 
 
-def combine_soil_types(args, hdf5_files, habitat_nodata):
+def combine_soil_types(args):
 
     LOGGER.info('Processing soil types...')
 
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+    
     # soil types
     soil_types = { \
         'mud':0, \
@@ -1758,10 +1776,13 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
 
 
 
-def combine_natural_habitats(args, hdf5_files, habitat_nodata):
+def combine_natural_habitats(args):
 
     LOGGER.info('Processing natural habitats...')
 
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+    
     category = 'natural habitats'
 
     # Create hdf5 category for natural habitats
