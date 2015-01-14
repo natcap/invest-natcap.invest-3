@@ -285,11 +285,6 @@ def _execute_nutrient(args):
     if args['valuation_enabled']:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-    #_validate_inputs(nutrients_to_process, lucode_to_parameters,
-    #                 threshold_table, valuation_lookup)
-
-
-
 
     #This one is tricky, we want to make a dictionary that indexes by nutrient
     #id and yields a dicitonary indexed by ws_id to the threshold amount of
