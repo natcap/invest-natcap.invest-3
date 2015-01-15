@@ -7,6 +7,7 @@ Models
 
     models/blue_carbon.rst
     models/carbon.rst
+    models/coastal_vulnerability.rst
     models/crop_production.rst
     models/finfish_aquaculture.rst
     models/fisheries.rst

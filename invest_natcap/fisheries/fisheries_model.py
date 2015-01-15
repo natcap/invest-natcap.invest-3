@@ -139,7 +139,7 @@ def set_recru_func(vars_dict):
         vars_dict (dictionary)
 
     Returns:
-        rec_func (lambda function): recruitment function
+        rec_func (function): recruitment function
 
     Example Output of Returned Recruitment Function::
 
@@ -160,39 +160,53 @@ def set_recru_func(vars_dict):
     Fec = vars_dict['Fecundity']
     fixed = vars_dict['total_recur_recruits']
 
-    def create_Spawners(N_prev):
+    def spawners(N_prev):
         return (N_prev * Matu * Weight).sum()
 
-    def create_BH(N_prev):
-        spawners = create_Spawners
+    def rec_func_BH(N_prev):
         N_0 = (LarvDisp * ((alpha * spawners(
             N_prev) / (beta + spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
-    def create_Ricker(N_prev):
-        spawners = create_Spawners
+    def rec_func_Ricker(N_prev):
         N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
             np.e ** (-beta * spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
-    def create_Fecundity(N_prev):
-        spawners = create_Spawners
+    def rec_func_Fecundity(N_prev):
         N_0 = (LarvDisp * (N_prev * Matu * Fec).sum() / sexsp)
         return (N_0, spawners(N_prev))
 
-    def create_Fixed(N_prev):
+    def rec_func_Fixed(N_prev):
         N_0 = LarvDisp * fixed / sexsp
         return (N_0, None)
 
     # Create Recruitment Function
-    if vars_dict['recruitment_type'] == "Beverton-Holt":
-        return create_BH
+    if vars_dict['recruitment_type'] == "Other":
+        try:
+            rec_func = vars_dict['recruitment_func']
+            assert(hasattr(rec_func, '__call__'))
+
+            # Test function
+            N_prev = np.ones([len(vars_dict['Classes']), sexsp, len(
+                vars_dict['Regions'])]).swapaxes(0, 2)
+            N_0, spawn = rec_func(N_prev)
+            assert(type(spawn) is np.float64)
+            assert(N_0.shape == (len(vars_dict['Regions']),))
+            return rec_func
+
+        except Exception, e:
+            LOGGER.error("User-defined recruitment function could not be validated.")
+            raise ValueError
+
+    elif vars_dict['recruitment_type'] == "Beverton-Holt":
+        return rec_func_BH
     elif vars_dict['recruitment_type'] == "Ricker":
-        return create_Ricker
+        return rec_func_Ricker
     elif vars_dict['recruitment_type'] == "Fecundity":
-        return create_Fecundity
+        return rec_func_Fecundity
     elif vars_dict['recruitment_type'] == "Fixed":
-        return create_Fixed
+        return rec_func_Fixed
     else:
         LOGGER.error("Could not determine correct recruitment function")
         raise ValueError

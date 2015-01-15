@@ -4,25 +4,17 @@ Fisheries Package
 Table of Contents
 -----------------
 
-+ `Model Entry Point`_
-+ `Fisheries Module`_
++ `Fisheries Model Entry Point`_
 + `Fisheries IO Module`_
 + `Fisheries Model Module`_
 + `Fisheries Habitat Scenario Tool Module`_
 + `Fisheries Habitat Scenario Tool IO Module`_
 
-Model Entry Point
------------------
+Fisheries Model Entry Point
+---------------------------
 
 .. autofunction:: invest_natcap.fisheries.fisheries.execute
 
-Fisheries Module
-----------------
-
-.. automodule:: invest_natcap.fisheries.fisheries
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Fisheries IO Module
 -------------------
