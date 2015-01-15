@@ -160,26 +160,25 @@ def execute(args, create_outputs=True):
 
     Conditions that a new recruitment function must meet to run properly:
 
-    + **The function must accept as an argument:** a single numpy three-dimensional array (N_prev) representing the state of the population at the previous time step. N_prev has three dimensions: the indicies of the first dimension represent age/stage in ascending order, the indices of the second dimension represent the sex if it is specific (i.e. two indices representing female, then male if the model is 'sex-specific', else just a single zero index representing the female and male populations aggregated together), and the indices of the third dimension correspond to the region (must be in same order as provided in the Population Parameters File)
+    + **The function must accept as an argument:** a single numpy three-dimensional array (N_prev) representing the state of the population at the previous time step. N_prev has three dimensions: the indices of the first dimension correspond to the region (must be in same order as provided in the Population Parameters File), the indices of the second dimension represent the sex if it is specific (i.e. two indices representing female, then male if the model is 'sex-specific', else just a single zero index representing the female and male populations aggregated together), and  the indicies of the third dimension represent age/stage in ascending order.
 
     + **The function must return:** a tuple of two values. The first value (N_0) being a single numpy one-dimensional array representing the youngest age of the population for the next time step. The indices of the array correspond to the regions of the population (outputted in same order as provided). If the model is sex-specific, it is currently assumed that males and females are produced in equal number and that the returned array has been already been divided by 2 in the recruitment function.   The second value (spawners) is the number or weight of the spawners created by the population from the previous time step, provided as a scalar float value (non-negative).
 
     Example of How Recruitment Function Operates within Fisheries Model::
 
         # input data
-        N_prev = [[[age0-female-region0, age0-female-region1],
-                   [age0-male-region0, age0-male-region1]],
-                  [[age1-female-region0, age1-female-region1],
-                   [age1-male-region0], [age1-male-region1]]]
+        N_prev_xsa = [[[region0-female-age0, region0-female-age1],
+                       [region0-male-age0, region1-male-age1]],
+                      [[region1-female-age0, region1-female-age1],
+                       [region1-male-age0], [region1-male-age1]]]
 
         # execute function
-        N_0, spawners = rec_func(N_prev)
+        N_0_x, spawners = rec_func(N_prev_xsa)
 
         # output data - where N_0 contains information about the youngest
         #     age/stage of the population for the next time step:
-        N_0 = [age0-region0, age0-region1] # if sex-specific, rec_func should divide by two before returning
+        N_0_x = [region0-age0, region1-age0] # if sex-specific, rec_func should divide by two before returning
         type(spawners) is float
-
 
     '''
 
