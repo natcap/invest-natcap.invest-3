@@ -1443,7 +1443,6 @@ def store_tidal_information(args, transect_data_file):
     category = 'tidal information'
 
 
-
     tidal_forcing_dataset = \
         transect_data_file.create_dataset('tidal forcing', \
             (args['tiles'], args['tidal_forcing_field_count']), \
@@ -1467,7 +1466,6 @@ def store_tidal_information(args, transect_data_file):
 
     shp_name = filenames[0]
 
-    
     for field in args['shapefiles'][category][shp_name]:
 
         # Retreive the index for this field
@@ -1476,19 +1474,21 @@ def store_tidal_information(args, transect_data_file):
         # Extract the type for this shapefile
         tidal_file_uri = args['shapefiles'][category][shp_name][field]
 
+        raster = gdal.Open(tidal_file_uri)
+        band = raster.GetRasterBand(1)
+
         source_nodata = raster_utils.get_nodata_from_uri(tidal_file_uri)
 
-        array = raster_utils.load_memory_mapped_array( \
-            tidal_file_uri, raster_utils.temporary_filename())
+#        array = raster_utils.load_memory_mapped_array( \
+#            tidal_file_uri, raster_utils.temporary_filename())
 
-#        raster = gdal.Open(tidal_file_uri)
-#        band = raster.GetRasterBand(1)
-#        array = band.ReadAsArray()
+        raster = gdal.Open(tidal_file_uri)
+        band = raster.GetRasterBand(1)
+        # Remove once source agrees with tidal_forcing in the assert
+        array = band.ReadAsArray()
 
         tiles = args['tiles']
-
-    
-
+ 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
@@ -1496,18 +1496,41 @@ def store_tidal_information(args, transect_data_file):
 
 #            indices_limit_array = args['indices_limit_array']
 #            positions_array = args['positions_array']
-            tidal_forcing_array = args['tidal_forcing_array']
+#            tidal_forcing_array = args['tidal_forcing_array']
 
             [start, end] = indices_limit_dataset[transect]
+
+            if end < 0:
+                continue
 
             # The climatic data is taken as much offshore as possible
             positions = \
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
             
+            print('start, end', start, end)
+#            print 'positions',
+            tidal_forcing = []
+            for position in range(end-start):
+#                print('position', position)
+#                print '(' + str(positions[0][position]) + ', ' + \
+#                    positions[1][position] + ')',
+                tidal_forcing.append(
+                    band.ReadAsArray(positions[1][position], \
+                        positions[0][position], 1, 1)
+                    )
+#            print('')
+
+#            tidal_forcing = np.array(tidal_forcing)
+
             source = array[positions]
 
             source = source[source != habitat_nodata]
+
+            print('tidal_forcing', tidal_forcing)
+#            print('positions', zip(positions[0], positions[1]))
+            print('source', source)
+            assert np.sum(np.absolute(source - tidal_forcing)) < 1e-15
 
             if source.size:
                 tidal_value = np.average(source)
@@ -1516,9 +1539,15 @@ def store_tidal_information(args, transect_data_file):
                 tidal_value = habitat_nodata
 
             # Copy directly to destination
-            tidal_forcing_array[transect, field_id] = tidal_value
+#            tidal_forcing_array[transect, field_id] = tidal_value
+            tidal_forcing_dataset[transect, field_id] = tidal_value
 
-    tidal_forcing_dataset[...] = tidal_forcing_array[...]
+
+        # Closing the raster and band before reuse
+        band = None
+        raster = None
+
+#    tidal_forcing_dataset[...] = tidal_forcing_array[...]
 
 
 
