@@ -268,7 +268,7 @@ def compute_transects(args):
                         'depths':smoothed_depths[start:end], \
                         'clip_limits':(0, shore-start, end-start)})
 
-                    # Update the logest transect length if necessary
+                    # Update the longest transect length if necessary
                     if (end - start) > max_transect_length:
                         max_transect_length = end - start
                     
@@ -305,6 +305,7 @@ def compute_transects(args):
 #    tiles = 50
     
     args['tiles'] = tiles
+    args['max_transect_length'] = max_transect_length
 
     LOGGER.debug('found %i tiles.' % tiles)
 
@@ -340,17 +341,6 @@ def compute_transects(args):
     soil_properties_dataset = \
         transect_data_file.create_dataset('soil_properties', \
             (transect_count, soil_field_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
-
-    habitat_type_dataset = \
-        transect_data_file.create_dataset('habitat_type', \
-            (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-    
-    habitat_properties_dataset = \
-        transect_data_file.create_dataset('habitat_properties', \
-            (transect_count, habitat_field_count, max_transect_length), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
     bathymetry_dataset = \
@@ -409,20 +399,6 @@ def compute_transects(args):
             mode='w+', shape=soil_properties_dataset.shape)
 #        np.ones(soil_properties_dataset.shape) * habitat_nodata
 
-    print('4')
-
-    habitat_type_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=habitat_type_dataset.shape)
-#        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
-
-    print('5')
-
-    habitat_properties_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=habitat_properties_dataset.shape)
-#        np.ones(habitat_properties_dataset.shape) * habitat_nodata
-
     print('6')
 
     bathymetry_array = \
@@ -462,8 +438,6 @@ def compute_transects(args):
     args['climatic_forcing_array'] = climatic_forcing_array
     args['soil_type_array'] = soil_type_array
     args['soil_properties_array'] = soil_properties_array
-    args['habitat_type_array'] = habitat_type_array
-    args['habitat_properties_array'] = habitat_properties_array
     args['bathymetry_array'] = bathymetry_array
     args['positions_array'] = positions_array
     args['shore_array'] = shore_array
@@ -498,6 +472,11 @@ def compute_transects(args):
 
         transect_info[transect] = None
 
+    bathymetry_dataset[...] = bathymetry_array[...]
+    positions_dataset[...] = positions_array[...]
+    indices_limit_dataset[...] = indices_limit_array[...]
+    shore_dataset[...] = shore_array[...]
+    coordinates_limits_dataset[...] = coordinates_limits_array[...]
 
 
 #    for category in args['shapefiles']:
@@ -514,7 +493,7 @@ def compute_transects(args):
     args['habitat_nodata'] = habitat_nodata
 
 
-    combine_natural_habitats(args)
+    combine_natural_habitats(args, transect_data_file)
     combine_soil_types(args)
     store_climatic_forcing(args)
     store_tidal_information(args, transect_data_file)
@@ -525,11 +504,6 @@ def compute_transects(args):
     soil_properties_dataset[...] = soil_properties_array[...]
     habitat_type_dataset[...] = habitat_type_array[...]
     habitat_properties_dataset[...] = habitat_properties_array[...]
-    bathymetry_dataset[...] = bathymetry_array[...]
-    positions_dataset[...] = positions_array[...]
-    indices_limit_dataset[...] = indices_limit_array[...]
-    coordinates_limits_dataset[...] = coordinates_limits_array[...]
-    shore_dataset[...] = shore_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
@@ -1805,14 +1779,50 @@ def combine_soil_types(args):
 
 
 
-def combine_natural_habitats(args):
+def combine_natural_habitats(args, transect_data_file):
 
     LOGGER.info('Processing natural habitats...')
 
     hdf5_files = args['hdf5_files']
     habitat_nodata = args['habitat_nodata']
+
+    indices_limit_array = args['indices_limit_array']
+    shore_array = args['shore_array']
+    positions_array = args['positions_array']
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
     
     category = 'natural habitats'
+
+
+    habitat_type_dataset = \
+        transect_data_file.create_dataset('habitat_type', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+    
+    habitat_properties_dataset = \
+        transect_data_file.create_dataset('habitat_properties', \
+            (args['tiles'], args['habitat_field_count'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+
+    habitat_type_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=habitat_type_dataset.shape)
+#        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
+
+    habitat_properties_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=habitat_properties_dataset.shape)
+#        np.ones(habitat_properties_dataset.shape) * habitat_nodata
+
+
+    args['habitat_type_array'] = habitat_type_array
+    args['habitat_properties_array'] = habitat_properties_array
 
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
@@ -1850,64 +1860,71 @@ def combine_natural_habitats(args):
                 type_key = key
                 break
 
-        # Get rid of the path and the extension
-        basename = os.path.splitext(os.path.basename( \
-            args['shapefiles'][category][shp_name][type_key]))[0]
-
-        # Extract the type for this shapefile
+        # Extract the habitat type for this shapefile
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
         source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
         array = raster_utils.load_memory_mapped_array( \
             type_shapefile_uri, raster_utils.temporary_filename())
 
-#        raster = gdal.Open(type_shapefile_uri)
-#        band = raster.GetRasterBand(1)
+        raster = gdal.Open(type_shapefile_uri)
+        band = raster.GetRasterBand(1)
 #        array = band.ReadAsArray()
 
         tiles = args['tiles']
-
-        indices_limit_array = args['indices_limit_array']
-        shore_array = args['shore_array']
-        positions_array = args['positions_array']
-        habitat_type_array = args['habitat_type_array']
-        habitat_properties_array = args['habitat_properties_array']
-
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [start, end] = indices_limit_array[transect]
+            [start, end] = indices_limit_dataset[transect]
+            assert start == indices_limit_array[transect][0], \
+                str(start) + ' vs ' + str(indices_limit_array[transect][0])
+            assert end == indices_limit_array[transect][1], \
+                str(end) + ' vs ' + str(indices_limit_array[transect][1])
+
 
             shore = shore_array[transect]
 
             #raw_positions = transect_info[transect]['raw_positions']
             raw_positions = \
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
+
+            test_positions = \
                 (positions_array[transect, 0, start:end], \
                 positions_array[transect, 1, start:end])
             
-            if raw_positions is None:
-                print('trnsect', transect)
-                print('start, end', start, end)
-                print('positions_array[0]', positions_array[transect, 0, start:end])
-                print('positions_array[1]', positions_array[transect, 1, start:end])
-                print('positions_array', positions_array)
-                assert raw_positions is not None
+            for index in range(raw_positions[0].size):
+                assert raw_positions[0][index] == test_positions[0][index]
+                assert raw_positions[1][index] == test_positions[1][index]
             
             #Load the habitats as sampled from the raster
             source = array[raw_positions]
+            assert source.size == end - start
+#            source = source[start:end,]
 
-            # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-
-            source = source[start:end,]
+            print('start, end', start, end)
+#            print 'positions',
+            habitat_type = []
+            for position in range(end-start):
+#                print('position', position)
+#                print '(' + str(positions[0][position]) + ', ' + \
+#                    positions[1][position] + ')',
+                habitat_type.append(
+                    band.ReadAsArray(int(raw_positions[1][position]), \
+                        int(raw_positions[0][position]), 1, 1)
+                    )
+            habitat_type = np.array(habitat_type)
+            assert habitat_type.size == end - start
+            for i in range(habitat_type.size):
+                assert habitat_type[i] == source[i]
 
             # Load the habitat type buffer
             destination = habitat_type_array[transect,start:end]
+            assert destination.size == end - start
+
 
             # Overriding source_nodata so it doesn't interfere with habitat_nodata
             source[source == source_nodata] = habitat_nodata
@@ -2016,7 +2033,8 @@ def combine_natural_habitats(args):
 #            raster = None
             array = None
 
-
+    print('---------------- Stopping here ---------------- ')
+    sys.exit(0)
 
 def apply_habitat_constraints(habitat, constraints):
     print('transect size', habitat.size)
