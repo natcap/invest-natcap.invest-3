@@ -1793,6 +1793,7 @@ def combine_natural_habitats(args, transect_data_file):
     limit_group = transect_data_file['limits']
     indices_limit_dataset = limit_group['indices']
     positions_dataset = transect_data_file['ij_positions']
+    shore_dataset = transect_data_file['shore_index']
 
     
     category = 'natural habitats'
@@ -1885,7 +1886,9 @@ def combine_natural_habitats(args, transect_data_file):
                 str(end) + ' vs ' + str(indices_limit_array[transect][1])
 
 
-            shore = shore_array[transect]
+            test_shore = shore_array[transect]
+            shore = shore_dataset[transect]
+            assert np.sum(np.absolute(test_shore - shore)) < 1e-15
 
             #raw_positions = transect_info[transect]['raw_positions']
             raw_positions = \
@@ -1984,8 +1987,8 @@ def combine_natural_habitats(args, transect_data_file):
             array = raster_utils.load_memory_mapped_array( \
                 uri, raster_utils.temporary_filename())
 
-#            raster = gdal.Open(uri)
-#            band = raster.GetRasterBand(1)
+            raster = gdal.Open(uri)
+            band = raster.GetRasterBand(1)
 #            array = band.ReadAsArray()
 
 #            LOGGER.info('Extracting transect information from ' + basename)
@@ -1995,7 +1998,7 @@ def combine_natural_habitats(args, transect_data_file):
                 if transect % progress_step == 0:
                     print '.',
 
-                [start, end] = indices_limit_array[transect]
+                [start, end] = indices_limit_dataset[transect]
 
                 shore = shore_array[transect]
 
