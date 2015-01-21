@@ -1941,7 +1941,6 @@ def combine_natural_habitats(args, transect_data_file):
                 if transect % progress_step == 0:
                     print '.',
 
-                print('1')
                 [start, end] = indices_limit_dataset[transect]
 
                 raw_positions = \
@@ -1950,8 +1949,7 @@ def combine_natural_habitats(args, transect_data_file):
 
 
                 #Load the habitats as sampled from the raster
-                print('2')
-                habitat_property = np.ones(end-start) * -1
+                habitat_property = (np.ones(end-start) * -1).astype('float32')
                 for position in range(end-start):
                     habitat_property[position] = \
                         band.ReadAsArray(int(raw_positions[1][position]), \
@@ -1963,19 +1961,15 @@ def combine_natural_habitats(args, transect_data_file):
                     habitat_properties_dataset[transect, field_id, start:end]
 
                 # Save transect to file
-                print('3')
                 mask = mask_dataset[transect, start:end]
-                print('4')
 
                 destination[mask] = habitat_property[mask]
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
 
-                print('5')
                 masked_positions = \
                     (clipped_positions[0][mask], clipped_positions[1][mask])
-                print('6')
                 
             print('')
 
