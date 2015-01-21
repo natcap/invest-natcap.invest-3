@@ -373,6 +373,9 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata, \
             dtype = 'i4')
 
+    mask_dataset = transect_data_file.create_dataset('mask', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = False, dtype = 'b')
 
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
@@ -493,7 +496,7 @@ def compute_transects(args):
 
 
     combine_natural_habitats(args, transect_data_file)
-    combine_soil_types(args)
+    combine_soil_types(args, transect_data_file)
     store_climatic_forcing(args)
     store_tidal_information(args, transect_data_file)
 
@@ -1586,7 +1589,7 @@ def store_climatic_forcing(args):
 
 
 
-def combine_soil_types(args):
+def combine_soil_types(args, transect_data_file):
 
     LOGGER.info('Processing soil types...')
 
@@ -1618,6 +1621,7 @@ def combine_soil_types(args):
     category = 'soil type'
 
     hdf5_files[category] = []
+    mask_dataset = transect_data_file['mask']
 
     filenames = args['shapefiles'][category].keys()
 
@@ -1808,9 +1812,7 @@ def combine_natural_habitats(args, transect_data_file):
 
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
-    mask_dataset = transect_data_file.create_dataset('mask', \
-            (args['tiles'], args['max_transect_length']), \
-            compression = 'gzip', fillvalue = False, dtype = 'b')
+    mask_dataset = transect_data_file['mask']
 
     for shp_name in args['shapefiles'][category]:
 
@@ -1939,6 +1941,7 @@ def combine_natural_habitats(args, transect_data_file):
                 if transect % progress_step == 0:
                     print '.',
 
+                print('1')
                 [start, end] = indices_limit_dataset[transect]
 
                 raw_positions = \
@@ -1947,6 +1950,7 @@ def combine_natural_habitats(args, transect_data_file):
 
 
                 #Load the habitats as sampled from the raster
+                print('2')
                 habitat_property = np.ones(end-start) * -1
                 for position in range(end-start):
                     habitat_property[position] = \
@@ -1959,15 +1963,19 @@ def combine_natural_habitats(args, transect_data_file):
                     habitat_properties_dataset[transect, field_id, start:end]
 
                 # Save transect to file
+                print('3')
                 mask = mask_dataset[transect, start:end]
+                print('4')
 
                 destination[mask] = habitat_property[mask]
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
 
+                print('5')
                 masked_positions = \
                     (clipped_positions[0][mask], clipped_positions[1][mask])
+                print('6')
                 
             print('')
 
