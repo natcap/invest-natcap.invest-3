@@ -329,8 +329,7 @@ def compute_transects(args):
     climatic_forcing_dataset = \
         transect_data_file.create_dataset('climatic_forcing', \
             (transect_count, climatic_forcing_field_count), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
+            compression = 'gzip', fillvalue = 0)
 
     soil_type_dataset = \
         transect_data_file.create_dataset('soil_type', \
@@ -1786,10 +1785,6 @@ def combine_natural_habitats(args, transect_data_file):
     hdf5_files = args['hdf5_files']
     habitat_nodata = args['habitat_nodata']
 
-    indices_limit_array = args['indices_limit_array']
-    shore_array = args['shore_array']
-    positions_array = args['positions_array']
-
     limit_group = transect_data_file['limits']
     indices_limit_dataset = limit_group['indices']
     positions_dataset = transect_data_file['ij_positions']
@@ -1811,22 +1806,11 @@ def combine_natural_habitats(args, transect_data_file):
             compression = 'gzip', fillvalue = habitat_nodata)
 
 
-    habitat_type_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=habitat_type_dataset.shape)
-#        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
-
-    habitat_properties_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=habitat_properties_dataset.shape)
-#        np.ones(habitat_properties_dataset.shape) * habitat_nodata
-
-
-    args['habitat_type_array'] = habitat_type_array
-    args['habitat_properties_array'] = habitat_properties_array
-
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
+    mask_dataset = transect_data_file.create_dataset('mask', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = False, dtype = 'b')
 
     for shp_name in args['shapefiles'][category]:
 
@@ -1842,9 +1826,6 @@ def combine_natural_habitats(args, transect_data_file):
                 break
 
         assert habitat is not None
-
-        mask = None
-        mask_dict = {}
 
         # Build the list of field names in lower case 
         field_names_lowercase = \
@@ -1864,13 +1845,10 @@ def combine_natural_habitats(args, transect_data_file):
         # Extract the habitat type for this shapefile
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
-        source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-        array = raster_utils.load_memory_mapped_array( \
-            type_shapefile_uri, raster_utils.temporary_filename())
+        shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
 
         raster = gdal.Open(type_shapefile_uri)
         band = raster.GetRasterBand(1)
-#        array = band.ReadAsArray()
 
         tiles = args['tiles']
 
@@ -1880,70 +1858,38 @@ def combine_natural_habitats(args, transect_data_file):
                 print '.',
 
             [start, end] = indices_limit_dataset[transect]
-            assert start == indices_limit_array[transect][0], \
-                str(start) + ' vs ' + str(indices_limit_array[transect][0])
-            assert end == indices_limit_array[transect][1], \
-                str(end) + ' vs ' + str(indices_limit_array[transect][1])
-
-
-            test_shore = shore_array[transect]
-            shore = shore_dataset[transect]
-            assert np.sum(np.absolute(test_shore - shore)) < 1e-15
 
             #raw_positions = transect_info[transect]['raw_positions']
             raw_positions = \
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
 
-            test_positions = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
-            
-            for index in range(raw_positions[0].size):
-                assert raw_positions[0][index] == test_positions[0][index]
-                assert raw_positions[1][index] == test_positions[1][index]
-            
             #Load the habitats as sampled from the raster
-            source = array[raw_positions]
-            assert source.size == end - start
-#            source = source[start:end,]
-
-            print('start, end', start, end)
-#            print 'positions',
-            habitat_type = []
+            habitat_type = np.ones(end-start) * -1
             for position in range(end-start):
-#                print('position', position)
-#                print '(' + str(positions[0][position]) + ', ' + \
-#                    positions[1][position] + ')',
-                habitat_type.append(
+                habitat_type[position] = \
                     band.ReadAsArray(int(raw_positions[1][position]), \
-                        int(raw_positions[0][position]), 1, 1)
-                    )
-            habitat_type = np.array(habitat_type)
-            assert habitat_type.size == end - start
-            for i in range(habitat_type.size):
-                assert habitat_type[i] == source[i]
+                        int(raw_positions[0][position]), 1, 1)[0]
 
             # Load the habitat type buffer
-            destination = habitat_type_array[transect,start:end]
-            assert destination.size == end - start
+            destination = habitat_type_dataset[transect,start:end]
 
 
-            # Overriding source_nodata so it doesn't interfere with habitat_nodata
-            source[source == source_nodata] = habitat_nodata
+            # Overriding shapefile_nodata so it doesn't interfere with habitat_nodata
+            habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
+
 
             # Apply the habitat constraints
-#                source = \
-#                    apply_habitat_constraints(source, args['habitat_information'])
+#                habitat_type = \
+#                    apply_habitat_constraints(habitat_type, args['habitat_information'])
 #                sys.exit(0)
             
             # Compute the mask that will be used to update the values
-            mask = destination < source
-
-            mask_dict[transect] = mask
+            mask = destination < habitat_type
+            mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
-            destination[mask] = source[mask]
+            destination[mask] = habitat_type[mask]
 
             # Remove nodata
             clipped_positions = \
@@ -1954,20 +1900,20 @@ def combine_natural_habitats(args, transect_data_file):
                 (clipped_positions[0][mask], clipped_positions[1][mask])
 
             if category in args['valid_habitat_types']:
-                # Update the values using source
-                transects[masked_positions] = source[mask]
+                # Update the values using habitat_type
+                transects[masked_positions] = habitat_type[mask]
                 # Leave the transect ID on the transect's shore
+                shore = shore_dataset[transect]
                 transects[(raw_positions[0][shore], \
                     raw_positions[1][shore])] = transect
         
         print('')
 
         # Clean up
-#        band = None
-#        raster = None
-        array = None
+        band = None
+        raster = None
 
-
+        # Go through each property for the current habitat
         for field in args['shapefiles'][category][shp_name]:
 
             # Skip the field 'type'
@@ -1979,20 +1925,15 @@ def combine_natural_habitats(args, transect_data_file):
                 os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
 
             # Extract data from the current raster field
-#            print "args['field_index']['natural habitats'][" + str(habitat_id) + "]",
-#            print(args['field_index']['natural habitats'][habitat_id])
             field_id = args['field_index']['natural habitats'][habitat_id]['fields'][field.lower()]
 
             uri = args['shapefiles'][category][shp_name][field]
-            array = raster_utils.load_memory_mapped_array( \
-                uri, raster_utils.temporary_filename())
-
             raster = gdal.Open(uri)
             band = raster.GetRasterBand(1)
-#            array = band.ReadAsArray()
 
 #            LOGGER.info('Extracting transect information from ' + basename)
             
+            # Process 
             progress_step = tiles / 50
             for transect in range(tiles):
                 if transect % progress_step == 0:
@@ -2000,28 +1941,27 @@ def combine_natural_habitats(args, transect_data_file):
 
                 [start, end] = indices_limit_dataset[transect]
 
-                shore = shore_array[transect]
-
                 raw_positions = \
-                    (positions_array[transect, 0, start:end], \
-                    positions_array[transect, 1, start:end])
+                    (positions_dataset[transect, 0, start:end], \
+                    positions_dataset[transect, 1, start:end])
 
 
-                source = array[raw_positions]
+                #Load the habitats as sampled from the raster
+                habitat_property = np.ones(end-start) * -1
+                for position in range(end-start):
+                    habitat_property[position] = \
+                        band.ReadAsArray(int(raw_positions[1][position]), \
+                            int(raw_positions[0][position]), 1, 1)
 
-                # Interpolate the data to the model resolution 
-    #                source = interpolate_transect(source, i_side_fine, \
-    #                    args['model_resolution'], kind = 'nearest')
-
-                source = source[start:end,]
+                habitat_property = habitat_property[start:end,]
 
                 destination = \
-                    habitat_properties_array[transect, field_id, start:end]
+                    habitat_properties_dataset[transect, field_id, start:end]
 
                 # Save transect to file
-                mask = mask_dict[transect]
+                mask = mask_dataset[transect, start:end]
 
-                destination[mask] = source[mask]
+                destination[mask] = habitat_property[mask]
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
@@ -2032,9 +1972,8 @@ def combine_natural_habitats(args, transect_data_file):
             print('')
 
             # Close the raster before proceeding to the next one
-#            band = None
-#            raster = None
-            array = None
+            band = None
+            raster = None
 
     print('---------------- Stopping here ---------------- ')
     sys.exit(0)
