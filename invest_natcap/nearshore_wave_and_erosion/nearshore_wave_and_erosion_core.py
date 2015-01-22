@@ -331,17 +331,6 @@ def compute_transects(args):
             (transect_count, climatic_forcing_field_count), \
             compression = 'gzip', fillvalue = 0)
 
-    soil_type_dataset = \
-        transect_data_file.create_dataset('soil_type', \
-            (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-
-    soil_properties_dataset = \
-        transect_data_file.create_dataset('soil_properties', \
-            (transect_count, soil_field_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
-
     bathymetry_dataset = \
         transect_data_file.create_dataset('bathymetry', \
             (tiles, max_transect_length), \
@@ -387,20 +376,6 @@ def compute_transects(args):
             mode='w+', shape=climatic_forcing_dataset.shape)
 #        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
 
-    print('2')
-
-    soil_type_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=soil_type_dataset.shape)
-#        np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
-
-    print('3')
-
-    soil_properties_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=soil_properties_dataset.shape)
-#        np.ones(soil_properties_dataset.shape) * habitat_nodata
-
     print('6')
 
     bathymetry_array = \
@@ -438,8 +413,6 @@ def compute_transects(args):
 
 
     args['climatic_forcing_array'] = climatic_forcing_array
-    args['soil_type_array'] = soil_type_array
-    args['soil_properties_array'] = soil_properties_array
     args['bathymetry_array'] = bathymetry_array
     args['positions_array'] = positions_array
     args['shore_array'] = shore_array
@@ -502,10 +475,6 @@ def compute_transects(args):
 
     # Both the habitat type and the habitat field data are complete, save them
     climatic_forcing_dataset[...] = climatic_forcing_array[...]
-    soil_type_dataset[...] = soil_type_array[...]
-    soil_properties_dataset[...] = soil_properties_array[...]
-    habitat_type_dataset[...] = habitat_type_array[...]
-    habitat_properties_dataset[...] = habitat_properties_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
@@ -1656,20 +1625,45 @@ def combine_soil_types(args, transect_data_file):
     array = raster_utils.load_memory_mapped_array( \
         type_shapefile_uri, raster_utils.temporary_filename())
 
-#    raster = gdal.Open(type_shapefile_uri)
-#    band = raster.GetRasterBand(1)
+    raster = gdal.Open(type_shapefile_uri)
+    band = raster.GetRasterBand(1)
 #    array = band.ReadAsArray()
 
 #    LOGGER.info('Extracting priority information from ' + shp_name)
     
-    tiles = args['tiles']
-
     indices_limit_array = args['indices_limit_array']
-    shore_array = args['shore_array']
     positions_array = args['positions_array']
-    soil_type_array = args['soil_type_array']
-    soil_properties_array = args['soil_properties_array']
+    shore_array = args['shore_array']
 
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+    shore_dataset = transect_data_file['shore_index']
+
+    soil_type_dataset = \
+        transect_data_file.create_dataset('soil_type', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+
+    soil_properties_dataset = \
+        transect_data_file.create_dataset('soil_properties', \
+            (args['tiles'], args['soil_field_count'], \
+                args['max_transect_length']), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+
+    soil_type_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=soil_type_dataset.shape)
+
+    soil_properties_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=soil_properties_dataset.shape)
+
+
+
+    tiles = args['tiles']
 
     progress_step = tiles / 50
     for transect in range(tiles):
@@ -1780,6 +1774,8 @@ def combine_soil_types(args, transect_data_file):
 #        raster = None
         array = None
 
+    print('---------------- Stopping here ---------------- ')
+    sys.exit(0)
 
 
 def combine_natural_habitats(args, transect_data_file):
@@ -1794,10 +1790,6 @@ def combine_natural_habitats(args, transect_data_file):
     positions_dataset = transect_data_file['ij_positions']
     shore_dataset = transect_data_file['shore_index']
 
-    
-    category = 'natural habitats'
-
-
     habitat_type_dataset = \
         transect_data_file.create_dataset('habitat_type', \
             (args['tiles'], args['max_transect_length']), \
@@ -1809,6 +1801,8 @@ def combine_natural_habitats(args, transect_data_file):
             (args['tiles'], args['habitat_field_count'], args['max_transect_length']), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
+    
+    category = 'natural habitats'
 
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
@@ -1977,8 +1971,6 @@ def combine_natural_habitats(args, transect_data_file):
             band = None
             raster = None
 
-    print('---------------- Stopping here ---------------- ')
-    sys.exit(0)
 
 def apply_habitat_constraints(habitat, constraints):
     print('transect size', habitat.size)
