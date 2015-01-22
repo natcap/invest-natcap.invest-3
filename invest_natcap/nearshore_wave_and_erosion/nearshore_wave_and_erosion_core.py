@@ -1622,18 +1622,11 @@ def combine_soil_types(args, transect_data_file):
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
     source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
-    array = raster_utils.load_memory_mapped_array( \
-        type_shapefile_uri, raster_utils.temporary_filename())
 
     raster = gdal.Open(type_shapefile_uri)
     band = raster.GetRasterBand(1)
-#    array = band.ReadAsArray()
 
 #    LOGGER.info('Extracting priority information from ' + shp_name)
-    
-    indices_limit_array = args['indices_limit_array']
-    positions_array = args['positions_array']
-    shore_array = args['shore_array']
 
     limit_group = transect_data_file['limits']
     indices_limit_dataset = limit_group['indices']
@@ -1653,16 +1646,6 @@ def combine_soil_types(args, transect_data_file):
             compression = 'gzip', fillvalue = habitat_nodata)
 
 
-    soil_type_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=soil_type_dataset.shape)
-
-    soil_properties_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=soil_properties_dataset.shape)
-
-
-
     tiles = args['tiles']
 
     progress_step = tiles / 50
@@ -1670,25 +1653,22 @@ def combine_soil_types(args, transect_data_file):
         if transect % progress_step == 0:
             print '.',
 
-        [start, end] = indices_limit_array[transect]
+        [start, end] = indices_limit_dataset[transect]
 
         #raw_positions = transect_info[transect]['raw_positions']
         raw_positions = \
-            (positions_array[transect, 0, start:end], \
-            positions_array[transect, 1, start:end])
-        
+            (positions_dataset[transect, 0, start:end], \
+            positions_dataset[transect, 1, start:end])
+
         #Load the habitats as sampled from the raster
-        source = array[raw_positions]
-
-        # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-
-        source = source[start:end,]
+        source = np.ones(end-start) * -1
+        for position in range(end-start):
+            source[position] = \
+                band.ReadAsArray(int(raw_positions[1][position]), \
+                    int(raw_positions[0][position]), 1, 1)[0]
 
         # Load the soil type buffer
-        destination = soil_type_array[transect,start:end]
+        destination = soil_type_dataset[transect,start:end]
 
         # Overriding source_nodata so it doesn't interfere with habitat_nodata
         source[source == source_nodata] = habitat_nodata
@@ -1735,44 +1715,45 @@ def combine_soil_types(args, transect_data_file):
         array = raster_utils.load_memory_mapped_array( \
             uri, raster_utils.temporary_filename())
 
-#        raster = gdal.Open(uri)
-#        band = raster.GetRasterBand(1)
-#        array = band.ReadAsArray()
+        raster = gdal.Open(uri)
+        band = raster.GetRasterBand(1)
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [start, end] = indices_limit_array[transect]
+            [start, end] = indices_limit_dataset[transect]
 
-            shore = shore_array[transect]
+            shore = shore_dataset[transect]
 
             raw_positions = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
-
-
-            source = array[raw_positions]
-
-            # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-            source = source[start:end,]
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
+            
+            source = np.ones(end-start) * -1
+            for position in range(end-start):
+                source[position] = \
+                    band.ReadAsArray(int(raw_positions[1][position]), \
+                        int(raw_positions[0][position]), 1, 1)[0]
 
             destination = \
-                soil_properties_array[transect, field_id, start:end]
+                soil_properties_dataset[transect, field_id, start:end]
 
+            # We just copy the source to the destination, without checking 
+            # for mud as above with the soil type. This is because for soil 
+            # type, we know what value we should use: the code for mud.
+            # Here, for soil properties, we don't know what values we should
+            # be using, so we just copy the values over. It's the user's 
+            # responsibility to put valid properties for mud and gravel/sand
+            # wherever there could be two possible types of soil.
             destination = source
-
             
         print('')
 
         # Close the raster before proceeding to the next one
-#        band = None
-#        raster = None
-        array = None
+        band = None
+        raster = None
 
     print('---------------- Stopping here ---------------- ')
     sys.exit(0)
