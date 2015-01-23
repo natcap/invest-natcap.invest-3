@@ -326,11 +326,6 @@ def compute_transects(args):
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
 
-    climatic_forcing_dataset = \
-        transect_data_file.create_dataset('climatic_forcing', \
-            (transect_count, climatic_forcing_field_count), \
-            compression = 'gzip', fillvalue = 0)
-
     bathymetry_dataset = \
         transect_data_file.create_dataset('bathymetry', \
             (tiles, max_transect_length), \
@@ -371,13 +366,6 @@ def compute_transects(args):
     # can run optimally with enough memory, or use the HD otherwise...
     LOGGER.debug('Creating arrays')
 
-    climatic_forcing_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=climatic_forcing_dataset.shape)
-#        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
-
-    print('6')
-
     bathymetry_array = \
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
             mode='w+', shape=bathymetry_dataset.shape)
@@ -412,7 +400,6 @@ def compute_transects(args):
 #        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
 
 
-    args['climatic_forcing_array'] = climatic_forcing_array
     args['bathymetry_array'] = bathymetry_array
     args['positions_array'] = positions_array
     args['shore_array'] = shore_array
@@ -470,7 +457,7 @@ def compute_transects(args):
 
     combine_natural_habitats(args, transect_data_file)
     combine_soil_types(args, transect_data_file)
-    store_climatic_forcing(args)
+    store_climatic_forcing(args, transect_data_file)
     store_tidal_information(args, transect_data_file)
 
     # Both the habitat type and the habitat field data are complete, save them
@@ -1399,8 +1386,8 @@ def store_tidal_information(args, transect_data_file):
         np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
             mode='w+', shape=tidal_forcing_dataset.shape)
 
-    args['tidal_forcing_array'] = tidal_forcing_array
-    
+    indices_limit_array = args['indices_limit_array']
+    positions_array = args['positions_array']
 
 
     hdf5_files[category] = []
@@ -1439,69 +1426,73 @@ def store_tidal_information(args, transect_data_file):
             if transect % progress_step == 0:
                 print '.',
 
-#            indices_limit_array = args['indices_limit_array']
-#            positions_array = args['positions_array']
-#            tidal_forcing_array = args['tidal_forcing_array']
-
+            [start_test, end_test] = indices_limit_array[transect]
             [start, end] = indices_limit_dataset[transect]
+            assert start == start_test
+            assert end == end_test
 
             if end < 0:
                 continue
 
-            # The climatic data is taken as much offshore as possible
+            # Load tidal forcing
             positions = \
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
+            positions_test = \
+                (positions_array[transect, 0, start:end], \
+                positions_array[transect, 1, start:end])
+            assert positions_dataset[0].size == positions_array[0].size
+            for i in range(positions_test[0].size):
+                assert positions[0][i] == positions_test[0][i]
+                assert positions[1][i] == positions_test[1][i]
             
-            print('start, end', start, end)
-#            print 'positions',
-            tidal_forcing = []
+            tidal_forcing = np.ones(end-start)
             for position in range(end-start):
-#                print('position', position)
-#                print '(' + str(positions[0][position]) + ', ' + \
-#                    positions[1][position] + ')',
-                tidal_forcing.append(
-                    band.ReadAsArray(positions[1][position], \
-                        positions[0][position], 1, 1)
-                    )
-#            print('')
-
-#            tidal_forcing = np.array(tidal_forcing)
+                tidal_forcing[position] = \
+                    band.ReadAsArray(int(positions[1][position]), \
+                        int(positions[0][position]), 1, 1)[0]
 
             source = array[positions]
+            assert source.size == tidal_forcing.size
+            for i in range(tidal_forcing.size):
+                assert source[i] == tidal_forcing[i]
 
             source = source[source != habitat_nodata]
-
-            print('tidal_forcing', tidal_forcing)
-#            print('positions', zip(positions[0], positions[1]))
-            print('source', source)
-            assert np.sum(np.absolute(source - tidal_forcing)) < 1e-15
 
             if source.size:
                 tidal_value = np.average(source)
             else:
-#                LOGGER.warning('No ' + field + ' information for transect ' + str(transect))
                 tidal_value = habitat_nodata
 
             # Copy directly to destination
-#            tidal_forcing_array[transect, field_id] = tidal_value
             tidal_forcing_dataset[transect, field_id] = tidal_value
-
 
         # Closing the raster and band before reuse
         band = None
         raster = None
 
-#    tidal_forcing_dataset[...] = tidal_forcing_array[...]
+
+    print('---------------- Stopping here ---------------- ')
+    sys.exit(0)
 
 
 
-def store_climatic_forcing(args):
+
+def store_climatic_forcing(args, transect_data_file):
 
     LOGGER.info('Processing climatic forcing...')
     
     hdf5_files = args['hdf5_files']
     habitat_nodata = args['habitat_nodata']
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (args['tiles'], args['climatic_forcing_field_count']), \
+            compression = 'gzip', fillvalue = 0)
 
     # Create 'climatic forcing' category
     category = 'climatic forcing'
@@ -1513,7 +1504,6 @@ def store_climatic_forcing(args):
     assert len(filenames) == 1, 'Detected more than one climatic forcing file'
 
     shp_name = filenames[0]
-
     
     for field in args['shapefiles'][category][shp_name]:
 
@@ -1525,37 +1515,28 @@ def store_climatic_forcing(args):
 
         source_nodata = raster_utils.get_nodata_from_uri(file_uri)
 
-        array = raster_utils.load_memory_mapped_array( \
-            file_uri, raster_utils.temporary_filename())
-
-#        raster = gdal.Open(file_uri)
-#        band = raster.GetRasterBand(1)
-#        array = band.ReadAsArray()
+        raster = gdal.Open(file_uri)
+        band = raster.GetRasterBand(1)
 
         tiles = args['tiles']
-
-        indices_limit_array = args['indices_limit_array']
-        positions_array = args['positions_array']
-        climatic_forcing_array = args['climatic_forcing_array']
-
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [_, end] = indices_limit_array[transect]
+            [_, end] = indices_limit_dataset[transect]
 
             # The climatic data is taken as much offshore as possible
             position = \
-                (positions_array[transect, 0, end-1], \
-                positions_array[transect, 1, end-1])
-            
+                (positions_dataset[transect, 0, end-1], \
+                positions_dataset[transect, 1, end-1])
+
             # Copy directly to destination
-            climatic_forcing_array[transect, field_id] = array[position]
+            climatic_forcing_dataset[transect, field_id] = \
+                band.ReadAsArray(int(position[1]), int(position[0]), 1, 1)[0]
         
         print('')
-
 
 
 def combine_soil_types(args, transect_data_file):
@@ -1754,9 +1735,6 @@ def combine_soil_types(args, transect_data_file):
         # Close the raster before proceeding to the next one
         band = None
         raster = None
-
-    print('---------------- Stopping here ---------------- ')
-    sys.exit(0)
 
 
 def combine_natural_habitats(args, transect_data_file):
