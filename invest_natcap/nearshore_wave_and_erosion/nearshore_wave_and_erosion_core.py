@@ -79,10 +79,6 @@ def compute_transects(args):
     transects = \
         sp.sparse.lil_matrix((transect_band.YSize, transect_band.XSize))
     
-#    print('past transects. size', \
-#        (transect_band.YSize, transect_band.XSize), \
-#        'blocksize', block_size)
-
     # Store transect profiles to reconstruct shore profile
     args['shore_profile_uri'] = os.path.join( \
         os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
@@ -364,68 +360,31 @@ def compute_transects(args):
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
-    LOGGER.debug('Creating arrays')
-
-    bathymetry_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=bathymetry_dataset.shape)
-#        np.ones(bathymetry_dataset.shape) * habitat_nodata
-
-    print('7')
-
-    positions_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
-            mode='w+', shape=positions_dataset.shape)
-#        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
-
-    print('8')
-
-    shore_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=shore_dataset.shape)
-#        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
-
-    print('9')
-
-    indices_limit_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
-            mode='w+', shape=indices_limit_dataset.shape)
-#        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
-
-    print('10')
-
-    coordinates_limits_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
-            mode='w+', shape=coordinates_limits_dataset.shape)
-#        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
-
-
-    args['bathymetry_array'] = bathymetry_array
-    args['positions_array'] = positions_array
-    args['shore_array'] = shore_array
-    args['indices_limit_array'] = indices_limit_array
-    args['coordinates_limits_array'] = coordinates_limits_array
-
-
     LOGGER.debug('Storing transect_info data')
 
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
-        bathymetry_array[transect, start:end] = \
+        bathymetry_dataset[transect, start:end] = \
             transect_info[transect]['depths'][start:end]
 
-        positions_array[transect, 0, start:end] = \
+        positions_dataset[transect, 0, start:end] = \
             transect_info[transect]['raw_positions'][0][start:end]
 
-        positions_array[transect, 1, start:end] = \
+        positions_dataset[transect, 1, start:end] = \
             transect_info[transect]['raw_positions'][1][start:end]
 
-        indices_limit_array[transect] = [start, end]
+        indices_limit_dataset[transect] = [start, end]
 
-        shore_array[transect] = shore
+        shore_dataset[transect] = shore
 
-        coordinates_limits_array[transect] = [ \
+        coordinates_limits_dataset[transect] = [ \
+            transect_info[transect]['raw_positions'][0][start], \
+            transect_info[transect]['raw_positions'][1][start], \
+            transect_info[transect]['raw_positions'][0][end-1], \
+            transect_info[transect]['raw_positions'][1][end-1], \
+            ]
+        coordinates_limits_dataset[transect] = [ \
             transect_info[transect]['raw_positions'][0][start], \
             transect_info[transect]['raw_positions'][1][start], \
             transect_info[transect]['raw_positions'][0][end-1], \
@@ -433,13 +392,6 @@ def compute_transects(args):
             ]
 
         transect_info[transect] = None
-
-    bathymetry_dataset[...] = bathymetry_array[...]
-    positions_dataset[...] = positions_array[...]
-    indices_limit_dataset[...] = indices_limit_array[...]
-    shore_dataset[...] = shore_array[...]
-    coordinates_limits_dataset[...] = coordinates_limits_array[...]
-
 
 #    for category in args['shapefiles']:
 #        print('')
@@ -1382,14 +1334,6 @@ def store_tidal_information(args, transect_data_file):
             dtype = 'i4')
 
 
-    tidal_forcing_array = \
-        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
-            mode='w+', shape=tidal_forcing_dataset.shape)
-
-    indices_limit_array = args['indices_limit_array']
-    positions_array = args['positions_array']
-
-
     hdf5_files[category] = []
 
     filenames = args['shapefiles'][category].keys()
@@ -1426,10 +1370,7 @@ def store_tidal_information(args, transect_data_file):
             if transect % progress_step == 0:
                 print '.',
 
-            [start_test, end_test] = indices_limit_array[transect]
             [start, end] = indices_limit_dataset[transect]
-            assert start == start_test
-            assert end == end_test
 
             if end < 0:
                 continue
@@ -1438,13 +1379,6 @@ def store_tidal_information(args, transect_data_file):
             positions = \
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
-            positions_test = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
-            assert positions_dataset[0].size == positions_array[0].size
-            for i in range(positions_test[0].size):
-                assert positions[0][i] == positions_test[0][i]
-                assert positions[1][i] == positions_test[1][i]
             
             tidal_forcing = np.ones(end-start)
             for position in range(end-start):
@@ -1452,15 +1386,10 @@ def store_tidal_information(args, transect_data_file):
                     band.ReadAsArray(int(positions[1][position]), \
                         int(positions[0][position]), 1, 1)[0]
 
-            source = array[positions]
-            assert source.size == tidal_forcing.size
-            for i in range(tidal_forcing.size):
-                assert source[i] == tidal_forcing[i]
+            tidal_forcing = tidal_forcing[tidal_forcing != habitat_nodata]
 
-            source = source[source != habitat_nodata]
-
-            if source.size:
-                tidal_value = np.average(source)
+            if tidal_forcing.size:
+                tidal_value = np.average(tidal_forcing)
             else:
                 tidal_value = habitat_nodata
 
@@ -1470,6 +1399,8 @@ def store_tidal_information(args, transect_data_file):
         # Closing the raster and band before reuse
         band = None
         raster = None
+
+        print('')
 
 
     print('---------------- Stopping here ---------------- ')
