@@ -99,6 +99,12 @@ def compute_transects(args):
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
 
+    row_count = landmass_band.YSize 
+    col_count = landmass_band.XSize
+
+#    landmass_band = None
+#    landmass_raster = None
+
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
     message = 'Cannot open file ' + args['aoi_raster_uri']
@@ -109,21 +115,14 @@ def compute_transects(args):
     bathymetry = raster_utils.load_memory_mapped_array( \
         args['bathymetry_raster_uri'], raster_utils.temporary_filename())
 
-    raster = gdal.Open(args['bathymetry_raster_uri'])
-    message = 'Cannot open file ' + args['bathymetry_raster_uri']
-    assert raster is not None, message
-    band = raster.GetRasterBand(1)
-    band = None
-    raster = None
-
-    row_count = landmass_band.YSize 
-    col_count = landmass_band.XSize
-
    # Get the fine and coarse raster cell sizes, ensure consistent signs
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
+
+    args['i_side_coarse'] = i_side_coarse
+    args['i_side_fine'] = i_side_fine
 
     # Start and stop coordinates in meters
     i_start = int(round(fine_geotransform[3]))
@@ -178,7 +177,6 @@ def compute_transects(args):
             #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
 
             # Look for landmass cover on tile
-            #tile = landmass[i_base:i_base+i_offset, :j_base+j_offset]
             tile = landmass_band.ReadAsArray(j_base, i_base, j_offset, i_offset)
 
             land = np.sum(tile)
@@ -221,8 +219,8 @@ def compute_transects(args):
                     # Compute raw transect depths
                     raw_depths, raw_positions = \
                         compute_raw_transect_depths(transect_position, \
-                        transect_orientation, bathymetry, \
-                        landmass, i_side_fine, \
+                        transect_orientation, bathymetry, args['bathymetry_raster_uri'], \
+                        landmass, args['landmass_raster_uri'], i_side_fine, \
                         args['max_land_profile_len'], \
                         args['max_land_profile_height'], \
                         args['max_profile_length'])
@@ -292,6 +290,8 @@ def compute_transects(args):
     landmass = None
     aoi_band = None
     aoi_raster = None
+    bathymetry_band = None
+    bathymetry_raster = None
     landmass_band = None
     landmass_raster = None
 
@@ -412,15 +412,6 @@ def compute_transects(args):
     store_climatic_forcing(args, transect_data_file)
     store_tidal_information(args, transect_data_file)
 
-    # Both the habitat type and the habitat field data are complete, save them
-    climatic_forcing_dataset[...] = climatic_forcing_array[...]
-
-    # Add size and model resolution to the attributes
-    habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
-    habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
-    habitat_type_dataset.attrs.create('bathymetry_resolution', i_side_fine)
-    
-
     # Store shore information gathered during the computation
     LOGGER.info('Storing transect information...')
     n_rows = transect_band.YSize
@@ -491,8 +482,6 @@ def compute_transects(args):
 
 
     # We're done, we close the file
-    #habitat_type_dataset = None
-    #habitat_properties_dataset = None
     transect_data_file.close()
 
     return transect_data_uri
@@ -656,7 +645,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(2000, 2500): #transect_count):
+#    for transect in range(2000, 2500): # Debug
+    for transect in range(transect_count): # Release
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
@@ -1267,10 +1257,10 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     interp_J = np.unique(interp_J)
 
     # Compute the actual interpolation
-    print('Interpolating for', interp_I.size * interp_J.size, 'points...')
+    LOGGER.info('Interpolating', interp_I.size * interp_J.size, 'points...')
     surface = F(interp_I, interp_J)
 
-    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
+#    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
 
     # Save the values in a raster
     wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
@@ -1284,12 +1274,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
 
-    wave_array = raster_utils.load_memory_mapped_array( \
-        wave_interpolation_uri, raster_utils.temporary_filename())
+#    wave_array = raster_utils.load_memory_mapped_array( \
+#        wave_interpolation_uri, raster_utils.temporary_filename())
 
-#    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
-#    wave_band = wave_raster.GetRasterBand(1)
-#    wave_array = wave_band.ReadAsArray()
+    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
+    wave_band = wave_raster.GetRasterBand(1)
+    wave_array = wave_band.ReadAsArray()
 
     II, JJ = np.meshgrid(interp_I, interp_J)
 
@@ -1299,13 +1289,13 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     wave_array[([0], [0])] = 1.
 
-#    wave_band.WriteArray(wave_array)
+    wave_band.WriteArray(wave_array)
 
     wave_array = None
-#    wave_band = None
-#    wave_raster.FlushCache()
-#    gdal.Dataset.__swig_destroy__(wave_raster)
-#    wave_raster = None
+    wave_band = None
+    wave_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(wave_raster)
+    wave_raster = None
 
     raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
 
@@ -1322,17 +1312,14 @@ def store_tidal_information(args, transect_data_file):
     indices_limit_dataset = limit_group['indices']
     positions_dataset = transect_data_file['ij_positions']
 
-
     # Create new category
     category = 'tidal information'
-
 
     tidal_forcing_dataset = \
         transect_data_file.create_dataset('tidal forcing', \
             (args['tiles'], args['tidal_forcing_field_count']), \
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
-
 
     hdf5_files[category] = []
 
@@ -1355,13 +1342,8 @@ def store_tidal_information(args, transect_data_file):
 
         source_nodata = raster_utils.get_nodata_from_uri(tidal_file_uri)
 
-#        array = raster_utils.load_memory_mapped_array( \
-#            tidal_file_uri, raster_utils.temporary_filename())
-
         raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
-        # Remove once source agrees with tidal_forcing in the assert
-        array = band.ReadAsArray()
 
         tiles = args['tiles']
  
@@ -1401,10 +1383,6 @@ def store_tidal_information(args, transect_data_file):
         raster = None
 
         print('')
-
-
-    print('---------------- Stopping here ---------------- ')
-    sys.exit(0)
 
 
 
@@ -1603,9 +1581,8 @@ def combine_soil_types(args, transect_data_file):
     print('')
 
     # Clean up
-#    band = None
-#    raster = None
-    array = None
+    band = None
+    raster = None
 
     for field in args['shapefiles'][category][shp_name]:
 
@@ -1624,9 +1601,6 @@ def combine_soil_types(args, transect_data_file):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         uri = args['shapefiles'][category][shp_name][field]
-        array = raster_utils.load_memory_mapped_array( \
-            uri, raster_utils.temporary_filename())
-
         raster = gdal.Open(uri)
         band = raster.GetRasterBand(1)
 
@@ -1686,6 +1660,12 @@ def combine_natural_habitats(args, transect_data_file):
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
     
+    # Add size and model resolution to the attributes
+    habitat_type_dataset.attrs.create('transect_spacing', args['i_side_coarse'])
+    habitat_type_dataset.attrs.create('model_resolution', args['model_resolution'])
+    habitat_type_dataset.attrs.create('bathymetry_resolution', args['i_side_fine'])
+    
+
     habitat_properties_dataset = \
         transect_data_file.create_dataset('habitat_properties', \
             (args['tiles'], args['habitat_field_count'], args['max_transect_length']), \
@@ -1765,7 +1745,7 @@ def combine_natural_habitats(args, transect_data_file):
             habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
 
 
-            # Apply the habitat constraints
+            # Apply habitat constraints
 #                habitat_type = \
 #                    apply_habitat_constraints(habitat_type, args['habitat_information'])
 #                sys.exit(0)
@@ -2009,7 +1989,7 @@ def compute_transect_orientation(position, orientation, landmass):
 
 
 def compute_raw_transect_depths(shore_point, \
-    direction_vector, bathymetry, landmass, model_resolution, \
+    direction_vector, bathymetry, bathymetry_uri, landmass, landmass_uri, model_resolution, \
     max_land_profile_len, max_land_profile_height, \
     max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
@@ -2017,8 +1997,14 @@ def compute_raw_transect_depths(shore_point, \
     max_land_len = max_land_profile_len / model_resolution
     max_sea_len = 1000 * max_sea_profile_len / model_resolution
 
+    bathymetry_raster = gdal.Open(bathymetry_uri)
+    bathymetry_band = bathymetry_raster.GetRasterBand(1)
+
+    #landmass_raster = gdal.Open(landmass_uri)
+    #landmass_band = landmass_raster.GetRasterBand(1)
+
     # Limits on maximum coordinates
-    bathymetry_shape = bathymetry.shape
+    bathymetry_shape = (bathymetry_band.YSize, bathymetry_band.XSize)
 
     depths = np.ones((max_land_len + max_sea_len + 1))*-20000
 
@@ -2052,19 +2038,27 @@ def compute_raw_transect_depths(shore_point, \
     start_j = p_j - d_j
 
     # If no land behind the piece of land, stop there and report 0
-    if not landmass[int(round(start_i)), int(round(start_j))]:
+    land = landmass[int(round(start_i)), int(round(start_j))]
+    # The code below might work, but is risky, because the landmass band
+    # is already used in the parent function. Opening it again here, 
+    # or passing it as a parameter is unsafe.
+#    land_test = landmass[int(round(start_i)), int(round(start_j))]
+#    land = landmass_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+#    assert land_test == land, str(land_test) + " vs " + str(land)
+
+    if not land:
         inland_steps = 0
     # Else, count from 1
     else:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
-            elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+            elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
             # Hit either nodata, or some bad data
             if elevation <= -12000:
                 inland_steps -= 1
                 break
             # Stop if shore is reached
-            if not landmass[int(round(start_i)), int(round(start_j))]:
+            if not elevation:
                 inland_steps -= 1
                 break
             # Stop at maximum elevation
@@ -2095,7 +2089,8 @@ def compute_raw_transect_depths(shore_point, \
         if landmass[int(round(start_i)), int(round(start_j))]:
             offshore_steps -= 1
             break
-        elevation = bathymetry[int(round(start_i)), int(round(start_j))]
+        elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+
         # Hit either nodata, or some bad data
         if elevation <= -12000:
             offshore_steps -= 1
