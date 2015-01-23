@@ -1,31 +1,23 @@
-import crop_production_core
+import json
+import operator
+import sys
+import random
+import math
+import datetime
+import time
+import copy
+import os
 import logging
 
-import os
-
+import numpy
 from osgeo import gdal, ogr, osr
 #gdal.UseExceptions()
 
 import invest_natcap
 from invest_natcap import raster_utils
 from invest_natcap import reporting
+import crop_production_core
 
-import json
-
-import operator
-
-import numpy
-
-import sys
-
-import random
-
-import math
-
-import datetime
-import time
-
-import copy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

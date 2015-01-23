@@ -78,7 +78,6 @@ def compute_transects(args):
     block_size = transect_band.GetBlockSize()
     transects = \
         sp.sparse.lil_matrix((transect_band.YSize, transect_band.XSize))
-#    transects = transect_band.ReadAsArray()
     
 #    print('past transects. size', \
 #        (transect_band.YSize, transect_band.XSize), \
@@ -93,19 +92,16 @@ def compute_transects(args):
     shore_band = shore_raster.GetRasterBand(1)
     shore = \
         sp.sparse.lil_matrix((shore_band.XSize, shore_band.YSize))
-#    shore_profile = shore_band.ReadAsArray()
-
-#    print('past shore')
 
     # Landmass
+    landmass = raster_utils.load_memory_mapped_array( \
+        args['landmass_raster_uri'], raster_utils.temporary_filename())
+    
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
     message = 'Cannot open file ' + args['landmass_raster_uri']
     assert landmass_raster is not None, message
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
-    landmass = landmass_band.ReadAsArray()
-    
-#    print('past landmass')
 
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
@@ -113,23 +109,21 @@ def compute_transects(args):
     assert aoi_raster is not None, message
     aoi_band = aoi_raster.GetRasterBand(1)
     
-#    print('past AOI')
-
     # Bathymetry
+    bathymetry = raster_utils.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+
     raster = gdal.Open(args['bathymetry_raster_uri'])
     message = 'Cannot open file ' + args['bathymetry_raster_uri']
     assert raster is not None, message
     band = raster.GetRasterBand(1)
-    bathymetry = band.ReadAsArray()
     band = None
     raster = None
 
     row_count = landmass_band.YSize 
     col_count = landmass_band.XSize
 
-#    print('past bathymetry')
-
-   # Get the fine and coarse raster cell sizes, making sure the signs are consistent
+   # Get the fine and coarse raster cell sizes, ensure consistent signs
     i_side_fine = int(round(fine_geotransform[1]))
     j_side_fine = int(round(fine_geotransform[5]))
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
@@ -150,6 +144,7 @@ def compute_transects(args):
     j_offset = j_side_coarse/j_side_fine + 6
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
+
 
     tiles = 0 # Number of valid tiles
 
@@ -236,7 +231,7 @@ def compute_transects(args):
                         args['max_land_profile_height'], \
                         args['max_profile_length'])
 
-                    # The index positions might be outside of valid bathimetry
+                    # The index positions might be outside of valid bathymetry
                     if raw_depths is None:
                         continue
 
@@ -273,7 +268,7 @@ def compute_transects(args):
                         'depths':smoothed_depths[start:end], \
                         'clip_limits':(0, shore-start, end-start)})
 
-                    # Update the logest transect length if necessary
+                    # Update the longest transect length if necessary
                     if (end - start) > max_transect_length:
                         max_transect_length = end - start
                     
@@ -310,6 +305,7 @@ def compute_transects(args):
 #    tiles = 50
     
     args['tiles'] = tiles
+    args['max_transect_length'] = max_transect_length
 
     LOGGER.debug('found %i tiles.' % tiles)
 
@@ -325,42 +321,10 @@ def compute_transects(args):
     transect_data_uri = \
         os.path.join(args['intermediate_dir'], 'transect_data.h5')
     
+    LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
+
     transect_data_file = h5py.File(transect_data_uri, 'w')
     
-
-    tidal_forcing_dataset = \
-        transect_data_file.create_dataset('tidal forcing', \
-            (transect_count, tidal_forcing_field_count), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-
-    climatic_forcing_dataset = \
-        transect_data_file.create_dataset('climatic_forcing', \
-            (transect_count, climatic_forcing_field_count), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-
-    soil_type_dataset = \
-        transect_data_file.create_dataset('soil_type', \
-            (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-
-    soil_properties_dataset = \
-        transect_data_file.create_dataset('soil_properties', \
-            (transect_count, soil_field_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
-
-    habitat_type_dataset = \
-        transect_data_file.create_dataset('habitat_type', \
-            (transect_count, max_transect_length), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
-    
-    habitat_properties_dataset = \
-        transect_data_file.create_dataset('habitat_properties', \
-            (transect_count, habitat_field_count, max_transect_length), \
-            compression = 'gzip', fillvalue = habitat_nodata)
 
     bathymetry_dataset = \
         transect_data_file.create_dataset('bathymetry', \
@@ -393,54 +357,57 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata, \
             dtype = 'i4')
 
+    mask_dataset = transect_data_file.create_dataset('mask', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = False, dtype = 'b')
 
     # TODO: Break this up so we don't use so much memory
-    tidal_forcing_array = \
-        np.ones(tidal_forcing_dataset.shape) * habitat_nodata
-
-    climatic_forcing_array = \
-        np.ones(climatic_forcing_dataset.shape) * habitat_nodata
-
-    soil_type_array = \
-        np.ones(soil_type_dataset.shape).astype(int) * habitat_nodata
-
-    soil_properties_array = \
-        np.ones(soil_properties_dataset.shape) * habitat_nodata
-
-    habitat_type_array = \
-        np.ones(habitat_type_dataset.shape).astype(int) * habitat_nodata
-
-    habitat_properties_array = \
-        np.ones(habitat_properties_dataset.shape) * habitat_nodata
+    # On a second thought, this might be the best option: the model
+    # can run optimally with enough memory, or use the HD otherwise...
+    LOGGER.debug('Creating arrays')
 
     bathymetry_array = \
-        np.ones(bathymetry_dataset.shape) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=bathymetry_dataset.shape)
+#        np.ones(bathymetry_dataset.shape) * habitat_nodata
+
+    print('7')
 
     positions_array = \
-        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=positions_dataset.shape)
+#        np.ones(positions_dataset.shape).astype(int) * habitat_nodata
+
+    print('8')
 
     shore_array = \
-        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=shore_dataset.shape)
+#        np.ones(shore_dataset.shape).astype(int) * habitat_nodata
+
+    print('9')
 
     indices_limit_array = \
-        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=indices_limit_dataset.shape)
+#        np.ones(indices_limit_dataset.shape).astype(int) * habitat_nodata
+
+    print('10')
 
     coordinates_limits_array = \
-        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
+        np.memmap(raster_utils.temporary_filename(), dtype = 'int32', \
+            mode='w+', shape=coordinates_limits_dataset.shape)
+#        np.ones(coordinates_limits_dataset.shape) * habitat_nodata
 
 
-    args['tidal_forcing_array'] = tidal_forcing_array
-    args['climatic_forcing_array'] = climatic_forcing_array
-    args['soil_type_array'] = soil_type_array
-    args['soil_properties_array'] = soil_properties_array
-    args['habitat_type_array'] = habitat_type_array
-    args['habitat_properties_array'] = habitat_properties_array
     args['bathymetry_array'] = bathymetry_array
     args['positions_array'] = positions_array
     args['shore_array'] = shore_array
     args['indices_limit_array'] = indices_limit_array
     args['coordinates_limits_array'] = coordinates_limits_array
 
+
+    LOGGER.debug('Storing transect_info data')
 
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
@@ -467,6 +434,11 @@ def compute_transects(args):
 
         transect_info[transect] = None
 
+    bathymetry_dataset[...] = bathymetry_array[...]
+    positions_dataset[...] = positions_array[...]
+    indices_limit_dataset[...] = indices_limit_array[...]
+    shore_dataset[...] = shore_array[...]
+    coordinates_limits_dataset[...] = coordinates_limits_array[...]
 
 
 #    for category in args['shapefiles']:
@@ -479,26 +451,17 @@ def compute_transects(args):
 
 
     # HDF5 file container
-    hdf5_files = {}
+    args['hdf5_files'] = {}
+    args['habitat_nodata'] = habitat_nodata
 
 
-    combine_natural_habitats(args, hdf5_files, habitat_nodata)
-    combine_soil_types(args, hdf5_files, habitat_nodata)
-    store_climatic_forcing(args, hdf5_files, habitat_nodata)
-    store_tidal_information(args, hdf5_files, habitat_nodata)
+    combine_natural_habitats(args, transect_data_file)
+    combine_soil_types(args, transect_data_file)
+    store_climatic_forcing(args, transect_data_file)
+    store_tidal_information(args, transect_data_file)
 
     # Both the habitat type and the habitat field data are complete, save them
-    tidal_forcing_dataset[...] = tidal_forcing_array[...]
     climatic_forcing_dataset[...] = climatic_forcing_array[...]
-    soil_type_dataset[...] = soil_type_array[...]
-    soil_properties_dataset[...] = soil_properties_array[...]
-    habitat_type_dataset[...] = habitat_type_array[...]
-    habitat_properties_dataset[...] = habitat_properties_array[...]
-    bathymetry_dataset[...] = bathymetry_array[...]
-    positions_dataset[...] = positions_array[...]
-    indices_limit_dataset[...] = indices_limit_array[...]
-    coordinates_limits_dataset[...] = coordinates_limits_array[...]
-    shore_dataset[...] = shore_array[...]
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', i_side_coarse)
@@ -741,9 +704,9 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(transect_count):
+    for transect in range(2000, 2500): #transect_count):
 #        print('')
-        print('Computing nearshore waves and erosion on transect', transect_count - transect)
+        print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -1192,9 +1155,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     # Build mask to remove transect portions that are too far 
     # from the area we're interested in
-    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-    band = bathymetry.GetRasterBand(1)
-    transect_mask = band.ReadAsArray()
+    transect_mask = raster_utils.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+
+#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
+#    band = bathymetry.GetRasterBand(1)
+#    transect_mask = band.ReadAsArray()
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1214,7 +1180,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     for transect in intersected_transects:
 
-#        print('intersected transect', transect)
+        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
@@ -1228,13 +1194,18 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
             end = first_nan[0]
 
         # Interpolate delta_y: add key values for x and y
-        # First value is 0
+        # First value is 0 (no correction)
         delta_y = [0.]  # y
         x = [start] # x
-            
-#        print('current_transect', current_transect)
 
-        for i in range(len(current_transect)):
+
+        # Special case for first entry
+        coord, index, value = current_transect[0]
+        
+        if index == 0:
+            delta_y = [intersection[coord] - value]  # y
+
+        for i in range(1, len(current_transect)):
 
             # Fill in subsequent values using intersection data
             coord, index, value = current_transect[i]
@@ -1250,6 +1221,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
             delta_y.append(0.)
             x.append(end-1)
 
+        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+            str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
+
+        if len(delta_y) == 1:
+            continue
+
         delta_y = np.array(delta_y)
         x = np.array(x)
 
@@ -1264,13 +1241,15 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         # Run the interpolation:
         f = interpolate.interp1d(x, delta_y, 'linear')
 
-        inerpolation_range = range(start, end)
-        interpolated_delta_y = f(inerpolation_range)
+        interpolation_range = range(start, end)
+        interpolated_delta_y = f(interpolation_range)
 
         if np.isnan(interpolated_delta_y).any():
             print('current_transect', current_transect)
             print('wave_dataset[transect,start:end]', wave_dataset[transect,start:end])
+            print('x', x)
             print('delta_y', delta_y)
+            print('interpolation_range', interpolation_range)
             print('interpolated_delta_y', interpolated_delta_y)
             print('any', np.isnan(interpolated_delta_y).any(), \
                 'count', np.sum(np.isnan(interpolated_delta_y).any()))
@@ -1353,9 +1332,12 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
 
-    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
-    wave_band = wave_raster.GetRasterBand(1)
-    wave_array = wave_band.ReadAsArray()
+    wave_array = raster_utils.load_memory_mapped_array( \
+        wave_interpolation_uri, raster_utils.temporary_filename())
+
+#    wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
+#    wave_band = wave_raster.GetRasterBand(1)
+#    wave_array = wave_band.ReadAsArray()
 
     II, JJ = np.meshgrid(interp_I, interp_J)
 
@@ -1365,24 +1347,48 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 
     wave_array[([0], [0])] = 1.
 
-    wave_band.WriteArray(wave_array)
+#    wave_band.WriteArray(wave_array)
 
     wave_array = None
-    wave_band = None
-    wave_raster.FlushCache()
-    gdal.Dataset.__swig_destroy__(wave_raster)
-    wave_raster = None
+#    wave_band = None
+#    wave_raster.FlushCache()
+#    gdal.Dataset.__swig_destroy__(wave_raster)
+#    wave_raster = None
 
     raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
 
 
 
-def store_tidal_information(args, hdf5_files, habitat_nodata):
+def store_tidal_information(args, transect_data_file):
 
     LOGGER.info('Processing tidal information...')
+
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
     
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
+
     # Create new category
     category = 'tidal information'
+
+
+    tidal_forcing_dataset = \
+        transect_data_file.create_dataset('tidal forcing', \
+            (args['tiles'], args['tidal_forcing_field_count']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+
+
+    tidal_forcing_array = \
+        np.memmap(raster_utils.temporary_filename(), dtype = 'float32', \
+            mode='w+', shape=tidal_forcing_dataset.shape)
+
+    indices_limit_array = args['indices_limit_array']
+    positions_array = args['positions_array']
+
 
     hdf5_files[category] = []
 
@@ -1392,61 +1398,102 @@ def store_tidal_information(args, hdf5_files, habitat_nodata):
 
     shp_name = filenames[0]
 
-    
     for field in args['shapefiles'][category][shp_name]:
 
         # Retreive the index for this field
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         # Extract the type for this shapefile
-        shapefile_uri = args['shapefiles'][category][shp_name][field]
+        tidal_file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
-        raster = gdal.Open(shapefile_uri)
+        raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
+
+        source_nodata = raster_utils.get_nodata_from_uri(tidal_file_uri)
+
+#        array = raster_utils.load_memory_mapped_array( \
+#            tidal_file_uri, raster_utils.temporary_filename())
+
+        raster = gdal.Open(tidal_file_uri)
+        band = raster.GetRasterBand(1)
+        # Remove once source agrees with tidal_forcing in the assert
         array = band.ReadAsArray()
 
         tiles = args['tiles']
-
-        indices_limit_array = args['indices_limit_array']
-        positions_array = args['positions_array']
-        positions_array = args['positions_array']
-        tidal_forcing_array = args['tidal_forcing_array']
-
-
+ 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [start, end] = indices_limit_array[transect]
+            [start_test, end_test] = indices_limit_array[transect]
+            [start, end] = indices_limit_dataset[transect]
+            assert start == start_test
+            assert end == end_test
 
-            # The climatic data is taken as much offshore as possible
+            if end < 0:
+                continue
+
+            # Load tidal forcing
             positions = \
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
+            positions_test = \
                 (positions_array[transect, 0, start:end], \
                 positions_array[transect, 1, start:end])
+            assert positions_dataset[0].size == positions_array[0].size
+            for i in range(positions_test[0].size):
+                assert positions[0][i] == positions_test[0][i]
+                assert positions[1][i] == positions_test[1][i]
             
+            tidal_forcing = np.ones(end-start)
+            for position in range(end-start):
+                tidal_forcing[position] = \
+                    band.ReadAsArray(int(positions[1][position]), \
+                        int(positions[0][position]), 1, 1)[0]
+
             source = array[positions]
+            assert source.size == tidal_forcing.size
+            for i in range(tidal_forcing.size):
+                assert source[i] == tidal_forcing[i]
 
             source = source[source != habitat_nodata]
 
             if source.size:
                 tidal_value = np.average(source)
             else:
-#                LOGGER.warning('No ' + field + ' information for transect ' + str(transect))
                 tidal_value = habitat_nodata
 
             # Copy directly to destination
-            tidal_forcing_array[transect, field_id] = tidal_value
-        
-        print('')
+            tidal_forcing_dataset[transect, field_id] = tidal_value
+
+        # Closing the raster and band before reuse
+        band = None
+        raster = None
+
+
+    print('---------------- Stopping here ---------------- ')
+    sys.exit(0)
 
 
 
-def store_climatic_forcing(args, hdf5_files, habitat_nodata):
+
+def store_climatic_forcing(args, transect_data_file):
 
     LOGGER.info('Processing climatic forcing...')
     
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (args['tiles'], args['climatic_forcing_field_count']), \
+            compression = 'gzip', fillvalue = 0)
+
     # Create 'climatic forcing' category
     category = 'climatic forcing'
 
@@ -1457,7 +1504,6 @@ def store_climatic_forcing(args, hdf5_files, habitat_nodata):
     assert len(filenames) == 1, 'Detected more than one climatic forcing file'
 
     shp_name = filenames[0]
-
     
     for field in args['shapefiles'][category][shp_name]:
 
@@ -1465,43 +1511,41 @@ def store_climatic_forcing(args, hdf5_files, habitat_nodata):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         # Extract the type for this shapefile
-        shapefile_uri = args['shapefiles'][category][shp_name][field]
+        file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = raster_utils.get_nodata_from_uri(shapefile_uri)
-        raster = gdal.Open(shapefile_uri)
+        source_nodata = raster_utils.get_nodata_from_uri(file_uri)
+
+        raster = gdal.Open(file_uri)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
 
         tiles = args['tiles']
-
-        indices_limit_array = args['indices_limit_array']
-        positions_array = args['positions_array']
-        climatic_forcing_array = args['climatic_forcing_array']
-
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [_, end] = indices_limit_array[transect]
+            [_, end] = indices_limit_dataset[transect]
 
             # The climatic data is taken as much offshore as possible
             position = \
-                (positions_array[transect, 0, end-1], \
-                positions_array[transect, 1, end-1])
-            
+                (positions_dataset[transect, 0, end-1], \
+                positions_dataset[transect, 1, end-1])
+
             # Copy directly to destination
-            climatic_forcing_array[transect, field_id] = array[position]
+            climatic_forcing_dataset[transect, field_id] = \
+                band.ReadAsArray(int(position[1]), int(position[0]), 1, 1)[0]
         
         print('')
 
 
-
-def combine_soil_types(args, hdf5_files, habitat_nodata):
+def combine_soil_types(args, transect_data_file):
 
     LOGGER.info('Processing soil types...')
 
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+    
     # soil types
     soil_types = { \
         'mud':0, \
@@ -1527,6 +1571,7 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     category = 'soil type'
 
     hdf5_files[category] = []
+    mask_dataset = transect_data_file['mask']
 
     filenames = args['shapefiles'][category].keys()
 
@@ -1558,45 +1603,53 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
     source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+
     raster = gdal.Open(type_shapefile_uri)
     band = raster.GetRasterBand(1)
-    array = band.ReadAsArray()
 
 #    LOGGER.info('Extracting priority information from ' + shp_name)
-    
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+    shore_dataset = transect_data_file['shore_index']
+
+    soil_type_dataset = \
+        transect_data_file.create_dataset('soil_type', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+
+    soil_properties_dataset = \
+        transect_data_file.create_dataset('soil_properties', \
+            (args['tiles'], args['soil_field_count'], \
+                args['max_transect_length']), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+
     tiles = args['tiles']
-
-    indices_limit_array = args['indices_limit_array']
-    shore_array = args['shore_array']
-    positions_array = args['positions_array']
-    soil_type_array = args['soil_type_array']
-    soil_properties_array = args['soil_properties_array']
-
 
     progress_step = tiles / 50
     for transect in range(tiles):
         if transect % progress_step == 0:
             print '.',
 
-        [start, end] = indices_limit_array[transect]
+        [start, end] = indices_limit_dataset[transect]
 
         #raw_positions = transect_info[transect]['raw_positions']
         raw_positions = \
-            (positions_array[transect, 0, start:end], \
-            positions_array[transect, 1, start:end])
-        
+            (positions_dataset[transect, 0, start:end], \
+            positions_dataset[transect, 1, start:end])
+
         #Load the habitats as sampled from the raster
-        source = array[raw_positions]
-
-        # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-
-        source = source[start:end,]
+        source = np.ones(end-start) * -1
+        for position in range(end-start):
+            source[position] = \
+                band.ReadAsArray(int(raw_positions[1][position]), \
+                    int(raw_positions[0][position]), 1, 1)[0]
 
         # Load the soil type buffer
-        destination = soil_type_array[transect,start:end]
+        destination = soil_type_dataset[transect,start:end]
 
         # Overriding source_nodata so it doesn't interfere with habitat_nodata
         source[source == source_nodata] = habitat_nodata
@@ -1619,8 +1672,8 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
     print('')
 
     # Clean up
-    band = None
-    raster = None
+#    band = None
+#    raster = None
     array = None
 
     for field in args['shapefiles'][category][shp_name]:
@@ -1640,56 +1693,79 @@ def combine_soil_types(args, hdf5_files, habitat_nodata):
         field_id = args['field_index'][category]['fields'][field.lower()]
 
         uri = args['shapefiles'][category][shp_name][field]
+        array = raster_utils.load_memory_mapped_array( \
+            uri, raster_utils.temporary_filename())
+
         raster = gdal.Open(uri)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
-
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [start, end] = indices_limit_array[transect]
+            [start, end] = indices_limit_dataset[transect]
 
-            shore = shore_array[transect]
+            shore = shore_dataset[transect]
 
             raw_positions = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
-
-
-            source = array[raw_positions]
-
-            # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-            source = source[start:end,]
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
+            
+            source = np.ones(end-start) * -1
+            for position in range(end-start):
+                source[position] = \
+                    band.ReadAsArray(int(raw_positions[1][position]), \
+                        int(raw_positions[0][position]), 1, 1)[0]
 
             destination = \
-                soil_properties_array[transect, field_id, start:end]
+                soil_properties_dataset[transect, field_id, start:end]
 
+            # We just copy the source to the destination, without checking 
+            # for mud as above with the soil type. This is because for soil 
+            # type, we know what value we should use: the code for mud.
+            # Here, for soil properties, we don't know what values we should
+            # be using, so we just copy the values over. It's the user's 
+            # responsibility to put valid properties for mud and gravel/sand
+            # wherever there could be two possible types of soil.
             destination = source
-
             
         print('')
 
         # Close the raster before proceeding to the next one
         band = None
         raster = None
-        array = None
 
 
-
-def combine_natural_habitats(args, hdf5_files, habitat_nodata):
+def combine_natural_habitats(args, transect_data_file):
 
     LOGGER.info('Processing natural habitats...')
 
+    hdf5_files = args['hdf5_files']
+    habitat_nodata = args['habitat_nodata']
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+    shore_dataset = transect_data_file['shore_index']
+
+    habitat_type_dataset = \
+        transect_data_file.create_dataset('habitat_type', \
+            (args['tiles'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
+    
+    habitat_properties_dataset = \
+        transect_data_file.create_dataset('habitat_properties', \
+            (args['tiles'], args['habitat_field_count'], args['max_transect_length']), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
+    
     category = 'natural habitats'
 
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
+    mask_dataset = transect_data_file['mask']
 
     for shp_name in args['shapefiles'][category]:
 
@@ -1706,9 +1782,6 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
 
         assert habitat is not None
 
-        mask = None
-        mask_dict = {}
-
         # Build the list of field names in lower case 
         field_names_lowercase = \
             [field_name.lower() for field_name in \
@@ -1724,69 +1797,54 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
                 type_key = key
                 break
 
-        # Get rid of the path and the extension
-        basename = os.path.splitext(os.path.basename( \
-            args['shapefiles'][category][shp_name][type_key]))[0]
-
-        # Extract the type for this shapefile
+        # Extract the habitat type for this shapefile
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
-        source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+        shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+
         raster = gdal.Open(type_shapefile_uri)
         band = raster.GetRasterBand(1)
-        array = band.ReadAsArray()
 
         tiles = args['tiles']
-
-        indices_limit_array = args['indices_limit_array']
-        shore_array = args['shore_array']
-        positions_array = args['positions_array']
-        habitat_type_array = args['habitat_type_array']
-        habitat_properties_array = args['habitat_properties_array']
-
 
         progress_step = tiles / 50
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
 
-            [start, end] = indices_limit_array[transect]
-
-            shore = shore_array[transect]
+            [start, end] = indices_limit_dataset[transect]
 
             #raw_positions = transect_info[transect]['raw_positions']
             raw_positions = \
-                (positions_array[transect, 0, start:end], \
-                positions_array[transect, 1, start:end])
-            
+                (positions_dataset[transect, 0, start:end], \
+                positions_dataset[transect, 1, start:end])
+
             #Load the habitats as sampled from the raster
-            source = array[raw_positions]
-
-            # Interpolate the data to the model resolution 
-#                source = interpolate_transect(source, i_side_fine, \
-#                    args['model_resolution'], kind = 'nearest')
-
-
-            source = source[start:end,]
+            habitat_type = np.ones(end-start) * -1
+            for position in range(end-start):
+                habitat_type[position] = \
+                    band.ReadAsArray(int(raw_positions[1][position]), \
+                        int(raw_positions[0][position]), 1, 1)[0]
 
             # Load the habitat type buffer
-            destination = habitat_type_array[transect,start:end]
+            destination = habitat_type_dataset[transect,start:end]
 
-            # Overriding source_nodata so it doesn't interfere with habitat_nodata
-            source[source == source_nodata] = habitat_nodata
+
+            # Overriding shapefile_nodata so it doesn't interfere with habitat_nodata
+            habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
+
 
             # Apply the habitat constraints
-#                source = \
-#                    apply_habitat_constraints(source, args['habitat_information'])
+#                habitat_type = \
+#                    apply_habitat_constraints(habitat_type, args['habitat_information'])
 #                sys.exit(0)
             
             # Compute the mask that will be used to update the values
-            mask = destination < source
-
-            mask_dict[transect] = mask
+            mask = destination < habitat_type
+            mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
-            destination[mask] = source[mask]
+            destination[mask] = habitat_type[mask]
 
             # Remove nodata
             clipped_positions = \
@@ -1797,9 +1855,10 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
                 (clipped_positions[0][mask], clipped_positions[1][mask])
 
             if category in args['valid_habitat_types']:
-                # Update the values using source
-                transects[masked_positions] = source[mask]
+                # Update the values using habitat_type
+                transects[masked_positions] = habitat_type[mask]
                 # Leave the transect ID on the transect's shore
+                shore = shore_dataset[transect]
                 transects[(raw_positions[0][shore], \
                     raw_positions[1][shore])] = transect
         
@@ -1808,9 +1867,8 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
         # Clean up
         band = None
         raster = None
-        array = None
 
-
+        # Go through each property for the current habitat
         for field in args['shapefiles'][category][shp_name]:
 
             # Skip the field 'type'
@@ -1822,46 +1880,43 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
                 os.path.basename(args['shapefiles'][category][shp_name][field]))[0]
 
             # Extract data from the current raster field
-#            print "args['field_index']['natural habitats'][" + str(habitat_id) + "]",
-#            print(args['field_index']['natural habitats'][habitat_id])
             field_id = args['field_index']['natural habitats'][habitat_id]['fields'][field.lower()]
 
             uri = args['shapefiles'][category][shp_name][field]
             raster = gdal.Open(uri)
             band = raster.GetRasterBand(1)
-            array = band.ReadAsArray()
 
 #            LOGGER.info('Extracting transect information from ' + basename)
             
+            # Process 
             progress_step = tiles / 50
             for transect in range(tiles):
                 if transect % progress_step == 0:
                     print '.',
 
-                [start, end] = indices_limit_array[transect]
-
-                shore = shore_array[transect]
+                [start, end] = indices_limit_dataset[transect]
 
                 raw_positions = \
-                    (positions_array[transect, 0, start:end], \
-                    positions_array[transect, 1, start:end])
+                    (positions_dataset[transect, 0, start:end], \
+                    positions_dataset[transect, 1, start:end])
 
 
-                source = array[raw_positions]
+                #Load the habitats as sampled from the raster
+                habitat_property = (np.ones(end-start) * -1).astype('float32')
+                for position in range(end-start):
+                    habitat_property[position] = \
+                        band.ReadAsArray(int(raw_positions[1][position]), \
+                            int(raw_positions[0][position]), 1, 1)
 
-                # Interpolate the data to the model resolution 
-    #                source = interpolate_transect(source, i_side_fine, \
-    #                    args['model_resolution'], kind = 'nearest')
-
-                source = source[start:end,]
+                habitat_property = habitat_property[start:end,]
 
                 destination = \
-                    habitat_properties_array[transect, field_id, start:end]
+                    habitat_properties_dataset[transect, field_id, start:end]
 
                 # Save transect to file
-                mask = mask_dict[transect]
+                mask = mask_dataset[transect, start:end]
 
-                destination[mask] = source[mask]
+                destination[mask] = habitat_property[mask]
 
                 clipped_positions = \
                     (raw_positions[0][start:end], raw_positions[1][start:end])
@@ -1874,8 +1929,6 @@ def combine_natural_habitats(args, hdf5_files, habitat_nodata):
             # Close the raster before proceeding to the next one
             band = None
             raster = None
-            array = None
-
 
 
 def apply_habitat_constraints(habitat, constraints):
@@ -2043,11 +2096,13 @@ def compute_raw_transect_depths(shore_point, \
 
     p_i = shore_point[0]
     
+    # Shore point outside bathymetry
     if (p_i < 0) or (p_i >= bathymetry_shape[0]):
         return (None, None)
 
     p_j = shore_point[1]
 
+    # Shore point outside bathymetry
     if (p_j < 0) or (p_j >= bathymetry_shape[0]):
         return (None, None)
 

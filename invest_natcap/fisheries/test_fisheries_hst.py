@@ -12,7 +12,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 workspace_dir = '../../test/invest-data/test/data/fisheries/'
 data_dir = '../../test/invest-data/Fisheries'
-inputs_dir = os.path.join(data_dir, 'Input/Habitat_Scenario_Tool')
+inputs_dir = os.path.join(data_dir, 'input/Habitat_Scenario_Tool')
 outputs_dir = os.path.join(workspace_dir, 'output')
 
 
