@@ -1956,3 +1956,35 @@ cdef class BlockCache:
                                 yoff=global_row_offset, xoff=global_col_offset)
         for band in self.band_list:
             band.FlushCache()
+
+
+
+'''def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+    high_edges=set()
+    low_edges=set()
+    flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges)
+    if len(low_edges) == 0:
+        if len(high_edges) != 0:
+            LOGGER.warn('There were undrainable flats')
+        else:
+            LOGGER.info('There were no flats')
+        return
+
+    label = 1
+    for cell in low_edges:
+        if cell is not labeled:
+            label_flats(cell, dem_uri, labels_uri)
+            label += 1
+
+    for cell in high_edges:
+        if cell is not labeled:
+            remove cell from high_edges
+    if any cell was removed from high_edges:
+        LOGGER.warn('not all flats have outlets')
+
+    away_from_higher(
+        labels_uri, flat_mask_uri, flow_direction_uri, high_edges,
+        flat_height_uri)
+    towards_lower(
+        labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
+        flat_height_uri)'''
