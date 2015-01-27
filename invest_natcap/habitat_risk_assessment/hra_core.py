@@ -1713,9 +1713,9 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         risk_map = numpy.zeros(b_pix.shape)
         risk_map[:] = -1
 
-        risk_map = numpy.where(b_pix == -1 & c_pix != -1, 0, risk_map)
+        risk_map = numpy.where((b_pix == -1) & (c_pix != -1), 0, risk_map)
         risk_map = numpy.where(
-            b_pix != -1 & c_pix != -1,
+            (b_pix != -1) & (c_pix != -1),
             e_pix * c_pix, risk_map)
 
         return risk_map
