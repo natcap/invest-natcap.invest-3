@@ -518,6 +518,41 @@ def execute(args):
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
+    # ------- Habitats constraints conventions: --------
+    # The field 'constraints' indicates where a specific layer can be found.
+    # The limits are expressed in various units. For instance:
+    #
+    #   -for the constraints land/water: the unit is a distance from the shore in meters
+    #   -for MLLW: the unit is depth, which is expressed as a number of MLLW. 
+    #       For instance, a value of 2 for 'MLLW' means twice the depth of MLLW.
+    #   -For MHHW: the unit is elevation, which is expressed as a number of MHHW.
+    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an elevation 3 times
+    #       higher than MHHW.
+    #
+    # Note: All the distances and elevations/depth are relative to the shore.
+    # 
+    # The values can be either positive or negative:
+    #   -Positive values indicate that the habitat is allowed from the shore 
+    #       up to a certain distance away from the shore:
+    #       'land':10 -> the habitat is allowed to grow from 0 to 10m from the
+    #           shore landward.
+    #       'water':20 -> the habitat is allowed to grow from 0 to 20m from the
+    #           shore seaward.
+    #       'MLLW':2 -> the habitat is allowed to grow within depths that range 
+    #           from 0 to 2 units of MLLW. If MLLW is 1.2, 
+    #           the depth is 1.2x2=2.4m
+    #       'MHHW':0.5 -> the habitat is allowed to grow within an elevations 
+    #           that range from 0 to 0.5 units of MHHW. If MLLW is 0.2, 
+    #           the depth is 0.2x0.5=0.1m
+    #
+    # Negative values are the opposite: instead of specifying an area FROM 
+    #   the shore out, it specifies an area UP TO the shore. In other words,
+    #   The area 
+    #       'land':-10 -> the habitat is allowed to grow from 10m inland from the
+    #           shore up to infinity landward.
+    #       'MLLW':-2 -> the habitat cannot grow at depths shallower 
+    #           than 2 units of MLLW. If MLLW is 1.2, the depth is 1.2x2=2.4m
+    #
     args['habitat_information'] = [
         ('kelp',
             {'shapefile type':'seagrass', 'type':1},           
@@ -534,6 +569,7 @@ def execute(args):
         ('levee',                 
             {'shapefile type':'man-made structure', 'type':5}, 
             {'constraints':{'land':-50.0, 'water':0.}}),
+#            {'constraints':{'water':0.}}),
         ('beach',                 
             {'shapefile type':'beach'},                        
             {'constraints':{'MHHW':1, 'MLLW':1}}),
@@ -853,6 +889,8 @@ def execute(args):
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
 
+    # Computing constraints rasters so they can directly be used as masks 
+    # for the habitats that have spatial constraints.
     for habitat_information in args['habitat_information']:
         habitat_constraints = habitat_information[2]['constraints']
 
@@ -863,24 +901,25 @@ def execute(args):
 #            print('Checking land constraint')
 
             # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
+#            if not os.path.isfile(constraint_uri):
 #                print('Creating land constraint', constraint_uri)
                 
-                land_distance_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'land_distance_mask.tif')
-                
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land_and_nodata, land_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
+            land_distance_mask_uri = \
+                os.path.join(args['intermediate_dir'], \
+                    'land_distance_mask.tif')
+            
+            raster_utils.vectorize_datasets( \
+                [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
+                -1, cell_size, 'intersection', vectorize_op = False)
 
-                # Use the mask to compute distance over land
-                raster_utils.distance_transform_edt(land_distance_mask_uri, \
-                    constraint_uri)
+            # Use the mask to compute distance over land
+            raster_utils.distance_transform_edt(land_distance_mask_uri, \
+                constraint_uri)
 
-                scale_raster_inplace(constraint_uri, cell_size)
+            scale_raster_inplace(constraint_uri, cell_size)
 
+            # Keep this out of the if statement
             args['constraints_type']['land'] = constraint_uri
 
         # Detect a sea-related distance constraint
@@ -890,24 +929,25 @@ def execute(args):
 #            print('checking water constraint')
 
             # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
+#            if not os.path.isfile(constraint_uri):
 #                print('Creating water constraint', constraint_uri)
 
-                water_distance_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'water_distance_mask.tif')
+            water_distance_mask_uri = \
+                os.path.join(args['intermediate_dir'], \
+                    'water_distance_mask.tif')
 
-                raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_water_and_nodata, water_distance_mask_uri, gdal.GDT_Float32, \
-                    -1, cell_size, 'intersection', vectorize_op = False)
+            raster_utils.vectorize_datasets( \
+                [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
+                -1, cell_size, 'intersection', vectorize_op = False)
 
-                # Use the mask to compute distance over land
-                raster_utils.distance_transform_edt(water_distance_mask_uri, \
-                    constraint_uri)
+            # Use the mask to compute distance over land
+            raster_utils.distance_transform_edt(water_distance_mask_uri, \
+                constraint_uri)
 
-                scale_raster_inplace(constraint_uri, cell_size)
+            scale_raster_inplace(constraint_uri, cell_size)
 
+            # Keep this out of the if statement
             args['constraints_type']['water'] = constraint_uri
 
 
@@ -1022,42 +1062,99 @@ def execute(args):
             args['constraints_type']['MLLW'] = constraint_uri
 
 
+    # Compute the constraints for each habitat
+    def combine_constraints(*x):
+        result = x[0]
+        for i in range(1, len(x)):
+            result = numpy.logical_or(result, x[i])
+        return result
 
-#    LOGGER.debug('Uniformizing the input raster sizes...')
-#    # Need to uniformize the size of land and bathymetry rasters
-#    in_raster_list.append(args['landmass_raster_uri'])
-#    in_raster_list.append(args['bathymetry_raster_uri'])
-#
-#    # For every input raster, create a corresponding output raster
-#    out_raster_list = []
-#    for uri in in_raster_list:
-#        out_raster_list.append(raster_utils.temporary_filename())
-#    # Gather info for aligning rasters properly
-#    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
-#    resample_method_list = ['bilinear'] * len(out_raster_list)
-#    out_pixel_size = cell_size
-#    mode = 'dataset'
-#    dataset_to_align_index = 0
-#    dataset_to_bound_index = 0
-#    # Invoke raster alignent function
-#    raster_utils.align_dataset_list( \
-#        in_raster_list, out_raster_list, resample_method_list,
-#        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
-#
-#    LOGGER.debug('Done')
-#    # Now copy the result back to the original files
-#    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
-#        os.remove(in_uri)
-#        os.rename(out_uri, in_uri)
-#
-#    # Quick sanity test with shape just to make sure
-#    landmass_raster_shape = \
-#        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
-#    bathymetry_raster_shape = \
-#        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
-#    assert landmass_raster_shape == bathymetry_raster_shape
-#    
-#    LOGGER.debug('Done')
+    # Loop through the habitats
+    for habitat_info in args['habitat_information']:
+        habitat_name = habitat_info[0]
+        print('habitat', habitat_name)
+        # -For each constraint:
+        constraint_uri_list = []
+        for constraint_type in habitat_info[2]['constraints'].keys():
+            # Retreive constraint URI
+            constraint_uri = args['constraints_type'][constraint_type] 
+            constraint_nodata = raster_utils.get_nodata_from_uri(constraint_uri)
+            # -Extract the constraint value
+            value = habitat_info[2]['constraints'][constraint_type]
+            print('constraint', constraint_type, 'value', value)
+            # -if pos: compute from shore to value
+            output_uri = raster_utils.temporary_filename()
+            if value >= 0.:
+                raster_utils.vectorize_datasets( \
+                    [constraint_uri], \
+                    # Test for data values in the interval [0, value]
+                    lambda x: numpy.logical_and( \
+                        x > 0, \
+                        x <= value, \
+                        x != constraint_nodata), \
+                    output_uri, gdal.GDT_Float32, constraint_nodata, cell_size, \
+                    'intersection', vectorize_op = False)
+            # -if neg: compute ~(from shore to value)
+            else:
+                raster_utils.vectorize_datasets( \
+                    [constraint_uri], \
+                    # Test for data values in the interval ]value, +inf], 
+                    # with the sign of value adjusted so that value >0
+                    lambda x: numpy.logical_and( \
+                        x > (-value), \
+                        x != constraint_nodata), \
+                    output_uri, gdal.GDT_Float32, constraint_nodata, cell_size, \
+                    'intersection', vectorize_op = False)
+            # -Add constraint to constraint_list
+            constraint_uri_list.append(output_uri)
+        # -Use vectorize_datasets to combine the constraints
+        # -Save the constraint in a URI
+        habitat_info[2]['constraint_uri'] = \
+            os.path.join(args['intermediate_dir'], \
+                habitat_name + '_constraint_mask.tif')
+        raster_utils.vectorize_datasets(constraint_uri_list, combine_constraints, \
+            habitat_info[2]['constraint_uri'], \
+            gdal.GDT_Float32, constraint_nodata, cell_size, \
+            'intersection', vectorize_op = False)
+        print('Saved constraints for', habitat_name, 'to', habitat_info[2]['constraint_uri'])
+
+#    sys.exit(0)
+
+    LOGGER.debug('Uniformizing the input raster sizes...')
+    # Need to uniformize the size of land and bathymetry rasters
+    in_raster_list.append(args['landmass_raster_uri'])
+    in_raster_list.append(args['bathymetry_raster_uri'])
+
+    # For every input raster, create a corresponding output raster
+    out_raster_list = []
+    for uri in in_raster_list:
+        out_raster_list.append(raster_utils.temporary_filename())
+    # Gather info for aligning rasters properly
+    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
+    resample_method_list = ['bilinear'] * len(out_raster_list)
+    out_pixel_size = cell_size
+    mode = 'dataset'
+    dataset_to_align_index = 0
+    dataset_to_bound_index = 0
+    # Invoke raster alignent function
+    raster_utils.align_dataset_list( \
+        in_raster_list, out_raster_list, resample_method_list,
+        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+
+    LOGGER.debug('Done')
+    # Now copy the result back to the original files
+    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
+        os.remove(in_uri)
+        os.rename(out_uri, in_uri)
+
+    # Quick sanity test with shape just to make sure
+    landmass_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
+    bathymetry_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
+    assert landmass_raster_shape == bathymetry_raster_shape
+    
+    LOGGER.debug('Done')
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 

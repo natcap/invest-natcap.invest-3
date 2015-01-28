@@ -645,8 +645,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-#    for transect in range(2000, 2500): # Debug
-    for transect in range(transect_count): # Release
+    for transect in range(2000, 2500): # Debug
+#    for transect in range(transect_count): # Release
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
@@ -1563,11 +1563,6 @@ def combine_soil_types(args, transect_data_file):
         # Overriding source_nodata so it doesn't interfere with habitat_nodata
         source[source == source_nodata] = habitat_nodata
 
-        # Apply the habitat constraints
-#                source = \
-#                    apply_habitat_constraints(source, args['habitat_information'])
-#                sys.exit(0)
-        
         # Copy soil type directly to destination
         destination = source
 
@@ -1683,11 +1678,11 @@ def combine_natural_habitats(args, transect_data_file):
         LOGGER.info('Extracting information from ' + shp_name)
         
         # Find habitat_id that will be used to search field position in field_index:
-        habitat_type = args['shapefile types'][category][shp_name]
+        habitat_type_name = args['shapefile types'][category][shp_name]
         habitat_id = None
         for habitat in args['field_index']['natural habitats']:
             if args['field_index']['natural habitats'][habitat]['name'] == \
-                habitat_type:
+                habitat_type_name:
                 habitat_id = int(habitat)
                 break
 
@@ -1737,6 +1732,19 @@ def combine_natural_habitats(args, transect_data_file):
                     band.ReadAsArray(int(raw_positions[1][position]), \
                         int(raw_positions[0][position]), 1, 1)[0]
 
+            # Load the constraints
+#            if 'constraints' in args['habitat_information'][habitat_type_name]:
+#                print('Found constraints in', habitat_type_name, \
+#                    args['habitat_information'][habitat_type_name]['constraints'])
+#                constraints = np.copy(habitat_type)
+#                for position in range(end-start):
+#                    constraints[position] = \
+#                        constraints_band.ReadAsArray( \
+#                            int(raw_positions[1][position]), \
+#                            int(raw_positions[0][position]), 1, 1)[0]
+#            else:
+#                print('No constraints for', habitat_type_name)
+
             # Load the habitat type buffer
             destination = habitat_type_dataset[transect,start:end]
 
@@ -1745,13 +1753,12 @@ def combine_natural_habitats(args, transect_data_file):
             habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
 
 
-            # Apply habitat constraints
-#                habitat_type = \
-#                    apply_habitat_constraints(habitat_type, args['habitat_information'])
-#                sys.exit(0)
-            
             # Compute the mask that will be used to update the values
             mask = destination < habitat_type
+
+            # Apply habitat constraints
+            # mask = np.logical_and(mask, constraints)
+
             mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
@@ -1842,7 +1849,7 @@ def combine_natural_habitats(args, transect_data_file):
             raster = None
 
 
-def apply_habitat_constraints(habitat, constraints):
+def apply_habitat_constraints(mask, habitat_type, args):
     print('transect size', habitat.size)
 
     habitat_types = np.unique(habitat).astype(int)
