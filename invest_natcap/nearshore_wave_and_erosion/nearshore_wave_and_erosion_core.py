@@ -266,22 +266,11 @@ def compute_transects(args):
                     if (end - start) > max_transect_length:
                         max_transect_length = end - start
                     
-                    # Store transect information
-#                        transects[transect_position] = tiles
-                    #position1 = \
-                    #    (transect_position + \
-                    #        transect_orientation).astype(int)
-                    #position3 = \
-                    #    (transect_position + \
-                    #        transect_orientation * 3).astype(int)
-                    #transects[position1[0], position1[1]] = 6
-                    #transects[position3[0], position3[1]] = 8
-                    #transects[raw_positions] = 100 + tiles #raw_depths
-#                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
-#                            tiles #raw_depths
-
-                    ## Will reconstruct the shore from this information
-                    #shore_profile[raw_positions] = raw_depths
+#                    # Store transect information
+#                    transects[raw_positions] = bathymetry_nodata
+#                    transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
+#                            smoothed_depths[start:end]
+#                    transects[transect_position] = tiles
                     
                     tiles += 1
 
@@ -297,15 +286,13 @@ def compute_transects(args):
 
     transect_count = tiles
 
-#    transect_count = 50
-#    tiles = 50
-    
     args['tiles'] = tiles
     args['max_transect_length'] = max_transect_length
 
     LOGGER.debug('found %i tiles.' % tiles)
 
     habitat_nodata = -99999
+
 
     # Create a numpy array to store the habitat type
     habitat_field_count = args['habitat_field_count']
@@ -400,6 +387,36 @@ def compute_transects(args):
 #        for filename in args['shapefiles'][category]:
 #            print('filename', filename, 'fields:', \
 #                args['shapefiles'][category][filename].keys())
+
+
+    # Going through the bathymetry raster tile-by-tile.
+    LOGGER.debug('Saving transect data...')
+    for transect in range(transect_count):
+        # Extract important positions
+        start = indices_limit_dataset[transect,0]
+        end = indices_limit_dataset[transect,1]
+        shore = shore_dataset[transect]
+
+        # Store bathymetry in the transect 
+        transects[( \
+            positions_dataset[transect, 0, start:end], \
+            positions_dataset[transect, 1, start:end])] = \
+                bathymetry_dataset[transect, start:end]
+
+        # Store inland distance in pixels
+        transects[( \
+            positions_dataset[transect, 0, start], \
+            positions_dataset[transect, 1, start])] = shore - start
+
+        # Store offshore distance in pixels
+        transects[( \
+            positions_dataset[transect, 0, end-1], \
+            positions_dataset[transect, 1, end-1])] =  end - shore - 1
+
+        # Store transect ID at the shore location
+        transects[( \
+            positions_dataset[transect, 0, shore], \
+            positions_dataset[transect, 1, shore])] = transect
 
 
     # HDF5 file container
@@ -1047,7 +1064,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         
         coordinates_array = coordinates_dataset[transect,start:end]
 
-        # Clip the reansect at the first occurence of NaN
+        # Clip the transect at the first occurence of NaN
         first_nan = np.where(np.isnan(wave_array))[0]
         if first_nan.size:
             end = first_nan[0]
@@ -1733,6 +1750,9 @@ def combine_natural_habitats(args, transect_data_file):
                         int(raw_positions[0][position]), 1, 1)[0]
 
             # Load the constraints
+#            print('habitat_type_name', habitat_type_name)
+#            print("args['habitat_information']", args['habitat_information'])
+#            print("args['habitat_information'][habitat_type_name]", args['habitat_information'][habitat_type_name])
 #            if 'constraints' in args['habitat_information'][habitat_type_name]:
 #                print('Found constraints in', habitat_type_name, \
 #                    args['habitat_information'][habitat_type_name]['constraints'])
