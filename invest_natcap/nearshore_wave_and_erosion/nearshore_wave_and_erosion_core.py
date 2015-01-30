@@ -1033,9 +1033,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     (transect_count, max_transect_length) = wave_dataset.shape
 
     
-#    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
-
-   
     wave_coordinates = np.zeros(coordinates_dataset.shape[1])
     wave_array = np.zeros(wave_dataset.shape[1])
 
@@ -1116,10 +1113,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     # from the area we're interested in
     transect_mask = raster_utils.load_memory_mapped_array( \
         args['bathymetry_raster_uri'], raster_utils.temporary_filename())
-
-#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-#    band = bathymetry.GetRasterBand(1)
-#    transect_mask = band.ReadAsArray()
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1290,9 +1283,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     
     raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
-
-#    wave_array = raster_utils.load_memory_mapped_array( \
-#        wave_interpolation_uri, raster_utils.temporary_filename())
 
     wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
     wave_band = wave_raster.GetRasterBand(1)
@@ -1752,18 +1742,30 @@ def combine_natural_habitats(args, transect_data_file):
             # Load the constraints
 #            print('habitat_type_name', habitat_type_name)
 #            print("args['habitat_information']", args['habitat_information'])
-#            print("args['habitat_information'][habitat_type_name]", args['habitat_information'][habitat_type_name])
-#            if 'constraints' in args['habitat_information'][habitat_type_name]:
-#                print('Found constraints in', habitat_type_name, \
-#                    args['habitat_information'][habitat_type_name]['constraints'])
-#                constraints = np.copy(habitat_type)
-#                for position in range(end-start):
-#                    constraints[position] = \
-#                        constraints_band.ReadAsArray( \
-#                            int(raw_positions[1][position]), \
-#                            int(raw_positions[0][position]), 1, 1)[0]
-#            else:
-#                print('No constraints for', habitat_type_name)
+            
+#            print("first habitat", args['habitat_information'][1])
+#            print("habitat name", args['habitat_information'][1][0])
+#            print("constraints", args['habitat_information'][1][2]['constraints'])
+#            print("constraint_uri", args['habitat_information'][1][2]['constraint_uri'])
+
+            for hab_id in range(len(args['habitat_information'])):
+                habitat_name = args['habitat_information'][hab_id][0]
+
+                if habitat_name == habitat_type_name:
+                    assert 'constraints' in args['habitat_information'][hab_id][2] 
+#                    print('Found constraints in', habitat_type_name, \
+#                        args['habitat_information'][hab_id][2]['constraints'])
+                    constraints = np.copy(habitat_type)
+                    #constraint_uri = 
+                    #constraint_raster = gdal.Open(constraint_uri)
+                    #constraint_band = constraint_raster.GetRasterBand(1)
+                    #for position in range(end-start):
+                    #    constraints[position] = \
+                    #        constraint_band.ReadAsArray( \
+                    #            int(raw_positions[1][position]), \
+                    #            int(raw_positions[0][position]), 1, 1)[0]
+#                else:
+#                    print('No constraints for', habitat_type_name)
 
             # Load the habitat type buffer
             destination = habitat_type_dataset[transect,start:end]
