@@ -57,48 +57,5 @@ class TestConvertSurvivalMatrix(unittest.TestCase):
             guess['Surv_nat_xsa_mod'], check['Surv_nat_xsa'])
 
 
-class TestConvertSurvivalMatrix2(unittest.TestCase):
-    def setUp(self):
-        self.args = {
-            'workspace_dir': workspace_dir,
-            'sexsp': 'No',
-            'population_csv_uri': os.path.join(
-                inputs_dir, 'pop_params.csv'),
-            'habitat_chg_csv_uri': os.path.join(
-                inputs_dir, 'habitat_chg_params2.csv'),
-            'habitat_dep_csv_uri': os.path.join(
-                inputs_dir, 'habitat_dep_params2.csv'),
-            'gamma': 0.5,
-        }
-        self.check = {
-            'workspace_dir': workspace_dir,
-            'sexsp': 'No',
-            'population_csv_uri': os.path.join(
-                outputs_dir, 'pop_params_spreadsheet_mod2.csv'),
-            'habitat_chg_csv_uri': os.path.join(
-                inputs_dir, 'habitat_chg_params2.csv'),
-            'habitat_dep_csv_uri': os.path.join(
-                inputs_dir, 'habitat_dep_params2.csv'),
-            'gamma': 0.5,
-        }
-
-    def test_convert_spreadsheet2(self):
-        '''
-        Test an example from the provided spreadsheet. This time with
-        dependencies values that are not {0, 1}
-        '''
-        # Fetch pre and post variables
-        vars_dict = io.fetch_args(self.args)
-        check = io.fetch_args(self.check)
-
-        # Run operation
-        guess = main.convert_survival_matrix(vars_dict)
-
-        np.set_printoptions(precision=4)
-        pp.pprint(guess['Surv_nat_xsa_mod'] - check['Surv_nat_xsa'])
-        testing.assert_array_almost_equal(
-            guess['Surv_nat_xsa_mod'], check['Surv_nat_xsa'])
-
-
 if __name__ == '__main__':
     unittest.main()
