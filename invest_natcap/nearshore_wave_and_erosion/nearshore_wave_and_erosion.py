@@ -1087,7 +1087,7 @@ def execute(args):
     # Loop through the habitats
     for habitat_info in args['habitat_information']:
         habitat_name = habitat_info[0]
-        print('habitat', habitat_name)
+#        print('habitat', habitat_name)
 
         current_habitat_was_detected = False
 
@@ -1113,7 +1113,7 @@ def execute(args):
             constraint_nodata = raster_utils.get_nodata_from_uri(constraint_uri)
             # -Extract the constraint value
             value = habitat_info[2]['constraints'][constraint_type]
-            print('constraint', constraint_type, 'value', value)
+#            print('constraint', constraint_type, 'value', value)
             # -if pos: compute from shore to value
             output_uri = raster_utils.temporary_filename()
             if value >= 0.:

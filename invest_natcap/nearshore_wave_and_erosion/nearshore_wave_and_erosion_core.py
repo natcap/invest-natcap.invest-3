@@ -349,6 +349,7 @@ def compute_transects(args):
     # can run optimally with enough memory, or use the HD otherwise...
     LOGGER.debug('Storing transect_info data')
 
+    #Todo: Remove this by using datasets directly instead of transect_info
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
@@ -391,32 +392,48 @@ def compute_transects(args):
 
     # Going through the bathymetry raster tile-by-tile.
     LOGGER.debug('Saving transect data...')
+    single_value = np.array([[0]])
+
+    progress_step = tiles / 50
     for transect in range(transect_count):
+        if transect % progress_step == 0:
+            print '.',
         # Extract important positions
         start = indices_limit_dataset[transect,0]
         end = indices_limit_dataset[transect,1]
         shore = shore_dataset[transect]
 
-        # Store bathymetry in the transect 
-        transects[( \
-            positions_dataset[transect, 0, start:end], \
-            positions_dataset[transect, 1, start:end])] = \
-                bathymetry_dataset[transect, start:end]
-
+        for pos in range(end-start):
+            # Store bathymetry in the transect
+            single_value[0, 0] = bathymetry_dataset[transect, pos]
+            transect_band.WriteArray( \
+                single_value, \
+                int(positions_dataset[transect, 1, pos]), \
+                int(positions_dataset[transect, 0, pos]))
+                    
         # Store inland distance in pixels
-        transects[( \
-            positions_dataset[transect, 0, start], \
-            positions_dataset[transect, 1, start])] = shore - start
+        single_value[0, 0] = shore - start
+        
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
 
         # Store offshore distance in pixels
-        transects[( \
-            positions_dataset[transect, 0, end-1], \
-            positions_dataset[transect, 1, end-1])] =  end - shore - 1
+        single_value[0, 0] = end - shore - 1
+        
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
 
         # Store transect ID at the shore location
-        transects[( \
-            positions_dataset[transect, 0, shore], \
-            positions_dataset[transect, 1, shore])] = transect
+        single_value[0, 0] = transect
+
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
 
 
     # HDF5 file container
@@ -429,64 +446,64 @@ def compute_transects(args):
     store_climatic_forcing(args, transect_data_file)
     store_tidal_information(args, transect_data_file)
 
-    # Store shore information gathered during the computation
-    LOGGER.info('Storing transect information...')
-    n_rows = transect_band.YSize
-    n_cols = transect_band.XSize
-
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    dataset_buffer = np.zeros((rows_per_block, cols_per_block))
-
-    # Compute data for progress bar
-    block_count = n_row_blocks * n_col_blocks
-    progress_step = block_count / 50
-    processed_blocks = 0
-
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            # Show progress bar
-            if processed_blocks % progress_step == 0:
-                print '.',
-
-            # Load data from the dataset
-            transect_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset, 
-                win_xsize=col_block_width,
-                win_ysize=row_block_width, 
-                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
-                
-            dataset_block = dataset_buffer[ \
-                0:row_block_width, \
-                0:col_block_width]
-            
-            # Load data from the sparse matrix
-            matrix_block = transects[ \
-                row_offset:row_offset+row_block_width, \
-                col_offset:col_offset+col_block_width].todense()
-
-            # Write sparse matrix contents over the dataset
-            mask = np.where(matrix_block != 0)
-
-            dataset_block[mask] = matrix_block[mask]
-
-            transect_band.WriteArray(
-                dataset_block[0:row_block_width, 0:col_block_width],
-                xoff=col_offset, yoff=row_offset)
-
-            processed_blocks += 1
+#    # Store shore information gathered during the computation
+#    LOGGER.info('Storing transect information...')
+#    n_rows = transect_band.YSize
+#    n_cols = transect_band.XSize
+#
+#    cols_per_block, rows_per_block = block_size[0], block_size[1]
+#    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+#    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+#
+#    dataset_buffer = np.zeros((rows_per_block, cols_per_block))
+#
+#    # Compute data for progress bar
+#    block_count = n_row_blocks * n_col_blocks
+#    progress_step = block_count / 50
+#    processed_blocks = 0
+#
+#    for row_block_index in xrange(n_row_blocks):
+#        row_offset = row_block_index * rows_per_block
+#        row_block_width = n_rows - row_offset
+#        if row_block_width > rows_per_block:
+#            row_block_width = rows_per_block
+#
+#        for col_block_index in xrange(n_col_blocks):
+#            col_offset = col_block_index * cols_per_block
+#            col_block_width = n_cols - col_offset
+#            if col_block_width > cols_per_block:
+#                col_block_width = cols_per_block
+#
+#            # Show progress bar
+#            if processed_blocks % progress_step == 0:
+#                print '.',
+#
+#            # Load data from the dataset
+#            transect_band.ReadAsArray(
+#                xoff=col_offset, yoff=row_offset, 
+#                win_xsize=col_block_width,
+#                win_ysize=row_block_width, 
+#                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
+#                
+#            dataset_block = dataset_buffer[ \
+#                0:row_block_width, \
+#                0:col_block_width]
+#            
+#            # Load data from the sparse matrix
+#            matrix_block = transects[ \
+#                row_offset:row_offset+row_block_width, \
+#                col_offset:col_offset+col_block_width].todense()
+#
+#            # Write sparse matrix contents over the dataset
+#            mask = np.where(matrix_block != 0)
+#
+#            dataset_block[mask] = matrix_block[mask]
+#
+#            transect_band.WriteArray(
+#                dataset_block[0:row_block_width, 0:col_block_width],
+#                xoff=col_offset, yoff=row_offset)
+#
+#            processed_blocks += 1
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
