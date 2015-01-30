@@ -1110,47 +1110,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
                     max_downhill_facet = -1
                     lowest_dem = e_0
-                    #we have a special case if we're on the border of the raster
-                    if (e_0_col == 0 or e_0_col == n_cols - 1 or e_0_row == 0 or e_0_row == n_rows - 1):
-                        #loop through the neighbor edges, and manually set a direction
-                        for facet_index in range(8):
-                            e_1_row = row_offsets[facet_index] + global_row
-                            e_1_col = col_offsets[facet_index] + global_col
-                            if (e_1_col == -1 or e_1_col == n_cols or e_1_row == -1 or e_1_row == n_rows):
-                                continue
-                            block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
-                            e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
-                            if e_1 == dem_nodata:
-                                continue
-                            if e_1 < lowest_dem:
-                                lowest_dem = e_1
-                                max_downhill_facet = facet_index
-                                
-                        if max_downhill_facet != -1:
-                            flow_direction = 3.14159265 / 4.0 * max_downhill_facet
-                        else:
-                            #we need to point to the left or right
-                            if global_col == 0:
-                                flow_direction = 3.14159265 / 2.0 * 2
-                            elif global_col == n_cols - 1:
-                                flow_direction = 3.14159265 / 2.0 * 0
-                            elif global_row == 0:
-                                flow_direction = 3.14159265 / 2.0 * 1
-                            elif global_row == n_rows - 1:
-                                flow_direction = 3.14159265 / 2.0 * 3
-                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = flow_direction
-                        cache_dirty[e_0_row_index, e_0_col_index] = 1
-                        #done with this pixel, go to the next
-                        continue
                         
                     #Calculate the flow flow_direction for each facet
                     slope_max = 0 #use this to keep track of the maximum down-slope
                     flow_direction_max_slope = 0 #flow direction on max downward slope
                     max_index = 0 #index to keep track of max slope facet
                     
-                    #max_downhill_facet = -1
-                    #lowest_dem = e_0
-                    contaminated = False
                     for facet_index in range(8):
                         #This defines the three points the facet
 
@@ -1158,6 +1123,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         e_1_col = e_1_offsets[facet_index * 2 + 1] + global_col
                         e_2_row = e_2_offsets[facet_index * 2 + 0] + global_row
                         e_2_col = e_2_offsets[facet_index * 2 + 1] + global_col
+                        #make sure one of the facets doesn't hang off the edge
+                        if (e_1_row < 0 or e_1_row >= n_rows or 
+                            e_2_row < 0 or e_2_row >= n_rows or
+                            e_1_col < 0 or e_1_col >= n_cols or
+                            e_2_col < 0 or e_2_col >= n_cols):
+                            continue
 
                         block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
                         block_cache.update_cache(e_2_row, e_2_col, &e_2_row_index, &e_2_col_index, &e_2_row_block_offset, &e_2_col_block_offset)
@@ -1165,63 +1136,61 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         e_1 = dem_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
                         e_2 = dem_block[e_2_row_index, e_2_col_index, e_2_row_block_offset, e_2_col_block_offset]
 
+                        if e_1 == dem_nodata and e_2 == dem_nodata:
+                            continue
+
                         if facet_index % 2 == 0 and e_1 != dem_nodata and e_1 < lowest_dem:
                             lowest_dem = e_1
                             max_downhill_facet = facet_index
                         elif facet_index % 2 == 1 and e_2 != dem_nodata and e_2 < lowest_dem:
                             lowest_dem = e_2
                             max_downhill_facet = facet_index
-                        
-                        #avoid calculating a slope on nodata values
-                        if e_1 == dem_nodata or e_2 == dem_nodata:
-                            #If any neighbors are nodata, it's contaminated
-                            contaminated = True
-                            continue
-                            
+
                         #s_1 is slope along straight edge
                         s_1 = (e_0 - e_1) / d_1 #Eqn 1
                         #slope along diagonal edge
                         s_2 = (e_1 - e_2) / d_2 #Eqn 2
-                        
-                        flow_direction = atan2(s_2, s_1) #Eqn 3
-                        
-                        if flow_direction < 0: #Eqn 4
-                            #If the flow direction goes off one side, set flow
-                            #direction to that side and the slope to the straight line
-                            #distance slope
-                            flow_direction = 0
-                            slope = s_1
-                        elif flow_direction > max_r: #Eqn 5
-                            #If the flow direciton goes off the diagonal side, figure
-                            #out what its value is and
-                            flow_direction = max_r
-                            slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+
+                        #can't calculate flow direction if one of the facets is nodata
+                        if e_1 == dem_nodata or e_2 == dem_nodata:
+                            #calc max slope here
+                            if e_1 != dem_nodata:
+                                #straight line to next pixel
+                                slope = s_1
+                            else:
+                                #diagonal line to next pixel
+                                slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
                         else:
-                            slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
-                            
+                            #both facets are defined, this is the core of
+                            #d-infinity algorithm
+                            flow_direction = atan2(s_2, s_1) #Eqn 3
+
+                            if flow_direction < 0: #Eqn 4
+                                #If the flow direction goes off one side, set flow
+                                #direction to that side and the slope to the straight line
+                                #distance slope
+                                flow_direction = 0
+                                slope = s_1
+                            elif flow_direction > max_r: #Eqn 5
+                                #If the flow direciton goes off the diagonal side, figure
+                                #out what its value is and
+                                flow_direction = max_r
+                                slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                            else:
+                                slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
+                        #update the maxes depending on the results above
                         if slope > slope_max:
                             flow_direction_max_slope = flow_direction
                             slope_max = slope
                             max_index = facet_index
-                        
-                    # This is the fallthrough condition for the for loop, we reach
-                    # it only if we haven't encountered an invalid slope or pixel
-                    # that caused the above algorithm to break out 
-                    #Calculate the global angle depending on the max slope facet
-                    if not contaminated:
-                        if slope_max > 0:
-                            flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
-                                a_f[max_index] * flow_direction_max_slope +
-                                a_c[max_index] * 3.14159265 / 2.0)
-                            cache_dirty[e_0_row_index, e_0_col_index] = 1
-                        #just in case we set 2pi rather than 0
-                        #if abs(flow_array[0, col_index] - 3.14159265 * 2.0) < 1e-10:
-                        #    flow_array[0, col_index]  = 0.0
-                    else:
-                        if max_downhill_facet != -1:
-                            flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
-                                3.14159265 / 4.0 * max_downhill_facet)
-                            cache_dirty[e_0_row_index, e_0_col_index] = 1
+
+                    #if there's a downward slope, save the flow direction
+                    if slope_max > 0:
+                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
+                            a_f[max_index] * flow_direction_max_slope +
+                            a_c[max_index] * 3.14159265 / 2.0)
+                        cache_dirty[e_0_row_index, e_0_col_index] = 1
 
     block_cache.flush_cache()
     flow_band = None
@@ -1987,3 +1956,35 @@ cdef class BlockCache:
                                 yoff=global_row_offset, xoff=global_col_offset)
         for band in self.band_list:
             band.FlushCache()
+
+
+
+'''def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+    high_edges=set()
+    low_edges=set()
+    flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges)
+    if len(low_edges) == 0:
+        if len(high_edges) != 0:
+            LOGGER.warn('There were undrainable flats')
+        else:
+            LOGGER.info('There were no flats')
+        return
+
+    label = 1
+    for cell in low_edges:
+        if cell is not labeled:
+            label_flats(cell, dem_uri, labels_uri)
+            label += 1
+
+    for cell in high_edges:
+        if cell is not labeled:
+            remove cell from high_edges
+    if any cell was removed from high_edges:
+        LOGGER.warn('not all flats have outlets')
+
+    away_from_higher(
+        labels_uri, flat_mask_uri, flow_direction_uri, high_edges,
+        flat_height_uri)
+    towards_lower(
+        labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
+        flat_height_uri)'''

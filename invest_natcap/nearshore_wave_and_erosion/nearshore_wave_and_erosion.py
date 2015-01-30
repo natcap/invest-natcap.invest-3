@@ -518,6 +518,41 @@ def execute(args):
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
+    # ------- Habitats constraints conventions: --------
+    # The field 'constraints' indicates where a specific layer can be found.
+    # The limits are expressed in various units. For instance:
+    #
+    #   -for the constraints land/water: the unit is a distance from the shore in meters
+    #   -for MLLW: the unit is depth, which is expressed as a number of MLLW. 
+    #       For instance, a value of 2 for 'MLLW' means twice the depth of MLLW.
+    #   -For MHHW: the unit is elevation, which is expressed as a number of MHHW.
+    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an elevation 3 times
+    #       higher than MHHW.
+    #
+    # Note: All the distances and elevations/depth are relative to the shore.
+    # 
+    # The values can be either positive or negative:
+    #   -Positive values indicate that the habitat is allowed from the shore 
+    #       up to a certain distance away from the shore:
+    #       'land':10 -> the habitat is allowed to grow from 0 to 10m from the
+    #           shore landward.
+    #       'water':20 -> the habitat is allowed to grow from 0 to 20m from the
+    #           shore seaward.
+    #       'MLLW':2 -> the habitat is allowed to grow within depths that range 
+    #           from 0 to 2 units of MLLW. If MLLW is 1.2, 
+    #           the depth is 1.2x2=2.4m
+    #       'MHHW':0.5 -> the habitat is allowed to grow within an elevations 
+    #           that range from 0 to 0.5 units of MHHW. If MLLW is 0.2, 
+    #           the depth is 0.2x0.5=0.1m
+    #
+    # Negative values are the opposite: instead of specifying an area FROM 
+    #   the shore out, it specifies an area UP TO the shore. In other words,
+    #   The area 
+    #       'land':-10 -> the habitat is allowed to grow from 10m inland from the
+    #           shore up to infinity landward.
+    #       'MLLW':-2 -> the habitat cannot grow at depths shallower 
+    #           than 2 units of MLLW. If MLLW is 1.2, the depth is 1.2x2=2.4m
+    #
     args['habitat_information'] = [
         ('kelp',
             {'shapefile type':'seagrass', 'type':1},           
@@ -534,6 +569,7 @@ def execute(args):
         ('levee',                 
             {'shapefile type':'man-made structure', 'type':5}, 
             {'constraints':{'land':-50.0, 'water':0.}}),
+#            {'constraints':{'water':0.}}),
         ('beach',                 
             {'shapefile type':'beach'},                        
             {'constraints':{'MHHW':1, 'MLLW':1}}),
@@ -744,8 +780,8 @@ def execute(args):
                 else:
                     category = shapefile_type
 
-                # If new shapefile type, add it to the dictionary
-                if shapefile_type not in args['shapefiles']:
+                # If new category (new shapefile type), add it to the dictionary
+                if category not in args['shapefiles']:
                     args['shapefiles'][category] = {}
                     args['shapefiles'][category][basename] = {}
 
@@ -853,26 +889,43 @@ def execute(args):
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
 
-    for habitat_information in args['habitat_information']:
-        habitat_constraints = habitat_information[2]['constraints']
+    # Computing constraints rasters so they can directly be used as masks 
+    # for the habitats that have spatial constraints.
+#    print('detected habitats')
+    for detected_habitat in args['shapefile types']['natural habitats']:
+#        print(args['shapefile types']['natural habitats'][detected_habitat])
 
-        # Detected a land-related distance constraint
-        if 'land' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'land_distance_map.tif')
-#            print('Checking land constraint')
+        detected_habitat_type = args['shapefile types']['natural habitats'][detected_habitat]
 
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-#                print('Creating land constraint', constraint_uri)
-                
+
+        for habitat_information in args['habitat_information']:
+            habitat_type = habitat_information[0]
+            if habitat_type != detected_habitat_type:
+#                print('habitat type', habitat_type, 'is not detected habitat', detected_habitat_type)
+                continue
+
+#            print('Processing habitat', habitat_type)
+
+            habitat_constraints = habitat_information[2]['constraints']
+#            print('habitat_constraints', habitat_constraints)
+
+            # Detected a land-related distance constraint
+            if 'land' in habitat_constraints:
+                constraint_uri = os.path.join(args['intermediate_dir'], \
+                    'land_distance_map.tif')
+    #            print('Checking land constraint')
+
+                # Create the constraint raster if it doesn't exist already
+    #            if not os.path.isfile(constraint_uri):
+    #                print('Creating land constraint', constraint_uri)
+                    
                 land_distance_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
                         'land_distance_mask.tif')
                 
                 raster_utils.vectorize_datasets( \
                     [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land_and_nodata, land_distance_mask_uri, gdal.GDT_Float32, \
+                    keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
                     -1, cell_size, 'intersection', vectorize_op = False)
 
                 # Use the mask to compute distance over land
@@ -881,17 +934,18 @@ def execute(args):
 
                 scale_raster_inplace(constraint_uri, cell_size)
 
-            args['constraints_type']['land'] = constraint_uri
+                # Keep this out of the if statement
+                args['constraints_type']['land'] = constraint_uri
 
-        # Detect a sea-related distance constraint
-        if 'water' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'water_distance_map.tif')
-#            print('checking water constraint')
+            # Detect a sea-related distance constraint
+            if 'water' in habitat_constraints:
+                constraint_uri = os.path.join(args['intermediate_dir'], \
+                    'water_distance_map.tif')
+    #            print('checking water constraint')
 
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-#                print('Creating water constraint', constraint_uri)
+                # Create the constraint raster if it doesn't exist already
+    #            if not os.path.isfile(constraint_uri):
+    #                print('Creating water constraint', constraint_uri)
 
                 water_distance_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
@@ -899,7 +953,7 @@ def execute(args):
 
                 raster_utils.vectorize_datasets( \
                     [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_water_and_nodata, water_distance_mask_uri, gdal.GDT_Float32, \
+                    keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
                     -1, cell_size, 'intersection', vectorize_op = False)
 
                 # Use the mask to compute distance over land
@@ -908,156 +962,235 @@ def execute(args):
 
                 scale_raster_inplace(constraint_uri, cell_size)
 
-            args['constraints_type']['water'] = constraint_uri
+                # Keep this out of the if statement
+                args['constraints_type']['water'] = constraint_uri
 
 
-        # Detect a mean high water-related depth constraint
-        if 'MHHW' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'MHHW_depth_map.tif')
-#            print('checking MHHW constraint')
+            # Detect a mean high water-related depth constraint
+            if 'MHHW' in habitat_constraints:
+                constraint_uri = os.path.join(args['intermediate_dir'], \
+                    'MHHW_depth_map.tif')
+    #            print('checking MHHW constraint')
 
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-#                print('Creating MHHW constraint', constraint_uri)
+                # Create the constraint raster if it doesn't exist already
+                if not os.path.isfile(constraint_uri):
+    #                print('Creating MHHW constraint', constraint_uri)
 
-                MHHW_depth_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'MHHW_depth_mask.tif')
+                    MHHW_depth_mask_uri = \
+                        os.path.join(args['intermediate_dir'], \
+                            'MHHW_depth_mask.tif')
 
+                    raster_utils.vectorize_datasets( \
+                        [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                        keep_land, MHHW_depth_mask_uri, gdal.GDT_Float32, \
+                        bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
+
+                    # Now, find the mean MHHW
+                    MHHW_depth_mask_uri = \
+                        os.path.join(args['intermediate_dir'], \
+                            'MHHW_depth_mask.tif')
+
+                    # Find the filename
+                    MHHW_uri = ''
+                    for raster_uri in in_raster_list:
+                        if 'mhhw' in raster_uri:
+                            MHHW_uri = raster_uri
+                            break
+                    if not MHHW_uri:
+                        print("Can't find MHHW raster in raster list")
+                        print('Files are:', in_raster_list)
+                        assert MHHW_uri
+
+                    # Compute the average MHHW
+                    MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
+                    MHHW_raster = gdal.Open(MHHW_uri)
+                    MHHW_band = MHHW_raster.GetRasterBand(1)
+                    (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
+                    MHHW_band = None
+                    MHHW_raster = None
+                    
+                    mean_MHHW = (MHHW_min + MHHW_max) / 2.
+
+                    assert mean_MHHW > 0, "Mean High High Water can't be negative"
+
+                    # Scale depths to mean_MHHW
+                    raster_utils.vectorize_datasets( \
+                        [MHHW_depth_mask_uri, args['bathymetry_raster_uri']], \
+                        lambda x, y: numpy.where(x==0, y / mean_MHHW, 0.), \
+                        constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                        'intersection', vectorize_op = False)
+
+                args['constraints_type']['MHHW'] = constraint_uri
+
+
+            # Detect a mean low water-related depth constraint
+            if 'MLLW' in habitat_constraints:
+                constraint_uri = os.path.join(args['intermediate_dir'], \
+                    'MLLW_depth_map.tif')
+    #            print('checking MLLW constraint')
+
+                # Create the constraint raster if it doesn't exist already
+                if not os.path.isfile(constraint_uri):
+    #                print('Creating MLLW constraint', constraint_uri)
+
+                    MLLW_depth_mask_uri = \
+                        os.path.join(args['intermediate_dir'], \
+                            'MLLW_depth_mask.tif')
+
+                    raster_utils.vectorize_datasets( \
+                        [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
+                        keep_water, MLLW_depth_mask_uri, gdal.GDT_Float32, \
+                        bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
+
+                    # Now, find the mean MLLW
+                    MLLW_depth_mask_uri = \
+                        os.path.join(args['intermediate_dir'], \
+                            'MLLW_depth_mask.tif')
+
+                    # Find the filename
+                    MLLW_uri = ''
+                    for raster_uri in in_raster_list:
+                        if 'mllw' in raster_uri:
+                            MLLW_uri = raster_uri
+                            break
+                    assert MLLW_uri
+
+                    # Compute the average MLLW
+                    MLLW_nodata = raster_utils.get_nodata_from_uri(MLLW_uri)
+                    MLLW_raster = gdal.Open(MLLW_uri)
+                    MLLW_band = MLLW_raster.GetRasterBand(1)
+                    (MLLW_min, MLLW_max) = MLLW_band.ComputeRasterMinMax()
+                    MLLW_band = None
+                    MLLW_raster = None
+
+                    mean_MLLW = (MLLW_min + MLLW_max) / 2.
+
+                    assert mean_MLLW < 0, "Mean Low Low Water can't be positive"
+
+                    # Scale depths to mean_MLLW
+                    raster_utils.vectorize_datasets( \
+                        [MLLW_depth_mask_uri, args['bathymetry_raster_uri']], \
+                        lambda x, y: numpy.where(x==0, y / mean_MLLW, 0.), \
+                        constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                        'intersection', vectorize_op = False)
+
+                args['constraints_type']['MLLW'] = constraint_uri
+
+
+    # Compute the constraints for each habitat
+    def combine_constraints(*x):
+        result = x[0]
+        for i in range(1, len(x)):
+            result = numpy.logical_or(result, x[i])
+        return result
+
+    # Loop through the habitats
+    for habitat_info in args['habitat_information']:
+        habitat_name = habitat_info[0]
+        print('habitat', habitat_name)
+
+        current_habitat_was_detected = False
+
+        for detected_habitat in args['shapefile types']['natural habitats']:
+            
+            if habitat_name ==  args['shapefile types']['natural habitats'][detected_habitat]:
+                current_habitat_was_detected = True
+                continue                
+
+        if not current_habitat_was_detected:
+#            print('habitat name', habitat_name, 'is not detected habitat', \
+#                args['shapefile types']['natural habitats'][detected_habitat])
+            continue
+
+#        print('habitat name', habitat_name, 'is detected habitat', \
+#            args['shapefile types']['natural habitats'][detected_habitat])
+
+        # -For each constraint:
+        constraint_uri_list = []
+        for constraint_type in habitat_info[2]['constraints'].keys():
+            # Retreive constraint URI
+            constraint_uri = args['constraints_type'][constraint_type] 
+            constraint_nodata = raster_utils.get_nodata_from_uri(constraint_uri)
+            # -Extract the constraint value
+            value = habitat_info[2]['constraints'][constraint_type]
+            print('constraint', constraint_type, 'value', value)
+            # -if pos: compute from shore to value
+            output_uri = raster_utils.temporary_filename()
+            if value >= 0.:
                 raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_land, MHHW_depth_mask_uri, gdal.GDT_Float32, \
-                    bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
-
-                # Now, find the mean MHHW
-                MHHW_depth_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'MHHW_depth_mask.tif')
-
-                # Find the filename
-                MHHW_uri = ''
-                for raster_uri in in_raster_list:
-                    if 'mhhw' in raster_uri:
-                        MHHW_uri = raster_uri
-                        break
-                if not MHHW_uri:
-                    print("Can't find MHHW raster in raster list")
-                    print('Files are:', in_raster_list)
-                    assert MHHW_uri
-
-                # Compute the average MHHW
-                MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
-                MHHW_raster = gdal.Open(MHHW_uri)
-                MHHW_band = MHHW_raster.GetRasterBand(1)
-                (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
-                MHHW_band = None
-                MHHW_raster = None
-                
-                mean_MHHW = (MHHW_min + MHHW_max) / 2.
-
-                assert mean_MHHW > 0, "Mean High High Water can't be negative"
-
-                # Scale depths to mean_MHHW
-                raster_utils.vectorize_datasets( \
-                    [MHHW_depth_mask_uri, args['bathymetry_raster_uri']], \
-                    lambda x, y: numpy.where(x==0, y / mean_MHHW, 0.), \
-                    constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                    [constraint_uri], \
+                    # Test for data values in the interval [0, value]
+                    lambda x: numpy.logical_and( \
+                        x > 0, \
+                        x <= value, \
+                        x != constraint_nodata), \
+                    output_uri, gdal.GDT_Float32, constraint_nodata, cell_size, \
                     'intersection', vectorize_op = False)
-
-            args['constraints_type']['MHHW'] = constraint_uri
-
-
-        # Detect a mean low water-related depth constraint
-        if 'MLLW' in habitat_constraints:
-            constraint_uri = os.path.join(args['intermediate_dir'], \
-                'MLLW_depth_map.tif')
-#            print('checking MLLW constraint')
-
-            # Create the constraint raster if it doesn't exist already
-            if not os.path.isfile(constraint_uri):
-#                print('Creating MLLW constraint', constraint_uri)
-
-                MLLW_depth_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'MLLW_depth_mask.tif')
-
+            # -if neg: compute ~(from shore to value)
+            else:
                 raster_utils.vectorize_datasets( \
-                    [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
-                    keep_water, MLLW_depth_mask_uri, gdal.GDT_Float32, \
-                    bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
-
-                # Now, find the mean MLLW
-                MLLW_depth_mask_uri = \
-                    os.path.join(args['intermediate_dir'], \
-                        'MLLW_depth_mask.tif')
-
-                # Find the filename
-                MLLW_uri = ''
-                for raster_uri in in_raster_list:
-                    if 'mllw' in raster_uri:
-                        MLLW_uri = raster_uri
-                        break
-                assert MLLW_uri
-
-                # Compute the average MLLW
-                MLLW_nodata = raster_utils.get_nodata_from_uri(MLLW_uri)
-                MLLW_raster = gdal.Open(MLLW_uri)
-                MLLW_band = MLLW_raster.GetRasterBand(1)
-                (MLLW_min, MLLW_max) = MLLW_band.ComputeRasterMinMax()
-                MLLW_band = None
-                MLLW_raster = None
-
-                mean_MLLW = (MLLW_min + MLLW_max) / 2.
-
-                assert mean_MLLW < 0, "Mean Low Low Water can't be positive"
-
-                # Scale depths to mean_MLLW
-                raster_utils.vectorize_datasets( \
-                    [MLLW_depth_mask_uri, args['bathymetry_raster_uri']], \
-                    lambda x, y: numpy.where(x==0, y / mean_MLLW, 0.), \
-                    constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
+                    [constraint_uri], \
+                    # Test for data values in the interval ]value, +inf], 
+                    # with the sign of value adjusted so that value >0
+                    lambda x: numpy.logical_and( \
+                        x > (-value), \
+                        x != constraint_nodata), \
+                    output_uri, gdal.GDT_Float32, constraint_nodata, cell_size, \
                     'intersection', vectorize_op = False)
+            # -Add constraint to constraint_list
+            constraint_uri_list.append(output_uri)
+        # -Use vectorize_datasets to combine the constraints
+        # -Save the constraint in a URI
+        habitat_info[2]['constraint_uri'] = \
+            os.path.join(args['intermediate_dir'], \
+                habitat_name + '_constraint_mask.tif')
+        raster_utils.vectorize_datasets(constraint_uri_list, combine_constraints, \
+            habitat_info[2]['constraint_uri'], \
+            gdal.GDT_Float32, constraint_nodata, cell_size, \
+            'intersection', vectorize_op = False)
+        print('Saved constraints for', habitat_name, 'to', habitat_info[2]['constraint_uri'])
 
-            args['constraints_type']['MLLW'] = constraint_uri
+#    print("first habitat", args['habitat_information'][1])
+#    print("habitat name", args['habitat_information'][1][0])
+#    print("constraints", args['habitat_information'][1][2]['constraints'])
+#    print("constraint_uri", args['habitat_information'][1][2]['constraint_uri'])
 
 
+    LOGGER.debug('Uniformizing the input raster sizes...')
+    # Need to uniformize the size of land and bathymetry rasters
+    in_raster_list.append(args['landmass_raster_uri'])
+    in_raster_list.append(args['bathymetry_raster_uri'])
 
-#    LOGGER.debug('Uniformizing the input raster sizes...')
-#    # Need to uniformize the size of land and bathymetry rasters
-#    in_raster_list.append(args['landmass_raster_uri'])
-#    in_raster_list.append(args['bathymetry_raster_uri'])
-#
-#    # For every input raster, create a corresponding output raster
-#    out_raster_list = []
-#    for uri in in_raster_list:
-#        out_raster_list.append(raster_utils.temporary_filename())
-#    # Gather info for aligning rasters properly
-#    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
-#    resample_method_list = ['bilinear'] * len(out_raster_list)
-#    out_pixel_size = cell_size
-#    mode = 'dataset'
-#    dataset_to_align_index = 0
-#    dataset_to_bound_index = 0
-#    # Invoke raster alignent function
-#    raster_utils.align_dataset_list( \
-#        in_raster_list, out_raster_list, resample_method_list,
-#        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
-#
-#    LOGGER.debug('Done')
-#    # Now copy the result back to the original files
-#    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
-#        os.remove(in_uri)
-#        os.rename(out_uri, in_uri)
-#
-#    # Quick sanity test with shape just to make sure
-#    landmass_raster_shape = \
-#        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
-#    bathymetry_raster_shape = \
-#        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
-#    assert landmass_raster_shape == bathymetry_raster_shape
-#    
-#    LOGGER.debug('Done')
+    # For every input raster, create a corresponding output raster
+    out_raster_list = []
+    for uri in in_raster_list:
+        out_raster_list.append(raster_utils.temporary_filename())
+    # Gather info for aligning rasters properly
+    cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
+    resample_method_list = ['bilinear'] * len(out_raster_list)
+    out_pixel_size = cell_size
+    mode = 'dataset'
+    dataset_to_align_index = 0
+    dataset_to_bound_index = 0
+    # Invoke raster alignent function
+    raster_utils.align_dataset_list( \
+        in_raster_list, out_raster_list, resample_method_list,
+        out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
+
+    LOGGER.debug('Done')
+    # Now copy the result back to the original files
+    for in_uri, out_uri in zip(in_raster_list, out_raster_list):
+        os.remove(in_uri)
+        os.rename(out_uri, in_uri)
+
+    # Quick sanity test with shape just to make sure
+    landmass_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
+    bathymetry_raster_shape = \
+        raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
+    assert landmass_raster_shape == bathymetry_raster_shape
+    
+    LOGGER.debug('Done')
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 
