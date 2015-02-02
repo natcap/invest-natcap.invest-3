@@ -357,7 +357,9 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     return (pixel_diff_x, pixel_diff_y)
 
 
-def new_raster_from_base_uri(base_uri, *args, **kwargs):
+def new_raster_from_base_uri(
+        base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None,
+        n_rows=None, n_cols=None, dataset_options=None):
     """
     A wrapper for the function new_raster_from_base that opens up
     the base_uri before passing it to new_raster_from_base.
@@ -365,14 +367,35 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     Args:
         base_uri (string): a URI to a GDAL dataset on disk.
 
-        All other arguments to new_raster_from_base are passed in.
+        output_uri (string): a string URI to the new output raster dataset.
+        gdal_format (string): a string representing the GDAL file format of the
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata (?): a value that will be set as the nodata value for the
+            output raster.  Should be the same type as 'datatype'
+        datatype (?): the pixel datatype of the output raster, for example
+            gdal.GDT_Float32.  See the following header file for supported
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+
+    Keyword Args:
+        fill_value (?): the value to fill in the raster on creation
+        n_rows (?): if set makes the resulting raster have n_rows in it
+            if not, the number of rows of the outgoing dataset are equal to
+            the base.
+        n_cols (?): similar to n_rows, but for the columns.
+        dataset_options (?): a list of dataset options that gets
+            passed to the gdal creation driver, overrides defaults
 
     Returns:
-        nothing.
+        nothing
 
     """
 
-    raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
+    raster_cython_utils.new_raster_from_base_uri(
+        base_uri,output_uri, gdal_format, nodata, datatype, fill_value=None,
+        n_rows=None, n_cols=None, dataset_options=None)
 
 
 def new_raster_from_base(

@@ -363,6 +363,7 @@ def _execute_nutrient(args):
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
+        LOGGER.debug(lulc_uri)
         raster_utils.vectorize_datasets(
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
