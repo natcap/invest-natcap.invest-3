@@ -2227,7 +2227,7 @@ def align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         out_pixel_size, mode, dataset_to_align_index,
         dataset_to_bound_index=None, aoi_uri=None,
-        assert_datasets_projected=True, process_pool=None):
+        assert_datasets_projected=True):
     """
     Take a list of dataset uris and generates a new set that is completely
     aligned with identical projections and pixel sizes.
@@ -2258,7 +2258,6 @@ def align_dataset_list(
         aoi_uri (string): a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
-        process_pool (?): a process pool for multiprocessing
 
     Returns:
         nothing
@@ -2347,25 +2346,11 @@ def align_dataset_list(
             bounding_box[index] = \
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
-    result_list = []
-
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        if process_pool:
-            result_list.append(
-                process_pool.apply_async(
-                    resize_and_resample_dataset_uri,
-                    args=[
-                        original_dataset_uri, bounding_box, out_pixel_size,
-                        out_dataset_uri, resample_method]))
-        else:
-            resize_and_resample_dataset_uri(
-                original_dataset_uri, bounding_box, out_pixel_size,
-                out_dataset_uri, resample_method)
-
-    while len(result_list) > 0:
-        #wait on results and raise exception if process raised exception
-        result_list.pop().get(0xFFFF)
+        resize_and_resample_dataset_uri(
+            original_dataset_uri, bounding_box, out_pixel_size,
+            out_dataset_uri, resample_method)
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
@@ -2413,6 +2398,13 @@ def align_dataset_list(
         aoi_layer = None
         ogr.DataSource.__swig_destroy__(aoi_datasource)
         aoi_datasource = None
+
+        #Clean up datasets
+        out_band_list = None
+        for ds in out_dataset_list:
+            ds.FlushCache()
+            gdal.Dataset.__swig_destroy__(ds)
+        out_dataset_list = None
 
 
 def assert_file_existance(dataset_uri_list):
