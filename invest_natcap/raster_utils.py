@@ -394,8 +394,9 @@ def new_raster_from_base_uri(
     """
 
     raster_cython_utils.new_raster_from_base_uri(
-        base_uri,output_uri, gdal_format, nodata, datatype, fill_value=None,
-        n_rows=None, n_cols=None, dataset_options=None)
+        base_uri,output_uri, gdal_format, nodata, datatype,
+        fill_value=fill_value, n_rows=n_rows, n_cols=n_rows,
+        dataset_options=dataset_options)
 
 
 def new_raster_from_base(
@@ -2170,6 +2171,14 @@ def resize_and_resample_dataset_uri(
     original_dataset = gdal.Open(original_dataset_uri)
     original_band = original_dataset.GetRasterBand(1)
     original_nodata = original_band.GetNoDataValue()
+    #gdal python doesn't handle unsigned nodata values well and sometime returns
+    #negative numbers.  this guards against that
+    if original_band.DataType == gdal.GDT_Byte:
+        original_nodata %= 2**8
+    if original_band.DataType == gdal.GDT_UInt16:
+        original_nodata %= 2**16
+    if original_band.DataType == gdal.GDT_UInt32:
+        original_nodata %= 2**32
 
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
@@ -2206,8 +2215,9 @@ def resize_and_resample_dataset_uri(
     if original_nodata is None:
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
+    
     output_band.SetNoDataValue(original_nodata)
-
+    
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
@@ -2239,7 +2249,7 @@ def resize_and_resample_dataset_uri(
     original_band = None
     gdal.Dataset.__swig_destroy__(original_dataset)
     original_dataset = None
-
+    
     output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
@@ -2578,8 +2588,7 @@ def vectorize_datasets(
             pixel_size_out, bounding_box_mode, dataset_to_align_index,
             dataset_to_bound_index=dataset_to_bound_index,
             aoi_uri=aoi_uri,
-            assert_datasets_projected=assert_datasets_projected,
-            process_pool=process_pool)
+            assert_datasets_projected=assert_datasets_projected)
         aligned_datasets = [
             gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_out_uri_list]
