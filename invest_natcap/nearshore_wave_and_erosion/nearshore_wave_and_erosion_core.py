@@ -266,22 +266,11 @@ def compute_transects(args):
                     if (end - start) > max_transect_length:
                         max_transect_length = end - start
                     
-                    # Store transect information
-#                        transects[transect_position] = tiles
-                    #position1 = \
-                    #    (transect_position + \
-                    #        transect_orientation).astype(int)
-                    #position3 = \
-                    #    (transect_position + \
-                    #        transect_orientation * 3).astype(int)
-                    #transects[position1[0], position1[1]] = 6
-                    #transects[position3[0], position3[1]] = 8
-                    #transects[raw_positions] = 100 + tiles #raw_depths
-#                        transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
-#                            tiles #raw_depths
-
-                    ## Will reconstruct the shore from this information
-                    #shore_profile[raw_positions] = raw_depths
+#                    # Store transect information
+#                    transects[raw_positions] = bathymetry_nodata
+#                    transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
+#                            smoothed_depths[start:end]
+#                    transects[transect_position] = tiles
                     
                     tiles += 1
 
@@ -297,15 +286,13 @@ def compute_transects(args):
 
     transect_count = tiles
 
-#    transect_count = 50
-#    tiles = 50
-    
     args['tiles'] = tiles
     args['max_transect_length'] = max_transect_length
 
     LOGGER.debug('found %i tiles.' % tiles)
 
     habitat_nodata = -99999
+
 
     # Create a numpy array to store the habitat type
     habitat_field_count = args['habitat_field_count']
@@ -362,6 +349,7 @@ def compute_transects(args):
     # can run optimally with enough memory, or use the HD otherwise...
     LOGGER.debug('Storing transect_info data')
 
+    #Todo: Remove this by using datasets directly instead of transect_info
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
@@ -402,6 +390,52 @@ def compute_transects(args):
 #                args['shapefiles'][category][filename].keys())
 
 
+    # Going through the bathymetry raster tile-by-tile.
+    LOGGER.debug('Saving transect data...')
+    single_value = np.array([[0]])
+
+    progress_step = tiles / 50
+    for transect in range(transect_count):
+        if transect % progress_step == 0:
+            print '.',
+        # Extract important positions
+        start = indices_limit_dataset[transect,0]
+        end = indices_limit_dataset[transect,1]
+        shore = shore_dataset[transect]
+
+        for pos in range(end-start):
+            # Store bathymetry in the transect
+            single_value[0, 0] = bathymetry_dataset[transect, pos]
+            transect_band.WriteArray( \
+                single_value, \
+                int(positions_dataset[transect, 1, pos]), \
+                int(positions_dataset[transect, 0, pos]))
+                    
+        # Store inland distance in pixels
+        single_value[0, 0] = shore - start
+        
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
+
+        # Store offshore distance in pixels
+        single_value[0, 0] = end - shore - 1
+        
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
+
+        # Store transect ID at the shore location
+        single_value[0, 0] = transect
+
+        transect_band.WriteArray( \
+            single_value, \
+            int(positions_dataset[transect, 1, pos]), \
+            int(positions_dataset[transect, 0, pos]))
+
+
     # HDF5 file container
     args['hdf5_files'] = {}
     args['habitat_nodata'] = habitat_nodata
@@ -412,64 +446,64 @@ def compute_transects(args):
     store_climatic_forcing(args, transect_data_file)
     store_tidal_information(args, transect_data_file)
 
-    # Store shore information gathered during the computation
-    LOGGER.info('Storing transect information...')
-    n_rows = transect_band.YSize
-    n_cols = transect_band.XSize
-
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    dataset_buffer = np.zeros((rows_per_block, cols_per_block))
-
-    # Compute data for progress bar
-    block_count = n_row_blocks * n_col_blocks
-    progress_step = block_count / 50
-    processed_blocks = 0
-
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            # Show progress bar
-            if processed_blocks % progress_step == 0:
-                print '.',
-
-            # Load data from the dataset
-            transect_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset, 
-                win_xsize=col_block_width,
-                win_ysize=row_block_width, 
-                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
-                
-            dataset_block = dataset_buffer[ \
-                0:row_block_width, \
-                0:col_block_width]
-            
-            # Load data from the sparse matrix
-            matrix_block = transects[ \
-                row_offset:row_offset+row_block_width, \
-                col_offset:col_offset+col_block_width].todense()
-
-            # Write sparse matrix contents over the dataset
-            mask = np.where(matrix_block != 0)
-
-            dataset_block[mask] = matrix_block[mask]
-
-            transect_band.WriteArray(
-                dataset_block[0:row_block_width, 0:col_block_width],
-                xoff=col_offset, yoff=row_offset)
-
-            processed_blocks += 1
+#    # Store shore information gathered during the computation
+#    LOGGER.info('Storing transect information...')
+#    n_rows = transect_band.YSize
+#    n_cols = transect_band.XSize
+#
+#    cols_per_block, rows_per_block = block_size[0], block_size[1]
+#    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+#    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+#
+#    dataset_buffer = np.zeros((rows_per_block, cols_per_block))
+#
+#    # Compute data for progress bar
+#    block_count = n_row_blocks * n_col_blocks
+#    progress_step = block_count / 50
+#    processed_blocks = 0
+#
+#    for row_block_index in xrange(n_row_blocks):
+#        row_offset = row_block_index * rows_per_block
+#        row_block_width = n_rows - row_offset
+#        if row_block_width > rows_per_block:
+#            row_block_width = rows_per_block
+#
+#        for col_block_index in xrange(n_col_blocks):
+#            col_offset = col_block_index * cols_per_block
+#            col_block_width = n_cols - col_offset
+#            if col_block_width > cols_per_block:
+#                col_block_width = cols_per_block
+#
+#            # Show progress bar
+#            if processed_blocks % progress_step == 0:
+#                print '.',
+#
+#            # Load data from the dataset
+#            transect_band.ReadAsArray(
+#                xoff=col_offset, yoff=row_offset, 
+#                win_xsize=col_block_width,
+#                win_ysize=row_block_width, 
+#                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
+#                
+#            dataset_block = dataset_buffer[ \
+#                0:row_block_width, \
+#                0:col_block_width]
+#            
+#            # Load data from the sparse matrix
+#            matrix_block = transects[ \
+#                row_offset:row_offset+row_block_width, \
+#                col_offset:col_offset+col_block_width].todense()
+#
+#            # Write sparse matrix contents over the dataset
+#            mask = np.where(matrix_block != 0)
+#
+#            dataset_block[mask] = matrix_block[mask]
+#
+#            transect_band.WriteArray(
+#                dataset_block[0:row_block_width, 0:col_block_width],
+#                xoff=col_offset, yoff=row_offset)
+#
+#            processed_blocks += 1
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
@@ -645,8 +679,8 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
 
     #Read data for each transect, one at a time
-#    for transect in range(2000, 2500): # Debug
-    for transect in range(transect_count): # Release
+    for transect in range(2000, 2500): # Debug
+#    for transect in range(transect_count): # Release
 #        print('')
         print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
 
@@ -1016,9 +1050,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     (transect_count, max_transect_length) = wave_dataset.shape
 
     
-#    print('(transect_count, max_transect_length)', (transect_count, max_transect_length))
-
-   
     wave_coordinates = np.zeros(coordinates_dataset.shape[1])
     wave_array = np.zeros(wave_dataset.shape[1])
 
@@ -1047,7 +1078,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
         
         coordinates_array = coordinates_dataset[transect,start:end]
 
-        # Clip the reansect at the first occurence of NaN
+        # Clip the transect at the first occurence of NaN
         first_nan = np.where(np.isnan(wave_array))[0]
         if first_nan.size:
             end = first_nan[0]
@@ -1099,10 +1130,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     # from the area we're interested in
     transect_mask = raster_utils.load_memory_mapped_array( \
         args['bathymetry_raster_uri'], raster_utils.temporary_filename())
-
-#    bathymetry = gdal.Open(args['bathymetry_raster_uri'])
-#    band = bathymetry.GetRasterBand(1)
-#    transect_mask = band.ReadAsArray()
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1273,9 +1300,6 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     
     raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
-
-#    wave_array = raster_utils.load_memory_mapped_array( \
-#        wave_interpolation_uri, raster_utils.temporary_filename())
 
     wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
     wave_band = wave_raster.GetRasterBand(1)
@@ -1563,11 +1587,6 @@ def combine_soil_types(args, transect_data_file):
         # Overriding source_nodata so it doesn't interfere with habitat_nodata
         source[source == source_nodata] = habitat_nodata
 
-        # Apply the habitat constraints
-#                source = \
-#                    apply_habitat_constraints(source, args['habitat_information'])
-#                sys.exit(0)
-        
         # Copy soil type directly to destination
         destination = source
 
@@ -1683,11 +1702,11 @@ def combine_natural_habitats(args, transect_data_file):
         LOGGER.info('Extracting information from ' + shp_name)
         
         # Find habitat_id that will be used to search field position in field_index:
-        habitat_type = args['shapefile types'][category][shp_name]
+        habitat_type_name = args['shapefile types'][category][shp_name]
         habitat_id = None
         for habitat in args['field_index']['natural habitats']:
             if args['field_index']['natural habitats'][habitat]['name'] == \
-                habitat_type:
+                habitat_type_name:
                 habitat_id = int(habitat)
                 break
 
@@ -1737,6 +1756,34 @@ def combine_natural_habitats(args, transect_data_file):
                     band.ReadAsArray(int(raw_positions[1][position]), \
                         int(raw_positions[0][position]), 1, 1)[0]
 
+            # Load the constraints
+#            print('habitat_type_name', habitat_type_name)
+#            print("args['habitat_information']", args['habitat_information'])
+            
+#            print("first habitat", args['habitat_information'][1])
+#            print("habitat name", args['habitat_information'][1][0])
+#            print("constraints", args['habitat_information'][1][2]['constraints'])
+#            print("constraint_uri", args['habitat_information'][1][2]['constraint_uri'])
+
+            for hab_id in range(len(args['habitat_information'])):
+                habitat_name = args['habitat_information'][hab_id][0]
+
+                if habitat_name == habitat_type_name:
+                    assert 'constraints' in args['habitat_information'][hab_id][2] 
+#                    print('Found constraints in', habitat_type_name, \
+#                        args['habitat_information'][hab_id][2]['constraints'])
+                    constraints = np.copy(habitat_type)
+                    #constraint_uri = 
+                    #constraint_raster = gdal.Open(constraint_uri)
+                    #constraint_band = constraint_raster.GetRasterBand(1)
+                    #for position in range(end-start):
+                    #    constraints[position] = \
+                    #        constraint_band.ReadAsArray( \
+                    #            int(raw_positions[1][position]), \
+                    #            int(raw_positions[0][position]), 1, 1)[0]
+#                else:
+#                    print('No constraints for', habitat_type_name)
+
             # Load the habitat type buffer
             destination = habitat_type_dataset[transect,start:end]
 
@@ -1745,13 +1792,12 @@ def combine_natural_habitats(args, transect_data_file):
             habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
 
 
-            # Apply habitat constraints
-#                habitat_type = \
-#                    apply_habitat_constraints(habitat_type, args['habitat_information'])
-#                sys.exit(0)
-            
             # Compute the mask that will be used to update the values
             mask = destination < habitat_type
+
+            # Apply habitat constraints
+            # mask = np.logical_and(mask, constraints)
+
             mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
@@ -1842,7 +1888,7 @@ def combine_natural_habitats(args, transect_data_file):
             raster = None
 
 
-def apply_habitat_constraints(habitat, constraints):
+def apply_habitat_constraints(mask, habitat_type, args):
     print('transect size', habitat.size)
 
     habitat_types = np.unique(habitat).astype(int)
