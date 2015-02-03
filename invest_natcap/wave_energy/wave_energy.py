@@ -1,4 +1,7 @@
 """InVEST Wave Energy Model Core Code"""
+import sys
+import array
+import heapq
 import math
 import os
 import logging
@@ -983,52 +986,55 @@ def create_percentile_rasters(
         return bisect(percentiles, band)
     # Create a memory mapped matrix for the dataset that we're getting the
     # percentiles for
-    tmp_matrix_file = raster_utils.temporary_filename()
-    matrix = raster_utils.load_memory_mapped_array(
-            raster_path, tmp_matrix_file, array_type=None)
+    #tmp_matrix_file = raster_utils.temporary_filename()
+    #matrix = raster_utils.load_memory_mapped_array(
+    #        raster_path, tmp_matrix_file, array_type=None)
 
     # Get the shape of the matrix to create future memory mapped arrays from
-    n_rows, n_cols = matrix.shape
+    #n_rows, n_cols = matrix.shape
 
     # Create two more memory mapped arrays for storing operations done on the
     # original matrix. This helps avoid memory errors.
-    tmp_mask_file = raster_utils.temporary_filename()
-    matrix_mask = np.memmap(
-        tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
+    #tmp_mask_file = raster_utils.temporary_filename()
+    #matrix_mask = np.memmap(
+    #    tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
 
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
-    dataset_array = np.reshape(matrix, (-1,))
-    dataset_nodata_flat = np.reshape(matrix_mask, (-1))
+    #dataset_array = np.reshape(matrix, (-1,))
+    #dataset_nodata_flat = np.reshape(matrix_mask, (-1))
 
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
-    neg_float = float(np.finfo(np.float32).min) + 1.0
-    ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
+    #neg_float = float(np.finfo(np.float32).min) + 1.0
+    #ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
 
     # Create a mask of where the nodata values are
-    np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
+    #np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
 
     # Using the above mask, replace the nodata values with a very large negative
     # number
-    dataset_array[dataset_nodata_flat] = neg_float
+    #dataset_array[dataset_nodata_flat] = neg_float
     # Create a masked array based on the array with the redefined nodata values
     # and the nodata mask. This will be helpful when getting the proper min /
     # max value of the array which will be used later.
-    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
+    #dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
 
     # Get the min / max value of the masked array. The masked out values are
     # ignored when getting the min / max so we don't have to worry about the
     # very large negative number. This min / max will be used later in scoring
     # the percentiles
-    min_val = dataset_mask.min()
-    max_val = dataset_mask.max()
-    LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
+    #min_val = dataset_mask.min()
+    #max_val = dataset_mask.max()
+    #LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
 
     # Get the percentiles based on the data and percentile ranges we are looking
     # for
-    percentiles = get_percentiles(
-            dataset_array, percentile_list, min_val, max_val)
+    #percentiles = get_percentiles(
+    #        dataset_array, percentile_list, min_val, max_val)
+
+    percentiles = calculate_percentiles_from_raster(
+        raster_path, percentile_list)
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
@@ -1042,8 +1048,8 @@ def create_percentile_rasters(
     percentiles.insert(0, int(start_value))
 
     # Set nodata to a very small negative number
-    nodata = np.iinfo(np.int32).min
-
+    #nodata = np.iinfo(np.int32).min
+    nodata = -9999919
     pixel_size = raster_utils.get_cell_size_from_uri(raster_path)
 
     # Classify the pixels of raster_dataset into groups and write
@@ -1511,3 +1517,90 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
         feat = None
+
+def calculate_percentiles_from_raster(raster_uri, percentiles):
+    """Does a memory efficient percentile lookup from a raster
+
+        raster_uri - a uri to a gdal raster
+        percentiles - a list of desired percentiles to lookup
+            ex: [25,50,75,90]
+
+        returns - a list of values corresponding to the percentiles
+            from the percentiles list
+    """
+
+    GDAL_TO_NUMPY_TYPE = {
+        gdal.GDT_Byte: numpy.uint8,
+        gdal.GDT_Int16: numpy.int16,
+        gdal.GDT_Int32: numpy.int32,
+        gdal.GDT_UInt16: numpy.uint16,
+        gdal.GDT_UInt32: numpy.uint32,
+        gdal.GDT_Float32: numpy.float32,
+        gdal.GDT_Float64: numpy.float64
+        }
+
+    raster = gdal.Open(raster_uri)
+    type = raster_utils.get_datatype_from_uri(raster_uri)
+    np_type = GDAL_TO_NUMPY_TYPE[type]
+
+    def numbers_from_file(f):
+        """Generates an iterator from a file
+            f = file object
+        """
+        arr = numpy.load(f)
+        for x in a:
+            yield x
+
+    iters = []
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    n_rows = raster.RasterYSize
+    n_cols = raster.RasterXSize
+
+    n_elements = 0
+
+    #Set the row strides to be something reasonable, like 256MB blocks
+    row_strides = max(int(2**28 / (4 * n_cols)), 1)
+
+    for row_index in xrange(0, n_rows, row_strides):
+        #It's possible we're on the last set of rows and the stride
+        #is too big, update if so
+        if row_index + row_strides >= n_rows:
+            row_strides = n_rows - row_index
+
+        # Read in raster chunk as array
+        arr = band.ReadAsArray(0,row_index,n_cols,row_strides)
+
+        tmp_uri = raster_utils.temporary_filename()
+        tmp_file = open(t_uri, 'wb')
+        arr = arr.flatten()
+        #Remove nodata values from array and thus percentile calculation
+        arr = np.delete(arr, np.where(arr==nodata))
+        #Tally the number of values relevant for calculating percentiles
+        n_elements += len(arr)
+        arr = np.sort(arr)
+
+        np.save(tmp_file, arr)
+        tmp_file.close()
+        tmp_file = open(tmp_uri, 'rb')
+        tmp_file.seek(0)
+        iters.append(numbers_from_file(tmp_file))
+        arr = None
+
+    rank_list = []
+    for perc in percentiles:
+        rank = math.ceil(perc/100.0 * n_elements)
+        rank_list.append(int(rank))
+    counter = 0
+    results = []
+
+    for x in heapq.merge(*iters):
+        if counter in rank_list:
+            results.append[x]
+        counter += 1
+
+    array = None
+    band = None
+    raster = None
+    return results
