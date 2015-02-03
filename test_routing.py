@@ -1,11 +1,8 @@
 import cProfile
 import pstats
-import sys
 import os
 import logging
 import subprocess
-
-import gdal
 
 from invest_natcap.routing import routing_utils
 import routing_cython_core
@@ -57,3 +54,4 @@ if __name__ == '__main__':
     p = pstats.Stats('stats')
     p.sort_stats('time').print_stats(20)
     p.sort_stats('cumulative').print_stats(20)
+    os.remove('stats')
