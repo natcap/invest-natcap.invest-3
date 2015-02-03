@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
   "modelName": "nearshore_wave_and_erosion",
   "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
-  "height": 950,
+  "height": 1000,
   "width": 900,
   "elements": [
     {
@@ -183,6 +183,21 @@
                   "validText": "[0-9]+",
                   "defaultValue": "25",
                   "helpText": "Length of your bathymetry transect, in kilometers. The model will also cut a transect of the same distance landward of your site location."
+                },
+                {
+                  "label": "IF \"yes\": Maximum depth of your profile (m)",
+                  "id": "max_profile_depth",
+                  "args_id": "max_profile_depth",
+                  "type": "text",
+                  "width": 70,
+                  "required": false,
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "dataType": "int",
+                  "validText": "[0-9]+",
+                  "defaultValue": "100",
+                  "helpText": "Maximum depth of your bathymetry transect, in meters. After smoothing the bathymetry, the model will clip the transect if its depth exceeds the maximum depth threshold."
                 },
                 {
                   "label": "IF \"no\": Upload Your Cross-Shore Profile (Optional)",

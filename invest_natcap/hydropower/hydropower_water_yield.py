@@ -94,7 +94,7 @@ def execute(args):
     precip_uri = raster_utils.temporary_filename()
     depth_to_root_rest_layer_uri = raster_utils.temporary_filename()
     pawc_uri = raster_utils.temporary_filename()
-    
+
     sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
 
@@ -149,9 +149,9 @@ def execute(args):
 
     # Paths for the watershed and subwatershed tables
     watershed_results_csv_uri = os.path.join(
-            output_dir, 'watershed_results%s.csv' % file_suffix)
+            output_dir, 'watershed_results_wyield%s.csv' % file_suffix)
     subwatershed_results_csv_uri = os.path.join(
-            output_dir, 'subwatershed_results%s.csv' % file_suffix)
+            output_dir, 'subwatershed_results_wyield%s.csv' % file_suffix)
 
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
@@ -352,12 +352,12 @@ def execute(args):
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
     watershed_results_uri = os.path.join(
-            output_dir, 'watershed_results%s.shp' % file_suffix)
+            output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sheds_uri, watershed_results_uri)
 
     if sub_sheds_uri is not None:
         subwatershed_results_uri = os.path.join(
-                output_dir, 'subwatersheds%s.shp' % file_suffix)
+                output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
         raster_utils.copy_datasource_uri(sub_sheds_uri, subwatershed_results_uri)
 
     def aet_op(fractp, precip, veg):

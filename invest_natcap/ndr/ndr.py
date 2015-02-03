@@ -212,7 +212,7 @@ def execute(args):
     field_header_order = []
 
     watershed_output_datasource_uri = os.path.join(
-        output_dir, 'watershed_outputs%s.shp' % file_suffix)
+        output_dir, 'watershed_results_ndr%s.shp' % file_suffix)
     #If there is already an existing shapefile with the same name and path,
     #delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):

@@ -163,10 +163,10 @@ def execute(args):
                         'offending value table %s, lulc_code %s, value %s' % (
                             low_range, upper_range, table_key, str(lulc_code),
                             table[table_key]))
-        
+
     if not args['calc_p'] and not args['calc_n']:
         raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
-    
+
     nutrients_to_process = []
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
@@ -182,7 +182,7 @@ def execute(args):
             args['water_purification_valuation_table_uri'], 'ws_id')
     _validate_inputs(nutrients_to_process, lucode_to_parameters,
         threshold_table, valuation_lookup)
-    
+
     #Set up the water yield arguments that might be a little different than
     #nutrient retention
     water_yield_args = args.copy()
@@ -220,22 +220,22 @@ def _execute_nutrient(args):
                 disk representing the user's watersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values. (SAY WHAT VALUES ARE)
-            'soil_depth_uri' - a uri to an input raster describing the 
+            'soil_depth_uri' - a uri to an input raster describing the
                 average soil depth value for each cell (mm) (required)
-            'precipitation_uri' - a uri to an input raster describing the 
+            'precipitation_uri' - a uri to an input raster describing the
                 average annual precipitation value for each cell (mm) (required)
-            'pawc_uri' - a uri to an input raster describing the 
+            'pawc_uri' - a uri to an input raster describing the
                 plant available water content value for each cell. Plant Available
                 Water Content fraction (PAWC) is the fraction of water that can be
-                stored in the soil profile that is available for plants' use. 
+                stored in the soil profile that is available for plants' use.
                 PAWC is a fraction from 0 to 1 (required)
-            'eto_uri' - a uri to an input raster describing the 
+            'eto_uri' - a uri to an input raster describing the
                 annual average evapotranspiration value for each cell. Potential
                 evapotranspiration is the potential loss of water from soil by
                 both evaporation from the soil and transpiration by healthy Alfalfa
                 (or grass) if sufficient water is available (mm) (required)
-            'seasonality_constant' - floating point value between 1 and 10 
-                corresponding to the seasonal distribution of precipitation 
+            'seasonality_constant' - floating point value between 1 and 10
+                corresponding to the seasonal distribution of precipitation
                 (required)
             'calc_p' - True if phosphorous is meant to be modeled, if True then
                 biophyscial table and threshold table and valuation table must
@@ -253,7 +253,7 @@ def _execute_nutrient(args):
 
         returns nothing.
     """
-    
+
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
@@ -316,8 +316,8 @@ def _execute_nutrient(args):
     nodata_landuse = raster_utils.get_nodata_from_uri(lulc_uri)
     nodata_load = -1.0
 
-    #resolve plateaus 
-    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)    
+    #resolve plateaus
+    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)
     routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
 
     #Calculate flow accumulation
@@ -412,7 +412,7 @@ def _execute_nutrient(args):
     field_header_order = ['mn_run_ind']
 
     watershed_output_datasource_uri = os.path.join(
-        output_dir, 'watershed_outputs%s.shp' % file_suffix)
+        output_dir, 'watershed_results_nutrient%s.shp' % file_suffix)
     #If there is already an existing shapefile with the same name and path,
     #delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
@@ -483,7 +483,7 @@ def _execute_nutrient(args):
             alv_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         export_tot = raster_utils.aggregate_raster_values_uri(
             export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
-        
+
         #Retention is alv-export
         retention_tot = {}
         for ws_id in alv_tot:
@@ -519,11 +519,11 @@ def _execute_nutrient(args):
 
 def disc(years, percent_rate):
     """Calculate discount rate for a given number of years
-    
+
         years - an integer number of years
         percent_rate - a discount rate in percent
 
-        returns the discount rate for the number of years to use in 
+        returns the discount rate for the number of years to use in
             a calculation like yearly_cost * disc(years, percent_rate)"""
 
     discount = 0.0
@@ -552,7 +552,7 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer,
         returns nothing"""
     if field_header_order == None:
         field_header_order = field_summaries.keys()
-        
+
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
