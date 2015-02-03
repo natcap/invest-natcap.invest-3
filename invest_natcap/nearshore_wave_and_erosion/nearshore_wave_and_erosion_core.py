@@ -41,8 +41,6 @@ def execute(args):
     # Profile generator
     transect_data_uri = compute_transects(args)
     transect_csv_uri = export_transect_coordinates_to_CSV(transect_data_uri)
-#    transect_data_uri = \
-#        os.path.join(args['intermediate_dir'], 'transect_data.h5')
 
     # Stop there if the user only wants to run the profile generator 
     if args['modules_to_run'] == 'Profile generator only':
@@ -51,8 +49,6 @@ def execute(args):
     # Nearshore wave and erosion model
     biophysical_data_uri = \
         compute_nearshore_and_wave_erosion(transect_data_uri, args)
-#    biophysical_data_uri = \
-#        os.path.join(args['intermediate_dir'], 'output.h5')
 
     # Reconstruct 2D shore maps from biophysical data 
     reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri)
@@ -298,7 +294,7 @@ def compute_transects(args):
 
     # Creating HDF5 file that will store the transect data
     transect_data_uri = \
-        os.path.join(args['intermediate_dir'], 'transect_data.h5')
+        os.path.join(args['output_dir'], 'transect_data.h5')
     
     LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
 
@@ -722,28 +718,13 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     indices_limit = numpy.array((transect_length, 2))
     coordinates_limits = numpy.array((transect_length, 4))
 
-#    print('Number of transects', transect_count)
-#    print('Maximum number of habitat fields', habitat_fields)
-#    print('Maximum number of soil fields', soil_fields)
-#    print('Maximum transect length', transect_length)
-
     # Open field indices file, so that we can access a specific field by name
     field_indices_uri = os.path.join(args['intermediate_dir'], 'field_indices')
     field_indices = json.load(open(field_indices_uri)) # Open field indices info
 
     # Field indices
-#    print('')
-#    print('')
-
     for habitat_type in field_indices:
         habitat = field_indices[habitat_type]
-#        print('habitat', habitat)
-        #print('habitat ' + str(habitat_type) + ' has ' + \
-        #      str(len(habitat['fields'])) + ' fields:')
-
-        #for field in habitat['fields']:
-        #    print('field ' + str(field) + ' is ' + str(habitat['fields'][field]))
-#        print('')
 
 
     #--------------------------------------------------------------
@@ -1072,7 +1053,7 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
 
     # Saving data in HDF5
     biophysical_data_uri = \
-        os.path.join(args['intermediate_dir'], 'output.h5')
+        os.path.join(args['output_dir'], 'output.h5')
 
     f = h5py.File(biophysical_data_uri, 'w') # Create new HDF5 file
 
@@ -1374,7 +1355,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
 #    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
 
     # Save the values in a raster
-    wave_interpolation_uri = os.path.join(args['intermediate_dir'], \
+    wave_interpolation_uri = os.path.join(args['output_dir'], \
         'wave_interpolation.tif')
     
     print('Saving data to', wave_interpolation_uri)
