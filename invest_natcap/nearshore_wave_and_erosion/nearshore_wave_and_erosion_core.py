@@ -5,6 +5,7 @@ import math
 import sys
 import os
 import logging
+import csv
 
 import numpy as np
 import scipy as sp
@@ -39,6 +40,7 @@ def execute(args):
 
     # Profile generator
     transect_data_uri = compute_transects(args)
+    transect_csv_uri = export_transect_coordinates_to_CSV(transect_data_uri)
 #    transect_data_uri = \
 #        os.path.join(args['intermediate_dir'], 'transect_data.h5')
 
@@ -266,12 +268,6 @@ def compute_transects(args):
                     if (end - start) > max_transect_length:
                         max_transect_length = end - start
                     
-#                    # Store transect information
-#                    transects[raw_positions] = bathymetry_nodata
-#                    transects[(raw_positions[0][start:end], raw_positions[1][start:end])] = \
-#                            smoothed_depths[start:end]
-#                    transects[transect_position] = tiles
-                    
                     tiles += 1
 
     # Cleanup
@@ -320,6 +316,11 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata, \
             dtype = 'i4')
     
+    xy_positions_dataset = \
+        transect_data_file.create_dataset('xy_positions', \
+            (tiles, 2, max_transect_length), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+    
     shore_dataset = \
         transect_data_file.create_dataset('shore_index', \
             (tiles, 1), \
@@ -340,6 +341,11 @@ def compute_transects(args):
             compression = 'gzip', fillvalue = habitat_nodata, \
             dtype = 'i4')
 
+    xy_coordinates_limits_dataset = \
+        limits_group.create_dataset('xy_coordinates', \
+            (tiles, 4), \
+            compression = 'gzip', fillvalue = habitat_nodata)
+
     mask_dataset = transect_data_file.create_dataset('mask', \
             (args['tiles'], args['max_transect_length']), \
             compression = 'gzip', fillvalue = False, dtype = 'b')
@@ -350,17 +356,36 @@ def compute_transects(args):
     LOGGER.debug('Storing transect_info data')
 
     #Todo: Remove this by using datasets directly instead of transect_info
+    dataset = gdal.Open(args['bathymetry_raster_uri'])
+    
+    gt = dataset.GetGeoTransform()
+    dataset = None
+    
     for transect in range(transect_count):
         (start, shore, end) = transect_info[transect]['clip_limits']
-
-        bathymetry_dataset[transect, start:end] = \
-            transect_info[transect]['depths'][start:end]
 
         positions_dataset[transect, 0, start:end] = \
             transect_info[transect]['raw_positions'][0][start:end]
 
         positions_dataset[transect, 1, start:end] = \
             transect_info[transect]['raw_positions'][1][start:end]
+
+
+        # We want pixel center, not corner
+        origin = np.array([gt[3]+gt[5]/2., gt[0]+gt[1]/2.])
+        step = np.array([gt[5], gt[1]])
+
+        I = transect_info[transect]['raw_positions'][0][start:end] * \
+            step[0] + origin[0]
+        J = transect_info[transect]['raw_positions'][1][start:end] * \
+            step[1] + origin[1]
+
+        xy_positions_dataset[transect, 0, start:end] = J[start:end]
+        xy_positions_dataset[transect, 1, start:end] = I[start:end]
+
+        bathymetry_dataset[transect, start:end] = \
+            transect_info[transect]['depths'][start:end]
+
 
         indices_limit_dataset[transect] = [start, end]
 
@@ -372,28 +397,32 @@ def compute_transects(args):
             transect_info[transect]['raw_positions'][0][end-1], \
             transect_info[transect]['raw_positions'][1][end-1], \
             ]
-        coordinates_limits_dataset[transect] = [ \
-            transect_info[transect]['raw_positions'][0][start], \
-            transect_info[transect]['raw_positions'][1][start], \
-            transect_info[transect]['raw_positions'][0][end-1], \
-            transect_info[transect]['raw_positions'][1][end-1], \
-            ]
+        xy_coordinates_limits_dataset[transect] = \
+            [J[start], I[start], J[end-1], I[end-1]]
 
         transect_info[transect] = None
-
-#    for category in args['shapefiles']:
-#        print('')
-#        print 'HDF5 category', category,
-#        
-#        for filename in args['shapefiles'][category]:
-#            print('filename', filename, 'fields:', \
-#                args['shapefiles'][category][filename].keys())
 
 
     # Going through the bathymetry raster tile-by-tile.
     LOGGER.debug('Saving transect data...')
     single_value = np.array([[0]])
 
+
+    # Saving the shore
+    shore_points = transects.nonzero()  # Extract the shore points
+    progress_step = shore_points[0].size / 50
+    for segment in range(shore_points[0].size):
+        if segment % progress_step == 0:
+            print '.',
+        single_value[0, 0] = -1
+        transect_band.WriteArray( \
+            single_value, \
+            int(shore_points[1][segment]), \
+            int(shore_points[0][segment]))
+    print('')
+
+
+    # Saving transects
     progress_step = tiles / 50
     for transect in range(transect_count):
         if transect % progress_step == 0:
@@ -416,25 +445,25 @@ def compute_transects(args):
         
         transect_band.WriteArray( \
             single_value, \
-            int(positions_dataset[transect, 1, pos]), \
-            int(positions_dataset[transect, 0, pos]))
+            int(positions_dataset[transect, 1, start]), \
+            int(positions_dataset[transect, 0, start]))
 
         # Store offshore distance in pixels
         single_value[0, 0] = end - shore - 1
         
         transect_band.WriteArray( \
             single_value, \
-            int(positions_dataset[transect, 1, pos]), \
-            int(positions_dataset[transect, 0, pos]))
+            int(positions_dataset[transect, 1, end-1]), \
+            int(positions_dataset[transect, 0, end-1]))
 
         # Store transect ID at the shore location
         single_value[0, 0] = transect
 
         transect_band.WriteArray( \
             single_value, \
-            int(positions_dataset[transect, 1, pos]), \
-            int(positions_dataset[transect, 0, pos]))
-
+            int(positions_dataset[transect, 1, shore]), \
+            int(positions_dataset[transect, 0, shore]))
+    print('')
 
     # HDF5 file container
     args['hdf5_files'] = {}
@@ -447,6 +476,8 @@ def compute_transects(args):
     store_tidal_information(args, transect_data_file)
 
 #    # Store shore information gathered during the computation
+#    # This is faster than the above method, but it doesn't work on Windows:
+#    # instead of lines, the model saves entire rectangles of horizontal gradient
 #    LOGGER.info('Storing transect information...')
 #    n_rows = transect_band.YSize
 #    n_cols = transect_band.XSize
@@ -521,7 +552,60 @@ def compute_transects(args):
     return transect_data_uri
     
 
+def export_transect_coordinates_to_CSV(transect_data_uri):
+    """Extract transect coordinates to a CSV
 
+        Inputs:
+            -transect_data_uri: URI to the HDF5 output file produced 
+            by the PG tool
+
+        Returns the output CSV's URI that contains the data. """
+
+    output_csv_uri = os.path.splitext(transect_data_uri)[0] + '.csv'
+
+    LOGGER.debug('Exporting transect coordinates to CSV %s.' % output_csv_uri)
+
+    transect_data_file = h5py.File(transect_data_uri)
+
+
+    # Extract transect position
+    shore_id_dataset = transect_data_file['shore_index']
+    xy_positions_dataset = transect_data_file['xy_positions']
+
+    # First and last indices of the valid transect points (that are not nodata)
+    limit_group = transect_data_file['limits']
+
+    coordinates_limits_dataset = limit_group['xy_coordinates']
+
+
+    # Save data in CSV
+    np.set_printoptions(precision = 20)
+    with open(output_csv_uri, 'w') as csv_file:
+        writer = csv.writer(csv_file)
+
+        row = ['x', 'y', 'x_inland', 'y_inland', 'x_offshore', 'y_offshore']
+        writer.writerow(row)
+        
+        for transect in range(shore_id_dataset.size):
+            
+            # Extract transect intersection with shore
+            shore_index = shore_id_dataset[transect]
+            x_shore = xy_positions_dataset[transect, 0, shore_index]
+            y_shore = xy_positions_dataset[transect, 1, shore_index]
+            
+            # Extract transect most landward point (first point)
+            x_start = coordinates_limits_dataset[transect, 0]
+            y_start = coordinates_limits_dataset[transect, 1]
+            
+            # Extract transect most seaward point (last point)
+            x_end = coordinates_limits_dataset[transect, 2]
+            y_end = coordinates_limits_dataset[transect, 3]
+
+            # Create the row
+            row = [x_shore, y_shore, x_start, y_start, x_end, y_end]
+
+            # Write it
+            writer.writerow(row)
 
 
 # ----------------------------------------------
