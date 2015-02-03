@@ -836,6 +836,8 @@ def execute(args):
                     # Add new uri to uri list
                     args['shapefiles'][category][basename]['Type'] = output_uri
                     in_raster_list.append(output_uri)
+            else:
+                LOGGER.debug("Can't recognize the shapefile %s", file_uri)
 
 
     # -----------------------------
