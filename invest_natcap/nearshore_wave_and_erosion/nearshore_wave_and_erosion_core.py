@@ -249,7 +249,7 @@ def compute_transects(args):
 
                     # Clip if transect hits land
                     (clipped_transect, (start, shore, end)) = \
-                        clip_transect(smoothed_depths)
+                        clip_transect(smoothed_depths, args['max_profile_depth'])
 
                     # Transect could be invalid, skip it
                     if clipped_transect is None:
@@ -2306,7 +2306,7 @@ def smooth_transect(transect, window_size_pct):
 
     return y[window_length:-window_length+1] 
 
-def clip_transect(transect):
+def clip_transect(transect, max_depth):
     """Clip transect using maximum and minimum heights"""
     # Transect has to have a minimum size
     if transect.size < 5:
@@ -2318,7 +2318,7 @@ def clip_transect(transect):
         assert uniques[0] == 0.0
         return (transect, (0, 0, transect.size))
 
-    # If higher point is negative: can't do anything
+    # If higher point is negative: can't do anything, everything is underwater
     if transect[0] < 0:
         return (None, (None, None, None))
 
@@ -2337,6 +2337,9 @@ def clip_transect(transect):
     while transect[shore - 1 + water_extent] <= 0:
         # Stop if reached the end of the transect
         if shore + water_extent == transect.size:
+            break
+        # Stop if reached the maximum depth threshold
+        if transect[shore + water_extent] < -max_depth:
             break
         # Else, proceed to the next pixel
         water_extent += 1
