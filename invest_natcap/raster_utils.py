@@ -357,7 +357,9 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     return (pixel_diff_x, pixel_diff_y)
 
 
-def new_raster_from_base_uri(base_uri, *args, **kwargs):
+def new_raster_from_base_uri(
+        base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None,
+        n_rows=None, n_cols=None, dataset_options=None):
     """
     A wrapper for the function new_raster_from_base that opens up
     the base_uri before passing it to new_raster_from_base.
@@ -365,14 +367,36 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     Args:
         base_uri (string): a URI to a GDAL dataset on disk.
 
-        All other arguments to new_raster_from_base are passed in.
+        output_uri (string): a string URI to the new output raster dataset.
+        gdal_format (string): a string representing the GDAL file format of the
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata (?): a value that will be set as the nodata value for the
+            output raster.  Should be the same type as 'datatype'
+        datatype (?): the pixel datatype of the output raster, for example
+            gdal.GDT_Float32.  See the following header file for supported
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+
+    Keyword Args:
+        fill_value (?): the value to fill in the raster on creation
+        n_rows (?): if set makes the resulting raster have n_rows in it
+            if not, the number of rows of the outgoing dataset are equal to
+            the base.
+        n_cols (?): similar to n_rows, but for the columns.
+        dataset_options (?): a list of dataset options that gets
+            passed to the gdal creation driver, overrides defaults
 
     Returns:
-        nothing.
+        nothing
 
     """
 
-    raster_cython_utils.new_raster_from_base_uri(base_uri, *args, **kwargs)
+    raster_cython_utils.new_raster_from_base_uri(
+        base_uri,output_uri, gdal_format, nodata, datatype,
+        fill_value=fill_value, n_rows=n_rows, n_cols=n_rows,
+        dataset_options=dataset_options)
 
 
 def new_raster_from_base(
@@ -2147,6 +2171,14 @@ def resize_and_resample_dataset_uri(
     original_dataset = gdal.Open(original_dataset_uri)
     original_band = original_dataset.GetRasterBand(1)
     original_nodata = original_band.GetNoDataValue()
+    #gdal python doesn't handle unsigned nodata values well and sometime returns
+    #negative numbers.  this guards against that
+    if original_band.DataType == gdal.GDT_Byte:
+        original_nodata %= 2**8
+    if original_band.DataType == gdal.GDT_UInt16:
+        original_nodata %= 2**16
+    if original_band.DataType == gdal.GDT_UInt32:
+        original_nodata %= 2**32
 
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
@@ -2183,8 +2215,9 @@ def resize_and_resample_dataset_uri(
     if original_nodata is None:
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
+    
     output_band.SetNoDataValue(original_nodata)
-
+    
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo_transform)
     output_dataset.SetProjection(original_sr.ExportToWkt())
@@ -2216,7 +2249,7 @@ def resize_and_resample_dataset_uri(
     original_band = None
     gdal.Dataset.__swig_destroy__(original_dataset)
     original_dataset = None
-
+    
     output_dataset.FlushCache()
     gdal.Dataset.__swig_destroy__(output_dataset)
     output_dataset = None
@@ -2227,7 +2260,7 @@ def align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         out_pixel_size, mode, dataset_to_align_index,
         dataset_to_bound_index=None, aoi_uri=None,
-        assert_datasets_projected=True, process_pool=None):
+        assert_datasets_projected=True):
     """
     Take a list of dataset uris and generates a new set that is completely
     aligned with identical projections and pixel sizes.
@@ -2258,7 +2291,6 @@ def align_dataset_list(
         aoi_uri (string): a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
-        process_pool (?): a process pool for multiprocessing
 
     Returns:
         nothing
@@ -2347,25 +2379,11 @@ def align_dataset_list(
             bounding_box[index] = \
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
-    result_list = []
-
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
             dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        if process_pool:
-            result_list.append(
-                process_pool.apply_async(
-                    resize_and_resample_dataset_uri,
-                    args=[
-                        original_dataset_uri, bounding_box, out_pixel_size,
-                        out_dataset_uri, resample_method]))
-        else:
-            resize_and_resample_dataset_uri(
-                original_dataset_uri, bounding_box, out_pixel_size,
-                out_dataset_uri, resample_method)
-
-    while len(result_list) > 0:
-        #wait on results and raise exception if process raised exception
-        result_list.pop().get(0xFFFF)
+        resize_and_resample_dataset_uri(
+            original_dataset_uri, bounding_box, out_pixel_size,
+            out_dataset_uri, resample_method)
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
@@ -2413,6 +2431,13 @@ def align_dataset_list(
         aoi_layer = None
         ogr.DataSource.__swig_destroy__(aoi_datasource)
         aoi_datasource = None
+
+        #Clean up datasets
+        out_band_list = None
+        for ds in out_dataset_list:
+            ds.FlushCache()
+            gdal.Dataset.__swig_destroy__(ds)
+        out_dataset_list = None
 
 
 def assert_file_existance(dataset_uri_list):
@@ -2563,8 +2588,7 @@ def vectorize_datasets(
             pixel_size_out, bounding_box_mode, dataset_to_align_index,
             dataset_to_bound_index=dataset_to_bound_index,
             aoi_uri=aoi_uri,
-            assert_datasets_projected=assert_datasets_projected,
-            process_pool=process_pool)
+            assert_datasets_projected=assert_datasets_projected)
         aligned_datasets = [
             gdal.Open(filename, gdal.GA_ReadOnly) for filename in
             dataset_out_uri_list]

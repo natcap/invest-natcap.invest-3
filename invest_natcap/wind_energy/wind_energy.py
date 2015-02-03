@@ -1625,7 +1625,10 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     for point_dict in dict_data.itervalues():
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
-
+        # When projecting to WGS84, extents -180 to 180 are used for
+        # longitude. In case input longitude is from -360 to 0 convert
+        if longitude < -180:
+            longitude += 360
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
 

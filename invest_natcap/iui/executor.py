@@ -605,7 +605,7 @@ class Executor(threading.Thread):
                     # Try to launch a windows file explorer to visit the workspace
                     # directory now that the operation has finished executing.
                     LOGGER.info('Using windows explorer to view files')
-                    subprocess.Popen('explorer "%s"' % workspace)
+                    subprocess.Popen('explorer "%s"' % os.path.normpath(workspace))
                 else:
                     # Assume we're on linux.  No biggie, just use xdg-open to use the
                     # default file opening scheme.
