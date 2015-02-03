@@ -41,8 +41,8 @@ LOGGER = logging.getLogger('routing')
 
 
 def route_flux(
-    in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri, loss_uri,
-    flux_uri, absorption_mode, aoi_uri=None, stream_uri=None):
+        in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri,
+        loss_uri, flux_uri, absorption_mode, aoi_uri=None, stream_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -53,8 +53,8 @@ def route_flux(
         in_dem - a uri to the dem that generated in_flow_direction, they
             should be aligned rasters
         in_source_uri - a GDAL dataset that has source flux per pixel
-        in_absorption_rate_uri - a GDAL floating point dataset that has a percent
-            of flux absorbed per pixel
+        in_absorption_rate_uri - a GDAL floating point dataset that has a
+            percent of flux absorbed per pixel
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
@@ -68,19 +68,19 @@ def route_flux(
             and neighboring pixels will either be raw outlets or
             non-contibuting inputs depending on the orientation of the DEM.
         stream_uri - (optional) a GDAL dataset that classifies pixels as stream
-            (1) or not (0).  If during routing we hit a stream pixel, all 
-            upstream flux is considered to wash to zero because it will 
-            reach the outlet.  The advantage here is that it can't then 
+            (1) or not (0).  If during routing we hit a stream pixel, all
+            upstream flux is considered to wash to zero because it will
+            reach the outlet.  The advantage here is that it can't then
             route out of the stream
 
         returns nothing"""
-        
+
     dem_uri = raster_utils.temporary_filename(suffix='.tif')
     flow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
     source_uri = raster_utils.temporary_filename(suffix='.tif')
     absorption_rate_uri = raster_utils.temporary_filename(suffix='.tif')
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_flow_direction)
-    
+
     raster_utils.align_dataset_list(
         [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
         [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
@@ -96,17 +96,23 @@ def route_flux(
 
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode, stream_uri)
+        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode,
+        stream_uri)
 
-    for ds_uri in [dem_uri, flow_direction_uri, source_uri, absorption_rate_uri, outflow_weights_uri, outflow_direction_uri]:
+    cleanup_uri_list = [
+        dem_uri, flow_direction_uri, source_uri, absorption_rate_uri,
+        outflow_weights_uri, outflow_direction_uri]
+
+    for ds_uri in cleanup_uri_list:
         try:
             os.remove(ds_uri)
-        except OSError as e:
+        except OSError as exception:
             LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
-            LOGGER.warn(e)
+            LOGGER.warn(exception)
 
 
-def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
+def flow_accumulation(
+        flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
 
@@ -132,12 +138,13 @@ def flow_accumulation(flow_direction_uri, dem_uri, flux_output_uri, aoi_uri=None
         zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
         aoi_uri=aoi_uri)
 
-    for ds_uri in [constant_flux_source_uri, zero_absorption_source_uri, loss_uri]:
+    for ds_uri in [constant_flux_source_uri, zero_absorption_source_uri,
+                   loss_uri]:
         try:
             os.remove(ds_uri)
-        except OSError as e:
+        except OSError as exception:
             LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
-            LOGGER.warn(e)
+            LOGGER.warn(exception)
 
 
 def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
@@ -150,58 +157,30 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
         stream_uri - (input) the uri of the output stream dataset
 
         returns nothing"""
-    
+
     flow_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    stream_nodata = 255
+    #sometimes flow threshold comes in as a string from a model, cast to float
+    flow_threshold = float(flow_threshold)
     def classify_stream(flow_accumulation):
-        #mask and convert to 0/1
-        #flow_thrshold might come in as a string all across the invest models
-        #this just casts it so it doesn't break someone's model
-        stream_mask = (flow_accumulation >= float(flow_threshold)).astype(numpy.byte)
-        return numpy.where(flow_accumulation != flow_nodata, stream_mask, 255)
-        
+        """mask and convert to 0/1 or nodata"""
+
+        stream_mask = (
+            flow_accumulation >= flow_threshold).astype(numpy.byte)
+        return numpy.where(
+            flow_accumulation != flow_nodata, stream_mask, stream_nodata)
+
     raster_utils.vectorize_datasets(
-        [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte, 
-        255, raster_utils.get_cell_size_from_uri(flow_accumulation_uri),
+        [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte,
+        stream_nodata, raster_utils.get_cell_size_from_uri(
+            flow_accumulation_uri),
         'intersection', vectorize_op=False, assert_datasets_projected=False)
 
 
-def calculate_flow_length(flow_direction_uri, flow_length_uri):
-    """Calculate the flow length of a cell given the flow direction
-
-        flow_direction_uri - uri to a gdal dataset that represents the
-            d_inf flow direction of each pixel
-        flow_length_uri - the uri that the output flow length will be put to
-
-        returns nothing"""
-
-    flow_direction_dataset = gdal.Open(flow_direction_uri)
-    _, flow_direction_nodata = raster_utils.extract_band_and_nodata(
-        flow_direction_dataset)
-
-    flow_length_nodata = -1.0
-    flow_length_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
-        gdal.GDT_Float32)
-
-    flow_length_pixel_size = raster_utils.get_cell_size_from_uri(flow_length_uri)
-
-    def flow_length(flow_direction):
-        """Function to calculate flow length for vectorize_datasets"""
-        if flow_direction == flow_direction_nodata:
-            return flow_length_nodata
-        sin_val = numpy.abs(numpy.sin(flow_direction))
-        cos_val = numpy.abs(numpy.cos(flow_direction))
-        return flow_length_pixel_size / numpy.maximum(sin_val, cos_val)
-
-    cell_size = raster_utils.get_cell_size_from_uri(flow_direction_uri)
-    raster_utils.vectorize_datasets(
-        [flow_direction_uri], flow_length, flow_length_uri, gdal.GDT_Float32,
-        flow_length_nodata, cell_size, "intersection")
-
-
 def pixel_amount_exported(
-    in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri,
-    in_source_uri, pixel_export_uri, aoi_uri=None, percent_to_stream_uri=None):
+        in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri,
+        in_source_uri, pixel_export_uri, aoi_uri=None,
+        percent_to_stream_uri=None):
     """Calculates flow and absorption rates to determine the amount of source
         exported to the stream.  All datasets must be in the same projection.
         Nothing will be retained on stream pixels.
@@ -227,8 +206,10 @@ def pixel_amount_exported(
     source_uri = raster_utils.temporary_filename(suffix='.tif')
     flow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
     raster_utils.align_dataset_list(
-        [in_flow_direction_uri, in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri],
-        [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri, source_uri],
+        [in_flow_direction_uri, in_dem_uri, in_stream_uri,
+         in_retention_rate_uri, in_source_uri],
+        [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri,
+         source_uri],
         ["nearest", "nearest", "nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
@@ -256,7 +237,7 @@ def pixel_amount_exported(
         effect_uri = percent_to_stream_uri
     else:
         effect_uri = raster_utils.temporary_filename(suffix='.tif')
-        
+
     routing_cython_core.percent_to_sink(
         stream_uri, export_rate_uri, outflow_direction_uri,
         outflow_weights_uri, effect_uri)
@@ -276,16 +257,16 @@ def pixel_amount_exported(
         gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
-    for ds_uri in [dem_uri, stream_uri, retention_rate_uri, source_uri, 
-        flow_direction_uri, export_rate_uri, outflow_weights_uri,
-        outflow_direction_uri, effect_uri]:
+    for ds_uri in [dem_uri, stream_uri, retention_rate_uri, source_uri,
+                   flow_direction_uri, export_rate_uri, outflow_weights_uri,
+                   outflow_direction_uri, effect_uri]:
         if effect_uri == percent_to_stream_uri:
             continue
         try:
             os.remove(ds_uri)
-        except OSError as e:
+        except OSError as exception:
             LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
-            LOGGER.warn(e)
+            LOGGER.warn(exception)
 
 
 def calculate_stream(dem_uri, flow_threshold, stream_uri):
@@ -316,9 +297,9 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
     for ds_uri in [flow_accumulation_uri, flow_direction_uri, dem_offset_uri]:
         try:
             os.remove(ds_uri)
-        except OSError as e:
+        except OSError as exception:
             LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
-            LOGGER.warn(e)
+            LOGGER.warn(exception)
 
 
 def flow_direction_inf(dem_uri, flow_direction_uri):
@@ -341,21 +322,21 @@ def fill_pits(dem_uri, dem_out_uri):
     """This function fills regions in a DEM that don't drain to the edge
         of the dataset.  The resulting DEM will likely have plateaus where the
         pits are filled.
-        
+
         dem_uri - the original dem URI
         dem_out_uri - the original dem with pits raised to the highest drain
             value
-            
+
         returns nothing"""
     routing_cython_core.fill_pits(dem_uri, dem_out_uri)
-    
+
 
 def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
         in raster digital elevation models by Garbrecht and Martz (1997)
-        
+
         dem_carray - a chunked floating point array that represents a digital
             elevation model.  Any flat regions that would cause an undefined
             flow direction will be adjusted in height so that every pixel
@@ -363,14 +344,15 @@ def resolve_flat_regions_for_drainage(dem_uri, dem_out_uri):
 
         nodata_value - this value will be ignored on the DEM as a valid height
             value
-            
+
         returns nothing"""
     routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_out_uri)
 
 
-def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
+def distance_to_stream(
+        flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
-    
+
         flow_direction_uri - a raster with d-infinity flow directions
         stream_uri - a raster where 1 indicates a stream all other values
             ignored must be same dimensions and projection as
@@ -378,8 +360,8 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
         distance_uri - an output raster that will be the same dimensions as
             the input rasters where each pixel is in linear units the drainage
             from that point to a stream.
-            
+
         returns nothing"""
-        
+
     routing_cython_core.distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
