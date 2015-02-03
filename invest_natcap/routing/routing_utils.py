@@ -162,13 +162,13 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     stream_nodata = 255
     #sometimes flow threshold comes in as a string from a model, cast to float
     flow_threshold = float(flow_threshold)
-    def classify_stream(flow_accumulation):
+    def classify_stream(flow_accumulation_value):
         """mask and convert to 0/1 or nodata"""
 
         stream_mask = (
-            flow_accumulation >= flow_threshold).astype(numpy.byte)
+            flow_accumulation_value >= flow_threshold).astype(numpy.byte)
         return numpy.where(
-            flow_accumulation != flow_nodata, stream_mask, stream_nodata)
+            flow_accumulation_value != flow_nodata, stream_mask, stream_nodata)
 
     raster_utils.vectorize_datasets(
         [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte,
@@ -365,3 +365,57 @@ def distance_to_stream(
 
     routing_cython_core.distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
+
+
+
+def flow_direction(dem_uri):
+    d_infinity(dem_uri, flow_direction_uri)
+    resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
+
+
+def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+    high_edges=set()
+    low_edges=set()
+    flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges)
+    '''if len(low_edges) == 0:
+        if len(high_edges) != 0:
+            LOGGER.warn('There were undrainable flats')
+        else:
+            LOGGER.info('There were no flats')
+        return
+
+    label = 1
+    for cell in low_edges:
+        if cell is not labeled:
+            label_flats(cell, dem_uri, labels_uri)
+            label += 1
+
+    for cell in high_edges:
+        if cell is not labeled:
+            remove cell from high_edges
+    if any cell was removed from high_edges:
+        LOGGER.warn('not all flats have outlets')
+
+    away_from_higher(
+        labels_uri, flat_mask_uri, flow_direction_uri, high_edges,
+        flat_height_uri)
+    towards_lower(
+        labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
+        flat_height_uri)'''
+
+def flat_edges(high_edges_uri, low_edges_uri):
+    pass
+
+
+def label_flats(cell_index, label):
+    pass
+
+
+def away_from_higher(high_edges_uri, flat_height_list):
+    pass
+
+
+def towards_lower(low_edges_uri, flat_height_list):
+    pass
+
+
