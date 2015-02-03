@@ -986,52 +986,55 @@ def create_percentile_rasters(
         return bisect(percentiles, band)
     # Create a memory mapped matrix for the dataset that we're getting the
     # percentiles for
-    tmp_matrix_file = raster_utils.temporary_filename()
-    matrix = raster_utils.load_memory_mapped_array(
-            raster_path, tmp_matrix_file, array_type=None)
+    #tmp_matrix_file = raster_utils.temporary_filename()
+    #matrix = raster_utils.load_memory_mapped_array(
+    #        raster_path, tmp_matrix_file, array_type=None)
 
     # Get the shape of the matrix to create future memory mapped arrays from
-    n_rows, n_cols = matrix.shape
+    #n_rows, n_cols = matrix.shape
 
     # Create two more memory mapped arrays for storing operations done on the
     # original matrix. This helps avoid memory errors.
-    tmp_mask_file = raster_utils.temporary_filename()
-    matrix_mask = np.memmap(
-        tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
+    #tmp_mask_file = raster_utils.temporary_filename()
+    #matrix_mask = np.memmap(
+    #    tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
 
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
-    dataset_array = np.reshape(matrix, (-1,))
-    dataset_nodata_flat = np.reshape(matrix_mask, (-1))
+    #dataset_array = np.reshape(matrix, (-1,))
+    #dataset_nodata_flat = np.reshape(matrix_mask, (-1))
 
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
-    neg_float = float(np.finfo(np.float32).min) + 1.0
-    ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
+    #neg_float = float(np.finfo(np.float32).min) + 1.0
+    #ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
 
     # Create a mask of where the nodata values are
-    np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
+    #np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
 
     # Using the above mask, replace the nodata values with a very large negative
     # number
-    dataset_array[dataset_nodata_flat] = neg_float
+    #dataset_array[dataset_nodata_flat] = neg_float
     # Create a masked array based on the array with the redefined nodata values
     # and the nodata mask. This will be helpful when getting the proper min /
     # max value of the array which will be used later.
-    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
+    #dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
 
     # Get the min / max value of the masked array. The masked out values are
     # ignored when getting the min / max so we don't have to worry about the
     # very large negative number. This min / max will be used later in scoring
     # the percentiles
-    min_val = dataset_mask.min()
-    max_val = dataset_mask.max()
-    LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
+    #min_val = dataset_mask.min()
+    #max_val = dataset_mask.max()
+    #LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
 
     # Get the percentiles based on the data and percentile ranges we are looking
     # for
-    percentiles = get_percentiles(
-            dataset_array, percentile_list, min_val, max_val)
+    #percentiles = get_percentiles(
+    #        dataset_array, percentile_list, min_val, max_val)
+
+    percentiles = calculate_percentiles_from_raster(
+        raster_path, percentile_list)
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
@@ -1045,8 +1048,8 @@ def create_percentile_rasters(
     percentiles.insert(0, int(start_value))
 
     # Set nodata to a very small negative number
-    nodata = np.iinfo(np.int32).min
-
+    #nodata = np.iinfo(np.int32).min
+    nodata = -9999919
     pixel_size = raster_utils.get_cell_size_from_uri(raster_path)
 
     # Classify the pixels of raster_dataset into groups and write
