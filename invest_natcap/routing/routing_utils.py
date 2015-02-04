@@ -368,14 +368,54 @@ def distance_to_stream(
 
 
 
-def flow_direction(dem_uri):
-    d_infinity(dem_uri, flow_direction_uri)
+def flow_direction_flat_drainage(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+        Args:
+
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            flow_direction_uri (string) - (output) a uri to a single band GDAL
+                dataset with d infinity flow directions in it.
+            flat_mask_uri (string) - (output) a uri to a single band GDAL raster
+                that will have a
+            labels_uri (string) - (output)
+
+        Returns:
+            nothing"""
+
+    flow_direction_inf(dem_uri, flow_direction_uri)
     resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
 
 
 def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
-    high_edges=set()
-    low_edges=set()
+    """Function to resolve the flat regions in the dem given a first attempt
+        run at calculating flow direction.  Will provide regions of flat areas
+        and their labels.
+
+        Args:
+
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            flow_direction_uri (string) - (input/output) a uri to a single band
+                GDAL Dataset with partially defined d_infinity flow directions
+            flat_mask_uri (string) - (output) contains the number of increments
+                to be applied to each cell to form a gradient which will drain
+                the flat it is a part of
+            labels_uri (string) - (output) path to a gdal raster indicating
+                cells that match up with the dem_uri indicating which member of
+                a flat the cell is a part of.  If it is not a part of a flat it
+                has the value 0.
+
+        Returns:
+            nothing"""
+
+    high_edges = set()
+    low_edges = set()
     flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges)
     '''if len(low_edges) == 0:
         if len(high_edges) != 0:
@@ -403,7 +443,7 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
         labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
         flat_height_uri)'''
 
-def flat_edges(high_edges_uri, low_edges_uri):
+def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
     pass
 
 
