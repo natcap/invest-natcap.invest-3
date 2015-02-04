@@ -170,18 +170,6 @@
           "required": true,
           "validText": "^[0-9]+$",
           "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
-        },
-        {
-          "id": "results_suffix",
-          "args_id": "results_suffix",
-          "type": "text",
-          "dataType": "string",
-          "label": "Results Suffix (Optional)",
-          "defaultValue": "",
-          "required": false,
-          "returns": {
-            "ifEmpty": "pass"
-          }
         }
       ]
     }

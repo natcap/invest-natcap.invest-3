@@ -79,6 +79,10 @@ def execute(args):
     Returns:
         None
     """
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:

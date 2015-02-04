@@ -34,19 +34,6 @@
                   "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {
-                  "id": "results_suffix",
-                  "args_id": "suffix",
-                  "type": "text",
-                  "dataType": "string",
-                  "label": "Results Suffix (Optional)",
-                  "defaultValue": "",
-                  "required": false,
-                  "returns": {
-                    "ifEmpty": "pass"
-                  },
-                  "helpText": "A String that will be added to the end of the output file paths."
-                },
-                {
                   "label": "What modules do you want to run?",
                   "id": "modules_to_run",
                   "args_id": "modules_to_run",

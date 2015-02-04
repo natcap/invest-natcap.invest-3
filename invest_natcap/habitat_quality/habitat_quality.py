@@ -63,6 +63,10 @@ def execute(args):
     Returns:
         none
     """
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     workspace = args['workspace_dir']
 

@@ -146,6 +146,10 @@ def execute(args):
         None
 
     """
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     LOGGER.debug('Starting the Wind Energy Model')
 

@@ -464,6 +464,10 @@ def execute(args):
     args['workspace_dir']     - The file location where the outputs will 
                                 be written (Required)
     """
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     # Add the Output directory onto the given workspace
     args['output_dir'] = \

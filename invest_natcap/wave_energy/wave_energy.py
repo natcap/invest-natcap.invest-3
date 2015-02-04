@@ -80,6 +80,10 @@ def execute(args):
         }
 
     """
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     # Create the Output and Intermediate directories if they do not exist.
     workspace = args['workspace_dir']

@@ -467,6 +467,10 @@ def execute(args):
     ###
     #overiding, non-standard field names
     ###
+    try:
+        args['suffix']
+    except:
+        args['suffix'] = ''  # parameter not currently implemented in UI
 
     # Preliminary tests
     if ('transition' in args) and ('suitability' in args):

@@ -142,18 +142,6 @@
             "type": "GDAL"
           },
           "helpText": "A GDAL-supported raster file containing a digital elevation model dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
-        },
-        {
-          "id": "results_suffix",
-          "args_id": "suffix",
-          "type": "text",
-          "label": "Results Suffix (Optional)",
-          "defaultValue": "",
-          "returns": {
-            "ifEmpty": "pass"
-          },
-          "required": false,
-          "helpText": "A string that will be added to the end of the output file paths."
         }
       ]
     },

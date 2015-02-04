@@ -65,6 +65,10 @@ def execute(args):
         returns - nothing
     """
     LOGGER.info('Executing Monthly Water Yield')
+    try:
+        args['results_suffix']
+    except:
+        args['results_suffix'] = ''  # parameter not currently implemented in UI
 
     # Set up directories for model outputs
     workspace = args['workspace_dir']

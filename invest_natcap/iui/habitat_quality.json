@@ -195,19 +195,6 @@
           "defaultValue": "0.5",
           "required": true,
           "helpText": "A positive floating point value that is defaulted at 0.5. This is the value of the parameter k in equation (4). In general, set k to half of the highest grid cell degradation value on the landscape. To perform this model calibration the model must be run once in order to find the highest degradation value and set k for the provided landscape. Note that the choice of k only determines the spread and central tendency of habitat quality cores and does not affect the rank."
-        },
-        {
-          "id": "results_suffix",
-          "args_id": "suffix",
-          "type": "text",
-          "dataType": "string",
-          "label": "Results Suffix (Optional)",
-          "defaultValue": "",
-          "required": false,
-          "returns": {
-            "ifEmpty": "pass"
-          },
-          "helpText": "A string that will be added to the end of the output file paths."
         }
       ]
     }
