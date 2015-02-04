@@ -58,10 +58,6 @@ def execute(args):
             of runtime.
 
         returns nothing."""
-    try:
-        args['results_suffix']
-    except:
-        args['results_suffix'] = ''  # parameter not currently implemented in UI
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:

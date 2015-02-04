@@ -197,6 +197,15 @@
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]+$",
           "helpText": "Floating point value on the order of 1 to 30 corresponding to the seasonal distribution of precipitation."
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "A string that will be added to the end of the output uris."
         }
       ]
     },

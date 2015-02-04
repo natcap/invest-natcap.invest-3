@@ -56,10 +56,6 @@ def execute(args):
 
         returns nothing.
     """
-    try:
-        args['results_suffix']
-    except:
-        args['results_suffix'] = ''  # parameter not currently implemented in UI
 
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validation helper method to check that table headers are included

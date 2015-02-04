@@ -19,7 +19,7 @@ def execute(args):
 
 def execute_30(**args):
     """Malarial ecosystem disservice model.
-
+    
     Keyword arguments:
     lulc_uri -- a uri to a gdal dataset specifying land cover types
     results_suffix -- an optional string to append to the output files
@@ -36,11 +36,6 @@ def execute_30(**args):
 
     returns nothing
     """
-    try:
-        args['results_suffix']
-    except:
-        args['results_suffix'] = ''  # parameter not currently implemented in UI
-
     area_to_convert = float(args.pop('area_to_convert', 0.0))
     max_vector_flight = float(args.pop('max_vector_flight'))
     threshold_flow_accumulation = float(args.pop('threshold_flow_accumulation'))
