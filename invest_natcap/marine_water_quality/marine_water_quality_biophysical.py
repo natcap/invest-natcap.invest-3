@@ -24,77 +24,80 @@ def execute(args):
     biophysical model.
 
     Args:
-        workspace_dir (string): Directory to place outputs
-        aoi_poly_uri (string): OGR polygon Datasource indicating region
+        args['workspace_dir'] (string): Directory to place outputs
+        args['results_suffix'] (string): a string to append to any output file
+            name (optional)
+        args['aoi_poly_uri'] (string): OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
-        land_poly_uri (string): OGR polygon DataSource indicating areas where
-            land is.
-        pixel_size (int): float indicating pixel size in meters of output
-            grid.
-        layer_depth (float): float indicating the depth of the grid cells in
-            meters.
-        source_points_uri (string): OGR point Datasource indicating point
-            sources of pollution.
-        source_point_data_uri (string): csv file indicating the biophysical
-            properties of the point sources.
-        kps (float): float indicating decay rate of pollutant (kg/day)
-        tide_e_points_uri (string): OGR point Datasource with spatial
+        args['land_poly_uri'] (string): OGR polygon DataSource indicating areas
+            where land is.
+        args['pixel_size'] (int): float indicating pixel size in meters of
+            output grid.
+        args['layer_depth'] (float): float indicating the depth of the grid
+            cells in meters.
+        args['source_points_uri'] (string): OGR point Datasource indicating
+            point sources of pollution.
+        args['source_point_data_uri'] (string): csv file indicating the
+            biophysical properties of the point sources.
+        args['kps'] (float): float indicating decay rate of pollutant (kg/day)
+        args['tide_e_points_uri'] (string): OGR point Datasource with spatial
             information about the E parameter
-        adv_uv_points_uri (string): optional OGR point Datasource with spatial
-            advection u and v vectors.
+        args['adv_uv_points_uri'] (string): optional OGR point Datasource with
+            spatial advection u and v vectors.
 
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'aoi_poly_uri': 'path/to/shapefile',
-            'land_poly_uri': 'path/to/shapefile',
-            'pixel_size': 100,
-            'layer_depth': 1.0,
-            'source_points_uri': 'path/to/shapefile',
-            'source_point_data_uri': 'path/to/csv',
-            'kps': 0.001,
-            'tide_e_points_uri': 'path/to/shapefile',
-            'adv_uv_points_uri': 'path/to/shapefile',
-        }
-
+    Returns:
+        nothing
     """
 
     LOGGER.info("Starting MWQ execute")
 
-    output_directory = os.path.join(args['workspace_dir'],'output')
-    intermediate_directory = os.path.join(args['workspace_dir'],'intermediate')
+    # append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['results_suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
+    output_directory = os.path.join(args['workspace_dir'], 'output')
+    intermediate_directory = os.path.join(
+        args['workspace_dir'], 'intermediate')
     raster_utils.create_directories([output_directory, intermediate_directory])
 
-    #Create a grid based on the AOI
+    # Create a grid based on the AOI
     LOGGER.info("Creating grid based on the AOI polygon")
     pixel_size = args['pixel_size']
-    #the nodata value will be a min float
+    # the nodata value will be a min float
     nodata_out = -1.0
     raster_out_uri = os.path.join(
-        intermediate_directory,'concentration_grid.tif')
+        intermediate_directory, 'concentration_grid%s.tif' % file_suffix)
     raster_utils.create_raster_from_vector_extents_uri(
         args['aoi_poly_uri'], pixel_size, gdal.GDT_Float32,
         nodata_out, raster_out_uri)
 
-    #create a temporary grid of interpolated points for tide_e and adv_uv
+    # create a temporary grid of interpolated points for tide_e and adv_uv
     LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
-    tide_e_uri = os.path.join(intermediate_directory, 'tide_e.tif')
-    raster_utils.new_raster_from_base_uri(raster_out_uri,
-        tide_e_uri, 'GTiff', nodata_out, gdal.GDT_Float32)
-    adv_u_uri = os.path.join(intermediate_directory, 'adv_u.tif')
+    tide_e_uri = os.path.join(
+        intermediate_directory, 'tide_e%s.tif' % file_suffix)
+    raster_utils.new_raster_from_base_uri(
+        raster_out_uri, tide_e_uri, 'GTiff', nodata_out, gdal.GDT_Float32)
+    adv_u_uri = os.path.join(
+        intermediate_directory, 'adv_u%s.tif' % file_suffix)
     raster_utils.new_raster_from_base_uri(
         raster_out_uri, adv_u_uri, 'GTiff', nodata_out, gdal.GDT_Float32,
         fill_value=0)
-    adv_v_uri = os.path.join(intermediate_directory, 'adv_v.tif')
+    adv_v_uri = os.path.join(
+        intermediate_directory, 'adv_v%s.tif' % file_suffix)
     raster_utils.new_raster_from_base_uri(
         raster_out_uri, adv_v_uri, 'GTiff', nodata_out, gdal.GDT_Float32,
         fill_value=0)
-    in_water_uri = os.path.join(intermediate_directory, 'in_water.tif')
-    raster_utils.new_raster_from_base_uri(raster_out_uri,
-        in_water_uri, 'GTiff', nodata_out, gdal.GDT_Byte, fill_value=1)
+    in_water_uri = os.path.join(
+        intermediate_directory, 'in_water%s.tif' % file_suffix)
+    raster_utils.new_raster_from_base_uri(
+        raster_out_uri, in_water_uri, 'GTiff', nodata_out, gdal.GDT_Byte,
+        fill_value=1)
 
-    #Set up the in_water_array
+    # Set up the in_water_array
     LOGGER.info("Calculating the in_water array")
     in_water_raster = gdal.Open(in_water_uri, gdal.GA_Update)
     in_water_band = in_water_raster.GetRasterBand(1)
@@ -106,12 +109,13 @@ def execute(args):
     in_water_array = in_water_function(in_water_array)
     in_water_band = None
     in_water_raster = None
-    #Interpolate the datasource points onto a raster the same size as raster_out
+    # Interpolate the datasource points onto a raster the same size as
+    # raster_out
     LOGGER.info("Interpolating kh_km2_day onto raster")
     raster_utils.vectorize_points_uri(
         args['tide_e_points_uri'], 'E_km2_day', tide_e_uri)
     if 'adv_uv_points_uri' in args and args['adv_uv_points_uri'] != '':
-        #if adv_uv_points is not defined, then those are all 0 rasters
+        # if adv_uv_points is not defined, then those are all 0 rasters
         LOGGER.info("Interpolating U_m_sec_ onto raster")
         raster_utils.vectorize_points_uri(
             args['adv_uv_points_uri'], 'U_m_sec_', adv_u_uri)
@@ -119,7 +123,7 @@ def execute(args):
         raster_utils.vectorize_points_uri(
             args['adv_uv_points_uri'], 'V_m_sec_', adv_v_uri)
 
-    #Mask the interpolated points to the land polygon
+    # Mask the interpolated points to the land polygon
     LOGGER.info("Masking Tide E and ADV UV to the land polygon")
     for dataset_uri in [tide_e_uri, adv_u_uri, adv_v_uri]:
         dataset = gdal.Open(dataset_uri, gdal.GA_Update)
@@ -141,11 +145,10 @@ def execute(args):
            returns a projected point in the gridspace coordinates of
                raster_out"""
 
-        x_grid = int((point[1]-raster_out_gt[0])/raster_out_gt[1])
-        y_grid = int((point[0]-raster_out_gt[3])/raster_out_gt[5])
+        x_grid = int((point[1] - raster_out_gt[0]) / raster_out_gt[1])
+        y_grid = int((point[0] - raster_out_gt[3]) / raster_out_gt[5])
 
         return [y_grid, x_grid]
-
 
     LOGGER.info("Load the point sources")
     source_points = ogr.Open(args['source_points_uri'])
@@ -160,25 +163,26 @@ def execute(args):
             point = point_geometry.GetPoint()
             point_id = point_feature.GetField('id')
             LOGGER.debug("point and id %s %s", point, point_id)
-            #Appending point geometry with y first so it can be converted
-            #to the numpy (row,col) 2D notation easily.
+            # Appending point geometry with y first so it can be converted
+            # to the numpy (row,col) 2D notation easily.
             source_point_values[point_id] = {
                 'point': convert_to_grid_coords([point[1], point[0]])
-                }
+            }
 
     csv_file = open(args['source_point_data_uri'])
     reader = csv.DictReader(csv_file)
     for row in reader:
         point_id = int(row['ID'])
         if point_id not in source_point_values:
-            LOGGER.warn("%s is an id defined in the data table which is not "
+            LOGGER.warn(
+                "%s is an id defined in the data table which is not "
                 "found in the shapefile. Ignoring that point.", point_id)
             continue
 
-        #Look up the concentration
+        # Look up the concentration
         wps_concentration = float(row['WPS'])
 
-        #This merges the current dictionary with a new one that includes WPS
+        # This merges the current dictionary with a new one that includes WPS
         source_point_values[point_id] = dict(
             source_point_values[point_id].items() +
             {'WPS': wps_concentration}.items())
@@ -188,14 +192,14 @@ def execute(args):
     for point_id in source_point_values:
         if 'WPS' not in source_point_values[point_id]:
             LOGGER.warn("point %s has no source parameters from the CSV.  "
-                "Ignoring that point.", point_id)
-            #Can't delete out of the dictionary that we're iterating over
+                        "Ignoring that point.", point_id)
+            # Can't delete out of the dictionary that we're iterating over
             points_to_ignore.append(point_id)
-    #Deleting the points we don't have data for
+    # Deleting the points we don't have data for
     for point in points_to_ignore:
         del source_point_values[point]
     LOGGER.debug("these are the source points %s", source_point_values)
-    #Convert the georeferenced source coordinates to grid coordinates
+    # Convert the georeferenced source coordinates to grid coordinates
     LOGGER.info("Solving advection/diffusion equation")
 
     tide_e_memory_mapped_uri = raster_utils.temporary_filename()
@@ -203,11 +207,11 @@ def execute(args):
     tide_e_array = raster_utils.load_memory_mapped_array(
         tide_e_uri, tide_e_memory_mapped_uri)
 
-    #convert E from km^2/day to m^2/day
+    # convert E from km^2/day to m^2/day
     LOGGER.info("Convert tide E form km^2/day to m^2/day")
     tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2
 
-    #convert adv u from m/sec to m/day
+    # convert adv u from m/sec to m/day
     adv_u_memory_mapped_uri = raster_utils.temporary_filename()
     adv_u_array = raster_utils.load_memory_mapped_array(
         adv_u_uri, adv_u_memory_mapped_uri)
@@ -217,9 +221,9 @@ def execute(args):
     adv_u_array[adv_u_array != nodata_out] *= 86400.0
     adv_v_array[adv_v_array != nodata_out] *= 86400.0
 
-    #If the cells are square then it doesn't matter if we look at x or y
-    #but if different, we need just one value, so take the average.  Not the
-    #best, but better than nothing.
+    # If the cells are square then it doesn't matter if we look at x or y
+    # but if different, we need just one value, so take the average.  Not the
+    # best, but better than nothing.
     cell_size = raster_utils.get_cell_size_from_uri(raster_out_uri)
 
     concentration_array = marine_water_quality_core.diffusion_advection_solver(
@@ -232,8 +236,9 @@ def execute(args):
     raster_out_band = None
     raster_out = None
 
-    #rasterize away anything outside of the AOI
-    concentration_uri = os.path.join(output_directory, 'concentration.tif')
+    # rasterize away anything outside of the AOI
+    concentration_uri = os.path.join(
+        output_directory, 'concentration%s.tif' % file_suffix)
     raster_utils.vectorize_datasets(
         [raster_out_uri], lambda x: x, concentration_uri, gdal.GDT_Float32,
         nodata_out, cell_size, "intersection", aoi_uri=args['aoi_poly_uri'])
@@ -242,5 +247,5 @@ def execute(args):
 
     LOGGER.info("Done with marine water quality.")
     LOGGER.info("Intermediate rasters are located in %s",
-        intermediate_directory)
+                intermediate_directory)
     LOGGER.info("Output rasters are located in %s", output_directory)
