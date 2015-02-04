@@ -132,6 +132,7 @@ if platform.system() == 'Windows':
                          'invest_natcap',
                          'scipy.io.matlab.streams',
                          'scipy.special',
+                         'scipy.special._ufuncs_cxx',
                          'ctypes',
                          'shapely.geos',
                          'matplotlib.backends.backend_qt4agg',
