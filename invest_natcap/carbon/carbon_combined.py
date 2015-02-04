@@ -101,11 +101,6 @@ def execute_30(**args):
         outputs (dictionary): contains names of all output files
 
     """
-    try:
-        args['suffix']
-    except:
-        args['suffix'] = ''  # parameter not currently implemented in UI
-
     if not args['do_biophysical'] and not args['do_valuation']:
         raise Exception(
             'Neither biophysical nor valuation model selected. '

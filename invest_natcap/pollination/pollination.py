@@ -92,10 +92,6 @@ def execute(args):
     rasters to disk.  See the user's guide for details.
 
     """
-    try:
-        args['results_suffix']
-    except:
-        args['results_suffix'] = ''  # parameter not currently implemented in UI
 
     workspace = args['workspace_dir']
 

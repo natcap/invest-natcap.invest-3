@@ -281,6 +281,16 @@
             ]
           },
           "helpText": "Optional. An OGR-supported vector file. If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
+        },
+        {
+          "id": "results_suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "args_id": "results_suffix",
+          "required": false,
+          "width": 120,
+          "dataType": "string",
+          "helpText": "Optional.  The results suffix will be appended to the end of all output filenames. If provided, it must be alphanumeric."
         }
       ]
     }
