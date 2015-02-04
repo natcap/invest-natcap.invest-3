@@ -24,6 +24,16 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('wave_energy')
 
+GDAL_TO_NUMPY_TYPE = {
+    gdal.GDT_Byte: np.uint8,
+    gdal.GDT_Int16: np.int16,
+    gdal.GDT_Int32: np.int32,
+    gdal.GDT_UInt16: np.uint16,
+    gdal.GDT_UInt32: np.uint32,
+    gdal.GDT_Float32: np.float32,
+    gdal.GDT_Float64: np.float64
+    }
+
 def execute(args):
     """
     Executes both the biophysical and valuation parts of the
@@ -1037,8 +1047,8 @@ def create_percentile_rasters(
     #percentiles = get_percentiles(
     #        dataset_array, percentile_list, min_val, max_val)
 
-    percentiles = calculate_percentiles_from_raster(
-        raster_path, percentile_list)
+    percentiles = list(calculate_percentiles_from_raster(
+        raster_path, percentile_list))
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
@@ -1063,37 +1073,16 @@ def create_percentile_rasters(
             nodata, pixel_size, 'intersection',
             assert_datasets_projected=False, aoi_uri=aoi_shape_path)
 
-    # Create a memory mapped array for the output percentile raster. This will
-    # be used to get the pixel count for each percentile
-    tmp_perc_file = raster_utils.temporary_filename()
-    perc_array = raster_utils.load_memory_mapped_array(
-            output_path, tmp_perc_file, array_type=None)
-
     # Get the shape of the array so that future memory mapped arrays can be
     # based on it
-    count_rows, count_cols = perc_array.shape
+    #count_rows, count_cols = perc_array.shape
 
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
 
     percentile_groups = np.arange(1, len(percentiles) + 1)
 
-    LOGGER.debug('Percentile Groups : %s', percentile_groups)
-    for percentile_class in percentile_groups:
-        # This line of code takes the numpy array 'perc_array', which holds
-        # the values from the percentile_band after being grouped, and checks
-        # to see where the values are equal to a certain group.
-        # This check gives an array of indices where the case was true,
-        # so we take the size of that array to give us the number of pixels
-        # that fall in that group.
-
-        tmp_count_file = raster_utils.temporary_filename()
-        count_mask = np.memmap(
-            tmp_count_file, dtype = np.int32, mode = 'w+',
-            shape = (count_rows, count_cols))
-
-        np.equal(perc_array, percentile_class, count_mask)
-        pixel_count[percentile_class - 1] = np.count_nonzero(count_mask)
+    pixel_count = count_pixels_groups(output_path, percentile_groups, pixel_count)
 
     LOGGER.debug('number of pixels per group: : %s', pixel_count)
 
@@ -1532,17 +1521,6 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         returns - a list of values corresponding to the percentiles
             from the percentiles list
     """
-
-    GDAL_TO_NUMPY_TYPE = {
-        gdal.GDT_Byte: numpy.uint8,
-        gdal.GDT_Int16: numpy.int16,
-        gdal.GDT_Int32: numpy.int32,
-        gdal.GDT_UInt16: numpy.uint16,
-        gdal.GDT_UInt32: numpy.uint32,
-        gdal.GDT_Float32: numpy.float32,
-        gdal.GDT_Float64: numpy.float64
-        }
-
     raster = gdal.Open(raster_uri)
     type = raster_utils.get_datatype_from_uri(raster_uri)
     np_type = GDAL_TO_NUMPY_TYPE[type]
@@ -1551,8 +1529,8 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         """Generates an iterator from a file
             f = file object
         """
-        arr = numpy.load(f)
-        for x in a:
+        arr = np.load(f)
+        for x in arr:
             yield x
 
     iters = []
@@ -1577,7 +1555,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         arr = band.ReadAsArray(0,row_index,n_cols,row_strides)
 
         tmp_uri = raster_utils.temporary_filename()
-        tmp_file = open(t_uri, 'wb')
+        tmp_file = open(tmp_uri, 'wb')
         arr = arr.flatten()
         #Remove nodata values from array and thus percentile calculation
         arr = np.delete(arr, np.where(arr==nodata))
@@ -1597,14 +1575,72 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         rank = math.ceil(perc/100.0 * n_elements)
         rank_list.append(int(rank))
     counter = 0
-    results = []
+    results = np.zeros((1, len(rank_list)))[0]
+    index = 0
+    LOGGER.debug('Percentile Rank List: %s' % rank_list)
 
     for x in heapq.merge(*iters):
         if counter in rank_list:
-            results.append[x]
+            LOGGER.debug('percentile value is : %s' % x)
+            results[index] = x
+            index += 1
         counter += 1
 
     array = None
     band = None
     raster = None
     return results
+
+def count_pixels_groups(raster_uri, group_values, pixel_count):
+    """
+    """
+    dataset = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    band = dataset.GetRasterBand(1)
+
+    n_rows = dataset.RasterYSize
+    n_cols = dataset.RasterXSize
+
+    block_size = band.GetBlockSize()
+
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    dataset_block = np.zeros(
+        (rows_per_block, cols_per_block),
+        dtype=GDAL_TO_NUMPY_TYPE[band.DataType])
+
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+
+            band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                win_ysize=row_block_width,
+                buf_obj=dataset_block[0:row_block_width,0:col_block_width])
+
+            for index in xrange(len(group_values)):
+            # This line of code takes the numpy array 'perc_array', which holds
+            # the values from the percentile_band after being grouped, and checks
+            # to see where the values are equal to a certain group.
+            # This check gives an array of indices where the case was true,
+            # so we take the size of that array to give us the number of pixels
+            # that fall in that group.
+                val = group_values[index]
+                count_mask = np.zeros(dataset_block.shape)
+                np.equal(dataset_block, val, count_mask)
+                pixel_count[index] += np.count_nonzero(count_mask)
+
+    dataset_block = None
+    band = None
+    dataset = None
+
+    return pixel_count
