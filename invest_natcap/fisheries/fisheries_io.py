@@ -90,6 +90,11 @@ def fetch_args(args, create_outputs=True):
         This function receives an unmodified 'args' dictionary from the user
 
     '''
+    try:
+        args['results_suffix']
+    except:
+        args['results_suffix'] = ''
+
     if args['sexsp'].lower() == 'yes':
         args['sexsp'] = 2
     else:
@@ -775,7 +780,10 @@ def _create_intermediate_csv(vars_dict):
     if do_batch:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
-        filename = basename + '_population_by_time_step.csv'
+        filename = 'population_by_time_step_' + basename + '.csv'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'population_by_time_step_' + vars_dict[
+            'results_suffix'] + '.csv'
     else:
         filename = 'population_by_time_step.csv'
     uri = os.path.join(
@@ -826,7 +834,9 @@ def _create_results_csv(vars_dict):
     if do_batch:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
-        filename = basename + '_results_table.csv'
+        filename = 'results_table_' + basename + '.csv'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'results_table_' + vars_dict['results_suffix'] + '.csv'
     else:
         filename = 'results_table.csv'
     uri = os.path.join(vars_dict['output_dir'], filename)
@@ -896,7 +906,9 @@ def _create_results_html(vars_dict):
     if do_batch:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
-        filename = basename + '_results_page.html'
+        filename = 'results_page_' + basename + '.html'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'results_page_' + vars_dict['results_suffix'] + '.html'
     else:
         filename = 'results_page.html'
     uri = os.path.join(vars_dict['output_dir'], filename)
@@ -1075,11 +1087,14 @@ def _create_results_aoi(vars_dict):
     if do_batch:
         basename2 = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
-        output_aoi_uri = os.path.join(
-            vars_dict['output_dir'], basename2 + '_' + basename + '_results_aoi.shp')
+        filename = basename + '_results_aoi_' + basename2 + '.shp'
+    elif vars_dict['results_suffix'] != '':
+        filename = basename + '_results_aoi_' + vars_dict[
+            'results_suffix'] + '.shp'
     else:
-        output_aoi_uri = os.path.join(
-            vars_dict['output_dir'], basename + '_results_aoi.shp')
+        filename = basename + '_results_aoi.shp'
+
+    output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
 
     # Copy AOI file to outputs directory
     raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
