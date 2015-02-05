@@ -417,7 +417,8 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
 
     high_edges = set()
     low_edges = set()
-    flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges)
+    routing_cython_core.flat_edges(
+        dem_uri, flow_direction_uri, high_edges, low_edges)
     '''if len(low_edges) == 0:
         if len(high_edges) != 0:
             LOGGER.warn('There were undrainable flats')
@@ -444,38 +445,6 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
         labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
         flat_height_uri)'''
 
-def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
-    """This function locates flat cells that border on higher and lower terrain
-        and places them into sets for further processing.
-
-        Args:
-
-            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
-                elevation values
-            flow_direction_uri (string) - (input/output) a uri to a single band
-                GDAL Dataset with partially defined d_infinity flow directions
-            high_edges (set) - (output) will contain all the high edge cells
-            low_eges (set) - (output) will contain all the low edge cells
-
-        Returns:
-            nothing"""
-
-    '''for cell in flow_direction_uri:
-        if cell == nodata:
-            continue
-        for neighbor_cell of cell:
-            if neighbor_dem not in raster:
-                continue
-            neighbor_dem = dem_uri[neighbor_cell]
-            if neighbor_dem == nodata:
-                continue
-            if (cell != no_flow and neighbor_cell == no_flow
-                    and dem_uri[cell] == dem_uri[neighbor_cell]):
-                low_edges.add(cell)
-                break
-            elif cell ==no_flow and dem_uri[cell] < dem_uri[neighbor_cell]:
-                high_edges.add(cell)
-                break'''
 
 
 
