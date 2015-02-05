@@ -1624,10 +1624,17 @@ def count_pixels_groups(raster_uri, group_values, pixel_count):
             if col_block_width > cols_per_block:
                 col_block_width = cols_per_block
 
-            band.ReadAsArray(
+            #Using buf_obj was causing an issue where pixel counts were coming
+            #back as too high. Not sure why this would be, perhaps it's
+            #somehow counting something twice?
+
+            #band.ReadAsArray(
+            #    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+            #    win_ysize=row_block_width,
+            #    buf_obj=dataset_block[0:row_block_width,0:col_block_width])
+            dataset_block = band.ReadAsArray(
                 xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                win_ysize=row_block_width,
-                buf_obj=dataset_block[0:row_block_width,0:col_block_width])
+                win_ysize=row_block_width)
 
             for index in xrange(len(group_values)):
             # This line of code takes the numpy array 'perc_array', which holds
