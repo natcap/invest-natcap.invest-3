@@ -1081,9 +1081,15 @@ def create_percentile_rasters(
     pixel_count = count_pixels_groups(output_path, percentile_groups, pixel_count)
 
     LOGGER.debug('number of pixels per group: : %s', pixel_count)
+    perc_dict = {}
+    for index in xrange(len(percentile_groups)):
+        perc_dict[percentile_groups[index]] = percentile_ranges[index]
+
+    col_name = "Val_Range"
+    raster_utils.create_rat_uri(output_path, perc_dict, col_name)
 
     # Generate the attribute table for the percentile raster
-    create_attribute_table(output_path, percentile_ranges, pixel_count)
+    #create_attribute_table(output_path, percentile_ranges, pixel_count)
 
 def get_percentiles(value_list, percentile_list, min_val, max_val):
     """Creates a list of integers of the percentile marks
