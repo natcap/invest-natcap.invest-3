@@ -99,6 +99,9 @@
                   "id": "excluded_transects_uri",
                   "args_id": "excluded_transects_uri",
                   "type": "file",
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
                   "validateAs": {
                     "type": "CSV"
                   },
