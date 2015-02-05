@@ -368,7 +368,8 @@ def distance_to_stream(
 
 
 
-def flow_direction_flat_drainage(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+def flow_direction_flat_drainage(
+        dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -444,7 +445,40 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
         flat_height_uri)'''
 
 def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
-    pass
+    """This function locates flat cells that border on higher and lower terrain
+        and places them into sets for further processing.
+
+        Args:
+
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            flow_direction_uri (string) - (input/output) a uri to a single band
+                GDAL Dataset with partially defined d_infinity flow directions
+            high_edges (set) - (output) will contain all the high edge cells
+            low_eges (set) - (output) will contain all the low edge cells
+
+        Returns:
+            nothing"""
+
+    '''for cell in flow_direction_uri:
+        if cell == nodata:
+            continue
+        for neighbor_cell of cell:
+            if neighbor_dem not in raster:
+                continue
+            neighbor_dem = dem_uri[neighbor_cell]
+            if neighbor_dem == nodata:
+                continue
+            if (cell != no_flow and neighbor_cell == no_flow
+                    and dem_uri[cell] == dem_uri[neighbor_cell]):
+                low_edges.add(cell)
+                break
+            elif cell ==no_flow and dem_uri[cell] < dem_uri[neighbor_cell]:
+                high_edges.add(cell)
+                break'''
+
+
+
 
 
 def label_flats(cell_index, label):
