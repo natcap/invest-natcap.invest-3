@@ -252,13 +252,24 @@ def compute_transects(args):
                         continue
                    
                     # At this point, the transect is valid: 
+                    
+                    # Store minimum data if transect should be excluded
+                    if tiles in args['excluded_transects']:
+                        transect_info.append( \
+                            {'raw_positions': \
+                                (np.array(raw_positions[0][0:1]), \
+                                np.array(raw_positions[1][0:1])), \
+                            'depths':np.array(smoothed_depths[0:1]), \
+                            'clip_limits':(0, 0, 1)})
+
                     # extract remaining information about it
-                    transect_info.append( \
-                        {'raw_positions': \
-                            (raw_positions[0][start:end], \
-                            raw_positions[1][start:end]), \
-                        'depths':smoothed_depths[start:end], \
-                        'clip_limits':(0, shore-start, end-start)})
+                    else:
+                        transect_info.append( \
+                            {'raw_positions': \
+                                (raw_positions[0][start:end], \
+                                raw_positions[1][start:end]), \
+                            'depths':smoothed_depths[start:end], \
+                            'clip_limits':(0, shore-start, end-start)})
 
                     # Update the longest transect length if necessary
                     if (end - start) > max_transect_length:

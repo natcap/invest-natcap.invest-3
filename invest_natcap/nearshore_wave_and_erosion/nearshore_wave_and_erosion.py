@@ -6,6 +6,7 @@ import shutil
 import logging
 import numpy
 import json
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -569,7 +570,6 @@ def execute(args):
         ('levee',                 
             {'shapefile type':'man-made structure', 'type':5}, 
             {'constraints':{'land':-50.0, 'water':0.}}),
-#            {'constraints':{'water':0.}}),
         ('beach',                 
             {'shapefile type':'beach'},                        
             {'constraints':{'MHHW':1, 'MLLW':1}}),
@@ -840,6 +840,54 @@ def execute(args):
                 LOGGER.debug("Can't recognize the shapefile %s", file_uri)
 
 
+    # ----------------------------------------------------
+    # Loading the transects to exclude from a csv, if any
+    # ----------------------------------------------------
+    args['excluded_transects'] = set()
+
+    if 'excluded_transects_uri' in args:
+        assert os.path.isfile(args['excluded_transects_uri']), \
+            "Can't open transect exclusion file " + args['excluded_transects_uri']
+
+        with open(args['excluded_transects_uri']) as csvfile:
+            excluded_transects_reader = csv.reader(csvfile)
+
+            for row in excluded_transects_reader:
+                for item in row:
+
+                    # First, try to cast as int:
+                    try:
+                        transect = int(item)
+                        assert transect >= 0, \
+                            "A transect ID can't be negative (" + str(item) + ")"
+                        args['excluded_transects'].add(transect)
+
+                    # If it doesn't work, it might be a range:
+                    except ValueError:
+                        transect_range = item.split('-')
+                        assert len(transect_range) == 2, "Can't interpret CSV token " + item
+
+                        try:
+                            start = int(transect_range[0])
+                            end = int(transect_range[1])
+
+                            # Enforce start >= end
+                            assert start >= 0, \
+                                "A transect ID can't be negative (" + str(item) + ")"
+                            assert end >= start, \
+                                "Invalid range: expected (start >= end), " + \
+                                " got (" + str(start) + "," + str(end) + ")"    
+                            
+                            # It is a range, now add the transects to the set:
+                            for transect in range(start, end+1):
+                                args['excluded_transects'].add(transect)
+
+                        except ValueError:
+                            LOGGER.error("Can't interpret CSV token %s as a range", item)
+                            raise
+
+        LOGGER.debug('Found %i transects to exclude', len(args['excluded_transects']))
+
     # -----------------------------
     # Detect habitat constraints
     # -----------------------------
@@ -893,9 +941,7 @@ def execute(args):
 
     # Computing constraints rasters so they can directly be used as masks 
     # for the habitats that have spatial constraints.
-#    print('detected habitats')
     for detected_habitat in args['shapefile types']['natural habitats']:
-#        print(args['shapefile types']['natural habitats'][detected_habitat])
 
         detected_habitat_type = args['shapefile types']['natural habitats'][detected_habitat]
 
@@ -903,19 +949,14 @@ def execute(args):
         for habitat_information in args['habitat_information']:
             habitat_type = habitat_information[0]
             if habitat_type != detected_habitat_type:
-#                print('habitat type', habitat_type, 'is not detected habitat', detected_habitat_type)
                 continue
 
-#            print('Processing habitat', habitat_type)
-
             habitat_constraints = habitat_information[2]['constraints']
-#            print('habitat_constraints', habitat_constraints)
 
             # Detected a land-related distance constraint
             if 'land' in habitat_constraints:
                 constraint_uri = os.path.join(args['intermediate_dir'], \
                     'land_distance_map.tif')
-    #            print('Checking land constraint')
 
                 # Create the constraint raster if it doesn't exist already
     #            if not os.path.isfile(constraint_uri):
@@ -943,7 +984,6 @@ def execute(args):
             if 'water' in habitat_constraints:
                 constraint_uri = os.path.join(args['intermediate_dir'], \
                     'water_distance_map.tif')
-    #            print('checking water constraint')
 
                 # Create the constraint raster if it doesn't exist already
     #            if not os.path.isfile(constraint_uri):
@@ -972,11 +1012,9 @@ def execute(args):
             if 'MHHW' in habitat_constraints:
                 constraint_uri = os.path.join(args['intermediate_dir'], \
                     'MHHW_depth_map.tif')
-    #            print('checking MHHW constraint')
 
                 # Create the constraint raster if it doesn't exist already
                 if not os.path.isfile(constraint_uri):
-    #                print('Creating MHHW constraint', constraint_uri)
 
                     MHHW_depth_mask_uri = \
                         os.path.join(args['intermediate_dir'], \
@@ -1029,11 +1067,9 @@ def execute(args):
             if 'MLLW' in habitat_constraints:
                 constraint_uri = os.path.join(args['intermediate_dir'], \
                     'MLLW_depth_map.tif')
-    #            print('checking MLLW constraint')
 
                 # Create the constraint raster if it doesn't exist already
                 if not os.path.isfile(constraint_uri):
-    #                print('Creating MLLW constraint', constraint_uri)
 
                     MLLW_depth_mask_uri = \
                         os.path.join(args['intermediate_dir'], \
@@ -1089,7 +1125,6 @@ def execute(args):
     # Loop through the habitats
     for habitat_info in args['habitat_information']:
         habitat_name = habitat_info[0]
-#        print('habitat', habitat_name)
 
         current_habitat_was_detected = False
 
@@ -1100,12 +1135,7 @@ def execute(args):
                 continue                
 
         if not current_habitat_was_detected:
-#            print('habitat name', habitat_name, 'is not detected habitat', \
-#                args['shapefile types']['natural habitats'][detected_habitat])
             continue
-
-#        print('habitat name', habitat_name, 'is detected habitat', \
-#            args['shapefile types']['natural habitats'][detected_habitat])
 
         # -For each constraint:
         constraint_uri_list = []
@@ -1115,7 +1145,6 @@ def execute(args):
             constraint_nodata = raster_utils.get_nodata_from_uri(constraint_uri)
             # -Extract the constraint value
             value = habitat_info[2]['constraints'][constraint_type]
-#            print('constraint', constraint_type, 'value', value)
             # -if pos: compute from shore to value
             output_uri = raster_utils.temporary_filename()
             if value >= 0.:
@@ -1150,12 +1179,6 @@ def execute(args):
             habitat_info[2]['constraint_uri'], \
             gdal.GDT_Float32, constraint_nodata, cell_size, \
             'intersection', vectorize_op = False)
-        print('Saved constraints for', habitat_name, 'to', habitat_info[2]['constraint_uri'])
-
-#    print("first habitat", args['habitat_information'][1])
-#    print("habitat name", args['habitat_information'][1][0])
-#    print("constraints", args['habitat_information'][1][2]['constraints'])
-#    print("constraint_uri", args['habitat_information'][1][2]['constraint_uri'])
 
 
     LOGGER.debug('Uniformizing the input raster sizes...')
@@ -1191,7 +1214,7 @@ def execute(args):
     bathymetry_raster_shape = \
         raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
     assert landmass_raster_shape == bathymetry_raster_shape
-    
+
     LOGGER.debug('Done')
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
