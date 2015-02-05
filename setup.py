@@ -132,7 +132,6 @@ if platform.system() == 'Windows':
                          'invest_natcap',
                          'scipy.io.matlab.streams',
                          'scipy.special',
-                         'scipy.special._ufuncs_cxx',
                          'ctypes',
                          'shapely.geos',
                          'matplotlib.backends.backend_qt4agg',
@@ -145,6 +144,11 @@ if platform.system() == 'Windows':
                 'msvcp90.dll', 'geos_c.dll'],
             }
          }
+
+    # When building py2exe binaries on windows server, the built application
+    # won't run unless we import _ufuncs_cxx.
+    if platform.uname()[2] == '2008ServerR2':
+        py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
 
     #These are the exes that will get built
     py2exe_args['console'] = \
