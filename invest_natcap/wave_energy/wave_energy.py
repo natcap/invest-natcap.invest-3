@@ -1088,6 +1088,16 @@ def create_percentile_rasters(
     col_name = "Val_Range"
     raster_utils.create_rat_uri(output_path, perc_dict, col_name)
 
+    table_dict = {}
+    for index in xrange(len(percentile_groups)):
+        table_dict[index] = {}
+        table_dict[index]['id'] = percentile_groups[index]
+        table_dict[index]['Value Range'] = percentile_ranges[index]
+        table_dict[index]['Pixel Count'] = pixel_count[index]
+
+    attribute_table_uri = output_path[:-4] + '.csv'
+    column_names = ['id', 'Value Range', 'Pixel Count']
+    create_attribute_csv_table(attribute_table_uri, column_names, table_dict)
     # Generate the attribute table for the percentile raster
     #create_attribute_table(output_path, percentile_ranges, pixel_count)
 
@@ -1140,6 +1150,42 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_values.append(range_last)
     LOGGER.debug('range_values : %s', range_values)
     return range_values
+
+def create_attribute_csv_table(attribute_table_uri, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    if os.path.isfile(attribute_table_uri):
+        os.remove(attribute_table_uri)
+
+    csv_file = open(attribute_table_uri, 'wb')
+
+    #  Sort the keys so that the rows are written in order
+    row_keys = data.keys()
+    row_keys.sort()
+
+    csv_writer = csv.DictWriter(csv_file, fields)
+    #  Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn, fn) for fn in fields))
+
+    # Write the rows from the dictionary
+    for index in row_keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
 
 def create_attribute_table(raster_uri, percentile_ranges, counter):
     """Creates an attribute table of type '.vat.dbf'.  The attribute table
@@ -1584,7 +1630,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     for x in heapq.merge(*iters):
         if counter in rank_list:
             LOGGER.debug('percentile value is : %s' % x)
-            results[index] = x
+            results[index] = int(x)
             index += 1
         counter += 1
 
