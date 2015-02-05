@@ -21,6 +21,8 @@ def execute(args, create_outputs=True):
     :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.
 
+    :param str args['results_suffix']: a string to append to output filenames
+
     :param str args['aoi_uri']: location of shapefile which will be used as
         subregions for calculation. Each region must conatin a 'Name'
         attribute (case-sensitive) matching the given name in the population
@@ -102,6 +104,7 @@ def execute(args, create_outputs=True):
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
+            'results_suffix': 'scenario_name',
             'aoi_uri': 'path/to/aoi_uri',
             'total_timesteps': 100,
             'population_type': 'Stage-Based',

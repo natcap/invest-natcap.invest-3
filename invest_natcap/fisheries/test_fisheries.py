@@ -17,6 +17,7 @@ class TestBlueCrab(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
@@ -56,6 +57,7 @@ class TestDungenessCrab(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_hood_canal/DC_HoodCanal_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
@@ -95,6 +97,7 @@ class TestLobster(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_belize/Lob_Belize_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
@@ -132,6 +135,7 @@ class TestShrimp(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
             'total_timesteps': 300,
             'population_type': 'Stage-Based',
@@ -180,6 +184,7 @@ class TestCustomRecruitmentFunc(unittest.TestCase):
 
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
@@ -236,6 +241,7 @@ class TestCustomRecruitmentFunc2(unittest.TestCase):
 
         self.args = {
             'workspace_dir': workspace_dir,
+            'results_suffix': '',
             'aoi_uri': os.path.join(input_dir, 'shapefile_hood_canal/DC_HoodCanal_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',

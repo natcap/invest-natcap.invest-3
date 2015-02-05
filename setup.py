@@ -145,6 +145,11 @@ if platform.system() == 'Windows':
             }
          }
 
+    # When building py2exe binaries on windows server, the built application
+    # won't run unless we import _ufuncs_cxx.
+    if platform.uname()[2] == '2008ServerR2':
+        py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
+
     #These are the exes that will get built
     py2exe_args['console'] = \
         ['invest_crop_production.py',
