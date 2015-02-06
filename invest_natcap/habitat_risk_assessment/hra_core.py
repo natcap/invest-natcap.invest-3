@@ -7,7 +7,7 @@ import os
 import collections
 import math
 import datetime
-import matplotlib.pyplot
+from matplotlib import pyplot as plt
 import re
 import random
 import numpy
@@ -237,6 +237,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             ecosystem plot.
 
     Returns:
+        None
+
+    Outputs:
         A set of .png images containing the matplotlib plots for every H-S
         combination. Within that, each AOI will be displayed as plotted by
         (E,C) values.
@@ -271,13 +274,13 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         for radius, color in circle_color_list:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
-            cir = matplotlib.pyplot.Circle(
+            cir = plt.Circle(
                 (0, 0),
                 edgecolor='.25',
                 linestyle=linestyle,
                 radius=radius * max_value / 3.75,
                 fc=color)
-            matplotlib.pyplot.gca().add_patch(cir)
+            plt.gca().add_patch(cir)
 
     def jigger(E, C):
         '''
@@ -300,9 +303,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
         LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
 
-        fig = matplotlib.pyplot.figure(plot_index)
+        fig = plt.figure(plot_index)
         plot_index += 1
-        matplotlib.pyplot.suptitle(aoi_name)
+        plt.suptitle(aoi_name)
         fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
         fig.text(0.06, 0.5, 'Consequence', ha='center', va='center',
                  rotation='vertical')
@@ -316,44 +319,44 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
                 # Want to have two across, and make sure there are enough
                 # spaces going down for each of the subplots
-                matplotlib.pyplot.subplot(int(math.ceil(num_habs / 2.0)),
+                plt.subplot(int(math.ceil(num_habs / 2.0)),
                                           2, hab_index)
                 plot_background_circle(max_risk)
-                matplotlib.pyplot.title(curr_hab_name)
-                matplotlib.pyplot.xlim([-.5, max_risk])
-                matplotlib.pyplot.ylim([-.5, max_risk])
+                plt.title(curr_hab_name)
+                plt.xlim([-.5, max_risk])
+                plt.ylim([-.5, max_risk])
 
             hab_name = element[0]
             if curr_hab_name == hab_name:
 
-                matplotlib.pyplot.plot(
+                plt.plot(
                     element[2], element[3], 'k^',
                     markerfacecolor='black', markersize=8)
-                matplotlib.pyplot.annotate(
+                plt.annotate(
                     element[1], xy=(element[2], element[3]),
                     xytext=jigger(element[2], element[3]))
                 continue
 
             # We get here once we get to the next habitat
             hab_index += 1
-            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)),
+            plt.subplot(int(math.ceil(num_habs/2.0)),
                                       2, hab_index)
             plot_background_circle(max_risk)
 
             curr_hab_name = hab_name
 
-            matplotlib.pyplot.title(curr_hab_name)
-            matplotlib.pyplot.xlim([-.5, max_risk])
-            matplotlib.pyplot.ylim([-.5, max_risk])
+            plt.title(curr_hab_name)
+            plt.xlim([-.5, max_risk])
+            plt.ylim([-.5, max_risk])
 
             # We still need to plot the element that gets us here.
-            matplotlib.pyplot.plot(
+            plt.plot(
                 element[2],
                 element[3],
                 'k^',
                 markerfacecolor='black',
                 markersize=8)
-            matplotlib.pyplot.annotate(
+            plt.annotate(
                 element[1],
                 xy=(element[2], element[3]),
                 xytext=jigger(element[2], element[3]))
@@ -361,7 +364,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
         out_uri = os.path.join(
             out_dir, 'risk_plot_' + 'AOI[' + aoi_name + '].png')
 
-        matplotlib.pyplot.savefig(out_uri, format='png')
+        plt.savefig(out_uri, format='png')
 
     # Create one ecosystem megaplot that plots the points as summed E,C from
     # a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
@@ -369,8 +372,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
     plot_index += 1
     max_tot_risk = max_risk * max_stress * num_habs
 
-    matplotlib.pyplot.figure(plot_index)
-    matplotlib.pyplot.suptitle("Ecosystem Risk")
+    plt.figure(plot_index)
+    plt.suptitle("Ecosystem Risk")
 
     plot_background_circle(max_tot_risk)
 
@@ -390,20 +393,20 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     for aoi_name, p_dict in points_dict.items():
         # Create the points which are summed AOI's across all Habitats.
-        matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^',
+        plt.plot(p_dict['E'], p_dict['C'], 'k^',
                                markerfacecolor='black', markersize=8)
-        matplotlib.pyplot.annotate(
+        plt.annotate(
             aoi_name,
             xy=(p_dict['E'], p_dict['C']),
             xytext=(p_dict['E'], p_dict['C']+0.07))
 
-    matplotlib.pyplot.xlim([0, max_tot_risk])
-    matplotlib.pyplot.ylim([0, max_tot_risk])
-    matplotlib.pyplot.xlabel("Exposure (Cumulative)")
-    matplotlib.pyplot.ylabel("Consequence (Cumulative)")
+    plt.xlim([0, max_tot_risk])
+    plt.ylim([0, max_tot_risk])
+    plt.xlabel("Exposure (Cumulative)")
+    plt.ylabel("Consequence (Cumulative)")
 
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
-    matplotlib.pyplot.savefig(out_uri, format='png')
+    plt.savefig(out_uri, format='png')
 
 
 def make_aoi_tables(out_dir, aoi_pairs):

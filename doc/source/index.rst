@@ -11,10 +11,13 @@ Contents:
 .. toctree::
     :maxdepth: 2
 
-    core_utilities.rst
-    models.rst
-    supporting_tools.rst
-
+    final_ecosystem_services.rst
+    supporting_ecosystem_services.rst
+    ecosystem_service_analysis_tools.rst
+    geoprocessing.rst
+    user_interface.rst
+    utilities.rst
+    testing.rst
 
 Indices and tables
 ==================

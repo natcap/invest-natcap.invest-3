@@ -202,31 +202,31 @@ def execute(args):
 
     hra_args['risk_eq'] = args['risk_eq']
 
-    #Depending on the risk calculation equation, this should return the highest
-    #possible value of risk for any given habitat-stressor pairing. The highest
-    #risk for a habitat would just be this risk value * the number of stressor
-    #pairs that apply to it.
+    # Depending on the risk calculation equation, this should return the highest
+    # possible value of risk for any given habitat-stressor pairing. The highest
+    # risk for a habitat would just be this risk value * the number of stressor
+    # pairs that apply to it.
     max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
     hra_args['max_risk'] = max_r
 
-    #Pass along the max number of stressors the user believes will overlap one
-    #another
+    # Pass along the max number of stressors the user believes will overlap one
+    # another
     hra_args['max_stress'] = args['max_stress']
 
-    #Create intermediate and output folders. Delete old ones, if they exist.
+    # Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
             shutil.rmtree(folder)
 
         os.makedirs(folder)
 
-    #If using aoi zones are desired, pass the AOI layer directly to core to be
-    #dealt with there.
+    # If using aoi zones are desired, pass the AOI layer directly to core to be
+    # dealt with there.
     if 'aoi_tables' in args:
 
-        #Need to check that this shapefile contains the correct attribute name.
-        #Later, this is where the uppercase/lowercase dictionary can be
-        #implimented.
+        # Need to check that this shapefile contains the correct attribute name.
+        # Later, this is where the uppercase/lowercase dictionary can be
+        # implimented.
         shape = ogr.Open(args['aoi_tables'])
         layer = shape.GetLayer()
 
@@ -242,21 +242,21 @@ def execute(args):
                     must contain the attribute \"Name\" in order to be \
                     properly used within the HRA model run.")
 
-        #By this point, we know that the AOI layer contains the 'name' attrib
-        #in some form. Pass that on to the core so that the name can be easily
-        #pulled from the layers.
+        # By this point, we know that the AOI layer contains the 'name' attrib
+        # in some form. Pass that on to the core so that the name can be easily
+        # pulled from the layers.
         hra_args['aoi_key'] = lower_attrib['name']
         hra_args['aoi_tables'] = args['aoi_tables']
 
-    #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
-    #to use the pre-process module to unpack them and put them into the
-    #hra_args dict. Then can modify that within the rest of the code.
-    #We will also return a dictionary conatining directory locations for all
-    #of the necessary shapefiles. This will be used instead of having users
-    #re-enter the locations within args.
+    # Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
+    # to use the pre-process module to unpack them and put them into the
+    # hra_args dict. Then can modify that within the rest of the code.
+    # We will also return a dictionary conatining directory locations for all
+    # of the necessary shapefiles. This will be used instead of having users
+    # re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
 
-    #Where we will store the burned individual habitat and stressor rasters.
+    # Where we will store the burned individual habitat and stressor rasters.
     crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
     stress_dir = os.path.join(inter_dir, 'Stressor_Rasters')
@@ -268,7 +268,7 @@ def execute(args):
 
         os.makedirs(folder)
 
-    #Habitats
+    # Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
@@ -279,13 +279,13 @@ def execute(args):
 
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
-    #Get all stressor URI's
+    # Get all stressor URI's
     stress_names = listdir(hra_args['stressors_dir'])
     stress_list = fnmatch.filter(stress_names, '*.shp')
 
-    #Want a super simple dictionary of the stressor rasters we will use for
-    #overlap. The local var stress_dir is the location that should be used
-    #for rasterized stressor shapefiles.
+    # Want a super simple dictionary of the stressor rasters we will use for
+    # overlap. The local var stress_dir is the location that should be used
+    # for rasterized stressor shapefiles.
     stress_dict = make_stress_rasters(
         stress_dir,
         stress_list,
@@ -293,9 +293,9 @@ def execute(args):
         args['decay_eq'],
         hra_args['buffer_dict'])
 
-    #H_S_C and H_S_E
-    #Just add the DS's at the same time to the two dictionaries,
-    #since it should be the same keys.
+    # H_S_C and H_S_E
+    # Just add the DS's at the same time to the two dictionaries,
+    # since it should be the same keys.
     make_add_overlap_rasters(
         overlap_dir,
         hra_args['habitats'],
@@ -304,7 +304,7 @@ def execute(args):
         hra_args['h_s_e'],
         args['grid_size'])
 
-    #Criteria, if they exist.
+    # Criteria, if they exist.
     if 'criteria_dir' in hra_args:
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(
             hra_args['criteria_dir'])
@@ -317,8 +317,8 @@ def execute(args):
             hra_args['h_s_c'],
             args['grid_size'])
 
-    #No reason to hold the directory paths in memory since all info is now
-    #within dictionaries. Can remove them here before passing to core.
+    # No reason to hold the directory paths in memory since all info is now
+    # within dictionaries. Can remove them here before passing to core.
     for name in ('habitats_dir',
                  'species_dir', 'stressors_dir', 'criteria_dir'):
         if name in hra_args:
@@ -457,11 +457,11 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
 
     for shape in stress_list:
 
-        #The return of os.path.split is a tuple where everything after the
-        #final slash is returned as the 'tail' in the second element of the
-        #tuple path.splitext returns a tuple such that the first element is
-        #what comes before the file extension, and the second is the extension
-        #itself
+        # The return of os.path.split is a tuple where everything after the
+        # final slash is returned as the 'tail' in the second element of the
+        # tuple path.splitext returns a tuple such that the first element is
+        # what comes before the file extension, and the second is the extension
+        # itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
 
@@ -470,16 +470,16 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
 
         buff = buffer_dict[name]
 
-        #Want to set this specifically to make later overlap easier.
+        # Want to set this specifically to make later overlap easier.
         nodata = -1.
 
-        #Need to create a larger base than the envelope that would normally
-        #surround the raster, since we know that we can be expanding by at
-        #least buffer size more. For reference, look to
-        #"~/workspace/Examples/expand_raster.py"
+        # Need to create a larger base than the envelope that would normally
+        # surround the raster, since we know that we can be expanding by at
+        # least buffer size more. For reference, look to
+        # "~/workspace/Examples/expand_raster.py"
         shp_extent = layer.GetExtent()
 
-        #These have to be expanded by 2 * buffer to account for both sides
+        # These have to be expanded by 2 * buffer to account for both sides
         width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
         height = abs(shp_extent[3] - shp_extent[2]) + 2*buff
         p_width = int(np.ceil(width / grid_size))
@@ -488,7 +488,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         driver = gdal.GetDriverByName('GTiff')
         raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
 
-        #increase everything by buffer size
+        # increase everything by buffer size
         transform = [shp_extent[0] - buff,
                      grid_size,
                      0.0,
@@ -553,8 +553,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         elif decay_eq == 'Linear':
             make_lin_decay_array(dist_trans_uri, new_buff_uri, buff, nodata)
 
-        #Now, write the buffered version of the stressor to the stressors
-        #dictionary
+        # Now, write the buffered version of the stressor to the stressors
+        # dictionary
         stress_dict[name] = new_buff_uri
 
     return stress_dict
@@ -582,8 +582,8 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
 
             returns - numpy array with buffered values
         """
-        #Since we know anything that is land is currently represented as 0's,
-        #want to turn that back into 1's. everything else will just be nodata
+        # Since we know anything that is land is currently represented as 0's,
+        # want to turn that back into 1's. everything else will just be nodata
         swap = np.where(chunk == 0., 1, chunk)
         return np.where(swap > 1., nodata, swap)
 
@@ -626,8 +626,8 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
             returns - numpy array with buffered values
         """
         chunk_met = chunk * cell_size
-        #The decay rate should be approximately -1/distance we want 0 to be at.
-        #We add one to have a proper y-intercept.
+        # The decay rate should be approximately -1/distance we want 0 to be at
+        # We add one to have a proper y-intercept.
         lin_decay_chunk = -chunk_met / buff + 1.0
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
@@ -658,12 +658,12 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
     Returns: Nothing
     '''
 
-    #Want a cutoff for the decay amount after which we will say things are
-    #equivalent to nodata, since we don't want to have values outside the
-    #buffer zone.
+    # Want a cutoff for the decay amount after which we will say things are
+    # equivalent to nodata, since we don't want to have values outside the
+    # buffer zone.
     cutoff = 0.01
 
-    #Need to have a value representing the decay rate for the exponential decay
+    # Need a value representing the decay rate for the exponential decay
     rate = -math.log(cutoff) / buff
     cell_size = raster_utils.get_cell_size_from_uri(dist_trans_uri)
 
@@ -718,8 +718,8 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
             returns - numpy array with buffered values
         """
         chunk_met = chunk * cell_size
-        #Setting anything within the buffer zone to 1, and anything outside
-        #that distance to nodata.
+        # Setting anything within the buffer zone to 1, and anything outside
+        # that distance to nodata.
         return np.where(chunk_met <= buff, 1., nodata)
 
     raster_utils.vectorize_datasets(
@@ -756,11 +756,11 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
     for shape in hab_list:
 
-        #The return of os.path.split is a tuple where everything after the
-        #final slash is returned as the 'tail' in the second element of the
-        #tuple path.splitext returns a tuple such that the first element is
-        #what comes before the file extension, and the second is the extension
-        #itself
+        # The return of os.path.split is a tuple where everything after the
+        # final slash is returned as the 'tail' in the second element of the
+        # tuple path.splitext returns a tuple such that the first element is
+        # what comes before the file extension, and the second is the extension
+        # itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
 
         out_uri = os.path.join(dir, name + '.tif')
@@ -795,9 +795,9 @@ def calc_max_rating(risk_eq, max_rating):
         overlap raster.
     '''
 
-    #The max_rating ends up being the simplified result of each of the E and
-    #C equations when the same value is used in R/DQ/W. Thus for E and C, their
-    #max value is equivalent to the max_rating.
+    # The max_rating ends up being the simplified result of each of the E and
+    # C equations when the same value is used in R/DQ/W. Thus for E and C, their
+    # max value is equivalent to the max_rating.
 
     if risk_eq == 'Multiplicative':
         max_r = max_rating * max_rating
@@ -894,21 +894,21 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
     Returns nothing.
     '''
-    #H-S-C
+    # H-S-C
     for pair in crit_dict['h_s_c']:
 
         for c_name, c_path in crit_dict['h_s_c'][pair].iteritems():
 
-            #The path coming in from the criteria should be of the form
-            #dir/h_s_critname.shp.
+            # The path coming in from the criteria should be of the form
+            # dir/h_s_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
-            #Since all features will contain the same set of attributes,
-            #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating'
-            #was used.
+            # Since all features will contain the same set of attributes,
+            # and if it passes this loop, will definitely contain a 'rating', we
+            # can just use the last feature queried to figure out how 'rating'
+            # was used.
             lower_attrib = None
 
             for feature in layer:
@@ -934,15 +934,15 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 option_list=['ATTRIBUTE=' + lower_attrib[
                              'rating'], 'ALL_TOUCHED=TRUE'])
 
-            #Want to do a vectorize with the base layer, to make sure we're not
-            #adding in values where there should be none
+            # Want to do a vectorize with the base layer, to make sure we're not
+            # adding in values where there should be none
             base_uri = h_s_c[pair]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
 
             def overlap_hsc_spat_crit(base_pix, spat_pix):
 
-                #If there is no overlap, just return whatever is underneath.
-                #It will either be the value of that patial region or nodata
+                # If there is no overlap, just return whatever is underneath.
+                # It will either be the value of that patial region or nodata
                 if base_pix != base_nodata:
                     return spat_pix
 
@@ -971,21 +971,21 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                     Weight information. Please run HRA Preprocessor again to \
                     include all relavant criteria data.")
 
-    #Habs
+    # Habs
     for h in crit_dict['h']:
 
         for c_name, c_path in crit_dict['h'][h].iteritems():
 
-            #The path coming in from the criteria should be of the form
-            #dir/h_critname.shp.
+            # The path coming in from the criteria should be of the form
+            # dir/h_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
-            #Since all features will contain the same set of attributes,
-            #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating'
-            #was used.
+            # Since all features will contain the same set of attributes,
+            # and if it passes this loop, will definitely contain a 'rating', we
+            # can just use the last feature queried to figure out how 'rating'
+            # was used.
             lower_attrib = None
 
             for feature in layer:
@@ -1011,15 +1011,15 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
 
-            #Want to do a vectorize with the base layer, to make sure we're not
-            #adding in values where there should be none
+            # Want to do a vectorize with the base layer to make sure we're not
+            # adding in values where there should be none
             base_uri = habitats[h]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
 
             def overlap_h_spat_crit(base_pix, spat_pix):
 
-                #If there is no overlap, just return whatever is underneath.
-                #It will either be the value of that patial region or nodata
+                # If there is no overlap, just return whatever is underneath.
+                # It will either be the value of that patial region or nodata
                 if base_pix != base_nodata:
                     return spat_pix
 
@@ -1046,21 +1046,21 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                     the model run require corresponding Data Quality and \
                     Weight information. Please run HRA Preprocessor again to \
                     include all relavant criteria data.")
-    #H-S-E
+    # H-S-E
     for pair in crit_dict['h_s_e']:
 
         for c_name, c_path in crit_dict['h_s_e'][pair].iteritems():
 
-            #The path coming in from the criteria should be of the form
-            #dir/h_s_critname.shp.
+            # The path coming in from the criteria should be of the form
+            # dir/h_s_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
-            #Since all features will contain the same set of attributes,
-            #and if it passes this loop, will definitely contain a 'rating', we
-            #can just use the last feature queried to figure out how 'rating'
-            #was used.
+            # Since all features will contain the same set of attributes,
+            # and if it passes this loop, will definitely contain a 'rating', we
+            # can just use the last feature queried to figure out how 'rating'
+            # was used.
             lower_attrib = None
 
             for feature in layer:
@@ -1086,15 +1086,15 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
 
-            #Want to do a vectorize with the base layer, to make sure we're not
-            #adding in values where there should be none
+            # Want to do a vectorize with the base layer, to make sure we're not
+            # adding in values where there should be none
             base_uri = h_s_e[pair]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
 
             def overlap_hse_spat_crit(base_pix, spat_pix):
 
-                #If there is no overlap, just return whatever is underneath.
-                #It will either be the value of that patial region or nodata
+                # If there is no overlap, just return whatever is underneath.
+                # It will either be the value of that patial region or nodata
                 if base_pix != base_nodata:
                     return spat_pix
 
