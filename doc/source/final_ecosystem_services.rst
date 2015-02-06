@@ -10,9 +10,7 @@ Final Ecosystem Services
     final_ecosystem_services/crop_production.rst
     final_ecosystem_services/finfish_aquaculture.rst
     final_ecosystem_services/fisheries.rst
-    final_ecosystem_services/flood_mitigation.rst
     final_ecosystem_services/hydropower.rst
-    final_ecosystem_services/malaria.rst
     final_ecosystem_services/monthly_water_yield.rst
     final_ecosystem_services/ndr.rst
     final_ecosystem_services/nearshore_wave_and_erosion.rst
