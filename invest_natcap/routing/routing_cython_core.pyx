@@ -2248,6 +2248,8 @@ def label_flats(dem_uri, low_edges, labels_uri):
                     to_fill.push(neighbor_row * n_cols + neighbor_col)
 
             label += 1
+    block_cache.flush_cache()
+
 
 def clean_high_edges(labels_uri, high_edges):
     """Removes any high edges that do not have labels and reports them if so.
@@ -2317,5 +2319,3 @@ def clean_high_edges(labels_uri, high_edges):
     if len(unlabled_set) > 0:
         high_edges.difference_update(unlabled_set)
         LOGGER.warn("Not all flats have outlets")
-
-
