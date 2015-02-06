@@ -841,9 +841,9 @@ def load_binary_wave_data(wave_file_uri):
 
         wave_file_uri - The path to a pickled binary WW3 file.
 
-        returns - A dictionary of matrices representing hours of specific seastates,
-              as well as the period and height ranges.  It has the following
-              structure:
+        returns - A dictionary of matrices representing hours of specific
+              seastates, as well as the period and height ranges.
+              It has the following structure:
                {'periods': [1,2,3,4,...],
                 'heights': [.5,1.0,1.5,...],
                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
@@ -913,8 +913,8 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
         shape_path - A uri to a point shapefile datasource indicating where
             in the world we are interested in
         coord_trans - A coordinate transformation
-        coord_trans_opposite - A coordinate transformation that transforms in the
-                           opposite direction of 'coord_trans'
+        coord_trans_opposite - A coordinate transformation that transforms in
+                           the opposite direction of 'coord_trans'
         ds_uri - A uri to a gdal dataset to get the pixel size from
 
         returns - A tuple of the x and y pixel sizes of the global DEM
@@ -947,8 +947,8 @@ def get_coordinate_transformation(source_sr, target_sr):
         source_sr - A spatial reference
         target_sr - A spatial reference
 
-        return - A tuple, coord_trans (source to target) and coord_trans_opposite
-             (target to source)
+        return - A tuple, coord_trans (source to target) and
+            coord_trans_opposite (target to source)
     """
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
@@ -994,57 +994,10 @@ def create_percentile_rasters(
             returns - An integer that places each pixel into a group
         """
         return bisect(percentiles, band)
-    # Create a memory mapped matrix for the dataset that we're getting the
-    # percentiles for
-    #tmp_matrix_file = raster_utils.temporary_filename()
-    #matrix = raster_utils.load_memory_mapped_array(
-    #        raster_path, tmp_matrix_file, array_type=None)
 
-    # Get the shape of the matrix to create future memory mapped arrays from
-    #n_rows, n_cols = matrix.shape
-
-    # Create two more memory mapped arrays for storing operations done on the
-    # original matrix. This helps avoid memory errors.
-    #tmp_mask_file = raster_utils.temporary_filename()
-    #matrix_mask = np.memmap(
-    #    tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
-
-    # Flatten each array before doing operations so that it can be passed to
-    # scipy.scoreatpercentiles later
-    #dataset_array = np.reshape(matrix, (-1,))
-    #dataset_nodata_flat = np.reshape(matrix_mask, (-1))
-
-    # Create a very large negative number to replace the nodata values, so that
-    # they are not used when computing the percentiles later
-    #neg_float = float(np.finfo(np.float32).min) + 1.0
-    #ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
-
-    # Create a mask of where the nodata values are
-    #np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
-
-    # Using the above mask, replace the nodata values with a very large negative
-    # number
-    #dataset_array[dataset_nodata_flat] = neg_float
-    # Create a masked array based on the array with the redefined nodata values
-    # and the nodata mask. This will be helpful when getting the proper min /
-    # max value of the array which will be used later.
-    #dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
-
-    # Get the min / max value of the masked array. The masked out values are
-    # ignored when getting the min / max so we don't have to worry about the
-    # very large negative number. This min / max will be used later in scoring
-    # the percentiles
-    #min_val = dataset_mask.min()
-    #max_val = dataset_mask.max()
-    #LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
-
-    # Get the percentiles based on the data and percentile ranges we are looking
-    # for
-    #percentiles = get_percentiles(
-    #        dataset_array, percentile_list, min_val, max_val)
-
-    percentiles = list(calculate_percentiles_from_raster(
-        raster_path, percentile_list))
+    # Get the percentile values for each percentile
+    percentiles = calculate_percentiles_from_raster(
+        raster_path, percentile_list)
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
@@ -1058,7 +1011,6 @@ def create_percentile_rasters(
     percentiles.insert(0, int(start_value))
 
     # Set nodata to a very small negative number
-    #nodata = np.iinfo(np.int32).min
     nodata = -9999919
     pixel_size = raster_utils.get_cell_size_from_uri(raster_path)
 
@@ -1069,18 +1021,17 @@ def create_percentile_rasters(
             nodata, pixel_size, 'intersection',
             assert_datasets_projected=False, aoi_uri=aoi_shape_path)
 
-    # Get the shape of the array so that future memory mapped arrays can be
-    # based on it
-    #count_rows, count_cols = perc_array.shape
-
-    # Initialize a list that will hold pixel counts for each group
-    pixel_count = np.zeros(len(percentile_list) + 1)
-
+    # Create percentile groups of how percentile ranges are classified
+    # using bisect function on a raster
     percentile_groups = np.arange(1, len(percentiles) + 1)
 
-    pixel_count = count_pixels_groups(output_path, percentile_groups, pixel_count)
+    # Get the pixel count for each group
+    pixel_count = count_pixels_groups(output_path, percentile_groups)
 
     LOGGER.debug('number of pixels per group: : %s', pixel_count)
+
+    # Initialize a dictionary where percentile groups map to a string
+    # of corresponding percentile ranges. Used to create RAT
     perc_dict = {}
     for index in xrange(len(percentile_groups)):
         perc_dict[percentile_groups[index]] = percentile_ranges[index]
@@ -1088,6 +1039,8 @@ def create_percentile_rasters(
     col_name = "Val_Range"
     raster_utils.create_rat_uri(output_path, perc_dict, col_name)
 
+    # Initialize a dictionary to map percentile groups to percentile range
+    # string and pixel count. Used for creating CSV table
     table_dict = {}
     for index in xrange(len(percentile_groups)):
         table_dict[index] = {}
@@ -1098,32 +1051,12 @@ def create_percentile_rasters(
     attribute_table_uri = output_path[:-4] + '.csv'
     column_names = ['id', 'Value Range', 'Pixel Count']
     create_attribute_csv_table(attribute_table_uri, column_names, table_dict)
-    # Generate the attribute table for the percentile raster
-    #create_attribute_table(output_path, percentile_ranges, pixel_count)
-
-def get_percentiles(value_list, percentile_list, min_val, max_val):
-    """Creates a list of integers of the percentile marks
-
-        value_list - A list of numbers
-        percentile_list - A list of ascending integers of the desired
-            percentiles
-        min_val - a int/float indicating the lower limit for computing the
-            percentile. Values lower will be ignored
-        max_val - a int/float indicating the upper limit for computing the
-            percentile. Values greater will be ignored
-
-        returns - A list of integers which are the percentile marks"""
-
-    pct_list = []
-    for percentile in percentile_list:
-        pct_list.append(int(stats.scoreatpercentile(
-            value_list, percentile, (min_val, max_val))))
-    return pct_list
 
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     """Constructs the percentile ranges as Strings, with the first
         range starting at 1 and the last range being greater than the last
-        percentile mark.  Each string range is stored in a list that gets returned
+        percentile mark.  Each string range is stored in a list that gets
+        returned
 
         percentiles - A list of the percentile marks in ascending order
         units_short - A String that represents the shorthand for the units of
@@ -1186,44 +1119,6 @@ def create_attribute_csv_table(attribute_table_uri, fields, data):
         csv_writer.writerow(data[index])
 
     csv_file.close()
-
-def create_attribute_table(raster_uri, percentile_ranges, counter):
-    """Creates an attribute table of type '.vat.dbf'.  The attribute table
-        created is tied to the dataset of the raster_uri provided as input.
-        The table has 3 fields (VALUE, COUNT, VAL_RANGE) where VALUE acts as
-        an ID, COUNT is the number of pixels, and VAL_RANGE is the corresponding
-        percentile range
-
-        raster_uri - A String of the raster file the table should be associated with
-        percentile_ranges - A list of Strings representing the percentile ranges
-        counter - A list of integers that represent the pixel count
-
-        returns - nothing"""
-
-    # Create a new dbf file with the same name as the GTiff plus a .vat.dbf
-    output_path = raster_uri + '.vat.dbf'
-    # If the dbf file already exists, delete it
-    if os.path.isfile(output_path):
-        os.remove(output_path)
-    # Create new table, making readOnly explicit
-    dataset_attribute_table = dbf.Dbf(output_path, new = True, readOnly = False)
-    # Set the defined fields for the table
-    dataset_attribute_table.addField(
-                 # integer field
-                 ("VALUE", "N", 9),
-                 # integer field
-                 ("COUNT", "N", 9),
-                 # character field, I think header names need to be short?
-                 ("VAL_RANGE", "C", 254))
-    # Add all the records
-    for id_value in range(len(percentile_ranges)):
-        LOGGER.debug('id_value: %s', id_value)
-        rec = dataset_attribute_table.newRecord()
-        rec["VALUE"] = id_value + 1
-        rec["COUNT"] = int(counter[id_value])
-        rec["VAL_RANGE"] = percentile_ranges[id_value]
-        rec.store()
-    dataset_attribute_table.close()
 
 def wave_power(shape_uri):
     """Calculates the wave power from the fields in the shapefile
@@ -1560,34 +1455,42 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         feat = None
 
 def calculate_percentiles_from_raster(raster_uri, percentiles):
-    """Does a memory efficient percentile lookup from a raster
+    """Does a memory efficient sort to determine the percentiles
+        of a raster. Percentile algorithm currently used is the
+        nearest rank method.
 
-        raster_uri - a uri to a gdal raster
+        raster_uri - a uri to a gdal raster on disk
         percentiles - a list of desired percentiles to lookup
             ex: [25,50,75,90]
 
         returns - a list of values corresponding to the percentiles
             from the percentiles list
     """
-    raster = gdal.Open(raster_uri)
-    type = raster_utils.get_datatype_from_uri(raster_uri)
-    np_type = GDAL_TO_NUMPY_TYPE[type]
+    raster = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    raster_type = raster_utils.get_datatype_from_uri(raster_uri)
+    np_type = GDAL_TO_NUMPY_TYPE[raster_type]
 
-    def numbers_from_file(f):
-        """Generates an iterator from a file
-            f = file object
+    def numbers_from_file(fle):
+        """Generates an iterator from a file by loading all the numbers
+            and yielding
+
+            fle = file object
         """
-        arr = np.load(f)
-        for x in arr:
-            yield x
+        arr = np.load(fle)
+        for num in arr:
+            yield num
 
+    # List to hold the generated iterators
     iters = []
+
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
     n_rows = raster.RasterYSize
     n_cols = raster.RasterXSize
 
+    # Variable to count the total number of elements to compute percentile
+    # from. This leaves out nodata values
     n_elements = 0
 
     #Set the row strides to be something reasonable, like 256MB blocks
@@ -1600,15 +1503,17 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
             row_strides = n_rows - row_index
 
         # Read in raster chunk as array
-        arr = band.ReadAsArray(0,row_index,n_cols,row_strides)
+        arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
 
         tmp_uri = raster_utils.temporary_filename()
         tmp_file = open(tmp_uri, 'wb')
+        # Make array one dimensional for sorting and saving
         arr = arr.flatten()
-        #Remove nodata values from array and thus percentile calculation
+        # Remove nodata values from array and thus percentile calculation
         arr = np.delete(arr, np.where(arr==nodata))
-        #Tally the number of values relevant for calculating percentiles
+        # Tally the number of values relevant for calculating percentiles
         n_elements += len(arr)
+        # Sort array before saving
         arr = np.sort(arr)
 
         np.save(tmp_file, arr)
@@ -1618,30 +1523,48 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         iters.append(numbers_from_file(tmp_file))
         arr = None
 
+    # List to store the rank/index where each percentile will be found
     rank_list = []
+    # For each percentile calculate nearest rank
     for perc in percentiles:
         rank = math.ceil(perc/100.0 * n_elements)
         rank_list.append(int(rank))
+
+    # A variable to burn through when doing heapq merge sort over the
+    # iterators. Variable is used to check if we've iterated to a
+    # specified rank spot, to grab percentile value
     counter = 0
-    results = np.zeros((1, len(rank_list)))[0]
-    index = 0
+    # Setup a list of zeros to replace with percentile results
+    results = [0] * len(rank_list)
+
     LOGGER.debug('Percentile Rank List: %s' % rank_list)
 
-    for x in heapq.merge(*iters):
+    for num in heapq.merge(*iters):
+        # If a percentile rank has been hit, grab percentile value
         if counter in rank_list:
-            LOGGER.debug('percentile value is : %s' % x)
-            results[index] = int(x)
-            index += 1
+            LOGGER.debug('percentile value is : %s' % num)
+            results[rank_list.index(counter)] = int(num)
         counter += 1
 
-    array = None
     band = None
     raster = None
     return results
 
-def count_pixels_groups(raster_uri, group_values, pixel_count):
+def count_pixels_groups(raster_uri, group_values):
+    """Does a pixel count for each value in 'group_values' over the
+        raster provided by 'raster_uri'. Returns a list of pixel counts
+        for each value in 'group_values'
+
+        raster_uri - a uri path to a gdal raster on disk
+        group_values - a list of unique numbers for which to get a pixel count
+
+        returns - A list of integers, where each integer at an index
+            corresponds to the pixel count of the value from 'group_values'
+            found at the same index
     """
-    """
+    # Initialize a list that will hold pixel counts for each group
+    pixel_count = np.zeros(len(group_values))
+
     dataset = gdal.Open(raster_uri, gdal.GA_ReadOnly)
     band = dataset.GetRasterBand(1)
 
@@ -1649,14 +1572,11 @@ def count_pixels_groups(raster_uri, group_values, pixel_count):
     n_cols = dataset.RasterXSize
 
     block_size = band.GetBlockSize()
-
+    # Using block method for reading through a raster memory efficiently
+    # Taken from vectorize_datasets in raster_utils
     cols_per_block, rows_per_block = block_size[0], block_size[1]
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    dataset_block = np.zeros(
-        (rows_per_block, cols_per_block),
-        dtype=GDAL_TO_NUMPY_TYPE[band.DataType])
 
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
@@ -1670,25 +1590,13 @@ def count_pixels_groups(raster_uri, group_values, pixel_count):
             if col_block_width > cols_per_block:
                 col_block_width = cols_per_block
 
-            #Using buf_obj was causing an issue where pixel counts were coming
-            #back as too high. Not sure why this would be, perhaps it's
-            #somehow counting something twice?
-
-            #band.ReadAsArray(
-            #    xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-            #    win_ysize=row_block_width,
-            #    buf_obj=dataset_block[0:row_block_width,0:col_block_width])
             dataset_block = band.ReadAsArray(
                 xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
                 win_ysize=row_block_width)
 
+            # Cumulatively add the number of pixels found for each value
+            # in 'group_values'
             for index in xrange(len(group_values)):
-            # This line of code takes the numpy array 'perc_array', which holds
-            # the values from the percentile_band after being grouped, and checks
-            # to see where the values are equal to a certain group.
-            # This check gives an array of indices where the case was true,
-            # so we take the size of that array to give us the number of pixels
-            # that fall in that group.
                 val = group_values[index]
                 count_mask = np.zeros(dataset_block.shape)
                 np.equal(dataset_block, val, count_mask)
