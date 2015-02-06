@@ -2247,10 +2247,3 @@ def label_flats(dem_uri, low_edges, labels_uri):
 
             label += 1
 
-
-    '''label = 1
-    for cell in low_edges:
-        if cell is not labeled:
-            label_flats(cell, dem_uri, labels_uri)
-            label += 1'''
-    pass
