@@ -1974,6 +1974,9 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
         Returns:
             nothing"""
 
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
+
     dem_ds = gdal.Open(dem_uri)
     dem_band = dem_ds.GetRasterBand(1)
     flow_ds = gdal.Open(flow_direction_uri, gdal.GA_Update)
@@ -2008,14 +2011,26 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
 
+    cdef int global_row, global_col
+
     cdef int cell_row_index, cell_col_index
     cdef int cell_row_block_index, cell_col_block_index
     cdef int cell_row_block_offset, cell_col_block_offset
 
+    cdef int neighbor_index
+    cdef int neighbor_row, neighbor_col
+    cdef int neighbor_row_index, neighbor_col_index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset
+
+    cdef float cell_dem, cell_flow, neighbor_dem, neighbor_flow
+
+    cdef float dem_nodata = raster_utils.get_nodata_from_uri(
+        dem_uri)
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(
+        flow_direction_uri)
+
     cdef time_t last_time, current_time
     time(&last_time)
-
-
 
     for global_block_row in xrange(n_global_block_rows):
         time(&current_time)
@@ -2038,26 +2053,47 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
 
                     cell_dem = dem_block[cell_row_index, cell_col_index,
                         cell_row_block_offset, cell_col_block_offset]
+
+                    if cell_dem == dem_nodata:
+                        continue
+
                     cell_flow = flow_block[cell_row_index, cell_col_index,
                         cell_row_block_offset, cell_col_block_offset]
 
+                    for neighbor_index in xrange(8):
+                        neighbor_row = (
+                            neighbor_row_offset[neighbor_index] + global_row)
+                        neighbor_col = (
+                            neighbor_col_offset[neighbor_index] + global_col)
 
+                        if (neighbor_row >= n_rows or neighbor_row < 0 or
+                                neighbor_col >= n_cols or neighbor_col < 0):
+                            continue
 
+                        block_cache.update_cache(
+                            neighbor_row, neighbor_col,
+                            &neighbor_row_index, &neighbor_col_index,
+                            &neighbor_row_block_offset,
+                            &neighbor_col_block_offset)
+                        neighbor_dem = dem_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset,
+                            neighbor_col_block_offset]
 
+                        if neighbor_dem == dem_nodata:
+                            continue
 
-    '''for cell in flow_direction_uri:
-        if cell == nodata:
-            continue
-        for neighbor_cell of cell:
-            if neighbor_dem not in raster:
-                continue
-            neighbor_dem = dem_uri[neighbor_cell]
-            if neighbor_dem == nodata:
-                continue
-            if (cell != no_flow and neighbor_cell == no_flow
-                    and dem_uri[cell] == dem_uri[neighbor_cell]):
-                low_edges.add(cell)
-                break
-            elif cell ==no_flow and dem_uri[cell] < dem_uri[neighbor_cell]:
-                high_edges.add(cell)
-                break'''
+                        neighbor_flow = flow_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset,
+                            neighbor_col_block_offset]
+
+                        if (cell_flow != flow_nodata and
+                                neighbor_flow == flow_nodata and
+                                cell_dem == neighbor_dem):
+                            low_edges.add(global_row * n_cols + global_col)
+                            break
+                        elif (cell_flow == flow_nodata and
+                                cell_dem < neighbor_dem):
+                            high_edges.add(global_row * n_cols + global_col)
+                            break

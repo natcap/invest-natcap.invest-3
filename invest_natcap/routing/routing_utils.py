@@ -419,6 +419,8 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     low_edges = set()
     routing_cython_core.flat_edges(
         dem_uri, flow_direction_uri, high_edges, low_edges)
+    LOGGER.debug("high_edges len %d)", len(high_edges))
+    LOGGER.debug("low_edges len%d)", len(low_edges))
     '''if len(low_edges) == 0:
         if len(high_edges) != 0:
             LOGGER.warn('There were undrainable flats')
