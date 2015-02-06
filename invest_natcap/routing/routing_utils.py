@@ -421,20 +421,16 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
         dem_uri, flow_direction_uri, high_edges, low_edges)
     LOGGER.debug("high_edges len %d)", len(high_edges))
     LOGGER.debug("low_edges len%d)", len(low_edges))
-    '''if len(low_edges) == 0:
+    if len(low_edges) == 0:
         if len(high_edges) != 0:
             LOGGER.warn('There were undrainable flats')
         else:
             LOGGER.info('There were no flats')
         return
 
-    label = 1
-    for cell in low_edges:
-        if cell is not labeled:
-            label_flats(cell, dem_uri, labels_uri)
-            label += 1
+    routing_cython_core.label_flats(dem_uri, low_edges, labels_uri)
 
-    for cell in high_edges:
+    '''for cell in high_edges:
         if cell is not labeled:
             remove cell from high_edges
     if any cell was removed from high_edges:
@@ -447,13 +443,6 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
         labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
         flat_height_uri)'''
 
-
-
-
-
-
-def label_flats(cell_index, label):
-    pass
 
 
 def away_from_higher(high_edges_uri, flat_height_list):

@@ -2097,3 +2097,119 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
                                 cell_dem < neighbor_dem):
                             high_edges.add(global_row * n_cols + global_col)
                             break
+
+
+def label_flats(dem_uri, low_edges, labels_uri):
+    """A flood fill function to give all the cells of each flat a unique
+        label
+
+        Args:
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            low_edges (Set) - (input) Contains all the low edge cells of the dem
+                written as flat indexes in row major order
+            labels_uri (string) - (output) a uri to a single band integer gdal
+                dataset that will be created that will contain labels for the
+                flat regions of the DEM.
+            """
+
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
+
+    labels_nodata = -1
+    labels_ds = raster_utils.new_raster_from_base(
+        dem_ds, labels_uri, 'GTiff', labels_nodata,
+        gdal.GDT_Int32)
+    labels_band = labels_ds.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = dem_band.GetBlockSize()
+    cdef int n_rows = dem_ds.RasterYSize
+    cdef int n_cols = dem_ds.RasterXSize
+
+    cdef int n_block_rows = 3, n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] labels_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.float32)
+
+    band_list = [dem_band, labels_band]
+    block_list = [dem_block, labels_block]
+    update_list = [False, True]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    block_col_size, block_row_size = dem_band.GetBlockSize()
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+
+    cdef int global_row, global_col
+
+    cdef int cell_row_index, cell_col_index
+    cdef int cell_row_block_index, cell_col_block_index
+    cdef int cell_row_block_offset, cell_col_block_offset
+
+    cdef int neighbor_index
+    cdef int neighbor_row, neighbor_col
+    cdef int neighbor_row_index, neighbor_col_index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset
+
+    cdef float cell_dem, cell_label, neighbor_dem, neighbor_label
+
+    cdef float dem_nodata = raster_utils.get_nodata_from_uri(
+        dem_uri)
+    cdef float label_nodata = raster_utils.get_nodata_from_uri(
+        labels_uri)
+
+    cdef time_t last_time, current_time
+    time(&last_time)
+
+    cdef int flat_cell_index
+    cdef int label = 1
+
+    cdef queue[int] to_fill
+
+    for flat_cell_index in low_edges:
+        time(&current_time)
+        if current_time - last_time > 5.0:
+            #LOGGER.info(
+            #    "label_flats %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            last_time = current_time
+        global_row = flat_cell_index / n_cols
+        global_col = flat_cell_index % n_cols
+
+        block_cache.update_cache(
+            global_row, global_col,
+            &cell_row_index, &cell_col_index,
+            &cell_row_block_offset, &cell_col_block_offset)
+
+        cell_label = labels_block[cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        if cell_label == labels_nodata:
+            #label flats
+
+                #while flat_region_queue.size() > 0:
+            #flat_index = flat_region_queue.front()
+            #flat_set_for_looping.erase(flat_index)
+            #flat_region_queue.pop()
+            pass
+
+
+    '''label = 1
+    for cell in low_edges:
+        if cell is not labeled:
+            label_flats(cell, dem_uri, labels_uri)
+            label += 1'''
+    pass
