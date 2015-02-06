@@ -2,22 +2,14 @@
 functionality."""
 
 import os
-import shutil
 import logging
-import csv
-import json
 import codecs
 import re
 from types import StringType
 
-import numpy as np
-from osgeo import gdal
-from osgeo import ogr
-
 import invest_natcap
 from invest_natcap import raster_utils
 import table_generator
-import style
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
 REPORTING_DATA = os.path.join(
@@ -27,6 +19,7 @@ SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
 u = lambda string: unicode(string, 'utf-8')
+
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
@@ -217,6 +210,7 @@ def generate_report(reporting_args):
     # Write the html page to 'out_uri'
     write_html(html_obj, reporting_args['out_uri'])
 
+
 def write_html(html_obj, out_uri):
     """Write an html file to 'out_uri' from html element represented as strings
         in 'html_obj'
@@ -268,6 +262,7 @@ def write_html(html_obj, out_uri):
     html_file = codecs.open(out_uri, 'wb', 'utf-8')
     html_file.write(html_str)
     html_file.close()
+
 
 def build_table(param_args):
     """Generates a string representing a table in html format.
@@ -399,6 +394,7 @@ def build_table(param_args):
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict)
 
+
 def data_dict_to_list(data_dict):
     """Abstract out inner dictionaries from data_dict into a list, where
         the inner dictionaries are added to the list in the order of
@@ -418,6 +414,7 @@ def data_dict_to_list(data_dict):
 
     return data_list
 
+
 def add_text_element(param_args):
     """Generates a string that represents a html text block. The input string
         should be wrapped in proper html tags
@@ -430,6 +427,7 @@ def add_text_element(param_args):
     """
 
     return param_args['text']
+
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section
@@ -498,6 +496,7 @@ def add_head_element(param_args):
                 ' : %s' % form)
 
     return html_str
+
 
 def add_svg_element(param_args):
     """Generate an SVG file from a shapefile and read the SVG file in as a

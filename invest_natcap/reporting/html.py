@@ -191,6 +191,7 @@ class Table(object):
         '''Return the HTML string for the table.'''
         return self.table_elem.html()
 
+
 class _TableOfContents(object):
     '''Represents a Table of Contents for the document.'''
 
