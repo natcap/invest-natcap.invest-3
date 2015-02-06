@@ -2459,7 +2459,8 @@ def away_from_higher(
             cell_row_index, cell_col_index,
             cell_row_block_offset, cell_col_block_offset] = loops
         cache_dirty[cell_row_index, cell_col_index] = 1
-        flat_height[cell_label] = loops
+        #making it negative because it's easier to do here than in towards lower
+        flat_height[cell_label] = -loops
 
         #visit the neighbors
         for neighbor_index in xrange(8):
@@ -2489,5 +2490,162 @@ def away_from_higher(
                     neighbor_label == cell_label and
                     neighbor_flow == flow_nodata):
                 high_edges_queue.append(neighbor_row * n_cols + neighbor_col)
+
+    block_cache.flush_cache()
+
+
+def towards_lower(
+            low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
+            flat_height):
+    """Builds a gradient towards lower terrain.
+
+        Args:
+            low_edges (set) - (input) all the low edge cells of the DEM which
+                are part of drainable flats.
+            labels_uri (string) - (input) a uri to a single band integer gdal
+                dataset that contain labels for the cells that lie in
+                flat regions of the DEM.
+            flow_direction_uri (string) - (input) a uri to a single band
+                GDAL Dataset with partially defined d_infinity flow directions
+            flat_mask_uri (string) - (input/output) gdal dataset that contains
+                the negative step increments from toward_higher and will contain
+                the number of steps to be applied to each cell to form a
+                gradient away from higher terrain.  cells not in a flat have a
+                value of 0
+            flat_height (collections.defaultdict) - (input/output) Has an entry
+                for each label value of of labels_uri indicating the maximal
+                number of increments to be applied to the flat idientifed by
+                that label.
+
+        Returns:
+            nothing"""
+
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    flat_mask_nodata = raster_utils.get_nodata_from_uri(flat_mask_uri)
+
+    labels_ds = gdal.Open(labels_uri)
+    labels_band = labels_ds.GetRasterBand(1)
+    flat_mask_ds = gdal.Open(flat_mask_uri, gdal.GA_Update)
+    flat_mask_band = flat_mask_ds.GetRasterBand(1)
+    flow_direction_ds = gdal.Open(flow_direction_uri)
+    flow_direction_band = flow_direction_ds.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = labels_band.GetBlockSize()
+    cdef int n_rows = labels_ds.RasterYSize
+    cdef int n_cols = labels_ds.RasterXSize
+
+    cdef int n_block_rows = 3, n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] labels_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] flat_mask_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] flow_direction_block = (
+        numpy.zeros(
+            (n_block_rows, n_block_cols, block_row_size, block_col_size),
+            dtype=numpy.int32))
+
+    band_list = [labels_band, flat_mask_band, flow_direction_band]
+    block_list = [labels_block, flat_mask_block, flow_direction_block]
+    update_list = [False, True, False]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef int cell_row_index, cell_col_index
+    cdef int cell_row_block_index, cell_col_block_index
+    cdef int cell_row_block_offset, cell_col_block_offset
+
+    cdef int loops = 1
+
+    low_edges_queue = collections.deque()
+    cdef int neighbor_row, neighbor_col
+    cdef int flat_index
+    cdef int flat_row, flat_col
+    cdef int flat_mask
+    cdef int labels_nodata = raster_utils.get_nodata_from_uri(labels_uri)
+    cdef int cell_label, neighbor_label
+    cdef float neighbor_flow
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(
+        flow_direction_uri)
+
+    for flat_index in low_edges:
+        low_edges_queue.append(flat_index)
+
+    marker = -1
+    low_edges_queue.append(marker)
+    while len(low_edges_queue) > 1:
+        flat_index = low_edges_queue.popleft()
+        if flat_index == marker:
+            loops += 1
+            low_edges_queue.append(marker)
+            continue
+
+        flat_row = flat_index / n_cols
+        flat_col = flat_index % n_cols
+
+        block_cache.update_cache(
+            flat_row, flat_col,
+            &cell_row_index, &cell_col_index,
+            &cell_row_block_offset, &cell_col_block_offset)
+
+        flat_mask = flat_mask_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        if flat_mask > 0:
+            continue
+
+        cell_label = labels_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        if flat_mask < 0:
+            flat_mask_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset] = (
+                    flat_height[cell_label] + flat_mask + 2 * loops)
+        else:
+            flat_mask_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset] = 2 * loops
+        cache_dirty[cell_row_index, cell_col_index] = 1
+
+        #visit the neighbors
+        for neighbor_index in xrange(8):
+            neighbor_row = (
+                flat_row + neighbor_row_offset[neighbor_index])
+            neighbor_col = (
+                flat_col + neighbor_col_offset[neighbor_index])
+
+            if (neighbor_row < 0 or neighbor_row >= n_rows or
+                    neighbor_col < 0 or neighbor_col >= n_cols):
+                continue
+
+            block_cache.update_cache(
+                neighbor_row, neighbor_col,
+                &cell_row_index, &cell_col_index,
+                &cell_row_block_offset, &cell_col_block_offset)
+
+            neighbor_label = labels_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset]
+
+            neighbor_flow = flow_direction_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset]
+
+            if (neighbor_label != labels_nodata and
+                    neighbor_label == cell_label and
+                    neighbor_flow == flow_nodata):
+                low_edges_queue.append(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()

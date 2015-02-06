@@ -440,10 +440,8 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     routing_cython_core.away_from_higher(
         high_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
 
-    '''towards_lower(
-        labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
-        flat_height_uri)'''
-
+    routing_cython_core.towards_lower(
+        low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
 
 
 def away_from_higher(high_edges_uri, flat_height_list):
