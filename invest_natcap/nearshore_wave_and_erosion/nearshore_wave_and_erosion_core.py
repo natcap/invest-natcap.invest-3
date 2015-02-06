@@ -590,7 +590,7 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
     with open(output_csv_uri, 'w') as csv_file:
         writer = csv.writer(csv_file)
 
-        row = ['x', 'y', 'x_inland', 'y_inland', 'x_offshore', 'y_offshore']
+        row = ['transect_id', 'x', 'y', 'x_inland', 'y_inland', 'x_offshore', 'y_offshore']
         writer.writerow(row)
         
         for transect in range(shore_id_dataset.size):
@@ -609,7 +609,7 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
             y_end = coordinates_limits_dataset[transect, 3]
 
             # Create the row
-            row = [x_shore, y_shore, x_start, y_start, x_end, y_end]
+            row = [transect, x_shore, y_shore, x_start, y_start, x_end, y_end]
 
             # Write it
             writer.writerow(row)
