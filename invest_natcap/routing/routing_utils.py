@@ -27,6 +27,7 @@
 
 import logging
 import os
+import collections
 
 from osgeo import gdal
 import numpy
@@ -432,16 +433,14 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
 
     routing_cython_core.clean_high_edges(labels_uri, high_edges)
 
-    '''for cell in high_edges:
-        if cell is not labeled:
-            remove cell from high_edges
-    if any cell was removed from high_edges:
-        LOGGER.warn('not all flats have outlets')
+    flat_height = collections.defaultdict(int)
 
-    away_from_higher(
-        labels_uri, flat_mask_uri, flow_direction_uri, high_edges,
-        flat_height_uri)
-    towards_lower(
+
+
+    routing_cython_core.away_from_higher(
+        high_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
+
+    '''towards_lower(
         labels_uri, flat_mask_uri, flow_direction_uri, low_edges,
         flat_height_uri)'''
 

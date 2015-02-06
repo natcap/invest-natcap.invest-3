@@ -2,6 +2,7 @@
 
 import logging
 import os
+import collections
 
 import numpy
 cimport numpy
@@ -2261,6 +2262,7 @@ def clean_high_edges(labels_uri, high_edges):
             high_edges (set) - (input/output) a set containing row major order
                 flat indexes
 
+
         Returns:
             nothing"""
 
@@ -2319,3 +2321,173 @@ def clean_high_edges(labels_uri, high_edges):
     if len(unlabled_set) > 0:
         high_edges.difference_update(unlabled_set)
         LOGGER.warn("Not all flats have outlets")
+    block_cache.flush_cache()
+
+
+def away_from_higher(
+            high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
+            flat_height):
+    """Builds a gradient away from higher terrain.
+
+        Take Care, Take Care, Take Care
+        The Earth Is Not a Cold Dead Place
+        Those Who Tell The Truth Shall Die,
+            Those Who Tell The Truth Shall Live Forever
+        All Of A Sudden I Miss Everyone
+
+        The Birth And Death Of The Day
+        What Do You Go Home To?
+        Catastrophe, And The Cure.
+        Have you passed through this night?
+        With Tired Eyes, Tired Minds, Tired Souls, We Slept
+
+
+        Args:
+            high_edges (set) - (input) all the high edge cells of the DEM which
+                are part of drainable flats.
+            labels_uri (string) - (input) a uri to a single band integer gdal
+                dataset that contain labels for the cells that lie in
+                flat regions of the DEM.
+            flow_direction_uri (string) - (input) a uri to a single band
+                GDAL Dataset with partially defined d_infinity flow directions
+            flat_mask_uri (string) - (output) gdal dataset that contains the
+                number of increments to be applied to each cell to form a
+                gradient away from higher terrain.  cells not in a flat have a
+                value of 0
+            flat_height (collections.defaultdict) - (input/output) Has an entry
+                for each label value of of labels_uri indicating the maximal
+                number of increments to be applied to the flat idientifed by
+                that label.
+
+        Returns:
+            nothing"""
+
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    flat_mask_nodata = 0
+    raster_utils.new_raster_from_base_uri(
+        labels_uri, flat_mask_uri, 'GTiff', flat_mask_nodata,
+        gdal.GDT_Int32, fill_value=flat_mask_nodata)
+    flat_height.clear()
+
+    labels_ds = gdal.Open(labels_uri)
+    labels_band = labels_ds.GetRasterBand(1)
+    flat_mask_ds = gdal.Open(flat_mask_uri, gdal.GA_Update)
+    flat_mask_band = flat_mask_ds.GetRasterBand(1)
+    flow_direction_ds = gdal.Open(flow_direction_uri)
+    flow_direction_band = flow_direction_ds.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = labels_band.GetBlockSize()
+    cdef int n_rows = labels_ds.RasterYSize
+    cdef int n_cols = labels_ds.RasterXSize
+
+    cdef int n_block_rows = 3, n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] labels_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] flat_mask_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] flow_direction_block = (
+        numpy.zeros(
+            (n_block_rows, n_block_cols, block_row_size, block_col_size),
+            dtype=numpy.int32))
+
+    band_list = [labels_band, flat_mask_band, flow_direction_band]
+    block_list = [labels_block, flat_mask_block, flow_direction_block]
+    update_list = [False, True, False]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef int cell_row_index, cell_col_index
+    cdef int cell_row_block_index, cell_col_block_index
+    cdef int cell_row_block_offset, cell_col_block_offset
+
+    cdef int loops = 1
+
+    high_edges_queue = collections.deque()
+    cdef int neighbor_row, neighbor_col
+    cdef int flat_index
+    cdef int flat_row, flat_col
+    cdef int flat_mask
+    cdef int labels_nodata = raster_utils.get_nodata_from_uri(labels_uri)
+    cdef int cell_label, neighbor_label
+    cdef float neighbor_flow
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(
+        flow_direction_uri)
+
+    for flat_index in high_edges:
+        high_edges_queue.append(flat_index)
+
+    marker = -1
+    high_edges_queue.append(marker)
+    while len(high_edges_queue) > 1:
+        flat_index = high_edges_queue.popleft()
+        if flat_index == marker:
+            loops += 1
+            high_edges_queue.append(marker)
+            continue
+
+        flat_row = flat_index / n_cols
+        flat_col = flat_index % n_cols
+
+        block_cache.update_cache(
+            flat_row, flat_col,
+            &cell_row_index, &cell_col_index,
+            &cell_row_block_offset, &cell_col_block_offset)
+
+        flat_mask = flat_mask_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        cell_label = labels_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        if flat_mask != flat_mask_nodata:
+            continue
+
+        #update the cell mask and the max height of the flat
+        flat_mask_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset] = loops
+        cache_dirty[cell_row_index, cell_col_index] = 1
+        flat_height[cell_label] = loops
+
+        #visit the neighbors
+        for neighbor_index in xrange(8):
+            neighbor_row = (
+                flat_row + neighbor_row_offset[neighbor_index])
+            neighbor_col = (
+                flat_col + neighbor_col_offset[neighbor_index])
+
+            if (neighbor_row < 0 or neighbor_row >= n_rows or
+                    neighbor_col < 0 or neighbor_col >= n_cols):
+                continue
+
+            block_cache.update_cache(
+                neighbor_row, neighbor_col,
+                &cell_row_index, &cell_col_index,
+                &cell_row_block_offset, &cell_col_block_offset)
+
+            neighbor_label = labels_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset]
+
+            neighbor_flow = flow_direction_block[
+                cell_row_index, cell_col_index,
+                cell_row_block_offset, cell_col_block_offset]
+
+            if (neighbor_label != labels_nodata and
+                    neighbor_label == cell_label and
+                    neighbor_flow == flow_nodata):
+                high_edges_queue.append(neighbor_row * n_cols + neighbor_col)
+
+    block_cache.flush_cache()
