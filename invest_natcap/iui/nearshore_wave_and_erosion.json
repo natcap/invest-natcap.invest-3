@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
   "modelName": "nearshore_wave_and_erosion",
   "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
-  "height": 1000,
+  "height": 1100,
   "width": 900,
   "elements": [
     {
@@ -93,6 +93,19 @@
                   "required": true,
                   "returns": "strings",
                   "helpText": "This drop down box allows you to select whether you 1) wish to have the GIS create a cross-shore transect, 2) will upload a cross-shore profile of your own or 3) prefer to have the model create a theoretical profile. The answer provided to this question will determine whether subsequent inputs are required or optional."
+                },
+                {
+                  "label": "List of transects to exclude, if any (CSV)",
+                  "id": "excluded_transects_uri",
+                  "args_id": "excluded_transects_uri",
+                  "type": "file",
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "validateAs": {
+                    "type": "CSV"
+                  },
+                  "helpText": "A list of transect IDs as they are listed in 'transects.csv' or 'transects.tif'. <p> Individual transects are separated bu commas (800, 25, 1234), or contiguous transects can be specified with dashes: transects 12, 13, and 14 are excluded by mentioning the first and the last one: 12-14, where first &lt; last.</p> <p> Note: You will have to run the tool a first time to identify the transects to exclude if you don't have them already, and then specify the CSV file to the model in a second pass. </p>"
                 },
                 {
                   "label": "IF \"yes\": Bathymetric Grid (DEM)",
