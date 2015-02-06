@@ -2249,3 +2249,73 @@ def label_flats(dem_uri, low_edges, labels_uri):
 
             label += 1
 
+def clean_high_edges(labels_uri, high_edges):
+    """Removes any high edges that do not have labels and reports them if so.
+
+        Args:
+            labels_uri (string) - (input) a uri to a single band integer gdal
+                dataset that contain labels for the cells that lie in
+                flat regions of the DEM.
+            high_edges (set) - (input/output) a set containing row major order
+                flat indexes
+
+        Returns:
+            nothing"""
+
+    labels_ds = gdal.Open(labels_uri)
+    labels_band = labels_ds.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = labels_band.GetBlockSize()
+    cdef int n_rows = labels_ds.RasterYSize
+    cdef int n_cols = labels_ds.RasterXSize
+
+    cdef int n_block_rows = 3, n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] labels_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.int32)
+
+    band_list = [labels_band]
+    block_list = [labels_block]
+    update_list = [False]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef int labels_nodata = raster_utils.get_nodata_from_uri(
+        labels_uri)
+    cdef int flat_cell_label
+
+    cdef int cell_row_index, cell_col_index
+    cdef int cell_row_block_index, cell_col_block_index
+    cdef int cell_row_block_offset, cell_col_block_offset
+
+    cdef int flat_index
+    cdef int flat_row, flat_col
+    unlabled_set = set()
+    for flat_index in high_edges:
+        flat_row = flat_index / n_cols
+        flat_col = flat_index % n_cols
+
+        block_cache.update_cache(
+            flat_row, flat_col,
+            &cell_row_index, &cell_col_index,
+            &cell_row_block_offset, &cell_col_block_offset)
+
+        flat_cell_label = labels_block[
+            cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
+        #this is a flat that does not have an outlet
+        if flat_cell_label == labels_nodata:
+            unlabled_set.add(flat_index)
+
+    if len(unlabled_set) > 0:
+        high_edges.difference_update(unlabled_set)
+        LOGGER.warn("Not all flats have outlets")
+
+

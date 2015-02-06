@@ -430,6 +430,8 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
 
     routing_cython_core.label_flats(dem_uri, low_edges, labels_uri)
 
+    routing_cython_core.clean_high_edges(labels_uri, high_edges)
+
     '''for cell in high_edges:
         if cell is not labeled:
             remove cell from high_edges
