@@ -2180,12 +2180,14 @@ def label_flats(dem_uri, low_edges, labels_uri):
     cdef int fill_cell_row, fill_cell_col
     cdef queue[int] to_fill
     cdef float flat_height, current_flat_height
-
+    cdef int visit_number = 0
     for flat_cell_index in low_edges:
+        visit_number += 1
         time(&current_time)
         if current_time - last_time > 5.0:
-            #LOGGER.info(
-            #    "label_flats %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            LOGGER.info(
+                "label_flats %.1f%% complete",
+                float(visit_number) / len(low_edges) * 100)
             last_time = current_time
         global_row = flat_cell_index / n_cols
         global_col = flat_cell_index % n_cols
