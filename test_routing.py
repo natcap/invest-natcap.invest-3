@@ -26,7 +26,7 @@ def main():
     #    r"\brian_packard_dem_nutrient_bug\dem"
 
     dem_uri = \
-        'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\' \
+        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\' \
         + 'invest-data\\Base_Data\\Freshwater\\dem'
 
     args = {
@@ -38,7 +38,7 @@ def main():
         'labels_filename': 'labels.tif',
     }
 
-    output_directory = 'C:/Users/rpsharp/Documents/routing_test/'
+    output_directory = 'C:/Users/Rich/Documents/routing_test/'
     raster_utils.create_directories([output_directory])
     file_suffix = ''
 
@@ -70,7 +70,7 @@ def main():
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
-    subprocess.Popen([qgis_bin, flow_accumulation_uri],
+    subprocess.Popen([qgis_bin, flow_accumulation_uri, labels_uri],
                      cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':

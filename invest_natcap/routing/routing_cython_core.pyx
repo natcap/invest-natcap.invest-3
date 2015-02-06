@@ -1998,7 +1998,7 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
 
     band_list = [dem_band, flow_band]
     block_list = [dem_block, flow_block]
-    update_list = [False, True]
+    update_list = [False, False]
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
         (n_block_rows, n_block_cols), dtype=numpy.byte)
 
@@ -2119,7 +2119,7 @@ def label_flats(dem_uri, low_edges, labels_uri):
     dem_ds = gdal.Open(dem_uri)
     dem_band = dem_ds.GetRasterBand(1)
 
-    labels_nodata = -1
+    cdef int labels_nodata = -1
     labels_ds = raster_utils.new_raster_from_base(
         dem_ds, labels_uri, 'GTiff', labels_nodata,
         gdal.GDT_Int32)
@@ -2165,20 +2165,21 @@ def label_flats(dem_uri, low_edges, labels_uri):
     cdef int neighbor_row_index, neighbor_col_index
     cdef int neighbor_row_block_offset, neighbor_col_block_offset
 
-    cdef float cell_dem, cell_label, neighbor_dem, neighbor_label
+    cdef float cell_dem, neighbor_dem, neighbor_label
+    cdef float cell_label, flat_cell_label
 
     cdef float dem_nodata = raster_utils.get_nodata_from_uri(
         dem_uri)
-    cdef float label_nodata = raster_utils.get_nodata_from_uri(
-        labels_uri)
 
     cdef time_t last_time, current_time
     time(&last_time)
 
     cdef int flat_cell_index
+    cdef int flat_fill_cell_index
     cdef int label = 1
-
+    cdef int fill_cell_row, fill_cell_col
     cdef queue[int] to_fill
+    cdef float flat_height, current_flat_height
 
     for flat_cell_index in low_edges:
         time(&current_time)
@@ -2197,14 +2198,54 @@ def label_flats(dem_uri, low_edges, labels_uri):
         cell_label = labels_block[cell_row_index, cell_col_index,
             cell_row_block_offset, cell_col_block_offset]
 
+        flat_height = dem_block[cell_row_index, cell_col_index,
+            cell_row_block_offset, cell_col_block_offset]
+
         if cell_label == labels_nodata:
             #label flats
+            to_fill.push(flat_cell_index)
+            while not to_fill.empty():
+                flat_fill_cell_index = to_fill.front()
+                to_fill.pop()
+                fill_cell_row = flat_fill_cell_index / n_cols
+                fill_cell_col = flat_fill_cell_index % n_cols
+                if (fill_cell_row < 0 or fill_cell_row >= n_rows or
+                        fill_cell_col < 0 or fill_cell_col >= n_cols):
+                    continue
 
-                #while flat_region_queue.size() > 0:
-            #flat_index = flat_region_queue.front()
-            #flat_set_for_looping.erase(flat_index)
-            #flat_region_queue.pop()
-            pass
+                block_cache.update_cache(
+                    fill_cell_row, fill_cell_col,
+                    &cell_row_index, &cell_col_index,
+                    &cell_row_block_offset, &cell_col_block_offset)
+
+                current_flat_height = dem_block[cell_row_index, cell_col_index,
+                    cell_row_block_offset, cell_col_block_offset]
+
+                if current_flat_height != flat_height:
+                    continue
+
+                flat_cell_label = labels_block[
+                    cell_row_index, cell_col_index,
+                    cell_row_block_offset, cell_col_block_offset]
+
+                if flat_cell_label != labels_nodata:
+                    continue
+
+                #set the label
+                labels_block[
+                    cell_row_index, cell_col_index,
+                    cell_row_block_offset, cell_col_block_offset] = label
+                cache_dirty[cell_row_index, cell_col_index] = 1
+
+                #visit the neighbors
+                for neighbor_index in xrange(8):
+                    neighbor_row = (
+                        fill_cell_row + neighbor_row_offset[neighbor_index])
+                    neighbor_col = (
+                        fill_cell_col + neighbor_col_offset[neighbor_index])
+                    to_fill.push(neighbor_row * n_cols + neighbor_col)
+
+            label += 1
 
 
     '''label = 1
