@@ -429,17 +429,19 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
             LOGGER.info('There were no flats')
         return
 
+    LOGGER.info('labeling flats')
     routing_cython_core.label_flats(dem_uri, low_edges, labels_uri)
 
+    LOGGER.info('cleaning high edges')
     routing_cython_core.clean_high_edges(labels_uri, high_edges)
 
     flat_height = collections.defaultdict(int)
 
-
-
+    LOGGER.info('draining away from higher')
     routing_cython_core.away_from_higher(
         high_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
 
+    LOGGER.info('draining towards lower')
     routing_cython_core.towards_lower(
         low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
 

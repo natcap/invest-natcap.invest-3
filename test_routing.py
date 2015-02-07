@@ -70,7 +70,7 @@ def main():
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
-    subprocess.Popen([qgis_bin, flow_accumulation_uri, labels_uri, flat_mask_uri],
+    subprocess.Popen([qgis_bin, dem_uri, labels_uri, flat_mask_uri, flow_accumulation_uri],
                      cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':

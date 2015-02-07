@@ -2455,12 +2455,12 @@ def away_from_higher(
             continue
 
         #update the cell mask and the max height of the flat
+        #making it negative because it's easier to do here than in towards lower
         flat_mask_block[
             cell_row_index, cell_col_index,
-            cell_row_block_offset, cell_col_block_offset] = loops
+            cell_row_block_offset, cell_col_block_offset] = -loops
         cache_dirty[cell_row_index, cell_col_index] = 1
-        #making it negative because it's easier to do here than in towards lower
-        flat_height[cell_label] = -loops
+        flat_height[cell_label] = loops
 
         #visit the neighbors
         for neighbor_index in xrange(8):
