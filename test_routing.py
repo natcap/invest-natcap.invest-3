@@ -17,7 +17,7 @@ from invest_natcap import raster_utils
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('routedem')
+LOGGER = logging.getLogger('test_routing')
 
 
 def main():
@@ -70,8 +70,9 @@ def main():
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
-    subprocess.Popen([qgis_bin, dem_uri, labels_uri, flat_mask_uri, flow_accumulation_uri],
-                     cwd=os.path.dirname(qgis_bin))
+    subprocess.Popen(
+        [qgis_bin, dem_uri, labels_uri, flat_mask_uri, flow_accumulation_uri],
+        cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':
     cProfile.run('main()', 'stats')

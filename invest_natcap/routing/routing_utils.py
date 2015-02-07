@@ -452,5 +452,3 @@ def away_from_higher(high_edges_uri, flat_height_list):
 
 def towards_lower(low_edges_uri, flat_height_list):
     pass
-
-
