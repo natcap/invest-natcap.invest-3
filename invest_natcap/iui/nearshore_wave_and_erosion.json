@@ -54,11 +54,12 @@
                   "defaultValue": "Profile generator and nearshore wave and erosion",
                   "options": [
                     "Profile generator only",
+                    "Nearshore wave & erosion only",
                     "Profile generator + nearshore wave & erosion"
                   ],
                   "required": true,
                   "returns": "strings",
-                  "helpText": "Select the modules you want to be executed: profile generator is quick and allows you to quickly get shore profile information. The action of the waves on the shore takes a lot more time to execute."
+                  "helpText": "<p>Select the module(s) you want to be executed.</p> <p>In a typical first run, the user will run the profile generator only, identify the transects to exclude in a CSV, and use this file to run the nearshore wave and erosion model without the excluded transects. If the user already has the list of transects to exclude, he can run both tools in sequence in the same run.</p>"
                 },
                 {
                   "label": "Land polygon",

@@ -38,20 +38,21 @@ def execute(args):
         returns nothing"""
     logging.info('executing coastal_protection_core')
 
-    # Profile generator
-    transect_data_uri = compute_transects(args)
-    transect_csv_uri = export_transect_coordinates_to_CSV(transect_data_uri)
+    # Default transect data URI
+    args['transect_data_uri'] = \
+        os.path.join(args['output_dir'], 'transect_data.h5')
+    
+    # Run the profile generator
+    if 'Profile generator' in args['modules_to_run']: 
+        compute_transects(args)
+        export_transect_coordinates_to_CSV(args['transect_data_uri'])
 
-    # Stop there if the user only wants to run the profile generator 
-    if args['modules_to_run'] == 'Profile generator only':
-        return
+    # Run the nearshore wave and erosion model
+    if 'wave & erosion' in args['modules_to_run']:
+        compute_nearshore_and_wave_erosion(args)
 
-    # Nearshore wave and erosion model
-    biophysical_data_uri = \
-        compute_nearshore_and_wave_erosion(transect_data_uri, args)
-
-    # Reconstruct 2D shore maps from biophysical data 
-    reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri)
+        # Reconstruct 2D shore maps from biophysical data 
+        reconstruct_2D_shore_map(args)
 
     # Debug purposes
 #    p = cProfile.Profile()
@@ -304,12 +305,9 @@ def compute_transects(args):
     tidal_forcing_field_count = args['tidal_forcing_field_count']
 
     # Creating HDF5 file that will store the transect data
-    transect_data_uri = \
-        os.path.join(args['output_dir'], 'transect_data.h5')
-    
-    LOGGER.debug('Creating HDF5 file %s.' % transect_data_uri)
+    LOGGER.debug('Creating HDF5 file %s.' % args['transect_data_uri'])
 
-    transect_data_file = h5py.File(transect_data_uri, 'w')
+    transect_data_file = h5py.File(args['transect_data_uri'], 'w')
     
 
     bathymetry_dataset = \
@@ -556,7 +554,7 @@ def compute_transects(args):
     # We're done, we close the file
     transect_data_file.close()
 
-    return transect_data_uri
+    return args['transect_data_uri']
     
 
 def export_transect_coordinates_to_CSV(transect_data_uri):
@@ -618,21 +616,23 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
 # ----------------------------------------------
 # Nearshore wave and erosion model
 # ----------------------------------------------
-def compute_nearshore_and_wave_erosion(transect_data_uri, args):
+def compute_nearshore_and_wave_erosion(args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
     print('Loading HDF5 files...')
 
-    assert os.path.isfile(transect_data_uri)
+    assert os.path.isfile(args['transect_data_uri'])
 
-    f = h5py.File(transect_data_uri) # Open the HDF5 file
+    f = h5py.File(args['transect_data_uri']) # Open the HDF5 file
 
     # Average spatial resolution of all transects
     transect_spacing = f['habitat_type'].attrs['transect_spacing']
     # Distance between transect samples
+    bathymetry_resolution = f['habitat_type'].attrs['bathymetry_resolution']
     model_resolution = f['habitat_type'].attrs['model_resolution']
 
     print('average space between transects:', transect_spacing, 'm')
+    print('bathymetry resolution:', bathymetry_resolution, 'm')
     print('model resolution:', model_resolution, 'm')
 
     # ------------------------------------------------
@@ -1063,10 +1063,10 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
         
 
     # Saving data in HDF5
-    biophysical_data_uri = \
+    args['biophysical_data_uri'] = \
         os.path.join(args['output_dir'], 'output.h5')
 
-    f = h5py.File(biophysical_data_uri, 'w') # Create new HDF5 file
+    f = h5py.File(args['biophysical_data_uri'], 'w') # Create new HDF5 file
 
     # Creating the placeholders that will hold the matrices
     Depth_dataset = \
@@ -1103,14 +1103,14 @@ def compute_nearshore_and_wave_erosion(transect_data_uri, args):
     # Close your file at the end, or it could be invalid.
     f.close()
 
-    return biophysical_data_uri
+    return args['biophysical_data_uri']
 
 
-def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
+def reconstruct_2D_shore_map(args):
     LOGGER.debug('Reconstructing 2D shore maps...')
     
-    transect_data = h5py.File(transect_data_uri)
-    biophysical_data = h5py.File(biophysical_data_uri)
+    transect_data = h5py.File(args['transect_data_uri'])
+    biophysical_data = h5py.File(args['biophysical_data_uri'])
 
     limit_group = transect_data['limits']
     indices_limit_dataset = limit_group['indices']
@@ -1360,7 +1360,7 @@ def reconstruct_2D_shore_map(args, transect_data_uri, biophysical_data_uri):
     interp_J = np.unique(interp_J)
 
     # Compute the actual interpolation
-    LOGGER.info('Interpolating', interp_I.size * interp_J.size, 'points...')
+    LOGGER.info('Interpolating %i points...', interp_I.size * interp_J.size)
     surface = F(interp_I, interp_J)
 
 #    print('surface size:', surface.size, 'uniques', np.unique(surface).size, np.unique(surface))
