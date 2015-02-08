@@ -23,6 +23,7 @@ from invest_natcap import raster_utils
 import nearshore_wave_and_erosion_core as core
 
 from NearshoreWaveFunctions_3p0 import*
+import CPf_SignalSmooth as SignalSmooth
 
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
@@ -254,15 +255,6 @@ def compute_transects(args):
                    
                     # At this point, the transect is valid: 
                     
-                    # Store minimum data if transect should be excluded
-                    if tiles in args['excluded_transects']:
-                        transect_info.append( \
-                            {'raw_positions': \
-                                (np.array(raw_positions[0][0:1]), \
-                                np.array(raw_positions[1][0:1])), \
-                            'depths':np.array(smoothed_depths[0:1]), \
-                            'clip_limits':(0, 0, 1)})
-
                     # extract remaining information about it
                     else:
                         transect_info.append( \
@@ -613,13 +605,77 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
             writer.writerow(row)
 
 
+# ----------------------------------------------------
+# Loading the transects to exclude from a csv, if any
+# ----------------------------------------------------
+def load_excluded_transects(args):
+    """Load the ecluded tranects from a CSV file in a python set.
+
+        Inputs: 
+            -args['excluded_transects_uri']: the excluded transect CSV URI
+
+        Returns a set containing the excluded transect IDs as they appear in 
+            "transect_data.csv". 
+            If there is no CSV specified, the set is empty.
+    """    
+    
+    args['excluded_transects'] = set()
+
+    if 'excluded_transects_uri' in args:
+        assert os.path.isfile(args['excluded_transects_uri']), \
+            "Can't open transect exclusion file " + args['excluded_transects_uri']
+
+        with open(args['excluded_transects_uri']) as csvfile:
+            excluded_transects_reader = csv.reader(csvfile)
+
+            for row in excluded_transects_reader:
+                for item in row:
+
+                    # First, try to cast as int:
+                    try:
+                        transect = int(item)
+                        assert transect >= 0, \
+                            "A transect ID can't be negative (" + str(item) + ")"
+                        args['excluded_transects'].add(transect)
+
+                    # If it doesn't work, it might be a range:
+                    except ValueError:
+                        transect_range = item.split('-')
+                        assert len(transect_range) == 2, "Can't interpret CSV token " + item
+
+                        try:
+                            start = int(transect_range[0])
+                            end = int(transect_range[1])
+
+                            # Enforce start >= end
+                            assert start >= 0, \
+                                "A transect ID can't be negative (" + str(item) + ")"
+                            assert end >= start, \
+                                "Invalid range: expected (start >= end), " + \
+                                " got (" + str(start) + "," + str(end) + ")"    
+                            
+                            # It is a range, now add the transects to the set:
+                            for transect in range(start, end+1):
+                                args['excluded_transects'].add(transect)
+
+                        except ValueError:
+                            LOGGER.error("Can't interpret CSV token %s as a range", item)
+                            raise
+
+    LOGGER.debug('Found %i transects to exclude', len(args['excluded_transects']))
+
+    return args['excluded_transects']
+
+
 # ----------------------------------------------
 # Nearshore wave and erosion model
 # ----------------------------------------------
 def compute_nearshore_and_wave_erosion(args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
-    print('Loading HDF5 files...')
+    excluded_transects = load_excluded_transects(args)
+
+    LOGGER.debug('Loading HDF5 files...')
 
     assert os.path.isfile(args['transect_data_uri'])
 
@@ -758,7 +814,7 @@ def compute_nearshore_and_wave_erosion(args):
     for transect in range(2000, 2500): # Debug
 #    for transect in range(transect_count): # Release
 #        print('')
-        print('Computing nearshore waves and erosion on transect', transect) #transect_count - transect)
+        LOGGER.debug('Computing nearshore waves and erosion on transect %i', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -867,7 +923,6 @@ def compute_nearshore_and_wave_erosion(args):
             
             #Prepare to run the model
             dx=20;
-            import CPf_SignalSmooth as SignalSmooth
             smoothing_pct=10.0
             smoothing_pct=smoothing_pct/100;
             
@@ -875,7 +930,7 @@ def compute_nearshore_and_wave_erosion(args):
             Xold=range(0,dx*len(bathymetry),dx)
             Xnew=range(0,Xold[-1]+1)
             length=len(Xnew)
-            from scipy import interpolate
+
             fintp=interpolate.interp1d(Xold,bathymetry, kind='linear')
             bath=fintp(Xnew)
             bath_sm=SignalSmooth.smooth(bath,len(bath)*smoothing_pct,'hanning') 
