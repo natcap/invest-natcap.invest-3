@@ -2375,10 +2375,11 @@ def away_from_higher(
     cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
 
-    flat_mask_nodata = 0
+    cdef int flat_mask_nodata = -9999
+    #fill up the flat mask with 0s so it can be used to route a dem later
     raster_utils.new_raster_from_base_uri(
         labels_uri, flat_mask_uri, 'GTiff', flat_mask_nodata,
-        gdal.GDT_Int32, fill_value=flat_mask_nodata)
+        gdal.GDT_Int32, fill_value=0)
     flat_height.clear()
 
     labels_ds = gdal.Open(labels_uri)
@@ -2461,7 +2462,7 @@ def away_from_higher(
             cell_row_index, cell_col_index,
             cell_row_block_offset, cell_col_block_offset]
 
-        if flat_mask != flat_mask_nodata:
+        if flat_mask != 0:
             continue
 
         #update the cell mask and the max height of the flat
