@@ -1037,7 +1037,11 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef double max_r = numpy.pi / 4.0
 
     #Create a flow carray and respective dataset
-    cdef float flow_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+    cdef float flow_nodata = -9999
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
     flow_band = flow_direction_dataset.GetRasterBand(1)
 
@@ -1103,16 +1107,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     e_0_col = e_0_offsets[1] + global_col
 
                     block_cache.update_cache(e_0_row, e_0_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
-
-                    current_flow = flow_block[
-                        e_0_row_index, e_0_col_index,
-                        e_0_row_block_offset, e_0_col_block_offset]
-
-                    #this can happen if we have been passed an existing flow
-                    #direction raster, perhaps from an earlier iteration in a
-                    #multiphase flow resolution algorithm
-                    if current_flow != flow_nodata:
-                        continue
 
                     e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
                     #skip if we're on a nodata pixel skip
@@ -2660,3 +2654,269 @@ def towards_lower(
                 low_edges_queue.append(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
+
+
+def flow_direction_inf_masked_flow_dirs(
+        flat_mask_uri, labels_uri, flow_direction_uri):
+    """Calculates the D-infinity flow algorithm for regions defined from flat
+        drainage resolution.
+
+        Flow algorithm from: Tarboton, "A new method for the determination of
+        flow directions and upslope areas in grid digital elevation models,"
+        Water Resources Research, vol. 33, no. 2, pages 309 - 319, February
+        1997.
+
+        Also resolves flow directions in flat areas of DEM.
+
+        flat_mask_uri (string) - (input) a uri to a single band GDAL Dataset
+            that has offset values from the flat region resolution algorithm.
+            The offsets in flat_mask are the relative heights only within the
+            flat regions defined in labels_uri.
+        labels_uri (string) - (input) a uri to a single band integer gdal
+                dataset that contain labels for the cells that lie in
+                flat regions of the DEM.
+        flow_direction_uri - (input/output) a uri to an existing GDAL dataset
+            of same size as dem_uri.  Flow direction will be defined in regions
+            that have nodata values in them that overlap regions of labels_uri.
+            This is so this function can be used as a two pass filter for
+            resolving flow directions on a raw dem, then filling plateaus and
+            doing another pass.
+
+       returns nothing"""
+
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index, flat_index
+    cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
+        flow_direction_max_slope, slope_max, nodata_flow
+
+    flat_mask_ds = gdal.Open(flat_mask_uri)
+    flat_mask_band = flat_mask_ds.GetRasterBand(1)
+
+    #facet elevation and factors for slope and flow_direction calculations
+    #from Table 1 in Tarboton 1997.
+    #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
+    #convention.
+    cdef int *e_0_offsets = [+0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0]
+    cdef int *e_1_offsets = [+0, +1,
+                             -1, +0,
+                             -1, +0,
+                             +0, -1,
+                             +0, -1,
+                             +1, +0,
+                             +1, +0,
+                             +0, +1]
+    cdef int *e_2_offsets = [-1, +1,
+                             -1, +1,
+                             -1, -1,
+                             -1, -1,
+                             +1, -1,
+                             +1, -1,
+                             +1, +1,
+                             +1, +1]
+    cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
+    cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    n_rows, n_cols = raster_utils.get_row_col_from_uri(flat_mask_uri)
+    d_1 = raster_utils.get_cell_size_from_uri(flat_mask_uri)
+    d_2 = d_1
+    cdef double max_r = numpy.pi / 4.0
+
+
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(
+        flow_direction_uri)
+    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
+    flow_band = flow_direction_dataset.GetRasterBand(1)
+
+    cdef float label_nodata = raster_utils.get_nodata_from_uri(labels_uri)
+    label_dataset = gdal.Open(labels_uri)
+    label_band = label_dataset.GetRasterBand(1)
+
+    cdef int n_block_rows = 3, n_block_cols = 3 #the number of blocks we'll cache
+
+    #center point of global index
+    cdef int block_row_size, block_col_size
+    block_col_size, block_row_size = flat_mask_band.GetBlockSize()
+    cdef int global_row, global_col, e_0_row, e_0_col, e_1_row, e_1_col, e_2_row, e_2_col #index into the overall raster
+    cdef int e_0_row_index, e_0_col_index #the index of the cache block
+    cdef int e_0_row_block_offset, e_0_col_block_offset #index into the cache block
+    cdef int e_1_row_index, e_1_col_index #the index of the cache block
+    cdef int e_1_row_block_offset, e_1_col_block_offset #index into the cache block
+    cdef int e_2_row_index, e_2_col_index #the index of the cache block
+    cdef int e_2_row_block_offset, e_2_col_block_offset #index into the cache block
+
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
+    #define all the caches
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flow_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.float32)
+    #flat_mask block is a 64 bit float so it can capture the resolution of small flat_mask offsets
+    #from the plateau resolution algorithm.
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] flat_mask_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int32)
+    cdef numpy.ndarray[numpy.npy_int32, ndim=4] label_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size), dtype=numpy.int32)
+
+    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    band_list = [flat_mask_band, flow_band, label_band]
+    block_list = [flat_mask_block, flow_block, label_block]
+    update_list = [False, True, False]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef int row_offset, col_offset
+    cdef int y_offset, local_y_offset
+    cdef int max_downhill_facet
+    cdef double lowest_flat_mask, flat_mask_value, flow_direction_value
+
+    cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
+    cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
+    cdef time_t last_time, current_time
+    cdef float current_flow
+    cdef int current_label, e_1_label, e_2_label
+    time(&last_time)
+    #flow not defined on the edges, so just go 1 row in
+    for global_block_row in xrange(n_global_block_rows):
+        time(&current_time)
+        if current_time - last_time > 5.0:
+            LOGGER.info("flow_direction_inf %.1f%% complete", (global_row + 1.0) / n_rows * 100)
+            last_time = current_time
+        for global_block_col in xrange(n_global_block_cols):
+            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
+                    #is cache block not loaded?
+
+                    e_0_row = e_0_offsets[0] + global_row
+                    e_0_col = e_0_offsets[1] + global_col
+
+                    block_cache.update_cache(e_0_row, e_0_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
+
+                    current_label = label_block[
+                        e_0_row_index, e_0_col_index,
+                        e_0_row_block_offset, e_0_col_block_offset]
+
+                    #if a label isn't defiend we're not in a flat region
+                    if current_label == label_nodata:
+                        continue
+
+                    current_flow = flow_block[
+                        e_0_row_index, e_0_col_index,
+                        e_0_row_block_offset, e_0_col_block_offset]
+
+                    #this can happen if we have been passed an existing flow
+                    #direction raster, perhaps from an earlier iteration in a
+                    #multiphase flow resolution algorithm
+                    if current_flow != flow_nodata:
+                        continue
+
+                    e_0 = flat_mask_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
+                    #skip if we're on a nodata pixel skip
+
+                    max_downhill_facet = -1
+                    lowest_flat_mask = e_0
+
+                    #Calculate the flow flow_direction for each facet
+                    slope_max = 0 #use this to keep track of the maximum down-slope
+                    flow_direction_max_slope = 0 #flow direction on max downward slope
+                    max_index = 0 #index to keep track of max slope facet
+
+                    for facet_index in range(8):
+                        #This defines the three points the facet
+
+                        e_1_row = e_1_offsets[facet_index * 2 + 0] + global_row
+                        e_1_col = e_1_offsets[facet_index * 2 + 1] + global_col
+                        e_2_row = e_2_offsets[facet_index * 2 + 0] + global_row
+                        e_2_col = e_2_offsets[facet_index * 2 + 1] + global_col
+                        #make sure one of the facets doesn't hang off the edge
+                        if (e_1_row < 0 or e_1_row >= n_rows or
+                            e_2_row < 0 or e_2_row >= n_rows or
+                            e_1_col < 0 or e_1_col >= n_cols or
+                            e_2_col < 0 or e_2_col >= n_cols):
+                            continue
+
+                        block_cache.update_cache(e_1_row, e_1_col, &e_1_row_index, &e_1_col_index, &e_1_row_block_offset, &e_1_col_block_offset)
+                        block_cache.update_cache(e_2_row, e_2_col, &e_2_row_index, &e_2_col_index, &e_2_row_block_offset, &e_2_col_block_offset)
+
+                        e_1 = flat_mask_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
+                        e_2 = flat_mask_block[e_2_row_index, e_2_col_index, e_2_row_block_offset, e_2_col_block_offset]
+
+                        e_1_label = label_block[e_1_row_index, e_1_col_index, e_1_row_block_offset, e_1_col_block_offset]
+                        e_2_label = label_block[e_2_row_index, e_2_col_index, e_2_row_block_offset, e_2_col_block_offset]
+
+                        #if labels aren't t the same as the current, we can't flow to them
+                        if (e_1_label != current_label and e_2_label != current_label):
+                            continue
+
+                        if facet_index % 2 == 0 and e_1 < lowest_flat_mask and e_1_label == current_label:
+                            lowest_flat_mask = e_1
+                            max_downhill_facet = facet_index
+                        elif facet_index % 2 == 1 and e_2 < lowest_flat_mask and e_2_label == current_label:
+                            lowest_flat_mask = e_2
+                            max_downhill_facet = facet_index
+
+                        #s_1 is slope along straight edge
+                        s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                        #slope along diagonal edge
+                        s_2 = (e_1 - e_2) / d_2 #Eqn 2
+
+                        #can't calculate flow direction if one of the facets is nodata
+                        if e_1_label != current_label or e_2_label != current_label:
+                            #calc max slope here
+                            if e_1_label == current_label:
+                                #straight line to next pixel
+                                slope = s_1
+                            else:
+                                #diagonal line to next pixel
+                                slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
+                        else:
+                            #both facets are defined, this is the core of
+                            #d-infinity algorithm
+                            flow_direction = atan2(s_2, s_1) #Eqn 3
+
+                            if flow_direction < 0: #Eqn 4
+                                #If the flow direction goes off one side, set flow
+                                #direction to that side and the slope to the straight line
+                                #distance slope
+                                flow_direction = 0
+                                slope = s_1
+                            elif flow_direction > max_r: #Eqn 5
+                                #If the flow direciton goes off the diagonal side, figure
+                                #out what its value is and
+                                flow_direction = max_r
+                                slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                            else:
+                                slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
+                        #update the maxes depending on the results above
+                        if slope > slope_max:
+                            flow_direction_max_slope = flow_direction
+                            slope_max = slope
+                            max_index = facet_index
+
+                    #if there's a downward slope, save the flow direction
+                    if slope_max > 0:
+                        flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
+                            a_f[max_index] * flow_direction_max_slope +
+                            a_c[max_index] * 3.14159265 / 2.0)
+                        cache_dirty[e_0_row_index, e_0_col_index] = 1
+
+    block_cache.flush_cache()
+    flow_band = None
+    gdal.Dataset.__swig_destroy__(flow_direction_dataset)
+    flow_direction_dataset = None
+    raster_utils.calculate_raster_stats_uri(flow_direction_uri)
