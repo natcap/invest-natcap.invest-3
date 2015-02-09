@@ -1,4 +1,4 @@
-#cython: profile=False
+# cython: profile=True
 
 import logging
 import os
@@ -1966,7 +1966,9 @@ cdef class BlockCache:
         for band in self.band_list:
             band.FlushCache()
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
     """This function locates flat cells that border on higher and lower terrain
         and places them into sets for further processing.
@@ -2107,7 +2109,9 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
                             high_edges.add(global_row * n_cols + global_col)
                             break
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def label_flats(dem_uri, low_edges, labels_uri):
     """A flood fill function to give all the cells of each flat a unique
         label
@@ -2259,7 +2263,9 @@ def label_flats(dem_uri, low_edges, labels_uri):
             label += 1
     block_cache.flush_cache()
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def clean_high_edges(labels_uri, high_edges):
     """Removes any high edges that do not have labels and reports them if so.
 
@@ -2331,7 +2337,9 @@ def clean_high_edges(labels_uri, high_edges):
         LOGGER.warn("Not all flats have outlets")
     block_cache.flush_cache()
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def away_from_higher(
             high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
             flat_height):
@@ -2341,14 +2349,6 @@ def away_from_higher(
         The Earth Is Not a Cold Dead Place
         Those Who Tell The Truth Shall Die,
             Those Who Tell The Truth Shall Live Forever
-        All Of A Sudden I Miss Everyone
-
-        The Birth And Death Of The Day
-        What Do You Go Home To?
-        Catastrophe, And The Cure.
-        Have you passed through this night?
-        With Tired Eyes, Tired Minds, Tired Souls, We Slept
-
 
         Args:
             high_edges (set) - (input) all the high edge cells of the DEM which
@@ -2502,7 +2502,9 @@ def away_from_higher(
 
     block_cache.flush_cache()
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def towards_lower(
             low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
             flat_height):
@@ -2660,6 +2662,9 @@ def towards_lower(
     block_cache.flush_cache()
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def flow_direction_inf_masked_flow_dirs(
         flat_mask_uri, labels_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm for regions defined from flat
