@@ -443,12 +443,5 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     LOGGER.info('cleaning high edges')
     routing_cython_core.clean_high_edges(labels_uri, high_edges)
 
-    flat_height = collections.defaultdict(int)
-
-    LOGGER.info('draining away from higher')
-    routing_cython_core.away_from_higher(
-        high_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
-
-    LOGGER.info('draining towards lower')
-    routing_cython_core.towards_lower(
-        low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
+    routing_cython_core.drain_flats(
+        high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri)

@@ -1,4 +1,4 @@
-# cython: profile=True
+# cython: profile=False
 
 import logging
 import os
@@ -14,6 +14,7 @@ from cython.operator cimport dereference as deref
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libcpp.set cimport set as c_set
+from libcpp.map cimport map
 from libc.math cimport atan
 from libc.math cimport atan2
 from libc.math cimport tan
@@ -1884,6 +1885,16 @@ cdef class BlockCache:
                     "a band was passed in that has a different dimension than"
                     "the memory block was specified as")
 
+        for band in band_list:
+            block_col_size, block_row_size = band.GetBlockSize()
+            if block_col_size == 1 or block_row_size == 1:
+                LOGGER.warn(
+                    'a band in BlockCache is not memory blocked, this might '
+                    'make the runtime slow for other algorithms. %s',
+                    band.GetDescription())
+
+
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
@@ -2340,9 +2351,27 @@ def clean_high_edges(labels_uri, high_edges):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def away_from_higher(
-            high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
-            flat_height):
+def drain_flats(
+        high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri):
+
+    cdef map[int, int] flat_height
+
+    LOGGER.info('draining away from higher')
+    away_from_higher(
+        high_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
+
+    LOGGER.info('draining towards lower')
+    towards_lower(
+        low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
+
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef away_from_higher(
+        high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
+        map[int, int] &flat_height):
     """Builds a gradient away from higher terrain.
 
         Take Care, Take Care, Take Care
@@ -2378,7 +2407,6 @@ def away_from_higher(
     raster_utils.new_raster_from_base_uri(
         labels_uri, flat_mask_uri, 'GTiff', flat_mask_nodata,
         gdal.GDT_Int32, fill_value=0)
-    flat_height.clear()
 
     labels_ds = gdal.Open(labels_uri)
     labels_band = labels_ds.GetRasterBand(1)
@@ -2421,7 +2449,6 @@ def away_from_higher(
 
     cdef int loops = 1
 
-    high_edges_queue = collections.deque()
     cdef int neighbor_row, neighbor_col
     cdef int flat_index
     cdef int flat_row, flat_col
@@ -2432,16 +2459,19 @@ def away_from_higher(
     cdef float flow_nodata = raster_utils.get_nodata_from_uri(
         flow_direction_uri)
 
+    cdef queue[int] high_edges_queue
+
     for flat_index in high_edges:
-        high_edges_queue.append(flat_index)
+        high_edges_queue.push(flat_index)
 
     marker = -1
-    high_edges_queue.append(marker)
-    while len(high_edges_queue) > 1:
-        flat_index = high_edges_queue.popleft()
+    high_edges_queue.push(marker)
+    while high_edges_queue.size() > 1:
+        flat_index = high_edges_queue.front()
+        high_edges_queue.pop()
         if flat_index == marker:
             loops += 1
-            high_edges_queue.append(marker)
+            high_edges_queue.push(marker)
             continue
 
         flat_row = flat_index / n_cols
@@ -2498,16 +2528,16 @@ def away_from_higher(
             if (neighbor_label != labels_nodata and
                     neighbor_label == cell_label and
                     neighbor_flow == flow_nodata):
-                high_edges_queue.append(neighbor_row * n_cols + neighbor_col)
+                high_edges_queue.push(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def towards_lower(
-            low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
-            flat_height):
+cdef towards_lower(
+        low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
+        map[int, int] &flat_height):
     """Builds a gradient towards lower terrain.
 
         Args:
@@ -2577,7 +2607,7 @@ def towards_lower(
 
     cdef int loops = 1
 
-    low_edges_queue = collections.deque()
+    cdef queue[int] low_edges_queue
     cdef int neighbor_row, neighbor_col
     cdef int flat_index
     cdef int flat_row, flat_col
@@ -2589,15 +2619,16 @@ def towards_lower(
         flow_direction_uri)
 
     for flat_index in low_edges:
-        low_edges_queue.append(flat_index)
+        low_edges_queue.push(flat_index)
 
     marker = -1
-    low_edges_queue.append(marker)
-    while len(low_edges_queue) > 1:
-        flat_index = low_edges_queue.popleft()
+    low_edges_queue.push(marker)
+    while low_edges_queue.size() > 1:
+        flat_index = low_edges_queue.front()
+        low_edges_queue.pop()
         if flat_index == marker:
             loops += 1
-            low_edges_queue.append(marker)
+            low_edges_queue.push(marker)
             continue
 
         flat_row = flat_index / n_cols
@@ -2657,7 +2688,7 @@ def towards_lower(
             if (neighbor_label != labels_nodata and
                     neighbor_label == cell_label and
                     neighbor_flow == flow_nodata):
-                low_edges_queue.append(neighbor_row * n_cols + neighbor_col)
+                low_edges_queue.push(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
 
@@ -3001,7 +3032,6 @@ def find_outlets(dem_uri, flow_direction_uri):
             #either a sink or an outlet
 
             if dem_value != dem_nodata and flow_direction == flow_nodata:
-                LOGGER.debug(flow_direction)
                 flat_index = cell_row_index * n_cols + cell_col_index
                 outlet_set.add(flat_index)
 
