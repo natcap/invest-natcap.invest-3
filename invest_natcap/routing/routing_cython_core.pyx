@@ -1083,9 +1083,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef int row_offset, col_offset
-    cdef int y_offset, local_y_offset
-    cdef int max_downhill_facet
-    cdef double lowest_dem, dem_value, flow_direction_value
 
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
@@ -1112,9 +1109,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     #skip if we're on a nodata pixel skip
                     if e_0 == dem_nodata:
                         continue
-
-                    max_downhill_facet = -1
-                    lowest_dem = e_0
 
                     #Calculate the flow flow_direction for each facet
                     slope_max = 0 #use this to keep track of the maximum down-slope
@@ -1152,12 +1146,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         #can't calculate flow direction if one of the facets is nodata
                         if e_1 == dem_nodata or e_2 == dem_nodata:
                             #calc max slope here
-                            if e_1 != dem_nodata:
+                            if e_1 != dem_nodata and facet_index % 2 == 0:
                                 #straight line to next pixel
                                 slope = s_1
-                            else:
+                                flow_direction = 0
+                            elif e_2 != dem_nodata and facet_index % 2 == 1:
                                 #diagonal line to next pixel
                                 slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
+                                flow_direction = max_r
                         else:
                             #both facets are defined, this is the core of
                             #d-infinity algorithm
@@ -2773,9 +2769,6 @@ def flow_direction_inf_masked_flow_dirs(
         n_block_rows, n_block_cols, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef int row_offset, col_offset
-    cdef int y_offset, local_y_offset
-    cdef int max_downhill_facet
-    cdef double lowest_flat_mask, flat_mask_value, flow_direction_value
 
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
@@ -2820,9 +2813,6 @@ def flow_direction_inf_masked_flow_dirs(
                     e_0 = flat_mask_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
                     #skip if we're on a nodata pixel skip
 
-                    max_downhill_facet = -1
-                    lowest_flat_mask = e_0
-
                     #Calculate the flow flow_direction for each facet
                     slope_max = 0 #use this to keep track of the maximum down-slope
                     flow_direction_max_slope = 0 #flow direction on max downward slope
@@ -2862,13 +2852,20 @@ def flow_direction_inf_masked_flow_dirs(
 
                         #can't calculate flow direction if one of the facets is nodata
                         if e_1_label != current_label or e_2_label != current_label:
-                            #calc max slope here
-                            if e_1_label == current_label:
+                            #make sure the flow direction perfectly aligns with
+                            #the facet direction so we don't get a case where
+                            #we point toward a pixel but the next pixel down
+                            #is the correct flow direction
+                            if e_1_label == current_label and facet_index % 2 == 0:
                                 #straight line to next pixel
                                 slope = s_1
-                            else:
+                                flow_direction = 0
+                            elif e_2_label == current_label and facet_index % 2 == 1:
                                 #diagonal line to next pixel
                                 slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
+                                flow_direction = max_r
+                            else:
+                                continue
                         else:
                             #both facets are defined, this is the core of
                             #d-infinity algorithm
