@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 
-from invest_natcap.report_generation import html
+from invest_natcap.reporting import html
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \

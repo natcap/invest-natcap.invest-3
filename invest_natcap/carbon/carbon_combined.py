@@ -9,7 +9,7 @@ from datetime import datetime
 from invest_natcap.carbon import carbon_biophysical
 from invest_natcap.carbon import carbon_valuation
 from invest_natcap.carbon import carbon_utils
-from invest_natcap.report_generation import html
+from invest_natcap.reporting import html
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

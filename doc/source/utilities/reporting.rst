@@ -17,6 +17,14 @@ Table Generator
     :undoc-members:
     :show-inheritance:
 
+HTML
+----
+
+.. automodule:: invest_natcap.report_generation.html
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Module contents
 ---------------
 
