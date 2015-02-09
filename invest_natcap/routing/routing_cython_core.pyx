@@ -1146,14 +1146,16 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         #can't calculate flow direction if one of the facets is nodata
                         if e_1 == dem_nodata or e_2 == dem_nodata:
                             #calc max slope here
-                            if e_1 != dem_nodata and facet_index % 2 == 0:
+                            if e_1 != dem_nodata and facet_index % 2 == 0 and e_1 < e_0:
                                 #straight line to next pixel
                                 slope = s_1
                                 flow_direction = 0
-                            elif e_2 != dem_nodata and facet_index % 2 == 1:
+                            elif e_2 != dem_nodata and facet_index % 2 == 1 and e_2 < e_0:
                                 #diagonal line to next pixel
                                 slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
                                 flow_direction = max_r
+                            else:
+                                continue
                         else:
                             #both facets are defined, this is the core of
                             #d-infinity algorithm
@@ -1853,7 +1855,9 @@ cdef class BlockCache:
     update_list = []
 
     def __cinit__(
-        self, int n_block_rows, int n_block_cols, int n_rows, int n_cols, int block_row_size, int block_col_size, band_list, block_list, update_list, numpy.int8_t[:,:] cache_dirty):
+            self, int n_block_rows, int n_block_cols, int n_rows, int n_cols,
+            int block_row_size, int block_col_size, band_list, block_list,
+            update_list, numpy.int8_t[:,:] cache_dirty):
         self.n_block_rows = n_block_rows
         self.n_block_cols = n_block_cols
         self.block_col_size = block_col_size
@@ -1868,6 +1872,17 @@ cdef class BlockCache:
         self.band_list[:] = band_list
         self.block_list[:] = block_list
         self.update_list[:] = update_list
+        list_lengths = [len(x) for x in [band_list, block_list, update_list]]
+        if len(set(list_lengths)) > 1:
+            raise ValueError(
+                "lengths of band_list, block_list, update_list should be equal."
+                " instead they are %s", list_lengths)
+        raster_dimensions_list = [(b.YSize, b.XSize) for b in band_list]
+        for raster_n_rows, raster_n_cols in raster_dimensions_list:
+            if raster_n_rows != n_rows or raster_n_cols != n_cols:
+                raise ValueError(
+                    "a band was passed in that has a different dimension than"
+                    "the memory block was specified as")
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -2856,11 +2871,11 @@ def flow_direction_inf_masked_flow_dirs(
                             #the facet direction so we don't get a case where
                             #we point toward a pixel but the next pixel down
                             #is the correct flow direction
-                            if e_1_label == current_label and facet_index % 2 == 0:
+                            if e_1_label == current_label and facet_index % 2 == 0 and e_1 < e_0:
                                 #straight line to next pixel
                                 slope = s_1
                                 flow_direction = 0
-                            elif e_2_label == current_label and facet_index % 2 == 1:
+                            elif e_2_label == current_label and facet_index % 2 == 1 and e_2 < e_0:
                                 #diagonal line to next pixel
                                 slope = (e_0 - e_2) / sqrt(d_1 **2 + d_2 ** 2)
                                 flow_direction = max_r
@@ -2903,3 +2918,86 @@ def flow_direction_inf_masked_flow_dirs(
     gdal.Dataset.__swig_destroy__(flow_direction_dataset)
     flow_direction_dataset = None
     raster_utils.calculate_raster_stats_uri(flow_direction_uri)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def find_outlets(dem_uri, flow_direction_uri):
+    """Discover and return the outlets in the dem array
+
+        Args:
+            dem_uri (string) - (input) a uri to a gdal dataset representing
+                height values
+            flow_direction_uri (string) - (input) a uri to gdal dataset
+                representing flow direction values
+
+        Returns:
+            A (Set) of flat integer index indicating the outlets in dem"""
+
+    dem_ds = gdal.Open(dem_uri)
+    dem_band = dem_ds.GetRasterBand(1)
+
+    flow_direction_ds = gdal.Open(flow_direction_uri)
+    flow_direction_band = flow_direction_ds.GetRasterBand(1)
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(
+        flow_direction_uri)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = dem_band.GetBlockSize()
+    cdef int n_rows = dem_ds.RasterYSize
+    cdef int n_cols = dem_ds.RasterXSize
+
+    cdef int n_block_rows = 3, n_block_cols = 3
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] dem_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flow_direction_block = numpy.zeros(
+        (n_block_rows, n_block_cols, block_row_size, block_col_size),
+        dtype=numpy.float32)
+
+    band_list = [dem_band, flow_direction_band]
+    block_list = [dem_block, flow_direction_block]
+    update_list = [False, False]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
+        (n_block_rows, n_block_cols), dtype=numpy.byte)
+
+    cdef BlockCache block_cache = BlockCache(
+        n_block_rows, n_block_cols, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
+
+    cdef float dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+
+    cdef int cell_row_index, cell_col_index
+    cdef int cell_row_block_index, cell_col_block_index
+    cdef int cell_row_block_offset, cell_col_block_offset
+    cdef int flat_index
+    cdef float dem_value, flow_direction
+
+    outlet_set = set()
+
+    for cell_row_index in xrange(n_rows):
+        for cell_col_index in xrange(n_cols):
+
+            block_cache.update_cache(
+                cell_row_index, cell_col_index,
+                &cell_row_block_index, &cell_col_block_index,
+                &cell_row_block_offset, &cell_col_block_offset)
+
+            dem_value = dem_block[
+                cell_row_block_index, cell_col_block_index,
+                cell_row_block_offset, cell_col_block_offset]
+            flow_direction = flow_direction_block[
+                cell_row_block_index, cell_col_block_index,
+                cell_row_block_offset, cell_col_block_offset]
+
+            #it's a valid dem but no flow direction could be defined, it's
+            #either a sink or an outlet
+
+            if dem_value != dem_nodata and flow_direction == flow_nodata:
+                LOGGER.debug(flow_direction)
+                flat_index = cell_row_index * n_cols + cell_col_index
+                outlet_set.add(flat_index)
+
+    return outlet_set

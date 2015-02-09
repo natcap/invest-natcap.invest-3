@@ -91,12 +91,13 @@ def route_flux(
     outflow_weights_uri = raster_utils.temporary_filename(suffix='.tif')
     outflow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
 
-    sink_cell_set = routing_cython_core.find_sinks(dem_uri)
+    outlet_cell_set = routing_cython_core.find_outlets(
+        dem_uri, flow_direction_uri)
     routing_cython_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     routing_cython_core.calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
+        outflow_direction_uri, outflow_weights_uri, outlet_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode,
         stream_uri)
 
