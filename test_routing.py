@@ -26,10 +26,12 @@ def main():
     #    r"\brian_packard_dem_nutrient_bug\dem"
 
     dem_uri = (
-        r"E:\repositories\invest-natcap.invest-3\test\invest-data\Base_Data"
-        r"\Freshwater\erosivity")
+        #r"E:\repositories\invest-natcap.invest-3\test\invest-data\Base_Data"
+        #r"\Freshwater\erosivity")
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
+        'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\' \
+        + 'invest-data\\Base_Data\\Freshwater\\dem')
 
     args = {
         'flow_direction_filename': 'flow_direction.tif',
@@ -40,7 +42,7 @@ def main():
         'labels_filename': 'labels.tif',
     }
 
-    output_directory = 'C:/Users/rsharp/Documents/routing_test/'
+    output_directory = 'C:/Users/rpsharp/Documents/routing_test/'
     raster_utils.create_directories([output_directory])
     file_suffix = ''
 
