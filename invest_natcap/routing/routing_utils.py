@@ -303,19 +303,29 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
             LOGGER.warn(exception)
 
 
-def flow_direction_inf(dem_uri, flow_direction_uri):
+def flow_direction_inf(
+        dem_uri, flow_direction_uri, create_flow_direction_raster=True):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
         directions and upslope areas in grid digital elevation models," Water
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
-       dem_uri - (input) a uri to a single band GDAL Dataset with elevation
+        dem_uri - (input) a uri to a single band GDAL Dataset with elevation
            values
-       flow_direction_uri - (output) a uri to a single band GDAL dataset
-           with d infinity flow directions in it.
+        flow_direction_uri - (input/output) a uri to a single band GDAL dataset
+           with d infinity flow directions in it.  If
+           create_flow_direction_raster is True, creates a new raster for this
+           output, otherwise overwrites the nodata values in the one that
+           exists.
 
        returns nothing"""
+
+    if create_flow_direction_raster:
+        flow_nodata = -9999
+        raster_utils.new_raster_from_base_uri(
+            dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
+            gdal.GDT_Float32, fill_value=flow_nodata)
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
 
 
@@ -390,9 +400,12 @@ def flow_direction_flat_drainage(
         Returns:
             nothing"""
 
-    flow_direction_inf(dem_uri, flow_direction_uri)
+    flow_direction_inf(
+        dem_uri, flow_direction_uri, create_flow_direction_raster=True)
     resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
-
+    #Do the second pass with the flat mask and overwrite the flow direction
+    flow_direction_inf(
+        flat_mask_uri, flow_direction_uri, create_flow_direction_raster=False)
 
 def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     """Function to resolve the flat regions in the dem given a first attempt
@@ -444,11 +457,3 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
     LOGGER.info('draining towards lower')
     routing_cython_core.towards_lower(
         low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
-
-
-def away_from_higher(high_edges_uri, flat_height_list):
-    pass
-
-
-def towards_lower(low_edges_uri, flat_height_list):
-    pass

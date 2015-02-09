@@ -973,10 +973,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
         Also resolves flow directions in flat areas of DEM.
 
-       dem_uri - a uri to a single band GDAL Dataset with elevation values
-       flow_direction_uri - a uri to write a single band float raster of same
-            dimensions.  After the function call it will have flow direction
-            in it.
+        dem_uri (string) - (input) a uri to a single band GDAL Dataset with elevation values
+        flow_direction_uri - (input/output) a uri to an existing GDAL dataset with
+            of same as dem_uri.  Flow direction will be defined in regions that have
+            nodata values in them.  non-nodata values will be ignored.  This is so
+            this function can be used as a two pass filter for resolving flow directions
+            on a raw dem, then filling plateaus and doing another pass.
 
        returns nothing"""
 
@@ -1035,10 +1037,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef double max_r = numpy.pi / 4.0
 
     #Create a flow carray and respective dataset
-    cdef float flow_nodata = -9999
-    raster_utils.new_raster_from_base_uri(
-        dem_uri, flow_direction_uri, 'GTiff', flow_nodata,
-        gdal.GDT_Float32, fill_value=flow_nodata)
+    cdef float flow_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
     flow_band = flow_direction_dataset.GetRasterBand(1)
 
@@ -1087,6 +1086,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
     cdef time_t last_time, current_time
+    cdef float current_flow
     time(&last_time)
     #flow not defined on the edges, so just go 1 row in
     for global_block_row in xrange(n_global_block_rows):
@@ -1103,8 +1103,18 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     e_0_col = e_0_offsets[1] + global_col
 
                     block_cache.update_cache(e_0_row, e_0_col, &e_0_row_index, &e_0_col_index, &e_0_row_block_offset, &e_0_col_block_offset)
-                    e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
 
+                    current_flow = flow_block[
+                        e_0_row_index, e_0_col_index,
+                        e_0_row_block_offset, e_0_col_block_offset]
+
+                    #this can happen if we have been passed an existing flow
+                    #direction raster, perhaps from an earlier iteration in a
+                    #multiphase flow resolution algorithm
+                    if current_flow != flow_nodata:
+                        continue
+
+                    e_0 = dem_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset]
                     #skip if we're on a nodata pixel skip
                     if e_0 == dem_nodata:
                         continue
