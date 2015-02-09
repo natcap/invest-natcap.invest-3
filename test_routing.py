@@ -10,6 +10,7 @@ import pstats
 import os
 import logging
 import subprocess
+import tempfile
 
 from invest_natcap.routing import routing_utils
 from invest_natcap import raster_utils
@@ -43,6 +44,8 @@ def main():
     }
 
     output_directory = 'C:/Users/rpsharp/Documents/routing_test/'
+
+    tempfile.tempdir = output_directory
     raster_utils.create_directories([output_directory])
     file_suffix = ''
 
