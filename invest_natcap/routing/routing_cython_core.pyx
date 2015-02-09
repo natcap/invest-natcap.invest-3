@@ -1144,13 +1144,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                         if e_1 == dem_nodata and e_2 == dem_nodata:
                             continue
 
-                        if facet_index % 2 == 0 and e_1 != dem_nodata and e_1 < lowest_dem:
-                            lowest_dem = e_1
-                            max_downhill_facet = facet_index
-                        elif facet_index % 2 == 1 and e_2 != dem_nodata and e_2 < lowest_dem:
-                            lowest_dem = e_2
-                            max_downhill_facet = facet_index
-
                         #s_1 is slope along straight edge
                         s_1 = (e_0 - e_1) / d_1 #Eqn 1
                         #slope along diagonal edge
@@ -2859,15 +2852,8 @@ def flow_direction_inf_masked_flow_dirs(
                         e_2_label = label_block[e_2_row_index, e_2_col_index, e_2_row_block_offset, e_2_col_block_offset]
 
                         #if labels aren't t the same as the current, we can't flow to them
-                        if (e_1_label != current_label and e_2_label != current_label):
+                        if e_1_label != current_label and e_2_label != current_label:
                             continue
-
-                        if facet_index % 2 == 0 and e_1 < lowest_flat_mask and e_1_label == current_label:
-                            lowest_flat_mask = e_1
-                            max_downhill_facet = facet_index
-                        elif facet_index % 2 == 1 and e_2 < lowest_flat_mask and e_2_label == current_label:
-                            lowest_flat_mask = e_2
-                            max_downhill_facet = facet_index
 
                         #s_1 is slope along straight edge
                         s_1 = (e_0 - e_1) / d_1 #Eqn 1
