@@ -69,8 +69,7 @@ def compute_transects(args):
 
     # Store shore and transect information
     shore_nodata = -20000.0
-    args['transects_uri'] = os.path.join( \
-        os.path.split(args['landmass_raster_uri'])[0], 'transects.tif')
+    args['transects_uri'] = os.path.join(args['output_dir'], 'transects.tif')
     raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
         args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
