@@ -7,6 +7,8 @@ import logging
 import numpy
 import json
 import csv
+import h5py
+from h5py import h5z
 
 from osgeo import gdal
 from osgeo import ogr
@@ -20,6 +22,8 @@ logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
 LOGGER = logging.getLogger('nearshore_wave_and_erosion')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+
 
 # TODO: Get rid of this function!!!! (in CV too)
 def clip_datasource(aoi_ds, orig_ds, output_uri):
@@ -455,6 +459,17 @@ def extract_raster_information(raster_uri):
     return (raster_nodata, cell_size)
     
 
+def hdf5_is_gzip_capable():
+    """Test if the current hdf5 distribution can compress data using gzip.
+        Used code from Andrew Collette's python script posted in this forum:
+        https://groups.google.com/forum/#!topic/h5py/m_Sqt2qZNQk
+
+        Inputs: None
+
+        Returns True if the gzip filter is available, False otherwise
+    """
+    return h5z.filter_avail(h5z.FILTER_DEFLATE)
+
 
 def execute(args):
     """This function invokes the coastal protection model given uri inputs 
@@ -465,6 +480,22 @@ def execute(args):
     args['workspace_dir']     - The file location where the outputs will 
                                 be written (Required)
     """
+
+    if not hdf5_is_gzip_capable():
+        anaconda_gzip_issue = \
+            "https://groups.google.com/forum/#!topic/h5py/m_Sqt2qZNQk"
+        anaconda_website = \
+            "https://store.continuum.io/cshop/anaconda/"
+        h5py_users_manual = \
+            "docs.h5py.org/en/latest/high/dataset.html#filter-pipeline"
+
+        LOGGER.critical("The gzip filter is not available on your current" + \
+            " distribution of HDF5. Some anaconda versions of h5py" + \
+            " don't have gzip capability (%s). In this case," + \
+            " you can download the latest version of anaconda here: %s." + \
+            " For more information on HDF5 filters, see here: %s", \
+            anaconda_gzip_issue, anaconda_website, h5py_users_manual)
+        assert hdf5_is_gzip_capable(), "See log message above"
 
     # Add the Output directory onto the given workspace
     args['output_dir'] = \
@@ -839,54 +870,6 @@ def execute(args):
             else:
                 LOGGER.debug("Can't recognize the shapefile %s", file_uri)
 
-
-    # ----------------------------------------------------
-    # Loading the transects to exclude from a csv, if any
-    # ----------------------------------------------------
-    args['excluded_transects'] = set()
-
-    if 'excluded_transects_uri' in args:
-        assert os.path.isfile(args['excluded_transects_uri']), \
-            "Can't open transect exclusion file " + args['excluded_transects_uri']
-
-        with open(args['excluded_transects_uri']) as csvfile:
-            excluded_transects_reader = csv.reader(csvfile)
-
-            for row in excluded_transects_reader:
-                for item in row:
-
-                    # First, try to cast as int:
-                    try:
-                        transect = int(item)
-                        assert transect >= 0, \
-                            "A transect ID can't be negative (" + str(item) + ")"
-                        args['excluded_transects'].add(transect)
-
-                    # If it doesn't work, it might be a range:
-                    except ValueError:
-                        transect_range = item.split('-')
-                        assert len(transect_range) == 2, "Can't interpret CSV token " + item
-
-                        try:
-                            start = int(transect_range[0])
-                            end = int(transect_range[1])
-
-                            # Enforce start >= end
-                            assert start >= 0, \
-                                "A transect ID can't be negative (" + str(item) + ")"
-                            assert end >= start, \
-                                "Invalid range: expected (start >= end), " + \
-                                " got (" + str(start) + "," + str(end) + ")"    
-                            
-                            # It is a range, now add the transects to the set:
-                            for transect in range(start, end+1):
-                                args['excluded_transects'].add(transect)
-
-                        except ValueError:
-                            LOGGER.error("Can't interpret CSV token %s as a range", item)
-                            raise
-
-        LOGGER.debug('Found %i transects to exclude', len(args['excluded_transects']))
 
     # -----------------------------
     # Detect habitat constraints
