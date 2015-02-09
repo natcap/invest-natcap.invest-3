@@ -21,6 +21,15 @@
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "A string that will be added to the end of the output uris."
+        },
+        {
           "id": "precipitation",
           "args_id": "precipitation_uri",
           "type": "file",
@@ -197,15 +206,6 @@
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]+$",
           "helpText": "Floating point value on the order of 1 to 30 corresponding to the seasonal distribution of precipitation."
-        },
-        {
-          "id": "results_suffix",
-          "args_id": "results_suffix",
-          "type": "text",
-          "label": "Results Suffix (Optional)",
-          "defaultValue": "",
-          "required": false,
-          "helpText": "A string that will be added to the end of the output uris."
         }
       ]
     },
