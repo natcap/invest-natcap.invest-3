@@ -25,20 +25,22 @@ def main():
     #dem_uri = r"C:\Users\rpsharp\Dropbox_stanford\Dropbox" \
     #    r"\brian_packard_dem_nutrient_bug\dem"
 
-    dem_uri = \
-        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\' \
-        + 'invest-data\\Base_Data\\Freshwater\\dem'
+    dem_uri = (
+        r"E:\repositories\invest-natcap.invest-3\test\invest-data\Base_Data"
+        r"\Freshwater\erosivity")
+        #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
+        #+ 'invest-data\\Base_Data\\Freshwater\\dem'
 
     args = {
         'flow_direction_filename': 'flow_direction.tif',
         'flow_accumulation_filename': 'flow_accumulation.tif',
         'resolve_plateaus_filename': 'resolved_plateaus_dem.tif',
         'sink_filename': 'sinks.tif',
-        'flat_mask_filename': 'flat_maxk.tif',
+        'flat_mask_filename': 'flat_mask.tif',
         'labels_filename': 'labels.tif',
     }
 
-    output_directory = 'C:/Users/Rich/Documents/routing_test/'
+    output_directory = 'C:/Users/rsharp/Documents/routing_test/'
     raster_utils.create_directories([output_directory])
     file_suffix = ''
 
