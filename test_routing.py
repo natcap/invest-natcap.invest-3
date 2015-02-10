@@ -31,8 +31,9 @@ def main():
         #r"\Freshwater\erosivity")
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
-        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\' \
-        + 'invest-data\\Base_Data\\Freshwater\\dem')
+        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
+        #r"C:\Users\rich\Documents\Dropbox\brian_packard_dem_nutrient_bug\dem")
+        #r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\hi_dem10m_p")
 
     args = {
         'flow_direction_filename': 'flow_direction.tif',
@@ -55,18 +56,7 @@ def main():
     flow_direction_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
 
-    (prefix, suffix) = (
-        os.path.splitext(args['flat_mask_filename']))
-    flat_mask_uri = os.path.join(
-        output_directory, prefix + file_suffix + suffix)
-
-    (prefix, suffix) = (
-        os.path.splitext(args['labels_filename']))
-    labels_uri = os.path.join(
-        output_directory, prefix + file_suffix + suffix)
-
-    routing_utils.flow_direction_flat_drainage(
-        dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
+    routing_utils.flow_direction_d_inf(dem_uri, flow_direction_uri)
 
     LOGGER.info('calculating flow accumulation')
     (prefix, suffix) = (
@@ -78,8 +68,7 @@ def main():
 
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
     subprocess.Popen(
-        [qgis_bin, dem_uri, labels_uri, flat_mask_uri, flow_direction_uri,
-         flow_accumulation_uri],
+        [qgis_bin, dem_uri, flow_direction_uri, flow_accumulation_uri],
         cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':

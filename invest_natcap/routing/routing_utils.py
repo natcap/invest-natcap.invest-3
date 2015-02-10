@@ -27,7 +27,6 @@
 
 import logging
 import os
-import collections
 
 from osgeo import gdal
 import numpy
@@ -213,7 +212,7 @@ def pixel_amount_exported(
         [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri,
          source_uri],
         ["nearest", "nearest", "nearest", "nearest", "nearest"], out_pixel_size,
-        "intersection", 0, aoi_uri=aoi_uri)
+         "intersection", 0, aoi_uri=aoi_uri)
 
     #Calculate export rate
     export_rate_uri = raster_utils.temporary_filename(suffix='.tif')
@@ -250,8 +249,8 @@ def pixel_amount_exported(
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
     def mult_nodata(source, effect, stream):
         """Does the multiply of source by effect if there's not a stream"""
-        if source == nodata_source or effect == nodata_effect or \
-                stream == nodata_stream:
+        if (source == nodata_source or effect == nodata_effect or
+                stream == nodata_stream):
             return nodata_source
         return source * effect * (1 - stream)
     raster_utils.vectorize_datasets(
@@ -369,9 +368,8 @@ def distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
 
 
-
-def flow_direction_flat_drainage(
-        dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+def flow_direction_d_inf(
+        dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -384,15 +382,15 @@ def flow_direction_flat_drainage(
                 elevation values
             flow_direction_uri (string) - (output) a uri to a single band GDAL
                 dataset with d infinity flow directions in it.
-            flat_mask_uri (string) - (output) a uri to a single band GDAL raster
-                that will have a
-            labels_uri (string) - (output)
 
         Returns:
             nothing"""
 
     #inital pass to define flow directions off the dem
     flow_direction_inf(dem_uri, flow_direction_uri)
+
+    flat_mask_uri = raster_utils.temporary_filename()
+    labels_uri = raster_utils.temporary_filename()
 
     resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
 
@@ -413,13 +411,6 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
                 elevation values
             flow_direction_uri (string) - (input/output) a uri to a single band
                 GDAL Dataset with partially defined d_infinity flow directions
-            flat_mask_uri (string) - (output) contains the number of increments
-                to be applied to each cell to form a gradient which will drain
-                the flat it is a part of
-            labels_uri (string) - (output) path to a gdal raster indicating
-                cells that match up with the dem_uri indicating which member of
-                a flat the cell is a part of.  If it is not a part of a flat it
-                has the value 0.
 
         Returns:
             nothing"""
