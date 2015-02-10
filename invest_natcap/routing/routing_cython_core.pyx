@@ -1980,7 +1980,7 @@ cdef class BlockCache:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
+def flat_edges(dem_uri, flow_direction_uri):
     """This function locates flat cells that border on higher and lower terrain
         and places them into sets for further processing.
 
@@ -1990,11 +1990,14 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
                 elevation values
             flow_direction_uri (string) - (input/output) a uri to a single band
                 GDAL Dataset with partially defined d_infinity flow directions
-            high_edges (set) - (output) will contain all the high edge cells
-            low_eges (set) - (output) will contain all the low edge cells
 
         Returns:
-            nothing"""
+            high_edges, low_edges where,
+
+                high_edges (list) - contain all the high edge cells as flat row
+                    major order indexes
+                low_edges (list) - will contain all the low edge cells as flat
+                    row major order indexes"""
 
     cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -2050,6 +2053,9 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
         dem_uri)
     cdef float flow_nodata = raster_utils.get_nodata_from_uri(
         flow_direction_uri)
+
+    high_edges = []
+    low_edges = []
 
     cdef time_t last_time, current_time
     time(&last_time)
@@ -2113,12 +2119,14 @@ def flat_edges(dem_uri, flow_direction_uri, high_edges, low_edges):
                         if (cell_flow != flow_nodata and
                                 neighbor_flow == flow_nodata and
                                 cell_dem == neighbor_dem):
-                            low_edges.add(global_row * n_cols + global_col)
+                            low_edges.append(global_row * n_cols + global_col)
                             break
                         elif (cell_flow == flow_nodata and
                                 cell_dem < neighbor_dem):
-                            high_edges.add(global_row * n_cols + global_col)
+                            high_edges.append(global_row * n_cols + global_col)
                             break
+    return high_edges, low_edges
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -2274,6 +2282,7 @@ def label_flats(dem_uri, low_edges, labels_uri):
             label += 1
     block_cache.flush_cache()
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -2344,9 +2353,11 @@ def clean_high_edges(labels_uri, high_edges):
             unlabled_set.add(flat_index)
 
     if len(unlabled_set) > 0:
-        high_edges.difference_update(unlabled_set)
+        #want to preserve the order of the high edges so there's this n^2ish
+        high_edges[:] = [x for x in high_edges if x not in unlabled_set]
         LOGGER.warn("Not all flats have outlets")
     block_cache.flush_cache()
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -2363,7 +2374,6 @@ def drain_flats(
     LOGGER.info('draining towards lower')
     towards_lower(
         low_edges, labels_uri, flow_direction_uri, flat_mask_uri, flat_height)
-
 
 
 @cython.boundscheck(False)
