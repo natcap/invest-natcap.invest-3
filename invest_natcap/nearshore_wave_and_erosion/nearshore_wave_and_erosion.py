@@ -634,16 +634,16 @@ def execute(args):
 
     # Process each habitat
     args['shapefile_required_fields'] = { \
-        'tidal information': [ \
+        'tidal information': set([ \
             'MHHW', \
             'MSL', \
-            'MLLW'],
-        'climatic forcing':[ \
+            'MLLW']),
+        'climatic forcing': set([ \
             'Surge', \
             'WindSpeed', \
             'WavePeriod', \
-            'WaveHeight'], \
-        'soil type': [ \
+            'WaveHeight']), \
+        'soil type': set([ \
             'DryDensity', \
             'ErosionCst', \
             'SedSize', \
@@ -651,24 +651,49 @@ def execute(args):
             'BermLength', \
             'BermHeight', \
             'DuneHeight', \
-            'Type'],
-        'seagrass': [ \
+            'Type']),
+        'seagrass': set([ \
             'StemHeight', \
             'StemDiam', \
             'StemDensty', \
             'StemDrag', \
-            'Type'],
-        'underwater structures': [ \
+            'Type']),
+        'underwater structures': set([ \
             'ShoreDist', \
             'Height', \
             'BaseWidth', \
             'CrestWidth', \
-            'Type'],
-        'coral reef': [ \
+            'Type']),
+        'coral reef': set([ \
             'FricCoverd',
             'FricUncov',
             'SLRKeepUp',
-            'DegrUncov']}
+            'DegrUncov']),
+        'mangrove': set([ \
+            'SurfRough',
+            'SurRedFact',
+            'RootHeight',
+            'RootDiam',
+            'RootDensty',
+            'RootsDrag',
+            'TrnkHeight',
+            'TrunkDiam',
+            'TrnkDensty',
+            'TrunkDrag',
+            'CnpyHeight',
+            'CanopyDiam',
+            'CnpyDensty',
+            'CanopyDrag',
+            'DnstyReduc']),
+        'man-made structures': set([ \
+            'Type',
+            'Height',
+            'SideSlope',
+            'OvertopLim']),
+        'terrestrial structures': set([ \
+            'Type',
+            'TransParam',
+            'Height'])}
 
     shapefile_required_fields = args['shapefile_required_fields']
 
@@ -717,14 +742,16 @@ def execute(args):
         # Add the fields
         destination['fields'] = {}
 
-        for field_id in range(len(required_fields)):                
-            field_name = required_fields[field_id]
+        field_id = 0
+        for field_name in required_fields:                
         
             # Only add if field is not 'type'
             if field_name.lower() != 'type':
         
                 # Field name is set to its index in the required fields array
                 destination['fields'][field_name.lower()] = field_id
+
+                field_id += 1
 
 
     # Save the dictionary
@@ -793,82 +820,110 @@ def execute(args):
 
             # Extract field names and build checksum
             shapefile_checksum = 0
+            recognized_fields = set()
+            unknown_fields = []
             for field_id in range(field_count):
                 field_defn = layer_def.GetFieldDefn(field_id)
                 field_name = field_defn.GetName()
 
                 if field_name in field_values:
                     shapefile_checksum += field_values[field_name]
-
-            # If checksum corresponds to a known shapefile type, process it
-            if shapefile_checksum in shapefile_type_checksum:
-                shapefile_type = shapefile_type_checksum[shapefile_checksum]
-
-                LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
-
-                if shapefile_type in args['valid_habitat_types']:
-                    category = 'natural habitats'
+                    recognized_fields.add(field_name)
                 else:
-                    category = shapefile_type
+                    unknown_fields.append(field_name)
 
-                # If new category (new shapefile type), add it to the dictionary
-                if category not in args['shapefiles']:
-                    args['shapefiles'][category] = {}
-                    args['shapefiles'][category][basename] = {}
+            # Check if the recognized fields fit a type of shapefile
+            is_known_shapefile = False # Used to notify that a shapefile is unknown
+            
+            missing_fields = {} # Stores missing fields for each habitat
 
-                    args['shapefile types'][category] = {}
-                    args['shapefile types'][category][basename] = \
-                        shapefile_type
+            for shapefile_type in args['shapefile_required_fields']:
 
-                # Rasterize the known shapefile for each field name
-                LOGGER.info('Processing %s...', file_uri)
-                for field_name in shapefile_required_fields[shapefile_type]:
-                    # Rasterize the shapefile's field
-                    # If this habitat has subtypes, then the field 'type' 
-                    # is used to determine priority.
-                    output_uri = os.path.join(args['intermediate_dir'], \
-                        basename + '_' + field_name.lower() + '.tif')
+                if args['shapefile_required_fields'][shapefile_type] <= recognized_fields:
 
-                    if not os.path.isfile(output_uri):
-                        # Rasterize the current shapefile field
-                        LOGGER.debug('rasterizing field %s to %s', field_name, output_uri)
-                        preprocess_polygon_datasource(file_uri, args['aoi_uri'], \
-                            args['cell_size'], output_uri, \
-                            field_name = field_name, nodata = -99999.0)
-                    
-                    # Keep this raster uri
-                    args['shapefiles'][category][basename][field_name] = \
-                        output_uri
-                    in_raster_list.append(output_uri)
+                    is_known_shapefile = True
 
-                # If priority raster not already added, add it now
-                if (shapefile_type, None) in args['habitat_priority']:
-                    # Priority raster name on disk
-                    output_uri = os.path.join(args['intermediate_dir'], \
-                            basename + '_' + 'type' + '.tif')
-                    if not os.path.isfile(output_uri):
-                        LOGGER.debug('Creating type raster to %s', output_uri)
-                        # Copy data over from most recent raster
-                        shutil.copy(in_raster_list[-1], output_uri)
-                        # Extract array
-                        nodata = raster_utils.get_nodata_from_uri(output_uri)
-                        raster = gdal.Open(output_uri, gdal.GA_Update)
-                        band = raster.GetRasterBand(1)
-                        array = band.ReadAsArray()
-                        # Overwrite data with priority value
-                        array[array != nodata] = args['habitat_priority'][(shapefile_type, None)]
-                        print('assigning', args['habitat_priority'][(shapefile_type, None)], \
-                            'to', basename + '_' + 'type' + '.tif')
-                        band.WriteArray(array)
-                        # clean-up
-                        array = None
-                        band = None
-                        raster = None
-                    # Add new uri to uri list
-                    args['shapefiles'][category][basename]['Type'] = output_uri
-                    in_raster_list.append(output_uri)
-            else:
-                LOGGER.debug("Can't recognize the shapefile %s", file_uri)
+                    LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
+
+                    if shapefile_type in args['valid_habitat_types']:
+                        category = 'natural habitats'
+                    else:
+                        category = shapefile_type
+
+                    # If new category (new shapefile type), add it to the dictionary
+                    if category not in args['shapefiles']:
+                        args['shapefiles'][category] = {}
+                        args['shapefile types'][category] = {}
+
+                    if basename not in args['shapefiles'][category]:
+                        args['shapefiles'][category][basename] = {}
+                        args['shapefile types'][category][basename] = \
+                            shapefile_type
+
+                    # Rasterize the known shapefile for each field name
+                    LOGGER.info('Processing %s...', file_uri)
+                    for field_name in shapefile_required_fields[shapefile_type]:
+                        # Rasterize the shapefile's field
+                        # If this habitat has subtypes, then the field 'type' 
+                        # is used to determine priority.
+                        output_uri = os.path.join(args['intermediate_dir'], \
+                            basename + '_' + field_name.lower() + '.tif')
+
+                        if not os.path.isfile(output_uri):
+                            # Rasterize the current shapefile field
+                            LOGGER.debug('rasterizing field %s to %s', \
+                                field_name, output_uri)
+                            preprocess_polygon_datasource(file_uri, \
+                                args['aoi_uri'], args['cell_size'], \
+                                output_uri, field_name = field_name, \
+                                nodata = -99999.0)
+                        
+                        # Keep this raster uri
+                        args['shapefiles'][category][basename][field_name] = \
+                            output_uri
+                        in_raster_list.append(output_uri)
+
+                    # If priority raster not already added, add it now
+                    if (shapefile_type, None) in args['habitat_priority']:
+                        # Priority raster name on disk
+                        output_uri = os.path.join(args['intermediate_dir'], \
+                                basename + '_' + 'type' + '.tif')
+                        if not os.path.isfile(output_uri):
+                            LOGGER.debug('Creating type raster to %s', output_uri)
+                            # Copy data over from most recent raster
+                            shutil.copy(in_raster_list[-1], output_uri)
+                            # Extract array
+                            nodata = raster_utils.get_nodata_from_uri(output_uri)
+                            raster = gdal.Open(output_uri, gdal.GA_Update)
+                            band = raster.GetRasterBand(1)
+                            array = band.ReadAsArray()
+                            # Overwrite data with priority value
+                            array[array != nodata] = \
+                                args['habitat_priority'][(shapefile_type, None)]
+                            LOGGER.debug('assigning %i to %s_type.tif', \
+                                args['habitat_priority'][(shapefile_type, None)], basename)
+                            band.WriteArray(array)
+                            # clean-up
+                            array = None
+                            band = None
+                            raster = None
+                        # Add new uri to uri list
+                        args['shapefiles'][category][basename]['Type'] = output_uri
+                        in_raster_list.append(output_uri)
+
+                    break
+                else:
+                    missing_fields[shapefile_type] = \
+                        args['shapefile_required_fields'][shapefile_type] - \
+                        recognized_fields
+
+            if not is_known_shapefile:
+                LOGGER.debug("Can't recognize shapefile %s", file_uri)
+                # Enumerate what's missing to comply for each shapefile type:
+                for shapefile_type in missing_fields:
+                    if len(missing_fields[shapefile_type]) < 5:
+                        LOGGER.debug("For %s, missing fields are: %s", \
+                            shapefile_type, str(missing_fields[shapefile_type]))
 
 
     # -----------------------------

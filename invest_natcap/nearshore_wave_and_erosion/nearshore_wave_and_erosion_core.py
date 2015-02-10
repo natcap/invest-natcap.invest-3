@@ -1459,15 +1459,15 @@ def store_tidal_information(args, transect_data_file):
 
     LOGGER.info('Processing tidal information...')
 
+    # Create new category
+    category = 'tidal information'
+
     hdf5_files = args['hdf5_files']
     habitat_nodata = args['habitat_nodata']
     
-    limit_group = transect_data_file['limits']
-    indices_limit_dataset = limit_group['indices']
-    positions_dataset = transect_data_file['ij_positions']
-
-    # Create new category
-    category = 'tidal information'
+    if category not in args['shapefiles']:
+        LOGGER.info("Couldn't find any %s data. Skip it.", category)
+        return
 
     tidal_forcing_dataset = \
         transect_data_file.create_dataset('tidal forcing', \
@@ -1475,13 +1475,17 @@ def store_tidal_information(args, transect_data_file):
             compression = 'gzip', fillvalue = 0, \
             dtype = 'i4')
 
-    hdf5_files[category] = []
-
     filenames = args['shapefiles'][category].keys()
 
     assert len(filenames) == 1, 'Detected more than one climatic forcing file'
 
     shp_name = filenames[0]
+
+    limit_group = transect_data_file['limits']
+    indices_limit_dataset = limit_group['indices']
+    positions_dataset = transect_data_file['ij_positions']
+
+    hdf5_files[category] = []
 
     for field in args['shapefiles'][category][shp_name]:
 
@@ -1545,9 +1549,24 @@ def store_climatic_forcing(args, transect_data_file):
 
     LOGGER.info('Processing climatic forcing...')
     
+    # Create 'climatic forcing' category
+    category = 'climatic forcing'
+
     hdf5_files = args['hdf5_files']
     habitat_nodata = args['habitat_nodata']
 
+    hdf5_files[category] = []
+
+    if category not in args['shapefiles']:
+        LOGGER.info("Couldn't find any %s data. Skip it.", category)
+        return
+
+    filenames = args['shapefiles'][category].keys()
+
+    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
+
+    shp_name = filenames[0]
+    
     limit_group = transect_data_file['limits']
     indices_limit_dataset = limit_group['indices']
     positions_dataset = transect_data_file['ij_positions']
@@ -1557,17 +1576,6 @@ def store_climatic_forcing(args, transect_data_file):
             (args['tiles'], args['climatic_forcing_field_count']), \
             compression = 'gzip', fillvalue = 0)
 
-    # Create 'climatic forcing' category
-    category = 'climatic forcing'
-
-    hdf5_files[category] = []
-
-    filenames = args['shapefiles'][category].keys()
-
-    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
-
-    shp_name = filenames[0]
-    
     for field in args['shapefiles'][category][shp_name]:
 
         # Retreive the index for this field
