@@ -31,7 +31,7 @@ def main():
         #r"\Freshwater\erosivity")
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
-        'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\' \
+        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\' \
         + 'invest-data\\Base_Data\\Freshwater\\dem')
 
     args = {
@@ -43,7 +43,7 @@ def main():
         'labels_filename': 'labels.tif',
     }
 
-    output_directory = 'C:/Users/rpsharp/Documents/routing_test/'
+    output_directory = 'C:/Users/Rich/Documents/routing_test/'
 
     tempfile.tempdir = output_directory
     raster_utils.create_directories([output_directory])
