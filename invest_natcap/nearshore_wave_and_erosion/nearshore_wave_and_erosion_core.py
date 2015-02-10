@@ -150,9 +150,11 @@ def compute_transects(args):
     max_transect_length = 0
 
     # Going through the bathymetry raster tile-by-tile.
+    LOGGER.debug('Detecting shore')
+    progress_step = (i_end - i_start) / i_side_coarse / 50
     for i in range(i_start, i_end, i_side_coarse):
-        LOGGER.debug(' Detecting shore along line ' + \
-            str((i_end - i)/i_side_coarse))
+        if i % progress_step == 0:
+            print '.',
 
         # Top of the current tile
         i_base = max((i - i_start) / i_side_fine - 3, 0)
@@ -268,6 +270,7 @@ def compute_transects(args):
                         max_transect_length = end - start
                     
                     tiles += 1
+    print('')
 
     # Cleanup
     bathymetry = None

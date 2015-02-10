@@ -861,7 +861,7 @@ def execute(args):
                             shapefile_type
 
                     # Rasterize the known shapefile for each field name
-                    LOGGER.info('Processing %s...', file_uri)
+#                    LOGGER.info('Processing %s...', file_uri)
                     for field_name in shapefile_required_fields[shapefile_type]:
                         # Rasterize the shapefile's field
                         # If this habitat has subtypes, then the field 'type' 
@@ -871,8 +871,8 @@ def execute(args):
 
                         if not os.path.isfile(output_uri):
                             # Rasterize the current shapefile field
-                            LOGGER.debug('rasterizing field %s to %s', \
-                                field_name, output_uri)
+#                            LOGGER.debug('rasterizing field %s to %s', \
+#                                field_name, output_uri)
                             preprocess_polygon_datasource(file_uri, \
                                 args['aoi_uri'], args['cell_size'], \
                                 output_uri, field_name = field_name, \
@@ -889,7 +889,7 @@ def execute(args):
                         output_uri = os.path.join(args['intermediate_dir'], \
                                 basename + '_' + 'type' + '.tif')
                         if not os.path.isfile(output_uri):
-                            LOGGER.debug('Creating type raster to %s', output_uri)
+#                            LOGGER.debug('Creating type raster to %s', output_uri)
                             # Copy data over from most recent raster
                             shutil.copy(in_raster_list[-1], output_uri)
                             # Extract array
@@ -919,11 +919,13 @@ def execute(args):
 
             if not is_known_shapefile:
                 LOGGER.debug("Can't recognize shapefile %s", file_uri)
+                filename = os.path.split(file_uri)[1]
                 # Enumerate what's missing to comply for each shapefile type:
                 for shapefile_type in missing_fields:
                     if len(missing_fields[shapefile_type]) < 5:
-                        LOGGER.debug("For %s, missing fields are: %s", \
-                            shapefile_type, str(missing_fields[shapefile_type]))
+                        LOGGER.debug("To be %s, %s needs the fields %s", \
+                            shapefile_type, filename, \
+                            str(sorted(list(missing_fields[shapefile_type]))))
 
 
     # -----------------------------
