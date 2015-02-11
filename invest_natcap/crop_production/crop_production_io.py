@@ -1,16 +1,11 @@
 '''
-The Crop Production IO module contains functions for handling inputs and outputs
+The Crop Production IO module contains functions for handling inputs and
+outputs
 '''
 
 import logging
-import os
-import csv
 
-from osgeo import ogr
-import numpy as np
-
-from invest_natcap import raster_utils
-from invest_natcap import reporting
+from invest_natcap import raster_utils as ru
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -40,7 +35,7 @@ def fetch_args(args, create_outputs=True):
 
     Example Returns::
 
-        model_list = {
+        vars_dict = {
             'workspace_dir': 'path/to/workspace_dir',
             'output_dir': 'path/to/output_dir',
             'results_suffix': '',
@@ -57,8 +52,3 @@ def fetch_args(args, create_outputs=True):
 
     '''
     pass
-
-
-# Create Outputs
-def create_outputs(vars_dict):
-	pass

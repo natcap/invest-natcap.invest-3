@@ -88,9 +88,25 @@ def execute(args, create_outputs=True):
 
     # Run Model ...
 
+    # Calculate Yield
+    if vars_dict['do_yield_observed']:
+        vars_dict = model.calc_yield_observed(vars_dict)
 
-    # Create Model Outputs
-    if create_outputs:
-        io.create_outputs(model_vars_dict)
+    if vars_dict['do_climate_based_yields']:
 
-    # Return results to user (at least for testing)
+        if vars_dict['do_yield_percentile']:
+            vars_dict = model.calc_yield_percentile(vars_dict)
+
+        if vars_dict['do_yield_modeled']:
+            vars_dict = model.calc_yield_modeled(vars_dict)
+
+    # Calculate Nutrition
+    if vars_dict['do_nutrition']:
+        vars_dict = model.calc_nutrition(vars_dict)
+
+    # Calculate Economic Returns
+    if vars_dict['do_economic_returns']:
+        vars_dict = model.calc_economic_returns(vars_dict)
+
+    # Return Results
+    return vars_dict
