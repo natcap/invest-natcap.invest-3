@@ -101,9 +101,6 @@ def compute_transects(args):
     row_count = landmass_band.YSize 
     col_count = landmass_band.XSize
 
-#    landmass_band = None
-#    landmass_raster = None
-
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
     message = 'Cannot open file ' + args['aoi_raster_uri']
@@ -115,8 +112,11 @@ def compute_transects(args):
         args['bathymetry_raster_uri'], raster_utils.temporary_filename())
 
    # Get the fine and coarse raster cell sizes, ensure consistent signs
-    i_side_fine = int(round(fine_geotransform[1]))
-    j_side_fine = int(round(fine_geotransform[5]))
+    i_side_fine = int( \
+        math.sqrt(fine_geotransform[4]**2 + fine_geotransform[5]**2))
+    j_side_fine = int( \
+        math.sqrt(fine_geotransform[1]**2 + fine_geotransform[2]**2))
+
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
 
@@ -371,8 +371,9 @@ def compute_transects(args):
 
 
         # We want pixel center, not corner
-        origin = np.array([gt[3]+gt[5]/2., gt[0]+gt[1]/2.])
-        step = np.array([gt[5], gt[1]])
+        origin = np.array([gt[3]+gt[4]/2.+gt[5]/2., gt[0]+gt[1]/2.+gt[2]/2.])
+        step = np.array([gt[4]+gt[5], gt[1]+gt[2]])
+
 
         I = transect_info[transect]['raw_positions'][0][start:end] * \
             step[0] + origin[0]
@@ -421,8 +422,19 @@ def compute_transects(args):
     print('')
 
 
+    # HDF5 file container
+    args['hdf5_files'] = {}
+    args['habitat_nodata'] = habitat_nodata
+
+
+    combine_natural_habitats(args, transect_data_file)
+    combine_soil_types(args, transect_data_file)
+    store_climatic_forcing(args, transect_data_file)
+    store_tidal_information(args, transect_data_file)
+
     # Saving transects
     progress_step = tiles / 50
+    habitat_type_dataset = transect_data_file['habitat_type']
     for transect in range(transect_count):
         if transect % progress_step == 0:
             print '.',
@@ -434,6 +446,7 @@ def compute_transects(args):
         for pos in range(end-start):
             # Store bathymetry in the transect
             single_value[0, 0] = bathymetry_dataset[transect, pos]
+#            single_value[0, 0] = habitat_type_dataset[transect, pos]
             transect_band.WriteArray( \
                 single_value, \
                 int(positions_dataset[transect, 1, pos]), \
@@ -464,76 +477,6 @@ def compute_transects(args):
             int(positions_dataset[transect, 0, shore]))
     print('')
 
-    # HDF5 file container
-    args['hdf5_files'] = {}
-    args['habitat_nodata'] = habitat_nodata
-
-
-    combine_natural_habitats(args, transect_data_file)
-    combine_soil_types(args, transect_data_file)
-    store_climatic_forcing(args, transect_data_file)
-    store_tidal_information(args, transect_data_file)
-
-#    # Store shore information gathered during the computation
-#    # This is faster than the above method, but it doesn't work on Windows:
-#    # instead of lines, the model saves entire rectangles of horizontal gradient
-#    LOGGER.info('Storing transect information...')
-#    n_rows = transect_band.YSize
-#    n_cols = transect_band.XSize
-#
-#    cols_per_block, rows_per_block = block_size[0], block_size[1]
-#    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-#    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-#
-#    dataset_buffer = np.zeros((rows_per_block, cols_per_block))
-#
-#    # Compute data for progress bar
-#    block_count = n_row_blocks * n_col_blocks
-#    progress_step = block_count / 50
-#    processed_blocks = 0
-#
-#    for row_block_index in xrange(n_row_blocks):
-#        row_offset = row_block_index * rows_per_block
-#        row_block_width = n_rows - row_offset
-#        if row_block_width > rows_per_block:
-#            row_block_width = rows_per_block
-#
-#        for col_block_index in xrange(n_col_blocks):
-#            col_offset = col_block_index * cols_per_block
-#            col_block_width = n_cols - col_offset
-#            if col_block_width > cols_per_block:
-#                col_block_width = cols_per_block
-#
-#            # Show progress bar
-#            if processed_blocks % progress_step == 0:
-#                print '.',
-#
-#            # Load data from the dataset
-#            transect_band.ReadAsArray(
-#                xoff=col_offset, yoff=row_offset, 
-#                win_xsize=col_block_width,
-#                win_ysize=row_block_width, 
-#                buf_obj=dataset_buffer[0:row_block_width,0:col_block_width])
-#                
-#            dataset_block = dataset_buffer[ \
-#                0:row_block_width, \
-#                0:col_block_width]
-#            
-#            # Load data from the sparse matrix
-#            matrix_block = transects[ \
-#                row_offset:row_offset+row_block_width, \
-#                col_offset:col_offset+col_block_width].todense()
-#
-#            # Write sparse matrix contents over the dataset
-#            mask = np.where(matrix_block != 0)
-#
-#            dataset_block[mask] = matrix_block[mask]
-#
-#            transect_band.WriteArray(
-#                dataset_block[0:row_block_width, 0:col_block_width],
-#                xoff=col_offset, yoff=row_offset)
-#
-#            processed_blocks += 1
 
     #Making sure the band and dataset is flushed and not in memory before
     #adding stats
@@ -1893,19 +1836,12 @@ def combine_natural_habitats(args, transect_data_file):
             #Load the habitats as sampled from the raster
             habitat_type = np.ones(end-start) * -1
             for position in range(end-start):
+
                 habitat_type[position] = \
                     band.ReadAsArray(int(raw_positions[1][position]), \
                         int(raw_positions[0][position]), 1, 1)[0]
 
             # Load the constraints
-#            print('habitat_type_name', habitat_type_name)
-#            print("args['habitat_information']", args['habitat_information'])
-            
-#            print("first habitat", args['habitat_information'][1])
-#            print("habitat name", args['habitat_information'][1][0])
-#            print("constraints", args['habitat_information'][1][2]['constraints'])
-#            print("constraint_uri", args['habitat_information'][1][2]['constraint_uri'])
-
             for hab_id in range(len(args['habitat_information'])):
                 habitat_name = args['habitat_information'][hab_id][0]
 
@@ -2187,8 +2123,8 @@ def compute_raw_transect_depths(shore_point, \
     bathymetry_raster = gdal.Open(bathymetry_uri)
     bathymetry_band = bathymetry_raster.GetRasterBand(1)
 
-    #landmass_raster = gdal.Open(landmass_uri)
-    #landmass_band = landmass_raster.GetRasterBand(1)
+    habitat_type_raster = gdal.Open(landmass_uri)
+    habitat_type_band = habitat_type_raster.GetRasterBand(1)
 
     # Limits on maximum coordinates
     bathymetry_shape = (bathymetry_band.YSize, bathymetry_band.XSize)
@@ -2226,17 +2162,12 @@ def compute_raw_transect_depths(shore_point, \
 
     # If no land behind the piece of land, stop there and report 0
     land = landmass[int(round(start_i)), int(round(start_j))]
-    # The code below might work, but is risky, because the landmass band
-    # is already used in the parent function. Opening it again here, 
-    # or passing it as a parameter is unsafe.
-#    land_test = landmass[int(round(start_i)), int(round(start_j))]
-#    land = landmass_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
-#    assert land_test == land, str(land_test) + " vs " + str(land)
 
-    if not land:
-        inland_steps = 0
-    # Else, count from 1
-    else:
+
+    inland_steps = 0
+
+    # Only compute if there is land
+    if land:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
             elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
@@ -2250,6 +2181,7 @@ def compute_raw_transect_depths(shore_point, \
                 break
             # Stop at maximum elevation
             if elevation > 20:
+                inland_steps -= 1
                 break
             # We can store the depth at this point
             depths[max_land_len - inland_steps] = elevation
@@ -2299,8 +2231,10 @@ def compute_raw_transect_depths(shore_point, \
     # If shore borders nodata, offshore_step is -1, set it to 0
     offshore_steps = max(0, offshore_steps)
 
+    start = max_land_len - inland_steps
+    end = inland_steps + offshore_steps + 1
 
-    return (depths[I >= 0], (I[I >= 0].astype(int), J[J >= 0].astype(int)))
+    return (depths[start:end], (I[start:end].astype(int), J[start:end].astype(int)))
 
 
 def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'):

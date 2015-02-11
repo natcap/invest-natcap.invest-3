@@ -663,7 +663,9 @@ def execute(args):
     suitability_transition_dict = {}
 
     if args["calculate_transition"]:
+        print('calculate_transition')
         for next_lulc in transition_dict:
+            print('next_lulc', next_lulc)
             this_uri = os.path.join(workspace, transition_name % next_lulc)
             #construct reclass dictionary
             reclass_dict = {}
