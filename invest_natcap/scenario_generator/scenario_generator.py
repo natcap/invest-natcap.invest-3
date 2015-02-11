@@ -663,7 +663,7 @@ def execute(args):
     suitability_transition_dict = {}
 
     if args["calculate_transition"]:
-        print('calculate_transition')
+        print('calculating transition:')
         for next_lulc in transition_dict:
             print('next_lulc', next_lulc)
             this_uri = os.path.join(workspace, transition_name % next_lulc)
@@ -1106,7 +1106,8 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((priorities_dict[cover_id],
                                     cover_id,
-                                    int(math.ceil(area_change / cell_size))))
+                                    10000 * int(math.ceil(area_change \
+                                        / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
     else:
@@ -1121,7 +1122,8 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((transition_dict[cover_id][args["priority_field"]],
                                    cover_id,
-                                   int(math.ceil(area_change / cell_size))))
+                                   10000 * int(math.ceil(area_change \
+                                        / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
 
