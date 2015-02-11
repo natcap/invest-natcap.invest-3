@@ -31,20 +31,21 @@ def main():
         #r"\Freshwater\erosivity")
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
-        'C:\\Users\\Rich\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
+        'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
         #r"C:\Users\rich\Documents\Dropbox\brian_packard_dem_nutrient_bug\dem")
         #r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\hi_dem10m_p")
 
     args = {
         'flow_direction_filename': 'flow_direction.tif',
         'flow_accumulation_filename': 'flow_accumulation.tif',
-        'resolve_plateaus_filename': 'resolved_plateaus_dem.tif',
         'sink_filename': 'sinks.tif',
         'flat_mask_filename': 'flat_mask.tif',
         'labels_filename': 'labels.tif',
+        'threshold_flow_accumulation': 1000,
+        'downstream_distance_filename': 'downstream_distance.tif'
     }
 
-    output_directory = 'C:/Users/Rich/Documents/routing_test/'
+    output_directory = 'C:/Users/rpsharp/Documents/routing_test/'
 
     tempfile.tempdir = output_directory
     raster_utils.create_directories([output_directory])
@@ -66,10 +67,22 @@ def main():
     routing_utils.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
+    v_stream_uri = os.path.join(
+        output_directory, 'v_stream%s.tif' % file_suffix)
+    routing_utils.stream_threshold(
+        flow_accumulation_uri, float(args['threshold_flow_accumulation']),
+        v_stream_uri)
+
+    prefix, suffix = os.path.splitext(args['downstream_distance_filename'])
+    distance_uri = os.path.join(
+        output_directory, prefix + file_suffix + suffix)
+    routing_utils.distance_to_stream(
+        flow_direction_uri, v_stream_uri, distance_uri)
+
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
     subprocess.Popen(
-        [qgis_bin, dem_uri, flow_direction_uri, flow_accumulation_uri],
-        cwd=os.path.dirname(qgis_bin))
+        [qgis_bin, dem_uri, flow_direction_uri, flow_accumulation_uri,
+         distance_uri], cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':
     cProfile.run('main()', 'stats')
