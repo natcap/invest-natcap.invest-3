@@ -1,39 +1,30 @@
 Crop Production Package
 =======================
 
+Table of Contents
+-----------------
+
++ `Model Entry Point`_
++ `Crop Production IO Module`_
++ `Crop Production Model Module`_
+
 Model Entry Point
 -----------------
 
-.. autofunction:: invest_natcap.crop_production.crop_file_index.execute
+.. autofunction:: invest_natcap.crop_production.crop_production.execute
 
-Crop File Index
----------------
+Crop Production IO Module
+-------------------------
 
-.. automodule:: invest_natcap.crop_production.crop_file_index
+.. automodule:: invest_natcap.crop_production.crop_production_io
     :members:
     :undoc-members:
     :show-inheritance:
 
-Crop Production
----------------
+Crop Production Model Module
+----------------------------
 
-.. automodule:: invest_natcap.crop_production.crop_production
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Crop Production Core
---------------------
-
-.. automodule:: invest_natcap.crop_production.crop_production_core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Crop Production Modeled
------------------------
-
-.. automodule:: invest_natcap.crop_production.crop_production_modeled
+.. automodule:: invest_natcap.crop_production.crop_production_model
     :members:
     :undoc-members:
     :show-inheritance:
