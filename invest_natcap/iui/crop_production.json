@@ -4,792 +4,248 @@
   "targetScript": "invest_natcap.crop_production.crop_production",
   "modelName": "crop_production",
   "localDocURI": "../documentation/crop_production.html",
-  "condenseElements": true,
   "height": 800,
-  "width": 700,
-  "include_meta": true,
+  "width": 800,
   "elements": [
     {
-      "id": "objectiveTabGroup",
-      "type": "tabbedGroup",
+      "id": "alpha_only",
+      "label": "This tool is in an ALPHA testing stage.",
+      "type": "label",
+      "helpText": "Alpha tools are considered unstable."
+    },
+    {
+      "id": "workspace_list",
+      "type": "list",
       "elements": [
         {
-          "id": "main_tab",
-          "label": "Inputs",
-          "type": "tab",
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../CropProduction",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate outputs from multiple runs."
+        },
+        {
+          "id": "lulc_map_uri",
+          "args_id": "lulc_map_uri",
+          "type": "file",
+          "label": "Land Use Map (Raster)",
+          "defaultValue": "../CropProduction/input/lulc_map.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": ""
+        },
+        {
+          "id": "crop_lookup_table_uri",
+          "args_id": "crop_lookup_table_uri",
+          "type": "file",
+          "label": "Crop Lookup Table (CSV)",
+          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": ""
+        }
+      ]
+    },
+    {
+      "id": "do_yield_observed",
+      "label": "Calculate Yield based on Observed Yields within Region",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "yield_observed_list",
+          "type": "list",
           "elements": [
             {
-              "id": "alpha_only",
-              "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
-              "type": "label",
-              "helpText": "Alpha tools are considered unstable."
-            },
+              "id": "observed_yield_maps_dir",
+              "args_id": "observed_yield_maps_dir",
+              "type": "folder",
+              "label": "Observed Crop Yield Maps Folder",
+              "defaultValue": "../CropProduction/input/observed_yield_maps/",
+              "required": true,
+              "helpText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "do_climate_based_yields",
+      "label": "Calculate Yield with Climate-Based Functions",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "climate_based_yields_list",
+          "type": "list",
+          "elements": [
             {
-              "id": "main_tab_list",
+              "id": "climate_bin_maps_dir",
+              "args_id": "climate_bin_maps_dir",
+              "type": "folder",
+              "label": "Crop Climate-Bin Maps Folder",
+              "defaultValue": "../CropProduction/input/climate_bin_maps/",
+              "required": true,
+              "helpText": ""
+            }
+          ]
+        },
+        {
+          "id": "do_yield_percentile",
+          "label": "Calculate Yield based on Climate-specific Distribution of Observed Yields",
+          "type": "container",
+          "defaultValue": false,
+          "collapsible": true,
+          "elements": [
+            {
+              "id": "yield_percentile_list",
               "type": "list",
               "elements": [
                 {
-                  "id": "workspace_dir",
-                  "args_id": "workspace_dir",
-                  "type": "folder",
-                  "label": "Workspace",
-                  "defaultValue": "../CropProduction/output",
+                  "id": "percentile_yield_table_uri",
+                  "args_id": "percentile_yield_table_uri",
+                  "type": "file",
+                  "label": "Percentile Yield Table (CSV)",
+                  "defaultValue": "../CropProduction/input/percentile_yield_table.csv",
                   "required": true,
-                  "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+                  "validateAs": {
+                    "type": "CSV"
+                  },
+                  "helpText": ""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "do_yield_modeled",
+          "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
+          "type": "container",
+          "defaultValue": false,
+          "collapsible": true,
+          "elements": [
+            {
+              "id": "yield_modeled_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "modeled_yield_table_uri",
+                  "args_id": "modeled_yield_table_uri",
+                  "type": "file",
+                  "label": "Modeled Yield Table (CSV)",
+                  "defaultValue": "../CropProduction/input/modeled_yield_table.csv",
+                  "required": true,
+                  "validateAs": {
+                    "type": "CSV"
+                  },
+                  "helpText": ""
                 },
                 {
-                  "id": "crop_file_name",
-                  "args_id": "crop_file_name",
+                  "id": "modeled_fertilizer_maps_dir",
+                  "args_id": "modeled_fertilizer_maps_dir",
+                  "type": "folder",
+                  "label": "Fertilizer Application Rate Maps Folder",
+                  "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",
+                  "required": true,
+                  "helpText": ""
+                },
+                {
+                  "id": "irrigation_map_uri",
+                  "args_id": "irrigation_map_uri",
                   "type": "file",
-                  "label": "Crop Map (Raster)",
-                  "defaultValue": "../CropProduction/input/lulc_samp_cur.tif",
+                  "label": "Irrigation Map (Raster)",
+                  "defaultValue": "../CropProduction/input/irrigation_map.tif",
+                  "required": true,
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "required": true,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "reclass_table",
-                  "args_id": "reclass_table",
-                  "type": "file",
-                  "label": "Crop Reclass Table (CSV)",
-                  "defaultValue": "../CropProduction/input/reclass_table.csv",
-                  "validateAs": {
-                    "type": "CSV"
-                  },
-                  "required": true
-                },
-                {
-                  "id": "enable_tab_existing",
-                  "args_id": "enable_tab_existing",
-                  "type": "checkbox",
-                  "label": "Existing Yields",
-                  "defaultValue": true
-                }
-              ]
-            },
-            {
-              "id": "enable_tab_percentile",
-              "args_id": "enable_tab_percentile",
-              "type": "container",
-              "label": "Percentile Yields",
-              "defaultValue": false,
-              "collapsible": true,
-              "elements": [
-                {
-                  "id": "percentile_list",
-                  "type": "list",
-                  "elements": [
-                    {
-                      "id": "income_raster",
-                      "args_id": "income_raster",
-                      "type": "file",
-                      "label": "Income Raster",
-                      "defaultValue": "../CropProduction/input/OECDIncomeData.tif",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": true,
-                      "enabledBy": "calculate_nutrition"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "calculate_nutrition",
-              "args_id": "calculate_nutrition",
-              "type": "container",
-              "label": "Calculate Nutrition",
-              "collapsible": true,
-              "helpText": "Nutrition help text.",
-              "elements": [
-                {
-                  "id": "nutrition_list",
-                  "type": "list",
-                  "elements": [
-                    {
-                      "id": "nutrition_table",
-                      "args_id": "nutrition_table",
-                      "type": "file",
-                      "label": "Nutrition File (CSV)",
-                      "defaultValue": "../CropProduction/input/cropNutrient.csv",
-                      "validateAs": {
-                        "type": "CSV"
-                      },
-                      "required": true,
-                      "enabledBy": "calculate_nutrition"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "calculate_valuation",
-              "args_id": "calculate_valuation",
-              "type": "container",
-              "collapsible": true,
-              "label": "Calculate Valuation",
-              "defaultValue": true,
-              "helpText": "Valuation help text.",
-              "elements": [
-                {
-                  "id": "valuation_list",
-                  "type": "list",
-                  "elements": [
-                    {
-                      "id": "region_raster",
-                      "args_id": "valuation_raster",
-                      "type": "file",
-                      "label": "Region (Raster)",
-                      "defaultValue": "../CropProduction/input/subregion.tif",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": true,
-                      "enabledBy": "calculate_valuation",
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "valuation_table",
-                      "args_id": "valuation_table",
-                      "type": "file",
-                      "label": "Economic Value (CSV)",
-                      "defaultValue": "../CropProduction/input/Agcost_data_Data.csv",
-                      "validateAs": {
-                        "type": "CSV"
-                      },
-                      "required": true,
-                      "enabledBy": "calculate_valuation",
-                      "helpText": "A CSV file."
-                    },
-                    {
-                      "id": "field_machine",
-                      "args_id": "field_machine",
-                      "type": "dropdown",
-                      "label": "Machine Cost",
-                      "options": [
-                        "low_mach",
-                        "actual_mach",
-                        "high_mach"
-                      ],
-                      "returns": "strings",
-                      "defaultValue": 1,
-                      "disabledBy": "machine_uri"
-                    },
-                    {
-                      "id": "field_seed",
-                      "args_id": "field_seed",
-                      "type": "dropdown",
-                      "label": "Seed Cost",
-                      "options": [
-                        "low_seed",
-                        "actual_seed",
-                        "high_seed"
-                      ],
-                      "returns": "strings",
-                      "defaultValue": 1,
-                      "disabledBy": "seed_uri"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "main_tab_list_2",
-              "type": "list",
-              "elements": [
-                {
-                  "id": "raster_table",
-                  "args_id": "raster_table",
-                  "type": "file",
-                  "label": "Crop Files Index",
-                  "defaultValue": "../CropProduction/input/file_index.csv",
-                  "validateAs": {
-                    "type": "CSV"
-                  },
-                  "required": true,
-                  "helpText": "A CSV file."
+                  "helpText": ""
                 }
               ]
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "do_nutrition",
+      "label": "Calculate Nutrition Contents from Yield",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
         {
-          "id": "valuation_tab",
-          "label": "Economic Value",
-          "type": "tab",
-          "enabledBy": "calculate_valuation",
+          "id": "nutrition_list",
+          "type": "list",
           "elements": [
             {
-              "id": "valuation_override_quantities",
-              "args_id": "valuation_override_quantities",
-              "label": "Use spatially explicit quantities",
-              "type": "container",
-              "collapsible": true,
-              "helpText": "",
-              "elements": [
-                {
-                  "id": "valuation_override_quantities_list",
-                  "type": "list",
-                  "elements": [
-                    {
-                      "id": "nitrogen_uri",
-                      "args_id": "nitrogen_uri",
-                      "type": "file",
-                      "label": "Nitrogen Quantity (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "phosphorus_uri",
-                      "args_id": "phosphorus_uri",
-                      "type": "file",
-                      "label": "Phosphorus Quantity (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "potasssium_uri",
-                      "args_id": "potassium_uri",
-                      "type": "file",
-                      "label": "Potassium Quantity (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "irrigation_uri",
-                      "args_id": "irrigation_uri",
-                      "type": "file",
-                      "label": "Irrigation Quantity (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "valuation_override_prices",
-              "args_id": "valuation_override_prices",
-              "label": "Use Spatially Explicit Prices",
-              "type": "container",
-              "collapsible": true,
-              "helpText": "",
-              "elements": [
-                {
-                  "id": "valuation_override_prices_list",
-                  "type": "list",
-                  "elements": [
-                    {
-                      "id": "labor_uri",
-                      "args_id": "labor_uri",
-                      "type": "file",
-                      "label": "Labor Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "machine_uri",
-                      "args_id": "machine_uri",
-                      "type": "file",
-                      "label": "Machine Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "seed_uri",
-                      "args_id": "seed_uri",
-                      "type": "file",
-                      "label": "Seed Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "nitrogen_price_uri",
-                      "args_id": "nitrogen_price_uri",
-                      "type": "file",
-                      "label": "Nitrogen Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "phosphorus_price_uri",
-                      "args_id": "phosphorus_price_uri",
-                      "type": "file",
-                      "label": "Phosphorus Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    },
-                    {
-                      "id": "potasssium_price_uri",
-                      "args_id": "potassium_price_uri",
-                      "type": "file",
-                      "label": "Potassium Price (Raster)",
-                      "defaultValue": "",
-                      "validateAs": {
-                        "type": "GDAL"
-                      },
-                      "required": false,
-                      "helpText": "A GDAL-supported raster file."
-                    }
-                  ]
-                }
-              ]
+              "id": "nutrition_table_uri",
+              "args_id": "nutrition_table_uri",
+              "type": "file",
+              "label": "Nutrient Contents Table (CSV)",
+              "defaultValue": "../CropProduction/input/nutrition_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": ""
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "do_economic_returns",
+      "label": "Calculate Economic Returns from Yield",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
         {
-          "id": "nutrition_tab",
-          "label": "Nutrition Value",
-          "type": "tab",
-          "enabledBy": "calculate_nutrition",
+          "id": "economics_list",
+          "type": "list",
           "elements": [
             {
-              "id": "nutrition_rasters",
-              "label": "<b>Enable the nutrients of study and provided spatially explicit data if desired.</b>",
-              "type": "label",
+              "id": "economics_table_uri",
+              "args_id": "economics_table_uri",
+              "type": "file",
+              "label": "Economics Table (CSV)",
+              "defaultValue": "../CropProduction/input/economics_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
               "helpText": ""
             },
             {
-              "id": "hideableFileEntry_list",
-              "args_id": "hideableFileEntry_list",
-              "type": "list",
-              "elements": [
-                {
-                  "id": "nutrient_protein",
-                  "args_id": "nutrient_protein",
-                  "type": "hideableFileEntry",
-                  "label": "Protein",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_lipids",
-                  "args_id": "nutrient_lipids",
-                  "type": "hideableFileEntry",
-                  "label": "Lipids (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_energy",
-                  "args_id": "nutrient_energy",
-                  "type": "hideableFileEntry",
-                  "label": "Energy (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_calcium",
-                  "args_id": "nutrient_calcium",
-                  "type": "hideableFileEntry",
-                  "label": "Calcium (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_iron",
-                  "args_id": "nutrient_iron",
-                  "type": "hideableFileEntry",
-                  "label": "Iron (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_magnesium",
-                  "args_id": "nutrient_magnesium",
-                  "type": "hideableFileEntry",
-                  "label": "Magenesium (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_phosphorus",
-                  "args_id": "nutrient_phosphorus",
-                  "type": "hideableFileEntry",
-                  "label": "Phosphorus (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_potassium",
-                  "args_id": "nutrient_potassium",
-                  "type": "hideableFileEntry",
-                  "label": "Potassium (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_sodium",
-                  "args_id": "nutrient_sodium",
-                  "type": "hideableFileEntry",
-                  "label": "Sodium (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_zinc",
-                  "args_id": "nutrient_zinc",
-                  "type": "hideableFileEntry",
-                  "label": "Zinc (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_copper",
-                  "args_id": "nutrient_copper",
-                  "type": "hideableFileEntry",
-                  "label": "Copper (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_flouride",
-                  "args_id": "nutrient_flouride",
-                  "type": "hideableFileEntry",
-                  "label": "Flouride (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_manganese",
-                  "args_id": "nutrient_manganese",
-                  "type": "hideableFileEntry",
-                  "label": "Manganese (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_selenium",
-                  "args_id": "nutrient_selenium",
-                  "type": "hideableFileEntry",
-                  "label": "Selenium (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_a",
-                  "args_id": "nutrient_vit_a",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin A (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_carotene_b",
-                  "args_id": "nutrient_carotene_b",
-                  "type": "hideableFileEntry",
-                  "label": "Carotene β (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_carotene_a",
-                  "args_id": "nutrient_carotene_a",
-                  "type": "hideableFileEntry",
-                  "label": "Carotene α (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_e",
-                  "args_id": "nutrient_vit_e",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin E (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_cryptoxanthin",
-                  "args_id": "nutrient_cryptoxanthin",
-                  "type": "hideableFileEntry",
-                  "label": "Cryptoxanthin (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_lycopene",
-                  "args_id": "nutrient_lycopene",
-                  "type": "hideableFileEntry",
-                  "label": "Lycopene (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_lutein",
-                  "args_id": "nutrient_lutein",
-                  "type": "hideableFileEntry",
-                  "label": "Lutein && Zeaxanthin (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_tocopherol_b",
-                  "args_id": "nutrient_tocopherol_b",
-                  "type": "hideableFileEntry",
-                  "label": "Tocopherol β (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_tocopherol_g",
-                  "args_id": "nutrient_tocopherol_g",
-                  "type": "hideableFileEntry",
-                  "label": "Tocopherol γ (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_tocopherol_d",
-                  "args_id": "nutrient_tocopherol_d",
-                  "type": "hideableFileEntry",
-                  "label": "Tocopherol δ (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_c",
-                  "args_id": "nutrient_vit_c",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin C (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b1",
-                  "args_id": "nutrient_vit_b1",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B1 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b2",
-                  "args_id": "nutrient_vit_b2",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B2 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b3",
-                  "args_id": "nutrient_vit_b3",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B3 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b5",
-                  "args_id": "nutrient_vit_b5",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B5 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b6",
-                  "args_id": "nutrient_vit_b6",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B6 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b9",
-                  "args_id": "nutrient_vit_b9",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B9 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_b12",
-                  "args_id": "nutrient_vit_b12",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin B12 (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                },
-                {
-                  "id": "nutrient_vit_k",
-                  "args_id": "nutrient_vit_k",
-                  "type": "hideableFileEntry",
-                  "label": "Vitamin K (Raster)",
-                  "defaultValue": "",
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "required": false,
-                  "helpText": "A GDAL-supported raster file."
-                }
-              ]
+              "id": "economics_fertilizer_maps_dir",
+              "args_id": "economics_fertilizer_maps_dir",
+              "type": "folder",
+              "label": "Fertilizer Application Rate Maps Folder (Optional)",
+              "defaultValue": "../CropProduction/input/economics_fertilizer_maps/",
+              "required": false,
+              "helpText": ""
             }
           ]
         }
