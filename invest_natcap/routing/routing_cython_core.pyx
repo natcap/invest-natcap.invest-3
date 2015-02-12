@@ -899,22 +899,30 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
+def distance_to_stream(
+        flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
 
-        flow_direction_uri - a raster with d-infinity flow directions
-        stream_uri - a raster where 1 indicates a stream all other values
-            ignored must be same dimensions and projection as
-            flow_direction_uri)
-        distance_uri - an output raster that will be the same dimensions as
-            the input rasters where each pixel is in linear units the drainage
-            from that point to a stream.
-        factor_uri - a floating point raster that is used to multiply the stepsize by
-            for each current pixel
+        Args:
+            flow_direction_uri (string) - (input) a path to a raster with
+                d-infinity flow directions.
+            stream_uri (string) - (input) a raster where 1 indicates a stream
+                all other values ignored must be same dimensions and projection
+                as flow_direction_uri.
+            distance_uri (string) - (output) a path to the output raster that
+                will be created as same dimensions as the input rasters where
+                each pixel is in linear units the drainage from that point to a
+                stream.
+            factor_uri (string) - (optional input) a floating point raster that
+                is used to multiply the stepsize by for each current pixel,
+                useful for some models to calculate a user defined downstream
+                factor.
 
-        returns nothing"""
+        Returns:
+            nothing"""
 
     cdef float distance_nodata = -9999
+    cdef float distance_visited = -1
     raster_utils.new_raster_from_base_uri(
         flow_direction_uri, distance_uri, 'GTiff', distance_nodata,
         gdal.GDT_Float32, fill_value=distance_nodata)
@@ -950,67 +958,85 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
     cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
 
-    #not flat on the edges of the raster, could be a sink
     cdef int block_col_size, block_row_size
     block_col_size, block_row_size = stream_band.GetBlockSize()
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
     cdef int n_global_block_cols = int(ceil(float(n_cols) / block_col_size))
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] stream_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+        dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = (
+        numpy.zeros(
+            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+            dtype=numpy.int8))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = (
+        numpy.zeros(
+            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+            dtype=numpy.float32))
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] distance_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+        dtype=numpy.float32)
 
-    band_list = [stream_band, outflow_direction_band, outflow_weights_band, distance_band]
-    block_list = [stream_block, outflow_direction_block, outflow_weights_block, distance_block]
+    band_list = [stream_band, outflow_direction_band, outflow_weights_band,
+                 distance_band]
+    block_list = [stream_block, outflow_direction_block, outflow_weights_block,
+                  distance_block]
     update_list = [False, False, False, True]
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] factor_block
-    cdef int factor_exists = factor_uri != None
+    cdef int factor_exists = (factor_uri != None)
     if factor_exists:
         factor_block = numpy.zeros(
-            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+            dtype=numpy.float32)
         factor_ds = gdal.Open(factor_uri)
         factor_band = factor_ds.GetRasterBand(1)
         band_list.append(factor_band)
         block_list.append(factor_block)
         update_list.append(False)
 
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = (
+        numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte))
 
     cdef BlockCache block_cache = BlockCache(
-        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
+        block_col_size, band_list, block_list, update_list, cache_dirty)
 
     #center point of global index
-    cdef int global_row, global_col #index into the overall raster
-    cdef int row_index, col_index #the index of the cache block
-    cdef int row_block_offset, col_block_offset #index into the cache block
-    cdef int global_block_row, global_block_col #used to walk the global blocks
+    cdef int global_row, global_col
+    cdef int row_index, col_index
+    cdef int row_block_offset, col_block_offset
+    cdef int global_block_row, global_block_col
 
     #neighbor sections of global index
-    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
-    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
-    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+    cdef int neighbor_row, neighbor_col
+    cdef int neighbor_row_index, neighbor_col_index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset
 
-    #build up the stream pixel indexes
+    #build up the stream pixel indexes as starting seed points for the search
     cdef time_t last_time, current_time
     time(&last_time)
     for global_block_row in xrange(n_global_block_rows):
         time(&current_time)
         if current_time - last_time > 5.0:
-            LOGGER.info("find_sinks %.1f%% complete", (global_block_row + 1.0) / n_global_block_rows * 100)
+            LOGGER.info(
+                "find_sinks %.1f%% complete",
+                (global_block_row + 1.0) / n_global_block_rows * 100)
             last_time = current_time
         for global_block_col in xrange(n_global_block_cols):
-            for global_row in xrange(global_block_row*block_row_size, min((global_block_row+1)*block_row_size, n_rows)):
-                for global_col in xrange(global_block_col*block_col_size, min((global_block_col+1)*block_col_size, n_cols)):
-                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-
-                    if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-                        #it's a stream, remember that
+            for global_row in xrange(
+                    global_block_row*block_row_size,
+                    min((global_block_row+1)*block_row_size, n_rows)):
+                for global_col in xrange(
+                        global_block_col*block_col_size,
+                        min((global_block_col+1)*block_col_size, n_cols)):
+                    block_cache.update_cache(
+                        global_row, global_col, &row_index, &col_index,
+                        &row_block_offset, &col_block_offset)
+                    if stream_block[
+                            row_index, col_index, row_block_offset,
+                            col_block_offset] == 1:
                         visit_stack.push(global_row * n_cols + global_col)
 
     cdef int flat_index
@@ -1019,62 +1045,81 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
     cdef float outflow_weight, neighbor_distance, step_size
     cdef float factor
     cdef int it_flows_here
-    cdef int step_count = 0
     cdef int downstream_index, downstream_uncalculated
 
     while visit_stack.size() > 0:
         flat_index = visit_stack.top()
-        visit_stack.pop()
 
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
 
-        step_count += 1
         time(&current_time)
         if current_time - last_time > 5.0:
             last_time = current_time
             LOGGER.info(
-                'visit_stack on stream distance size: %d (reports every 5.0 secs)' %
-                (visit_stack.size()))
+                'visit_stack on stream distance size: %d ', visit_stack.size())
 
+        block_cache.update_cache(
+            global_row, global_col, &row_index, &col_index,
+            &row_block_offset, &col_block_offset)
+        current_distance = distance_block[
+            row_index, col_index, row_block_offset, col_block_offset]
 
-        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-        current_distance = distance_block[row_index, col_index, row_block_offset, col_block_offset]
-
-        if current_distance != distance_nodata:
+        if (current_distance != distance_nodata and
+                current_distance != distance_visited):
             #if cell is already defined, then skip
             continue
 
-        outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
-        if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1 or outflow_weight == outflow_nodata:
+        #mark as visited
+        distance_block[
+            row_index, col_index, row_block_offset, col_block_offset] = (
+                distance_visited)
+        cache_dirty[row_index, col_index] = 1
+
+        outflow_weight = outflow_weights_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+
+        if (stream_block[row_index, col_index,
+                         row_block_offset, col_block_offset] == 1 or
+                outflow_weight == outflow_nodata):
             #it's a stream, set distance to zero
-            distance_block[row_index, col_index, row_block_offset, col_block_offset] = 0
-            cache_dirty[row_index, col_index] = 1
-        else:
+            distance_block[
+                row_index, col_index, row_block_offset, col_block_offset] = 0
+        elif current_distance != distance_visited:
             #check to see if downstream neighbors are processed
             downstream_uncalculated = False
+            outflow_direction = outflow_direction_block[
+                row_index, col_index, row_block_offset, col_block_offset]
+
             for downstream_index in range(2):
-                block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-                outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
-                outflow_direction = outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset]
+
                 if downstream_index == 1:
+                    #rotate weight and direction
                     outflow_weight = 1.0 - outflow_weight
                     outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.0:
                     neighbor_row = global_row + row_offsets[outflow_direction]
                     neighbor_col = global_col + col_offsets[outflow_direction]
-                    if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
-                        #out of bounds
+                    if (neighbor_row < 0 or neighbor_row >= n_rows or
+                            neighbor_col < 0 or neighbor_col >= n_cols):
                         continue
 
-                    block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
-                    neighbor_distance = distance_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
-                    neighbor_outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                    block_cache.update_cache(
+                        neighbor_row, neighbor_col, &neighbor_row_index,
+                        &neighbor_col_index, &neighbor_row_block_offset,
+                        &neighbor_col_block_offset)
+                    neighbor_distance = distance_block[
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset]
+                    neighbor_outflow_weight = outflow_weights_block[
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset]
 
                     #make sure that downstream neighbor isn't processed and
                     #isn't a nodata pixel for some reason
-                    if neighbor_distance == distance_nodata and neighbor_outflow_weight != outflow_nodata:
+                    if (neighbor_distance == distance_nodata and
+                            neighbor_outflow_weight != outflow_nodata):
                         visit_stack.push(neighbor_row * n_cols + neighbor_col)
                         downstream_uncalculated = True
 
@@ -1082,31 +1127,48 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
                 #need to process downstream first
                 continue
 
-            #calculate current
-            block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-            distance_block[row_index, col_index, row_block_offset, col_block_offset] = 0
+            #if we made it here we can calculate current distance
+            block_cache.update_cache(
+                global_row, global_col, &row_index, &col_index,
+                &row_block_offset, &col_block_offset)
+            distance_block[
+                row_index, col_index, row_block_offset, col_block_offset] = 0
             cache_dirty[row_index, col_index] = 1
-            outflow_weight = outflow_weights_block[row_index, col_index, row_block_offset, col_block_offset]
-            outflow_direction = outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset]
-            for downstream_index in range(2):
+            #current is processed
+            visit_stack.pop()
 
+            outflow_weight = outflow_weights_block[
+                row_index, col_index, row_block_offset, col_block_offset]
+            outflow_direction = outflow_direction_block[
+                row_index, col_index, row_block_offset, col_block_offset]
+
+            if factor_exists:
+                factor = factor_block[
+                    row_index, col_index, row_block_offset,
+                    col_block_offset]
+            else:
+                factor = 1.0
+            downstream_distance = 0
+            for downstream_index in range(2):
                 if downstream_index == 1:
                     outflow_weight = 1.0 - outflow_weight
                     outflow_direction = (outflow_direction + 1) % 8
 
                 if outflow_weight > 0.0:
                     neighbor_row = global_row + row_offsets[outflow_direction]
-                    if neighbor_row < 0 or neighbor_row >= n_rows:
-                        #out of bounds
-                        continue
-
                     neighbor_col = global_col + col_offsets[outflow_direction]
-                    if neighbor_col < 0 or neighbor_col >= n_cols:
+                    if (neighbor_row < 0 or neighbor_row >= n_rows or
+                            neighbor_col < 0 or neighbor_col >= n_cols):
                         #out of bounds
                         continue
 
-                    block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
-                    neighbor_distance = distance_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                    block_cache.update_cache(
+                        neighbor_row, neighbor_col, &neighbor_row_index,
+                        &neighbor_col_index, &neighbor_row_block_offset,
+                        &neighbor_col_block_offset)
+                    neighbor_distance = distance_block[
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset]
 
                     if outflow_direction % 2 == 1:
                         #increase distance by a square root of 2 for diagonal
@@ -1114,50 +1176,55 @@ def distance_to_stream(flow_direction_uri, stream_uri, distance_uri, factor_uri=
                     else:
                         step_size = cell_size
 
-                    if neighbor_distance != distance_nodata:
-                        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-                        if factor_exists:
-                            factor = factor_block[row_index, col_index, row_block_offset, col_block_offset]
-                        else:
-                            factor = 1.0
-                        distance_block[row_index, col_index, row_block_offset, col_block_offset] += (
-                            neighbor_distance + step_size * factor) * outflow_weight
-                        cache_dirty[row_index, col_index] = 1
+                    if (neighbor_distance != distance_nodata and
+                            neighbor_distance != distance_visited):
+                        downstream_distance += outflow_weight * (
+                            neighbor_distance + step_size * factor)
+
+            block_cache.update_cache(
+                global_row, global_col, &row_index, &col_index,
+                &row_block_offset, &col_block_offset)
+            distance_block[
+                row_index, col_index,
+                row_block_offset, col_block_offset] = downstream_distance
+            cache_dirty[row_index, col_index] = 1
 
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
             neighbor_row = global_row + row_offsets[neighbor_index]
-            if neighbor_row < 0 or neighbor_row >= n_rows:
-                #out of bounds
-                continue
             neighbor_col = global_col + col_offsets[neighbor_index]
-            if neighbor_col < 0 or neighbor_col >= n_cols:
+            if (neighbor_row < 0 or neighbor_row >= n_rows or
+                    neighbor_col < 0 or neighbor_col >= n_cols):
                 #out of bounds
                 continue
 
-            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+            block_cache.update_cache(
+                neighbor_row, neighbor_col, &neighbor_row_index,
+                &neighbor_col_index, &neighbor_row_block_offset,
+                &neighbor_col_block_offset)
             neighbor_outflow_direction = outflow_direction_block[
-                neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_direction == outflow_direction_nodata:
                 continue
 
-            neighbor_outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+            neighbor_outflow_weight = outflow_weights_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
 
             it_flows_here = False
             if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
-                #the neighbor flows into this cell
                 it_flows_here = True
-
-            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
-                #the offset neighbor flows into this cell
+            elif ((neighbor_outflow_direction + 1) % 8 ==
+                    inflow_offsets[neighbor_index]):
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
             if (it_flows_here and neighbor_outflow_weight > 0.0 and
-                distance_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] ==
-                distance_nodata):
-                #not touched yet, set distance push on the visit stack
+                    distance_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] ==
+                    distance_nodata):
                 visit_stack.push(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
