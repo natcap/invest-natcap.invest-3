@@ -67,12 +67,14 @@ def main():
     routing_utils.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
+    LOGGER.info('calculating streams')
     v_stream_uri = os.path.join(
         output_directory, 'v_stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
         flow_accumulation_uri, float(args['threshold_flow_accumulation']),
         v_stream_uri)
 
+    LOGGER.info('calculating downstream distance')
     prefix, suffix = os.path.splitext(args['downstream_distance_filename'])
     distance_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
@@ -82,7 +84,7 @@ def main():
     qgis_bin = r"C:\Program Files\QGIS Brighton\bin\qgis.bat"
     subprocess.Popen(
         [qgis_bin, dem_uri, flow_direction_uri, flow_accumulation_uri,
-         distance_uri], cwd=os.path.dirname(qgis_bin))
+         distance_uri, v_stream_uri], cwd=os.path.dirname(qgis_bin))
 
 if __name__ == '__main__':
     cProfile.run('main()', 'stats')
