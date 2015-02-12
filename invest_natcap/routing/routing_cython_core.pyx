@@ -1068,6 +1068,7 @@ def distance_to_stream(
         if (current_distance != distance_nodata and
                 current_distance != distance_visited):
             #if cell is already defined, then skip
+            visit_stack.pop()
             continue
 
         #mark as visited
@@ -1085,58 +1086,55 @@ def distance_to_stream(
             #it's a stream, set distance to zero
             distance_block[
                 row_index, col_index, row_block_offset, col_block_offset] = 0
-        elif current_distance != distance_visited:
-            #check to see if downstream neighbors are processed
-            downstream_uncalculated = False
-            outflow_direction = outflow_direction_block[
-                row_index, col_index, row_block_offset, col_block_offset]
+        else:
+            if current_distance != distance_visited:
+                #check to see if downstream neighbors are processed
+                downstream_uncalculated = False
+                outflow_direction = outflow_direction_block[
+                    row_index, col_index, row_block_offset, col_block_offset]
 
-            for downstream_index in range(2):
+                for downstream_index in range(2):
 
-                if downstream_index == 1:
-                    #rotate weight and direction
-                    outflow_weight = 1.0 - outflow_weight
-                    outflow_direction = (outflow_direction + 1) % 8
+                    if downstream_index == 1:
+                        #rotate weight and direction
+                        outflow_weight = 1.0 - outflow_weight
+                        outflow_direction = (outflow_direction + 1) % 8
 
-                if outflow_weight > 0.0:
-                    neighbor_row = global_row + row_offsets[outflow_direction]
-                    neighbor_col = global_col + col_offsets[outflow_direction]
-                    if (neighbor_row < 0 or neighbor_row >= n_rows or
-                            neighbor_col < 0 or neighbor_col >= n_cols):
-                        continue
+                    if outflow_weight > 0.0:
+                        neighbor_row = (
+                            global_row + row_offsets[outflow_direction])
+                        neighbor_col = (
+                            global_col + col_offsets[outflow_direction])
+                        if (neighbor_row < 0 or neighbor_row >= n_rows or
+                                neighbor_col < 0 or neighbor_col >= n_cols):
+                            continue
 
-                    block_cache.update_cache(
-                        neighbor_row, neighbor_col, &neighbor_row_index,
-                        &neighbor_col_index, &neighbor_row_block_offset,
-                        &neighbor_col_block_offset)
-                    neighbor_distance = distance_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]
-                    neighbor_outflow_weight = outflow_weights_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]
+                        block_cache.update_cache(
+                            neighbor_row, neighbor_col, &neighbor_row_index,
+                            &neighbor_col_index, &neighbor_row_block_offset,
+                            &neighbor_col_block_offset)
+                        neighbor_distance = distance_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset,
+                            neighbor_col_block_offset]
+                        neighbor_outflow_weight = outflow_weights_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset,
+                            neighbor_col_block_offset]
 
-                    #make sure that downstream neighbor isn't processed and
-                    #isn't a nodata pixel for some reason
-                    if (neighbor_distance == distance_nodata and
-                            neighbor_outflow_weight != outflow_nodata):
-                        visit_stack.push(neighbor_row * n_cols + neighbor_col)
-                        downstream_uncalculated = True
+                        #make sure that downstream neighbor isn't processed and
+                        #isn't a nodata pixel for some reason
+                        if (neighbor_distance == distance_nodata and
+                                neighbor_outflow_weight != outflow_nodata):
+                            visit_stack.push(
+                                neighbor_row * n_cols + neighbor_col)
+                            downstream_uncalculated = True
 
-            if downstream_uncalculated:
-                #need to process downstream first
-                continue
+                if downstream_uncalculated:
+                    #need to process downstream first
+                    continue
 
             #if we made it here we can calculate current distance
-            block_cache.update_cache(
-                global_row, global_col, &row_index, &col_index,
-                &row_block_offset, &col_block_offset)
-            distance_block[
-                row_index, col_index, row_block_offset, col_block_offset] = 0
-            cache_dirty[row_index, col_index] = 1
-            #current is processed
-            visit_stack.pop()
-
             outflow_weight = outflow_weights_block[
                 row_index, col_index, row_block_offset, col_block_offset]
             outflow_direction = outflow_direction_block[
@@ -1180,6 +1178,8 @@ def distance_to_stream(
                             neighbor_distance != distance_visited):
                         downstream_distance += outflow_weight * (
                             neighbor_distance + step_size * factor)
+                    if neighbor_distance == distance_visited:
+                        LOGGER.warn("Upstream from a visisted but uncalcualted downstream neighbor with outflow weight %f", outflow_weight)
 
             block_cache.update_cache(
                 global_row, global_col, &row_index, &col_index,
@@ -1188,6 +1188,9 @@ def distance_to_stream(
                 row_index, col_index,
                 row_block_offset, col_block_offset] = downstream_distance
             cache_dirty[row_index, col_index] = 1
+
+            #current is processed
+            visit_stack.pop()
 
         #push any upstream neighbors that inflow onto the stack
         for neighbor_index in range(8):
@@ -1221,10 +1224,12 @@ def distance_to_stream(
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
+            neighbor_distance = distance_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
+
             if (it_flows_here and neighbor_outflow_weight > 0.0 and
-                    distance_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] ==
-                    distance_nodata):
+                    neighbor_distance == distance_nodata):
                 visit_stack.push(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
