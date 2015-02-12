@@ -1065,6 +1065,7 @@ def distance_to_stream(
         block_cache.update_cache(
             global_row, global_col, &row_index, &col_index,
             &row_block_offset, &col_block_offset)
+
         current_distance = distance_block[
             row_index, col_index, row_block_offset, col_block_offset]
 
@@ -1085,6 +1086,12 @@ def distance_to_stream(
                 neighbor_row, neighbor_col, &neighbor_row_index,
                 &neighbor_col_index, &neighbor_row_block_offset,
                 &neighbor_col_block_offset)
+
+            if stream_block[neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset] == 1:
+                #streams were already added, skip if they are in the queue
+                continue
+
             neighbor_outflow_direction = outflow_direction_block[
                 neighbor_row_index, neighbor_col_index,
                 neighbor_row_block_offset, neighbor_col_block_offset]
