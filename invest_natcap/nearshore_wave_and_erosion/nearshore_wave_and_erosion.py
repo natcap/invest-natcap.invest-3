@@ -704,6 +704,7 @@ def execute(args):
                 args['habitat_information'][i][1] else None), i) \
             for i in range(len(args['habitat_information']))])
 
+
     # Assign a positional index to every habitat field
     args['field_index'] = {}
     for shapefile in shapefile_required_fields:

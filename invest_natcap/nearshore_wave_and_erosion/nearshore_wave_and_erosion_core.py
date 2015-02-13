@@ -1784,6 +1784,11 @@ def combine_natural_habitats(args, transect_data_file):
             (args['tiles'], args['habitat_field_count'], args['max_transect_length']), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
+    # A dictionary that maps habitat codes as found on site to a habitat name:
+    # {'kelp':1, 'seagrass':2, 'levee':5, etc.}
+    # This is useful for the user-specified habitat types such as corals, beach, marsh
+    habitat_name_map = {}
+
     
     category = 'natural habitats'
 
@@ -1821,10 +1826,31 @@ def combine_natural_habitats(args, transect_data_file):
                 type_key = key
                 break
 
+
         # Extract the habitat type for this shapefile
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
+        # Store the habitat combinations in a set (remove nodata)
         shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+        unique_values = \
+            set(raster_utils.unique_raster_values_uri(type_shapefile_uri))
+        if shapefile_nodata in unique_values:
+            unique_values.remove(shapefile_nodata)
+
+        # Save all the habitat values in this layer to the field index dictionary
+        for code in unique_values:
+            # Check the code is not already used 
+            # (2 habitats can't have the same code)
+            assert code not in habitat_name_map, \
+                'code ' + str(code) + ' for ' + habitat_type_name + \
+                ' is already used by ' + habitat_name_map[code]
+
+            # Assign this code to the habitat name
+            habitat_name_map[code] = habitat_type_name
+
+        args['field_index']['natural habitats'][habitat]['habitat_values'] = \
+            unique_values
+
 
         raster = gdal.Open(type_shapefile_uri)
         band = raster.GetRasterBand(1)
@@ -1873,12 +1899,12 @@ def combine_natural_habitats(args, transect_data_file):
 #                else:
 #                    print('No constraints for', habitat_type_name)
 
-            # Load the habitat type buffer
-            destination = habitat_type_dataset[transect,start:end]
-
-
             # Overriding shapefile_nodata so it doesn't interfere with habitat_nodata
             habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
+
+
+            # Load the habitat type buffer
+            destination = habitat_type_dataset[transect,start:end]
 
 
             # Compute the mask that will be used to update the values
@@ -1894,13 +1920,10 @@ def combine_natural_habitats(args, transect_data_file):
             for index in mask[0]:
                 habitat_type_dataset[transect, index] = habitat_type[index]
 
-#            # Remove nodata
-#            clipped_positions = \
-#                (raw_positions[0][start:end], raw_positions[1][start:end])
-#
-#            # Positions to update
-#            masked_positions = \
-#                (clipped_positions[0][mask], clipped_positions[1][mask])
+    # Save the habitat index codes that we just used
+    with open(os.path.join(args['output_dir'], 'habitat_index_codes.json'), 'w') \
+        as habitat_index_codes:
+        json.dump(habitat_name_map, habitat_index_codes)
 
         
         print('')
@@ -1970,6 +1993,12 @@ def combine_natural_habitats(args, transect_data_file):
             # Close the raster before proceeding to the next one
             band = None
             raster = None
+
+#    # Save the habitat index codes that we just used
+#    with open(os.path.join(args['output_dir'], 'habitat_properties.json'), 'w') \
+#        as habitat_property_codes:
+#        json.dump(args['field_index'], habitat_property_codes)
+
 
 
 def apply_habitat_constraints(mask, habitat_type, args):
