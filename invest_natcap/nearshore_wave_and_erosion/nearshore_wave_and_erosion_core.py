@@ -1796,12 +1796,16 @@ def combine_natural_habitats(args, transect_data_file):
     hdf5_files[category] = []
     mask_dataset = transect_data_file['mask']
 
+    # --------------------------------------------
+    # Process each habitat layer
+    # --------------------------------------------
     for shp_name in args['shapefiles'][category]:
 
         LOGGER.info('Extracting information from ' + shp_name)
         
         # Find habitat_id that will be used to search field position in field_index:
         habitat_type_name = args['shapefile types'][category][shp_name]
+
         habitat_id = None
         for habitat in args['field_index']['natural habitats']:
             if args['field_index']['natural habitats'][habitat]['name'] == \
@@ -1857,7 +1861,9 @@ def combine_natural_habitats(args, transect_data_file):
 
         tiles = args['tiles']
 
-        print('shp_name', habitat_type_name, shp_name)
+        # ---------------------------------
+        # Store habitat type
+        # ---------------------------------
         progress_step = max(tiles / 50, 1)
         for transect in range(tiles):
             if transect % progress_step == 0:
@@ -1909,30 +1915,24 @@ def combine_natural_habitats(args, transect_data_file):
 
             # Compute the mask that will be used to update the values
             mask = np.where(destination < habitat_type)
-#            print('mask', mask)
 
             # Apply habitat constraints
             # mask = np.logical_and(mask, constraints)
-
-#            mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
             for index in mask[0]:
                 habitat_type_dataset[transect, index] = habitat_type[index]
 
-    # Save the habitat index codes that we just used
-    with open(os.path.join(args['output_dir'], 'habitat_index_codes.json'), 'w') \
-        as habitat_index_codes:
-        json.dump(habitat_name_map, habitat_index_codes)
-
-        
         print('')
+
 
         # Clean up
         band = None
         raster = None
 
-        # Go through each property for the current habitat
+        # ---------------------------------
+        # Store habitat properties
+        # ---------------------------------
         for field in args['shapefiles'][category][shp_name]:
 
             # Skip the field 'type'
@@ -1950,14 +1950,13 @@ def combine_natural_habitats(args, transect_data_file):
             raster = gdal.Open(uri)
             band = raster.GetRasterBand(1)
 
-#            LOGGER.info('Extracting transect information from ' + basename)
-            
-            # Process 
+            # Process each transect individually
             progress_step = max(tiles / 50, 1)
             for transect in range(tiles):
                 if transect % progress_step == 0:
                     print '.',
 
+                # Extract raster positions and transect extents
                 [start, end] = indices_limit_dataset[transect]
 
                 raw_positions = \
@@ -1965,28 +1964,24 @@ def combine_natural_habitats(args, transect_data_file):
                     positions_dataset[transect, 1, start:end])
 
 
-                #Load the habitats as sampled from the raster
-                habitat_property = (np.ones(end-start) * -1).astype('float32')
+                # Store field value wherever we find the current habitat
                 for position in range(end-start):
-                    habitat_property[position] = \
-                        band.ReadAsArray(int(raw_positions[1][position]), \
-                            int(raw_positions[0][position]), 1, 1)
 
-                habitat_property = habitat_property[start:end,]
+                    # Load habitat type, and convert it to string (dict key)
+                    habitat_type = \
+                        str(band.ReadAsArray(int(raw_positions[1][position]), \
+                            int(raw_positions[0][position]), 1, 1)[0])
 
-                destination = \
-                    habitat_properties_dataset[transect, field_id, start:end]
+                    # If current habitat at this position, write the field value
+                    if (habitat_type in habitat_name_map) and \
+                        habitat_name_map[habitat_type] == habitat_type_name:
 
-                # Save transect to file
-                mask = mask_dataset[transect, start:end]
+                        field_value = \
+                            band.ReadAsArray(int(raw_positions[1][position]), \
+                                int(raw_positions[0][position]), 1, 1)
 
-                destination[mask] = habitat_property[mask]
-
-                clipped_positions = \
-                    (raw_positions[0][start:end], raw_positions[1][start:end])
-
-                masked_positions = \
-                    (clipped_positions[0][mask], clipped_positions[1][mask])
+                        habitat_properties_dataset[transect, field_id, position] = \
+                            field_value
                 
             print('')
 
@@ -1994,11 +1989,10 @@ def combine_natural_habitats(args, transect_data_file):
             band = None
             raster = None
 
-#    # Save the habitat index codes that we just used
-#    with open(os.path.join(args['output_dir'], 'habitat_properties.json'), 'w') \
-#        as habitat_property_codes:
-#        json.dump(args['field_index'], habitat_property_codes)
-
+    # Save the habitat index codes that we just used
+    with open(os.path.join(args['output_dir'], 'habitat_index_codes.json'), 'w') \
+        as habitat_index_codes:
+        json.dump(habitat_name_map, habitat_index_codes)
 
 
 def apply_habitat_constraints(mask, habitat_type, args):
