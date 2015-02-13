@@ -522,7 +522,7 @@ def execute(args):
             for the curvature of the earth and refraction of visible light in
             air.
         pop_uri (string): Raster used to determine population within the
-            AOI’s land-seascape where point features contributing to negative
+            AOI's land-seascape where point features contributing to negative
             scenic quality are visible and not visible.
         overlap_uri (string): A shapefile used to determine the impact of
             objects on visual quality. This input must be a polygon and

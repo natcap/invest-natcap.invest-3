@@ -151,9 +151,10 @@ def compute_transects(args):
 
     # Going through the bathymetry raster tile-by-tile.
     LOGGER.debug('Detecting shore')
-    progress_step = (i_end - i_start) / i_side_coarse / 50
+    progress_step = max((i_end - i_start) / i_side_coarse / 50, 1)
+#    for i in range(i_start, i_start+10*i_side_coarse, i_side_coarse):
     for i in range(i_start, i_end, i_side_coarse):
-        if i % progress_step == 0:
+        if (i / i_side_coarse)  % progress_step == 0:
             print '.',
 
         # Top of the current tile
@@ -258,6 +259,7 @@ def compute_transects(args):
                     
                     # extract remaining information about it
                     else:
+#                        print('transect raw positions', raw_positions[0][start:end])
                         transect_info.append( \
                             {'raw_positions': \
                                 (raw_positions[0][start:end], \
@@ -270,7 +272,13 @@ def compute_transects(args):
                         max_transect_length = end - start
                     
                     tiles += 1
+
+#            if tiles >= 10:
+#                break
+
     print('')
+
+#    sys.exit(0)
 
     # Cleanup
     bathymetry = None
@@ -410,7 +418,7 @@ def compute_transects(args):
 
     # Saving the shore
     shore_points = transects.nonzero()  # Extract the shore points
-    progress_step = shore_points[0].size / 50
+    progress_step = max(shore_points[0].size / 50, 1)
     for segment in range(shore_points[0].size):
         if segment % progress_step == 0:
             print '.',
@@ -433,7 +441,7 @@ def compute_transects(args):
     store_tidal_information(args, transect_data_file)
 
     # Saving transects
-    progress_step = tiles / 50
+    progress_step = max(tiles / 50, 1)
     habitat_type_dataset = transect_data_file['habitat_type']
     for transect in range(transect_count):
         if transect % progress_step == 0:
@@ -445,8 +453,10 @@ def compute_transects(args):
 
         for pos in range(end-start):
             # Store bathymetry in the transect
-            single_value[0, 0] = bathymetry_dataset[transect, pos]
-#            single_value[0, 0] = habitat_type_dataset[transect, pos]
+
+#            single_value[0, 0] = bathymetry_dataset[transect, pos]
+            single_value[0, 0] = habitat_type_dataset[transect, pos]
+            
             transect_band.WriteArray( \
                 single_value, \
                 int(positions_dataset[transect, 1, pos]), \
@@ -1451,7 +1461,7 @@ def store_tidal_information(args, transect_data_file):
 
         tiles = args['tiles']
  
-        progress_step = tiles / 50
+        progress_step = max(tiles / 50, 1)
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
@@ -1537,7 +1547,7 @@ def store_climatic_forcing(args, transect_data_file):
 
         tiles = args['tiles']
 
-        progress_step = tiles / 50
+        progress_step = max(tiles / 50, 1)
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
@@ -1646,7 +1656,7 @@ def combine_soil_types(args, transect_data_file):
 
     tiles = args['tiles']
 
-    progress_step = tiles / 50
+    progress_step = max(tiles / 50, 1)
     for transect in range(tiles):
         if transect % progress_step == 0:
             print '.',
@@ -1707,7 +1717,7 @@ def combine_soil_types(args, transect_data_file):
         raster = gdal.Open(uri)
         band = raster.GetRasterBand(1)
 
-        progress_step = tiles / 50
+        progress_step = max(tiles / 50, 1)
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
@@ -1821,7 +1831,8 @@ def combine_natural_habitats(args, transect_data_file):
 
         tiles = args['tiles']
 
-        progress_step = tiles / 50
+        print('shp_name', habitat_type_name, shp_name)
+        progress_step = max(tiles / 50, 1)
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
@@ -1840,6 +1851,7 @@ def combine_natural_habitats(args, transect_data_file):
                 habitat_type[position] = \
                     band.ReadAsArray(int(raw_positions[1][position]), \
                         int(raw_positions[0][position]), 1, 1)[0]
+
 
             # Load the constraints
             for hab_id in range(len(args['habitat_information'])):
@@ -1870,31 +1882,26 @@ def combine_natural_habitats(args, transect_data_file):
 
 
             # Compute the mask that will be used to update the values
-            mask = destination < habitat_type
+            mask = np.where(destination < habitat_type)
+#            print('mask', mask)
 
             # Apply habitat constraints
             # mask = np.logical_and(mask, constraints)
 
-            mask_dataset[transect, start:end] = mask
+#            mask_dataset[transect, start:end] = mask
 
             # Update habitat_types with new type of higher priority
-            destination[mask] = habitat_type[mask]
+            for index in mask[0]:
+                habitat_type_dataset[transect, index] = habitat_type[index]
 
-            # Remove nodata
-            clipped_positions = \
-                (raw_positions[0][start:end], raw_positions[1][start:end])
+#            # Remove nodata
+#            clipped_positions = \
+#                (raw_positions[0][start:end], raw_positions[1][start:end])
+#
+#            # Positions to update
+#            masked_positions = \
+#                (clipped_positions[0][mask], clipped_positions[1][mask])
 
-            # Positions to update
-            masked_positions = \
-                (clipped_positions[0][mask], clipped_positions[1][mask])
-
-            if category in args['valid_habitat_types']:
-                # Update the values using habitat_type
-                transects[masked_positions] = habitat_type[mask]
-                # Leave the transect ID on the transect's shore
-                shore = shore_dataset[transect]
-                transects[(raw_positions[0][shore], \
-                    raw_positions[1][shore])] = transect
         
         print('')
 
@@ -1923,7 +1930,7 @@ def combine_natural_habitats(args, transect_data_file):
 #            LOGGER.info('Extracting transect information from ' + basename)
             
             # Process 
-            progress_step = tiles / 50
+            progress_step = max(tiles / 50, 1)
             for transect in range(tiles):
                 if transect % progress_step == 0:
                     print '.',
@@ -2112,13 +2119,13 @@ def compute_transect_orientation(position, orientation, landmass):
 
 
 def compute_raw_transect_depths(shore_point, \
-    direction_vector, bathymetry, bathymetry_uri, landmass, landmass_uri, model_resolution, \
-    max_land_profile_len, max_land_profile_height, \
+    direction_vector, bathymetry, bathymetry_uri, landmass, landmass_uri, \
+    bathymetry_resolution, max_land_profile_len, max_land_profile_height, \
     max_sea_profile_len):
     """ compute the transect endpoints that will be used to cut transects"""
     # Maximum transect extents
-    max_land_len = max_land_profile_len / model_resolution
-    max_sea_len = 1000 * max_sea_profile_len / model_resolution
+    max_land_len = max_land_profile_len / bathymetry_resolution
+    max_sea_len = 1000 * max_sea_profile_len / bathymetry_resolution
 
     bathymetry_raster = gdal.Open(bathymetry_uri)
     bathymetry_band = bathymetry_raster.GetRasterBand(1)
@@ -2131,8 +2138,8 @@ def compute_raw_transect_depths(shore_point, \
 
     depths = np.ones((max_land_len + max_sea_len + 1))*-20000
 
-    I = np.ones(depths.size) * -1
-    J = np.ones(depths.size) * -1
+    I = (np.ones(depths.size) * -1).astype(int)
+    J = (np.ones(depths.size) * -1).astype(int)
 
     p_i = shore_point[0]
     
@@ -2185,8 +2192,8 @@ def compute_raw_transect_depths(shore_point, \
                 break
             # We can store the depth at this point
             depths[max_land_len - inland_steps] = elevation
-            I[max_land_len - inland_steps] = start_i
-            J[max_land_len - inland_steps] = start_j
+            I[max_land_len - inland_steps] = int(round(start_i))
+            J[max_land_len - inland_steps] = int(round(start_j))
 
             # Move backward (inland)
             start_i -= d_i
@@ -2216,8 +2223,8 @@ def compute_raw_transect_depths(shore_point, \
             break
         # We can store the depth at this point
         depths[max_land_len + offshore_steps] = elevation
-        I[max_land_len + offshore_steps] = start_i
-        J[max_land_len + offshore_steps] = start_j
+        I[max_land_len + offshore_steps] = int(round(start_i))
+        J[max_land_len + offshore_steps] = int(round(start_j))
 
         # Move forward (offshore)
         start_i += d_i
@@ -2232,9 +2239,9 @@ def compute_raw_transect_depths(shore_point, \
     offshore_steps = max(0, offshore_steps)
 
     start = max_land_len - inland_steps
-    end = inland_steps + offshore_steps + 1
+    end = max_land_len + offshore_steps + 1
 
-    return (depths[start:end], (I[start:end].astype(int), J[start:end].astype(int)))
+    return (depths[start:end], (I[start:end], J[start:end]))
 
 
 def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'):

@@ -663,9 +663,7 @@ def execute(args):
     suitability_transition_dict = {}
 
     if args["calculate_transition"]:
-        print('calculating transition:')
         for next_lulc in transition_dict:
-            print('next_lulc', next_lulc)
             this_uri = os.path.join(workspace, transition_name % next_lulc)
             #construct reclass dictionary
             reclass_dict = {}
@@ -978,6 +976,9 @@ def execute(args):
                                               "union")
 
                 minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+
+                assert minimum < maximum, "Wrong distance (min, max) = (" + \
+                    str(minimum) + ", " + str(maximum) + ") in " + fdistance_uri
 
                 def normalize_op(value):
                     if value == transition_nodata:
