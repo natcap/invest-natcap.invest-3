@@ -1013,6 +1013,8 @@ def distance_to_stream(
     cdef int neighbor_row_index, neighbor_col_index
     cdef int neighbor_row_block_offset, neighbor_col_block_offset
 
+    cdef float original_distance
+
     #build up the stream pixel indexes as starting seed points for the search
     cdef time_t last_time, current_time
     time(&last_time)
@@ -1047,6 +1049,8 @@ def distance_to_stream(
     cdef int downstream_index, downstream_calculated
     cdef float downstream_distance
 
+    cdef float INF = n_rows * n_cols * cell_size
+
     while visit_queue.size() > 0:
         flat_index = visit_queue.front()
         visit_queue.pop()
@@ -1063,43 +1067,32 @@ def distance_to_stream(
             global_row, global_col, &row_index, &col_index,
             &row_block_offset, &col_block_offset)
 
-        current_distance = distance_block[
-            row_index, col_index, row_block_offset, col_block_offset]
-
-        if current_distance != distance_nodata:
-            #already defined
-            continue
+        update_downstream = False
+        update_inflow = False
 
         if stream_block[row_index, col_index, row_block_offset,
                 col_block_offset] == 1:
             distance_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 0
             cache_dirty[row_index, col_index] = 1
-        else:
-            #determine downstream neighbors
-            outflow_direction = outflow_direction_block[
-                row_index, col_index, row_block_offset,
-                col_block_offset]
-            outflow_weight = outflow_weights_block[
-                row_index, col_index, row_block_offset,
-                col_block_offset]
+            update_inflow = True
 
-            if outflow_weight == outflow_nodata:
-                #this cell doesn't drain, distance to stream is 0
-                distance_block[row_index, col_index,
-                    row_block_offset, col_block_offset] = 0
-                cache_dirty[row_index, col_index] = 1
-                continue
+        original_distance = distance_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+        outflow_direction = outflow_direction_block[
+            row_index, col_index, row_block_offset,
+            col_block_offset]
+        outflow_weight = outflow_weights_block[
+            row_index, col_index, row_block_offset,
+            col_block_offset]
 
-            downstream_distance = 0
-            downstream_calculated = True
-
+        if outflow_direction != outflow_nodata:
+            current_distance = 0
             if factor_exists:
                 factor = factor_block[
                     row_index, col_index, row_block_offset, col_block_offset]
             else:
                 factor = 1.0
-
             for neighbor_index in xrange(2):
                 #check if downstream neighbors are calcualted
                 if neighbor_index == 1:
@@ -1121,6 +1114,10 @@ def distance_to_stream(
                 neighbor_distance = distance_block[
                     neighbor_row_index, neighbor_col_index,
                     neighbor_row_block_offset, neighbor_col_block_offset]
+                if neighbor_distance == distance_nodata:
+                    neighbor_distance = INF
+                    visit_queue.push(neighbor_row * n_cols + neighbor_col)
+                    update_downstream = True
 
                 if outflow_direction % 2 == 1:
                     #increase distance by a square root of 2 for diagonal
@@ -1128,99 +1125,64 @@ def distance_to_stream(
                 else:
                     step_size = cell_size
 
-                if neighbor_distance == distance_nodata:
+                current_distance += (
+                    neighbor_distance + step_size * factor) * outflow_weight
 
-                    neighbor_outflow_direction = outflow_direction_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]
-
-                    if neighbor_outflow_direction == outflow_direction_nodata:
-                        #if the neighbor has no flow, distance to a stream is 0
-                        downstream_distance += step_size
-                        continue
-
-                    neighbor_outflow_weight = outflow_weights_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]
-                    it_flows_here = False
-                    if (neighbor_outflow_direction ==
-                            inflow_offsets[neighbor_index]):
-                        it_flows_here = True
-                    elif ((neighbor_outflow_direction + 1) % 8 ==
-                            inflow_offsets[neighbor_index]):
-                        it_flows_here = True
-                        neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
-
-                    if not it_flows_here or (it_flows_here and
-                            neighbor_outflow_weight < outflow_weight):
-                        downstream_calculated = False
-                        visit_queue.push(neighbor_row * n_cols + neighbor_col)
-                    else:
-                        #don't bother getting a contribution from the
-                        #downstream neighbor because it flows into this cell
-                        #more than this cell flows into it.  this is meant
-                        #to break loops where there's a roundoff error amount
-                        #of flow.
-                        downstream_distance += step_size
-                else:
-                    downstream_distance += (
-                        neighbor_distance + step_size * factor) * outflow_weight
-
-            if downstream_calculated:
-                block_cache.update_cache(
-                    global_row, global_col, &row_index, &col_index,
-                    &row_block_offset, &col_block_offset)
-                distance_block[row_index, col_index, row_block_offset,
-                    col_block_offset]  = downstream_distance
+            if (current_distance < original_distance or
+                    original_distance == distance_nodata):
+                distance_block[row_index, col_index,
+                    row_block_offset, col_block_offset] = current_distance
                 cache_dirty[row_index, col_index] = 1
-            else:
-                visit_queue.push(flat_index)
-                continue
+                update_inflow = True
 
-        #update any upstream neighbors with this distance
-        for neighbor_index in range(8):
-            neighbor_row = global_row + row_offsets[neighbor_index]
-            neighbor_col = global_col + col_offsets[neighbor_index]
-            if (neighbor_row < 0 or neighbor_row >= n_rows or
-                    neighbor_col < 0 or neighbor_col >= n_cols):
-                #out of bounds
-                continue
+        if update_downstream:
+            #that means we should revisit this index once the downstream are
+            #fixed just in case the downstream changed?  do we need to?
+            #if the downstream updates inflow it'll pick this one up again...
+            #visit_queue.push(flat_index)
+            pass
+        elif update_inflow:
+            #update any upstream neighbors with this distance
+            for neighbor_index in range(8):
+                neighbor_row = global_row + row_offsets[neighbor_index]
+                neighbor_col = global_col + col_offsets[neighbor_index]
+                if (neighbor_row < 0 or neighbor_row >= n_rows or
+                        neighbor_col < 0 or neighbor_col >= n_cols):
+                    #out of bounds
+                    continue
 
-            block_cache.update_cache(
-                neighbor_row, neighbor_col, &neighbor_row_index,
-                &neighbor_col_index, &neighbor_row_block_offset,
-                &neighbor_col_block_offset)
+                block_cache.update_cache(
+                    neighbor_row, neighbor_col, &neighbor_row_index,
+                    &neighbor_col_index, &neighbor_row_block_offset,
+                    &neighbor_col_block_offset)
 
-            if stream_block[neighbor_row_index, neighbor_col_index,
-                    neighbor_row_block_offset, neighbor_col_block_offset] == 1:
                 #streams were already added, skip if they are in the queue
-                continue
+                if stream_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset,
+                        neighbor_col_block_offset] == 1:
+                    continue
 
-            neighbor_outflow_direction = outflow_direction_block[
-                neighbor_row_index, neighbor_col_index,
-                neighbor_row_block_offset, neighbor_col_block_offset]
-            if neighbor_outflow_direction == outflow_direction_nodata:
-                #if the neighbor has no flow, we can't pass the distance to it
-                continue
+                neighbor_outflow_direction = outflow_direction_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+                if neighbor_outflow_direction == outflow_direction_nodata:
+                    #if the neighbor has no flow, we can't flow here
+                    continue
 
-            neighbor_outflow_weight = outflow_weights_block[
-                neighbor_row_index, neighbor_col_index,
-                neighbor_row_block_offset, neighbor_col_block_offset]
+                neighbor_outflow_weight = outflow_weights_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
 
-            it_flows_here = False
-            if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
-                it_flows_here = True
-            elif ((neighbor_outflow_direction + 1) % 8 ==
-                    inflow_offsets[neighbor_index]):
-                it_flows_here = True
-                neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
+                it_flows_here = False
+                if (neighbor_outflow_direction ==
+                        inflow_offsets[neighbor_index]):
+                    it_flows_here = True
+                elif ((neighbor_outflow_direction + 1) % 8 ==
+                        inflow_offsets[neighbor_index]):
+                    it_flows_here = True
+                    neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
-            neighbor_distance = distance_block[
-                neighbor_row_index, neighbor_col_index,
-                neighbor_row_block_offset, neighbor_col_block_offset]
-
-            if it_flows_here and neighbor_outflow_weight > 0.0:
-                if neighbor_distance == distance_nodata:
+                if it_flows_here and neighbor_outflow_weight > 0.0:
                     visit_queue.push(neighbor_row * n_cols + neighbor_col)
 
     block_cache.flush_cache()
