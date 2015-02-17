@@ -1629,7 +1629,7 @@ def combine_soil_types(args, transect_data_file):
     # Extract the type for this shapefile
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
-    source_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+    shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
 
     raster = gdal.Open(type_shapefile_uri)
     band = raster.GetRasterBand(1)
@@ -1663,33 +1663,28 @@ def combine_soil_types(args, transect_data_file):
 
         [start, end] = indices_limit_dataset[transect]
 
-        #raw_positions = transect_info[transect]['raw_positions']
         raw_positions = \
             (positions_dataset[transect, 0, start:end], \
             positions_dataset[transect, 1, start:end])
 
         #Load the habitats as sampled from the raster
-        source = np.ones(end-start) * -1
         for position in range(end-start):
-            source[position] = \
+            
+            soil_type = \
                 band.ReadAsArray(int(raw_positions[1][position]), \
                     int(raw_positions[0][position]), 1, 1)[0]
 
-        # Load the soil type buffer
-        destination = soil_type_dataset[transect,start:end]
+            dataset_type = soil_type_dataset[transect,position]
 
-        # Overriding source_nodata so it doesn't interfere with habitat_nodata
-        source[source == source_nodata] = habitat_nodata
 
-        # Copy soil type directly to destination
-        destination = source
+            if dataset_type == shapefile_nodata:
+                soil_type_dataset[transect,position] = habitat_nodata
 
-        # Apply the soil type constraints
-        for mud_only_habitat in mud_only_habitat_ids:
-            replace_with_mud = np.where(destination == mud_only_habitat)
+            elif dataset_type < soil_type:
+                soil_type_dataset[transect,position] = soil_type
 
-            if replace_with_mud[0].size:
-                destination[replace_with_mud] = soil_types['mud']
+            if soil_type in mud_only_habitat_ids:
+                soil_type_dataset[transect,position] = soil_types['mud']
     
     print('')
 
@@ -1730,23 +1725,13 @@ def combine_soil_types(args, transect_data_file):
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
             
-            source = np.ones(end-start) * -1
             for position in range(end-start):
-                source[position] = \
+                field_value = \
                     band.ReadAsArray(int(raw_positions[1][position]), \
-                        int(raw_positions[0][position]), 1, 1)[0]
+                        int(raw_positions[0][position]), 1, 1)
 
-            destination = \
-                soil_properties_dataset[transect, field_id, start:end]
-
-            # We just copy the source to the destination, without checking 
-            # for mud as above with the soil type. This is because for soil 
-            # type, we know what value we should use: the code for mud.
-            # Here, for soil properties, we don't know what values we should
-            # be using, so we just copy the values over. It's the user's 
-            # responsibility to put valid properties for mud and gravel/sand
-            # wherever there could be two possible types of soil.
-            destination = source
+                soil_properties_dataset[transect, field_id, position] = \
+                    field_value
             
         print('')
 
@@ -1821,7 +1806,8 @@ def combine_natural_habitats(args, transect_data_file):
                 args['shapefiles'][category][shp_name].keys()]
 
         # Assert if field 'type' doesn't exist
-        assert 'type' in field_names_lowercase
+        assert 'type' in field_names_lowercase, "Can't find field 'type' in " \
+            + str(field_names_lowercase)
 
         # Store the key 'type' in its original case
         type_key = None
@@ -1871,7 +1857,6 @@ def combine_natural_habitats(args, transect_data_file):
 
             [start, end] = indices_limit_dataset[transect]
 
-            #raw_positions = transect_info[transect]['raw_positions']
             raw_positions = \
                 (positions_dataset[transect, 0, start:end], \
                 positions_dataset[transect, 1, start:end])
@@ -1893,7 +1878,7 @@ def combine_natural_habitats(args, transect_data_file):
                     habitat_type_dataset[transect,position] = habitat_type
                     habitat_presence += 1
 
-            print habitat_presence,
+#            print habitat_presence,
 
 #            # Load the constraints
 #            for hab_id in range(len(args['habitat_information'])):
@@ -1915,7 +1900,6 @@ def combine_natural_habitats(args, transect_data_file):
 ##                else:
 ##                    print('No constraints for', habitat_type_name)
 
-        print('')
         print('')
 
 
@@ -1978,7 +1962,7 @@ def combine_natural_habitats(args, transect_data_file):
 
                         valid_hab_positions += 1
 
-                print valid_hab_positions,
+#                print valid_hab_positions,
                 
             print('')
 

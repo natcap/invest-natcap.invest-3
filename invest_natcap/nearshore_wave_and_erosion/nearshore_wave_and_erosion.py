@@ -596,7 +596,7 @@ def execute(args):
             {'shapefile type':'underwater structures'},        
             {'constraints':{'land':0.}}), 
         ('coral reef',            
-            {'shapefile type':'coral reef', 'type':4},                   
+            {'shapefile type':'coral reef'},                   
             {'constraints':{'land':0.}}), 
         ('levee',                 
             {'shapefile type':'man-made structure', 'type':5}, 
