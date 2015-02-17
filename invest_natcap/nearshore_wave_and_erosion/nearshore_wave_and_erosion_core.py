@@ -1877,52 +1877,45 @@ def combine_natural_habitats(args, transect_data_file):
                 positions_dataset[transect, 1, start:end])
 
             #Load the habitats as sampled from the raster
-            habitat_type = np.ones(end-start) * -1
+            habitat_presence = 0
             for position in range(end-start):
 
-                habitat_type[position] = \
+                habitat_type = \
                     band.ReadAsArray(int(raw_positions[1][position]), \
                         int(raw_positions[0][position]), 1, 1)[0]
 
+                dataset_type = habitat_type_dataset[transect,position]
 
-            # Load the constraints
-            for hab_id in range(len(args['habitat_information'])):
-                habitat_name = args['habitat_information'][hab_id][0]
+                if dataset_type == shapefile_nodata:
+                    habitat_type_dataset[transect,position] = habitat_nodata
 
-                if habitat_name == habitat_type_name:
-                    assert 'constraints' in args['habitat_information'][hab_id][2] 
-#                    print('Found constraints in', habitat_type_name, \
-#                        args['habitat_information'][hab_id][2]['constraints'])
-                    constraints = np.copy(habitat_type)
-                    #constraint_uri = 
-                    #constraint_raster = gdal.Open(constraint_uri)
-                    #constraint_band = constraint_raster.GetRasterBand(1)
-                    #for position in range(end-start):
-                    #    constraints[position] = \
-                    #        constraint_band.ReadAsArray( \
-                    #            int(raw_positions[1][position]), \
-                    #            int(raw_positions[0][position]), 1, 1)[0]
-#                else:
-#                    print('No constraints for', habitat_type_name)
+                elif dataset_type < habitat_type:
+                    habitat_type_dataset[transect,position] = habitat_type
+                    habitat_presence += 1
 
-            # Overriding shapefile_nodata so it doesn't interfere with habitat_nodata
-            habitat_type[habitat_type == shapefile_nodata] = habitat_nodata
+            print habitat_presence,
 
+#            # Load the constraints
+#            for hab_id in range(len(args['habitat_information'])):
+#                habitat_name = args['habitat_information'][hab_id][0]
+#
+#                if habitat_name == habitat_type_name:
+#                    assert 'constraints' in args['habitat_information'][hab_id][2] 
+##                    print('Found constraints in', habitat_type_name, \
+##                        args['habitat_information'][hab_id][2]['constraints'])
+#                    constraints = np.copy(habitat_type)
+#                    #constraint_uri = 
+#                    #constraint_raster = gdal.Open(constraint_uri)
+#                    #constraint_band = constraint_raster.GetRasterBand(1)
+#                    #for position in range(end-start):
+#                    #    constraints[position] = \
+#                    #        constraint_band.ReadAsArray( \
+#                    #            int(raw_positions[1][position]), \
+#                    #            int(raw_positions[0][position]), 1, 1)[0]
+##                else:
+##                    print('No constraints for', habitat_type_name)
 
-            # Load the habitat type buffer
-            destination = habitat_type_dataset[transect,start:end]
-
-
-            # Compute the mask that will be used to update the values
-            mask = np.where(destination < habitat_type)
-
-            # Apply habitat constraints
-            # mask = np.logical_and(mask, constraints)
-
-            # Update habitat_types with new type of higher priority
-            for index in mask[0]:
-                habitat_type_dataset[transect, index] = habitat_type[index]
-
+        print('')
         print('')
 
 
@@ -1965,12 +1958,12 @@ def combine_natural_habitats(args, transect_data_file):
 
 
                 # Store field value wherever we find the current habitat
+                valid_hab_positions = 0
                 for position in range(end-start):
 
                     # Load habitat type, and convert it to string (dict key)
                     habitat_type = \
-                        str(band.ReadAsArray(int(raw_positions[1][position]), \
-                            int(raw_positions[0][position]), 1, 1)[0])
+                        habitat_type_dataset[transect,position]
 
                     # If current habitat at this position, write the field value
                     if (habitat_type in habitat_name_map) and \
@@ -1982,6 +1975,10 @@ def combine_natural_habitats(args, transect_data_file):
 
                         habitat_properties_dataset[transect, field_id, position] = \
                             field_value
+
+                        valid_hab_positions += 1
+
+                print valid_hab_positions,
                 
             print('')
 
