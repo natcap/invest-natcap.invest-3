@@ -353,10 +353,6 @@ def compute_transects(args):
             (tiles, 4), \
             compression = 'gzip', fillvalue = habitat_nodata)
 
-    mask_dataset = transect_data_file.create_dataset('mask', \
-            (args['tiles'], args['max_transect_length']), \
-            compression = 'gzip', fillvalue = False, dtype = 'b')
-
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
@@ -1598,7 +1594,6 @@ def combine_soil_types(args, transect_data_file):
     category = 'soil type'
 
     hdf5_files[category] = []
-    mask_dataset = transect_data_file['mask']
 
     filenames = args['shapefiles'][category].keys()
 
@@ -1779,7 +1774,6 @@ def combine_natural_habitats(args, transect_data_file):
 
     # Create hdf5 category for natural habitats
     hdf5_files[category] = []
-    mask_dataset = transect_data_file['mask']
 
     # --------------------------------------------
     # Process each habitat layer
