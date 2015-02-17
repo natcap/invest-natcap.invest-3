@@ -596,7 +596,7 @@ def execute(args):
             {'shapefile type':'underwater structures'},        
             {'constraints':{'land':0.}}), 
         ('coral reef',            
-            {'shapefile type':'coral reef'},                   
+            {'shapefile type':'coral reef', 'type':4},                   
             {'constraints':{'land':0.}}), 
         ('levee',                 
             {'shapefile type':'man-made structure', 'type':5}, 
@@ -753,7 +753,6 @@ def execute(args):
                 destination['fields'][field_name.lower()] = field_id
 
                 field_id += 1
-
 
     # Save the dictionary
     field_index_dictionary_uri = \
