@@ -1079,12 +1079,15 @@ def distance_to_stream(
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
 
+
+
         block_cache.update_cache(
             global_row, global_col, &row_index, &col_index,
             &row_block_offset, &col_block_offset)
 
         update_downstream = False
         pushed_current = False
+        current_distance = 0.0
 
         time(&current_time)
         if current_time - last_time > 5.0:
@@ -1117,6 +1120,8 @@ def distance_to_stream(
         if current_stream == 1:
             distance_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 0
+            processed_cell_block[row_index, col_index,
+                row_block_offset, col_block_offset] = 1
             cache_dirty[row_index, col_index] = 1
         else:
             #add downstream distance to current distance
