@@ -1079,8 +1079,6 @@ def distance_to_stream(
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
 
-
-
         block_cache.update_cache(
             global_row, global_col, &row_index, &col_index,
             &row_block_offset, &col_block_offset)
@@ -1125,8 +1123,6 @@ def distance_to_stream(
             cache_dirty[row_index, col_index] = 1
         else:
             #add downstream distance to current distance
-            original_distance = distance_block[
-                row_index, col_index, row_block_offset, col_block_offset]
             outflow_direction = outflow_direction_block[
                 row_index, col_index, row_block_offset,
                 col_block_offset]
@@ -1149,8 +1145,8 @@ def distance_to_stream(
                 if outflow_weight <= 0.0:
                     continue
 
-                neighbor_row = global_row + row_offsets[neighbor_index]
-                neighbor_col = global_col + col_offsets[neighbor_index]
+                neighbor_row = global_row + row_offsets[outflow_direction]
+                neighbor_col = global_col + col_offsets[outflow_direction]
                 if (neighbor_row < 0 or neighbor_row >= n_rows or
                         neighbor_col < 0 or neighbor_col >= n_cols):
                     #out of bounds
