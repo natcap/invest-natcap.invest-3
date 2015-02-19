@@ -13,6 +13,7 @@ from cython.operator cimport dereference as deref
 
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
+from libcpp.deque cimport deque
 from libcpp.set cimport set as c_set
 from libcpp.map cimport map
 from libc.math cimport atan
@@ -94,7 +95,7 @@ cdef class BlockCache:
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    @cython.cdivision(True)
+    @cython.cdivision(False)
     cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
         cdef int cache_row_size, cache_col_size
         cdef int global_row_offset, global_col_offset
@@ -441,7 +442,7 @@ def calculate_transport(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def calculate_flow_weights(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
     """This function calculates the flow weights from a d-infinity based
@@ -524,7 +525,9 @@ def calculate_flow_weights(
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
     cdef int n_neighbors = 8
-    cdef double *angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+    cdef double angle_to_neighbor[8]
+    for index in range(8):
+        angle_to_neighbor[index] = 2.0*PI*index/8.0
 
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     cdef int *diagonal_offsets = [
@@ -567,9 +570,9 @@ def calculate_flow_weights(
                                 outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
 
                             # clamping the outflow weight in case it's too large or small
-                            if outflow_weight >= 1.0:
+                            if outflow_weight >= 1.0 - 1e-6:
                                 outflow_weight = 1.0
-                            if outflow_weight <= 0.0:
+                            if outflow_weight <= 1e-6:
                                 outflow_weight = 1.0
                                 neighbor_direction_index = (neighbor_direction_index + 1) % 8
                             outflow_direction_block[row_index, col_index, row_block_offset, col_block_offset] = neighbor_direction_index
@@ -665,7 +668,7 @@ def fill_pits(dem_uri, dem_out_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
@@ -898,7 +901,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
@@ -941,7 +944,7 @@ def distance_to_stream(
     n_rows, n_cols = raster_utils.get_row_col_from_uri(
         flow_direction_uri)
 
-    cdef stack[int] visit_stack
+    cdef deque[int] visit_stack
 
     stream_ds = gdal.Open(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
@@ -952,8 +955,8 @@ def distance_to_stream(
     distance_ds = gdal.Open(distance_uri, gdal.GA_Update)
     distance_band = distance_ds.GetRasterBand(1)
 
-    outflow_weights_uri = raster_utils.temporary_filename()
-    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = os.path.join(os.path.dirname(flow_direction_uri),'outflow_weights.tif')#raster_utils.temporary_filename()
+    outflow_direction_uri = os.path.join(os.path.dirname(flow_direction_uri),'outflow_direction.tif')#raster_utils.temporary_filename()
     calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     outflow_weights_ds = gdal.Open(outflow_weights_uri)
@@ -1058,8 +1061,14 @@ def distance_to_stream(
                             row_index, col_index, row_block_offset,
                             col_block_offset] == 1:
                         flat_index = global_row * n_cols + global_col
-                        visit_stack.push(global_row * n_cols + global_col)
+                        visit_stack.push_front(global_row * n_cols + global_col)
                         cells_in_queue.insert(flat_index)
+
+                        distance_block[row_index, col_index,
+                            row_block_offset, col_block_offset] = 0
+                        processed_cell_block[row_index, col_index,
+                            row_block_offset, col_block_offset] = 1
+                        cache_dirty[row_index, col_index] = 1
 
     cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
@@ -1073,8 +1082,8 @@ def distance_to_stream(
     cdef int pushed_current = False
 
     while visit_stack.size() > 0:
-        flat_index = visit_stack.top()
-        visit_stack.pop()
+        flat_index = visit_stack.front()
+        visit_stack.pop_front()
         cells_in_queue.erase(flat_index)
         global_row = flat_index / n_cols
         global_col = flat_index % n_cols
@@ -1084,7 +1093,6 @@ def distance_to_stream(
             &row_block_offset, &col_block_offset)
 
         update_downstream = False
-        pushed_current = False
         current_distance = 0.0
 
         time(&current_time)
@@ -1121,7 +1129,8 @@ def distance_to_stream(
             processed_cell_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 1
             cache_dirty[row_index, col_index] = 1
-        else:
+        elif processed_cell_block[row_index, col_index, row_block_offset,
+                col_block_offset] == 0:
             #add downstream distance to current distance
             outflow_direction = outflow_direction_block[
                 row_index, col_index, row_block_offset,
@@ -1166,17 +1175,18 @@ def distance_to_stream(
                 neighbor_distance = distance_block[
                     neighbor_row_index, neighbor_col_index,
                     neighbor_row_block_offset, neighbor_col_block_offset]
-                if neighbor_distance == distance_nodata:
+                if processed_cell_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset,
+                        neighbor_col_block_offset] == 0:
                     neighbor_flat_index = neighbor_row * n_cols + neighbor_col
                     #insert into the processing queue if it's not already there
+                    if (cells_in_queue.find(flat_index) ==
+                            cells_in_queue.end()):
+                        visit_stack.push_back(flat_index)
+                        cells_in_queue.insert(flat_index)
                     if (cells_in_queue.find(neighbor_flat_index) ==
                             cells_in_queue.end()):
-                        if (cells_in_queue.find(flat_index) ==
-                                cells_in_queue.end() and not pushed_current):
-                            visit_stack.push(flat_index)
-                            cells_in_queue.insert(flat_index)
-                            pushed_current = True
-                        visit_stack.push(neighbor_flat_index)
+                        visit_stack.push_front(neighbor_flat_index)
                         cells_in_queue.insert(neighbor_flat_index)
                         update_downstream = True
                     neighbor_distance = 0.0
@@ -1190,6 +1200,10 @@ def distance_to_stream(
                 current_distance += (
                     neighbor_distance + step_size * factor) * outflow_weight
 
+            if not update_downstream:
+                distance_block[row_index, col_index,
+                    row_block_offset, col_block_offset] = current_distance
+                cache_dirty[row_index, col_index] = 1
         if not update_downstream:
             #mark flat_index as processed
             block_cache.update_cache(
@@ -1257,7 +1271,7 @@ def distance_to_stream(
                 if (it_flows_here and neighbor_outflow_weight > 0.0 and
                     cells_in_queue.find(neighbor_flat_index) ==
                         cells_in_queue.end()):
-                    visit_stack.push(neighbor_flat_index)
+                    visit_stack.push_back(neighbor_flat_index)
                     cells_in_queue.insert(neighbor_flat_index)
 
     block_cache.flush_cache()
@@ -1265,7 +1279,7 @@ def distance_to_stream(
     for dataset in [outflow_weights_ds, outflow_direction_ds]:
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
-        os.remove(dataset_uri)
+        pass#os.remove(dataset_uri)
 
 
 @cython.boundscheck(False)
@@ -1467,7 +1481,7 @@ def percent_to_sink(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def flat_edges(dem_uri, flow_direction_uri):
     """This function locates flat cells that border on higher and lower terrain
         and places them into sets for further processing.
@@ -1616,7 +1630,7 @@ def flat_edges(dem_uri, flow_direction_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def label_flats(dem_uri, low_edges, labels_uri):
     """A flood fill function to give all the cells of each flat a unique
         label
@@ -1769,7 +1783,7 @@ def label_flats(dem_uri, low_edges, labels_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def clean_high_edges(labels_uri, high_edges):
     """Removes any high edges that do not have labels and reports them if so.
 
@@ -1842,7 +1856,7 @@ def clean_high_edges(labels_uri, high_edges):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def drain_flats(
         high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri):
     """A wrapper function for draining flats so it can be called from a
@@ -1878,7 +1892,7 @@ def drain_flats(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 cdef away_from_higher(
         high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
         map[int, int] &flat_height):
@@ -2054,7 +2068,7 @@ cdef away_from_higher(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 cdef towards_lower(
         low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
         map[int, int] &flat_height):
@@ -2223,7 +2237,7 @@ cdef towards_lower(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def flow_direction_inf_masked_flow_dirs(
         flat_mask_uri, labels_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm for regions defined from flat
@@ -2484,7 +2498,7 @@ def flow_direction_inf_masked_flow_dirs(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
+@cython.cdivision(False)
 def find_outlets(dem_uri, flow_direction_uri):
     """Discover and return the outlets in the dem array
 
