@@ -392,12 +392,14 @@ def flow_direction_d_inf(
     flat_mask_uri = raster_utils.temporary_filename()
     labels_uri = raster_utils.temporary_filename()
 
-    resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
+    flats_exist = resolve_flats(
+        dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
 
     #Do the second pass with the flat mask and overwrite the flow direction
     #nodata that was not calculated on the first pass
-    routing_cython_core.flow_direction_inf_masked_flow_dirs(
-        flat_mask_uri, labels_uri, flow_direction_uri)
+    if flats_exist:
+        routing_cython_core.flow_direction_inf_masked_flow_dirs(
+            flat_mask_uri, labels_uri, flow_direction_uri)
 
 
 def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
@@ -413,7 +415,7 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
                 GDAL Dataset with partially defined d_infinity flow directions
 
         Returns:
-            nothing"""
+            True if there were flats to resolve, False otherwise"""
 
     high_edges, low_edges = routing_cython_core.flat_edges(
         dem_uri, flow_direction_uri)
@@ -424,7 +426,7 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
             LOGGER.warn('There were undrainable flats')
         else:
             LOGGER.info('There were no flats')
-        return
+        return False
 
     LOGGER.info('labeling flats')
     routing_cython_core.label_flats(dem_uri, low_edges, labels_uri)
@@ -434,3 +436,5 @@ def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
 
     routing_cython_core.drain_flats(
         high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri)
+
+    return True
