@@ -6,7 +6,6 @@ import logging
 import os
 import operator
 
-import numpy
 from osgeo import gdal, ogr, osr
 
 from invest_natcap import raster_utils
