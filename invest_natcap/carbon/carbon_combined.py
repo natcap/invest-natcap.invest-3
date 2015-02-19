@@ -146,6 +146,12 @@ def _package_valuation_args(args, biophysical_outputs):
     args['yr_cur'] = args['lulc_cur_year']
     args['yr_fut'] = args['lulc_fut_year']
 
+    if args['yr_cur'] >= args['yr_fut']:
+        raise Exception(
+            'The current year must be earlier than the future year. '
+            'The values for current/future year are: %d/%d' %
+            (args['yr_cur'], args['yr_fut']))
+
     biophysical_to_valuation = {
         'uncertainty': 'uncertainty_data',
         'sequest_redd': 'sequest_redd_uri',
