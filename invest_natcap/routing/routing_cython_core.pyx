@@ -886,7 +886,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     if slope_max > 0:
                         flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
                             a_f[max_index] * flow_direction_max_slope +
-                            a_c[max_index] * 3.14159265 / 2.0)
+                            a_c[max_index] * PI / 2.0)
                         cache_dirty[e_0_row_index, e_0_col_index] = 1
 
     block_cache.flush_cache()
@@ -1190,10 +1190,6 @@ def distance_to_stream(
                 current_distance += (
                     neighbor_distance + step_size * factor) * outflow_weight
 
-            distance_block[row_index, col_index,
-                row_block_offset, col_block_offset] = current_distance
-            cache_dirty[row_index, col_index] = 1
-
         if not update_downstream:
             #mark flat_index as processed
             block_cache.update_cache(
@@ -1201,6 +1197,8 @@ def distance_to_stream(
                 &row_block_offset, &col_block_offset)
             processed_cell_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 1
+            distance_block[row_index, col_index,
+                row_block_offset, col_block_offset] = current_distance
             cache_dirty[row_index, col_index] = 1
 
             #update any upstream neighbors with this distance
@@ -2474,7 +2472,7 @@ def flow_direction_inf_masked_flow_dirs(
                     if slope_max > 0:
                         flow_block[e_0_row_index, e_0_col_index, e_0_row_block_offset, e_0_col_block_offset] = (
                             a_f[max_index] * flow_direction_max_slope +
-                            a_c[max_index] * 3.14159265 / 2.0)
+                            a_c[max_index] * PI / 2.0)
                         cache_dirty[e_0_row_index, e_0_col_index] = 1
 
     block_cache.flush_cache()
