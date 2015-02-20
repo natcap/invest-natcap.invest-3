@@ -95,7 +95,7 @@ cdef class BlockCache:
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    @cython.cdivision(False)
+    @cython.cdivision(True)
     cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
         cdef int cache_row_size, cache_col_size
         cdef int global_row_offset, global_col_offset
@@ -442,7 +442,7 @@ def calculate_transport(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def calculate_flow_weights(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
     """This function calculates the flow weights from a d-infinity based
@@ -668,7 +668,7 @@ def fill_pits(dem_uri, dem_out_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
@@ -901,7 +901,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
     """This function calculates the flow downhill distance to the stream layers
@@ -943,6 +943,7 @@ def distance_to_stream(
     cdef int n_rows, n_cols
     n_rows, n_cols = raster_utils.get_row_col_from_uri(
         flow_direction_uri)
+    cdef int INF = n_rows + n_cols
 
     cdef deque[int] visit_stack
 
@@ -961,7 +962,7 @@ def distance_to_stream(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     outflow_weights_ds = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
-    cdef float outflow_nodata = raster_utils.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = raster_utils.get_nodata_from_uri(
         outflow_weights_uri)
     outflow_direction_ds = gdal.Open(outflow_direction_uri)
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
@@ -1081,6 +1082,8 @@ def distance_to_stream(
 
     cdef int pushed_current = False
 
+    cdef int log_iteration = False
+
     while visit_stack.size() > 0:
         flat_index = visit_stack.front()
         visit_stack.pop_front()
@@ -1095,6 +1098,7 @@ def distance_to_stream(
         update_downstream = False
         current_distance = 0.0
 
+        log_iteration = False
         time(&current_time)
         if current_time - last_time > 5.0:
             last_time = current_time
@@ -1119,22 +1123,26 @@ def distance_to_stream(
                 col_block_offset]
             LOGGER.info("outflow_direction %f", outflow_direction)
             LOGGER.info("outflow_weight %f", outflow_weight)
+            log_iteration = True
 
 
         current_stream = stream_block[
             row_index, col_index, row_block_offset, col_block_offset]
+        outflow_direction = outflow_direction_block[
+            row_index, col_index, row_block_offset,
+            col_block_offset]
         if current_stream == 1:
             distance_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 0
             processed_cell_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 1
             cache_dirty[row_index, col_index] = 1
+        elif outflow_direction == outflow_direction_nodata:
+            current_distance = INF
         elif processed_cell_block[row_index, col_index, row_block_offset,
                 col_block_offset] == 0:
             #add downstream distance to current distance
-            outflow_direction = outflow_direction_block[
-                row_index, col_index, row_block_offset,
-                col_block_offset]
+
             outflow_weight = outflow_weights_block[
                 row_index, col_index, row_block_offset,
                 col_block_offset]
@@ -1175,6 +1183,22 @@ def distance_to_stream(
                 neighbor_distance = distance_block[
                     neighbor_row_index, neighbor_col_index,
                     neighbor_row_block_offset, neighbor_col_block_offset]
+
+                neighbor_outflow_direction = outflow_direction_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+
+                neighbor_outflow_weight = outflow_weights_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+
+
+                if log_iteration:
+                    LOGGER.debug("neighbor_index %d", neighbor_index)
+                    LOGGER.debug("neighbor_distance %f", neighbor_distance)
+                    LOGGER.debug("neighbor direction %f", neighbor_outflow_direction)
+                    LOGGER.debug("neighbor weight %f", neighbor_outflow_weight)
+
                 if processed_cell_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset,
                         neighbor_col_block_offset] == 0:
@@ -1184,10 +1208,18 @@ def distance_to_stream(
                             cells_in_queue.end()):
                         visit_stack.push_back(flat_index)
                         cells_in_queue.insert(flat_index)
+                        if log_iteration:
+                            LOGGER.debug("current not in queue so added")
+
                     if (cells_in_queue.find(neighbor_flat_index) ==
                             cells_in_queue.end()):
+                        if log_iteration:
+                            LOGGER.debug("neighbor not in queue so added")
                         visit_stack.push_front(neighbor_flat_index)
                         cells_in_queue.insert(neighbor_flat_index)
+                    else:
+                        if log_iteration:
+                            LOGGER.debug("neighbor already in queue so not added")
                     update_downstream = True
                     neighbor_distance = 0.0
 
@@ -1481,7 +1513,7 @@ def percent_to_sink(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def flat_edges(dem_uri, flow_direction_uri):
     """This function locates flat cells that border on higher and lower terrain
         and places them into sets for further processing.
@@ -1630,7 +1662,7 @@ def flat_edges(dem_uri, flow_direction_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def label_flats(dem_uri, low_edges, labels_uri):
     """A flood fill function to give all the cells of each flat a unique
         label
@@ -1783,7 +1815,7 @@ def label_flats(dem_uri, low_edges, labels_uri):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def clean_high_edges(labels_uri, high_edges):
     """Removes any high edges that do not have labels and reports them if so.
 
@@ -1856,7 +1888,7 @@ def clean_high_edges(labels_uri, high_edges):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def drain_flats(
         high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri):
     """A wrapper function for draining flats so it can be called from a
@@ -1892,7 +1924,7 @@ def drain_flats(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 cdef away_from_higher(
         high_edges, labels_uri, flow_direction_uri, flat_mask_uri,
         map[int, int] &flat_height):
@@ -2068,7 +2100,7 @@ cdef away_from_higher(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 cdef towards_lower(
         low_edges, labels_uri, flow_direction_uri, flat_mask_uri,
         map[int, int] &flat_height):
@@ -2237,7 +2269,7 @@ cdef towards_lower(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def flow_direction_inf_masked_flow_dirs(
         flat_mask_uri, labels_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm for regions defined from flat
@@ -2498,7 +2530,7 @@ def flow_direction_inf_masked_flow_dirs(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(False)
+@cython.cdivision(True)
 def find_outlets(dem_uri, flow_direction_uri):
     """Discover and return the outlets in the dem array
 
