@@ -117,6 +117,8 @@ def compute_transects(args):
     j_side_fine = int( \
         math.sqrt(fine_geotransform[1]**2 + fine_geotransform[2]**2))
 
+    print('fine_geotransform', fine_geotransform)
+
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
 
@@ -136,6 +138,8 @@ def compute_transects(args):
     # computing shore orientation
     i_offset = i_side_coarse/i_side_fine + 6
     j_offset = j_side_coarse/j_side_fine + 6
+    print('(i_side_coarse, i_side_fine)', (i_side_coarse, i_side_fine))
+    print('(i_offset, j_offset)', (i_offset, j_offset))
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
@@ -185,96 +189,167 @@ def compute_transects(args):
 
             # If land and sea, we have a shore: detect it and store
             if land and land < tile_size:
-                shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
-                shore_pts = np.where(shore_patch == 1)
-                if shore_pts[0].size:
+                if tiles > 13:
+                    continue
+                    
+                print 'tile ' + str(tiles)
+                i_first = i_base+3
+                j_first = j_base+3
+                i_last = i_base+i_offset-3
+                j_last = j_base+j_offset-3
 
+#                print('tile limits', (i_first, j_first, i_last, j_last))
+                #Draw the tile
+                for row in range(i_first, i_last+1):
+                    for col in range(j_first, j_last+1):
+                        transects[(row, col)] = tiles #-12
+#                for left in range(i_first, i_last+1):
+#                    transects[(left, j_first)] = -10
+#                for right in range(i_first, i_last+1):
+#                    transects[(left, j_last)] = -2
+#                for up in range(j_first, j_last+1):
+#                    transects[(i_first, up)] = -10
+#                for down in range(j_first, j_last+1):
+#                    transects[(i_last, down)] = -2
+
+                shore_patch = detect_shore(tile, mask, 0, 3, connectedness = 4)
+                shore_pts = np.where(shore_patch == 1)
+
+                print('shore points', shore_pts[0].size)
+
+                if shore_pts[0].size:
                     # Store shore position
-                    transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
+                    for p in zip(shore_pts[0], shore_pts[1]):
+                        if p[0] < 3:
+                            continue
+                        elif p[0] > i_offset-3:
+                            continue
+                        if p[1] < 3:
+                            continue
+                        elif p[1] > j_offset-3:
+                            continue
+                        
+                        transects[(p[0] + i_base, p[1] + j_base)] = -1
 
                     # Estimate shore orientation
                     shore_orientations = \
-                        compute_shore_orientation(shore_patch, \
+                        compute_shore_orientations(shore_patch, \
                             shore_pts, i_base, j_base)
 
                     # Skip if no shore orientation
                     if not shore_orientations:
+                        print("No valid shore orientations")
                         continue
+                    for p in shore_orientations:
+                        transects[(p[0], p[1])] = -2
+                    print('shore_orientations', len(shore_orientations))
+
+                    tiles += 1
 
                     # Pick transect position among valid shore points
                     assert len(shore_pts) == 2, str((i, j)) + ' ' + str(shore_pts)
-                    transect_position = select_transect(shore_orientations.keys())
+                    transect_positions = \
+                        select_transect(shore_orientations.keys(), \
+                            i_base+3, j_base+3, \
+                            i_base+i_offset-3, i_base+i_offset-3)
 
                     # Skip tile if no valid shore points
-                    if not transect_position:
+                    if len(transect_positions) == 0:
+                        print("No well defined position")
                         continue
+                    for p in transect_positions:
+                        transects[(p[0], p[1])] = -3
+                    print('transect_positions', len(transect_positions))
 
-                    # Compute transect orientation
-                    transect_orientation = \
-                        compute_transect_orientation(transect_position, \
-                            shore_orientations[transect_position],landmass)
 
-                    # Skip tile if can't compute valid orientation
-                    if transect_orientation is None:
-                        continue
-
-                    # Compute raw transect depths
-                    raw_depths, raw_positions = \
-                        compute_raw_transect_depths(transect_position, \
-                        transect_orientation, bathymetry, args['bathymetry_raster_uri'], \
-                        landmass, args['landmass_raster_uri'], i_side_fine, \
-                        args['max_land_profile_len'], \
-                        args['max_land_profile_height'], \
-                        args['max_profile_length'])
-
-                    # The index positions might be outside of valid bathymetry
-                    if raw_depths is None:
-                        continue
-
-                    # Interpolate transect to the model resolution
-                    interpolated_depths = \
-                        raw_depths if raw_depths.size > 5 else None
+#                    # Compute transect orientation
+#                    transect_orientations = \
+#                        compute_transect_orientations( \
+#                            transect_positions, shore_orientations,landmass)
+#                    # Skip tile if can't compute valid orientation
+#                    if len(transect_orientations) == 0:
+#                        print("No valid transect orientation")
+#                        continue
+#                    for p in transect_orientations:
+#                        transects[(p[0], p[1])] = -4
+#                    print('transect_orientations', len(transect_orientations))
+#
+#
+#                    # Look for the first valid transect
+#                    for transect_position in transect_orientations:
+#                        print('    trying transect position', transect_position)
+#
+#                        transect_orientation = transect_orientations[transect_position]
+#
+#                        # Compute raw transect depths
+#                        raw_depths, raw_positions = \
+#                            compute_raw_transect_depths(transect_position, \
+#                            transect_orientation, bathymetry, \
+#                            args['bathymetry_raster_uri'], \
+#                            landmass, args['landmass_raster_uri'], \
+#                            i_side_fine, \
+#                            args['max_land_profile_len'], \
+#                            args['max_land_profile_height'], \
+#                            args['max_profile_length'])
+#
+#                        # The index positions might be outside of valid bathymetry
+#                        if raw_depths is None:
+#                            print('    No valid depths')
+#                            continue
+#                        transects[(transect_position[0], transect_position[1])] = -5
+#
+#
+#                        # Interpolate transect to the model resolution
 #                        interpolated_depths = \
-#                            interpolate_transect(raw_depths, i_side_fine, \
-#                                args['model_resolution'])
-
-                    # Not enough values for interpolation
-                    if interpolated_depths is None:
-                        continue
-
-                    # Smooth transect
-                    smoothed_depths = \
-                        smooth_transect(interpolated_depths, \
-                            args['smoothing_percentage'])
-
-                    # Clip if transect hits land
-                    (clipped_transect, (start, shore, end)) = \
-                        clip_transect(smoothed_depths, args['max_profile_depth'])
-
-                    # Transect could be invalid, skip it
-                    if clipped_transect is None:
-                        continue
-                   
-                    # At this point, the transect is valid: 
-                    
-                    # extract remaining information about it
-                    else:
-#                        print('transect raw positions', raw_positions[0][start:end])
-                        transect_info.append( \
-                            {'raw_positions': \
-                                (raw_positions[0][start:end], \
-                                raw_positions[1][start:end]), \
-                            'depths':smoothed_depths[start:end], \
-                            'clip_limits':(0, shore-start, end-start)})
-
-                    # Update the longest transect length if necessary
-                    if (end - start) > max_transect_length:
-                        max_transect_length = end - start
-                    
-                    tiles += 1
-
-#            if tiles >= 10:
-#                break
+#                            raw_depths if raw_depths.size > 5 else None
+#    #                        interpolated_depths = \
+#    #                            interpolate_transect(raw_depths, i_side_fine, \
+#    #                                args['model_resolution'])
+#
+#                        # Not enough values for interpolation
+#                        if interpolated_depths is None:
+#                            print("    Can't interpolate depths")
+#                            continue
+#                        transects[(transect_position[0], transect_position[1])] = -6
+#
+#                        # Smooth transect
+#                        smoothed_depths = \
+#                            smooth_transect(interpolated_depths, \
+#                                args['smoothing_percentage'])
+#
+#                        # Clip if transect hits land
+#                        (clipped_transect, (start, shore, end)) = \
+#                            clip_transect(smoothed_depths, \
+#                                args['max_profile_depth'])
+#
+#                        # Transect could be invalid, skip it
+#                        if clipped_transect is None:
+#                            print("    All the transect has been clipped")
+#                            continue
+#                       
+#                        # At this point, the transect is valid: 
+#                        else:
+#                            print('    found valid transect at ', transect_position, \
+#                                (raw_positions[0][0], raw_positions[1][0]))
+#                            # Store important information about it
+#                            transect_info.append( \
+#                                {'raw_positions': \
+#                                    (raw_positions[0][start:end], \
+#                                    raw_positions[1][start:end]), \
+#                                'depths':smoothed_depths[start:end], \
+#                                'clip_limits':(0, shore-start, end-start)})
+#
+#                            # Update the longest transect length if necessary
+#                            if (end - start) > max_transect_length:
+#                                max_transect_length = end - start
+#                            
+#                            tiles += 1
+#
+#                            # Found valid transect, break out of the loop
+#                            break
+#
+##                    print('failed to find a valid transect')
+#                print('done')
 
     print('')
 
@@ -290,12 +365,14 @@ def compute_transects(args):
     landmass_band = None
     landmass_raster = None
 
+    LOGGER.debug('found %i tiles.' % tiles)
+
+    tiles = len(transect_info)
+
     transect_count = tiles
 
     args['tiles'] = tiles
     args['max_transect_length'] = max_transect_length
-
-    LOGGER.debug('found %i tiles.' % tiles)
 
     habitat_nodata = -99999
 
@@ -364,7 +441,7 @@ def compute_transects(args):
     gt = dataset.GetGeoTransform()
     dataset = None
     
-    for transect in range(transect_count):
+    for transect in range(len(transect_info)):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
         positions_dataset[transect, 0, start:end] = \
@@ -418,7 +495,11 @@ def compute_transects(args):
     for segment in range(shore_points[0].size):
         if segment % progress_step == 0:
             print '.',
-        single_value[0, 0] = -1
+        single_value[0, 0] = \
+            transects[ \
+                shore_points[0][segment], \
+                shore_points[1][segment]]
+
         transect_band.WriteArray( \
             single_value, \
             int(shore_points[1][segment]), \
@@ -439,7 +520,7 @@ def compute_transects(args):
     # Saving transects
     progress_step = max(tiles / 50, 1)
     habitat_type_dataset = transect_data_file['habitat_type']
-    for transect in range(transect_count):
+    for transect in range(tiles):
         if transect % progress_step == 0:
             print '.',
         # Extract important positions
@@ -1985,7 +2066,7 @@ def apply_habitat_constraints(mask, habitat_type, args):
     return habitat
 
 
-def compute_shore_orientation(shore, shore_pts, i_base, j_base):
+def compute_shore_orientations(shore, shore_pts, i_base, j_base):
     """Compute an estimate of the shore orientation. 
        Inputs:
            -shore: 2D numpy shore array (1 for shore, 0 otherwise)
@@ -2023,98 +2104,144 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
             (neighbors[0][1] - neighbors[0][0], \
             neighbors[1][1] - neighbors[1][0])
 
+#    print(shore.astype(int))
+#    print(updated_shore)
+
     # Compute average orientations
     shore = np.copy(updated_shore)
     average_orientations = {}
-    for coord in orientations.keys():
+    
+    for coord in orientations:
         row, col = coord
+#        print('working on coord', coord)
         neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
         neighborhood[1, 1] = 0
         neighbor_count = np.sum(neighborhood)
              
         if neighbor_count != 2:
-            del orientations[coord]
+#            print('Not enough neighbors')
             continue
+        print('valid')
 
         neighbors = np.where(neighborhood == 1)
+        # Make coordinates absolute
         neighbors = (neighbors[0] + row - 1, neighbors[1] + col - 1)
 
+        # Extract points separately
         first = (neighbors[0][0], neighbors[1][0])
         second = (neighbors[0][1], neighbors[1][1])
-        if (first not in orientations) or (second not in orientations):
-            del orientations[coord]
-            continue
+        assert first in orientations
+        assert second in orientations
+        #if (first not in orientations) or (second not in orientations):
+        #    continue
 
+        # Compute average orientation
         average_orientation = \
             ((orientations[first][0] + orientations[second][0]) / 2,
             (orientations[first][1] + orientations[second][1]) / 2)
             
+        # Store in dictionary
         average_orientations[coord] = average_orientation
+
+    # Combine orientation (weight==2) with average orientation (weight==1).
     shore_orientation = {}
-    for segment in orientations.keys():
+    for segment in average_orientations:
         O = orientations[segment]
         A = average_orientations[segment]
         shore_orientation[(segment[0] + i_base, segment[1] + j_base)] = \
             (float(2 * O[0] + A[0]) / 3., float(2 * O[1] + A[1]) / 3.)
 
+#    print(shore_orientation)
+#    print('')
+
     return shore_orientation
  
-def select_transect(shore_pts):
-    """Select transect postion among shore points"""
+def select_transect(shore_pts, i_start, j_start, i_end, j_end):
+    """Select transect position among shore points, by avoiding positions
+        on the bufferred parts of the transect. Buffers overlap between up to
+        4 tiles, and cause the same positions to be selected multiple times.
+
+        Inputs:
+            -shore_pts: shore point coordinates (absolute rows & cols)
+            -i_start, j_start, i_end, j_end: tile extents without the
+                buffers. i/j refer to row/col, and start/end refer to
+                smallest/largest values.
+
+        Returns a list of [i, j] point coordinates that are not within 
+            the buffer region"""
     if not len(shore_pts):
         return None
     
     # Return the transect with the smallest i first, and j second
     sorted_points = sorted(shore_pts, key = lambda p: p[1])
     sorted_points = sorted(sorted_points, key = lambda p: p[0])
+
+    # Remove points in the buffer to avoid 2 transects appear side-by-side
+    valid_points = []
+    for p in sorted_points:
+        if p[0] < i_start:
+            continue
+        elif p[1] < j_start:
+            continue
+        elif p[0] > i_end:
+            continue
+        elif p[1] > j_end:
+            continue
+        valid_points.append(p)
     
-    return sorted_points[0]
+    return valid_points
 
-def compute_transect_orientation(position, orientation, landmass):
+def compute_transect_orientations(positions, orientations, landmass):
     """Returns transect orientation towards the ocean."""
-    # orientation is perpendicular to the shore
-    orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
+    # Returned list of all the transect orientations
+    transect_orientations = {}
 
-    # Compute the long (l) and the short (s) axes indices
-    l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
-    s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
+    for position in positions:
+        # orientation is perpendicular to the shore
+        orientation = orientations[position]
+        orientation = np.array([-orientation[1], orientation[0]])
 
-    # Normalize orientation and extend to 3 pixels to minimize roundoff
-    orientation[s] = round(3 * float(orientation[s]) / orientation[l])
-    orientation[l] = 3.
+        # Compute the long (l) and the short (s) axes indices
+        l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
+        s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
 
-    # Orientation points to water: return rescaled vector
-    if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
-        return orientation / 3.
+        # Normalize orientation and extend to 3 pixels to minimize roundoff
+        orientation[s] = round(3 * float(orientation[s]) / orientation[l])
+        orientation[l] = 3.
 
-    # Otherwise, check the opposite direction
-    else:
-        orientation *= -1.
-        
-        # Other direction works, return rescaled orientation
+        # Orientation points to water: return rescaled vector
         if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
-            return orientation / 3.
-        
-        # Other direction does not work: possible overshoot, shorten vector
+            transect_orientations[position] = orientation / 3.
+
+        # Otherwise, check the opposite direction
         else:
-            # Reduce the vector length
-            step = np.array([round(orientation[0]/3.), round(orientation[1]/3.)])
-
-            # Orientation points to water: return vector as is
-            if not landmass[position[0] + step[0], position[1] + step[1]]:
-                return orientation
-        
-            # Orientation points to land: check the other direction
+            orientation *= -1.
+            
+            # Other direction works, return rescaled orientation
+            if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
+                transect_orientations[position] = orientation / 3.
+            
+            # Other direction does not work: possible overshoot, shorten vector
             else:
-                step *= -1 # step in the other direction
-        
-                # Orientation doesn't work, return invalid transect.
-                if landmass[position[0] +step[0], position[1] +step[1]]:
-                    return None
-        
-                # Other direction worked, return orientation
-                return orientation * -1
+                # Reduce the vector length
+                step = np.array([round(orientation[0]/3.), round(orientation[1]/3.)])
 
+                # Orientation points to water: return vector as is
+                if not landmass[position[0] + step[0], position[1] + step[1]]:
+                    transect_orientations[position] = orientation
+            
+                # Orientation points to land: check the other direction
+                else:
+                    step *= -1 # step in the other direction
+            
+                    # Orientation doesn't work, return invalid transect.
+                    if landmass[position[0] +step[0], position[1] +step[1]]:
+                        continue
+            
+                    # Other direction worked, return orientation
+                    transect_orientations[position] = orientation * -1
+
+    return transect_orientations
 
 def compute_raw_transect_depths(shore_point, \
     direction_vector, bathymetry, bathymetry_uri, landmass, landmass_uri, \
@@ -2351,10 +2478,14 @@ def clip_transect(transect, max_depth):
 
 
 # improve this docstring!
-def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
+def detect_shore(land_sea_array, aoi_array, aoi_nodata, buffer_size, connectedness = 8):
     """ Extract the boundary between land and sea from a raster.
     
-        - raster: numpy array with sea, land and nodata values.
+        - land_sea_array: numpy array with sea, land and nodata values.
+        - tile_limits: 4-tuple of type int with row/col coordinate limits 
+            of the tile without the buffers: (i_first, j_first, i_last, j_last)
+            where i/j is the row/col coords, first/last are lowest/largest 
+            coordinate values.
         
         returns a numpy array the same size as the input raster with the shore
         encoded as ones, and zeros everywhere else."""
@@ -2393,9 +2524,6 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
         # Real shore = all borders - shore artifacts
         borders = ((borders - aoi_borders) >0 ).astype('int') * 1.
 
-        shore_segment_count = np.sum(borders)
-#        if shore_segment_count == 0:
-#            LOGGER.warning('No shore segment detected')
         return borders
 
 

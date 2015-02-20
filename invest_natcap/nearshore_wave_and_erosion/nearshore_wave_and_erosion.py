@@ -806,6 +806,7 @@ def execute(args):
     # they're of a known type
     known_shapefiles = set() # Set of known shapefiles that will be rasterized
     in_raster_list = [] # Rasters that will be aligned and clipped and resampled
+    in_raster_list.append(args['aoi_raster_uri'])
     in_habitat_type = [] # habitat type. See args['habitat_information']
     for file_uri in files:
         basename = os.path.basename(file_uri)
@@ -1234,10 +1235,11 @@ def execute(args):
     cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
     resample_method_list = ['bilinear'] * len(out_raster_list)
     out_pixel_size = cell_size
-    mode = 'dataset'
+    mode = 'intersection'
+#    mode = 'dataset'
     dataset_to_align_index = 0
     dataset_to_bound_index = 0
-    # Invoke raster alignent function
+    # Invoke raster alignment function
     raster_utils.align_dataset_list( \
         in_raster_list, out_raster_list, resample_method_list,
         out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
