@@ -1188,7 +1188,7 @@ def distance_to_stream(
                             cells_in_queue.end()):
                         visit_stack.push_front(neighbor_flat_index)
                         cells_in_queue.insert(neighbor_flat_index)
-                        update_downstream = True
+                    update_downstream = True
                     neighbor_distance = 0.0
 
                 if outflow_direction % 2 == 1:

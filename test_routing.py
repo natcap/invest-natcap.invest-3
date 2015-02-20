@@ -32,8 +32,8 @@ def main():
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
         #'C:\\Users\\rich\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
-        #'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
-        r"C:\Users\rpsharp\Documents\dem_clipped.tif")
+        r'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
+        #r"C:\Users\rpsharp\Documents\dem_clipped.tif")
         #r"C:\Users\rich\Documents\Dropbox\brian_packard_dem_nutrient_bug\dem")
         #r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\hi_dem10m_p")
 
@@ -43,7 +43,7 @@ def main():
         'sink_filename': 'sinks.tif',
         'flat_mask_filename': 'flat_mask.tif',
         'labels_filename': 'labels.tif',
-        'threshold_flow_accumulation': 20,
+        'threshold_flow_accumulation': 1000,
         'downstream_distance_filename': 'downstream_distance.tif'
     }
 
