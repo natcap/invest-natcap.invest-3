@@ -5,10 +5,12 @@
 import logging
 import os
 import operator
+import pprint as pp
 
 from osgeo import gdal, ogr, osr
 
 from invest_natcap import raster_utils
+import blue_carbon_io as io
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -234,9 +236,25 @@ def execute(args):
         }
 
     """
-    print args
+    # import pickle
 
-    # preprocess args for possible ease of adoption of future IUI features
+    # pp.pprint(args)
+    vars_dict = io.fetch_args(args)
+    pp.pprint(vars_dict)
+    with open('vars_dict', 'w') as f:
+        pickle.dump(vars_dict, f)
+    return
+
+    # Fetch Args
+    workspace_dir = args["workspace_dir"]
+    debug_log_file = open(os.path.join(workspace_dir, "debug.txt"), mode="w")
+    debug_log = logging.StreamHandler(debug_log_file)
+    debug_log.setFormatter(logging.Formatter(
+        fmt='%(asctime)s %(message)s', datefmt="%M:%S"))
+    LOGGER.addHandler(debug_log)
+
+    analysis_year = args["analysis_year"]
+
     # this creates a hypothetical IUI element from existing element
     lulc_list = []
     for i in range(1, 6):
@@ -251,35 +269,17 @@ def execute(args):
     lulc_uri_dict = dict([(lulc["year"], lulc["uri"]) for lulc in lulc_list])
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
-
-    # constants
-    gdal_format = "GTiff"
-    gdal_type_carbon = gdal.GDT_Float64
-    nodata_default_int = -1
-    nodata_default_float = -1
-    gdal_type_identity_raster = gdal.GDT_Int16
-
-    # inputs parameters
-    workspace_dir = args["workspace_dir"]
-    analysis_year = args["analysis_year"]
-
-    debug_log_file = open(os.path.join(workspace_dir, "debug.txt"), mode="w")
-    debug_log = logging.StreamHandler(debug_log_file)
-    debug_log.setFormatter(logging.Formatter(
-        fmt='%(asctime)s %(message)s', datefmt="%M:%S"))
-    LOGGER.addHandler(debug_log)
-
     # copy LULC for analysis year
     lulc_uri_dict[analysis_year] = lulc_uri_dict[lulc_years[-1]]
 
-    # carbon schedule
-    carbon_schedule_field_key = "Year"
-    carbon_schedule_field_rate = "Price"
+    # constants
+    gdal_type_carbon = gdal.GDT_Float64
+    nodata_default_int = -1
+    nodata_default_float = -1
 
     # carbon pools table
     carbon_uri = args["carbon_pools_uri"]
 
-    carbon_field_key = "Id"
     carbon_field_veg = "Veg Type"
     carbon_field_above = "Above (Mg / ha)"
     carbon_field_below = "Below (Mg / ha)"
@@ -288,24 +288,15 @@ def execute(args):
     carbon_acc_bio_field = "Bio_accum_rate (Mg / ha / yr)"
     carbon_acc_soil_field = "Soil_accum_rate (Mg / ha / yr)"
 
-    # transition matrix
-    trans_comment_uri = args["transition_matrix_uri"]
-
     # remove transition comment
     trans_uri = raster_utils.temporary_filename()
     trans_file = open(trans_uri, 'w')
-    trans_comment_table = open(trans_comment_uri).readlines()
+    trans_comment_table = open(args["transition_matrix_uri"]).readlines()
     row_count = len(trans_comment_table[0].strip().strip(",").split(","))
     trans_file.write("".join(trans_comment_table[:row_count-1]))
     trans_file.close()
 
-    trans_field_key = "Id"
-    trans_acc = "Accumulation"
-
     # disturbance table
-    dis_bio_csv_uri = args["biomass_disturbance_csv_uri"]
-    dis_soil_csv_uri = args["soil_disturbance_csv_uri"]
-
     dis_field_key = "veg type"
 
     # half-life table
@@ -315,12 +306,10 @@ def execute(args):
     half_life_field_soil = "soil (years)"
 
     # outputs
-    extent_name = "extent.shp"
-    blue_carbon_csv_name = "sequestration.csv"
-    intermediate_dir = "intermediate"
+    intermediate_dir = os.path.join(workspace_dir, "intermediate")
 
-    if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
-        os.makedirs(os.path.join(workspace_dir, intermediate_dir))
+    if not os.path.exists(intermediate_dir):
+        os.makedirs(intermediate_dir)
 
     # carbon pool file names
     carbon_name = "stock_%i.tif"
@@ -384,24 +373,27 @@ def execute(args):
     loss_name = "loss_%i_%i.tif"
 
     # uri
-    extent_uri = os.path.join(workspace_dir, extent_name)
-    blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
+    extent_uri = os.path.join(workspace_dir, "extent.shp")
+    blue_carbon_csv_uri = os.path.join(workspace_dir, "sequestration.csv")
 
     # process inputs
-    dis_bio = raster_utils.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
+    dis_bio = raster_utils.get_lookup_from_csv(
+        args["biomass_disturbance_csv_uri"], dis_field_key)
 
     # adding accumulation value to disturbance table
+    trans_acc = "Accumulation"
+
     for k in dis_bio:
         dis_bio[k][trans_acc] = 0.0
 
     dis_soil = raster_utils.get_lookup_from_csv(
-        dis_soil_csv_uri, dis_field_key)
+        args["soil_disturbance_csv_uri"], dis_field_key)
     # adding accumulation values to disturbance table
     for k in dis_soil:
         dis_soil[k][trans_acc] = 0.0
 
-    trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
-    carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
+    trans = raster_utils.get_lookup_from_csv(trans_uri, "Id")
+    carbon = raster_utils.get_lookup_from_csv(carbon_uri, "Id")
 
     class InfiniteDict:
         def __init__(self, k, v):
@@ -486,7 +478,7 @@ def execute(args):
                 else:
                     veg_field_dict[veg_type][field][k] = 0.0
 
-    # add biomass to carbon field
+    ## add biomass to carbon field
     carbon_field_bio = "bio"
     for veg_type in veg_type_list:
         veg_field_dict[veg_type][carbon_field_bio] = {}
@@ -525,10 +517,13 @@ def execute(args):
             for transition_lulc in trans:
                 trans_dis_dict[component][(original_lulc, transition_lulc)] = component_dict[carbon[original_lulc][carbon_field_veg]][trans[original_lulc][str(transition_lulc)]]
 
+
+    # RUN BIOPHYSICAL COMPONENT HERE
+
     # vectorize datasets operations
     # standard ops
     def add_op(*values):
-        if nodata_default_int in values:
+        if vars_dict['nodata_default_int'] in values:
             return nodata_default_int
         return reduce(operator.add, values)
 
@@ -641,18 +636,16 @@ def execute(args):
     raster_utils.new_raster_from_base_uri(
         this_uri,
         zero_raster_uri,
-        gdal_format,
+        "GTiff",
         nodata_default_int,
-        gdal_type_identity_raster,
+        gdal.GDT_Int16,
         fill_value=0)
 
     for veg_type in veg_type_list:
         veg_base_uri_dict[veg_type] = {}
 
-        this_veg_stock_soil_uri = os.path.join(
-            workspace_dir, veg_stock_soil_name % (this_year, veg_type))
-        this_veg_stock_bio_uri = os.path.join(
-            workspace_dir, veg_stock_bio_name % (this_year, veg_type))
+        this_veg_stock_soil_uri = veg_stock_soil_name % (this_year, veg_type)
+        this_veg_stock_bio_uri = veg_stock_bio_name % (this_year, veg_type)
 
         raster_utils.reclassify_dataset_uri(
             this_uri,
@@ -689,14 +682,14 @@ def execute(args):
             workspace_dir, carbon_name % this_year)
         this_total_carbon_uri_list = []
 
-        this_total_acc_soil_uri = os.path.join(
-            workspace_dir, this_total_acc_soil_name % (this_year, next_year))
-        this_total_acc_bio_uri = os.path.join(
-            workspace_dir, this_total_acc_bio_name % (this_year, next_year))
-        this_total_dis_soil_uri = os.path.join(
-            workspace_dir, this_total_dis_soil_name % (this_year, next_year))
-        this_total_dis_bio_uri = os.path.join(
-            workspace_dir, this_total_dis_bio_name % (this_year, next_year))
+        this_total_acc_soil_uri = this_total_acc_soil_name % (
+            this_year, next_year)
+        this_total_acc_bio_uri = this_total_acc_bio_name % (
+            this_year, next_year)
+        this_total_dis_soil_uri = this_total_dis_soil_name % (
+            this_year, next_year)
+        this_total_dis_bio_uri = this_total_dis_bio_name % (
+            this_year, next_year)
 
         veg_acc_bio_uri_list = []
         veg_acc_soil_uri_list = []
@@ -716,52 +709,39 @@ def execute(args):
 
             LOGGER.info("Processing vegetation type %i.", veg_type)
             # litter URI's
-            this_veg_litter_uri = os.path.join(
-                workspace_dir, veg_litter_name % (this_year, veg_type))
+            this_veg_litter_uri = veg_litter_name % (this_year, veg_type)
 
             # disturbance and accumulation URI's
-            this_veg_acc_bio_uri = os.path.join(
-                workspace_dir, veg_acc_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_acc_soil_uri = os.path.join(
-                workspace_dir, veg_acc_soil_name % (
-                    this_year, next_year, veg_type))
-            this_veg_dis_bio_uri = os.path.join(
-                workspace_dir, veg_dis_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_dis_soil_uri = os.path.join(
-                workspace_dir, veg_dis_soil_name % (
-                    this_year, next_year, veg_type))
+            this_veg_acc_bio_uri = veg_acc_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_acc_soil_uri = veg_acc_soil_name % (
+                this_year, next_year, veg_type)
+            this_veg_dis_bio_uri = veg_dis_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_dis_soil_uri = veg_dis_soil_name % (
+                this_year, next_year, veg_type)
 
             # transition adjusted URI's
-            this_veg_adj_acc_bio_uri = os.path.join(
-                workspace_dir, veg_adj_acc_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_adj_acc_soil_uri = os.path.join(
-                workspace_dir, veg_adj_acc_soil_name % (
-                    this_year, next_year, veg_type))
-            this_veg_adj_dis_bio_uri = os.path.join(
-                workspace_dir, veg_adj_dis_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_adj_dis_soil_uri = os.path.join(
-                workspace_dir, veg_adj_dis_soil_name % (
-                    this_year, next_year, veg_type))
+            this_veg_adj_acc_bio_uri = veg_adj_acc_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_adj_acc_soil_uri = veg_adj_acc_soil_name % (
+                this_year, next_year, veg_type)
+            this_veg_adj_dis_bio_uri = veg_adj_dis_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_adj_dis_soil_uri = veg_adj_dis_soil_name % (
+                this_year, next_year, veg_type)
 
             # emission URI's
-            this_veg_em_bio_uri = os.path.join(
-                workspace_dir, veg_em_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_em_soil_uri = os.path.join(
-                workspace_dir, veg_em_soil_name % (
-                    this_year, next_year, veg_type))
+            this_veg_em_bio_uri = veg_em_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_em_soil_uri = veg_em_soil_name % (
+                this_year, next_year, veg_type)
 
             # emission adjusted URI's
-            this_veg_adj_em_dis_bio_uri = os.path.join(
-                workspace_dir, veg_adj_em_dis_bio_name % (
-                    this_year, next_year, veg_type))
-            this_veg_adj_em_dis_soil_uri = os.path.join(
-                workspace_dir, veg_adj_em_dis_soil_name % (
-                    this_year, next_year, veg_type))
+            this_veg_adj_em_dis_bio_uri = veg_adj_em_dis_bio_name % (
+                this_year, next_year, veg_type)
+            this_veg_adj_em_dis_soil_uri = veg_adj_em_dis_soil_name % (
+                this_year, next_year, veg_type)
 
             # litter
             raster_utils.reclassify_dataset_uri(
@@ -983,6 +963,10 @@ def execute(args):
                                       neg_op,
                                       loss_uri)
 
+
+
+    # RUN VALUATION COMPONENT HERE
+
     # Valuation component starts here
     if args["private_valuation"]:
         # tabulate results in new csv file
@@ -1000,14 +984,14 @@ def execute(args):
             # If no price table, create carbon schedule
             carbon_schedule = {}
             for year in range(lulc_years[0], analysis_year + 1):
-                carbon_schedule[year] = {carbon_schedule_field_rate: float(
+                carbon_schedule[year] = {"Price": float(
                     args["carbon_value"]) * ((
                         1 + (float(args["rate_change"]) / float(100))) ** (
                         year - lulc_years[0]))}
         else:
             # Fetch carbon schedule from provided price table
             carbon_schedule = raster_utils.get_lookup_from_csv(
-                args["carbon_schedule"], carbon_schedule_field_key)
+                args["carbon_schedule"], "Year")
 
         period_op_dict = {}
         for start_year, end_year in zip(lulc_years, (
