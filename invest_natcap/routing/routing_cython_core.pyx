@@ -956,8 +956,8 @@ def distance_to_stream(
     distance_ds = gdal.Open(distance_uri, gdal.GA_Update)
     distance_band = distance_ds.GetRasterBand(1)
 
-    outflow_weights_uri = os.path.join(os.path.dirname(flow_direction_uri),'outflow_weights.tif')#raster_utils.temporary_filename()
-    outflow_direction_uri = os.path.join(os.path.dirname(flow_direction_uri),'outflow_direction.tif')#raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
     calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     outflow_weights_ds = gdal.Open(outflow_weights_uri)
@@ -1079,10 +1079,7 @@ def distance_to_stream(
     cdef int downstream_index, downstream_calculated
     cdef float downstream_distance
     cdef float current_stream
-
     cdef int pushed_current = False
-
-    cdef int log_iteration = False
 
     while visit_stack.size() > 0:
         flat_index = visit_stack.front()
@@ -1098,33 +1095,11 @@ def distance_to_stream(
         update_downstream = False
         current_distance = 0.0
 
-        log_iteration = False
         time(&current_time)
         if current_time - last_time > 5.0:
             last_time = current_time
             LOGGER.info(
                 'visit_stack on stream distance size: %d ', visit_stack.size())
-            LOGGER.info('cells in queue size: %d ', cells_in_queue.size())
-
-            LOGGER.info('global_row, global_col %d %d', global_row, global_col)
-            original_distance = distance_block[
-                row_index, col_index, row_block_offset, col_block_offset]
-            LOGGER.info("original_distance %f", original_distance)
-            LOGGER.info("processed: %d", processed_cell_block[
-                row_index, col_index, row_block_offset, col_block_offset])
-            LOGGER.info("stream block %d", stream_block[
-                row_index, col_index, row_block_offset, col_block_offset])
-
-            outflow_direction = outflow_direction_block[
-                row_index, col_index, row_block_offset,
-                col_block_offset]
-            outflow_weight = outflow_weights_block[
-                row_index, col_index, row_block_offset,
-                col_block_offset]
-            LOGGER.info("outflow_direction %f", outflow_direction)
-            LOGGER.info("outflow_weight %f", outflow_weight)
-            log_iteration = True
-
 
         current_stream = stream_block[
             row_index, col_index, row_block_offset, col_block_offset]
@@ -1192,13 +1167,6 @@ def distance_to_stream(
                     neighbor_row_index, neighbor_col_index,
                     neighbor_row_block_offset, neighbor_col_block_offset]
 
-
-                if log_iteration:
-                    LOGGER.debug("neighbor_index %d", neighbor_index)
-                    LOGGER.debug("neighbor_distance %f", neighbor_distance)
-                    LOGGER.debug("neighbor direction %f", neighbor_outflow_direction)
-                    LOGGER.debug("neighbor weight %f", neighbor_outflow_weight)
-
                 if processed_cell_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset,
                         neighbor_col_block_offset] == 0:
@@ -1208,18 +1176,12 @@ def distance_to_stream(
                             cells_in_queue.end()):
                         visit_stack.push_back(flat_index)
                         cells_in_queue.insert(flat_index)
-                        if log_iteration:
-                            LOGGER.debug("current not in queue so added")
 
                     if (cells_in_queue.find(neighbor_flat_index) ==
                             cells_in_queue.end()):
-                        if log_iteration:
-                            LOGGER.debug("neighbor not in queue so added")
                         visit_stack.push_front(neighbor_flat_index)
                         cells_in_queue.insert(neighbor_flat_index)
-                    else:
-                        if log_iteration:
-                            LOGGER.debug("neighbor already in queue so not added")
+
                     update_downstream = True
                     neighbor_distance = 0.0
 
@@ -1232,10 +1194,6 @@ def distance_to_stream(
                 current_distance += (
                     neighbor_distance + step_size * factor) * outflow_weight
 
-            if not update_downstream:
-                distance_block[row_index, col_index,
-                    row_block_offset, col_block_offset] = current_distance
-                cache_dirty[row_index, col_index] = 1
         if not update_downstream:
             #mark flat_index as processed
             block_cache.update_cache(
@@ -1311,7 +1269,7 @@ def distance_to_stream(
     for dataset in [outflow_weights_ds, outflow_direction_ds]:
         gdal.Dataset.__swig_destroy__(dataset)
     for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
-        pass#os.remove(dataset_uri)
+        os.remove(dataset_uri)
 
 
 @cython.boundscheck(False)
