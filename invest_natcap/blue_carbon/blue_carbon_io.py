@@ -48,109 +48,36 @@ def fetch_args(args):
     Example Returns::
 
         vars = {
-            # original args ...
+            # ... original args ...
 
-            'analysis_year': '(year)',
-            'lulc_uri_dict' = {'(lulc_year)': '(raster_uri)', ...},
+            # Derived Variables
+
+            # Raster Information
+            'lulc_uri_dict': {
+                '(lulc_year)': '(raster_uri)',
+                ...
+            },
+            'lulc_years': [2004, 2050, 2100]
             'gdal_type_carbon': gdal.GDT_Float64,
+            'cell_size': 1000,
             'nodata_default_int': -1,
             'nodata_default_float': -1,
+            'nodata_lulc': 0,
 
-            'carbon_uri': '(carbon_csv_uri)',
-            'carbon_field_veg': 'Veg Type',
-            'carbon_field_above': 'Above (Mg / ha)',
-            'carbon_field_below': 'Below (Mg / ha)',
+            # Carbon Pools (Not Used - see veg_field_dict, trans_veg_acc_dict, trans_dis_dict)
+            'carbon_pools': {
+                '(Id)': {
+                    'Above (Mg / ha)': 0,
+                    'Below (Mg / ha)': 0,
+                    ...
+                },
+                ...
+            },
             'carbon_field_soil': 'Soil (Mg / ha)',
-            'carbon_field_litter' = 'Litter (Mg / ha)',
-            'carbon_acc_bio_field' = 'Bio_accum_rate (Mg / ha / yr)',
-            'carbon_acc_soil_field' = 'Soil_accum_rate (Mg / ha / yr)',
+            'carbon_field_litter': 'Litter (Mg / ha)',
 
-            'trans_uri': raster_utils.temporary_filename(),
-            'trans_acc': 'Accumulation',
-
-            'dis_field_key': 'veg_type',
-
-            'half_life_csv_uri': '(uri)',
-            'half_life_field_key': 'veg_type',
-            'half_life_field_bio': 'biomass (years)',
-            'half_life_field_soil': 'soil (years)',
-
-            'intermediate_dir': '(uri)'
-
-            veg_stock_bio_name
-            veg_stock_soil_name
-            veg_litter_name
-
-            acc_soil_name
-            acc_bio_name
-            veg_acc_bio_name
-            veg_acc_soil_name
-            veg_dis_bio_name
-            veg_dis_soil_name
-
-            dis_bio_name
-            dis_soil_name
-            veg_adj_acc_bio_name
-            veg_adj_acc_soil_name
-            veg_adj_dis_bio_name
-            veg_adj_dis_soil_name
-            veg_adj_em_dis_bio_name
-            veg_adj_em_dis_soil_name
-            veg_em_bio_name
-            veg_em_soil_name
-
-            this_total_acc_soil_name
-            this_total_acc_bio_name
-            this_total_dis_soil_name
-            this_total_dis_bio_name
-            net_sequestration_name
-            gain_name
-            loss_name
-            extent_uri
-            blue_carbon_csv_uri: '(sequestration.csv)'
-
-            'dis_soil': {  <-- soil_disturbance_csv_uri table
-                '0': {
-                    'Accumulation': 0  <-- accumulation initialized to 0
-                    'High Disturbance': 0,
-                    'Low Disturbance': 0,
-                    'Medium Disturbance': 0,
-                    'None': 0,
-                    'veg name': 'other',
-                    'veg type': 0
-                }
-
-                '1': {
-                    ...
-                }
-                ...
-            },
-
-            'dis_bio': {  <-- biomass_disturbance_csv_uri table
-                '0': {
-                    'High Disturbance': 0,
-                    'Low Disturbance': 0,
-                    'Medium Disturbance': 0,
-                    'None': 0,
-                    'veg name': 'other',
-                    'veg type': 0
-                }
-
-                '1': {
-                    ...
-                }
-                ...
-            },
-
-            'carbon': {'(Id)': '...'},  <-- carbon table dictionary
-
-            'acc_soil' = {
-                '(id)': {'Accumulation': (float)}
-            },
-            'acc_bio' = {
-                '(id)': {'Accumulation': (float)}
-            },
-            'half_life' = {
+            # Carbon Decay Rate for Vegetation/Disturbance Type
+            'half_life': {
                 '(id)': {
                     'biomass (years)': (float),
                     'soil (years)': (float),
@@ -158,39 +85,83 @@ def fetch_args(args):
                     'veg type': (int)
                 }
             },
+            'half_life_field_key': 'veg_type',
+            'half_life_field_bio': 'biomass (years)',
+            'half_life_field_soil': 'soil (years)',
 
-            'trans': {'(Id)': '...'},  <-- transition table dictionary
-
-            'change_types': set(['Accumulation', 'Medium Disturbance', 'None']),
-
-            'nodata_lulc': 0,
-            'cell_size': 1000,
-            'conversion': 100,
-            'veg_dict': {'(Id)', '(veg_type)'},
+            'veg_field_dict': {
+                (veg_type): {
+                    'Above (Mg / ha)': {
+                        (Id): (???), ...
+                    }, ...
+                }, ...
+            },
             'veg_type_list': [0, 1, 2],
-            'veg_field_dict': {(veg_type): {'Above (Mg / ha)': {(Id): (???), ...}, ...}, ...},
-            'veg_trans_acc_dict': {
+
+            # (EXPLAIN)
+            'trans_veg_acc_dict': {
                 '(veg_type)': {
                     'acc_soil': {
-                        (Id): {
-                            ...
-                        },
+                        (original_lulc, transition_lulc): (accumulation),
                         ...
                     },
-                    ...
-                },
-                ...
+                    'acc_bio': {
+                        (original_lulc, transition_lulc): (accumulation),
+                        ...
+                    },
+                }, ...
             },
+
+            # Transition Matrix for Carbon Flow
             'trans_dis_dict': {
-                'dis_bio': {
+                'dis_bio': {  # <-- derived from biomass_disturbance_csv_uri
                     (original_lulc, transition_lulc): (disturbance),
                     ...
                 },
-                'dis_soil': {
+                'dis_soil': {  # <-- derived from soil_disturbance_csv_uri
                     (original_lulc, transition_lulc): (disturbance),
                     ...
                 }
             },
+            'dis_soil_key': 'dis_soil',
+            'dis_bio_key': 'dis_bio',
+            'acc_soil_key': 'acc_soil',
+            'acc_bio_key': 'acc_bio',
+
+            # Intermediate Outputs
+            'intermediate_dir': '/path/to/intermediate/',
+            'veg_stock_bio_uris': '/path/to/%i_veg_%i_stock_biomass.tif',
+            'veg_stock_soil_uris': '/path/to/%i_veg_%i_stock_soil.tif',
+            'veg_litter_uris': '/path/to/%i_veg_%i_litter.tif',
+            'acc_soil_uris': '/path/to/%i_acc_soil.tif',
+            'acc_bio_uris': '/path/to/%i_acc_bio.tif',
+            'veg_acc_bio_uris': '/path/to/%i_%i_veg_%i_acc_bio.tif',
+            'veg_acc_soil_uris': '/path/to/%i_%i_veg_%i_acc_soil.tif',
+            'veg_dis_bio_uris': '/path/to/%i_%i_veg_%i_dis_bio.tif',
+            'veg_dis_soil_uris': '/path/to/%i_%i_veg_%i_dis_soil.tif',
+            'dis_bio_uris': '/path/to/%i_dis_bio.tif',
+            'dis_soil_uris': '/path/to/%i_dis_soil.tif',
+            'veg_adj_acc_bio_uris': '/path/to/%i_%i_veg_%i_adj_acc_bio.tif',
+            'veg_adj_acc_soil_uris': '/path/to/%i_%i_veg_%i_adj_acc_soil.tif',
+            'veg_adj_dis_bio_uris': '/path/to/%i_%i_veg_%i_adj_dis_bio.tif',
+            'veg_adj_dis_soil_uris': '/path/to/%i_%i_veg_%i_adj_dis_soil.tif',
+            'veg_adj_em_dis_bio_uris': '/path/to/%i_%i_veg_%i_adj_em_dis_bio.tif',
+            'veg_adj_em_dis_soil_uris': '/path/to/%i_%i_veg_%i_adj_em_dis_soil.tif',
+            'veg_em_bio_uris': '/path/to/%i_%i_veg_%i_em_bio.tif',
+            'veg_em_soil_uris': '/path/to/%i_%i_veg_%i_em_soil.tif',
+
+            'this_total_acc_soil_uris': '/path/to/%i_%i_soil_acc.tif',
+            'this_total_acc_bio_uris': '/path/to/%i_%i_bio_acc.tif',
+            'this_total_dis_soil_uris': '/path/to/%i_%i_soil_dis.tif',
+            'this_total_dis_bio_uris': '/path/to/%i_%i_bio_dis.tif',
+
+            # Final Outputs
+            'extent_uri': '/path/to/extent.shp',  # Bounding area of all input LULC maps
+            'carbon_stock_uri': '/path/to/stock_%%i.tif',  # Carbon stock at time t
+            'net_sequestration_uri': '/path/to/sequest_%i_%i.tif',  # Carbon sequested over given timeperiod
+            'gain_uri': '/path/to/gain_%i_%i.tif',  # Only positive net sequestration
+            'loss_uri': '/path/to/loss_%i_%i.tif',  # Only negative net sequestration
+            'blue_carbon_csv_uri': '/path/to/sequestration.csv',  # Valuation table
         }
 
     '''
@@ -205,6 +176,8 @@ def fetch_args(args):
         os.makedirs(intermediate_dir)
 
     # === Initialize Dictionaries from Input Tables
+
+    # == Distrubance CSVs
     trans_acc = "Accumulation"
     dis_field_key = "veg type"
 
@@ -220,7 +193,7 @@ def fetch_args(args):
     for k in vars_dict['dis_bio']:
         vars_dict['dis_bio'][k][trans_acc] = 0.0
 
-    # carbon_pools_uri - carbon
+    # == Carbon Pools CSV
     carbon_field_veg = "Veg Type"
     carbon_field_above = "Above (Mg / ha)"
     carbon_field_below = "Below (Mg / ha)"
@@ -230,10 +203,10 @@ def fetch_args(args):
     carbon_field_soil = "Soil (Mg / ha)"
     vars_dict['carbon_field_soil'] = carbon_field_soil
 
-    vars_dict['carbon'] = raster_utils.get_lookup_from_csv(
+    vars_dict['carbon_pools'] = raster_utils.get_lookup_from_csv(
         vars_dict['carbon_pools_uri'], "Id")
 
-    # half_life_csv_uri - half_life
+    # == Half Life CSV
     half_life_field_key = "veg type"
     vars_dict['half_life_field_bio'] = "biomass (years)"
     vars_dict['half_life_field_soil'] = "soil (years)"
@@ -241,8 +214,8 @@ def fetch_args(args):
         vars_dict['half_life_csv_uri'],
         half_life_field_key)
 
-    # transition_matrix_uri - trans
-    vars_dict['trans'] = raster_utils.get_lookup_from_csv(
+    # == Transition Matrix CSV
+    trans_csv_dict = raster_utils.get_lookup_from_csv(
         vars_dict['transition_matrix_uri'], "Id")
 
     # === Initialize Derivative Dictionaries
@@ -261,6 +234,8 @@ def fetch_args(args):
     vars_dict['lulc_uri_dict'] = lulc_uri_dict
     vars_dict['lulc_years'] = lulc_years
 
+    _validate_rasters(vars_dict, trans_csv_dict, lulc_uri_dict, lulc_years)
+
     class InfiniteDict:
         def __init__(self, k, v):
             self.d = {k: v}
@@ -277,54 +252,20 @@ def fetch_args(args):
     # constructing accumulation tables from carbon table
     # acc_soil - from carbon
     acc_soil = {}
-    for k in vars_dict['carbon']:
+    for k in vars_dict['carbon_pools']:
         acc_soil[k] = InfiniteDict(
             trans_acc,
-            vars_dict['carbon'][k][carbon_acc_soil_field])
+            vars_dict['carbon_pools'][k][carbon_acc_soil_field])
     vars_dict['acc_soil'] = acc_soil
 
     # acc_bio - from carbon
     acc_bio = {}
-    for k in vars_dict['carbon']:
+    for k in vars_dict['carbon_pools']:
         acc_bio[k] = InfiniteDict(
             trans_acc,
-            vars_dict['carbon'][k][carbon_acc_bio_field])
+            vars_dict['carbon_pools'][k][carbon_acc_bio_field])
     vars_dict['acc_bio'] = acc_bio
 
-    # validate disturbance and accumulation tables
-    change_types = set()
-    for k1 in vars_dict['trans']:
-        for k2 in vars_dict['trans']:
-            change_types.add(vars_dict['trans'][k1][str(k2)])
-
-    # validating data
-    vars_dict['nodata_lulc'] = set([raster_utils.get_nodata_from_uri(
-        lulc_uri_dict[k]) for k in lulc_uri_dict])
-    if len(vars_dict['nodata_lulc']) == 1:
-        LOGGER.debug("All rasters have the same nodata value.")
-        vars_dict['nodata_lulc'] = vars_dict['nodata_lulc'].pop()
-    else:
-        msg = "All rasters must have the same nodata value."
-        LOGGER.error(msg)
-        raise ValueError, msg
-
-    vars_dict['cell_size'] = set([raster_utils.get_cell_size_from_uri(
-        lulc_uri_dict[k]) for k in lulc_uri_dict])
-    if len(vars_dict['cell_size']) == 1:
-        LOGGER.debug("All rasters have the same cell size.")
-        vars_dict['cell_size'] = vars_dict['cell_size'].pop()
-    else:
-        msg = "All rasters must have the same cell size."
-        LOGGER.error(msg)
-        raise ValueError, msg
-
-    LOGGER.debug("Checking alignment.")
-    try:
-        _alignment_check_uri([lulc_uri_dict[k] for k in lulc_uri_dict])
-    except ValueError, msg:
-        LOGGER.error("Alignment check FAILED.")
-        LOGGER.error(msg)
-        raise ValueError, msg
 
     # construct dictionaries for single parameter lookups
     conversion = (raster_utils.get_cell_size_from_uri(
@@ -332,8 +273,8 @@ def fetch_args(args):
 
     LOGGER.debug("Cell size is %s hectacres.", conversion)
 
-    veg_dict = dict([(k, int(vars_dict[
-        'carbon'][k][carbon_field_veg])) for k in vars_dict['carbon']])
+    veg_dict = dict([(k, int(vars_dict['carbon_pools'][k][
+        carbon_field_veg])) for k in vars_dict['carbon_pools']])
 
     veg_type_list = list(set([veg_dict[k] for k in veg_dict]))
     vars_dict['veg_type_list'] = veg_type_list
@@ -347,10 +288,10 @@ def fetch_args(args):
                       vars_dict['carbon_field_litter'],
                       carbon_field_soil]:
             veg_field_dict[veg_type][field] = {}
-            for k in vars_dict['carbon']:
-                if int(vars_dict['carbon'][k][carbon_field_veg]) == veg_type:
+            for k in vars_dict['carbon_pools']:
+                if int(vars_dict['carbon_pools'][k][carbon_field_veg]) == veg_type:
                     veg_field_dict[veg_type][field][k] = float(
-                        vars_dict['carbon'][k][field]) * conversion
+                        vars_dict['carbon_pools'][k][field]) * conversion
                 else:
                     veg_field_dict[veg_type][field][k] = 0.0
 
@@ -358,7 +299,7 @@ def fetch_args(args):
     carbon_field_bio = "bio"
     for veg_type in veg_type_list:
         veg_field_dict[veg_type][carbon_field_bio] = {}
-        for k in vars_dict['carbon']:
+        for k in vars_dict['carbon_pools']:
             veg_field_dict[veg_type][carbon_field_bio][k] = veg_field_dict[
                 veg_type][carbon_field_below][k] + veg_field_dict[veg_type][
                 carbon_field_above][k]
@@ -366,26 +307,26 @@ def fetch_args(args):
     vars_dict['carbon_field_bio'] = carbon_field_bio
 
     # accumulation
-    veg_trans_acc_dict = {}
+    trans_veg_acc_dict = {}
     for veg_type in veg_type_list:
-        veg_trans_acc_dict[veg_type] = {}
+        trans_veg_acc_dict[veg_type] = {}
         for component, component_dict in [("acc_soil", acc_soil),
                                           ("acc_bio", acc_bio)]:
-            veg_trans_acc_dict[veg_type][component] = {}
-            for original_lulc in vars_dict['trans']:
-                veg_trans_acc_dict[veg_type][component][original_lulc] = {}
-                for transition_lulc in vars_dict['trans']:
-                    if int(vars_dict['carbon'][transition_lulc][
+            trans_veg_acc_dict[veg_type][component] = {}
+            for original_lulc in trans_csv_dict:
+                trans_veg_acc_dict[veg_type][component][original_lulc] = {}
+                for transition_lulc in trans_csv_dict:
+                    if int(vars_dict['carbon_pools'][transition_lulc][
                             carbon_field_veg]) == veg_type:
-                        veg_trans_acc_dict[veg_type][component][
+                        trans_veg_acc_dict[veg_type][component][
                             (original_lulc, transition_lulc)] = component_dict[
-                                transition_lulc][vars_dict['trans'][
+                                transition_lulc][trans_csv_dict[
                                     original_lulc][str(
                                         transition_lulc)]] * conversion
                     else:
-                        veg_trans_acc_dict[veg_type][component][(
+                        trans_veg_acc_dict[veg_type][component][(
                             original_lulc, transition_lulc)] = 0.0
-    vars_dict['veg_trans_acc_dict'] = veg_trans_acc_dict
+    vars_dict['trans_veg_acc_dict'] = trans_veg_acc_dict
 
     # disturbance
     trans_dis_dict = {}
@@ -393,11 +334,11 @@ def fetch_args(args):
             ("dis_bio", vars_dict['dis_bio']),
             ("dis_soil", vars_dict['dis_soil'])]:
         trans_dis_dict[component] = {}
-        for original_lulc in vars_dict['trans']:
-            for transition_lulc in vars_dict['trans']:
+        for original_lulc in trans_csv_dict:
+            for transition_lulc in trans_csv_dict:
                 trans_dis_dict[component][(original_lulc, transition_lulc)] = \
-                    component_dict[vars_dict['carbon'][original_lulc][
-                        carbon_field_veg]][vars_dict['trans'][original_lulc][
+                    component_dict[vars_dict['carbon_pools'][original_lulc][
+                        carbon_field_veg]][trans_csv_dict[original_lulc][
                             str(transition_lulc)]]
     vars_dict['trans_dis_dict'] = trans_dis_dict
 
@@ -406,83 +347,87 @@ def fetch_args(args):
     vars_dict['nodata_default_int'] = -1
     vars_dict['nodata_default_float'] = -1
 
+    vars_dict['acc_soil_key'] = "acc_soil"
+    vars_dict['acc_bio_key'] = "acc_bio"
+    vars_dict['dis_bio_key'] = "dis_bio"
+    vars_dict['dis_soil_key'] = "dis_soil"
+
     # === Create Output Raster URI Templates
-    vars_dict['acc_soil_name'] = "acc_soil"
-    vars_dict['acc_bio_name'] = "acc_bio"
-    vars_dict['dis_bio_name'] = "dis_bio"
-    vars_dict['dis_soil_name'] = "dis_soil"
-
     # carbon pool file names
-    vars_dict['carbon_name'] = "stock_%i.tif"
-
-    vars_dict['veg_stock_bio_name'] = os.path.join(
+    vars_dict['veg_stock_bio_uris'] = os.path.join(
         intermediate_dir, "%i_veg_%i_stock_biomass.tif")
-    vars_dict['veg_stock_soil_name'] = os.path.join(
+    vars_dict['veg_stock_soil_uris'] = os.path.join(
         intermediate_dir, "%i_veg_%i_stock_soil.tif")
 
     # carbon litter
-    vars_dict['veg_litter_name'] = os.path.join(
+    vars_dict['veg_litter_uris'] = os.path.join(
         intermediate_dir, "%i_veg_%i_litter.tif")
 
     # carbon accumulation file names
-    vars_dict['acc_soil_name'] = os.path.join(
+    vars_dict['acc_soil_uris'] = os.path.join(
         intermediate_dir, "%i_acc_soil.tif")
-    vars_dict['acc_bio_name'] = os.path.join(
+    vars_dict['acc_bio_uris'] = os.path.join(
         intermediate_dir, "%i_acc_bio.tif")
 
-    vars_dict['veg_acc_bio_name'] = os.path.join(
+    vars_dict['veg_acc_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_acc_bio.tif")
-    vars_dict['veg_acc_soil_name'] = os.path.join(
+    vars_dict['veg_acc_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_acc_soil.tif")
-    vars_dict['veg_dis_bio_name'] = os.path.join(
+    vars_dict['veg_dis_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_dis_bio.tif")
-    vars_dict['veg_dis_soil_name'] = os.path.join(
+    vars_dict['veg_dis_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_dis_soil.tif")
 
     # carbon disturbance file names
-    vars_dict['dis_bio_name'] = os.path.join(
+    vars_dict['dis_bio_uris'] = os.path.join(
         intermediate_dir, "%i_dis_bio.tif")
-    vars_dict['dis_soil_name'] = os.path.join(
+    vars_dict['dis_soil_uris'] = os.path.join(
         intermediate_dir, "%i_dis_soil.tif")
 
     # adjusted carbon file names
-    vars_dict['veg_adj_acc_bio_name'] = os.path.join(
+    vars_dict['veg_adj_acc_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_acc_bio.tif")
-    vars_dict['veg_adj_acc_soil_name'] = os.path.join(
+    vars_dict['veg_adj_acc_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_acc_soil.tif")
-    vars_dict['veg_adj_dis_bio_name'] = os.path.join(
+    vars_dict['veg_adj_dis_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_dis_bio.tif")
-    vars_dict['veg_adj_dis_soil_name'] = os.path.join(
+    vars_dict['veg_adj_dis_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_dis_soil.tif")
 
-    vars_dict['veg_adj_em_dis_bio_name'] = os.path.join(
+    vars_dict['veg_adj_em_dis_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_em_dis_bio.tif")
-    vars_dict['veg_adj_em_dis_soil_name'] = os.path.join(
+    vars_dict['veg_adj_em_dis_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_adj_em_dis_soil.tif")
 
     # emission file names
-    vars_dict['veg_em_bio_name'] = os.path.join(
+    vars_dict['veg_em_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_em_bio.tif")
-    vars_dict['veg_em_soil_name'] = os.path.join(
+    vars_dict['veg_em_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_veg_%i_em_soil.tif")
 
     # totals
-    vars_dict['this_total_acc_soil_name'] = os.path.join(
+    vars_dict['this_total_acc_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_soil_acc.tif")
-    vars_dict['this_total_acc_bio_name'] = os.path.join(
+    vars_dict['this_total_acc_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_bio_acc.tif")
-    vars_dict['this_total_dis_soil_name'] = os.path.join(
+    vars_dict['this_total_dis_soil_uris'] = os.path.join(
         intermediate_dir, "%i_%i_soil_dis.tif")
-    vars_dict['this_total_dis_bio_name'] = os.path.join(
+    vars_dict['this_total_dis_bio_uris'] = os.path.join(
         intermediate_dir, "%i_%i_bio_dis.tif")
-    vars_dict['net_sequestration_name'] = "sequest_%i_%i.tif"
-    vars_dict['gain_name'] = "gain_%i_%i.tif"
-    vars_dict['loss_name'] = "loss_%i_%i.tif"
 
+    # Create Output URIs
     vars_dict['extent_uri'] = os.path.join(
         workspace_dir, "extent.shp")
     vars_dict['blue_carbon_csv_uri'] = os.path.join(
         workspace_dir, "sequestration.csv")
+    vars_dict['net_sequestration_uri'] = os.path.join(
+        workspace_dir, "sequest_%i_%i.tif")
+    vars_dict['gain_uri'] = os.path.join(
+        workspace_dir, "gain_%i_%i.tif")
+    vars_dict['loss_uri'] = os.path.join(
+        workspace_dir, "loss_%i_%i.tif")
+    vars_dict['carbon_stock_uri'] = os.path.join(
+        workspace_dir, "stock_%i.tif")
 
     return vars_dict
 
@@ -533,3 +478,44 @@ def _alignment_check_uri(dataset_uri_list):
         dataset = None
 
     return True
+
+
+def _validate_rasters(vars_dict, trans_csv_dict, lulc_uri_dict, lulc_years):
+    '''
+    '''
+    # validate disturbance and accumulation tables
+    change_types = set()
+    for k1 in trans_csv_dict:
+        for k2 in trans_csv_dict:
+            change_types.add(trans_csv_dict[k1][str(k2)])
+
+    # check that all rasters have same nodata value
+    vars_dict['nodata_lulc'] = set([raster_utils.get_nodata_from_uri(
+        lulc_uri_dict[k]) for k in lulc_uri_dict])
+    if len(vars_dict['nodata_lulc']) == 1:
+        LOGGER.debug("All rasters have the same nodata value.")
+        vars_dict['nodata_lulc'] = vars_dict['nodata_lulc'].pop()
+    else:
+        msg = "All rasters must have the same nodata value."
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    # check that all rasters have same cell size
+    vars_dict['cell_size'] = set([raster_utils.get_cell_size_from_uri(
+        lulc_uri_dict[k]) for k in lulc_uri_dict])
+    if len(vars_dict['cell_size']) == 1:
+        LOGGER.debug("All rasters have the same cell size.")
+        vars_dict['cell_size'] = vars_dict['cell_size'].pop()
+    else:
+        msg = "All rasters must have the same cell size."
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    # check that all rasters are aligned
+    LOGGER.debug("Checking alignment.")
+    try:
+        _alignment_check_uri([lulc_uri_dict[k] for k in lulc_uri_dict])
+    except ValueError, msg:
+        LOGGER.error("Alignment check FAILED.")
+        LOGGER.error(msg)
+        raise ValueError, msg

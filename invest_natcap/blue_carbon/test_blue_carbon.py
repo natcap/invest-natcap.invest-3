@@ -37,9 +37,9 @@ class TestOverallModel1(unittest.TestCase):
             'carbon_pools_uri': os.path.join(input_dir, 'carbon.csv'),
             'half_life_csv_uri': os.path.join(input_dir, 'half_life.csv'),
             'transition_matrix_uri': os.path.join(input_dir, 'transition.csv'),
-            'private_valuation': True,
+            'do_private_valuation': True,
             'discount_rate': 5,
-            'price_table': True,
+            'do_price_table': True,
             'carbon_schedule': os.path.join(input_dir, 'SCC5.csv')
             #'carbon_value': None,
             #'rate_change': None,
@@ -58,15 +58,15 @@ class TestOverallModel1(unittest.TestCase):
             print src.read_band(1)[0:100:5, 0:100:5]
 
 
-# class TestOverallModel2(unittest.TestCase):
-#     def setUp(self):
-#         self.args = {
+class TestOverallModel2(unittest.TestCase):
+    def setUp(self):
+        self.args = {
 
-#         }
+        }
 
-#     def test_run(self):
-#         guess = blue_carbon.execute(self.args)
-#         pass
+    def test_run(self):
+        guess = blue_carbon.execute(self.args)
+        pass
 
 
 if __name__ == '__main__':

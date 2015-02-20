@@ -263,10 +263,10 @@
       ]
     },
     {
-      "id": "private_valuation",
+      "id": "do_private_valuation",
       "type": "container",
       "collapsible": true,
-      "args_id": "private_valuation",
+      "args_id": "do_private_valuation",
       "label": "Valuation",
       "defaultValue": true,
       "elements": [
@@ -303,8 +303,8 @@
               "helpText": "The discount rate as an integer percent. <p>For more information, see 'Data Needs' section in the model's documentation"
             },
             {
-              "id": "price_table",
-              "args_id": "price_table",
+              "id": "do_price_table",
+              "args_id": "do_price_table",
               "type": "checkbox",
               "label": "Use price table",
               "defaultValue": true
