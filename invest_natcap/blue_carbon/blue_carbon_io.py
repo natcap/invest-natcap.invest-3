@@ -266,7 +266,6 @@ def fetch_args(args):
             vars_dict['carbon_pools'][k][carbon_acc_bio_field])
     vars_dict['acc_bio'] = acc_bio
 
-
     # construct dictionaries for single parameter lookups
     conversion = (raster_utils.get_cell_size_from_uri(
         lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0  # convert to Ha
@@ -300,6 +299,7 @@ def fetch_args(args):
     for veg_type in veg_type_list:
         veg_field_dict[veg_type][carbon_field_bio] = {}
         for k in vars_dict['carbon_pools']:
+            # sum (below, above) carbon pools together
             veg_field_dict[veg_type][carbon_field_bio][k] = veg_field_dict[
                 veg_type][carbon_field_below][k] + veg_field_dict[veg_type][
                 carbon_field_above][k]
@@ -310,8 +310,9 @@ def fetch_args(args):
     trans_veg_acc_dict = {}
     for veg_type in veg_type_list:
         trans_veg_acc_dict[veg_type] = {}
-        for component, component_dict in [("acc_soil", acc_soil),
-                                          ("acc_bio", acc_bio)]:
+        for component, component_dict in [
+                ("acc_soil", acc_soil),
+                ("acc_bio", acc_bio)]:
             trans_veg_acc_dict[veg_type][component] = {}
             for original_lulc in trans_csv_dict:
                 trans_veg_acc_dict[veg_type][component][original_lulc] = {}

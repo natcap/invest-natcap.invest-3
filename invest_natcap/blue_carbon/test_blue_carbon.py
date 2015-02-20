@@ -58,15 +58,15 @@ class TestOverallModel1(unittest.TestCase):
             print src.read_band(1)[0:100:5, 0:100:5]
 
 
-class TestOverallModel2(unittest.TestCase):
-    def setUp(self):
-        self.args = {
+# class TestOverallModel2(unittest.TestCase):
+#     def setUp(self):
+#         self.args = {
 
-        }
+#         }
 
-    def test_run(self):
-        guess = blue_carbon.execute(self.args)
-        pass
+#     def test_run(self):
+#         guess = blue_carbon.execute(self.args)
+#         pass
 
 
 if __name__ == '__main__':

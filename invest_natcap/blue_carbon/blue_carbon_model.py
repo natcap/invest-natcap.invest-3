@@ -11,6 +11,8 @@ from osgeo import gdal, ogr, osr
 
 from invest_natcap import raster_utils
 
+import rasterio as rio
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -58,7 +60,6 @@ def run_biophysical(vars_dict):
                 return nodata_default_float
             return trans_veg_acc_dict[veg_type][acc_bio_key][(
                 int(original_lulc), int(transition_lulc))] * t
-
         return acc_bio_co_op
 
     def acc_soil_op_closure(veg_type, t):
@@ -280,7 +281,6 @@ def run_biophysical(vars_dict):
                 dis_soil_op,
                 this_veg_dis_soil_uri)
 
-
             # Transition
 
             # transition adjusted undisturbed biomass
@@ -407,6 +407,22 @@ def run_biophysical(vars_dict):
             veg_base_uri_dict[veg_type][
                 base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
+            # DEBUG
+            print_raster("Current Year (%i) LULC Raster" % this_year, this_uri)
+            print_raster("Next Year (%i) LULC Raster" % next_year, next_uri)
+            print_raster("Veg %i accumulated carbon in biomass" % veg_type, this_veg_acc_bio_uri)
+            print_raster("Veg %i accumulated carbon in soil" % veg_type, this_veg_acc_soil_uri)
+            print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
+            print_raster("Veg %i disturbed carbon in soil" % veg_type, this_veg_dis_soil_uri)
+            print_raster("Veg %i adjusted accumulated carbon in biomass" % veg_type, this_veg_adj_acc_bio_uri)
+            print_raster("Veg %i adjusted accumulated carbon in soil" % veg_type, this_veg_adj_acc_soil_uri)
+            print_raster("Veg %i adjusted disturbed carbon in biomass" % veg_type, this_veg_adj_dis_bio_uri)
+            print_raster("Veg %i adjusted disturbed carbon in soil" % veg_type, this_veg_adj_dis_soil_uri)
+            print_raster("Veg %i emissions from biomass" % veg_type, this_veg_em_bio_uri)
+            print_raster("Veg %i emissions from soil" % veg_type, this_veg_em_soil_uri)
+            print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
+            print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
+
         vectorize_carbon_datasets(
             this_total_carbon_uri_list,
             add_op,
@@ -433,6 +449,13 @@ def run_biophysical(vars_dict):
             veg_dis_soil_uri_list,
             add_op,
             this_total_dis_soil_uri)
+
+        # DEBUG
+        print_raster("Total Carbon Stock for Year %i" % this_year, this_total_carbon_uri)
+        print_raster("Carbon accumulated in biomass", this_total_acc_bio_uri)
+        print_raster("Carbon accumulated in soil", this_total_acc_soil_uri)
+        print_raster("Carbon disturbed in biomass", this_total_dis_bio_uri)
+        print_raster("Carbon disturbed in soil", this_total_dis_soil_uri)
 
     # analysis year raster
     this_total_carbon_uri = vars_dict['carbon_stock_uri'] % analysis_year
@@ -714,3 +737,9 @@ def _emissions_interpolation(start_year, end_year, this_year, next_year, alpha):
     return ((1 - (0.5 ** ((next_year - start_year)/alpha))) - (1 - (0.5 ** (
         (this_year - start_year)/alpha))))/(1 - (0.5 ** (
             (end_year - start_year)/alpha)))
+
+
+def print_raster(title, uri):
+    with rio.open(uri) as src:
+        print src.read_band(1)[0:100:5, 0:100:5]
+    print "^^^", title
