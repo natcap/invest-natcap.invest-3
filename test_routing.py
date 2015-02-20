@@ -31,9 +31,10 @@ def main():
         #r"\Freshwater\erosivity")
         #'C:\\Users\\rsharp\\Documents\\invest-natcap.invest-3\\test\\' \
         #+ 'invest-data\\Base_Data\\Freshwater\\dem'
-        #'C:\\Users\\rich\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
         #r'C:\\Users\\rpsharp\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
-        r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\DEM.tif")
+        #'C:\\Users\\rich\\Documents\\invest-natcap.invest-3\\test\\invest-data\\Base_Data\\Freshwater\\dem')
+        #r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\DEM.tif")
+        r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\hi_dem10m_p")
         #r"C:\Users\rpsharp\Documents\dem_clipped.tif")
         #r"C:\Users\rich\Documents\Dropbox\brian_packard_dem_nutrient_bug\dem")
         #r"C:\Users\rich\Documents\Dropbox\big_dems_for_testing_routing\hi_dem10m_p")
