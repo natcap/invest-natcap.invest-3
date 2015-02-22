@@ -218,6 +218,8 @@ def fetch_args(args):
     trans_csv_dict = raster_utils.get_lookup_from_csv(
         vars_dict['transition_matrix_uri'], "Id")
 
+    ####################################
+    #  NEW FUNCTION SHOULD GO HERE
     # === Initialize Derivative Dictionaries
     lulc_list = []
     for i in range(1, 6):

@@ -51,7 +51,7 @@ class TestOverallModel1(unittest.TestCase):
         print os.listdir(self.args['workspace_dir'])
 
         with rio.open(os.path.join(
-                self.args['workspace_dir'], 'loss_2004_2050.tif')) as src:
+                self.args['workspace_dir'], 'stock_2050.tif')) as src:
             print src.width
             print src.height
             print src.count

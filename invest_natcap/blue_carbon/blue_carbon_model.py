@@ -23,8 +23,6 @@ def run_biophysical(vars_dict):
     '''
     '''
     # Setup Operations
-    # vectorize datasets operations
-    # standard ops
     gdal_type_carbon = vars_dict['gdal_type_carbon']
     nodata_default_int = vars_dict['nodata_default_int']
     nodata_default_float = vars_dict['nodata_default_float']
@@ -101,17 +99,6 @@ def run_biophysical(vars_dict):
         else:
             return base + (adj * mask)
 
-    def vectorize_carbon_datasets(
-            dataset_uri_list, dataset_pixel_op, dataset_out_uri):
-        raster_utils.vectorize_datasets(
-            dataset_uri_list,
-            dataset_pixel_op,
-            dataset_out_uri,
-            gdal_type_carbon,
-            nodata_default_float,
-            cell_size,
-            "union")
-
     def half_life_op_closure(veg_type, half_life_field, alpha_t):
         def h_l_op(c):
             if c is nodata_default_float:
@@ -130,6 +117,17 @@ def run_biophysical(vars_dict):
                 return 0
 
         return h_l_op
+
+    def carbon_raster_calculation(
+            dataset_uri_list, dataset_pixel_op, dataset_out_uri):
+        raster_utils.vectorize_datasets(
+            dataset_uri_list,
+            dataset_pixel_op,
+            dataset_out_uri,
+            gdal_type_carbon,
+            nodata_default_float,
+            cell_size,
+            "union")
 
     # Run Biophysical Model
     lulc_years = vars_dict['lulc_years']
@@ -250,7 +248,7 @@ def run_biophysical(vars_dict):
             # biomass accumulation
             this_veg_acc_bio_uri = vars_dict['veg_acc_bio_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_uri, next_uri],
                 acc_bio_op_closure(veg_type, t),
                 this_veg_acc_bio_uri)
@@ -258,7 +256,7 @@ def run_biophysical(vars_dict):
             # soil accumulation
             this_veg_acc_soil_uri = vars_dict['veg_acc_soil_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_uri, next_uri],
                 acc_soil_op_closure(veg_type, t),
                 this_veg_acc_soil_uri)
@@ -266,7 +264,7 @@ def run_biophysical(vars_dict):
             # biomass disturbance
             this_veg_dis_bio_uri = vars_dict['veg_dis_bio_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_acc_bio], this_uri, next_uri],
                 dis_bio_op,
@@ -275,7 +273,7 @@ def run_biophysical(vars_dict):
             # soil disturbance
             this_veg_dis_soil_uri = vars_dict['veg_dis_soil_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_acc_soil], this_uri, next_uri],
                 dis_soil_op,
@@ -286,7 +284,7 @@ def run_biophysical(vars_dict):
             # transition adjusted undisturbed biomass
             this_veg_adj_acc_bio_uri = vars_dict['veg_adj_acc_bio_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_acc_bio],
                     this_veg_acc_bio_uri, this_veg_dis_bio_uri],
@@ -296,7 +294,7 @@ def run_biophysical(vars_dict):
             # transition adjusted undisturbed soil
             this_veg_adj_acc_soil_uri = vars_dict['veg_adj_acc_soil_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_acc_soil], this_veg_acc_soil_uri,
                     this_veg_dis_soil_uri],
@@ -306,7 +304,7 @@ def run_biophysical(vars_dict):
             # transition adjusted disturbed biomass
             this_veg_adj_dis_bio_uri = vars_dict['veg_adj_dis_bio_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_dis_bio], this_veg_dis_bio_uri],
                 add_op,
@@ -315,7 +313,7 @@ def run_biophysical(vars_dict):
             # transition adjusted disturbed soil
             this_veg_adj_dis_soil_uri = vars_dict['veg_adj_dis_soil_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
                     base_veg_dis_soil], this_veg_dis_soil_uri],
                 add_op,
@@ -325,7 +323,7 @@ def run_biophysical(vars_dict):
             # biomass emissions
             this_veg_em_bio_uri = vars_dict['veg_em_bio_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_veg_adj_dis_bio_uri],
                 half_life_op_closure(
                     veg_type, vars_dict['half_life_field_bio'], t),
@@ -334,7 +332,7 @@ def run_biophysical(vars_dict):
             # soil emissions
             this_veg_em_soil_uri = vars_dict['veg_em_soil_uris'] % (
                 this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_veg_adj_dis_soil_uri],
                 half_life_op_closure(
                     veg_type, vars_dict['half_life_field_soil'], t),
@@ -344,7 +342,7 @@ def run_biophysical(vars_dict):
             # emissions adjusted disturbed biomass
             this_veg_adj_em_dis_bio_uri = vars_dict[
                 'veg_adj_em_dis_bio_uris'] % (this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_veg_adj_dis_bio_uri, this_veg_em_bio_uri],
                 sub_op,
                 this_veg_adj_em_dis_bio_uri)
@@ -352,7 +350,7 @@ def run_biophysical(vars_dict):
             # emissions adjusted disturbed soil
             this_veg_adj_em_dis_soil_uri = vars_dict[
                 'veg_adj_em_dis_soil_uris'] % (this_year, next_year, veg_type)
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [this_veg_adj_dis_soil_uri, this_veg_em_soil_uri],
                 sub_op,
                 this_veg_adj_em_dis_soil_uri)
@@ -423,29 +421,29 @@ def run_biophysical(vars_dict):
             print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
             print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
 
-        vectorize_carbon_datasets(
+        carbon_raster_calculation(
             this_total_carbon_uri_list,
             add_op,
             this_total_carbon_uri)
 
         stock_uri_dict[this_year] = this_total_carbon_uri
 
-        vectorize_carbon_datasets(
+        carbon_raster_calculation(
             veg_acc_bio_uri_list,
             add_op,
             this_total_acc_bio_uri)
 
-        vectorize_carbon_datasets(
+        carbon_raster_calculation(
             veg_acc_soil_uri_list,
             add_op,
             this_total_acc_soil_uri)
 
-        vectorize_carbon_datasets(
+        carbon_raster_calculation(
             veg_dis_bio_uri_list,
             add_op,
             this_total_dis_bio_uri)
 
-        vectorize_carbon_datasets(
+        carbon_raster_calculation(
             veg_dis_soil_uri_list,
             add_op,
             this_total_dis_soil_uri)
@@ -477,10 +475,12 @@ def run_biophysical(vars_dict):
         this_total_carbon_uri_list.append(this_veg_adj_acc_bio_uri)
         this_total_carbon_uri_list.append(this_veg_adj_acc_soil_uri)
 
-    vectorize_carbon_datasets(
+    carbon_raster_calculation(
         this_total_carbon_uri_list,
         add_op,
         this_total_carbon_uri)
+
+    print_raster("Total Carbon Stock for Analysis Year", this_total_carbon_uri)
 
     stock_uri_dict[analysis_year] = this_total_carbon_uri
 
@@ -513,20 +513,24 @@ def run_biophysical(vars_dict):
 
             stock_uri_list = [stock_uri_dict[next_year],
                               stock_uri_dict[this_year]]
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 stock_uri_list,
                 sub_op,
                 total_seq_uri)
 
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [total_seq_uri],
                 pos_op,
                 gain_uri)
 
-            vectorize_carbon_datasets(
+            carbon_raster_calculation(
                 [total_seq_uri],
                 neg_op,
                 loss_uri)
+
+            print_raster("Next Sequestration from %i to %i", total_seq_uri)
+            print_raster("Total Gain from %i to %i" % (this_year, next_year), gain_uri)
+            print_raster("Total Loss from %i to %i" % (this_year, next_year), loss_uri)
 
     vars_dict['totals'] = totals
 
@@ -740,6 +744,12 @@ def _emissions_interpolation(start_year, end_year, this_year, next_year, alpha):
 
 
 def print_raster(title, uri):
-    with rio.open(uri) as src:
-        print src.read_band(1)[0:100:5, 0:100:5]
-    print "^^^", title
+    # with rio.open(uri) as src:
+    #     a = src.read_band(1)[0:100:5, 0:100:5]
+    #     print a
+    #     print "^^^", title
+        # with open('rasters.txt', 'a') as f:
+        #     pp.pprint(title, stream=f)
+        #     # pp.pprint(a, stream=f)
+        #     f.write('\n')
+    pass
