@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.routing.routedem",
   "modelName": "routedem",
   "localDocURI": "../documentation/routedem.html",
-  "height": 800,
+  "height": 570,
   "width": 700,
   "elements": [
     {
