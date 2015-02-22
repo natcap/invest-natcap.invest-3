@@ -19,6 +19,7 @@ LOGGER = logging.getLogger('blue_carbon')
 
 def fetch_args(args):
     '''
+    Fetches inputs for blue carbon model and returns dictionary of variables
 
     Example Args::
 

@@ -21,6 +21,7 @@ LOGGER = logging.getLogger('blue_carbon')
 
 def run_biophysical(vars_dict):
     '''
+    Runs the biophysical component of the Blue Carbon model
     '''
     # Setup Operations
     gdal_type_carbon = vars_dict['gdal_type_carbon']
@@ -406,20 +407,20 @@ def run_biophysical(vars_dict):
                 base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
             # DEBUG
-            print_raster("Current Year (%i) LULC Raster" % this_year, this_uri)
-            print_raster("Next Year (%i) LULC Raster" % next_year, next_uri)
-            print_raster("Veg %i accumulated carbon in biomass" % veg_type, this_veg_acc_bio_uri)
-            print_raster("Veg %i accumulated carbon in soil" % veg_type, this_veg_acc_soil_uri)
-            print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
-            print_raster("Veg %i disturbed carbon in soil" % veg_type, this_veg_dis_soil_uri)
-            print_raster("Veg %i adjusted accumulated carbon in biomass" % veg_type, this_veg_adj_acc_bio_uri)
-            print_raster("Veg %i adjusted accumulated carbon in soil" % veg_type, this_veg_adj_acc_soil_uri)
-            print_raster("Veg %i adjusted disturbed carbon in biomass" % veg_type, this_veg_adj_dis_bio_uri)
-            print_raster("Veg %i adjusted disturbed carbon in soil" % veg_type, this_veg_adj_dis_soil_uri)
-            print_raster("Veg %i emissions from biomass" % veg_type, this_veg_em_bio_uri)
-            print_raster("Veg %i emissions from soil" % veg_type, this_veg_em_soil_uri)
-            print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
-            print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
+            _print_raster("Current Year (%i) LULC Raster" % this_year, this_uri)
+            _print_raster("Next Year (%i) LULC Raster" % next_year, next_uri)
+            _print_raster("Veg %i accumulated carbon in biomass" % veg_type, this_veg_acc_bio_uri)
+            _print_raster("Veg %i accumulated carbon in soil" % veg_type, this_veg_acc_soil_uri)
+            _print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
+            _print_raster("Veg %i disturbed carbon in soil" % veg_type, this_veg_dis_soil_uri)
+            _print_raster("Veg %i adjusted accumulated carbon in biomass" % veg_type, this_veg_adj_acc_bio_uri)
+            _print_raster("Veg %i adjusted accumulated carbon in soil" % veg_type, this_veg_adj_acc_soil_uri)
+            _print_raster("Veg %i adjusted disturbed carbon in biomass" % veg_type, this_veg_adj_dis_bio_uri)
+            _print_raster("Veg %i adjusted disturbed carbon in soil" % veg_type, this_veg_adj_dis_soil_uri)
+            _print_raster("Veg %i emissions from biomass" % veg_type, this_veg_em_bio_uri)
+            _print_raster("Veg %i emissions from soil" % veg_type, this_veg_em_soil_uri)
+            _print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
+            _print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
 
         carbon_raster_calculation(
             this_total_carbon_uri_list,
@@ -449,11 +450,11 @@ def run_biophysical(vars_dict):
             this_total_dis_soil_uri)
 
         # DEBUG
-        print_raster("Total Carbon Stock for Year %i" % this_year, this_total_carbon_uri)
-        print_raster("Carbon accumulated in biomass", this_total_acc_bio_uri)
-        print_raster("Carbon accumulated in soil", this_total_acc_soil_uri)
-        print_raster("Carbon disturbed in biomass", this_total_dis_bio_uri)
-        print_raster("Carbon disturbed in soil", this_total_dis_soil_uri)
+        _print_raster("Total Carbon Stock for Year %i" % this_year, this_total_carbon_uri)
+        _print_raster("Carbon accumulated in biomass", this_total_acc_bio_uri)
+        _print_raster("Carbon accumulated in soil", this_total_acc_soil_uri)
+        _print_raster("Carbon disturbed in biomass", this_total_dis_bio_uri)
+        _print_raster("Carbon disturbed in soil", this_total_dis_soil_uri)
 
     # analysis year raster
     this_total_carbon_uri = vars_dict['carbon_stock_uri'] % analysis_year
@@ -480,7 +481,7 @@ def run_biophysical(vars_dict):
         add_op,
         this_total_carbon_uri)
 
-    print_raster("Total Carbon Stock for Analysis Year", this_total_carbon_uri)
+    _print_raster("Total Carbon Stock for Analysis Year", this_total_carbon_uri)
 
     stock_uri_dict[analysis_year] = this_total_carbon_uri
 
@@ -528,9 +529,9 @@ def run_biophysical(vars_dict):
                 neg_op,
                 loss_uri)
 
-            print_raster("Next Sequestration from %i to %i", total_seq_uri)
-            print_raster("Total Gain from %i to %i" % (this_year, next_year), gain_uri)
-            print_raster("Total Loss from %i to %i" % (this_year, next_year), loss_uri)
+            _print_raster("Next Sequestration from %i to %i", total_seq_uri)
+            _print_raster("Total Gain from %i to %i" % (this_year, next_year), gain_uri)
+            _print_raster("Total Loss from %i to %i" % (this_year, next_year), loss_uri)
 
     vars_dict['totals'] = totals
 
@@ -538,7 +539,8 @@ def run_biophysical(vars_dict):
 
 
 def _datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
-    """Creates a shapefile with the bounding box from a raster.
+    """
+    Creates a shapefile with the bounding box from a raster.
 
     Args:
         dataset_uri (str): The uri for the input raster.
@@ -629,6 +631,7 @@ def _sum_uri(dataset_uri, datasource_uri):
 
 def run_valuation(vars_dict):
     '''
+    Runs the valuation component of the Blue Carbon model
     '''
     blue_carbon_csv_uri = vars_dict['blue_carbon_csv_uri']
     veg_acc_bio_uris = vars_dict['veg_acc_bio_uris']
@@ -743,7 +746,10 @@ def _emissions_interpolation(start_year, end_year, this_year, next_year, alpha):
             (end_year - start_year)/alpha)))
 
 
-def print_raster(title, uri):
+def _print_raster(title, uri):
+    '''
+    Debugging function that prints raster sample to screen and/or writes to file
+    '''
     # with rio.open(uri) as src:
     #     a = src.read_band(1)[0:100:5, 0:100:5]
     #     print a
