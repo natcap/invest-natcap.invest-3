@@ -197,6 +197,7 @@ def compute_transects(args):
                 i_last = i_base+i_offset-3
                 j_last = j_base+j_offset-3
 
+                print('tile', tiles)
 #                print('tile limits', (i_first, j_first, i_last, j_last))
                 #Draw the tile
 #                for row in range(i_first, i_last+1):
@@ -228,7 +229,7 @@ def compute_transects(args):
                         elif p[1] > j_offset-3:
                             continue
                         
-                        transects[(p[0] + i_base, p[1] + j_base)] = -1
+                        transects[(p[0] + i_base, p[1] + j_base)] = tiles # -1
 
                     # Estimate shore orientation
                     shore_orientations = \
@@ -237,11 +238,11 @@ def compute_transects(args):
 
                     # Skip if no shore orientation
                     if not shore_orientations:
-#                        print("No valid shore orientations")
+                        print("No valid shore orientations")
                         continue
-#                    for p in shore_orientations:
-#                        transects[(p[0], p[1])] = -2
-#                    print('shore_orientations', len(shore_orientations))
+                    for p in shore_orientations:
+                        transects[(p[0], p[1])] = -2
+                    print('shore_orientations', len(shore_orientations))
 
                     # Pick transect position among valid shore points
                     assert len(shore_pts) == 2, str((i, j)) + ' ' + str(shore_pts)
@@ -253,11 +254,11 @@ def compute_transects(args):
 
                     # Skip tile if no valid shore points
                     if len(transect_positions) == 0:
-#                        print("No well defined position")
+                        print("No well defined position")
                         continue
 #                    for p in transect_positions:
 #                        transects[(p[0], p[1])] = -3
-#                    print('transect_positions', len(transect_positions))
+                    print('transect_positions', len(transect_positions))
 
 
                     # Compute transect orientation
@@ -265,17 +266,15 @@ def compute_transects(args):
                         compute_transect_orientations( \
                             transect_positions, shore_orientations,landmass)
                     # Skip tile if can't compute valid orientation
-#                    if len(transect_orientations) == 0:
-#                        print("No valid transect orientation for", transect_positions)
-#                        continue
-#                    for p in transect_orientations:
-#                        o = transect_orientations[p]
-#                        transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
-#                        transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
-#                        transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
-#                    print('transect_orientations', len(transect_orientations))
-
-
+                    if len(transect_orientations) == 0:
+                        print("No valid transect orientation for", transect_positions)
+                        continue
+                    for p in transect_orientations:
+                        o = transect_orientations[p]
+                        transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
+                        transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
+                        transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
+                    print('transect_orientations', len(transect_orientations))
                     # Look for the first valid transect
                     for transect_position in transect_orientations:
 
@@ -331,7 +330,7 @@ def compute_transects(args):
                         # At this point, the transect is valid: 
                         else:
 #                            print('    found valid transect at ', transect_position, \
-                                (raw_positions[0][0], raw_positions[1][0]))
+#                                (raw_positions[0][0], raw_positions[1][0]))
                             # Store important information about it
                             transect_info.append( \
                                 {'raw_positions': \
@@ -349,9 +348,8 @@ def compute_transects(args):
                             # Found valid transect, break out of the loop
                             break
 
-                    tiles += 1
+#                    tiles += 1
 
-##                    print('failed to find a valid transect')
 #                print('done')
 
     print('')
@@ -2070,18 +2068,33 @@ def apply_habitat_constraints(mask, habitat_type, args):
 
 
 def compute_shore_orientations(shore, shore_pts, i_base, j_base):
-    """Compute an estimate of the shore orientation. 
+    """Compute an estimate of the shore orientation. To do so, the algorithm 
+        computes the orientation 'O' from two adjascent neighbors for each 
+        focal shore segment.
+        Then, it computes the average of each pixel orientation 'A' by looking
+        at the orientation of the two neighboring pixels.
+        The orientation at a given pixel is given by the mean: 
+            1/3 * (2*O + A)
+
        Inputs:
-           -shore: 2D numpy shore array (1 for shore, 0 otherwise)
-           -shore_pts: shore ij coordinates in shore array coordinates
+           -shore: small 2D numpy shore array (1 for shore, 0 otherwise)
+           -shore_pts: shore ij coordinates relative to the small shore array
+           -i_base, j_base: row/col offsets used to compute absolute 
+            coordinates from the relative shore array coordinates
 
         Returns a dictionary of {(shore ij):(orientation vector ij)} pairs"""
-    shore = np.copy(shore) # Creating a copy in-place
+    # We don't want to modify the shore passed as argument, so we copy it
+    shore = np.copy(shore)
     max_i, max_j = shore.shape
 
+    # Used to swap shore states between steps i and i+1
     updated_shore = shore.astype(int)
 
-    # Compute orientations
+    # Compute orientations (O) for each pixel
+    # The orientation is undefined if there is less than 1 neighbor or too many:
+    #
+    #   0 neighbors: shore orientation is undefined
+#    print(shore.astype(int))
     orientations = {}
     for coord in zip(shore_pts[0], shore_pts[1]):
         row, col = coord
@@ -2093,19 +2106,61 @@ def compute_shore_orientations(shore, shore_pts, i_base, j_base):
             updated_shore[row, col] = 0
             continue
 
+#        print('coord', coord)
+
+        # Compute how many shore pixels there are in the focal pixel's 
+        # neighborhood and try to clean it up so we get as many valid 
+        # transect locations as possible:        
+
+        # Raw neighborhood before it's cleaned up
         neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        # We don't count the focal pixel in the neighborhood
         neighborhood[1, 1] = 0
+        # Number of neighboring pixels. Should be 2 ideally.
         neighbor_count = np.sum(neighborhood)
  
+        # First step: try to fix the shore so we get 2 pixels from which 
+        # to compute a valid orientation:
+        
+#        print('neighborhood before', neighborhood)
+#        print('neighbor count', neighbor_count)
+
+        # 0 neighbors: can't do anything        
+        if neighbor_count == 0:
+#            print('no neighbors, skip')
+            updated_shore[row, col] = 0
+            continue
+        # 1 neighbor: re-instate focal point to compute the orientation 
+        elif neighbor_count == 1:
+#            print('one neighbor')
+            neighborhood[1, 1] = 1
+        # 2 neighbors: no changes needed, no 'if' condition for this case
+        # 3 and more neighbors: remove the diagonal pixels, it might help.
+        elif neighbor_count > 2:
+#            print('multiple neighbors')
+            neighborhood[0, 0] = 0
+            neighborhood[0, 2] = 0
+            neighborhood[2, 2] = 0
+            neighborhood[2, 0] = 0
+
+#        print('neighborhood after', neighborhood)
+
+        # Second step: recompute the number of neighbors after cleanup step.
+        neighbors = np.where(neighborhood == 1)
+        neighbor_count = np.sum(neighborhood)
+
+        # Skip if not 2 neighbors
         if neighbor_count != 2:
+#            print('wrong number of neighbors', neighbor_count)
             updated_shore[row, col] = 0
             continue
 
-        neighbors = np.where(neighborhood == 1)
-
+        # Otherwise, we're good: let's compute the orientation
         orientations[coord] = \
             (neighbors[0][1] - neighbors[0][0], \
             neighbors[1][1] - neighbors[1][0])
+
+#        print('orientation', orientations[coord])
 
 #    print(shore.astype(int))
 #    print(updated_shore)
@@ -2154,6 +2209,7 @@ def compute_shore_orientations(shore, shore_pts, i_base, j_base):
         composite = np.array([float(2 * O[0] + A[0]), float(2 * O[1] + A[1])])
         norm = (composite[0]**2 + composite[1]**2)**.5
 
+        # Make the key coordiantes absolute
         shore_orientation[(segment[0] + i_base, segment[1] + j_base)] = \
             composite / norm
             
