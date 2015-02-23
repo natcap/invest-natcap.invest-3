@@ -31,7 +31,7 @@ def execute(args):
             of interest to run the model.  Will define the grid.
         args['land_poly_uri'] (string): OGR polygon DataSource indicating areas
             where land is.
-        args['pixel_size'] (int): float indicating pixel size in meters of
+        args['pixel_size'] (float): float indicating pixel size in meters of
             output grid.
         args['layer_depth'] (float): float indicating the depth of the grid
             cells in meters.

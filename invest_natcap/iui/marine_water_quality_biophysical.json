@@ -60,7 +60,7 @@
         {
           "id": "pixel_size",
           "type": "text",
-          "label": "Output Pixel Size (meters)",
+          "label": "Output Pixel Size (in units of the AOI polygon)",
           "args_id": "pixel_size",
           "required": true,
           "defaultValue": "100",
@@ -68,7 +68,7 @@
             "type": "number",
             "gteq": 0
           },
-          "dataType": "int",
+          "dataType": "float",
           "helpText": "Horizontal grid size, which determines the output resolution of the pollutant density raster. A larger number will make the output grid coarser but the model will run faster, while a finer resolution will require more computation and memory. Try making this number larger if a model run causes an out of memory error."
         },
         {
