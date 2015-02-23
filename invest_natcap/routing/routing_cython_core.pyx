@@ -936,6 +936,9 @@ def distance_to_stream(
         distance_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
         gdal.GDT_Byte, fill_value=0)
 
+    processed_cell_ds = gdal.Open(processed_cell_uri, gdal.GA_Update)
+    processed_cell_band = processed_cell_ds.GetRasterBand(1)
+
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
