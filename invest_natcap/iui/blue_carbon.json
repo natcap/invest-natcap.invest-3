@@ -275,19 +275,6 @@
           "type": "list",
           "elements": [
             {
-              "id": "carbon_units",
-              "args_id": "carbon_units",
-              "type": "dropdown",
-              "label": "Price in Terms of Metric Tons of",
-              "options": [
-                "Carbon (C)",
-                "Carbon Dioxide (CO2)"
-              ],
-              "defaultValue": 1,
-              "required": true,
-              "helpText": "The units for the price per unit of carbon type. <p>For more information, see 'Data Needs' section in the model's documentation"
-            },
-            {
               "id": "discount_rate",
               "args_id": "discount_rate",
               "type": "text",
@@ -316,7 +303,7 @@
               "label": "Carbon Price Table (CSV)",
               "defaultValue": "../BlueCarbon/input/SCC5.csv",
               "helpText": "The social cost of carbon table. <p>For more information, see 'Data Needs' section in the model's documentation",
-              "enabledBy": "price_table",
+              "enabledBy": "do_price_table",
               "required": true
             },
             {
@@ -332,7 +319,7 @@
                 "type": "number"
               },
               "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units. <p>For more information, see 'Data Needs' section in the model's documentation",
-              "disabledBy": "price_table",
+              "disabledBy": "do_price_table",
               "required": true
             },
             {
@@ -349,7 +336,7 @@
                 "type": "number"
               },
               "helpText": "The integer percent increase of the price of carbon per year. <p>For more information, see 'Data Needs' section in the model's documentation",
-              "disabledBy": "price_table"
+              "disabledBy": "do_price_table"
             }
           ]
         }
