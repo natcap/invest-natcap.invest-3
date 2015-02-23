@@ -90,12 +90,13 @@ def route_flux(
     outflow_weights_uri = raster_utils.temporary_filename(suffix='.tif')
     outflow_direction_uri = raster_utils.temporary_filename(suffix='.tif')
 
-    sink_cell_set = routing_cython_core.find_sinks(dem_uri)
+    outlet_cell_set = routing_cython_core.find_outlets(
+        dem_uri, flow_direction_uri)
     routing_cython_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     routing_cython_core.calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
+        outflow_direction_uri, outflow_weights_uri, outlet_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode,
         stream_uri)
 
@@ -162,13 +163,13 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     stream_nodata = 255
     #sometimes flow threshold comes in as a string from a model, cast to float
     flow_threshold = float(flow_threshold)
-    def classify_stream(flow_accumulation):
+    def classify_stream(flow_accumulation_value):
         """mask and convert to 0/1 or nodata"""
 
         stream_mask = (
-            flow_accumulation >= flow_threshold).astype(numpy.byte)
+            flow_accumulation_value >= flow_threshold).astype(numpy.byte)
         return numpy.where(
-            flow_accumulation != flow_nodata, stream_mask, stream_nodata)
+            flow_accumulation_value != flow_nodata, stream_mask, stream_nodata)
 
     raster_utils.vectorize_datasets(
         [flow_accumulation_uri], classify_stream, stream_uri, gdal.GDT_Byte,
@@ -211,7 +212,7 @@ def pixel_amount_exported(
         [flow_direction_uri, dem_uri, stream_uri, retention_rate_uri,
          source_uri],
         ["nearest", "nearest", "nearest", "nearest", "nearest"], out_pixel_size,
-        "intersection", 0, aoi_uri=aoi_uri)
+         "intersection", 0, aoi_uri=aoi_uri)
 
     #Calculate export rate
     export_rate_uri = raster_utils.temporary_filename(suffix='.tif')
@@ -248,8 +249,8 @@ def pixel_amount_exported(
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
     def mult_nodata(source, effect, stream):
         """Does the multiply of source by effect if there's not a stream"""
-        if source == nodata_source or effect == nodata_effect or \
-                stream == nodata_stream:
+        if (source == nodata_source or effect == nodata_effect or
+                stream == nodata_stream):
             return nodata_source
         return source * effect * (1 - stream)
     raster_utils.vectorize_datasets(
@@ -309,12 +310,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         directions and upslope areas in grid digital elevation models," Water
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
-       dem_uri - (input) a uri to a single band GDAL Dataset with elevation
+        dem_uri - (input) a uri to a single band GDAL Dataset with elevation
            values
-       flow_direction_uri - (output) a uri to a single band GDAL dataset
-           with d infinity flow directions in it.
+
 
        returns nothing"""
+
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
 
 
@@ -365,3 +366,73 @@ def distance_to_stream(
 
     routing_cython_core.distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
+
+
+def flow_direction_d_inf(
+        dem_uri, flow_direction_uri):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+        Args:
+
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            flow_direction_uri (string) - (output) a uri to a single band GDAL
+                dataset with d infinity flow directions in it.
+
+        Returns:
+            nothing"""
+
+    #inital pass to define flow directions off the dem
+    flow_direction_inf(dem_uri, flow_direction_uri)
+
+    flat_mask_uri = raster_utils.temporary_filename()
+    labels_uri = raster_utils.temporary_filename()
+
+    flats_exist = resolve_flats(
+        dem_uri, flow_direction_uri, flat_mask_uri, labels_uri)
+
+    #Do the second pass with the flat mask and overwrite the flow direction
+    #nodata that was not calculated on the first pass
+    if flats_exist:
+        routing_cython_core.flow_direction_inf_masked_flow_dirs(
+            flat_mask_uri, labels_uri, flow_direction_uri)
+
+
+def resolve_flats(dem_uri, flow_direction_uri, flat_mask_uri, labels_uri):
+    """Function to resolve the flat regions in the dem given a first attempt
+        run at calculating flow direction.  Will provide regions of flat areas
+        and their labels.
+
+        Args:
+
+            dem_uri (string) - (input) a uri to a single band GDAL Dataset with
+                elevation values
+            flow_direction_uri (string) - (input/output) a uri to a single band
+                GDAL Dataset with partially defined d_infinity flow directions
+
+        Returns:
+            True if there were flats to resolve, False otherwise"""
+
+    high_edges, low_edges = routing_cython_core.flat_edges(
+        dem_uri, flow_direction_uri)
+    if len(low_edges) == 0:
+        if len(high_edges) != 0:
+            LOGGER.warn('There were undrainable flats')
+        else:
+            LOGGER.info('There were no flats')
+        return False
+
+    LOGGER.info('labeling flats')
+    routing_cython_core.label_flats(dem_uri, low_edges, labels_uri)
+
+    LOGGER.info('cleaning high edges')
+    routing_cython_core.clean_high_edges(labels_uri, high_edges)
+
+    routing_cython_core.drain_flats(
+        high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri)
+
+    return True

@@ -104,17 +104,17 @@ def execute(args):
     aligned_dem_uri = preprocessed_data['aligned_dem_uri']
     aligned_erosivity_uri = preprocessed_data['aligned_erosivity_uri']
     aligned_erodibility_uri = preprocessed_data['aligned_erodibility_uri']
-    dem_offset_uri = preprocessed_data['dem_offset_uri']
     thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
     ls_uri = preprocessed_data['ls_uri']
 
-    #this section is to align the lulc with the prepared data, we need to make a garbage
-    #tempoary dem to conform to the align_dataset_list API that requires as many outputs
-    #as inputs
+    #this section is to align the lulc with the prepared data, we need to make
+    #a garbage tempoary dem to conform to the align_dataset_list API that
+    #requires as many outputs as inputs
     aligned_lulc_uri = os.path.join(intermediate_dir, 'aligned_lulc.tif')
-    out_pixel_size = raster_utils.get_cell_size_from_uri(preprocessed_data['aligned_dem_uri'])
+    out_pixel_size = raster_utils.get_cell_size_from_uri(
+        preprocessed_data['aligned_dem_uri'])
     tmp_dem_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
         [aligned_dem_uri, args['lulc_uri']], [tmp_dem_uri, aligned_lulc_uri],
@@ -176,9 +176,11 @@ def execute(args):
 
     cp_factor_uri = os.path.join(
         intermediate_dir, 'cp_factor%s.tif' % file_suffix)
+
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
-        (lulc_code, table) in biophysical_table.items()])
+         (lulc_code, table) in biophysical_table.items()])
+
     cp_nodata = -1.0
     raster_utils.reclassify_dataset_uri(
         aligned_lulc_uri, lulc_to_cp, cp_factor_uri, gdal.GDT_Float64,
@@ -214,13 +216,17 @@ def execute(args):
     flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
         flow_accumulation_uri)
 
-    w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
-    s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+    w_accumulation_uri = os.path.join(
+        intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
+    s_accumulation_uri = os.path.join(
+        intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+
     for factor_uri, accumulation_uri in [
-        (thresholded_w_factor_uri, w_accumulation_uri), (thresholded_slope_uri, s_accumulation_uri)]:
-        LOGGER.info("calculating %s" % (accumulation_uri))
+            (thresholded_w_factor_uri, w_accumulation_uri),
+            (thresholded_slope_uri, s_accumulation_uri)]:
+        LOGGER.info("calculating %s", accumulation_uri)
         routing_utils.route_flux(
-            flow_direction_uri, dem_offset_uri, factor_uri,
+            flow_direction_uri, aligned_dem_uri, factor_uri,
             zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'])
 
@@ -231,9 +237,9 @@ def execute(args):
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = raster_utils.get_nodata_from_uri(s_accumulation_uri)
     for bar_nodata, accumulation_uri, bar_uri in [
-        (w_bar_nodata, w_accumulation_uri, w_bar_uri),
-        (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
-        LOGGER.info("calculating %s" % (accumulation_uri))
+            (w_bar_nodata, w_accumulation_uri, w_bar_uri),
+            (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
+        LOGGER.info("calculating %s", accumulation_uri)
         def bar_op(base_accumulation, flow_accumulation):
             return numpy.where(
                 (base_accumulation != bar_nodata) & (flow_accumulation != flow_accumulation_nodata),
@@ -720,23 +726,19 @@ def _prepare(**args):
         intermediate_dir, 'aligned_erodibility.tif')
 
     input_list = [tiled_dem_uri, args['erosivity_uri'], args['erodibility_uri']]
-    dataset_out_uri_list = [aligned_dem_uri, aligned_erosivity_uri, aligned_erodibility_uri]
+    dataset_out_uri_list = [
+        aligned_dem_uri, aligned_erosivity_uri, aligned_erodibility_uri]
     raster_utils.align_dataset_list(
         input_list, dataset_out_uri_list,
         ['nearest'] * len(dataset_out_uri_list), out_pixel_size, 'intersection',
         0, aoi_uri=args['watersheds_uri'])
 
-    #resolve plateaus
-    dem_offset_uri = os.path.join(
-        intermediate_dir, 'dem_offset.tif')
-    routing_cython_core.resolve_flat_regions_for_drainage(
-        aligned_dem_uri, dem_offset_uri)
-
     #Calculate slope
     LOGGER.info("Calculating slope")
     original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
-    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    thresholded_slope_uri = os.path.join(
+        intermediate_dir, 'thresholded_slope.tif')
+    raster_utils.calculate_slope(aligned_dem_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
         '''Convert slope to m/m and clamp at 0.005 and 1.0 as
@@ -759,9 +761,9 @@ def _prepare(**args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction.tif')
 
-    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
+    routing_utils.flow_direction_d_inf(aligned_dem_uri, flow_direction_uri)
     routing_utils.flow_accumulation(
-        flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+        flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
 
     #Calculate LS term
     LOGGER.info('calculate ls term')
@@ -775,7 +777,6 @@ def _prepare(**args):
         'aligned_dem_uri': aligned_dem_uri,
         'aligned_erosivity_uri': aligned_erosivity_uri,
         'aligned_erodibility_uri': aligned_erodibility_uri,
-        'dem_offset_uri': dem_offset_uri,
         'thresholded_slope_uri': thresholded_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri,

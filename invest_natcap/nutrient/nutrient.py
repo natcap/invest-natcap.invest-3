@@ -316,26 +316,24 @@ def _execute_nutrient(args):
     nodata_landuse = raster_utils.get_nodata_from_uri(lulc_uri)
     nodata_load = -1.0
 
-    #resolve plateaus
-    dem_offset_uri = os.path.join(intermediate_dir, 'dem_offset%s.tif' % file_suffix)
-    routing_cython_core.resolve_flat_regions_for_drainage(dem_uri, dem_offset_uri)
-
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % file_suffix)
+    flow_accumulation_uri = os.path.join(
+        intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+    flow_direction_uri = os.path.join(
+        intermediate_dir, 'flow_direction%s.tif' % file_suffix)
 
-    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    routing_utils.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(
+        flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(output_dir, 'v_stream%s.tif' % file_suffix)
 
     #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
-    routing_utils.stream_threshold(flow_accumulation_uri,
-        float(args['accum_threshold']), stream_uri)
+    routing_utils.stream_threshold(
+        flow_accumulation_uri, float(args['accum_threshold']), stream_uri)
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):
