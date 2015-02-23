@@ -124,7 +124,7 @@ def execute(args):
     else:
         preprocessed_data = _prepare(**args)
 
-    dem_offset_uri = preprocessed_data['dem_offset_uri']
+    aligned_dem_uri = preprocessed_data['aligned_dem_uri']
     thresholded_slope_uri = preprocessed_data['thresholded_slope_uri']
     flow_accumulation_uri = preprocessed_data['flow_accumulation_uri']
     flow_direction_uri = preprocessed_data['flow_direction_uri']
@@ -263,7 +263,7 @@ def execute(args):
     loss_uri = raster_utils.temporary_filename()
     #need this for low level route_flux function
     raster_utils.make_constant_raster_from_base_uri(
-        dem_offset_uri, 0.0, zero_absorption_source_uri)
+        aligned_dem_uri, 0.0, zero_absorption_source_uri)
 
     flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
         flow_accumulation_uri)
@@ -275,7 +275,7 @@ def execute(args):
             (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         routing_utils.route_flux(
-            flow_direction_uri, dem_offset_uri, factor_uri,
+            flow_direction_uri, aligned_dem_uri, factor_uri,
             zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'])
 
@@ -590,7 +590,7 @@ def _prepare(**args):
         args['watersheds_uri'] - layer to AOI/watersheds
 
         return a dictionary with the keys:
-            'dem_offset_uri': dem_offset_uri,
+            'aligned_dem_uri': aligned_dem_uri,
             'thresholded_slope_uri': thresholded_slope_uri,
             'flow_accumulation_uri': flow_accumulation_uri,
             'flow_direction_uri': flow_direction_uri
@@ -610,14 +610,6 @@ def _prepare(**args):
         'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
-    #resolve plateaus
-    dem_offset_uri = os.path.join(
-        intermediate_dir, 'dem_offset.tif')
-    routing_cython_core.resolve_flat_regions_for_drainage(
-        aligned_dem_uri, dem_offset_uri)
-
-    os.remove(aligned_dem_uri)
-
     #Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
@@ -625,14 +617,17 @@ def _prepare(**args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction.tif')
 
-    routing_cython_core.flow_direction_inf(dem_offset_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(flow_direction_uri, dem_offset_uri, flow_accumulation_uri)
+    routing_utils.flow_direction_d_inf(
+        aligned_dem_uri, flow_direction_uri)
+    routing_utils.flow_accumulation(
+        flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
 
     #Calculate slope
     LOGGER.info("Calculating slope")
     original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    thresholded_slope_uri = os.path.join(intermediate_dir, 'thresholded_slope.tif')
-    raster_utils.calculate_slope(dem_offset_uri, original_slope_uri)
+    thresholded_slope_uri = os.path.join(
+        intermediate_dir, 'thresholded_slope.tif')
+    raster_utils.calculate_slope(aligned_dem_uri, original_slope_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(original_slope_uri)
     def threshold_slope(slope):
         '''Threshold slope between 0.001 and 1.0'''
@@ -648,7 +643,7 @@ def _prepare(**args):
         dataset_to_align_index=0, vectorize_op=False)
 
     return {
-        'dem_offset_uri': dem_offset_uri,
+        'aligned_dem_uri': aligned_dem_uri,
         'thresholded_slope_uri': thresholded_slope_uri,
         'flow_accumulation_uri': flow_accumulation_uri,
         'flow_direction_uri': flow_direction_uri
