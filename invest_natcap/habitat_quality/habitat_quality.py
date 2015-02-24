@@ -256,7 +256,7 @@ def execute(args):
             if decay_type == 'linear':
                 make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                kernel = make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
+                make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             raster_utils.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
