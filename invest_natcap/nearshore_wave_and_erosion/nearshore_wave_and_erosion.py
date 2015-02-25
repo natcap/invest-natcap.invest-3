@@ -512,7 +512,8 @@ def execute(args):
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
         raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
-    args['max_land_profile_len'] = 200  # Maximum inland distance
+    # Look for mis-aligned shore up to 10 pixels inland
+    args['max_land_profile_len'] = int(10 * args['cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
 
     # Preprocess the landmass

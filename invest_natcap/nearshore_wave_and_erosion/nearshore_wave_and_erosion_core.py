@@ -249,7 +249,7 @@ def compute_transects(args):
 
                     # Skip tile if no valid shore points
                     if len(transect_positions) == 0:
-                        print("No well defined position")
+#                        print("No well defined position")
                         continue
 #                    for p in transect_positions:
 #                        transects[(p[0], p[1])] = -3
@@ -261,13 +261,13 @@ def compute_transects(args):
                             transect_positions, shore_orientations,landmass)
                     # Skip tile if can't compute valid orientation
                     if len(transect_orientations) == 0:
-                        print("No valid transect orientation for", transect_positions)
+                        print("  No valid transect orientation for", transect_positions)
                         continue
-                    for p in transect_orientations:
-                       o = transect_orientations[p]
-                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
-                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
-                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
+#                    for p in transect_orientations:
+#                       o = transect_orientations[p]
+#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
+#                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
+#                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
                     # Look for the first valid transect
                     for transect_position in transect_orientations:
                         transect_orientation = transect_orientations[transect_position]
@@ -283,6 +283,7 @@ def compute_transects(args):
                             args['max_profile_length'])
                         # The index positions might be outside of valid bathymetry
                         if raw_depths is None:
+                            print('  Could not sample transect depth')
                             continue
 #                        transects[(transect_position[0], transect_position[1])] = -5
 
@@ -2412,29 +2413,52 @@ def compute_raw_transect_depths(shore_point, \
     start_i = p_i - d_i
     start_j = p_j - d_j
 
-    # If no land behind the piece of land, stop there and report 0
-    land = landmass[int(round(start_i)), int(round(start_j))]
-
+    # Offset if the shore is either inland or in the water
+    shore_offset = 0
 
     inland_steps = 0
 
-    # Only compute if there is land
+    # Only compute the landward part of the transect
+    elevation = \
+        bathymetry_band.ReadAsArray( \
+            int(round(p_j)), \
+            int(round(p_i)), 1, 1)[0]
+
+    # If no land behind the shore, stop there and report 0
+    land = landmass[int(round(start_i)), int(round(start_j))]
+
     if land:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
+            # Save last elevation before updating it
+            last_elevation = elevation 
             elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+            
             # Hit either nodata, or some bad data
             if elevation <= -12000:
                 inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
                 break
-            # Stop if shore is reached
-            if not elevation:
-                inland_steps -= 1
-                break
+ 
             # Stop at maximum elevation
             if elevation > 20:
                 inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
                 break
+
+            # Reached the top of a hill, stop there
+            if last_elevation > elevation:
+                inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
+                break
+
+#            # If we're in the water but moving up, then offset the shore
+#            if elevation <= 0:
+#                shore_offset -= 1
+
             # We can store the depth at this point
             depths[max_land_len - inland_steps] = elevation
             I[max_land_len - inland_steps] = int(round(start_i))
@@ -2449,24 +2473,71 @@ def compute_raw_transect_depths(shore_point, \
                 (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
                 break
 
+        # If the highest inland point is still underwater, this transect is invalid
+        highest_elevation = bathymetry_band.ReadAsArray( \
+            int(round(start_j)), int(round(start_i)), 1, 1)[0]
+        
+        if highest_elevation < 0.:
+            return (None, None)
+
+    # No land behind shore, return
+    else:
+        return (None, None)
+
+
     # Compute the seaward part of the transect
     start_i = p_i + d_i
     start_j = p_j + d_j
 
-    # Stop when maximum offshore distance is reached
     offshore_steps = 0
+
+    last_elevation = \
+        bathymetry_band.ReadAsArray( \
+            int(round(p_j)), \
+            int(round(p_i)), 1, 1)[0]
+
+    # Stop when maximum offshore distance is reached
     for offshore_steps in range(1, max_sea_len):
-        # Stop if shore is reached
-        if landmass[int(round(start_i)), int(round(start_j))]:
-            offshore_steps -= 1
-            break
-        elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+
+        last_elevation = elevation 
+        elevation = \
+            bathymetry_band.ReadAsArray( \
+                int(round(start_j)), int(round(start_i)), 1, 1)[0]
 
         # Hit either nodata, or some bad data
         if elevation <= -12000:
             offshore_steps -= 1
+            start_i -= d_i
+            start_j -= d_j
             break
-        # We can store the depth at this point
+
+        # Stop if land is reached
+        if landmass[int(round(start_i)), int(round(start_j))]:
+            offshore_steps -= 1
+            break
+
+        # If positive elevation:
+        
+
+        # Looking at slope:
+
+        # We're going up...
+        if elevation > last_elevation:
+            # ...and we're above water: stop there
+            if elevation > 0:
+                offshore_steps -= 1
+                start_i -= d_i
+                start_j -= d_j
+                break
+        
+#        # We're going down...
+#        if elevation <= last_elevation:
+#            # ...and we're above water: 
+#            # we're getting closer to the shore, adjust it
+#            if elevation > 0:
+#                shore_offset += 1
+
+        # We can store the depth (elevation) at this point
         depths[max_land_len + offshore_steps] = elevation
         I[max_land_len + offshore_steps] = int(round(start_i))
         J[max_land_len + offshore_steps] = int(round(start_j))
