@@ -166,13 +166,6 @@ def execute(args):
 
     out_nodata = -1.0
 
-    #Create raster of habitat based on habitat field
-    habitat_uri = os.path.join(inter_dir, 'habitat%s.tif' % suffix)
-
-    map_raster_to_dict_values(
-        cur_landuse_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
-        'none')
-
     # If access_lyr: convert to raster, if value is null set to 1,
     # else set to value
     try:
@@ -203,6 +196,14 @@ def execute(args):
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_ds_uri in landuse_uri_dict.iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
+
+        #Create raster of habitat based on habitat field
+        habitat_uri = os.path.join(
+            inter_dir, 'habitat_%s_%s.tif' % (lulc_key, suffix))
+
+        map_raster_to_dict_values(
+            lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
+            'none')
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -245,8 +246,8 @@ def execute(args):
             dr_pixel = dr_max / cell_size
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
-            filtered_threat_uri = \
-               os.path.join(inter_dir, threat + '_filtered%s.tif' % suffix)
+            filtered_threat_uri = os.path.join(
+                inter_dir, threat + '_filtered_%s_%s.tif' % (lulc_key, suffix))
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -255,7 +256,7 @@ def execute(args):
             if decay_type == 'linear':
                 make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                kernel = make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
+                make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             raster_utils.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
@@ -681,7 +682,7 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
 def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     max_distance = expected_distance * 5
     kernel_size = int(numpy.round(max_distance * 2 + 1))
-    
+
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
@@ -717,7 +718,7 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
 
 def make_linear_decay_kernel_uri(max_distance, kernel_uri):
     kernel_size = int(numpy.round(max_distance * 2 + 1))
-    
+
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,

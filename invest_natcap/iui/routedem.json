@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.routing.routedem",
   "modelName": "routedem",
   "localDocURI": "../documentation/routedem.html",
-  "height": 800,
+  "height": 570,
   "width": 700,
   "elements": [
     {
@@ -40,15 +40,6 @@
           "defaultValue": "pit_filled_dem.tif",
           "required": true,
           "helpText": "The filename of the output raster with pits filled in. It will go in the project workspace."
-        },
-        {
-          "id": "resolve_plateaus_filename",
-          "args_id": "resolve_plateaus_filename",
-          "type": "text",
-          "label": "Plateau Resolved DEM Filename",
-          "defaultValue": "plateau_resolved_dem.tif",
-          "required": true,
-          "helpText": "The filename of the output raster with plateaus resolved. It will go in the project workspace."
         },
         {
           "id": "flow_direction_filename",
