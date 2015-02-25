@@ -117,7 +117,7 @@ def compute_transects(args):
     j_side_fine = int( \
         math.sqrt(fine_geotransform[1]**2 + fine_geotransform[2]**2))
 
-    print('fine_geotransform', fine_geotransform)
+#    print('fine_geotransform', fine_geotransform)
 
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
@@ -138,8 +138,8 @@ def compute_transects(args):
     # computing shore orientation
     i_offset = i_side_coarse/i_side_fine + 6
     j_offset = j_side_coarse/j_side_fine + 6
-    print('(i_side_coarse, i_side_fine)', (i_side_coarse, i_side_fine))
-    print('(i_offset, j_offset)', (i_offset, j_offset))
+#    print('(i_side_coarse, i_side_fine)', (i_side_coarse, i_side_fine))
+#    print('(i_offset, j_offset)', (i_offset, j_offset))
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
@@ -190,6 +190,9 @@ def compute_transects(args):
             # If land and sea, we have a shore: detect it and store
             if land and land < tile_size:
                     
+#                if tiles > 30:
+#                    continue
+
                 i_first = i_base+3
                 j_first = j_base+3
                 i_last = i_base+i_offset-3
@@ -200,7 +203,7 @@ def compute_transects(args):
                 #Draw the tile
 #                for row in range(i_first, i_last+1):
 #                    for col in range(j_first, j_last+1):
-#                        transects[(row, col)] = tiles #-12
+#                        transects[(col, row)] = tiles #-12
 #                for left in range(i_first, i_last+1):
 #                    transects[(left, j_first)] = -10
 #                for right in range(i_first, i_last+1):
@@ -235,7 +238,7 @@ def compute_transects(args):
 
                     # Skip if no shore orientation
                     if not shore_orientations:
-                        print("No valid shore orientations")
+#                        print("No valid shore orientations")
                         continue
                     for p in shore_orientations:
                         transects[(p[0], p[1])] = -2
@@ -254,14 +257,13 @@ def compute_transects(args):
 #                    for p in transect_positions:
 #                        transects[(p[0], p[1])] = -3
 
-
                     # Compute transect orientation
                     transect_orientations = \
                         compute_transect_orientations( \
                             transect_positions, shore_orientations,landmass)
                     # Skip tile if can't compute valid orientation
                     if len(transect_orientations) == 0:
-                        print("  No valid transect orientation for", transect_positions)
+#                        print("  No valid transect orientation for", transect_positions)
                         continue
 #                    for p in transect_orientations:
 #                       o = transect_orientations[p]
@@ -270,6 +272,7 @@ def compute_transects(args):
 #                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
                     # Look for the first valid transect
                     for transect_position in transect_orientations:
+#                        print('transect_position', transect_position)
                         transect_orientation = transect_orientations[transect_position]
                         # Compute raw transect depths
                         raw_depths, raw_positions = \
@@ -283,7 +286,7 @@ def compute_transects(args):
                             args['max_profile_length'])
                         # The index positions might be outside of valid bathymetry
                         if raw_depths is None:
-                            print('  Could not sample transect depth')
+#                            print('  Could not sample transect depth')
                             continue
 #                        transects[(transect_position[0], transect_position[1])] = -5
 
@@ -301,8 +304,8 @@ def compute_transects(args):
                         smoothed_depths = \
                             smooth_transect(interpolated_depths, \
                                 args['smoothing_percentage'])
-
-                        # Clip if transect hits land
+                        
+                        # Apply additional constraints on the smoothed transect
                         (clipped_transect, (start, shore, end)) = \
                             clip_transect(smoothed_depths, \
                                 args['max_profile_depth'])
@@ -508,7 +511,7 @@ def compute_transects(args):
             # Store bathymetry in the transect
 
 #            single_value[0, 0] = bathymetry_dataset[transect, pos]
-            single_value[0, 0] = habitat_type_dataset[transect, pos]
+            single_value[0, 0] = 0 #habitat_type_dataset[transect, pos]
             
             transect_band.WriteArray( \
                 single_value, \
@@ -2354,9 +2357,9 @@ def compute_transect_orientations(positions, orientations, land):
             transect_orientations[position] = orientation * -1
 
         # Nothing worked
-        else:
-            print('position', position)
-            print('No valid orientation')
+#        else:
+#            print('position', position)
+#            print('No valid orientation')
 
 #        print('-----orientation', orientation)
 
@@ -2403,7 +2406,7 @@ def compute_raw_transect_depths(shore_point, \
     d_j = direction_vector[1]
 
     initial_elevation = bathymetry[p_i, p_j]
-    depths[max_land_len] = 0
+    depths[max_land_len] = initial_elevation
 
     I[max_land_len] = p_i
     J[max_land_len] = p_j
@@ -2432,7 +2435,9 @@ def compute_raw_transect_depths(shore_point, \
         for inland_steps in range(1, max_land_len):
             # Save last elevation before updating it
             last_elevation = elevation 
-            elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+            elevation = \
+                bathymetry_band.ReadAsArray( \
+                    int(round(start_j)), int(round(start_i)), 1, 1)[0]
             
             # Hit either nodata, or some bad data
             if elevation <= -12000:
@@ -2454,10 +2459,6 @@ def compute_raw_transect_depths(shore_point, \
                 start_i += d_i
                 start_j += d_j
                 break
-
-#            # If we're in the water but moving up, then offset the shore
-#            if elevation <= 0:
-#                shore_offset -= 1
 
             # We can store the depth at this point
             depths[max_land_len - inland_steps] = elevation
@@ -2502,7 +2503,8 @@ def compute_raw_transect_depths(shore_point, \
         last_elevation = elevation 
         elevation = \
             bathymetry_band.ReadAsArray( \
-                int(round(start_j)), int(round(start_i)), 1, 1)[0]
+                int(round(start_j)), int(round(start_i)), 1, 1)[0][0]
+        is_land = landmass[int(round(start_i)), int(round(start_j))]
 
         # Hit either nodata, or some bad data
         if elevation <= -12000:
@@ -2512,7 +2514,7 @@ def compute_raw_transect_depths(shore_point, \
             break
 
         # Stop if land is reached
-        if landmass[int(round(start_i)), int(round(start_j))]:
+        if is_land:
             offshore_steps -= 1
             break
 
@@ -2530,13 +2532,6 @@ def compute_raw_transect_depths(shore_point, \
                 start_j -= d_j
                 break
         
-#        # We're going down...
-#        if elevation <= last_elevation:
-#            # ...and we're above water: 
-#            # we're getting closer to the shore, adjust it
-#            if elevation > 0:
-#                shore_offset += 1
-
         # We can store the depth (elevation) at this point
         depths[max_land_len + offshore_steps] = elevation
         I[max_land_len + offshore_steps] = int(round(start_i))
@@ -2556,6 +2551,8 @@ def compute_raw_transect_depths(shore_point, \
 
     start = max_land_len - inland_steps
     end = max_land_len + offshore_steps + 1
+
+#    print('(start, end)', (start, end))
 
     return (depths[start:end], (I[start:end], J[start:end]))
 
@@ -2621,15 +2618,32 @@ def smooth_transect(transect, window_size_pct):
     return y[window_length:-window_length+1] 
 
 def clip_transect(transect, max_depth):
-    """Clip transect using maximum and minimum heights"""
+    """Clip transect further since the depths have been smoothed out.
+
+        Inputs:
+            -transect: numpy array of real-valued depths
+            -max_depth: maximum depth constraint beyond which to clip
+
+        Returns nested tuples (clipped_transect, (start, shore, end)) where:
+            -clipped_transect is a clipped version of the input numpy array
+            -start, end: indices of the transect edges in the array
+            -shore: index where the shore is
+
+            If the transect is invalid, returns (None, (None, None, None))"""
+
     # Transect has to have a minimum size
     if transect.size < 5:
          return (None, (None, None, None))
 
-    # Return if transect is full of zeros, otherwise break
+    # Return if transect is full of zeros, otherwise the transect is invalid
     uniques = np.unique(transect)
     if uniques.size == 1:
-        assert uniques[0] == 0.0
+        # If depth != 0 everywhere, transect is invalid 
+        # (either above water or submerged)
+        if uniques[0] != 0.0:
+            return (None, (None, None, None))
+
+        # Limit case: the transect is valid, but it's really borderline
         return (transect, (0, 0, transect.size))
 
     # If higher point is negative: can't do anything, everything is underwater
@@ -2646,8 +2660,7 @@ def clip_transect(transect, max_depth):
 
     # Find water extent
     water_extent = 1
-#    print('transect size', transect.size)
-#    print('shore', shore)
+
     while transect[shore - 1 + water_extent] <= 0:
         # Stop if reached the end of the transect
         if shore + water_extent == transect.size:
@@ -2661,7 +2674,6 @@ def clip_transect(transect, max_depth):
     # Compute the extremes on the valid portion only
     highest_point = np.argmax(transect[:shore])
     lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
-#    print('highest, lowest', (highest_point, lowest_point))
 
     assert highest_point < lowest_point
 
