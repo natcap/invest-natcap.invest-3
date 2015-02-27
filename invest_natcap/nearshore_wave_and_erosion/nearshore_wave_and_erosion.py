@@ -516,33 +516,6 @@ def execute(args):
     args['max_land_profile_len'] = int(10 * args['cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
 
-    # Preprocess the landmass
-    args['landmass_raster_uri'] = \
-        os.path.join(args['intermediate_dir'], 'landmass.tif')
-    if not os.path.isfile(args['landmass_raster_uri']):
-        LOGGER.debug('Pre-processing landmass...')
-        preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['cell_size'], \
-            os.path.join(args['intermediate_dir'], 'landmass.tif'))
-
-    # Preprocessing the AOI
-    args['aoi_raster_uri'] = os.path.join(args['intermediate_dir'], 'aoi.tif')
-    if not os.path.isfile(args['aoi_raster_uri']):
-        LOGGER.debug('Pre-processing the AOI...')
-        args['aoi_raster_uri'] = \
-            preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
-            args['cell_size'], args['aoi_raster_uri'])
-
-
-    # Preprocess bathymetry
-    args['bathymetry_raster_uri'] = \
-        os.path.join(args['intermediate_dir'], 'bathymetry.tif')
-    if not os.path.isfile(args['bathymetry_raster_uri']):
-        LOGGER.debug('Pre-processing bathymetry...')
-        bathy_nodata = raster_utils.get_nodata_from_uri(args['bathymetry_uri'])
-        preprocess_dataset(args['bathymetry_uri'], \
-            args['aoi_uri'], args['cell_size'], args['bathymetry_raster_uri'])
-
 
     # Habitats shouldn't overlap. If they do, pick the highest priority one.
     # Habitat informatio is an array of (habitat_name, habitat_info) tuples
@@ -695,6 +668,35 @@ def execute(args):
             'Type',
             'TransParam',
             'Height'])}
+
+
+    # Preprocessing the AOI
+    args['aoi_raster_uri'] = os.path.join(args['intermediate_dir'], 'aoi.tif')
+    if not os.path.isfile(args['aoi_raster_uri']):
+        LOGGER.debug('Pre-processing the AOI...')
+        args['aoi_raster_uri'] = \
+            preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
+            args['cell_size'], args['aoi_raster_uri'])
+
+    # Preprocess the landmass
+    args['landmass_raster_uri'] = \
+        os.path.join(args['intermediate_dir'], 'landmass.tif')
+    if not os.path.isfile(args['landmass_raster_uri']):
+        LOGGER.debug('Pre-processing landmass...')
+        preprocess_polygon_datasource(args['landmass_uri'], \
+            args['aoi_uri'], args['cell_size'], \
+            os.path.join(args['intermediate_dir'], 'landmass.tif'))
+
+    # Preprocess bathymetry
+    args['bathymetry_raster_uri'] = \
+        os.path.join(args['intermediate_dir'], 'bathymetry.tif')
+    if not os.path.isfile(args['bathymetry_raster_uri']):
+        LOGGER.debug('Pre-processing bathymetry...')
+        bathy_nodata = raster_utils.get_nodata_from_uri(args['bathymetry_uri'])
+        preprocess_dataset(args['bathymetry_uri'], \
+            args['aoi_uri'], args['cell_size'], args['bathymetry_raster_uri'])
+
+
 
     shapefile_required_fields = args['shapefile_required_fields']
 
@@ -871,14 +873,17 @@ def execute(args):
                         output_uri = os.path.join(args['intermediate_dir'], \
                             basename + '_' + field_name.lower() + '.tif')
 
-                        if not os.path.isfile(output_uri):
+                        if os.path.isfile(output_uri):
+                            LOGGER.debug('Skipping file %s.', \
+                                basename + '_' + field_name.lower() + '.tif')
+                        else:
                             # Rasterize the current shapefile field
 #                            LOGGER.debug('rasterizing field %s to %s', \
 #                                field_name, output_uri)
                             preprocess_polygon_datasource(file_uri, \
                                 args['aoi_uri'], args['cell_size'], \
                                 output_uri, field_name = field_name, \
-                                nodata = -99999.0)
+                                all_touched = True, nodata = -99999.0)
                         
                         # Keep this raster uri
                         args['shapefiles'][category][basename][field_name] = \
@@ -1081,7 +1086,7 @@ def execute(args):
                     if not MHHW_uri:
                         print("Can't find MHHW raster in raster list")
                         print('Files are:', in_raster_list)
-                        assert MHHW_uri
+                        assert MHHW_uri, "Didn't find MHHW raster from landmass shapefile."
 
                     # Compute the average MHHW
                     MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
@@ -1133,7 +1138,7 @@ def execute(args):
                         if 'mllw' in raster_uri:
                             MLLW_uri = raster_uri
                             break
-                    assert MLLW_uri
+                    assert MLLW_uri, "Didn't find MLLW raster from landmass shapefile."
 
                     # Compute the average MLLW
                     MLLW_nodata = raster_utils.get_nodata_from_uri(MLLW_uri)

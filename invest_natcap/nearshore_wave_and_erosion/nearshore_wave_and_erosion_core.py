@@ -27,7 +27,7 @@ import CPf_SignalSmooth as SignalSmooth
 
 logging.getLogger("raster_utils").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
-LOGGER = logging.getLogger('coastal_vulnerability_core')
+LOGGER = logging.getLogger('nearshore_wave_and_erosion_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -1886,8 +1886,10 @@ def combine_natural_habitats(args, transect_data_file):
             # Check the code is not already used 
             # (2 habitats can't have the same code)
             assert code not in habitat_name_map, \
-                'code ' + str(code) + ' for ' + habitat_type_name + \
-                ' is already used by ' + habitat_name_map[code]
+                'code ' + str(unique_values) + ' for ' + habitat_type_name + ' ' + \
+                str(os.path.split(type_shapefile_uri)[1]) + ' ' + \
+                ' is already used by ' + habitat_name_map[code] + \
+                ', habitat map: ' + str(habitat_name_map)
 
             # Assign this code to the habitat name
             habitat_name_map[code] = habitat_type_name
@@ -2499,6 +2501,7 @@ def compute_raw_transect_depths(shore_point, \
 
     # Stop when maximum offshore distance is reached
     for offshore_steps in range(1, max_sea_len):
+#        print('    offshore_steps', offshore_steps)
 
         last_elevation = elevation 
         elevation = \
@@ -2511,11 +2514,13 @@ def compute_raw_transect_depths(shore_point, \
             offshore_steps -= 1
             start_i -= d_i
             start_j -= d_j
+#            print('    Invalid bathymetry')
             break
 
         # Stop if land is reached
         if is_land:
             offshore_steps -= 1
+#            print('    Hit land')
             break
 
         # If positive elevation:
@@ -2530,6 +2535,7 @@ def compute_raw_transect_depths(shore_point, \
                 offshore_steps -= 1
                 start_i -= d_i
                 start_j -= d_j
+#                print('    Left water')
                 break
         
         # We can store the depth (elevation) at this point
@@ -2544,6 +2550,7 @@ def compute_raw_transect_depths(shore_point, \
         # Stop if outside raster limits
         if (start_i < 0) or (start_j < 0) or \
             (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
+#            print('    Outside raster limits', bathymetry_shape, 'when at', (start_i, start_j))
             break
 
     # If shore borders nodata, offshore_step is -1, set it to 0
@@ -2552,7 +2559,12 @@ def compute_raw_transect_depths(shore_point, \
     start = max_land_len - inland_steps
     end = max_land_len + offshore_steps + 1
 
-#    print('(start, end)', (start, end))
+#    print('(start, end)', (start, end), \
+#        '(inland_steps, offshore_steps)', (inland_steps, offshore_steps), \
+#        'max_land_len', max_land_len)
+#    print('depths', depths[start:end])
+#    print('I', I[start:end])
+#    print('J', J[start:end])
 
     return (depths[start:end], (I[start:end], J[start:end]))
 
@@ -2672,10 +2684,36 @@ def clip_transect(transect, max_depth):
         water_extent += 1
 
     # Compute the extremes on the valid portion only
-    highest_point = np.argmax(transect[:shore])
-    lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
+    # Note:
+    #   Numpy's argmin and argmax return the first occurence of the min/max.
+    #   We want the longest transect possible, so since argmin and argmax
+    #   traverse the transect in increasing index, argmax will indeed return 
+    #   the highest segment furthest away from the shore.
+    #   However, argmin will return the shortest offshore portion. To get the
+    #   longest one, we need to revert the offshore transect portion.
 
-    assert highest_point < lowest_point
+    # Highest point is straightforward
+    highest_point = np.argmax(transect[:shore])
+
+    # Lowest point has to be searched in the reversed transect portion 
+    # that is offshore.
+    # Find the boundary indices
+    rbegin = shore + water_extent-1
+    rend = shore-1
+
+    # Extract the offshore slice in reverse order
+    reversed_slice = transect[rbegin:rend:-1]
+    
+    # Index to the lowest point furthest away from the shore
+    lowest_point = np.argmin(reversed_slice)
+    
+    # The index is from the reversed slice, adjust it to the original indexing
+    lowest_point = shore + reversed_slice.size - 1 - lowest_point
+
+#    print('transect', lowest_point, transect)
+
+    assert transect[highest_point] >= transect[lowest_point], \
+        str(transect[highest_point]) + ' not >= ' + str(transect[lowest_point])
 
     return (transect[highest_point:lowest_point+1], (highest_point, shore, lowest_point+1))
 
