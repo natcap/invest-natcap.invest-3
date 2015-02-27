@@ -5,7 +5,9 @@ import tempfile
 
 from numpy import testing
 import numpy as np
+import gdal, osr
 import rasterio as rio
+import fauxgeodata as faux
 
 import blue_carbon
 
@@ -13,21 +15,119 @@ input_dir = '../../test/invest-data/BlueCarbon/input'
 pp = pprint.PrettyPrinter(indent=4)
 
 
-class TestOverallModel1(unittest.TestCase):
+# class TestOverallModel1(unittest.TestCase):
+#     def setUp(self):
+#         workspace_dir = tempfile.mkdtemp("subdir")
+#         # filepath = os.path.join(subdir, 'test.tif')
+
+#         self.args = {
+#             'workspace_dir': workspace_dir,
+#             'lulc_uri_1': os.path.join(
+#                 input_dir, 'GBJC_2004_mean_Resample.tif'),
+#             'year_1': 2004,
+#             'lulc_uri_2': os.path.join(
+#                 input_dir, 'GBJC_2050_mean_Resample.tif'),
+#             'year_2': 2050,
+#             'lulc_uri_3': os.path.join(
+#                 input_dir, 'GBJC_2100_mean_Resample.tif'),
+#             'year_3': 2100,
+#             'analysis_year': 2150,
+#             'soil_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'soil_disturbance.csv'),
+#             'biomass_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'biomass_disturbance.csv'),
+#             'carbon_pools_uri': os.path.join(input_dir, 'carbon.csv'),
+#             'half_life_csv_uri': os.path.join(input_dir, 'half_life.csv'),
+#             'transition_matrix_uri': os.path.join(input_dir, 'transition.csv'),
+#             'do_private_valuation': True,
+#             'discount_rate': 5,
+#             'do_price_table': True,
+#             'carbon_schedule': os.path.join(input_dir, 'SCC5.csv')
+#             #'carbon_value': None,
+#             #'rate_change': None,
+#         }
+
+#     def test_run(self):
+#         blue_carbon.execute(self.args)
+
+#         print os.listdir(self.args['workspace_dir'])
+
+#         with rio.open(os.path.join(
+#                 self.args['workspace_dir'], 'stock_2050.tif')) as src:
+#             print src.width
+#             print src.height
+#             print src.count
+#             print src.read_band(1)[0:100:5, 0:100:5]
+
+
+class TestOverallModel2(unittest.TestCase):
     def setUp(self):
-        workspace_dir = tempfile.mkdtemp("subdir")        
-        # filepath = os.path.join(subdir, 'test.tif')
+        workspace_dir = tempfile.mkdtemp("subdir")
+        lulc_uri_1 = os.path.join(
+            workspace_dir, 'GBJC_2004_mean_Resample.tif'),
+        lulc_uri_2 = os.path.join(
+            workspace_dir, 'GBJC_2050_mean_Resample.tif'),
+        lulc_uri_3 = os.path.join(
+            workspace_dir, 'GBJC_2100_mean_Resample.tif'),
+
+        # create arrays
+        a = np.ones([5, 5])
+        a[0, 0] = 0
+        orgX, maxY = 0, 0
+        pixWidth, pixHeight = 1, 1
+
+        # kwargs = {
+        #     'count': 1,
+        #     'crs': {'init': u'epsg:26915'},
+        #     'dtype': 'uint8',
+        #     'affine': rio.Affine(1.0, 0.0, 0.0, 0.0, 1.0, 3.0),
+        #     'driver': u'GTiff',
+        #     'transform': (0.0, 1.0, 0.0, 3.0, 0.0, 1.0),
+        #     'height': 3,
+        #     'width': 3,
+        #     'nodata': -9999.0
+        # }
+
+        create_raster(
+            lulc_uri_1[0],
+            orgX,
+            maxY,
+            pixWidth,
+            pixHeight,
+            a,
+            proj=26915)
+
+        create_raster(
+            lulc_uri_2[0],
+            orgX,
+            maxY,
+            pixWidth,
+            pixHeight,
+            a,
+            proj=26915)
+
+        create_raster(
+            lulc_uri_3[0],
+            orgX,
+            maxY,
+            pixWidth,
+            pixHeight,
+            a,
+            proj=26915)
+
+        with rio.open(lulc_uri_1[0]) as src:
+            print src.meta
+            print src.crs
+            print src.bounds
+            print src.read_band(1)
 
         self.args = {
             'workspace_dir': workspace_dir,
-            'lulc_uri_1': os.path.join(
-                input_dir, 'GBJC_2004_mean_Resample.tif'),
+            'lulc_uri_1': lulc_uri_1[0],
             'year_1': 2004,
-            'lulc_uri_2': os.path.join(
-                input_dir, 'GBJC_2050_mean_Resample.tif'),
+            'lulc_uri_2': lulc_uri_2[0],
             'year_2': 2050,
-            'lulc_uri_3': os.path.join(
-                input_dir, 'GBJC_2100_mean_Resample.tif'),
+            'lulc_uri_3': lulc_uri_3[0],
             'year_3': 2100,
             'analysis_year': 2150,
             'soil_disturbance_csv_uri': os.path.join(
@@ -41,8 +141,6 @@ class TestOverallModel1(unittest.TestCase):
             'discount_rate': 5,
             'do_price_table': True,
             'carbon_schedule': os.path.join(input_dir, 'SCC5.csv')
-            #'carbon_value': None,
-            #'rate_change': None,
         }
 
     def test_run(self):
@@ -55,19 +153,30 @@ class TestOverallModel1(unittest.TestCase):
             print src.width
             print src.height
             print src.count
-            print src.read_band(1)[0:100:5, 0:100:5]
+            print src.read_band(1)
 
 
-# class TestOverallModel2(unittest.TestCase):
-#     def setUp(self):
-#         self.args = {
+def create_raster(filepath, orgX, maxY, pixWidth, pixHeight, array, proj=4326, gdal_type=gdal.GDT_Float32, nodata=-9999):
+    assert(len(array.shape) == 2)
 
-#         }
+    num_bands = 1
+    rotX = 0.0
+    rotY = 0.0
 
-#     def test_run(self):
-#         guess = blue_carbon.execute(self.args)
-#         pass
+    rows = array.shape[0]
+    cols = array.shape[1]
 
+    driver = gdal.GetDriverByName('GTiff')
+    raster = driver.Create(filepath, cols, rows, num_bands, gdal_type)
+    raster.SetGeoTransform((orgX, pixWidth, rotX, maxY, rotY, -pixHeight))
+
+    band = raster.GetRasterBand(1)  # Get only raster band
+    band.SetNoDataValue(nodata)
+    band.WriteArray(array)
+    raster_srs = osr.SpatialReference()
+    raster_srs.ImportFromEPSG(proj)
+    raster.SetProjection(raster_srs.ExportToWkt())
+    band.FlushCache()
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,13 +29,9 @@ def run_biophysical(vars_dict):
     nodata_default_float = vars_dict['nodata_default_float']
     nodata_lulc = vars_dict['nodata_lulc']
     cell_size = vars_dict['cell_size']
-    trans_dis_dict = vars_dict['trans_dis_dict']
-    trans_veg_acc_dict = vars_dict['trans_veg_acc_dict']
-    half_life = vars_dict['half_life']
-    acc_bio_key = vars_dict['acc_bio_key']
-    acc_soil_key = vars_dict['acc_soil_key']
-    dis_bio_key = vars_dict['dis_bio_key']
-    dis_soil_key = vars_dict['dis_soil_key']
+    transition_disturbance_dict = vars_dict['transition_disturbance_dict']
+    transition_accumulation_dict = vars_dict['transition_accumulation_dict']
+    half_lives_by_veg_dict = vars_dict['half_lives_by_veg_dict']
 
     def add_op(*values):
         if nodata_default_int in values:
@@ -57,7 +53,7 @@ def run_biophysical(vars_dict):
         def acc_bio_co_op(original_lulc, transition_lulc):
             if nodata_lulc in [original_lulc, transition_lulc]:
                 return nodata_default_float
-            return trans_veg_acc_dict[veg_type][acc_bio_key][(
+            return transition_accumulation_dict[veg_type]["biomass_accumulation_dict"][(
                 int(original_lulc), int(transition_lulc))] * t
         return acc_bio_co_op
 
@@ -65,7 +61,7 @@ def run_biophysical(vars_dict):
         def acc_soil_co_op(original_lulc, transition_lulc):
             if nodata_lulc in [original_lulc, transition_lulc]:
                 return nodata_default_float
-            return trans_veg_acc_dict[veg_type][acc_soil_key][(
+            return transition_accumulation_dict[veg_type]["soil_accumulation_dict"][(
                 int(original_lulc), int(transition_lulc))] * t
 
         return acc_soil_co_op
@@ -73,13 +69,13 @@ def run_biophysical(vars_dict):
     def dis_bio_op(carbon_base, original_lulc, transition_lulc):
         if nodata_lulc in [carbon_base, original_lulc, transition_lulc]:
             return nodata_default_float
-        return carbon_base * trans_dis_dict[dis_bio_key][(
+        return carbon_base * transition_disturbance_dict['biomass_disturbance_dict'][(
             int(original_lulc), int(transition_lulc))]
 
     def dis_soil_op(carbon_base, original_lulc, transition_lulc):
         if nodata_lulc in [carbon_base, original_lulc, transition_lulc]:
             return nodata_default_float
-        return carbon_base * trans_dis_dict[dis_soil_key][(
+        return carbon_base * transition_disturbance_dict['soil_disturbance_dict'][(
             int(original_lulc), int(transition_lulc))]
 
     def adj_op(base, acc, dis):
@@ -104,7 +100,7 @@ def run_biophysical(vars_dict):
         def h_l_op(c):
             if c is nodata_default_float:
                 return c
-            alpha = half_life[veg_type][half_life_field]
+            alpha = half_lives_by_veg_dict[veg_type][half_life_field]
 
             try:
                 h_l = alpha_t/float(alpha)
@@ -134,13 +130,13 @@ def run_biophysical(vars_dict):
     lulc_years = vars_dict['lulc_years']
     lulc_uri_dict = vars_dict['lulc_uri_dict']
     veg_type_list = vars_dict['veg_type_list']
-    veg_field_dict = vars_dict['veg_field_dict']
+    carbon_stock_by_veg_pool_id_dict = vars_dict['carbon_stock_by_veg_pool_id_dict']
     workspace_dir = vars_dict['workspace_dir']
     extent_uri = vars_dict['extent_uri']
     intermediate_dir = vars_dict['intermediate_dir']
-    carbon_field_bio = vars_dict['carbon_field_bio']
-    carbon_field_soil = vars_dict['carbon_field_soil']
-    carbon_field_litter = vars_dict['carbon_field_litter']
+    carbon_stock_biomass_key = vars_dict['carbon_stock_biomass_key']
+    carbon_stock_soil_key = vars_dict['carbon_stock_soil_key']
+    carbon_stock_litter_key = vars_dict['carbon_stock_litter_key']
     analysis_year = vars_dict['analysis_year']
     veg_litter_uris = vars_dict['veg_litter_uris']
 
@@ -176,7 +172,7 @@ def run_biophysical(vars_dict):
 
         raster_utils.reclassify_dataset_uri(
             this_uri,
-            veg_field_dict[veg_type][carbon_field_bio],
+            carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_biomass_key],
             this_veg_stock_bio_uri,
             gdal_type_carbon,
             nodata_default_float,
@@ -184,7 +180,7 @@ def run_biophysical(vars_dict):
 
         raster_utils.reclassify_dataset_uri(
             this_uri,
-            veg_field_dict[veg_type][carbon_field_soil],
+            carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_soil_key],
             this_veg_stock_soil_uri,
             gdal_type_carbon,
             nodata_default_float,
@@ -240,7 +236,7 @@ def run_biophysical(vars_dict):
 
             raster_utils.reclassify_dataset_uri(
                 this_uri,
-                veg_field_dict[veg_type][carbon_field_litter],
+                carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_litter_key],
                 this_veg_litter_uri,
                 gdal_type_carbon,
                 nodata_default_float,
@@ -640,7 +636,7 @@ def run_valuation(vars_dict):
     lulc_years = vars_dict['lulc_years']
     analysis_year = vars_dict['analysis_year']
     totals = vars_dict['totals']
-    half_life = vars_dict['half_life']
+    half_lives_by_veg_dict = vars_dict['half_lives_by_veg_dict']
     half_life_field_bio = vars_dict['half_life_field_bio']
     half_life_field_soil = vars_dict['half_life_field_soil']
     veg_em_bio_uris = vars_dict['veg_em_bio_uris']
@@ -711,7 +707,7 @@ def run_valuation(vars_dict):
                         end_year,
                         this_year,
                         next_year,
-                        float(half_life[veg_type][half_life_field_bio]))
+                        float(half_lives_by_veg_dict[veg_type][half_life_field_bio]))
                 except ValueError:
                     c = 0
 
@@ -729,7 +725,7 @@ def run_valuation(vars_dict):
                         end_year,
                         this_year,
                         next_year,
-                        float(half_life[veg_type][half_life_field_soil]))
+                        float(half_lives_by_veg_dict[veg_type][half_life_field_soil]))
                 except ValueError:
                     c = 0
 
@@ -750,12 +746,12 @@ def _print_raster(title, uri):
     '''
     Debugging function that prints raster sample to screen and/or writes to file
     '''
-    # with rio.open(uri) as src:
-    #     a = src.read_band(1)[0:100:5, 0:100:5]
-    #     print a
-    #     print "^^^", title
-        # with open('rasters.txt', 'a') as f:
-        #     pp.pprint(title, stream=f)
-        #     # pp.pprint(a, stream=f)
-        #     f.write('\n')
-    pass
+    with rio.open(uri) as src:
+        a = src.read_band(1)[0:100:5, 0:100:5]
+        print a
+        print "^^^", title
+        with open('rasters.txt', 'a') as f:
+            pp.pprint(title, stream=f)
+            pp.pprint(a, stream=f)
+            f.write('\n')
+    # pass

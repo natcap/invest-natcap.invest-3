@@ -4,10 +4,9 @@
 
 import logging
 import os
-import operator
 import pprint as pp
 
-from osgeo import gdal, ogr, osr
+from osgeo import gdal, osr
 
 from invest_natcap import raster_utils
 
@@ -48,12 +47,10 @@ def fetch_args(args):
 
     Example Returns::
 
-        vars = {
+        vars_dict = {
             # ... original args ...
 
             # Derived Variables
-
-            # Raster Information
             'lulc_uri_dict': {
                 '(lulc_year)': '(raster_uri)',
                 ...
@@ -65,20 +62,7 @@ def fetch_args(args):
             'nodata_default_float': -1,
             'nodata_lulc': 0,
 
-            # Carbon Pools (Not Used - see veg_field_dict, trans_veg_acc_dict, trans_dis_dict)
-            'carbon_pools': {
-                '(Id)': {
-                    'Above (Mg / ha)': 0,
-                    'Below (Mg / ha)': 0,
-                    ...
-                },
-                ...
-            },
-            'carbon_field_soil': 'Soil (Mg / ha)',
-            'carbon_field_litter': 'Litter (Mg / ha)',
-
-            # Carbon Decay Rate for Vegetation/Disturbance Type
-            'half_life': {
+            'half_lives_by_veg_dict': {
                 '(id)': {
                     'biomass (years)': (float),
                     'soil (years)': (float),
@@ -90,7 +74,7 @@ def fetch_args(args):
             'half_life_field_bio': 'biomass (years)',
             'half_life_field_soil': 'soil (years)',
 
-            'veg_field_dict': {
+            'carbon_stock_by_veg_pool_id_dict': {
                 (veg_type): {
                     'Above (Mg / ha)': {
                         (Id): (???), ...
@@ -98,36 +82,33 @@ def fetch_args(args):
                 }, ...
             },
             'veg_type_list': [0, 1, 2],
+            'carbon_stock_soil_key': 'Soil (Mg / ha)',
+            'carbon_stock_litter_key': 'Litter (Mg / ha)',
+            'carbon_stock_biomass_key': 'biomass',
 
-            # (EXPLAIN)
-            'trans_veg_acc_dict': {
+            'transition_accumulation_dict': {
                 '(veg_type)': {
-                    'acc_soil': {
+                    'biomass_accumulation_dict': {
                         (original_lulc, transition_lulc): (accumulation),
                         ...
                     },
-                    'acc_bio': {
+                    'soil_accumulation_dict': {
                         (original_lulc, transition_lulc): (accumulation),
                         ...
                     },
                 }, ...
             },
 
-            # Transition Matrix for Carbon Flow
-            'trans_dis_dict': {
-                'dis_bio': {  # <-- derived from biomass_disturbance_csv_uri
+            'transition_disturbance_dict': {
+                'biomass_disturbance_dict': {  # <-- derived from biomass_disturbance_csv_uri
                     (original_lulc, transition_lulc): (disturbance),
                     ...
                 },
-                'dis_soil': {  # <-- derived from soil_disturbance_csv_uri
+                'soil_disturbance_dict': {  # <-- derived from soil_disturbance_csv_uri
                     (original_lulc, transition_lulc): (disturbance),
                     ...
                 }
             },
-            'dis_soil_key': 'dis_soil',
-            'dis_bio_key': 'dis_bio',
-            'acc_soil_key': 'acc_soil',
-            'acc_bio_key': 'acc_bio',
 
             # Intermediate Outputs
             'intermediate_dir': '/path/to/intermediate/',
@@ -168,7 +149,7 @@ def fetch_args(args):
     '''
     vars_dict = dict(args.items())
 
-    # === Create Workspace
+    # Create Workspace
     workspace_dir = args['workspace_dir']
     intermediate_dir = os.path.join(args['workspace_dir'], "intermediate")
     vars_dict['intermediate_dir'] = intermediate_dir
@@ -176,68 +157,154 @@ def fetch_args(args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
 
-    # === Initialize Dictionaries from Input Tables
+    vars_dict = set_constants(vars_dict)
 
-    # == Distrubance CSVs
-    trans_acc = "Accumulation"
-    dis_field_key = "veg type"
+    # Fetch Inputs
+    vars_dict = fetch_lulc_rasters(vars_dict)
+    vars_dict = read_disturbance_csvs(vars_dict)
+    vars_dict = read_half_life_csv(vars_dict)
+    vars_dict = read_transition_matrix_csv(vars_dict)
+    vars_dict = read_carbon_pools_csv(vars_dict)
 
-    # soil_disturbance_csv_uri - dis_soil
-    vars_dict['dis_soil'] = raster_utils.get_lookup_from_csv(
-        args["soil_disturbance_csv_uri"], dis_field_key)
-    for k in vars_dict['dis_soil']:
-        vars_dict['dis_soil'][k][trans_acc] = 0.0
+    vars_dict = create_transition_matrices(vars_dict)
 
-    # biomass_disturbance_csv_uri - dis_bio
-    vars_dict['dis_bio'] = raster_utils.get_lookup_from_csv(
-        args["biomass_disturbance_csv_uri"], dis_field_key)
-    for k in vars_dict['dis_bio']:
-        vars_dict['dis_bio'][k][trans_acc] = 0.0
+    # Validate Inputs
+    _validate_rasters(vars_dict)
 
-    # == Carbon Pools CSV
-    carbon_field_veg = "Veg Type"
-    carbon_field_above = "Above (Mg / ha)"
-    carbon_field_below = "Below (Mg / ha)"
-    carbon_acc_soil_field = "Soil_accum_rate (Mg / ha / yr)"
-    carbon_acc_bio_field = "Bio_accum_rate (Mg / ha / yr)"
-    vars_dict['carbon_field_litter'] = "Litter (Mg / ha)"
-    carbon_field_soil = "Soil (Mg / ha)"
-    vars_dict['carbon_field_soil'] = carbon_field_soil
+    # Define Outputs
+    vars_dict = create_output_uris(vars_dict)
 
-    vars_dict['carbon_pools'] = raster_utils.get_lookup_from_csv(
-        vars_dict['carbon_pools_uri'], "Id")
+    return vars_dict
 
-    # == Half Life CSV
-    half_life_field_key = "veg type"
-    vars_dict['half_life_field_bio'] = "biomass (years)"
-    vars_dict['half_life_field_soil'] = "soil (years)"
-    vars_dict['half_life'] = raster_utils.get_lookup_from_csv(
-        vars_dict['half_life_csv_uri'],
-        half_life_field_key)
 
-    # == Transition Matrix CSV
-    trans_csv_dict = raster_utils.get_lookup_from_csv(
-        vars_dict['transition_matrix_uri'], "Id")
-
-    ####################################
-    #  NEW FUNCTION SHOULD GO HERE
-    # === Initialize Derivative Dictionaries
+def fetch_lulc_rasters(vars_dict):
+    '''
+    Returns:
+        lulc_uri_dict
+        lulc_years
+        conversion
+    '''
+    # Create list of LULC rasters
     lulc_list = []
     for i in range(1, 6):
-        if "year_%i" % i in args:
+        if "year_%i" % i in vars_dict:
             lulc_list.append(
-                {"uri": args["lulc_uri_%i" % i], "year": args["year_%i" % i]})
+                {"uri": vars_dict["lulc_uri_%i" % i], "year": vars_dict["year_%i" % i]})
         else:
             break
     lulc_uri_dict = dict([(lulc["year"], lulc["uri"]) for lulc in lulc_list])
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
-    # copy LULC for analysis year
-    lulc_uri_dict[args["analysis_year"]] = lulc_uri_dict[lulc_years[-1]]
+    lulc_uri_dict[vars_dict["analysis_year"]] = lulc_uri_dict[lulc_years[-1]]
     vars_dict['lulc_uri_dict'] = lulc_uri_dict
     vars_dict['lulc_years'] = lulc_years
 
-    _validate_rasters(vars_dict, trans_csv_dict, lulc_uri_dict, lulc_years)
+    vars_dict['conversion'] = (raster_utils.get_cell_size_from_uri(
+        lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0  # convert to Ha
+    LOGGER.debug("Cell size is %s hectacres.", vars_dict['conversion'])
+
+    return vars_dict
+
+
+def set_constants(vars_dict):
+    '''
+
+    Returns:
+        gdal_type_carbon
+        nodata_default_int
+        nodata_default_float
+        trans_acc
+    '''
+    vars_dict['gdal_type_carbon'] = gdal.GDT_Float64
+    vars_dict['nodata_default_int'] = -1
+    vars_dict['nodata_default_float'] = -1
+    vars_dict['trans_acc'] = "Accumulation"
+
+    return vars_dict
+
+
+def read_disturbance_csvs(vars_dict):
+    '''
+    Returns:
+        biomass_disturbance_dict (dict): descr
+
+        soil_disturbance_dict (dict): descr
+    '''
+    disturbance_tables_key = "veg type"
+
+    # soil_disturbance_csv_uri - dis_soil
+    vars_dict['soil_disturbance_dict'] = raster_utils.get_lookup_from_csv(
+        vars_dict["soil_disturbance_csv_uri"], disturbance_tables_key)
+    for k in vars_dict['soil_disturbance_dict']:
+        vars_dict['soil_disturbance_dict'][k][vars_dict['trans_acc']] = 0.0
+
+    # biomass_disturbance_csv_uri - dis_bio
+    vars_dict['biomass_disturbance_dict'] = raster_utils.get_lookup_from_csv(
+        vars_dict["biomass_disturbance_csv_uri"], disturbance_tables_key)
+    for k in vars_dict['biomass_disturbance_dict']:
+        vars_dict['biomass_disturbance_dict'][k][vars_dict['trans_acc']] = 0.0
+
+    return vars_dict
+
+
+def read_half_life_csv(vars_dict):
+    '''
+    Returns:
+        half_life_field_bio
+        half_life_field_soil
+        half_lives_by_veg_dict
+    '''
+    half_life_field_key = "veg type"
+    vars_dict['half_life_field_bio'] = "biomass (years)"
+    vars_dict['half_life_field_soil'] = "soil (years)"
+    vars_dict['half_lives_by_veg_dict'] = raster_utils.get_lookup_from_csv(
+        vars_dict['half_life_csv_uri'],
+        half_life_field_key)
+
+    return vars_dict
+
+
+def read_transition_matrix_csv(vars_dict):
+    '''
+    Returns:
+        transition_csv_dict
+    '''
+    vars_dict['transition_csv_dict'] = raster_utils.get_lookup_from_csv(
+        vars_dict['transition_matrix_uri'], "Id")
+    return vars_dict
+
+
+def read_carbon_pools_csv(vars_dict):
+    '''
+
+    Returns:
+        carbon_pools
+        carbon_stock_by_veg_pool_id_dict
+        veg_type_list
+        carbon_stock_soil_key
+        carbon_stock_biomass_key
+        carbon_stock_litter_key
+        biomass_accumulation_dict
+        soil_accumulation_dict
+    '''
+    vars_dict['carbon_pools'] = raster_utils.get_lookup_from_csv(
+        vars_dict['carbon_pools_uri'], "Id")
+
+    carbon_stock_veg = "Veg Type"
+    carbon_stock_above = "Above (Mg / ha)"
+    carbon_stock_below = "Below (Mg / ha)"
+    carbon_acc_soil_field = "Soil_accum_rate (Mg / ha / yr)"
+    carbon_acc_bio_field = "Bio_accum_rate (Mg / ha / yr)"
+    vars_dict['carbon_stock_litter_key'] = "Litter (Mg / ha)"
+    carbon_stock_soil_key = "Soil (Mg / ha)"
+    vars_dict['carbon_stock_soil_key'] = carbon_stock_soil_key
+
+    veg_dict = dict([(k, int(vars_dict['carbon_pools'][k][
+        carbon_stock_veg])) for k in vars_dict['carbon_pools']])
+
+    veg_type_list = list(set([veg_dict[k] for k in veg_dict]))
+    vars_dict['veg_type_list'] = veg_type_list
+
 
     class InfiniteDict:
         def __init__(self, k, v):
@@ -253,110 +320,109 @@ def fetch_args(args):
             return repr(self.d)
 
     # constructing accumulation tables from carbon table
-    # acc_soil - from carbon
-    acc_soil = {}
+    # soil_accumulation_dict - from carbon
+    soil_accumulation_dict = {}
     for k in vars_dict['carbon_pools']:
-        acc_soil[k] = InfiniteDict(
-            trans_acc,
+        soil_accumulation_dict[k] = InfiniteDict(
+            vars_dict['trans_acc'],
             vars_dict['carbon_pools'][k][carbon_acc_soil_field])
-    vars_dict['acc_soil'] = acc_soil
+    vars_dict['soil_accumulation_dict'] = soil_accumulation_dict
 
-    # acc_bio - from carbon
-    acc_bio = {}
+    # biomass_accumulation_dict - from carbon
+    biomass_accumulation_dict = {}
     for k in vars_dict['carbon_pools']:
-        acc_bio[k] = InfiniteDict(
-            trans_acc,
+        biomass_accumulation_dict[k] = InfiniteDict(
+            vars_dict['trans_acc'],
             vars_dict['carbon_pools'][k][carbon_acc_bio_field])
-    vars_dict['acc_bio'] = acc_bio
+    vars_dict['biomass_accumulation_dict'] = biomass_accumulation_dict
 
-    # construct dictionaries for single parameter lookups
-    conversion = (raster_utils.get_cell_size_from_uri(
-        lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0  # convert to Ha
-
-    LOGGER.debug("Cell size is %s hectacres.", conversion)
-
-    veg_dict = dict([(k, int(vars_dict['carbon_pools'][k][
-        carbon_field_veg])) for k in vars_dict['carbon_pools']])
-
-    veg_type_list = list(set([veg_dict[k] for k in veg_dict]))
-    vars_dict['veg_type_list'] = veg_type_list
-
-    # create carbon field dictionary
-    veg_field_dict = {}
+    carbon_stock_by_veg_pool_id_dict = {}
     for veg_type in veg_type_list:
-        veg_field_dict[veg_type] = {}
-        for field in [carbon_field_above,
-                      carbon_field_below,
-                      vars_dict['carbon_field_litter'],
-                      carbon_field_soil]:
-            veg_field_dict[veg_type][field] = {}
+        carbon_stock_by_veg_pool_id_dict[veg_type] = {}
+        for field in [carbon_stock_above,
+                      carbon_stock_below,
+                      vars_dict['carbon_stock_litter_key'],
+                      carbon_stock_soil_key]:
+            carbon_stock_by_veg_pool_id_dict[veg_type][field] = {}
             for k in vars_dict['carbon_pools']:
-                if int(vars_dict['carbon_pools'][k][carbon_field_veg]) == veg_type:
-                    veg_field_dict[veg_type][field][k] = float(
-                        vars_dict['carbon_pools'][k][field]) * conversion
+                if int(vars_dict['carbon_pools'][k][carbon_stock_veg]) == veg_type:
+                    carbon_stock_by_veg_pool_id_dict[veg_type][field][k] = float(
+                        vars_dict['carbon_pools'][k][field]) * vars_dict['conversion']
                 else:
-                    veg_field_dict[veg_type][field][k] = 0.0
+                    carbon_stock_by_veg_pool_id_dict[veg_type][field][k] = 0.0
 
     # add biomass to carbon field
-    carbon_field_bio = "bio"
+    carbon_stock_biomass_key = "biomass"
     for veg_type in veg_type_list:
-        veg_field_dict[veg_type][carbon_field_bio] = {}
+        carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_biomass_key] = {}
         for k in vars_dict['carbon_pools']:
-            # sum (below, above) carbon pools together
-            veg_field_dict[veg_type][carbon_field_bio][k] = veg_field_dict[
-                veg_type][carbon_field_below][k] + veg_field_dict[veg_type][
-                carbon_field_above][k]
-    vars_dict['veg_field_dict'] = veg_field_dict
-    vars_dict['carbon_field_bio'] = carbon_field_bio
+            # sum (below, above) carbon pools together into 'bio'
+            carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_biomass_key][k] = carbon_stock_by_veg_pool_id_dict[
+                veg_type][carbon_stock_below][k] + carbon_stock_by_veg_pool_id_dict[veg_type][
+                carbon_stock_above][k]
+    vars_dict['carbon_stock_by_veg_pool_id_dict'] = carbon_stock_by_veg_pool_id_dict
+    vars_dict['carbon_stock_biomass_key'] = carbon_stock_biomass_key
+
+    return vars_dict
+
+
+def create_transition_matrices(vars_dict):
+    '''
+    Returns:
+        transition_accumulation_dict
+        transition_disturbance_dict
+    '''
+    carbon_stock_veg = "Veg Type"
 
     # accumulation
-    trans_veg_acc_dict = {}
-    for veg_type in veg_type_list:
-        trans_veg_acc_dict[veg_type] = {}
+    biomass_accumulation_dict = vars_dict['biomass_accumulation_dict']
+    soil_accumulation_dict = vars_dict['soil_accumulation_dict']
+    transition_csv_dict = vars_dict['transition_csv_dict']
+    transition_accumulation_dict = {}
+    for veg_type in vars_dict['veg_type_list']:
+        transition_accumulation_dict[veg_type] = {}
         for component, component_dict in [
-                ("acc_soil", acc_soil),
-                ("acc_bio", acc_bio)]:
-            trans_veg_acc_dict[veg_type][component] = {}
-            for original_lulc in trans_csv_dict:
-                trans_veg_acc_dict[veg_type][component][original_lulc] = {}
-                for transition_lulc in trans_csv_dict:
+                ("soil_accumulation_dict", soil_accumulation_dict),
+                ("biomass_accumulation_dict", biomass_accumulation_dict)]:
+            transition_accumulation_dict[veg_type][component] = {}
+            for original_lulc in transition_csv_dict:
+                transition_accumulation_dict[veg_type][component][original_lulc] = {}
+                for transition_lulc in transition_csv_dict:
                     if int(vars_dict['carbon_pools'][transition_lulc][
-                            carbon_field_veg]) == veg_type:
-                        trans_veg_acc_dict[veg_type][component][
+                            carbon_stock_veg]) == veg_type:
+                        transition_accumulation_dict[veg_type][component][
                             (original_lulc, transition_lulc)] = component_dict[
-                                transition_lulc][trans_csv_dict[
+                                transition_lulc][transition_csv_dict[
                                     original_lulc][str(
-                                        transition_lulc)]] * conversion
+                                        transition_lulc)]] * vars_dict['conversion']
                     else:
-                        trans_veg_acc_dict[veg_type][component][(
+                        transition_accumulation_dict[veg_type][component][(
                             original_lulc, transition_lulc)] = 0.0
-    vars_dict['trans_veg_acc_dict'] = trans_veg_acc_dict
+    vars_dict['transition_accumulation_dict'] = transition_accumulation_dict
 
     # disturbance
-    trans_dis_dict = {}
+    transition_disturbance_dict = {}
     for component, component_dict in [
-            ("dis_bio", vars_dict['dis_bio']),
-            ("dis_soil", vars_dict['dis_soil'])]:
-        trans_dis_dict[component] = {}
-        for original_lulc in trans_csv_dict:
-            for transition_lulc in trans_csv_dict:
-                trans_dis_dict[component][(original_lulc, transition_lulc)] = \
+            ("biomass_disturbance_dict", vars_dict['biomass_disturbance_dict']),
+            ("soil_disturbance_dict", vars_dict['soil_disturbance_dict'])]:
+        transition_disturbance_dict[component] = {}
+        for original_lulc in transition_csv_dict:
+            for transition_lulc in transition_csv_dict:
+                transition_disturbance_dict[component][(original_lulc, transition_lulc)] = \
                     component_dict[vars_dict['carbon_pools'][original_lulc][
-                        carbon_field_veg]][trans_csv_dict[original_lulc][
+                        carbon_stock_veg]][transition_csv_dict[original_lulc][
                             str(transition_lulc)]]
-    vars_dict['trans_dis_dict'] = trans_dis_dict
+    vars_dict['transition_disturbance_dict'] = transition_disturbance_dict
 
-    # === Constants
-    vars_dict['gdal_type_carbon'] = gdal.GDT_Float64
-    vars_dict['nodata_default_int'] = -1
-    vars_dict['nodata_default_float'] = -1
+    return vars_dict
 
-    vars_dict['acc_soil_key'] = "acc_soil"
-    vars_dict['acc_bio_key'] = "acc_bio"
-    vars_dict['dis_bio_key'] = "dis_bio"
-    vars_dict['dis_soil_key'] = "dis_soil"
 
-    # === Create Output Raster URI Templates
+def create_output_uris(vars_dict):
+    '''
+    '''
+    workspace_dir = vars_dict['workspace_dir']
+    intermediate_dir = vars_dict['intermediate_dir']
+
     # carbon pool file names
     vars_dict['veg_stock_bio_uris'] = os.path.join(
         intermediate_dir, "%i_veg_%i_stock_biomass.tif")
@@ -438,7 +504,6 @@ def fetch_args(args):
 
 def _alignment_check_uri(dataset_uri_list):
     '''
-
     '''
     dataset_uri = dataset_uri_list[0]
     dataset = gdal.Open(dataset_uri)
@@ -484,14 +549,18 @@ def _alignment_check_uri(dataset_uri_list):
     return True
 
 
-def _validate_rasters(vars_dict, trans_csv_dict, lulc_uri_dict, lulc_years):
+def _validate_rasters(vars_dict):
     '''
     '''
     # validate disturbance and accumulation tables
+    transition_csv_dict = vars_dict['transition_csv_dict']
+    lulc_uri_dict = vars_dict['lulc_uri_dict']
+    lulc_years = vars_dict['lulc_years']
+
     change_types = set()
-    for k1 in trans_csv_dict:
-        for k2 in trans_csv_dict:
-            change_types.add(trans_csv_dict[k1][str(k2)])
+    for k1 in transition_csv_dict:
+        for k2 in transition_csv_dict:
+            change_types.add(transition_csv_dict[k1][str(k2)])
 
     # check that all rasters have same nodata value
     vars_dict['nodata_lulc'] = set([raster_utils.get_nodata_from_uri(
