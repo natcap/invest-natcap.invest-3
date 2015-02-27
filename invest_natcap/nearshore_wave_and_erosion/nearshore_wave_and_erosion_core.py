@@ -265,11 +265,16 @@ def compute_transects(args):
                     if len(transect_orientations) == 0:
 #                        print("  No valid transect orientation for", transect_positions)
                         continue
-#                    for p in transect_orientations:
-#                       o = transect_orientations[p]
-#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
-#                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
-#                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
+                    for p in transect_orientations:
+                       o = transect_orientations[p]
+                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
+                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -4
+                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -4
+
+                    tiles += 1
+                    
+                    continue
+
                     # Look for the first valid transect
                     for transect_position in transect_orientations:
 #                        print('transect_position', transect_position)
