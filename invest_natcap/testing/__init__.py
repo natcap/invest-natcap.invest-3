@@ -110,6 +110,8 @@ from invest_natcap.iui import fileio
 from invest_natcap import raster_utils
 import data_storage
 
+from create_raster import *
+
 LOGGER = logging.getLogger('invest_natcap.testing')
 
 def get_hash(uri):

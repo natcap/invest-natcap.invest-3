@@ -99,7 +99,7 @@
             {
               "id": "yield_observed_label",
               "type": "label",
-              "label": "HELP TEXT"
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: a set of GDAL-supported rasters within a folder named 'yield_observed' representing the observed crop yield for each crop.  [Additional requirements here]"
             }
           ]
         }
@@ -119,7 +119,7 @@
             {
               "id": "yield_percentile_label",
               "type": "label",
-              "label": "HELP TEXT"
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
             }
           ]
         }
@@ -139,7 +139,7 @@
             {
               "id": "yield_observed_label",
               "type": "label",
-              "label": "HELP TEXT"
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...). A table named 'yield_climate_regression_table.csv' within a folder named 'yield_climate_regression'.  [Additional requirements here]"
             },
             {
               "id": "modeled_fertilizer_maps_dir",
@@ -181,7 +181,7 @@
               "id": "nutrition_table_uri",
               "args_id": "nutrition_table_uri",
               "type": "file",
-              "label": "Nutrient Contents Table (CSV)",
+              "label": "Nutrition Contents Table (CSV)",
               "defaultValue": "../CropProduction/input/nutrition_table.csv",
               "required": true,
               "validateAs": {
@@ -214,15 +214,6 @@
               "validateAs": {
                 "type": "CSV"
               },
-              "helpText": ""
-            },
-            {
-              "id": "economics_fertilizer_maps_dir",
-              "args_id": "economics_fertilizer_maps_dir",
-              "type": "folder",
-              "label": "Fertilizer Application Rate Maps Folder (Optional)",
-              "defaultValue": "../CropProduction/input/economics_fertilizer_maps/",
-              "required": false,
               "helpText": ""
             }
           ]

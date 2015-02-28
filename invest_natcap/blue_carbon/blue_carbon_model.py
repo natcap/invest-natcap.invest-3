@@ -407,16 +407,16 @@ def run_biophysical(vars_dict):
             _print_raster("Next Year (%i) LULC Raster" % next_year, next_uri)
             _print_raster("Veg %i accumulated carbon in biomass" % veg_type, this_veg_acc_bio_uri)
             _print_raster("Veg %i accumulated carbon in soil" % veg_type, this_veg_acc_soil_uri)
-            _print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
-            _print_raster("Veg %i disturbed carbon in soil" % veg_type, this_veg_dis_soil_uri)
-            _print_raster("Veg %i adjusted accumulated carbon in biomass" % veg_type, this_veg_adj_acc_bio_uri)
-            _print_raster("Veg %i adjusted accumulated carbon in soil" % veg_type, this_veg_adj_acc_soil_uri)
-            _print_raster("Veg %i adjusted disturbed carbon in biomass" % veg_type, this_veg_adj_dis_bio_uri)
-            _print_raster("Veg %i adjusted disturbed carbon in soil" % veg_type, this_veg_adj_dis_soil_uri)
-            _print_raster("Veg %i emissions from biomass" % veg_type, this_veg_em_bio_uri)
-            _print_raster("Veg %i emissions from soil" % veg_type, this_veg_em_soil_uri)
-            _print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
-            _print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
+            # _print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
+            # _print_raster("Veg %i disturbed carbon in soil" % veg_type, this_veg_dis_soil_uri)
+            # _print_raster("Veg %i adjusted accumulated carbon in biomass" % veg_type, this_veg_adj_acc_bio_uri)
+            # _print_raster("Veg %i adjusted accumulated carbon in soil" % veg_type, this_veg_adj_acc_soil_uri)
+            # _print_raster("Veg %i adjusted disturbed carbon in biomass" % veg_type, this_veg_adj_dis_bio_uri)
+            # _print_raster("Veg %i adjusted disturbed carbon in soil" % veg_type, this_veg_adj_dis_soil_uri)
+            # _print_raster("Veg %i emissions from biomass" % veg_type, this_veg_em_bio_uri)
+            # _print_raster("Veg %i emissions from soil" % veg_type, this_veg_em_soil_uri)
+            # _print_raster("Veg %i adjusted emissions from biomass" % veg_type, this_veg_adj_em_dis_bio_uri)
+            # _print_raster("Veg %i adjusted emissions from soil" % veg_type, this_veg_adj_em_dis_soil_uri)
 
         carbon_raster_calculation(
             this_total_carbon_uri_list,
@@ -747,7 +747,7 @@ def _print_raster(title, uri):
     Debugging function that prints raster sample to screen and/or writes to file
     '''
     with rio.open(uri) as src:
-        a = src.read_band(1)[0:100:5, 0:100:5]
+        a = src.read_band(1)  # [0:100:5, 0:100:5]
         print a
         print "^^^", title
         with open('rasters.txt', 'a') as f:
