@@ -2317,8 +2317,6 @@ def compute_transect_orientations(positions, orientations, land):
         norm = (np.sum(orientation**2))**.5
         step = 3. * orientation / norm
 
-#        print('  position', position,'  orientation', orientation, 'step', step)
-
         # Sample landmass at 1, 2, and 3 pixels away from position
         water_is_1_px_ahead = \
             not land[int(round(position[0] +step[0]/3.)), \
@@ -2341,19 +2339,11 @@ def compute_transect_orientations(positions, orientations, land):
             int(round(position[0] -step[0])), \
             int(round(position[1] -step[1]))]
 
-#        print([water_is_3_px_behind, water_is_2_px_behind, water_is_1_px_behind, \
-#                water_is_3_px_ahead, water_is_2_px_ahead, water_is_1_px_ahead])
-
         # Try 3 pixels in the direction ahead
         if water_is_3_px_ahead:
             # Check if there is no land along the vector 'step'.
             if water_is_1_px_ahead and water_is_2_px_ahead:
                 transect_orientations[position] = orientation
-#                print('    Water is 3 px ahead')
-#                o = transect_orientations[position]
-#                print('    Water', not land[ \
-#                    int(round(position[0] + 3.*o[0]/3.)), \
-#                    int(round(position[1] + 3.*o[1]/3.))])
                 continue
         
         # Try opposite direction
@@ -2361,11 +2351,6 @@ def compute_transect_orientations(positions, orientations, land):
             # Same thing as above, but for the opposite direction
             if water_is_1_px_behind and water_is_2_px_behind:
                 transect_orientations[position] = -orientation
-#                print('    Water is 3 px behind')
-#                o = transect_orientations[position]
-#                print('    Water', not land[ \
-#                    int(round(position[0] - 3.*o[0]/3.)), \
-#                    int(round(position[1] - 3.*o[1]/3.))])
                 continue
 
         # Couldn't detect water 3 pixels away in either direction, 
@@ -2374,34 +2359,10 @@ def compute_transect_orientations(positions, orientations, land):
         # No land, all good: we store this direction.
         if water_is_1_px_ahead:
             transect_orientations[position] = orientation
-#            print('orientation', transect_orientations[position])
-#            print('    Water is 1 px ahead')
-#            o = transect_orientations[position]
-#            print('    Water', not land[ \
-#                int(round(position[0] + 3.*o[0]/3.)), \
-#                int(round(position[1] + 3.*o[1]/3.))])
 
         # Still hit land: try the other direction
         elif water_is_1_px_behind:
             transect_orientations[position] = -orientation
-#            print('orientation', transect_orientations[position])
-#            print('    Water is 1 px behind')
-#            o = transect_orientations[position]
-#            print('    Water', not land[ \
-#                int(round(position[0] + 3.*o[0]/3.)), \
-#                int(round(position[1] + 3.*o[1]/3.))])
-
-#        else:
-#            print('    Water is nowhere to be found')
-
-        # Nothing worked
-#        else:
-#            print('position', position)
-#            print('No valid orientation')
-
-#        print('-----orientation', orientation)
-
-#    print('transect_orientations', transect_orientations)
 
     return transect_orientations
 
