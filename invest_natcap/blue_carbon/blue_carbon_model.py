@@ -151,11 +151,11 @@ def run_biophysical(vars_dict):
     LOGGER.info("Calculating stock carbon values.")
     # calculate stock carbon values
     this_year = lulc_years[0]
-    this_uri = lulc_uri_dict[this_year]
+    this_year_uri = lulc_uri_dict[this_year]
     zero_raster_uri = os.path.join(intermediate_dir, "zeros.tif")
     # creating zero-fill raster for initial disturbed carbon
     raster_utils.new_raster_from_base_uri(
-        this_uri,
+        this_year_uri,
         zero_raster_uri,
         "GTiff",
         nodata_default_int,
@@ -171,7 +171,7 @@ def run_biophysical(vars_dict):
             this_year, veg_type)
 
         raster_utils.reclassify_dataset_uri(
-            this_uri,
+            this_year_uri,
             carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_biomass_key],
             this_veg_stock_bio_uri,
             gdal_type_carbon,
@@ -179,7 +179,7 @@ def run_biophysical(vars_dict):
             exception_flag="values_required")
 
         raster_utils.reclassify_dataset_uri(
-            this_uri,
+            this_year_uri,
             carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_soil_key],
             this_veg_stock_soil_uri,
             gdal_type_carbon,
@@ -195,7 +195,7 @@ def run_biophysical(vars_dict):
     # loop over lulc years
 
     # create extent shapefile
-    _datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)
+    _datasource_from_dataset_bounding_box_uri(this_year_uri, extent_uri)
 
     totals = {}
     stock_uri_dict = {}
@@ -221,8 +221,8 @@ def run_biophysical(vars_dict):
         totals[this_year] = {}
 
         LOGGER.info("Transition from %i to %i.", this_year, next_year)
-        this_uri = lulc_uri_dict[this_year]
-        next_uri = lulc_uri_dict[next_year]
+        this_year_uri = lulc_uri_dict[this_year]
+        next_year_uri = lulc_uri_dict[next_year]
 
         t = next_year - this_year
 
@@ -235,7 +235,7 @@ def run_biophysical(vars_dict):
                 'veg_litter_uris'] % (this_year, veg_type)
 
             raster_utils.reclassify_dataset_uri(
-                this_uri,
+                this_year_uri,
                 carbon_stock_by_veg_pool_id_dict[veg_type][carbon_stock_litter_key],
                 this_veg_litter_uri,
                 gdal_type_carbon,
@@ -246,7 +246,7 @@ def run_biophysical(vars_dict):
             this_veg_acc_bio_uri = vars_dict['veg_acc_bio_uris'] % (
                 this_year, next_year, veg_type)
             carbon_raster_calculation(
-                [this_uri, next_uri],
+                [this_year_uri, next_year_uri],
                 acc_bio_op_closure(veg_type, t),
                 this_veg_acc_bio_uri)
 
@@ -254,7 +254,7 @@ def run_biophysical(vars_dict):
             this_veg_acc_soil_uri = vars_dict['veg_acc_soil_uris'] % (
                 this_year, next_year, veg_type)
             carbon_raster_calculation(
-                [this_uri, next_uri],
+                [this_year_uri, next_year_uri],
                 acc_soil_op_closure(veg_type, t),
                 this_veg_acc_soil_uri)
 
@@ -263,7 +263,7 @@ def run_biophysical(vars_dict):
                 this_year, next_year, veg_type)
             carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
-                    base_veg_acc_bio], this_uri, next_uri],
+                    base_veg_acc_bio], this_year_uri, next_year_uri],
                 dis_bio_op,
                 this_veg_dis_bio_uri)
 
@@ -272,7 +272,7 @@ def run_biophysical(vars_dict):
                 this_year, next_year, veg_type)
             carbon_raster_calculation(
                 [veg_base_uri_dict[veg_type][
-                    base_veg_acc_soil], this_uri, next_uri],
+                    base_veg_acc_soil], this_year_uri, next_year_uri],
                 dis_soil_op,
                 this_veg_dis_soil_uri)
 
@@ -403,8 +403,8 @@ def run_biophysical(vars_dict):
                 base_veg_dis_soil] = this_veg_adj_em_dis_soil_uri
 
             # DEBUG
-            _print_raster("Current Year (%i) LULC Raster" % this_year, this_uri)
-            _print_raster("Next Year (%i) LULC Raster" % next_year, next_uri)
+            _print_raster("Current Year (%i) LULC Raster" % this_year, this_year_uri)
+            _print_raster("Next Year (%i) LULC Raster" % next_year, next_year_uri)
             _print_raster("Veg %i accumulated carbon in biomass" % veg_type, this_veg_acc_bio_uri)
             _print_raster("Veg %i accumulated carbon in soil" % veg_type, this_veg_acc_soil_uri)
             # _print_raster("Veg %i disturbed carbon in biomass" % veg_type, this_veg_dis_bio_uri)
