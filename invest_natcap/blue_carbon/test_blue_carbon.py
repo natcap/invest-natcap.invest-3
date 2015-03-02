@@ -62,7 +62,186 @@ pp = pprint.PrettyPrinter(indent=4)
 #             print src.read_band(1)[0:100:5, 0:100:5]
 
 
-class TestOverallModel2(unittest.TestCase):
+# class TestOverallModel2(unittest.TestCase):
+#     def setUp(self):
+#         workspace_dir = tempfile.mkdtemp("subdir")
+#         lulc_uri_1 = os.path.join(
+#             workspace_dir, 'GBJC_2004_mean_Resample.tif'),
+#         lulc_uri_2 = os.path.join(
+#             workspace_dir, 'GBJC_2050_mean_Resample.tif'),
+#         lulc_uri_3 = os.path.join(
+#             workspace_dir, 'GBJC_2100_mean_Resample.tif'),
+
+#         # create arrays
+#         a = np.ones([1, 1])
+#         # a[0, 0] = 0
+#         orgX, orgY = 0, 1
+#         pixWidth, pixHeight = 10000.0, -10000.0  # Cell size in meters?
+
+#         create_raster(
+#             lulc_uri_1[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 2,
+#             proj=26915)
+
+#         create_raster(
+#             lulc_uri_2[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 7,
+#             proj=26915)
+
+#         create_raster(
+#             lulc_uri_3[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 11,
+#             proj=26915)
+
+#         with rio.open(lulc_uri_1[0]) as src:
+#             print src.meta
+#             print src.crs
+#             print src.bounds
+#             print src.read_band(1)
+
+#         with rio.open(lulc_uri_2[0]) as src:
+#             print src.meta
+#             print src.crs
+#             print src.bounds
+#             print src.read_band(1)
+
+#         self.args = {
+#             'workspace_dir': workspace_dir,
+#             'lulc_uri_1': lulc_uri_1[0],
+#             'year_1': 2004,
+#             'lulc_uri_2': lulc_uri_2[0],
+#             'year_2': 2050,
+#             'lulc_uri_3': lulc_uri_3[0],
+#             'year_3': 2100,
+#             'analysis_year': 2150,
+#             'soil_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'soil_disturbance.csv'),
+#             'biomass_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'biomass_disturbance.csv'),
+#             'carbon_pools_uri': os.path.join(input_dir, 'carbon.csv'),
+#             'half_life_csv_uri': os.path.join(input_dir, 'half_life.csv'),
+#             'transition_matrix_uri': os.path.join(input_dir, 'transition.csv'),
+#             'do_private_valuation': True,
+#             'discount_rate': 5,
+#             'do_price_table': True,
+#             'carbon_schedule': os.path.join(input_dir, 'SCC5.csv')
+#         }
+
+#     def test_run(self):
+#         blue_carbon.execute(self.args)
+
+#         print os.listdir(self.args['workspace_dir'])
+
+#         with rio.open(os.path.join(
+#                 self.args['workspace_dir'], 'stock_2050.tif')) as src:
+#             print src.width
+#             print src.height
+#             print src.count
+#             print src.read_band(1)
+
+
+# class TestOverallModel3(unittest.TestCase):
+#     def setUp(self):
+#         workspace_dir = tempfile.mkdtemp("subdir")
+#         lulc_uri_1 = os.path.join(
+#             workspace_dir, 'GBJC_2004_mean_Resample.tif'),
+#         lulc_uri_2 = os.path.join(
+#             workspace_dir, 'GBJC_2050_mean_Resample.tif'),
+#         lulc_uri_3 = os.path.join(
+#             workspace_dir, 'GBJC_2100_mean_Resample.tif'),
+
+#         # create arrays
+#         a = np.ones([1, 1])
+#         # a[0, 0] = 0
+#         orgX, orgY = 0, 1
+#         pixWidth, pixHeight = 1000.0, -1000.0  # Cell size in meters?
+
+#         create_raster(
+#             lulc_uri_1[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 8,
+#             proj=26915)
+
+#         create_raster(
+#             lulc_uri_2[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 17,
+#             proj=26915)
+
+#         create_raster(
+#             lulc_uri_3[0],
+#             orgX,
+#             orgY,
+#             pixWidth,
+#             pixHeight,
+#             a * 17,
+#             proj=26915)
+
+#         with rio.open(lulc_uri_1[0]) as src:
+#             print src.meta
+#             print src.crs
+#             print src.bounds
+#             print src.read_band(1)
+
+#         with rio.open(lulc_uri_2[0]) as src:
+#             print src.meta
+#             print src.crs
+#             print src.bounds
+#             print src.read_band(1)
+
+#         self.args = {
+#             'workspace_dir': workspace_dir,
+#             'lulc_uri_1': lulc_uri_1[0],
+#             'year_1': 2004,
+#             'lulc_uri_2': lulc_uri_2[0],
+#             'year_2': 2050,
+#             'lulc_uri_3': lulc_uri_3[0],
+#             'year_3': 2100,
+#             'analysis_year': 2150,
+#             'soil_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'soil_disturbance.csv'),
+#             'biomass_disturbance_csv_uri': os.path.join(
+#                 input_dir, 'biomass_disturbance.csv'),
+#             'carbon_pools_uri': os.path.join(input_dir, 'carbon.csv'),
+#             'half_life_csv_uri': os.path.join(input_dir, 'half_life.csv'),
+#             'transition_matrix_uri': os.path.join(input_dir, 'transition.csv'),
+#             'do_private_valuation': True,
+#             'discount_rate': 5,
+#             'do_price_table': True,
+#             'carbon_schedule': os.path.join(input_dir, 'SCC5.csv')
+#         }
+
+#     def test_run(self):
+#         blue_carbon.execute(self.args)
+
+#         print os.listdir(self.args['workspace_dir'])
+
+#         with rio.open(os.path.join(
+#                 self.args['workspace_dir'], 'stock_2050.tif')) as src:
+#             print src.width
+#             print src.height
+#             print src.count
+#             print src.read_band(1)
+
+class TestOverallModel4(unittest.TestCase):
     def setUp(self):
         workspace_dir = tempfile.mkdtemp("subdir")
         lulc_uri_1 = os.path.join(
@@ -76,7 +255,7 @@ class TestOverallModel2(unittest.TestCase):
         a = np.ones([1, 1])
         # a[0, 0] = 0
         orgX, orgY = 0, 1
-        pixWidth, pixHeight = 10000.0, -10000.0  # Cell size in meters?
+        pixWidth, pixHeight = 1000.0, -1000.0  # Cell size in meters?
 
         create_raster(
             lulc_uri_1[0],
@@ -84,7 +263,7 @@ class TestOverallModel2(unittest.TestCase):
             orgY,
             pixWidth,
             pixHeight,
-            a * 2,
+            a * 20,
             proj=26915)
 
         create_raster(
@@ -93,7 +272,7 @@ class TestOverallModel2(unittest.TestCase):
             orgY,
             pixWidth,
             pixHeight,
-            a * 7,
+            a * 20,
             proj=26915)
 
         create_raster(
@@ -102,7 +281,7 @@ class TestOverallModel2(unittest.TestCase):
             orgY,
             pixWidth,
             pixHeight,
-            a * 11,
+            a * 20,
             proj=26915)
 
         with rio.open(lulc_uri_1[0]) as src:

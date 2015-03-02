@@ -525,7 +525,7 @@ def run_biophysical(vars_dict):
                 neg_op,
                 loss_uri)
 
-            _print_raster("Next Sequestration from %i to %i", total_seq_uri)
+            _print_raster("Next Sequestration from %i to %i" % (this_year, next_year), total_seq_uri)
             _print_raster("Total Gain from %i to %i" % (this_year, next_year), gain_uri)
             _print_raster("Total Loss from %i to %i" % (this_year, next_year), loss_uri)
 
@@ -752,6 +752,6 @@ def _print_raster(title, uri):
         print "^^^", title
         with open('rasters.txt', 'a') as f:
             pp.pprint(title, stream=f)
-            pp.pprint(a, stream=f)
+            pp.pprint(a[0:100:5, 0:100:5], stream=f)
             f.write('\n')
     # pass
