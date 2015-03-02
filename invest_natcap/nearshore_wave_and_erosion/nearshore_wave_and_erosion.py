@@ -524,16 +524,24 @@ def execute(args):
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
+    # ------- Habitat type values conventions: --------
+    #
+    # Each habitat has a type. The habitat type is used in situations where 
+    # habitats overlap: there can only be one habitat type at a given location.
+    # To resolve the ovrerlap, the model propritizes some habitats over others
+    # by assigning them a higher 'type' value.
+    #
     # ------- Habitats constraints conventions: --------
     # The field 'constraints' indicates where a specific layer can be found.
     # The limits are expressed in various units. For instance:
     #
-    #   -for the constraints land/water: the unit is a distance from the shore in meters
+    #   -for the constraints land/water: the unit is a distance from the shore 
+    #       in meters
     #   -for MLLW: the unit is depth, which is expressed as a number of MLLW. 
-    #       For instance, a value of 2 for 'MLLW' means twice the depth of MLLW.
-    #   -For MHHW: the unit is elevation, which is expressed as a number of MHHW.
-    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an elevation 3 times
-    #       higher than MHHW.
+    #       For instance, a value of 2 for 'MLLW' means twice the MLLW depth.
+    #   -For MHHW: the unit is an elevation expressed as a number of MHHW.
+    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an 
+    #       elevation 3 times that of MHHW.
     #
     # Note: All the distances and elevations/depth are relative to the shore.
     # 
@@ -554,18 +562,23 @@ def execute(args):
     # Negative values are the opposite: instead of specifying an area FROM 
     #   the shore out, it specifies an area UP TO the shore. In other words,
     #   The area 
-    #       'land':-10 -> the habitat is allowed to grow from 10m inland from the
-    #           shore up to infinity landward.
+    #       'land':-10 -> the habitat is allowed to grow from 10m inland from 
+    #           the shore up to infinity landward.
     #       'MLLW':-2 -> the habitat cannot grow at depths shallower 
     #           than 2 units of MLLW. If MLLW is 1.2, the depth is 1.2x2=2.4m
     #
     args['habitat_information'] = [
+        # Kelp habitat: 'type' exist in the 'kelp' dictionary, use it
         ('kelp',
             {'shapefile type':'seagrass', 'type':1},           
             {'constraints':{'land':0.}}), 
+        # Seagrass habitat: 'type' exist in the 'seagrass' dictionary, use it
         ('seagrass',              
             {'shapefile type':'seagrass', 'type':2},           
             {'constraints':{'land':0.}}), 
+        # underwater structures: 'type' doesn't exist in the 
+        # 'underwater structures' dictionary, will be assigned a default value
+        # based on the habitat positional index in the 'habitat_information'
         ('underwater structures', 
             {'shapefile type':'underwater structures'},        
             {'constraints':{'land':0.}}), 
@@ -608,6 +621,7 @@ def execute(args):
 
     # Process each habitat
     args['shapefile_required_fields'] = { \
+        # MHHW >= MSL >= MLLW, all floating point numbers 
         'tidal information': set([ \
             'MHHW', \
             'MSL', \
@@ -617,6 +631,7 @@ def execute(args):
             'WindSpeed', \
             'WavePeriod', \
             'WaveHeight']), \
+        # Type for soil type has to be either 1 (mud), 2 (sand), or 3 (gravel)
         'soil type': set([ \
             'DryDensity', \
             'ErosionCst', \
@@ -626,23 +641,44 @@ def execute(args):
             'BermHeight', \
             'DuneHeight', \
             'Type']),
+        # Seagrass type has to be either 1 (kelp) or 2 (eelgrass)
+        # see 'type' values defined in args['habitat_information'] above
         'seagrass': set([ \
             'StemHeight', \
             'StemDiam', \
             'StemDensty', \
             'StemDrag', \
             'Type']),
+        # This habitat has no 'type' field, so its default type is set to 3
         'underwater structures': set([ \
+            'Shape', \
             'ShoreDist', \
             'Height', \
             'BaseWidth', \
-            'CrestWidth', \
-            'Type']),
+            'CrestWidth']),
         'coral reef': set([ \
             'FricCoverd',
             'FricUncov',
             'SLRKeepUp',
             'DegrUncov']),
+        'man-made structures': set([ \
+            'Type',
+            'Height',
+            'SideSlope',
+            'OvertopLim']),
+        'beach': set([ \
+            'SedSize', \
+            'ForshrSlop', \
+            'BermLength', \
+            'BermHeight', \
+            'DuneHeight']),
+        'marsh': set([ \
+            'SurfRough',
+            'SurRedFact',
+            'StemHeight', \
+            'StemDiam', \
+            'StemDensty', \
+            'StemDrag']),
         'mangrove': set([ \
             'SurfRough',
             'SurRedFact',
@@ -659,11 +695,6 @@ def execute(args):
             'CnpyDensty',
             'CanopyDrag',
             'DnstyReduc']),
-        'man-made structures': set([ \
-            'Type',
-            'Height',
-            'SideSlope',
-            'OvertopLim']),
         'terrestrial structures': set([ \
             'Type',
             'TransParam',
