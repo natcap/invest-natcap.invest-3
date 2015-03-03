@@ -267,9 +267,7 @@ def execute(args):
         start (int): start year
         step (int): years between snapshots
         stop (int): stop year
-        private_valuation (boolean): enable private valuation
-        carbon_units (string): the units for the price per unit of carbon
-            type.
+        do_private_valuation (boolean): enable private valuation
         discount_rate (int): the discount rate as an integer percent.
         price_table (boolean): enable price table
         carbon_schedule (string): the social cost of carbon table.
@@ -295,14 +293,14 @@ def execute(args):
             'carbon_pools_uri': '/path/to/csv',
             'half_life_csv_uri': '/path/to/csv',
             'transition_matrix_uri': '/path/to/csv',
-            'private_valuation': True,
-            'carbon_units': 'Carbon Dioxide (CO2)',
+            'do_private_valuation': True,
             'discount_rate': 5,
-            'price_table': True,
+            'do_price_table': True,
             'carbon_schedule': '/path/to/csv',
             'carbon_value': 43.00,
             'rate_change': 0,
         }
+
 
     """
     # preprocess args for possible ease of adoption of future IUI features
@@ -1094,7 +1092,7 @@ def execute(args):
 
     # generate csv
     # open csv
-    if args["private_valuation"]:
+    if args["do_private_valuation"]:
         # tabulate results
         csv = open(blue_carbon_csv_uri, 'w')
 
@@ -1106,22 +1104,18 @@ def execute(args):
 
         csv.write(",".join(header))
 
-        if args["carbon_units"] == "Carbon Dioxide (CO2)":
-            price_conversion = ((15.9994 * 2) + 12.0107)/12.0107
-        else:
-            price_conversion = 1
-
-        if not args["price_table"]:
+        if not args["do_price_table"]:
+            # If no price table, create carbon schedule
             carbon_schedule = {}
-            for year in range(lulc_years[0], analysis_year+1):
-                carbon_schedule[year] = {carbon_schedule_field_rate: float(carbon_conversion * args["carbon_value"]) * ((1 + (float(args["rate_change"])/float(100))) ** (year-lulc_years[0]))}
+            for year in range(lulc_years[0], analysis_year + 1):
+                carbon_schedule[year] = {"Price": float(
+                    args["carbon_value"]) * ((
+                        1 + (float(args["rate_change"]) / float(100))) ** (
+                        year - lulc_years[0]))}
         else:
+            # Fetch carbon schedule from provided price table
             carbon_schedule = raster_utils.get_lookup_from_csv(
-                args["carbon_schedule"], carbon_schedule_field_key)
-
-            for k in carbon_schedule:
-                carbon_schedule[k][
-                    carbon_schedule_field_rate] *= price_conversion
+                args["carbon_schedule"], "Year")
 
         period_op_dict = {}
         for start_year, end_year in zip(lulc_years, (lulc_years+[analysis_year])[1:]):
