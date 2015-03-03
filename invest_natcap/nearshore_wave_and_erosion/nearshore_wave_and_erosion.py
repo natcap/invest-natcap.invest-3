@@ -602,10 +602,38 @@ def execute(args):
             {'constraints':{'MLLW':2}})
         ]
 
-    # List valid habitat types
-    args['valid_habitat_types'] = set()
-    for habitat_information in args['habitat_information']:
-        args['valid_habitat_types'].add(habitat_information[1]['shapefile type'])
+
+
+    # Collect and compile habitat information
+    args['habitat_priority'] = {}   # dictionary of (habitat_name: priority)
+    args['habitat_shapefiles'] = set() # Shapefile types that are habitats
+    args['shapefile_priorities'] = {} # Per-shapefile habitat priorities
+
+    for i in range(len(args['habitat_information'])):
+        
+        habitat_name = args['habitat_information'][i][0]
+        shapefile_type = args['habitat_information'][i][1]['shapefile type']
+        
+        # Build the 'shapefile type':habitat_priority dictionary
+        # The lowest the habitat priority, the more susceptible it will be replaced
+        # by a habitat of higher priority
+        args['habitat_priority'][habitat_name] = i + 1
+        
+        # List of shapefile types that are natural habitats
+        args['habitat_shapefiles'].add(shapefile_type)
+        
+        # Dictionary that stores the set of all valid habitat codes (priority)
+        # for every habitat shapefile
+        if shapefile_type in args['shapefile_priorities']:
+            args['shapefile_priorities'][shapefile_type].add( \
+                args['habitat_priority'][habitat_name])
+        else: 
+            args['shapefile_priorities'][shapefile_type] = set([ \
+                args['habitat_priority'][habitat_name]])
+
+    print("args['habitat_priority']", args['habitat_priority'])
+    print("args['habitat_shapefiles']", args['habitat_shapefiles'])
+    print("args['shapefile_priorities']", args['shapefile_priorities'])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -731,50 +759,48 @@ def execute(args):
 
     shapefile_required_fields = args['shapefile_required_fields']
 
-    # Build the habitats name--priority mapping
-    args['habitat_priority'] = \
-        dict([((args['habitat_information'][i][1]['shapefile type'], \
-                args['habitat_information'][i][1]['type'] if 'type' in \
-                args['habitat_information'][i][1] else None), i) \
-            for i in range(len(args['habitat_information']))])
-
-
     # Assign a positional index to every habitat field
     args['field_index'] = {}
     for shapefile in shapefile_required_fields:
         
-        # Collapse natural habitats together, keep the other fields unchanged
-        if shapefile in args['valid_habitat_types']:
+        # Group natural habitats together, keep the other fields 
+        # in their own category
+
+        # Known habitat => use natural habitats category
+        if shapefile in args['habitat_shapefiles']:
+            # Start by creating a habitat if necessary
             if 'natural habitats' not in args['field_index']:
                 args['field_index']['natural habitats'] = {}
 
             destination = args['field_index']['natural habitats']
+        
+        # Otherwise => put the shapefile in its own category
         else:
             args['field_index'][shapefile] = {}
             
             destination = args['field_index'][shapefile]
 
         # Create priority keys (numerical) for natural habitats:
-        if shapefile in args['valid_habitat_types']:
+        if shapefile in args['habitat_shapefiles']:
+            
             # Find the natural habitat in habitat information
-            for habitat_information in args['habitat_priority']:
-                habitat_name = habitat_information[0]
+            for habitat_name in args['habitat_priority']:
                 if habitat_name == shapefile:
-                    habitat_id = args['habitat_priority'][habitat_information]
+                    priority = args['habitat_priority'][habitat_name]
 
-                    destination[habitat_id] = {}
+                    destination[priority] = {}
 
-                    destination = destination[habitat_id]
+                    destination = destination[priority]
 
                     destination['name'] = shapefile
 
                     break
 
 
+        # Gather all the fields for this shapefile type
         required_fields = shapefile_required_fields[shapefile]
-
         
-        # Add the fields
+        # And create an entry when they will be stored
         destination['fields'] = {}
 
         field_id = 0
@@ -788,6 +814,22 @@ def execute(args):
 
                 field_id += 1
 
+    print("args['field_index']")
+    for category in args['field_index']:
+        print('  category', category)
+        if category == 'natural habitats':
+            for priority in args['field_index'][category]:
+                if 'name' in args['field_index'][category][priority]:
+                    print('    habitat name:', \
+                        args['field_index'][category][priority]['name'])
+                print('    priority', priority)
+                for field in args['field_index'][category][priority]['fields']:
+                    print('      ', \
+                        field, args['field_index'][category][priority]['fields'][field])
+        else:
+            for field in args['field_index'][category]['fields']:
+                print('      ', field, args['field_index'][category]['fields'][field])
+
     # Save the dictionary
     field_index_dictionary_uri = \
         os.path.join(args['intermediate_dir'], 'field_indices')
@@ -798,10 +840,7 @@ def execute(args):
     args['habitat_field_count'] = \
         max([len(shapefile_required_fields[shp]) \
             for shp in shapefile_required_fields \
-                if shp in args['valid_habitat_types']])
-
-    # Exclude the field 'Type'
-    args['soil_field_count'] = len(shapefile_required_fields['soil type']) - 1
+                if shp in args['habitat_shapefiles']])
 
     args['climatic_forcing_field_count'] = \
         len(shapefile_required_fields['climatic forcing'])
@@ -809,13 +848,21 @@ def execute(args):
     args['tidal_forcing_field_count'] = \
         len(shapefile_required_fields['tidal information'])
 
+    # Exclude the field 'Type'
+    args['soil_field_count'] = len(shapefile_required_fields['soil type']) - 1
+
 
     # -----------------------------
     # Detecting shapefile types
     # -----------------------------
 
-    args['shapefiles'] = {}         # Shapefile names, grouped in categories
-    args['shapefile types'] = {}    # Shapefile types, grouped in categories
+    # Keep track of the original shapefile type, grouped by category:
+    # type = args['shapefile types'][category][basename]
+    args['shapefile types'] = {}
+
+    # Keep track of all the raster URIs created from each shapefile field:
+    # uri = args['shapefile types'][category][basename][field_name]
+    args['shapefiles'] = {}
 
     # Collect all the different fields and assign a weight to each
     field_values = {} # weight for each field_value
@@ -874,13 +921,14 @@ def execute(args):
 
             for shapefile_type in args['shapefile_required_fields']:
 
+                # All the necessary fields for this shapefile have been identified 
                 if args['shapefile_required_fields'][shapefile_type] <= recognized_fields:
 
                     is_known_shapefile = True
 
                     LOGGER.debug('Detected that %s is %s', file_uri, shapefile_type)
 
-                    if shapefile_type in args['valid_habitat_types']:
+                    if shapefile_type in args['habitat_shapefiles']:
                         category = 'natural habitats'
                     else:
                         category = shapefile_type
@@ -890,6 +938,7 @@ def execute(args):
                         args['shapefiles'][category] = {}
                         args['shapefile types'][category] = {}
 
+                    # New file, add it to the category
                     if basename not in args['shapefiles'][category]:
                         args['shapefiles'][category][basename] = {}
                         args['shapefile types'][category][basename] = \
@@ -909,8 +958,8 @@ def execute(args):
                                 basename + '_' + field_name.lower() + '.tif')
                         else:
                             # Rasterize the current shapefile field
-#                            LOGGER.debug('rasterizing field %s to %s', \
-#                                field_name, output_uri)
+                            LOGGER.debug('rasterizing field %s to %s', \
+                                field_name, output_uri)
                             preprocess_polygon_datasource(file_uri, \
                                 args['aoi_uri'], args['cell_size'], \
                                 output_uri, field_name = field_name, \
@@ -922,12 +971,12 @@ def execute(args):
                         in_raster_list.append(output_uri)
 
                     # If priority raster not already added, add it now
-                    if (shapefile_type, None) in args['habitat_priority']:
-                        # Priority raster name on disk
+                    if shapefile_type in args['habitat_priority']:
+                        # Create the uri
                         output_uri = os.path.join(args['intermediate_dir'], \
                                 basename + '_' + 'type' + '.tif')
                         if not os.path.isfile(output_uri):
-#                            LOGGER.debug('Creating type raster to %s', output_uri)
+                            LOGGER.debug('Creating type raster to %s', output_uri)
                             # Copy data over from most recent raster
                             shutil.copy(in_raster_list[-1], output_uri)
                             # Extract array
@@ -937,9 +986,9 @@ def execute(args):
                             array = band.ReadAsArray()
                             # Overwrite data with priority value
                             array[array != nodata] = \
-                                args['habitat_priority'][(shapefile_type, None)]
+                                args['habitat_priority'][shapefile_type]
                             LOGGER.debug('assigning %i to %s_type.tif', \
-                                args['habitat_priority'][(shapefile_type, None)], basename)
+                                args['habitat_priority'][shapefile_type], basename)
                             band.WriteArray(array)
                             # clean-up
                             array = None
@@ -949,7 +998,26 @@ def execute(args):
                         args['shapefiles'][category][basename]['Type'] = output_uri
                         in_raster_list.append(output_uri)
 
+                    # Only valid habitat types should be stored in the raster
+                    if shapefile_type in args['habitat_shapefiles']:
+                        detected_uniques = set( \
+                            raster_utils.unique_raster_values_count( \
+                                output_uri).keys())
+
+                        expected_uniques = \
+                            args['shapefile_priorities'][shapefile_type]
+                        
+                        message = 'Unexpected types in ' + \
+                            str(detected_uniques) + \
+                            ' found for habitat ' + str(shapefile_type) + \
+                            '. Expected ' + str(expected_uniques)
+                        
+                        assert detected_uniques <= expected_uniques, message
+
+                    # This shapefile was recognized and processed, 
+                    # now stop and move on to the next shapefile
                     break
+
                 else:
                     missing_fields[shapefile_type] = \
                         args['shapefile_required_fields'][shapefile_type] - \
@@ -964,6 +1032,7 @@ def execute(args):
                         LOGGER.debug("To be %s, %s needs the fields %s", \
                             shapefile_type, filename, \
                             str(sorted(list(missing_fields[shapefile_type]))))
+
 
 
     # -----------------------------
