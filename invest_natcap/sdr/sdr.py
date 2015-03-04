@@ -9,8 +9,8 @@ from osgeo import ogr
 import numpy
 
 import pygeoprocessing.geoprocessing
-from invest_natcap.routing import routing_utils
-import routing_cython_core
+import pygeoprocessing.routing
+import pygeoprocessing.routing.routing_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -126,7 +126,7 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
 
-    routing_utils.stream_threshold(flow_accumulation_uri,
+    pygeoprocessing.routing.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
     stream_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(stream_uri)
 
@@ -225,7 +225,7 @@ def execute(args):
             (thresholded_w_factor_uri, w_accumulation_uri),
             (thresholded_slope_uri, s_accumulation_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
-        routing_utils.route_flux(
+        pygeoprocessing.routing.route_flux(
             flow_direction_uri, aligned_dem_uri, factor_uri,
             zero_absorption_source_uri, loss_uri, accumulation_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'])
@@ -286,7 +286,7 @@ def execute(args):
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    routing_cython_core.distance_to_stream(
+    pygeoprocessing.routing.routing_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
 
     LOGGER.info('calculate ic')
@@ -378,7 +378,7 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
     d_dn_bare_soil_uri = os.path.join(intermediate_dir, 'd_dn_bare_soil%s.tif' % file_suffix)
     d_up_nodata = -1.0
-    routing_cython_core.distance_to_stream(
+    pygeoprocessing.routing.routing_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_bare_soil_uri, factor_uri=s_factor_inverse_uri)
 
     ic_factor_bare_soil_uri = os.path.join(
@@ -761,8 +761,8 @@ def _prepare(**args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction.tif')
 
-    routing_utils.flow_direction_d_inf(aligned_dem_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(
+    pygeoprocessing.routing.flow_direction_d_inf(aligned_dem_uri, flow_direction_uri)
+    pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
 
     #Calculate LS term

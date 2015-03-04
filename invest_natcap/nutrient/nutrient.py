@@ -10,8 +10,8 @@ from osgeo import ogr
 import numpy
 
 import pygeoprocessing.geoprocessing
-from invest_natcap.routing import routing_utils
-import routing_cython_core
+import pygeoprocessing.routing
+import pygeoprocessing.routing.routing_core
 import invest_natcap.hydropower.hydropower_water_yield
 
 
@@ -323,8 +323,8 @@ def _execute_nutrient(args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction%s.tif' % file_suffix)
 
-    routing_utils.flow_direction_d_inf(dem_uri, flow_direction_uri)
-    routing_utils.flow_accumulation(
+    pygeoprocessing.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
@@ -332,7 +332,7 @@ def _execute_nutrient(args):
 
     #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
-    routing_utils.stream_threshold(
+    pygeoprocessing.routing.stream_threshold(
         flow_accumulation_uri, float(args['accum_threshold']), stream_uri)
     nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(stream_uri)
 
@@ -381,7 +381,7 @@ def _execute_nutrient(args):
     pygeoprocessing.geoprocessing.make_constant_raster_from_base_uri(
         dem_uri, 0.0, zero_raster_uri)
 
-    routing_utils.route_flux(
+    pygeoprocessing.routing.route_flux(
         flow_direction_uri, dem_uri, water_yield_uri, zero_raster_uri,
         water_loss_uri, upstream_water_yield_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
@@ -461,7 +461,7 @@ def _execute_nutrient(args):
         retention_uri[nutrient] = os.path.join(
             output_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
         tmp_flux_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        routing_utils.route_flux(
+        pygeoprocessing.routing.route_flux(
             flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],
             retention_uri[nutrient], tmp_flux_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
@@ -470,7 +470,7 @@ def _execute_nutrient(args):
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         pts_uri[nutrient] = os.path.join(intermediate_dir,
             '%s_percent_to_stream%s.tif' % (nutrient, file_suffix))
-        routing_utils.pixel_amount_exported(
+        pygeoprocessing.routing.pixel_amount_exported(
             flow_direction_uri, dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'],
             percent_to_stream_uri=pts_uri[nutrient])
