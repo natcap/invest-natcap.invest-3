@@ -5,7 +5,7 @@ import os
 import logging
 
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap.routing import routing_utils
 import routing_cython_core
 
@@ -29,7 +29,7 @@ def execute(args):
     prefix, suffix = os.path.splitext(args['pit_filled_filename'])
     dem_tiled_uri = os.path.join(
         output_directory, 'dem_tiled' + file_suffix + '.tif')
-    raster_utils.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
+    pygeoprocessing.geoprocessing.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
     dem_pit_filled_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
     routing_utils.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
@@ -41,7 +41,7 @@ def execute(args):
         prefix, suffix = os.path.splitext(args['slope_filename'])
         slope_uri = os.path.join(
             output_directory, prefix + file_suffix + suffix)
-        raster_utils.calculate_slope(dem_uri, slope_uri)
+        pygeoprocessing.geoprocessing.calculate_slope(dem_uri, slope_uri)
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow direction")

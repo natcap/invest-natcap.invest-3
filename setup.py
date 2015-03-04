@@ -7,14 +7,9 @@ import distutils.sysconfig
 import platform
 import os
 import sys
-import datetime
-import time
 import glob
-import subprocess
 import matplotlib
 import zipfile
-import re
-import shutil
 
 
 import numpy as np
@@ -24,8 +19,8 @@ from Cython.Build import cythonize
 SITE_PACKAGES = distutils.sysconfig.get_python_lib()
 
 from invest_natcap import build_utils
-VERSION = build_utils.invest_version(uri='invest_version.py',
-    force_new=True)
+VERSION = build_utils.invest_version(
+    uri='invest_version.py', force_new=True)
 # sanitize the version tag for distutils.
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
 from invest_natcap import invest_version
@@ -76,39 +71,40 @@ CMD_CLASSES = {
     'zip': ZipCommand,
 }
 
-packages = ['invest_natcap',
-            'invest_natcap.crop_production',
-            'invest_natcap.carbon',
-            'invest_natcap.dbfpy',
-            'invest_natcap.hydropower',
-            'invest_natcap.iui',
-            'invest_natcap.iui.dbfpy',
-            'invest_natcap.recreation',
-            'invest_natcap.testing',
-            'invest_natcap.reporting',
-            'invest_natcap.optimization',
-            'invest_natcap.timber',
-            'invest_natcap.nutrient',
-            'invest_natcap.ndr',
-            'invest_natcap.wave_energy',
-            'invest_natcap.pollination',
-            'invest_natcap.finfish_aquaculture',
-            'invest_natcap.fisheries',
-            'invest_natcap.marine_water_quality',
-            'invest_natcap.habitat_quality',
-            'invest_natcap.coastal_vulnerability',
-            'invest_natcap.nearshore_wave_and_erosion',
-            'invest_natcap.overlap_analysis',
-            'invest_natcap.wind_energy',
-            'invest_natcap.scenic_quality',
-            'invest_natcap.habitat_risk_assessment',
-            'invest_natcap.routing',
-            'invest_natcap.ntfp',
-            'invest_natcap.blue_carbon',
-            'invest_natcap.scenario_generator',
-            'invest_natcap.sdr',
-            'invest_natcap.habitat_suitability',
-            ]
+packages = [
+    'invest_natcap',
+    'invest_natcap.crop_production',
+    'invest_natcap.carbon',
+    'invest_natcap.dbfpy',
+    'invest_natcap.hydropower',
+    'invest_natcap.iui',
+    'invest_natcap.iui.dbfpy',
+    'invest_natcap.recreation',
+    'invest_natcap.testing',
+    'invest_natcap.reporting',
+    'invest_natcap.optimization',
+    'invest_natcap.timber',
+    'invest_natcap.nutrient',
+    'invest_natcap.ndr',
+    'invest_natcap.wave_energy',
+    'invest_natcap.pollination',
+    'invest_natcap.finfish_aquaculture',
+    'invest_natcap.fisheries',
+    'invest_natcap.marine_water_quality',
+    'invest_natcap.habitat_quality',
+    'invest_natcap.coastal_vulnerability',
+    'invest_natcap.nearshore_wave_and_erosion',
+    'invest_natcap.overlap_analysis',
+    'invest_natcap.wind_energy',
+    'invest_natcap.scenic_quality',
+    'invest_natcap.habitat_risk_assessment',
+    'invest_natcap.routing',
+    'invest_natcap.ntfp',
+    'invest_natcap.blue_carbon',
+    'invest_natcap.scenario_generator',
+    'invest_natcap.sdr',
+    'invest_natcap.habitat_suitability',
+]
 
 def get_iui_resource_data_files(lib_path):
     """Returns a list of tuples for all the files to be added to iui_resources.
@@ -181,7 +177,7 @@ if platform.system() == 'Windows':
          'routedem.py',
          'invest_sdr.py',
          'invest_habitat_suitability.py',
-         ]
+        ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
 
@@ -271,36 +267,39 @@ reporting_data_dir = os.path.join(SITE_PACKAGES, 'invest_natcap', 'reporting',
 data_files.append((reporting_data_dir,
     glob.glob('invest_natcap/reporting/reporting_data/*')))
 
+REQUIRES_LIST = [
+    'cython (>=0.19.1)',
+    'scipy (>=0.12.0)',
+    'osgeo (>=1.9.2)'
+    'pygeoprocessing',
+    ]
+
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
       packages=packages,
       cmdclass=CMD_CLASSES,
-      requires=['cython (>=0.19.1)', 'scipy (>=0.12.0)', 'osgeo (>=1.9.2)'],
+      requires=REQUIRES_LIST,
       include_dirs = [np.get_include()],
       data_files=data_files,
-      ext_modules=cythonize([Extension(name="invest_cython_core",
-                             sources = CYTHON_SOURCE_FILES),
-                   Extension(name="scenic_quality_cython_core",
-                             sources = ['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
-                   Extension(name="raster_cython_utils",
-                             sources = ['invest_natcap/raster_cython_utils.pyx'],
-                             language="c++"),
-                   Extension(name="pytable_tracer_cython",
-                             sources = ['invest_natcap/pytable_tracer_cython.pyx'],
-                             language="c++"),
-                   Extension(name="routing_cython_core",
-                             sources = ['invest_natcap/routing/routing_cython_core.pyx'],
-                             language="c++"),
-                   Extension(name="flood_mitigation_cython_core",
-                             sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
-                             language="c++"),
-                   ]),
+      ext_modules=cythonize([
+        Extension(
+            name="scenic_quality_cython_core",
+            sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+        Extension(
+            name="pytable_tracer_cython",
+            sources=['invest_natcap/pytable_tracer_cython.pyx'],
+            language="c++"),
+        Extension(
+            name="flood_mitigation_cython_core",
+            sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
+            language="c++"),
+        ]),
       **py2exe_args)
 
 # Since we wrote the invest version module to a file that needed to be taken
 # along with the other invest_version stuff, remove those files so we aren't
 # confused later on.
 for file_name in glob.glob('invest_natcap/invest_version.py*'):
-    print ('Removing %s' % file_name)
+    print 'Removing %s' % file_name
     os.remove(file_name)

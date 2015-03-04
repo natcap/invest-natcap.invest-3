@@ -10,7 +10,7 @@ import logging
 import numpy as np
 
 from osgeo import gdal
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('PIT FILL')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -420,10 +420,10 @@ def main():
 
     mask_uri = '/home/kathryn/Documents/Pit_Filling/testing_mask.tif'
 
-    new_dataset = raster_utils.new_raster_from_base(raster, mask_uri,
+    new_dataset = pygeoprocessing.geoprocessing.new_raster_from_base(raster, mask_uri,
                         'GTiff', nodata, gdal.GDT_Float32)
     
-    n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+    n_band, n_nodata = pygeoprocessing.geoprocessing.extract_band_and_nodata(new_dataset)
     n_band.Fill(n_nodata)
     
     n_band.WriteArray(raster_mask)
@@ -524,10 +524,10 @@ def main():
     #Write back to a raster
     de_pit_uri = '/home/kathryn/Documents/Pit_Filling/Perrine_Data/attempt_to_de_pit.tif'
     
-    new_dataset = raster_utils.new_raster_from_base(raster, de_pit_uri,
+    new_dataset = pygeoprocessing.geoprocessing.new_raster_from_base(raster, de_pit_uri,
                         'GTiff', nodata, gdal.GDT_Float32)
     
-    n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+    n_band, n_nodata = pygeoprocessing.geoprocessing.extract_band_and_nodata(new_dataset)
     n_band.Fill(n_nodata)
     
     n_band.WriteArray(base_array)

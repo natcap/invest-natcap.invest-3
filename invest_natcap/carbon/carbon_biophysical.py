@@ -10,7 +10,7 @@ from osgeo import ogr
 from scipy.stats import norm
 import numpy
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap.carbon import carbon_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -97,7 +97,7 @@ def execute_30(**args):
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur', 'fut', or 'redd'
 
             LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
-            nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
+            nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
             def map_carbon_pool(lulc):
                 if lulc == nodata:
@@ -106,9 +106,9 @@ def execute_30(**args):
             dataset_out_uri = outfile_uri('tot_C', scenario_type)
             outputs['tot_C_%s' % scenario_type] = dataset_out_uri
 
-            pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
+            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args[lulc_uri])
             # Create a raster that models total carbon storage per pixel.
-            raster_utils.vectorize_datasets(
+            pygeoprocessing.geoprocessing.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0,
@@ -124,7 +124,7 @@ def execute_30(**args):
                 outputs['variance_C_%s' % scenario_type] = variance_out_uri
 
                 # Create a raster that models variance in carbon storage per pixel.
-                raster_utils.vectorize_datasets(
+                pygeoprocessing.geoprocessing.vectorize_datasets(
                     [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
                     gdal.GDT_Float32, nodata_out, pixel_size_out,
                     "intersection", dataset_to_align_index=0,
@@ -142,16 +142,16 @@ def execute_30(**args):
                     _calculate_hwp_storage_cur(
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
-                    temp_c_cur_uri = raster_utils.temporary_filename()
+                    temp_c_cur_uri = pygeoprocessing.geoprocessing.temporary_filename()
                     shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
 
-                    hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
+                    hwp_cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
                         if hwp_cur == hwp_cur_nodata:
                             return tmp_c_cur
                         return tmp_c_cur + hwp_cur
 
-                    raster_utils.vectorize_datasets(
+                    pygeoprocessing.geoprocessing.vectorize_datasets(
                         [temp_c_cur_uri, c_hwp_uri], add_op,
                         outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection",
@@ -171,16 +171,16 @@ def execute_30(**args):
                         vol_hwp_uri, args['lulc_cur_year'], 
                         args['lulc_fut_year'], args['_process_pool'])
 
-                    temp_c_fut_uri = raster_utils.temporary_filename()
+                    temp_c_fut_uri = pygeoprocessing.geoprocessing.temporary_filename()
                     shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
 
-                    hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
+                    hwp_fut_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
                         if hwp_fut == hwp_fut_nodata:
                             return tmp_c_fut
                         return tmp_c_fut + hwp_fut
 
-                    raster_utils.vectorize_datasets(
+                    pygeoprocessing.geoprocessing.vectorize_datasets(
                         [temp_c_fut_uri, c_hwp_uri], add_op,
                         outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection",
@@ -201,9 +201,9 @@ def execute_30(**args):
                 seq = fut_clean - cur_clean
                 return numpy.where(fut_nodata & cur_nodata, nodata_out, seq)
                 
-            pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
+            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['lulc_cur_uri'])
             outputs['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
-            raster_utils.vectorize_datasets(
+            pygeoprocessing.geoprocessing.vectorize_datasets(
                 [outputs['tot_C_cur'], outputs['tot_C_%s' % fut_type]], sub_op,
                 outputs['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
@@ -258,7 +258,7 @@ def execute_30(**args):
                     return 0
 
                 outputs['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
-                raster_utils.vectorize_datasets(
+                pygeoprocessing.geoprocessing.vectorize_datasets(
                     [outputs[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
                                                        'variance_C_cur', 'variance_C_%s' % fut_type]],
                     confidence_op, outputs['conf_%s' % fut_type],
@@ -282,10 +282,10 @@ def _compute_carbon_pools(args):
     """Returns a dict with data on carbon pool totals and variance."""
 
     if args['do_uncertainty']:
-        pool_inputs = raster_utils.get_lookup_from_table(
+        pool_inputs = pygeoprocessing.geoprocessing.get_lookup_from_table(
             args['carbon_pools_uncertain_uri'], 'lucode')
     else:
-        pool_inputs = raster_utils.get_lookup_from_table(
+        pool_inputs = pygeoprocessing.geoprocessing.get_lookup_from_table(
             args['carbon_pools_uri'], 'lucode')
 
     cell_area_ha = _compute_cell_area_ha(args)
@@ -319,7 +319,7 @@ def _compute_carbon_pools(args):
 
 
 def _compute_cell_area_ha(args):
-    cell_area_cur = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri']) ** 2
+    cell_area_cur = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['lulc_cur_uri']) ** 2
 
     for scenario in ['fut', 'redd']:
         try:
@@ -327,7 +327,7 @@ def _compute_cell_area_ha(args):
         except KeyError:
             continue
 
-        cell_area_in_scenario = raster_utils.get_cell_size_from_uri(lulc_uri) ** 2
+        cell_area_in_scenario = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri) ** 2
 
         if cell_area_cur != cell_area_in_scenario:
             raise Exception(
@@ -352,7 +352,7 @@ def _compute_uncertainty_data(args, pools):
         except KeyError:
             continue
 
-        lulc_counts[scenario] = raster_utils.unique_raster_values_count(
+        lulc_counts[scenario] = pygeoprocessing.geoprocessing.unique_raster_values_count(
             lulc_uri)
 
     # Do a Monte Carlo simulation for carbon storage.
@@ -435,7 +435,7 @@ def _calculate_hwp_storage_cur(
         No return value"""
 
     ############### Start
-    pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
+    pixel_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     hwp_shape = ogr.Open(hwp_shape_uri)
     base_dataset = gdal.Open(base_dataset_uri)
     nodata = -5.0
@@ -500,7 +500,7 @@ def _calculate_hwp_storage_cur(
     for attribute_name, raster_uri in zip(
         calculated_attribute_names, [c_hwp_uri, bio_hwp_uri, vol_hwp_uri]):
 
-        raster = raster_utils.new_raster_from_base(
+        raster = pygeoprocessing.geoprocessing.new_raster_from_base(
             base_dataset, raster_uri, 'GTiff', nodata, gdal.GDT_Float32,
             fill_value=nodata)
         gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
@@ -534,16 +534,16 @@ def _calculate_hwp_storage_fut(
         No return value"""
 
     ############### Start
-    pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
+    pixel_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     nodata = -5.0
 
-    c_hwp_cur_uri = raster_utils.temporary_filename()
-    bio_hwp_cur_uri = raster_utils.temporary_filename()
-    vol_hwp_cur_uri = raster_utils.temporary_filename()
+    c_hwp_cur_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    bio_hwp_cur_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    vol_hwp_cur_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
-    raster_utils.new_raster_from_base_uri(base_dataset_uri, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    raster_utils.new_raster_from_base_uri(base_dataset_uri, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    raster_utils.new_raster_from_base_uri(base_dataset_uri, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(base_dataset_uri, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(base_dataset_uri, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(base_dataset_uri, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
 
     #Create a temporary shapefile to hold values of per feature carbon pools
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize
@@ -610,7 +610,7 @@ def _calculate_hwp_storage_fut(
         for attributeName, raster_uri in zip(calculatedAttributeNames,
                                           [c_hwp_cur_uri, bio_hwp_cur_uri, vol_hwp_cur_uri]):
             nodata = -1.0
-            raster_utils.new_raster_from_base_uri(base_dataset_uri, raster_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+            pygeoprocessing.geoprocessing.new_raster_from_base_uri(base_dataset_uri, raster_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
             raster = gdal.Open(raster_uri, gdal.GA_Update)
             gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy, options=['ATTRIBUTE=' + attributeName])
             raster.FlushCache()
@@ -677,8 +677,8 @@ def _calculate_hwp_storage_fut(
         for attributeName, (raster_uri, cur_raster_uri) in zip(
             calculatedAttributeNames, [(c_hwp_uri, c_hwp_cur_uri), (bio_hwp_uri, bio_hwp_cur_uri), (vol_hwp_uri, vol_hwp_cur_uri)]):
 
-            temp_filename = raster_utils.temporary_filename()
-            raster_utils.new_raster_from_base_uri(
+            temp_filename = pygeoprocessing.geoprocessing.temporary_filename()
+            pygeoprocessing.geoprocessing.new_raster_from_base_uri(
                 base_dataset_uri, temp_filename, 'GTiff',
                 nodata, gdal.GDT_Float32, fill_value=nodata)
             temp_raster = gdal.Open(temp_filename, gdal.GA_Update)
@@ -689,15 +689,15 @@ def _calculate_hwp_storage_fut(
 
             #add temp_raster and raster cur raster into the output raster
             nodata = -1.0
-            base_nodata = raster_utils.get_nodata_from_uri(raster_uri)
-            cur_nodata = raster_utils.get_nodata_from_uri(cur_raster_uri)
+            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_uri)
+            cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cur_raster_uri)
             def add_op(base, current):
                 if base == base_nodata or current == cur_nodata:
                     return nodata
                 return base + current
 
-            pixel_size_out = raster_utils.get_cell_size_from_uri(raster_uri)
-            raster_utils.vectorize_datasets(
+            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster_uri)
+            pygeoprocessing.geoprocessing.vectorize_datasets(
                 [cur_raster_uri, temp_filename], add_op, raster_uri,
                 gdal.GDT_Float32, nodata,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
