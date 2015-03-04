@@ -190,7 +190,7 @@ def compute_transects(args):
             # If land and sea, we have a shore: detect it and store
             if land and land < tile_size:
                     
-#                if tiles > 3200:
+#                if tiles > 237:
 #                    continue
 
                 i_first = i_base+3
@@ -297,7 +297,11 @@ def compute_transects(args):
                         if raw_depths is None:
 #                            print('  Could not sample transect depth')
                             continue
-#                        transects[(transect_position[0], transect_position[1])] = -5
+#                        transects[(transect_position[0], transect_position[1])] = -7
+
+#                    tiles += 1
+
+#                    continue
 
 
                         # Interpolate transect to the model resolution
@@ -2393,12 +2397,14 @@ def compute_raw_transect_depths(shore_point, \
     
     # Shore point outside bathymetry
     if (p_i < 0) or (p_i >= bathymetry_shape[0]):
+#        print('    shore', shore_point, 'outside bathymetry', bathymetry_shape)
         return (None, None)
 
     p_j = shore_point[1]
 
     # Shore point outside bathymetry
-    if (p_j < 0) or (p_j >= bathymetry_shape[0]):
+    if (p_j < 0) or (p_j >= bathymetry_shape[1]):
+#        print('    shore', shore_point, 'outside bathymetry', bathymetry_shape)
         return (None, None)
 
     d_i = direction_vector[0]
@@ -2432,6 +2438,7 @@ def compute_raw_transect_depths(shore_point, \
     if land:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
+#            print('    inland_steps', inland_steps)
             # Save last elevation before updating it
             last_elevation = elevation 
             elevation = \
@@ -2443,6 +2450,7 @@ def compute_raw_transect_depths(shore_point, \
                 inland_steps -= 1
                 start_i += d_i
                 start_j += d_j
+#                print('    Invalid bathymetry')
                 break
  
             # Stop at maximum elevation
@@ -2450,6 +2458,7 @@ def compute_raw_transect_depths(shore_point, \
                 inland_steps -= 1
                 start_i += d_i
                 start_j += d_j
+#                print('    Hit maximum elevation')
                 break
 
             # Reached the top of a hill, stop there
@@ -2457,6 +2466,7 @@ def compute_raw_transect_depths(shore_point, \
                 inland_steps -= 1
                 start_i += d_i
                 start_j += d_j
+#                print('    Reached the top of a hill')
                 break
 
             # We can store the depth at this point
@@ -2474,6 +2484,7 @@ def compute_raw_transect_depths(shore_point, \
                 # Went too far: backtrack one step
                 start_i += d_i
                 start_j += d_j
+#                print('    Outside raster limits')
                 break
 
         # If the highest inland point is still underwater, this transect is invalid
@@ -2481,10 +2492,12 @@ def compute_raw_transect_depths(shore_point, \
             int(round(start_j)), int(round(start_i)), 1, 1)[0]
         
         if highest_elevation < 0.:
+#            print('    All the transect is underwater')
             return (None, None)
 
     # No land behind shore, return
     else:
+#        print('    No land behind shore')
         return (None, None)
 
 

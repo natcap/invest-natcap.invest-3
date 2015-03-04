@@ -1088,6 +1088,12 @@ def execute(args):
 
     # Computing constraints rasters so they can directly be used as masks 
     # for the habitats that have spatial constraints.
+    print("args['shapefile types']", args['shapefile types'])
+    
+    # TODO: Should remove this limitation
+    assert 'natural habitats' in args['shapefile types'], \
+        "No natural habitats detected."
+    
     for detected_habitat in args['shapefile types']['natural habitats']:
 
         detected_habitat_type = args['shapefile types']['natural habitats'][detected_habitat]
