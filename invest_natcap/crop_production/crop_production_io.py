@@ -36,19 +36,14 @@ def fetch_args(args, create_outputs=True):
     Example Returns::
 
         vars_dict = {
-            'workspace_dir': 'path/to/workspace_dir',
-            'output_dir': 'path/to/output_dir',
-            'results_suffix': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
-            '': '',
+            
         }
 
+    '''
+    pass
+
+
+def create_outputs(vars_dict):
+    '''
     '''
     pass

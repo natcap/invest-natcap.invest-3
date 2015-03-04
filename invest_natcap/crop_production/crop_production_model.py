@@ -27,6 +27,18 @@ def calc_yield_observed(vars_dict):
             ...
         }
     '''
+    # Get List of Crops in LULC Crop Map
+
+    # For Each Crop, Clip Corresponding Observed Crop Yield Map over AOI and Reproject
+        # Output: Crop Yield Maps
+
+    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
+        # Output: Crop Production Maps
+        # If 'create_crop_production_maps' selected, save to output folder
+
+    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
+        # Output: Crop Production Dictionary?
+
     pass
 
 
@@ -46,6 +58,24 @@ def calc_yield_percentile(vars_dict):
             ...
         }
     '''
+    # Get List of Crops in LULC Crop Map
+
+    # Create Raster of Climate Bin Indices
+
+    # For Each Yield Column in Percentile Yield Table:
+
+    # For Each Crop, Create Crop Yield Map over AOI
+        # Output: Crop Yield Maps
+
+    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
+        # Output: Crop Production Maps
+        # If 'create_crop_production_maps' selected, save to output folder
+
+    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
+        # Output: Crop Production Dictionary?
+
+    # Generate Yield Results
+
     pass
 
 
