@@ -24,7 +24,7 @@ class MissingParameter(StandardError):
 
 
 # Fetch and Verify Arguments
-def fetch_args(args, create_outputs=True):
+def fetch_args(args):
     '''
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
@@ -77,7 +77,7 @@ def fetch_args(args, create_outputs=True):
             'modeled_yield_table_uri': 'path/to/modeled_yield_table_uri',
             'modeled_yield_table_dict': {
                 'crop': {
-                    'climate_bin': {
+                    <climate_bin>: {
                         'yield_ceiling': '<float>',
                         'yield_ceiling_rf': '<float>',
                         'b_nut': '<float>',
@@ -140,10 +140,10 @@ def fetch_args(args, create_outputs=True):
     if vars_dict['do_nutrition']:
         vars_dict = read_nutrition_table(vars_dict)
 
-    if vars_dict['do_economics']:
+    if vars_dict['do_economic_returns']:
         vars_dict = read_economics_table(vars_dict)
 
-    pass
+    return vars_dict
 
 
 def read_crop_lookup_table(vars_dict):
@@ -243,8 +243,8 @@ def fetch_spatial_dataset(vars_dict):
     spatial_dataset_dict = {
         'observed_yield_maps_dir': 'observed_yield/',
         'climate_bin_maps_dir': 'climate_bin_maps/',
-        'percentile_table_uri': 'climate_percentile_yield/percentile_yield_table.csv',
-        'modeled_yield_table_uri': 'climate_regression_yield/percentile_model_yield_table.csv'
+        'percentile_yield_tables_dir': 'climate_percentile_yield/',
+        'modeled_yield_tables_dir': 'climate_regression_yield/'
     }
 
     if vars_dict['do_yield_observed']:
@@ -262,18 +262,18 @@ def fetch_spatial_dataset(vars_dict):
         vars_dict = fetch_climate_bin_maps(vars_dict)
 
     if vars_dict['do_yield_percentile']:
-        vars_dict['percentile_table_uri'] = os.path.join(
+        vars_dict['percentile_yield_tables_dir'] = os.path.join(
             vars_dict['spatial_dataset_dir'],
-            spatial_dataset_dict['percentile_table_uri'])
+            spatial_dataset_dict['percentile_yield_tables_dir'])
 
-        vars_dict = read_percentile_yield_table(vars_dict)
+        vars_dict = read_percentile_yield_tables(vars_dict)
 
     if vars_dict['do_yield_regression_model']:
-        vars_dict['modeled_yield_table_uri'] = os.path.join(
+        vars_dict['modeled_yield_tables_dir'] = os.path.join(
             vars_dict['spatial_dataset_dir'],
-            spatial_dataset_dict['modeled_yield_table_uri'])
+            spatial_dataset_dict['modeled_yield_tables_dir'])
 
-        vars_dict = read_regression_model_yield_table(vars_dict)
+        vars_dict = read_regression_model_yield_tables(vars_dict)
 
     return vars_dict
 
@@ -354,24 +354,23 @@ def fetch_climate_bin_maps(vars_dict):
     return vars_dict
 
 
-# NOT IMPLEMENTED YET
-def read_percentile_yield_table(vars_dict):
+def read_percentile_yield_tables(vars_dict):
     '''
     Reads in the Percentile Yield Table and returns a dictionary
 
     Args:
-        percentile_table_uri (str): descr
+        percentile_yield_tables_dir (str): descr
 
     Returns:
-        percentile_table_dict (dict): descr
+        percentile_yield_dict (dict): descr
 
     Example Returns::
 
         vars_dict = {
             # ... previous vars ...
 
-            'percentile_table_uri': 'path/to/percentile_table_uri',
-            'percentile_table_dict': {
+            'percentile_yield_tables_dir': 'path/to/percentile_yield_tables_dir/',
+            'percentile_yield_dict': {
                 'crop': {
                     <climate_bin>: {
                         'yield_25th': <float>,
@@ -386,36 +385,46 @@ def read_percentile_yield_table(vars_dict):
         }
     '''
     # Add information to user here in the case of raised exception
-    assert(os.path.exists(vars_dict['percentile_table_uri']))
+    assert(os.path.exists(vars_dict['percentile_yield_tables_dir']))
 
-    # Need this to sort by crop, then climate bin
-    input_dict = get_nested_lookup_from_csv(
-        vars_dict['percentile_table_uri'], 'crop', 'climate_bin')
+    table_uris = _listdir(vars_dict['percentile_yield_tables_dir'])
+
+    percentile_yield_dict = {}
+    for table_uri in table_uris:
+        # could check here to make sure file is raster
+
+        basename = os.path.basename(table_uri)
+        cropname = basename.split('_')[0]
+        if cropname != '':
+            percentile_yield_dict[cropname] = ru.get_lookup_from_csv(
+                table_uri, 'climate_bin')
 
     # Add Assertion Statements?
 
-    vars_dict['percentile_table_dict'] = input_dict
+    vars_dict['percentile_yield_dict'] = percentile_yield_dict
+
     return vars_dict
 
 
-# NOT IMPLEMENTED YET
-def read_regression_model_yield_table(vars_dict):
+def read_regression_model_yield_tables(vars_dict):
     '''
     (desc)
 
     Args:
+        modeled_yield_tables_dir (str): descr
 
     Returns:
+        modeled_yield_dict (dict): descr
 
     Example Returns::
 
         vars_dict = {
             # ... previous vars ...
 
-            'modeled_yield_table_uri': 'path/to/modeled_yield_table_uri',
-            'modeled_yield_table_dict': {
+            'modeled_yield_tables_dir': 'path/to/modeled_yield_tables_dir/',
+            'modeled_yield_dict': {
                 'crop': {
-                    'climate_bin': {
+                    <climate_bin>: {
                         'yield_ceiling': '<float>',
                         'yield_ceiling_rf': '<float>',
                         'b_nut': '<float>',
@@ -429,8 +438,28 @@ def read_regression_model_yield_table(vars_dict):
             },
         }
     '''
+    # Add information to user here in the case of raised exception
+    assert(os.path.exists(vars_dict['modeled_yield_tables_dir']))
 
-    pass
+    table_uris = _listdir(vars_dict['modeled_yield_tables_dir'])
+
+    modeled_yield_dict = {}
+    for table_uri in table_uris:
+        # could check here to make sure file is raster
+
+        basename = os.path.basename(table_uri)
+        cropname = basename.split('_')[0]
+        if cropname != '':
+            modeled_yield_dict[cropname] = ru.get_lookup_from_csv(
+                table_uri, 'climate_bin')
+
+    # Clean Data? (e.g. make sure empty args are initializeD or set to None)
+
+    # Add Assertion Statements?
+
+    vars_dict['modeled_yield_dict'] = modeled_yield_dict
+
+    return vars_dict
 
 
 def fetch_modeled_fertilizer_maps(vars_dict):
@@ -552,7 +581,7 @@ def read_economics_table(vars_dict):
     return vars_dict
 
 
-# Helper function
+# Helper Functions
 def _listdir(path):
     '''
     A replacement for the standard os.listdir which, instead of returning
@@ -572,9 +601,89 @@ def _listdir(path):
     return uris
 
 
-# Create Outputs
-def create_outputs(vars_dict):
+# Temporary Folder Functions
+def setup_tmp(vars_dict):
     '''
+    Creates temporary folder in workspace to save temporary files and folders
+
+    Args:
+        workspace_dir (str): descr
+
+    Returns:
+        tmp_dir (str): descr
+
+    Example Returns::
+
+        vars_dict = {
+            # ...
+            'tmp_dir': '/path/to/tmp_dir',
+            'tmp_climate_percentile_dir': '/path/to/tmp_climate_percentile_dir',
+            'tmp_climate_regression_dir': '/path/to/tmp_climate_regression_dir',
+            'tmp_observed_dir': '/path/to/tmp_observed_dir',
+        }
+    '''
+    workspace_dir = vars_dict['workspace_dir']
+    tmp_dir = os.path.join(workspace_dir, 'tmp')
+
+    # Remove tmp_dir if exists
+    if os.path.exists(tmp_dir):
+        os.rmdir(tmp_dir)
+
+    # Create tmp_dir
+    os.mkdir(tmp_dir)
+    vars_dict['tmp_dir'] = tmp_dir
+
+    # Create sub-directories
+    sub_dirs = ['climate_percentile',
+                'climate_regression',
+                'observed']
+
+    for i in sub_dirs:
+        filepath = os.path.join(tmp_dir, (i))
+        os.makedirs(filepath)
+        var_name = 'tmp_' + i + '_dir'
+        vars_dict[var_name] = filepath
+
+    return vars_dict
+
+
+def clean_up_tmp(vars_dict):
+    '''
+    Removes temporary folder from workspace
+
+    Args:
+        workspace_dir (str): descr
+        tmp_dir (str): descr
+    '''
+    tmp_dir = vars_dict['tmp_dir']
+    os.rmdir(tmp_dir)
+
+
+# Output Function
+def save_production_maps(vars_dict):
+    '''
+    About
+
+    var_name (type): desc
+
+    Example Args::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     pass
-

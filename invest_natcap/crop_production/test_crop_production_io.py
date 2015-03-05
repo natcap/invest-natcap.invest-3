@@ -1,6 +1,11 @@
+'''
+python -m unittest test_crop_production_io
+'''
+
 import unittest
 import os
 import pprint
+import tempfile
 
 from numpy import testing
 import numpy as np
@@ -55,34 +60,36 @@ class TestIOReadEconomicsTable(unittest.TestCase):
         assert(type(economics_table_dict[keys[0]]['price']) in [float, int])
 
 
-# NOT IMPLEMENTED YET
-class TestIOReadPercentileYieldTable(unittest.TestCase):
+class TestIOReadPercentileYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
-            'percentile_table_uri': os.path.join(
+            'percentile_yield_tables_dir': os.path.join(
                 input_dir,
-                'spatial_dataset/climate_percentile_yield/percentile_yield_table.csv'),
+                'spatial_dataset/climate_percentile_yield/'),
         }
 
     def test_read_percentile_yield_table(self):
-        guess = io.read_percentile_yield_table(self.vars_dict)
-        pp.pprint(guess)
+        guess = io.read_percentile_yield_tables(self.vars_dict)
+        # pp.pprint(guess)
 
-        percentile_table_dict = guess['percentile_table_dict']
+        percentile_table_dict = guess['percentile_yield_dict']
         keys = percentile_table_dict.keys()
         assert(type(percentile_table_dict[keys[0]][1]['yield_25th']) in [float, int])
 
 
-# NOT IMPLEMENTED YET
-class TestIOReadRegressionModelYieldTable(unittest.TestCase):
+class TestIOReadRegressionModelYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
-            'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
+            'modeled_yield_tables_dir': os.path.join(input_dir, 'spatial_dataset/climate_regression_yield/'),
         }
 
     def test_read_regression_model_yield_table(self):
-        guess = io.read_regression_model_table(self.vars_dict)
-        pp.pprint(guess)
+        guess = io.read_regression_model_yield_tables(self.vars_dict)
+        # pp.pprint(guess)
+
+        modeled_yield_dict = guess['modeled_yield_dict']
+        keys = modeled_yield_dict.keys()
+        assert(type(modeled_yield_dict[keys[0]][1]['yield_ceiling']) in [float, int])
 
 
 class TestIOFetchObservedYieldMaps(unittest.TestCase):
@@ -115,18 +122,25 @@ class TestIOFetchClimateBinMaps(unittest.TestCase):
         assert(type(climate_bin_maps_dict[keys[0]]) is str)
 
 
-# UNIMPLEMENTED FUNCTIONS MUST BE IMPLEMENTED FIRST
 class TestIOFetchSpatialDataset(unittest.TestCase):
     def setUp(self):
         # Create Spatial Dataset Directory
 
         self.vars_dict = {
-            'spatial_dataset_dir': None,
+            'spatial_dataset_dir': os.path.join(
+                input_dir, 'spatial_dataset/'),
+            'do_yield_observed': True,
+            'do_yield_percentile': True,
+            'do_yield_regression_model': True,
         }
 
     def test_fetch_spatial_dataset(self):
         guess = io.fetch_spatial_dataset(self.vars_dict)
-        pp.pprint(guess)
+        # pp.pprint(guess)
+        keys = guess.keys()
+        assert('percentile_yield_dict' in keys)
+        assert('observed_yields_maps_dict' in keys)
+        assert('percentile_yield_dict' in keys)
 
 
 class TestIOFetchModeledFertilizerMaps(unittest.TestCase):
@@ -157,7 +171,7 @@ class TestIOFetchArgs(unittest.TestCase):
             'do_yield_percentile': True,
             'do_yield_regression_model': True,
             'modeled_fertilizer_maps_dir': os.path.join(
-                input_dir, 'modeled_fertilizer_maps'),
+                input_dir, 'fertilizer_maps'),
             'modeled_irrigation_map_uri':  os.path.join(
                 input_dir, 'irrigation_map.tif'),
             'do_nutrition': True,
@@ -170,7 +184,48 @@ class TestIOFetchArgs(unittest.TestCase):
 
     def test_fetch_args(self):
         guess = io.fetch_args(self.args)
-        pp.pprint(guess)
+        # pp.pprint(guess)
+        keys = guess.keys()
+        assert('percentile_yield_dict' in keys)
+        assert('observed_yields_maps_dict' in keys)
+        assert('percentile_yield_dict' in keys)
+        assert('nutrition_table_dict' in keys)
+        assert('economics_table_dict' in keys)
+        assert('modeled_fertilizer_maps_dict' in keys)
+        assert('crop_lookup_dict' in keys)
+
+
+class TestIOSetupTmp(unittest.TestCase):
+    def setUp(self):
+        workspace_dir = tempfile.mkdtemp()
+        os.mkdir(os.path.join(workspace_dir, 'tmp'))
+
+        self.vars_dict = {
+            'workspace_dir': workspace_dir
+        }
+
+    def test_run(self):
+        guess = io.setup_tmp(self.vars_dict)
+        # pp.pprint(guess)
+        tmp_dir = guess['tmp_dir']
+        assert(os.path.basename(tmp_dir) == 'tmp')
+
+
+class TestIOCleanUpTmp(unittest.TestCase):
+    def setUp(self):
+        workspace_dir = tempfile.mkdtemp()
+        tmp_dir = os.path.join(workspace_dir, 'tmp')
+        os.mkdir(tmp_dir)
+
+        self.vars_dict = {
+            'workspace_dir': workspace_dir,
+            'tmp_dir': tmp_dir
+        }
+
+    def test_run(self):
+        io.clean_up_tmp(self.vars_dict)
+        pp.pprint(self.vars_dict)
+        assert(not os.path.exists(self.vars_dict['tmp_dir']))
 
 
 class TestIOCreateOutputs(unittest.TestCase):
@@ -182,7 +237,6 @@ class TestIOCreateOutputs(unittest.TestCase):
     def test_run(self):
         guess = io.create_outputs(self.vars_dict)
         pp.pprint(guess)
-
 
 if __name__ == '__main__':
     unittest.main()
