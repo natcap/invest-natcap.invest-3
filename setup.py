@@ -270,8 +270,8 @@ data_files.append((reporting_data_dir,
 REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
-    'osgeo (>=1.9.2)'
-    'pygeoprocessing',
+    'osgeo (>=1.9.2)',
+    'pygeoprocessing (>=0.1.1)',
     ]
 
 #The standard distutils setup command
@@ -286,14 +286,6 @@ setup(name='invest_natcap',
         Extension(
             name="scenic_quality_cython_core",
             sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
-        Extension(
-            name="pytable_tracer_cython",
-            sources=['invest_natcap/pytable_tracer_cython.pyx'],
-            language="c++"),
-        Extension(
-            name="flood_mitigation_cython_core",
-            sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
-            language="c++"),
         ]),
       **py2exe_args)
 
