@@ -11,7 +11,43 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-def calc_yield_observed(vars_dict):
+def create_observed_yield_maps(vars_dict):
+    '''
+    Creates yield maps from observed data and stores in the temporary yield
+        folder
+
+    Args:
+        vars_dict (dict): descr
+
+    Example Args::
+
+        vars_dict = {
+            # ...
+
+            'lulc_map_uri': 'path/to/lulc_map_uri',
+            'observed_yields_maps_dict': {
+                'crop': 'path/to/crop_climate_bin_map',
+                ...
+            },
+            'tmp_observed_dir': '/path/to/tmp_observed_yield_dir',
+        }
+    '''
+    # Get List of Crops in LULC Crop Map
+
+    # For Each Crop, Clip Corresponding Observed Crop Yield Map over AOI and Reproject
+    #   Save to tmp_climate_percentile_yield_intermediate_dir
+
+    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
+    #   Output: Crop Production Maps
+    #   If 'create_crop_production_maps' selected, save to output folder
+
+    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
+    #   Output: Crop Production Dictionary?
+
+    pass
+
+
+def create_percentile_yield_maps(vars_dict):
     '''
     About
 
@@ -26,11 +62,39 @@ def calc_yield_observed(vars_dict):
 
             ...
         }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
+    # Get List of Crops in LULC Crop Map
+
+    # Create Raster of Climate Bin Indices
+
+    # For Each Yield Column in Percentile Yield Table:
+
+    # For Each Crop, Create Crop Yield Map over AOI
+        # Output: Crop Yield Maps
+
+    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
+        # Output: Crop Production Maps
+        # If 'create_crop_production_maps' selected, save to output folder
+
+    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
+        # Output: Crop Production Dictionary?
+
+    # Generate Yield Results
+
     pass
 
 
-def calc_yield_percentile(vars_dict):
+def create_regression_yield_maps(vars_dict):
     '''
     About
 
@@ -45,11 +109,21 @@ def calc_yield_percentile(vars_dict):
 
             ...
         }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     pass
 
 
-def calc_yield_modeled(vars_dict):
+def create_production_maps(vars_dict):
     '''
     About
 
@@ -64,11 +138,21 @@ def calc_yield_modeled(vars_dict):
 
             ...
         }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     pass
 
 
-def calc_nutrition(vars_dict):
+def create_economic_returns_map(vars_dict):
     '''
     About
 
@@ -83,17 +167,37 @@ def calc_nutrition(vars_dict):
 
             ...
         }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     pass
 
 
-def calc_economic_returns(vars_dict):
+def create_results_table(vars_dict):
     '''
     About
 
     var_name (type): desc
 
     Example Args::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
+
+    Example Returns::
 
         vars_dict = {
             ...
@@ -109,6 +213,29 @@ def calc_economic_returns(vars_dict):
 # Raster Utils Wrapper for High-level Functions
 def clip_raster_over_aoi():
     '''
+    About
+
+    var_name (type): desc
+
+    Example Args::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     # Check that datasets are in same projection
     ru.assert_datasets_in_same_projection()
@@ -130,6 +257,29 @@ def clip_raster_over_aoi():
 
 def sum_cells_in_raster():
     '''
+    About
+
+    var_name (type): desc
+
+    Example Args::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     # Option 1: use sum or mean in GDAL's raster stats
     # Option 2: extract numpy array using GDAL
@@ -140,6 +290,29 @@ def sum_cells_in_raster():
 
 def element_wise_operation():
     '''
+    About
+
+    var_name (type): desc
+
+    Example Args::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
+
+    Example Returns::
+
+        vars_dict = {
+            ...
+
+            '': '',
+
+            ...
+        }
     '''
     ru.vectorize_datasets(
         dataset_uri_list,

@@ -1,3 +1,7 @@
+'''
+python -m unittest test_crop_production_model
+'''
+
 import unittest
 import os
 import pprint

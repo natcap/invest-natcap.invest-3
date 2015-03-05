@@ -27,7 +27,7 @@
           "validateAs": {
             "type": "folder"
           },
-          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+          "helpText": "The selected folder is used as the workspace where all intermediate and final output files will be written. <br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
           "id": "results_suffix",
@@ -62,6 +62,26 @@
             "type": "CSV"
           },
           "helpText": ""
+        },
+        {
+          "id": "spatial_dataset_dir",
+          "args_id": "spatial_dataset_dir",
+          "type": "folder",
+          "label": "Crop Production Model Spatial Dataset Folder",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": ""
+        },
+        {
+          "id": "generate_crop_production_maps",
+          "args_id": "generate_crop_production_maps",
+          "type": "checkbox",
+          "label": "Generate Crop Production Maps",
+          "required": true,
+          "defaultValue": false,
+          "helpText": ""
         }
       ]
     },
@@ -77,112 +97,70 @@
           "type": "list",
           "elements": [
             {
-              "id": "observed_yield_maps_dir",
-              "args_id": "observed_yield_maps_dir",
-              "type": "folder",
-              "label": "Observed Crop Yield Maps Folder",
-              "defaultValue": "../CropProduction/input/observed_yield_maps/",
-              "required": true,
-              "helpText": ""
+              "id": "yield_observed_label",
+              "type": "label",
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: a set of GDAL-supported rasters within a folder named 'yield_observed' representing the observed crop yield for each crop.  [Additional requirements here]"
             }
           ]
         }
       ]
     },
     {
-      "id": "do_climate_based_yields",
-      "label": "Calculate Yield with Climate-Based Functions",
+      "id": "do_yield_percentile",
+      "label": "Calculate Yield based on Climate-specific Distribution of Observed Yields",
       "type": "container",
       "defaultValue": false,
       "collapsible": true,
       "elements": [
         {
-          "id": "climate_based_yields_list",
+          "id": "yield_percentile_list",
           "type": "list",
           "elements": [
             {
-              "id": "climate_bin_maps_dir",
-              "args_id": "climate_bin_maps_dir",
+              "id": "yield_percentile_label",
+              "type": "label",
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "do_yield_regression_model",
+      "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "yield_modeled_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "yield_observed_label",
+              "type": "label",
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...). A table named 'yield_climate_regression_table.csv' within a folder named 'yield_climate_regression'.  [Additional requirements here]"
+            },
+            {
+              "id": "modeled_fertilizer_maps_dir",
+              "args_id": "modeled_fertilizer_maps_dir",
               "type": "folder",
-              "label": "Crop Climate-Bin Maps Folder",
-              "defaultValue": "../CropProduction/input/climate_bin_maps/",
+              "label": "Fertilizer Application Rate Maps Folder",
+              "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",
               "required": true,
               "helpText": ""
-            }
-          ]
-        },
-        {
-          "id": "do_yield_percentile",
-          "label": "Calculate Yield based on Climate-specific Distribution of Observed Yields",
-          "type": "container",
-          "defaultValue": false,
-          "collapsible": true,
-          "elements": [
+            },
             {
-              "id": "yield_percentile_list",
-              "type": "list",
-              "elements": [
-                {
-                  "id": "percentile_yield_table_uri",
-                  "args_id": "percentile_yield_table_uri",
-                  "type": "file",
-                  "label": "Percentile Yield Table (CSV)",
-                  "defaultValue": "../CropProduction/input/percentile_yield_table.csv",
-                  "required": true,
-                  "validateAs": {
-                    "type": "CSV"
-                  },
-                  "helpText": ""
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "do_yield_modeled",
-          "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
-          "type": "container",
-          "defaultValue": false,
-          "collapsible": true,
-          "elements": [
-            {
-              "id": "yield_modeled_list",
-              "type": "list",
-              "elements": [
-                {
-                  "id": "modeled_yield_table_uri",
-                  "args_id": "modeled_yield_table_uri",
-                  "type": "file",
-                  "label": "Modeled Yield Table (CSV)",
-                  "defaultValue": "../CropProduction/input/modeled_yield_table.csv",
-                  "required": true,
-                  "validateAs": {
-                    "type": "CSV"
-                  },
-                  "helpText": ""
-                },
-                {
-                  "id": "modeled_fertilizer_maps_dir",
-                  "args_id": "modeled_fertilizer_maps_dir",
-                  "type": "folder",
-                  "label": "Fertilizer Application Rate Maps Folder",
-                  "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",
-                  "required": true,
-                  "helpText": ""
-                },
-                {
-                  "id": "irrigation_map_uri",
-                  "args_id": "irrigation_map_uri",
-                  "type": "file",
-                  "label": "Irrigation Map (Raster)",
-                  "defaultValue": "../CropProduction/input/irrigation_map.tif",
-                  "required": true,
-                  "validateAs": {
-                    "type": "GDAL"
-                  },
-                  "helpText": ""
-                }
-              ]
+              "id": "irrigation_map_uri",
+              "args_id": "irrigation_map_uri",
+              "type": "file",
+              "label": "Irrigation Map (Raster)",
+              "defaultValue": "../CropProduction/input/irrigation_map.tif",
+              "required": true,
+              "validateAs": {
+                "type": "GDAL"
+              },
+              "helpText": ""
             }
           ]
         }
@@ -203,7 +181,7 @@
               "id": "nutrition_table_uri",
               "args_id": "nutrition_table_uri",
               "type": "file",
-              "label": "Nutrient Contents Table (CSV)",
+              "label": "Nutrition Contents Table (CSV)",
               "defaultValue": "../CropProduction/input/nutrition_table.csv",
               "required": true,
               "validateAs": {
@@ -236,15 +214,6 @@
               "validateAs": {
                 "type": "CSV"
               },
-              "helpText": ""
-            },
-            {
-              "id": "economics_fertilizer_maps_dir",
-              "args_id": "economics_fertilizer_maps_dir",
-              "type": "folder",
-              "label": "Fertilizer Application Rate Maps Folder (Optional)",
-              "defaultValue": "../CropProduction/input/economics_fertilizer_maps/",
-              "required": false,
               "helpText": ""
             }
           ]
