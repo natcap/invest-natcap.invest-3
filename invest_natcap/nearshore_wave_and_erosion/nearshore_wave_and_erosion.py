@@ -631,9 +631,9 @@ def execute(args):
             args['shapefile_priorities'][shapefile_type] = set([ \
                 args['habitat_priority'][habitat_name]])
 
-    print("args['habitat_priority']", args['habitat_priority'])
-    print("args['habitat_shapefiles']", args['habitat_shapefiles'])
-    print("args['shapefile_priorities']", args['shapefile_priorities'])
+#    print("args['habitat_priority']", args['habitat_priority'])
+#    print("args['habitat_shapefiles']", args['habitat_shapefiles'])
+#    print("args['shapefile_priorities']", args['shapefile_priorities'])
 
     # List all shapefiles in the habitats directory
     files = []
@@ -679,7 +679,7 @@ def execute(args):
             'Type']),
         # This habitat has no 'type' field, so its default type is set to 3
         'underwater structures': set([ \
-            'Shape', \
+            'Geometry', \
             'ShoreDist', \
             'Height', \
             'BaseWidth', \
@@ -814,21 +814,21 @@ def execute(args):
 
                 field_id += 1
 
-    print("args['field_index']")
-    for category in args['field_index']:
-        print('  category', category)
-        if category == 'natural habitats':
-            for priority in args['field_index'][category]:
-                if 'name' in args['field_index'][category][priority]:
-                    print('    habitat name:', \
-                        args['field_index'][category][priority]['name'])
-                print('    priority', priority)
-                for field in args['field_index'][category][priority]['fields']:
-                    print('      ', \
-                        field, args['field_index'][category][priority]['fields'][field])
-        else:
-            for field in args['field_index'][category]['fields']:
-                print('      ', field, args['field_index'][category]['fields'][field])
+#    print("args['field_index']")
+#    for category in args['field_index']:
+#        print('  category', category)
+#        if category == 'natural habitats':
+#            for priority in args['field_index'][category]:
+#                if 'name' in args['field_index'][category][priority]:
+#                    print('    habitat name:', \
+#                        args['field_index'][category][priority]['name'])
+#                print('    priority', priority)
+#                for field in args['field_index'][category][priority]['fields']:
+#                    print('      ', \
+#                        field, args['field_index'][category][priority]['fields'][field])
+#        else:
+#            for field in args['field_index'][category]['fields']:
+#                print('      ', field, args['field_index'][category]['fields'][field])
 
     # Save the dictionary
     field_index_dictionary_uri = \
@@ -1088,7 +1088,7 @@ def execute(args):
 
     # Computing constraints rasters so they can directly be used as masks 
     # for the habitats that have spatial constraints.
-    print("args['shapefile types']", args['shapefile types'])
+#    print("args['shapefile types']", args['shapefile types'])
     
     # TODO: Should remove this limitation
     assert 'natural habitats' in args['shapefile types'], \
