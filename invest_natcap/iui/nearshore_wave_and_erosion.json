@@ -171,6 +171,33 @@
                   "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", the model will optionally allow for the location of natural habitats that intersect on the cross-shore transect. To do so, you must store all Natural Habitat input layers that you want to consider in a directory. Each natural habitat layer should consist of the location of those habitats, and all data in this folder must be polygon shapefiles and projected in meters. Further, each of these layers should end with an underscore followed by a unique number, for example \"_1\" or \"_2\"."
                 },
                 {
+                  "label": "IF \"yes\": Man-made Structures (Optional)",
+                  "id": "man_made_structures_uri",
+                  "args_id": "man_made_structures_uri",
+                  "type": "file",
+                  "required": false,
+                  "validateAs": {
+                    "type": "OGR",
+                    "layers": [
+                      {
+                        "name": {
+                          "inheritFrom": "file"
+                        },
+                        "type": "points",
+                        "projection": {
+                          "units": "meters",
+                          "exists": true
+                        }
+                      }
+                    ]
+                  },
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "defaultValue": "../CoastalProtection/Input/Structures_BarkClay.shp",
+                  "helpText": "If you have answered \"(1) Yes\" to the question: \"Do you want us to cut a cross-shore transect in GIS?\", and the user has a man-made structure layer that is outside the habitats directory, the file can be included from this input."
+                },
+                {
                   "label": "IF \"yes\": Maximum length of your profile (km)",
                   "id": "max_profile_length",
                   "args_id": "max_profile_length",
@@ -301,7 +328,7 @@
               "type": "list",
               "elements": [
                 {
-                  "label": "Cross-Shore Profile (e.g. CreatedProfile_[label for PG run].txt)",
+                  "label": "Cross-Shore Profile (default is transect_data.h5)",
                   "id": "cross_shore_profile_uri",
                   "args_id": "cross_shore_profile_uri",
                   "type": "file",

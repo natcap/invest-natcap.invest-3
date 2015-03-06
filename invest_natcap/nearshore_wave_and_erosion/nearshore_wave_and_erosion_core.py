@@ -524,7 +524,7 @@ def compute_transects(args):
             # Store bathymetry in the transect
 
 #            single_value[0, 0] = bathymetry_dataset[transect, pos]
-            single_value[0, 0] = 0 #habitat_type_dataset[transect, pos]
+            single_value[0, 0] = habitat_type_dataset[transect, pos]
             
             transect_band.WriteArray( \
                 single_value, \
@@ -701,7 +701,8 @@ def compute_nearshore_and_wave_erosion(args):
 
     LOGGER.debug('Loading HDF5 files...')
 
-    assert os.path.isfile(args['transect_data_uri'])
+    assert os.path.isfile(args['transect_data_uri']), \
+        "Can't open the HDF5 file " + args['transect_data_uri']
 
     f = h5py.File(args['transect_data_uri']) # Open the HDF5 file
 
@@ -1896,16 +1897,17 @@ def combine_natural_habitats(args, transect_data_file):
 
         # Save all the habitat values in this layer to the field index dictionary
         for code in unique_values:
-            # Check the code is not already used 
-            # (2 habitats can't have the same code)
-            assert code not in habitat_name_map, \
-                'code ' + str(unique_values) + ' for ' + habitat_type_name + ' ' + \
-                str(os.path.split(type_shapefile_uri)[1]) + ' ' + \
-                ' is already used by ' + habitat_name_map[code] + \
-                ', habitat map: ' + str(habitat_name_map)
+#            # Check the code is not already used 
+#            # (2 habitats can't have the same code)
+#            assert code not in habitat_name_map, \
+#                'code ' + str(unique_values) + ' for ' + habitat_type_name + ' ' + \
+#                str(os.path.split(type_shapefile_uri)[1]) + ' ' + \
+#                ' is already used by ' + habitat_name_map[code] + \
+#                ', habitat map: ' + str(habitat_name_map)
 
             # Assign this code to the habitat name
-            habitat_name_map[code] = habitat_type_name
+            if code not in habitat_name_map:
+                habitat_name_map[code] = habitat_type_name
 
         args['field_index']['natural habitats'][habitat]['habitat_values'] = \
             unique_values
@@ -1940,9 +1942,16 @@ def combine_natural_habitats(args, transect_data_file):
 
                 dataset_type = habitat_type_dataset[transect,position]
 
+                # Can't decide which habitat to choose
+                assert dataset_type != habitat_type, \
+                    "Can't decide which habitat code to choose (" + \
+                    str(dataset_type) + ")"
+
+                # Override with nodata
                 if dataset_type == shapefile_nodata:
                     habitat_type_dataset[transect,position] = habitat_nodata
 
+                # Override with higher priority habitat
                 elif dataset_type < habitat_type:
                     habitat_type_dataset[transect,position] = habitat_type
                     habitat_presence += 1
