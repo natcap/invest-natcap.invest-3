@@ -99,7 +99,6 @@ packages = [
     'invest_natcap.scenic_quality',
     'invest_natcap.habitat_risk_assessment',
     'invest_natcap.routing',
-    'invest_natcap.ntfp',
     'invest_natcap.blue_carbon',
     'invest_natcap.scenario_generator',
     'invest_natcap.sdr',
