@@ -9,7 +9,7 @@ import operator
 import numpy
 from osgeo import gdal, ogr, osr
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -71,8 +71,8 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     LOGGER.debug("Storing extent in: %s", datasource_uri)
 
     # getting projection and bounding box information
-    geotransform = raster_utils.get_geotransform_uri(dataset_uri)
-    bounding_box = raster_utils.get_bounding_box(dataset_uri)
+    geotransform = pygeoprocessing.geoprocessing.get_geotransform_uri(dataset_uri)
+    bounding_box = pygeoprocessing.geoprocessing.get_bounding_box(dataset_uri)
     upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
 
     # loading shapefile drive and opening output for writing
@@ -133,7 +133,7 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
 
 def sum_uri(dataset_uri, datasource_uri):
     """
-    Wrapper call to raster_utils.aggregate_raster_values_uri to extract
+    Wrapper call to pygeoprocessing.geoprocessing.aggregate_raster_values_uri to extract
     total
 
     Args:
@@ -143,7 +143,7 @@ def sum_uri(dataset_uri, datasource_uri):
     Returns:
         float: The total of the raster values within the shapefile
     """
-    total = raster_utils.aggregate_raster_values_uri(
+    total = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
         dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
 
@@ -153,7 +153,7 @@ def sum_by_category_uri(category_uri, value_uri, categories=None):
 
     '''
     if categories is None:
-        categories = raster_utils.unique_raster_values_count(
+        categories = pygeoprocessing.geoprocessing.unique_raster_values_count(
             category_uri).keys()
 
     category_src = gdal.Open(category_uri)
@@ -344,7 +344,7 @@ def execute(args):
     carbon_schedule_field_rate = "Price"
 
     if "carbon_schedule" in args:
-        carbon_schedule_csv = raster_utils.get_lookup_from_csv(
+        carbon_schedule_csv = pygeoprocessing.geoprocessing.get_lookup_from_csv(
             args["carbon_schedule"], carbon_schedule_field_key)
 
     # carbon pools table
@@ -364,7 +364,7 @@ def execute(args):
     trans_comment_uri = args["transition_matrix_uri"]
 
     # remove transition comment
-    trans_uri = raster_utils.temporary_filename()
+    trans_uri = pygeoprocessing.geoprocessing.temporary_filename()
     trans_file = open(trans_uri, 'w')
     trans_comment_table = open(trans_comment_uri).readlines()
     row_count = len(trans_comment_table[0].strip().strip(",").split(","))
@@ -511,19 +511,19 @@ def execute(args):
 
     # process inputs
 
-    dis_bio = raster_utils.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
+    dis_bio = pygeoprocessing.geoprocessing.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
     # adding accumulation value to disturbance table
     for k in dis_bio:
         dis_bio[k][trans_acc] = 0.0
 
-    dis_soil = raster_utils.get_lookup_from_csv(
+    dis_soil = pygeoprocessing.geoprocessing.get_lookup_from_csv(
         dis_soil_csv_uri, dis_field_key)
     # adding accumulation values to disturbance table
     for k in dis_soil:
         dis_soil[k][trans_acc] = 0.0
 
-    trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
-    carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
+    trans = pygeoprocessing.geoprocessing.get_lookup_from_csv(trans_uri, trans_field_key)
+    carbon = pygeoprocessing.geoprocessing.get_lookup_from_csv(carbon_uri, carbon_field_key)
 
     class InfiniteDict:
         def __init__(self, k, v):
@@ -547,7 +547,7 @@ def execute(args):
     for k in carbon:
         acc_bio[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_bio_field])
 
-    half_life = raster_utils.get_lookup_from_csv(
+    half_life = pygeoprocessing.geoprocessing.get_lookup_from_csv(
         half_life_csv_uri, half_life_field_key)
 
     # validate disturbance and accumulation tables
@@ -557,7 +557,7 @@ def execute(args):
             change_types.add(trans[k1][str(k2)])
 
     # validating data
-    nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
+    nodata_lulc = set([pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(nodata_lulc) == 1:
         LOGGER.debug("All rasters have the same nodata value.")
         nodata_lulc = nodata_lulc.pop()
@@ -566,7 +566,7 @@ def execute(args):
         LOGGER.error(msg)
         raise ValueError, msg
 
-    cell_size = set([raster_utils.get_cell_size_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
+    cell_size = set([pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(cell_size) == 1:
         LOGGER.debug("All rasters have the same cell size.")
         cell_size = cell_size.pop()
@@ -584,7 +584,7 @@ def execute(args):
         raise ValueError, msg
 
     # construct dictionaries for single parameter lookups
-    conversion = (raster_utils.get_cell_size_from_uri(
+    conversion = (pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0  # convert to Ha
 
     LOGGER.debug("Cell size is %s hectacres.", conversion)
@@ -711,7 +711,7 @@ def execute(args):
 
     def vectorize_carbon_datasets(
             dataset_uri_list, dataset_pixel_op, dataset_out_uri):
-        raster_utils.vectorize_datasets(
+        pygeoprocessing.geoprocessing.vectorize_datasets(
             dataset_uri_list,
             dataset_pixel_op,
             dataset_out_uri,
@@ -769,7 +769,7 @@ def execute(args):
     # creating zero-fill raster for initial disturbed carbon
     zero_raster_uri = os.path.join(workspace_dir, os.path.join(
         intermediate_dir, "zeros.tif"))
-    raster_utils.new_raster_from_base_uri(
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
         this_uri,
         zero_raster_uri,
         gdal_format,
@@ -785,7 +785,7 @@ def execute(args):
         this_veg_stock_bio_uri = os.path.join(
             workspace_dir, veg_stock_bio_name % (this_year, veg_type))
 
-        raster_utils.reclassify_dataset_uri(
+        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
             this_uri,
             veg_field_dict[veg_type][carbon_field_bio],
             this_veg_stock_bio_uri,
@@ -793,7 +793,7 @@ def execute(args):
             nodata_default_float,
             exception_flag="values_required")
 
-        raster_utils.reclassify_dataset_uri(
+        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
             this_uri,
             veg_field_dict[veg_type][carbon_field_soil],
             this_veg_stock_soil_uri,
@@ -865,7 +865,7 @@ def execute(args):
             this_veg_adj_em_dis_soil_uri = os.path.join(workspace_dir, veg_adj_em_dis_soil_name  % (this_year, next_year, veg_type))
 
             # litter
-            raster_utils.reclassify_dataset_uri(
+            pygeoprocessing.geoprocessing.reclassify_dataset_uri(
                 this_uri,
                 veg_field_dict[veg_type][carbon_field_litter],
                 this_veg_litter_uri,
@@ -1114,7 +1114,7 @@ def execute(args):
                         year - lulc_years[0]))}
         else:
             # Fetch carbon schedule from provided price table
-            carbon_schedule = raster_utils.get_lookup_from_csv(
+            carbon_schedule = pygeoprocessing.geoprocessing.get_lookup_from_csv(
                 args["carbon_schedule"], "Year")
 
         period_op_dict = {}

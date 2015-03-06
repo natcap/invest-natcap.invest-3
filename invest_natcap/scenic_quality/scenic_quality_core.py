@@ -5,10 +5,10 @@ import collections
 import logging
 from osgeo import gdal
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 import scenic_quality_cython_core
 
-logging.getLogger('raster_utils').setLevel(logging.WARNING)
+logging.getLogger('pygeoprocessing.geoprocessing').setLevel(logging.WARNING)
 logging.getLogger('raster_cython_utils').setLevel(logging.WARNING)
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \

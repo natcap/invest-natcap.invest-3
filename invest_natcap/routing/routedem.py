@@ -5,9 +5,9 @@ import os
 import logging
 
 
-from invest_natcap import raster_utils
-from invest_natcap.routing import routing_utils
-import routing_cython_core
+import pygeoprocessing.geoprocessing
+import pygeoprocessing.routing
+import pygeoprocessing.routing.routing_core
 
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -29,10 +29,10 @@ def execute(args):
     prefix, suffix = os.path.splitext(args['pit_filled_filename'])
     dem_tiled_uri = os.path.join(
         output_directory, 'dem_tiled' + file_suffix + '.tif')
-    raster_utils.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
+    pygeoprocessing.geoprocessing.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
     dem_pit_filled_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
-    routing_utils.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
+    pygeoprocessing.routing.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
     dem_uri = dem_pit_filled_uri
 
     #Calculate slope
@@ -41,20 +41,20 @@ def execute(args):
         prefix, suffix = os.path.splitext(args['slope_filename'])
         slope_uri = os.path.join(
             output_directory, prefix + file_suffix + suffix)
-        raster_utils.calculate_slope(dem_uri, slope_uri)
+        pygeoprocessing.geoprocessing.calculate_slope(dem_uri, slope_uri)
 
     #Calculate flow accumulation
     LOGGER.info("calculating flow direction")
     prefix, suffix = os.path.splitext(args['flow_direction_filename'])
     flow_direction_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
-    routing_utils.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    pygeoprocessing.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
 
     LOGGER.info("calculating flow accumulation")
     prefix, suffix = os.path.splitext(args['flow_accumulation_filename'])
     flow_accumulation_uri = os.path.join(
         output_directory, prefix + file_suffix + suffix)
-    routing_utils.flow_accumulation(
+    pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
@@ -74,12 +74,12 @@ def execute(args):
                 output_directory, 'v_stream%s_%s.tif' %
                 (file_suffix, str(threshold_amount)))
 
-            routing_utils.stream_threshold(
+            pygeoprocessing.routing.stream_threshold(
                 flow_accumulation_uri, threshold_amount, v_stream_uri)
     else:
         v_stream_uri = os.path.join(
             output_directory, 'v_stream%s.tif' % file_suffix)
-        routing_utils.stream_threshold(
+        pygeoprocessing.routing.stream_threshold(
             flow_accumulation_uri, float(args['threshold_flow_accumulation']),
             v_stream_uri)
 
@@ -87,5 +87,5 @@ def execute(args):
         prefix, suffix = os.path.splitext(args['downstream_distance_filename'])
         distance_uri = os.path.join(
             output_directory, prefix + file_suffix + suffix)
-        routing_utils.distance_to_stream(
+        pygeoprocessing.routing.distance_to_stream(
             flow_direction_uri, v_stream_uri, distance_uri)

@@ -10,7 +10,7 @@ from osgeo import osr
 from shapely.wkb import loads
 from matplotlib import pyplot
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -39,9 +39,9 @@ def grayscale_raster(raster_in_uri, raster_out_uri):
     gray_max = 254
 
     # Make sure raster stats have been calculated
-    raster_utils.calculate_raster_stats_uri(raster_in_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(raster_in_uri)
     # Get the raster statistics, looking for Min and Max specifcally
-    stats = raster_utils.get_statistics_from_uri(raster_in_uri)
+    stats = pygeoprocessing.geoprocessing.get_statistics_from_uri(raster_in_uri)
     # Get Min, Max values from raster
     raster_min = stats[0]
     raster_max = stats[1]
@@ -55,8 +55,8 @@ def grayscale_raster(raster_in_uri, raster_out_uri):
 
     # Get the pixel size of the input raster to use as the output
     # cell size
-    pixel_size = raster_utils.get_cell_size_from_uri(raster_in_uri)
-    nodata_in = raster_utils.get_nodata_from_uri(raster_in_uri)
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster_in_uri)
+    nodata_in = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_in_uri)
     out_nodata = 255
 
     def to_gray(pix):
@@ -67,7 +67,7 @@ def grayscale_raster(raster_in_uri, raster_out_uri):
         else:
             return int(np.interp(pix, x_range, y_range))
 
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         [raster_in_uri], to_gray, raster_out_uri, gdal.GDT_Byte, 255,
         pixel_size, 'intersection')
 
@@ -186,7 +186,7 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
 
 #   convert_ogr_fields_to_strings(shape_in_uri, shape_copy_uri)
 
-#   aoi_sr = raster_utils.get_spatial_ref_uri(shape_copy_uri)
+#   aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(shape_copy_uri)
 #   aoi_wkt = aoi_sr.ExportToWkt()
 
 #   wkt_file = open('../test/invest-data/test/data/style_data/wkt_file.txt', 'wb')
@@ -205,7 +205,7 @@ def create_thumbnail(image_in_uri, thumbnail_out_uri, size):
 #   # Reproject the AOI to the spatial reference of the shapefile so that the
 #   # AOI can be used to clip the shapefile properly
 #   tmp_uri = os.path.join(base_dir, 'tmp_shp_proj.shp')
-#   raster_utils.reproject_datasource_uri(
+#   pygeoprocessing.geoprocessing.reproject_datasource_uri(
 #           shape_copy_uri, wgs84_wkt, tmp_uri)
 
 #   css = open(css_uri).read()

@@ -9,7 +9,7 @@ import csv
 from osgeo import ogr
 import numpy as np
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap import reporting
 
 LOGGER = logging.getLogger('FISHERIES')
@@ -1097,7 +1097,7 @@ def _create_results_aoi(vars_dict):
     output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
 
     # Copy AOI file to outputs directory
-    raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
     ds = ogr.Open(output_aoi_uri, update=1)

@@ -16,7 +16,7 @@ import glob
 from osgeo import gdal
 from osgeo import ogr
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 
 DATA_ARCHIVES = os.path.join('data', 'regression_archives')
@@ -80,7 +80,7 @@ def collect_parameters(parameters, archive_uri):
         Returns nothing."""
 
     parameters = parameters.copy()
-    temp_workspace = raster_utils.temporary_folder()
+    temp_workspace = pygeoprocessing.geoprocessing.temporary_folder()
 
     def get_multi_part_gdal(filepath):
         """Collect all GDAL files into a new folder inside of the temp_workspace
@@ -381,7 +381,7 @@ def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
     # create a new temporary folder just for the input parameters, if the user
     # has not provided one already.
     if input_folder == None:
-        input_folder = raster_utils.temporary_folder()
+        input_folder = pygeoprocessing.geoprocessing.temporary_folder()
 
     # extract the archive to the workspace
     extract_archive(input_folder, archive_uri)

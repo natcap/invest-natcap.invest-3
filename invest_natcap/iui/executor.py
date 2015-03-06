@@ -19,7 +19,7 @@ import invest_natcap
 import invest_natcap.iui
 from invest_natcap.iui import fileio as iui_fileio
 from invest_natcap import fileio as fileio
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()
@@ -539,7 +539,7 @@ class Executor(threading.Thread):
             if '_process_pool' in args:
                 raise Exception("There's already a process_pool, aborting!")
             args['_process_pool'] = None
-#            process_pool = raster_utils.PoolNoDaemon()
+#            process_pool = pygeoprocessing.geoprocessing.PoolNoDaemon()
 #            args['_process_pool'] = process_pool
 
             # If we're including metadata, add per-run metadata here.
