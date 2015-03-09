@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.nearshore_wave_and_erosion.nearshore_wave_and_erosion",
   "modelName": "nearshore_wave_and_erosion",
   "localDocURI": "../documentation/nearshore_wave_and_erosion_model.html",
-  "height": 1100,
+  "height": 1200,
   "width": 900,
   "elements": [
     {
@@ -203,14 +203,47 @@
                   "args_id": "max_profile_length",
                   "type": "text",
                   "width": 70,
-                  "required": false,
-                  "returns": {
-                    "ifEmpty": "pass"
-                  },
+                  "required": true,
                   "dataType": "int",
                   "validText": "[0-9]+",
                   "defaultValue": "25",
                   "helpText": "Length of your bathymetry transect, in kilometers. The model will also cut a transect of the same distance landward of your site location."
+                },
+                {
+                  "label": "IF \"yes\": Minimum profile length (m)",
+                  "id": "min_profile_length",
+                  "args_id": "min_profile_length",
+                  "type": "text",
+                  "width": 70,
+                  "required": true,
+                  "dataType": "int",
+                  "validText": "[0-9]+",
+                  "defaultValue": "500",
+                  "helpText": "Minimum length of the entire transect, in meters."
+                },
+                {
+                  "label": "IF \"yes\": Minimum offshore profile length (m)",
+                  "id": "min_offshore_profile_length",
+                  "args_id": "min_offshore_profile_length",
+                  "type": "text",
+                  "width": 70,
+                  "required": true,
+                  "dataType": "int",
+                  "validText": "[0-9]+",
+                  "defaultValue": "500",
+                  "helpText": "Minimum length of the offshore portion of a transect, in meters."
+                },
+                {
+                  "label": "IF \"yes\": Minimum depth of your profile (m)",
+                  "id": "min_profile_depth",
+                  "args_id": "min_profile_depth",
+                  "type": "text",
+                  "width": 70,
+                  "required": true,
+                  "dataType": "int",
+                  "validText": "[0-9]+",
+                  "defaultValue": "0",
+                  "helpText": "Minimum depth of your bathymetry transect, in meters. After smoothing the bathymetry, the model will discard the transect if its average depth is above the minimum depth threshold."
                 },
                 {
                   "label": "IF \"yes\": Maximum depth of your profile (m)",

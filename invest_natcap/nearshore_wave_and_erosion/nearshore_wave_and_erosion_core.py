@@ -93,8 +93,10 @@ def compute_transects(args):
         args['landmass_raster_uri'], raster_utils.temporary_filename())
     
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
-    message = 'Cannot open file ' + args['landmass_raster_uri']
-    assert landmass_raster is not None, message
+
+    if landmass_raster is None:
+        raise IOError, 'Cannot open file ' + args['landmass_raster_uri']
+
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
 
@@ -103,8 +105,10 @@ def compute_transects(args):
 
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
-    message = 'Cannot open file ' + args['aoi_raster_uri']
-    assert aoi_raster is not None, message
+    
+    if aoi_raster is None:
+        raise IOError, 'Cannot open file ' + args['aoi_raster_uri']
+
     aoi_band = aoi_raster.GetRasterBand(1)
     
     # Bathymetry
@@ -244,7 +248,9 @@ def compute_transects(args):
 #                        transects[(p[0], p[1])] = -2
 
                     # Pick transect position among valid shore points
-                    assert len(shore_pts) == 2, str((i, j)) + ' ' + str(shore_pts)
+                    assert len(shore_pts) == 2, \
+                        "Can't process shore segment " + str((i, j)) + \
+                        ' ' + str(shore_pts)
                     transect_positions = \
                         select_transect(shore_orientations.keys(), \
                             i_base+3, j_base+3, \
@@ -327,6 +333,43 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
                        
+
+                        # Perform additional QAQC:
+
+                        # Enforce total profile length
+                        profile_length = end - start
+
+                        profile_length_m = profile_length * i_side_fine
+
+                        if profile_length_m < args['min_profile_length']:
+#                            print('Profile too short (' + str(profile_length_m) + \
+#                                ' < ' + str(args['min_profile_length']))
+                            continue
+
+                        
+                        # Enforce minimum offshore profile length
+                        offshore_length = end - shore
+
+                        offshore_length_m = offshore_length * i_side_fine
+
+                        if offshore_length_m < args['min_offshore_profile_length']:
+#                            print('Offshore portion too short (' + \
+#                                str(offshore_length_m) + \
+#                                ' < ' + str(args['min_offshore_profile_length']))
+                            continue
+
+                        
+                        # Enforce minimum profile depth
+                        averge_depth = \
+                            np.sum(clipped_transect[shore:end]) / offshore_length
+
+                        if averge_depth > args['min_profile_depth']:
+#                            print('Average transect depth too shallow (' + \
+#                                str(averge_depth) + \
+#                                ' < ' + str(args['min_profile_depth']))
+                            continue
+
+
                         # At this point, the transect is valid: 
                         else:
                             # Store important information about it
@@ -646,8 +689,9 @@ def load_excluded_transects(args):
     args['excluded_transects'] = set()
 
     if 'excluded_transects_uri' in args:
-        assert os.path.isfile(args['excluded_transects_uri']), \
-            "Can't open transect exclusion file " + args['excluded_transects_uri']
+        if not os.path.isfile(args['excluded_transects_uri']): 
+            raise IOError, "Can't open transect exclusion file " + \
+            args['excluded_transects_uri']
 
         with open(args['excluded_transects_uri']) as csvfile:
             excluded_transects_reader = csv.reader(csvfile)
@@ -658,25 +702,32 @@ def load_excluded_transects(args):
                     # First, try to cast as int:
                     try:
                         transect = int(item)
-                        assert transect >= 0, \
-                            "A transect ID can't be negative (" + str(item) + ")"
+                        if transect < 0:
+                            raise IndexError, \
+                                "A transect ID can't be negative (" + \
+                                    str(item) + ")" 
                         args['excluded_transects'].add(transect)
 
                     # If it doesn't work, it might be a range:
                     except ValueError:
                         transect_range = item.split('-')
-                        assert len(transect_range) == 2, "Can't interpret CSV token " + item
+                        if len(transect_range) != 2:
+                            raise IndexError, \
+                                "Can't interpret CSV token " + item
 
                         try:
                             start = int(transect_range[0])
                             end = int(transect_range[1])
 
                             # Enforce start >= end
-                            assert start >= 0, \
-                                "A transect ID can't be negative (" + str(item) + ")"
-                            assert end >= start, \
-                                "Invalid range: expected (start >= end), " + \
-                                " got (" + str(start) + "," + str(end) + ")"    
+                            if start < 0:
+                                raise IndexError, \
+                                    "A transect ID can't be negative (" + \
+                                    str(item) + ")"
+                            if end < start:
+                                raise ValueError,  \
+                                    "Invalid range: expected (start >= end), " + \
+                                    " got (" + str(start) + "," + str(end) + ")"    
                             
                             # It is a range, now add the transects to the set:
                             for transect in range(start, end+1):
@@ -701,8 +752,9 @@ def compute_nearshore_and_wave_erosion(args):
 
     LOGGER.debug('Loading HDF5 files...')
 
-    assert os.path.isfile(args['transect_data_uri']), \
-        "Can't open the HDF5 file " + args['transect_data_uri']
+    if not os.path.isfile(args['transect_data_uri']):
+        raise IOError, \
+            "Can't open the HDF5 file " + args['transect_data_uri']
 
     f = h5py.File(args['transect_data_uri']) # Open the HDF5 file
 
@@ -1200,8 +1252,10 @@ def reconstruct_2D_shore_map(args):
     wave_dataset = biophysical_data['Wave']
 
     # Shapes should agree
-    assert coordinates_dataset.shape[0] == wave_dataset.shape[0]
-    assert coordinates_dataset.shape[2] == wave_dataset.shape[1]
+    assert coordinates_dataset.shape[0] == wave_dataset.shape[0], \
+        "Wave vector and coordinates vector size mismatch (rows)"
+    assert coordinates_dataset.shape[2] == wave_dataset.shape[1], \
+        "Wave vector and coordinates vector size mismatch (columns)"
 
     (transect_count, max_transect_length) = wave_dataset.shape
 
@@ -1346,7 +1400,8 @@ def reconstruct_2D_shore_map(args):
             delta_y.append(0.)
             x.append(end-1)
 
-        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+        assert len(delta_y) == len(x), \
+            'Arrays x and delta_y disagree in size (' + \
             str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
 
         if len(delta_y) == 1:
@@ -1417,7 +1472,9 @@ def reconstruct_2D_shore_map(args):
                 if coord not in transect_footprint:
                     X.append(coordinates[0][index])
                     Y.append(coordinates[1][index])
-                    assert not math.isnan(corrected_transect_values[index])
+                    assert not math.isnan(corrected_transect_values[index]), \
+                        'Found NaN at point ' + str(coord) + \
+                        ' while trying removing coordinate duplicates.'
                     Z.append(corrected_transect_values[index])
 
                     transect_footprint.add(coord)
@@ -1429,7 +1486,9 @@ def reconstruct_2D_shore_map(args):
     # Now, we're ready to invoke the interpolation function
     # TODO: Fix that...
     print('Building the interpolation function for', X.size, 'points...')
-    assert not np.isnan(Z).any()
+    assert not np.isnan(Z).any(), \
+        'Found NaN in the values from which to interpolate.'
+
     F = interpolate.interp2d(X, Y, Z, kind='linear')
 
     # Build the array of points onto which the function will interpolate:
@@ -1503,7 +1562,7 @@ def store_tidal_information(args, transect_data_file):
 
     filenames = args['shapefiles'][category].keys()
 
-    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
+    assert len(filenames) == 1, 'Detected more than one tidal data file'
 
     shp_name = filenames[0]
 
@@ -1683,7 +1742,8 @@ def combine_soil_types(args, transect_data_file):
         [field_name.lower() for field_name in \
             args['shapefiles'][category][shp_name].keys()]
 
-    assert 'type' in field_names_lowercase
+    assert 'type' in field_names_lowercase, \
+        "No 'type' field found for soil types."
 
     type_key = None
     for key in args['shapefiles'][category][shp_name].keys():
@@ -1866,7 +1926,8 @@ def combine_natural_habitats(args, transect_data_file):
                 habitat_id = int(habitat)
                 break
 
-        assert habitat is not None
+        assert habitat_id is not None, \
+            "No habitat '" + habitat_type_name + "' found for " + shp_name
 
         # Build the list of field names in lower case 
         field_names_lowercase = \
@@ -1943,9 +2004,10 @@ def combine_natural_habitats(args, transect_data_file):
                 dataset_type = habitat_type_dataset[transect,position]
 
                 # Can't decide which habitat to choose
-                assert dataset_type != habitat_type, \
-                    "Can't decide which habitat code to choose (" + \
-                    str(dataset_type) + ")"
+                if dataset_type == habitat_type:
+                    raise Exception, \
+                        "Can't decide which habitat code to choose (" + \
+                        str(dataset_type) + ")"
 
                 # Override with nodata
                 if dataset_type == shapefile_nodata:
@@ -2597,7 +2659,9 @@ def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'
     if depths.size < 3:
         return None
 
-    assert new_resolution < old_resolution, 'New resolution should be finer.'
+    if new_resolution > old_resolution:
+        raise Exception, 'New resolution should be finer.'
+    
     x = np.arange(0, depths.size) * old_resolution
     f = interpolate.interp1d(x, depths, kind)
     x_new = \
@@ -2734,8 +2798,15 @@ def clip_transect(transect, max_depth):
 
 #    print('transect', lowest_point, transect)
 
+    # Testing that lowest_point appears before highest_point
+    assert highest_point < lowest_point, \
+        'Highest point ' + str(highest_point) + \
+        ' appears before lowest point ' + str(lowest_point)
+
+    # Testing that highest_point is higher than lowest_point 
     assert transect[highest_point] >= transect[lowest_point], \
-        str(transect[highest_point]) + ' not >= ' + str(transect[lowest_point])
+        'Highest point ' + str(transect[highest_point]) + ' not >= ' \
+        ' lowest point ' + str(transect[lowest_point])
 
     return (transect[highest_point:lowest_point+1], (highest_point, shore, lowest_point+1))
 
