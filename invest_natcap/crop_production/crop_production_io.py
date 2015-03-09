@@ -7,7 +7,7 @@ import logging
 import os
 import pprint as pp
 
-from invest_natcap import raster_utils as ru
+import pygeoprocessing.geoprocessing as ru
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
