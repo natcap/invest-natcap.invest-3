@@ -764,9 +764,9 @@ def compute_nearshore_and_wave_erosion(args):
     bathymetry_resolution = f['habitat_type'].attrs['bathymetry_resolution']
     model_resolution = f['habitat_type'].attrs['model_resolution']
 
-    print('average space between transects:', transect_spacing, 'm')
-    print('bathymetry resolution:', bathymetry_resolution, 'm')
-    print('model resolution:', model_resolution, 'm')
+#    print('average space between transects:', transect_spacing, 'm')
+#    print('bathymetry resolution:', bathymetry_resolution, 'm')
+#    print('model resolution:', model_resolution, 'm')
 
     # ------------------------------------------------
     # Define file contents
@@ -888,10 +888,13 @@ def compute_nearshore_and_wave_erosion(args):
 
 
     #Read data for each transect, one at a time
-    for transect in range(2000, 2500): # Debug
-#    for transect in range(transect_count): # Release
+#    for transect in range(2000, 2500): # Debug
+    progress_step = max(transect_count / 50, 1)
+    for transect in range(transect_count): # Release
+        if transect % progress_step == 0:
+            print '.',
 #        print('')
-        LOGGER.debug('Computing nearshore waves and erosion on transect %i', transect) #transect_count - transect)
+#        LOGGER.debug('Computing nearshore waves and erosion on transect %i', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -956,25 +959,29 @@ def compute_nearshore_and_wave_erosion(args):
                 
                     #Seagrass physical parameters - 'field_indices' dictionary
                     if seagrass_location[0].size:
-                        Sg_diameter_id = field_indices[str(seagrass)]['fields']['stemdiam']
+                        Sg_diameter_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdiam']
                         Sg_diameters = hab_properties[Sg_diameter_id][seagrass_location]
                         mean_stem_diameter = numpy.average(Sg_diameters)
 #                        print('   Seagrass detected. Mean stem diameter: ' + \
 #                            str(mean_stem_diameter) + ' m')
                 
-                        Sg_height_id = field_indices[str(seagrass)]['fields']['stemheight']
+                        Sg_height_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemheight']
                         Sg_height = hab_properties[Sg_height_id][seagrass_location]
                         mean_stem_height = numpy.average(Sg_height)
 #                        print('                                    Mean stem height: ' + \
 #                            str(mean_stem_height) + ' m')
                         
-                        Sg_density_id = field_indices[str(seagrass)]['fields']['stemdensty']
+                        Sg_density_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdensty']
                         Sg_density = hab_properties[Sg_density_id][seagrass_location]
                         mean_stem_density = numpy.average(Sg_density)
 #                        print('                                    Mean stem density: ' + \
 #                              str(mean_stem_density) + ' #/m^2')
                         
-                        Sg_drag_id = field_indices[str(seagrass)]['fields']['stemdrag']
+                        Sg_drag_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdrag']
                         Sg_drag = hab_properties[Sg_drag_id][seagrass_location]
                         mean_stem_drag = numpy.average(Sg_drag)
 #                        print('                                    Mean stem drag: ' + \
@@ -1325,8 +1332,8 @@ def reconstruct_2D_shore_map(args):
             else:
                 transect_footprint.add(coord)
 
-    print('Detected ' + str(intersection_count) + ' intersections in ' + \
-        str(intersecting_transect_count) + ' transects.')
+#    print('Detected ' + str(intersection_count) + ' intersections in ' + \
+#        str(intersecting_transect_count) + ' transects.')
 
 
     # Adjust the intersecting transects so they all agree with each other
@@ -1357,16 +1364,23 @@ def reconstruct_2D_shore_map(args):
 
     transect_footprint.clear() # used to remove coordinate duplicates
 
-    for transect in intersected_transects:
+    LOGGER.info("Processing %i transect intersections:", \
+        len(intersected_transects))
 
-        print('intersected transect', transect)
+    progress_step = max(len(intersected_transects) / 50, 1)
+    counter = 0
+    for transect in intersected_transects:
+        if counter % progress_step == 0:
+            print '.',
+        counter += 1
+#        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
         start = indices_limit_dataset[transect,0]
         end = indices_limit_dataset[transect,1]
 
-        # Clip the reansect at the first occurence of NaN
+        # Clip the transect at the first occurence of NaN
         wave_array = wave_dataset[transect,start:end]
         first_nan = np.where(np.isnan(wave_array))[0]
         if first_nan.size:
@@ -1485,6 +1499,7 @@ def reconstruct_2D_shore_map(args):
 
     # Now, we're ready to invoke the interpolation function
     # TODO: Fix that...
+    print('')
     print('Building the interpolation function for', X.size, 'points...')
     assert not np.isnan(Z).any(), \
         'Found NaN in the values from which to interpolate.'
