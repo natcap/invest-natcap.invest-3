@@ -14,10 +14,10 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from invest_natcap import raster_utils
+import pygeoprocessing
 import nearshore_wave_and_erosion_core
 
-logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("pygeoprocessing").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
 LOGGER = logging.getLogger('nearshore_wave_and_erosion')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -213,16 +213,16 @@ def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
 
     # Reproject AOI to input dataset projection
     reprojected_aoi_uri = os.path.join(out_head, base + '_reprojected_aoi.shp')
-    raster_utils.reproject_datasource_uri(aoi_datasource_uri, input_wkt, \
+    pygeoprocessing.reproject_datasource_uri(aoi_datasource_uri, input_wkt, \
         reprojected_aoi_uri)
 
     # Clip dataset with reprojected AOI
     clipped_dataset_uri = os.path.join(out_head, out_base + '_clipped_unprojected.tif')
-    raster_utils.clip_dataset_uri(in_dataset_uri, reprojected_aoi_uri, \
+    pygeoprocessing.clip_dataset_uri(in_dataset_uri, reprojected_aoi_uri, \
         clipped_dataset_uri, False)
 
     # Reproject clipped dataset to AOI's projection
-    raster_utils.reproject_dataset_uri(clipped_dataset_uri, \
+    pygeoprocessing.reproject_dataset_uri(clipped_dataset_uri, \
         cell_size, aoi_wkt, 'bilinear', out_dataset_uri)
     # Done, return the dataset uri
     return out_dataset_uri    
@@ -269,7 +269,7 @@ def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
         # Removing output_uri if it already exists
         if os.path.isdir(projected_aoi_uri):
             shutil.rmtree(projected_aoi_uri)
-        raster_utils.reproject_datasource(aoi, data_wkt, projected_aoi_uri)
+        pygeoprocessing.reproject_datasource(aoi, data_wkt, projected_aoi_uri)
         # Clip all the shapes outside the aoi
         out_uri = os.path.join(head, base + '_clipped')
         clip_datasource(ogr.Open(projected_aoi_uri), data, out_uri)
@@ -277,7 +277,7 @@ def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
         # Removing output_uri if it already exists
         if os.path.isdir(output_uri):
             shutil.rmtree(output_uri)
-        raster_utils.reproject_datasource(ogr.Open(out_uri), aoi_wkt, \
+        pygeoprocessing.reproject_datasource(ogr.Open(out_uri), aoi_wkt, \
         output_uri)
     # Ensure the resulting file's 1st layer is not empty
     out_shapefile = ogr.Open(output_uri)
@@ -375,7 +375,7 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
         aoi = ogr.Open(aoi_uri)
     # Create the raster that will contain the new data
     raster = \
-        raster_utils.create_raster_from_vector_extents(cell_size, 
+        pygeoprocessing.create_raster_from_vector_extents(cell_size, 
         cell_size, datatype, nodata, \
         output_uri, aoi)
     layer = shapefile.GetLayer(0)
@@ -451,10 +451,10 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
 
 def extract_raster_information(raster_uri):
     raster_nodata = \
-        raster_utils.get_nodata_from_uri(raster_uri)
+        pygeoprocessing.get_nodata_from_uri(raster_uri)
 
     cell_size = \
-        raster_utils.get_cell_size_from_uri(raster_uri)
+        pygeoprocessing.get_cell_size_from_uri(raster_uri)
 
     return (raster_nodata, cell_size)
     
@@ -511,7 +511,7 @@ def execute(args):
     # Initializations
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
-        raster_utils.get_cell_size_from_uri(args['bathymetry_uri']))
+        pygeoprocessing.get_cell_size_from_uri(args['bathymetry_uri']))
     # Look for mis-aligned shore up to 10 pixels inland
     args['max_land_profile_len'] = int(10 * args['cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
@@ -751,7 +751,7 @@ def execute(args):
         os.path.join(args['intermediate_dir'], 'bathymetry.tif')
     if not os.path.isfile(args['bathymetry_raster_uri']):
         LOGGER.debug('Pre-processing bathymetry...')
-        bathy_nodata = raster_utils.get_nodata_from_uri(args['bathymetry_uri'])
+        bathy_nodata = pygeoprocessing.get_nodata_from_uri(args['bathymetry_uri'])
         preprocess_dataset(args['bathymetry_uri'], \
             args['aoi_uri'], args['cell_size'], args['bathymetry_raster_uri'])
 
@@ -982,7 +982,7 @@ def execute(args):
                                 # Copy data over from most recent raster
                                 shutil.copy(in_raster_list[-1], output_uri)
                                 # Extract array
-                                nodata = raster_utils.get_nodata_from_uri(output_uri)
+                                nodata = pygeoprocessing.get_nodata_from_uri(output_uri)
                                 raster = gdal.Open(output_uri, gdal.GA_Update)
                                 band = raster.GetRasterBand(1)
                                 array = band.ReadAsArray()
@@ -1003,7 +1003,7 @@ def execute(args):
                         # Only valid habitat types should be stored in the raster
                         if shapefile_type in args['habitat_shapefiles']:
                             detected_uniques = set( \
-                                raster_utils.unique_raster_values_count( \
+                                pygeoprocessing.unique_raster_values_count( \
                                     output_uri).keys())
 
                             expected_uniques = \
@@ -1045,7 +1045,7 @@ def execute(args):
         args['constraints_type'] = {}
 
         # Precompute aoi nodata
-        aoi_nodata = raster_utils.get_nodata_from_uri(args['aoi_raster_uri'])
+        aoi_nodata = pygeoprocessing.get_nodata_from_uri(args['aoi_raster_uri'])
         bathymetry_nodata, cell_size = \
             extract_raster_information(args['bathymetry_raster_uri'])
 
@@ -1081,9 +1081,9 @@ def execute(args):
 
         # Scales a raster inplace by 'scaling_factor'
         def scale_raster_inplace(raster_uri, scaling_factor):
-            temp_uri = raster_utils.temporary_filename()
+            temp_uri = pygeoprocessing.temporary_filename()
 
-            raster_utils.vectorize_datasets([raster_uri], \
+            pygeoprocessing.vectorize_datasets([raster_uri], \
                 lambda x: x * scaling_factor, temp_uri, gdal.GDT_Float32, -1, \
                 cell_size, 'intersection', vectorize_op = False)
 
@@ -1123,13 +1123,13 @@ def execute(args):
                         os.path.join(args['intermediate_dir'], \
                             'land_distance_mask.tif')
                     
-                    raster_utils.vectorize_datasets( \
+                    pygeoprocessing.vectorize_datasets( \
                         [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
                         keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
                         -1, cell_size, 'intersection', vectorize_op = False)
 
                     # Use the mask to compute distance over land
-                    raster_utils.distance_transform_edt(land_distance_mask_uri, \
+                    pygeoprocessing.distance_transform_edt(land_distance_mask_uri, \
                         constraint_uri)
 
                     scale_raster_inplace(constraint_uri, cell_size)
@@ -1150,13 +1150,13 @@ def execute(args):
                         os.path.join(args['intermediate_dir'], \
                             'water_distance_mask.tif')
 
-                    raster_utils.vectorize_datasets( \
+                    pygeoprocessing.vectorize_datasets( \
                         [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
                         keep_water, water_distance_mask_uri, gdal.GDT_Float32, \
                         -1, cell_size, 'intersection', vectorize_op = False)
 
                     # Use the mask to compute distance over land
-                    raster_utils.distance_transform_edt(water_distance_mask_uri, \
+                    pygeoprocessing.distance_transform_edt(water_distance_mask_uri, \
                         constraint_uri)
 
                     scale_raster_inplace(constraint_uri, cell_size)
@@ -1177,7 +1177,7 @@ def execute(args):
                             os.path.join(args['intermediate_dir'], \
                                 'MHHW_depth_mask.tif')
 
-                        raster_utils.vectorize_datasets( \
+                        pygeoprocessing.vectorize_datasets( \
                             [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
                             keep_land, MHHW_depth_mask_uri, gdal.GDT_Float32, \
                             bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
@@ -1199,7 +1199,7 @@ def execute(args):
                             assert MHHW_uri, "Didn't find MHHW raster from landmass shapefile."
 
                         # Compute the average MHHW
-                        MHHW_nodata = raster_utils.get_nodata_from_uri(MHHW_uri)
+                        MHHW_nodata = pygeoprocessing.get_nodata_from_uri(MHHW_uri)
                         MHHW_raster = gdal.Open(MHHW_uri)
                         MHHW_band = MHHW_raster.GetRasterBand(1)
                         (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
@@ -1211,7 +1211,7 @@ def execute(args):
                         assert mean_MHHW > 0, "Mean High High Water can't be negative"
 
                         # Scale depths to mean_MHHW
-                        raster_utils.vectorize_datasets( \
+                        pygeoprocessing.vectorize_datasets( \
                             [MHHW_depth_mask_uri, args['bathymetry_raster_uri']], \
                             lambda x, y: numpy.where(x==0, y / mean_MHHW, 0.), \
                             constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
@@ -1232,7 +1232,7 @@ def execute(args):
                             os.path.join(args['intermediate_dir'], \
                                 'MLLW_depth_mask.tif')
 
-                        raster_utils.vectorize_datasets( \
+                        pygeoprocessing.vectorize_datasets( \
                             [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
                             keep_water, MLLW_depth_mask_uri, gdal.GDT_Float32, \
                             bathymetry_nodata, cell_size, 'intersection', vectorize_op = False)
@@ -1251,7 +1251,7 @@ def execute(args):
                         assert MLLW_uri, "Didn't find MLLW raster from landmass shapefile."
 
                         # Compute the average MLLW
-                        MLLW_nodata = raster_utils.get_nodata_from_uri(MLLW_uri)
+                        MLLW_nodata = pygeoprocessing.get_nodata_from_uri(MLLW_uri)
                         MLLW_raster = gdal.Open(MLLW_uri)
                         MLLW_band = MLLW_raster.GetRasterBand(1)
                         (MLLW_min, MLLW_max) = MLLW_band.ComputeRasterMinMax()
@@ -1263,7 +1263,7 @@ def execute(args):
                         assert mean_MLLW < 0, "Mean Low Low Water can't be positive"
 
                         # Scale depths to mean_MLLW
-                        raster_utils.vectorize_datasets( \
+                        pygeoprocessing.vectorize_datasets( \
                             [MLLW_depth_mask_uri, args['bathymetry_raster_uri']], \
                             lambda x, y: numpy.where(x==0, y / mean_MLLW, 0.), \
                             constraint_uri, gdal.GDT_Float32, bathymetry_nodata, cell_size, \
@@ -1302,13 +1302,13 @@ def execute(args):
             for constraint_type in habitat_info[2]['constraints'].keys():
                 # Retreive constraint URI
                 constraint_uri = args['constraints_type'][constraint_type] 
-                constraint_nodata = raster_utils.get_nodata_from_uri(constraint_uri)
+                constraint_nodata = pygeoprocessing.get_nodata_from_uri(constraint_uri)
                 # -Extract the constraint value
                 value = habitat_info[2]['constraints'][constraint_type]
                 # -if pos: compute from shore to value
-                output_uri = raster_utils.temporary_filename()
+                output_uri = pygeoprocessing.temporary_filename()
                 if value >= 0.:
-                    raster_utils.vectorize_datasets( \
+                    pygeoprocessing.vectorize_datasets( \
                         [constraint_uri], \
                         # Test for data values in the interval [0, value]
                         lambda x: numpy.logical_and( \
@@ -1319,7 +1319,7 @@ def execute(args):
                         'intersection', vectorize_op = False)
                 # -if neg: compute ~(from shore to value)
                 else:
-                    raster_utils.vectorize_datasets( \
+                    pygeoprocessing.vectorize_datasets( \
                         [constraint_uri], \
                         # Test for data values in the interval ]value, +inf], 
                         # with the sign of value adjusted so that value >0
@@ -1335,7 +1335,7 @@ def execute(args):
             habitat_info[2]['constraint_uri'] = \
                 os.path.join(args['intermediate_dir'], \
                     habitat_name + '_constraint_mask.tif')
-            raster_utils.vectorize_datasets(constraint_uri_list, combine_constraints, \
+            pygeoprocessing.vectorize_datasets(constraint_uri_list, combine_constraints, \
                 habitat_info[2]['constraint_uri'], \
                 gdal.GDT_Float32, constraint_nodata, cell_size, \
                 'intersection', vectorize_op = False)
@@ -1352,9 +1352,9 @@ def execute(args):
         # For every input raster, create a corresponding output raster
         out_raster_list = []
         for uri in in_raster_list:
-            out_raster_list.append(raster_utils.temporary_filename())
+            out_raster_list.append(pygeoprocessing.temporary_filename())
         # Gather info for aligning rasters properly
-        cell_size = raster_utils.get_cell_size_from_uri(args['landmass_raster_uri'])
+        cell_size = pygeoprocessing.get_cell_size_from_uri(args['landmass_raster_uri'])
         resample_method_list = ['bilinear'] * len(out_raster_list)
         out_pixel_size = cell_size
         mode = 'intersection'
@@ -1362,7 +1362,7 @@ def execute(args):
         dataset_to_align_index = 0
         dataset_to_bound_index = 0
         # Invoke raster alignment function
-        raster_utils.align_dataset_list( \
+        pygeoprocessing.align_dataset_list( \
             in_raster_list, out_raster_list, resample_method_list,
             out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index)
 
@@ -1374,9 +1374,9 @@ def execute(args):
 
         # Quick sanity test with shape just to make sure
         landmass_raster_shape = \
-            raster_utils.get_row_col_from_uri(args['landmass_raster_uri'])
+            pygeoprocessing.get_row_col_from_uri(args['landmass_raster_uri'])
         bathymetry_raster_shape = \
-            raster_utils.get_row_col_from_uri(args['bathymetry_raster_uri'])
+            pygeoprocessing.get_row_col_from_uri(args['bathymetry_raster_uri'])
         assert landmass_raster_shape == bathymetry_raster_shape
 
         LOGGER.debug('Done')
