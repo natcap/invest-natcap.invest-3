@@ -13,7 +13,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap.scenic_quality import scenic_quality_core
 import scenic_quality_cython_core
 
@@ -35,7 +35,7 @@ def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     original_dataset = gdal.Open(original_dataset_uri)
     reproject_dataset(original_dataset, *args, **kwargs)
 
-    raster_utils.calculate_raster_stats_uri(original_dataset_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(original_dataset_uri)
 
 def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
@@ -90,16 +90,16 @@ def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
                         original_sr.ExportToWkt(), output_sr.ExportToWkt(),
                         gdal.GRA_Bilinear)
     
-    raster_utils.calculate_raster_stats_uri(output_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(output_uri)
 
 
 def reclassify_quantile_dataset_uri( \
     dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
 
-    nodata_ds = raster_utils.get_nodata_from_uri(dataset_uri)
+    nodata_ds = pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri)
 
-    memory_file_uri = raster_utils.temporary_filename()
-    memory_array = raster_utils.load_memory_mapped_array(dataset_uri, memory_file_uri)
+    memory_file_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    memory_array = pygeoprocessing.geoprocessing.load_memory_mapped_array(dataset_uri, memory_file_uri)
     memory_array_flat = memory_array.reshape((-1,))
 
     quantile_breaks = [0]
@@ -117,9 +117,9 @@ def reclassify_quantile_dataset_uri( \
                     return new_value
         raise ValueError, "Value was not within quantiles."
 
-    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri)
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri)
 
-    raster_utils.vectorize_datasets([dataset_uri],
+    pygeoprocessing.geoprocessing.vectorize_datasets([dataset_uri],
                                     reclass,
                                     dataset_out_uri,
                                     datatype_out,
@@ -128,7 +128,7 @@ def reclassify_quantile_dataset_uri( \
                                     "union",
                                     dataset_to_align_index=0)
 
-    raster_utils.calculate_raster_stats_uri(dataset_out_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(dataset_out_uri)
 
 def get_data_type_uri(ds_uri):
     raster_ds = gdal.Open(ds_uri)
@@ -153,26 +153,26 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
         Default is 0.13."""
 
     # Extract cell size from input DEM
-    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(in_dem_uri)
 
     # Extract nodata
-    nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
+    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(in_dem_uri)
     
     ## Build I and J arrays, and save them to disk
-    rows, cols = raster_utils.get_row_col_from_uri(in_dem_uri)
+    rows, cols = pygeoprocessing.geoprocessing.get_row_col_from_uri(in_dem_uri)
     I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
     # Base path uri
     base_uri = os.path.split(out_viewshed_uri)[0]
     I_uri = os.path.join(base_uri, 'I.tif')
     J_uri = os.path.join(base_uri, 'J.tif')
-    raster_utils.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
     I_raster = gdal.Open(I_uri, gdal.GA_Update)
     I_band = I_raster.GetRasterBand(1)
     I_band.WriteArray(I)
     I_band = None
     I_raster = None
-    raster_utils.new_raster_from_base_uri(in_dem_uri, J_uri, 'GTiff', \
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(in_dem_uri, J_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
     J_raster = gdal.Open(J_uri, gdal.GA_Update)
     J_band = J_raster.GetRasterBand(1)
@@ -180,18 +180,18 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     J_band = None
     J_raster = None
     # Extract the input raster geotransform
-    GT = raster_utils.get_geotransform_uri(in_dem_uri)
+    GT = pygeoprocessing.geoprocessing.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
-    input_nodata = raster_utils.get_nodata_from_uri(in_dem_uri)
+    input_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(in_dem_uri)
     input_raster = gdal.Open(in_dem_uri)
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
     input_array[input_array == input_nodata] = 0.
     input_raster = None
 
     # Create a raster from base before passing it to viewshed
-    visibility_uri = out_viewshed_uri #raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
+    visibility_uri = out_viewshed_uri #pygeoprocessing.geoprocessing.temporary_filename()
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
         0., gdal.GDT_Float64, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
@@ -436,20 +436,20 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         # Write temporary result on disk
         tmp_uri = os.path.join(base_uri, 'viewshed_' + str(dist) + '_' + str(f) + '.tif')
-        raster_utils.new_raster_from_base_uri(visibility_uri, tmp_uri, 'GTiff', \
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(visibility_uri, tmp_uri, 'GTiff', \
             0., gdal.GDT_Float32, fill_value = 0)
         tmp_raster = gdal.Open(tmp_uri, gdal.GA_Update)
         tmp_band = tmp_raster.GetRasterBand(1)
         tmp_band.WriteArray(visibility_array)
         tmp_band = None
         tmp_raster = None
-        raster_utils.calculate_raster_stats_uri(tmp_uri)
+        pygeoprocessing.geoprocessing.calculate_raster_stats_uri(tmp_uri)
         visibility_raster = gdal.Open(visibility_uri, gdal.GA_Update)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_band.WriteArray(accum_visibility)
         visibility_band = None
         visibility_raster = None
-        raster_utils.calculate_raster_stats_uri(visibility_uri)
+        pygeoprocessing.geoprocessing.calculate_raster_stats_uri(visibility_uri)
         
         last_dist = max_distances[f]
 
@@ -459,7 +459,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     visibility_band.WriteArray(accum_visibility)
     visibility_band = None
     visibility_raster = None
-    raster_utils.calculate_raster_stats_uri(visibility_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(visibility_uri)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -564,7 +564,7 @@ def execute(args):
 
     #validate input
     LOGGER.debug("Validating parameters.")
-    dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
+    dem_cell_size=pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
     if "cell_size" in aq_args:
         if aq_args['cell_size'] < dem_cell_size:
@@ -620,17 +620,17 @@ def execute(args):
     LOGGER.info("Clipping DEM by AOI.")
 
     LOGGER.debug("Projecting AOI for DEM.")
-    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
+    dem_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
+    pygeoprocessing.geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
     LOGGER.debug("DEM: %s, AOI: %s", aq_args['dem_uri'], aoi_dem_uri)
-    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    pygeoprocessing.geoprocessing.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
     LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
 
-    nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
+    nodata_dem = pygeoprocessing.geoprocessing.get_nodata_from_uri(aq_args['dem_uri'])
 
     def no_zeros(value):
         if value == nodata_dem:
@@ -640,7 +640,7 @@ def execute(args):
         else:
             return value
 
-    raster_utils.vectorize_datasets([viewshed_dem_uri],
+    pygeoprocessing.geoprocessing.vectorize_datasets([viewshed_dem_uri],
                                     no_zeros,
                                     viewshed_dem_reclass_uri,
                                     get_data_type_uri(viewshed_dem_uri),
@@ -672,27 +672,27 @@ def execute(args):
         #tabulate population impact
         LOGGER.info("Tabulating population impact.")
         LOGGER.debug("Tabulating unaffected population.")
-        nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
+        nodata_pop = pygeoprocessing.geoprocessing.get_nodata_from_uri(aq_args["pop_uri"])
         LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
-        nodata_viewshed = raster_utils.get_nodata_from_uri(viewshed_uri)
+        nodata_viewshed = pygeoprocessing.geoprocessing.get_nodata_from_uri(viewshed_uri)
         LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
 
         #clip population
         LOGGER.debug("Projecting AOI for population raster clip.")
-        pop_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-        raster_utils.reproject_datasource_uri(aq_args['aoi_uri'],
+        pop_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
+        pygeoprocessing.geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'],
                                               pop_wkt,
                                               aoi_pop_uri)
 
         LOGGER.debug("Clipping population raster by projected AOI.")
-        raster_utils.clip_dataset_uri(aq_args['pop_uri'],
+        pygeoprocessing.geoprocessing.clip_dataset_uri(aq_args['pop_uri'],
                                       aoi_pop_uri,
                                       pop_clip_uri,
                                       False)
         
         #reproject clipped population
         LOGGER.debug("Reprojecting clipped population raster.")
-        vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
+        vs_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(viewshed_uri)
         reproject_dataset_uri(pop_clip_uri,
                                            vs_wkt,
                                            pop_prj_uri,
@@ -706,7 +706,7 @@ def execute(args):
                 return value1
         
         LOGGER.debug("Resampling and aligning population raster.")
-        raster_utils.vectorize_datasets([pop_prj_uri, viewshed_uri],
+        pygeoprocessing.geoprocessing.vectorize_datasets([pop_prj_uri, viewshed_uri],
                                        copy,
                                        pop_vs_uri,
                                        get_data_type_uri(pop_prj_uri),
@@ -778,7 +778,7 @@ def execute(args):
         else:
             return nodata_vs_bool
 
-    raster_utils.vectorize_datasets([viewshed_uri],
+    pygeoprocessing.geoprocessing.vectorize_datasets([viewshed_uri],
                                     non_zeros,
                                     viewshed_reclass_uri,
                                     gdal.GDT_Byte,
@@ -788,7 +788,7 @@ def execute(args):
 
     if "overlap_uri" in aq_args:  
         LOGGER.debug("Copying overlap analysis features.")
-        raster_utils.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+        pygeoprocessing.geoprocessing.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
 
         LOGGER.debug("Adding id field to overlap features.")
         id_name = "investID"
@@ -799,7 +799,7 @@ def execute(args):
         add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
         
         LOGGER.debug("Count overlapping pixels per area.")
-        values = raster_utils.aggregate_raster_values_uri(
+        values = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
             viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
 
         def calculate_percent(feature):

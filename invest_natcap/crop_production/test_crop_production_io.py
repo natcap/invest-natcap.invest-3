@@ -102,6 +102,7 @@ class TestIOFetchObservedYieldMaps(unittest.TestCase):
     def test_fetch_observed_yield_maps(self):
         guess = io.fetch_observed_yield_maps(self.vars_dict)
         observed_yield_maps_dict = guess['observed_yields_maps_dict']
+        # pp.pprint(observed_yield_maps_dict)
         keys = observed_yield_maps_dict.keys()
         assert(type(observed_yield_maps_dict[keys[0]]) is str)
 
@@ -224,19 +225,19 @@ class TestIOCleanUpTmp(unittest.TestCase):
 
     def test_run(self):
         io.clean_up_tmp(self.vars_dict)
-        pp.pprint(self.vars_dict)
+        # pp.pprint(self.vars_dict)
         assert(not os.path.exists(self.vars_dict['tmp_dir']))
 
 
-class TestIOCreateOutputs(unittest.TestCase):
-    def setUp(self):
-        self.vars_dict = {
+# class TestIOCreateOutputs(unittest.TestCase):
+#     def setUp(self):
+#         self.vars_dict = {
 
-        }
+#         }
 
-    def test_run(self):
-        guess = io.create_outputs(self.vars_dict)
-        pp.pprint(guess)
+#     def test_run(self):
+#         guess = io.create_outputs(self.vars_dict)
+#         pp.pprint(guess)
 
 if __name__ == '__main__':
     unittest.main()
