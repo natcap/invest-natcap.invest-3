@@ -17,7 +17,7 @@ import pstats
 
 from osgeo import gdal, ogr
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 import shutil
 
@@ -70,7 +70,7 @@ def calculate_priority(table_uri):
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
     # Compute pixel distance
-    raster_utils.distance_transform_edt(dataset_in_uri, dataset_out_uri)
+    pygeoprocessing.geoprocessing.distance_transform_edt(dataset_in_uri, dataset_out_uri)
     
     # Convert to meters
     def pixel_to_meters_op(x):
@@ -78,10 +78,10 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
 
         return x
 
-    cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
-    nodata = raster_utils.get_nodata_from_uri(dataset_out_uri)
-    tmp = raster_utils.temporary_filename()
-    raster_utils.vectorize_datasets(
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_in_uri)
+    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_out_uri)
+    tmp = pygeoprocessing.geoprocessing.temporary_filename()
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         [dataset_out_uri], \
         pixel_to_meters_op, \
         tmp, \
@@ -94,7 +94,7 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
     def identity_op(x):
         return x
 
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         [tmp], \
         identity_op, \
         dataset_out_uri, \
@@ -105,22 +105,22 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
         vectorize_op = False)
 
     # Compute raster stats so the raster is viewable in QGIS and Arc
-    raster_utils.calculate_raster_stats_uri(dataset_out_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(dataset_out_uri)
 
 ##def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None, max_distance = None):
 ##    if cell_size == None:
-##        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+##        cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_in_uri)
 ##
-##    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
+##    memory_array = pygeoprocessing.geoprocessing.load_memory_mapped_array(dataset_in_uri, pygeoprocessing.geoprocessing.temporary_filename())
 ##
 ##    memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
 ##
-##    nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
+##    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_in_uri)
 ##
 ####    if max_distance != None:
 ####        memory_array[memory_array > max_distance] = nodata
 ##
-##    raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
+##    pygeoprocessing.geoprocessing.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
 ##
 ##    dataset_out = gdal.Open(dataset_out_uri, 1)
 ##    band = dataset_out.GetRasterBand(1)
@@ -145,8 +145,8 @@ def get_geometry_type_from_uri(datasource_uri):
     return shape_type
 
 def get_transition_set_count_from_uri(dataset_uri_list):
-    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
-    lulc_nodata = int(raster_utils.get_nodata_from_uri(dataset_uri_list[0]))
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri_list[0])
+    lulc_nodata = int(pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
 
     #reclass rasters to compact bit space
@@ -154,7 +154,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
     unique_raster_values_count = {}
 
     for dataset_uri in dataset_uri_list:
-        unique_raster_values_count[dataset_uri] = raster_utils.unique_raster_values_count(dataset_uri)
+        unique_raster_values_count[dataset_uri] = pygeoprocessing.geoprocessing.unique_raster_values_count(dataset_uri)
         lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
 
     lulc_codes = list(lulc_codes)
@@ -181,12 +181,12 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     counts={}
     for i in range(len(dataset_uri_list)-1):
-        orig_uri = raster_utils.temporary_filename()
-        dest_uri = raster_utils.temporary_filename()
-        multi_uri = raster_utils.temporary_filename()
+        orig_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        dest_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        multi_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
         #reclass orig values
-        raster_utils.reclassify_dataset_uri(dataset_uri_list[i],
+        pygeoprocessing.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i],
                                             reclass_orig_dict,
                                             orig_uri,
                                             data_type,
@@ -194,7 +194,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                                             exception_flag="values_required")
 
         #reclass dest values
-        raster_utils.reclassify_dataset_uri(dataset_uri_list[i+1],
+        pygeoprocessing.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i+1],
                                             reclass_dest_dict,
                                             dest_uri,
                                             data_type,
@@ -202,7 +202,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                                             exception_flag="values_required")
 
         #multiplex orig with dest
-        raster_utils.vectorize_datasets([orig_uri, dest_uri],
+        pygeoprocessing.geoprocessing.vectorize_datasets([orig_uri, dest_uri],
                                         add_op,
                                         multi_uri,
                                         data_type,
@@ -211,7 +211,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
                                         "union")
 
         #get unique counts
-        counts[i]=raster_utils.unique_raster_values_count(multi_uri, False)
+        counts[i]=pygeoprocessing.geoprocessing.unique_raster_values_count(multi_uri, False)
 
     restore_classes = {}
     for key in reclass_orig_dict:
@@ -452,7 +452,7 @@ def filter_fragments(input_uri, size, output_uri):
     dst_band.WriteArray(dst_array)
 
 def sum_uri(dataset_uri, datasource_uri):
-    """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
+    """Wrapper call to pygeoprocessing.geoprocessing.aggregate_raster_values_uri to extract total
 
     :param dataset_uri: The uri for the input raster.
     :type dataset_uri: str
@@ -460,7 +460,7 @@ def sum_uri(dataset_uri, datasource_uri):
     :return: None
     :rtype: None
     """
-    total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
+    total = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
     
 def execute(args):
@@ -532,7 +532,7 @@ def execute(args):
     override_dataset_uri = os.path.join(workspace,"override" + suffix + ".tif")
     landcover_htm_uri = os.path.join(workspace,"scenario-output-summary" + suffix + ".html")
 
-    raster_utils.create_directories([workspace])
+    pygeoprocessing.geoprocessing.create_directories([workspace])
 
     #relative paths, or with patterned name
     transition_name = os.path.join(intermediate_dir, "transition_%i" + suffix + ".tif")
@@ -594,10 +594,10 @@ def execute(args):
     transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
         #load transition table
-        transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+        transition_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(args["transition"], args["transition_id"])
 
         #raise error if LULC contains cover id's not in transition table
-        landcover_count_dict = raster_utils.unique_raster_values_count(landcover_uri)
+        landcover_count_dict = pygeoprocessing.geoprocessing.unique_raster_values_count(landcover_uri)
         missing_lulc = set(landcover_count_dict).difference(transition_dict.keys())
         if len(missing_lulc) > 0 :
             missing_lulc = list(missing_lulc)
@@ -641,7 +641,7 @@ def execute(args):
 
 ##    #validate resampling size
 ##    if args["resolution"] != "":
-##        if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
+##        if args["resolution"] < pygeoprocessing.geoprocessing.get_cell_size_from_uri(landcover_uri):
 ##            msg = "The analysis resolution cannot be smaller than the input."
 ##            LOGGER.error(msg)
 ##            raise ValueError, msg
@@ -649,8 +649,8 @@ def execute(args):
 ##        else:
 ##            LOGGER.info("Resampling land cover.")
 ##            #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
-##            bounding_box = raster_utils.get_bounding_box(landcover_uri)
-##            raster_utils.resize_and_resample_dataset_uri(landcover_uri,
+##            bounding_box = pygeoprocessing.geoprocessing.get_bounding_box(landcover_uri)
+##            pygeoprocessing.geoprocessing.resize_and_resample_dataset_uri(landcover_uri,
 ##                                                         bounding_box,
 ##                                                         args["resolution"],
 ##                                                         landcover_resample_uri,
@@ -658,7 +658,7 @@ def execute(args):
 ##            LOGGER.debug("Changing landcover uri to resampled uri.")
 ##            landcover_uri = landcover_resample_uri
 
-    cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(landcover_uri)
 
     suitability_transition_dict = {}
 
@@ -675,7 +675,7 @@ def execute(args):
 
             if not all_zeros:
                 #reclass lulc by reclass_dict
-                raster_utils.reclassify_dataset_uri(landcover_uri,
+                pygeoprocessing.geoprocessing.reclassify_dataset_uri(landcover_uri,
                                                     reclass_dict,
                                                     this_uri,
                                                     transition_type,
@@ -692,7 +692,7 @@ def execute(args):
 
     suitability_factors_dict = {}
     if args["calculate_factors"]:
-        factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
+        factor_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(args["suitability"], args["suitability_id"])
         factor_uri_dict = {}
         factor_folder = args["suitability_folder"]
 
@@ -729,8 +729,8 @@ def execute(args):
                     burn_value = [1]
                     suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
                     gdal_format = gdal.GDT_Float64
-                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
-                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
+                    pygeoprocessing.geoprocessing.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 0)
+                    pygeoprocessing.geoprocessing.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
                     factor_uri_dict[(factor_stem, suitability_field_name, distance)] = ds_uri
 
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]: #point or line
@@ -747,20 +747,20 @@ def execute(args):
                     burn_value = [1]
                     LOGGER.info("Buffering rasterization of %s to distance of %i.", factor_stem, distance)
                     gdal_format = gdal.GDT_Byte
-                    raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, -1, gdal_format)
+                    pygeoprocessing.geoprocessing.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, -1, gdal_format)
 
-                    landcover_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
-                    ds_nodata = raster_utils.get_nodata_from_uri(ds_uri)
+                    landcover_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(landcover_uri)
+                    ds_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(ds_uri)
 
-                    raster_utils.vectorize_datasets([landcover_uri], \
+                    pygeoprocessing.geoprocessing.vectorize_datasets([landcover_uri], \
                         lambda x: 0 if x != landcover_nodata else -1, \
                         ds_uri, \
-                        raster_utils.get_datatype_from_uri(ds_uri), \
+                        pygeoprocessing.geoprocessing.get_datatype_from_uri(ds_uri), \
                         ds_nodata, \
-                        raster_utils.get_cell_size_from_uri(ds_uri), \
+                        pygeoprocessing.geoprocessing.get_cell_size_from_uri(ds_uri), \
                         'intersection')
 
-                    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
+                    pygeoprocessing.geoprocessing.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list)
 
                     calculate_distance_raster_uri(ds_uri, distance_uri)
 
@@ -768,17 +768,17 @@ def execute(args):
                         result = numpy.where(value > distance, transition_nodata, value)
                         return numpy.where(value == transition_nodata, transition_nodata, result)
 
-                    raster_utils.vectorize_datasets([distance_uri],
+                    pygeoprocessing.geoprocessing.vectorize_datasets([distance_uri],
                                                     threshold,
                                                     fdistance_uri,
-                                                    raster_utils.get_datatype_from_uri(distance_uri),
+                                                    pygeoprocessing.geoprocessing.get_datatype_from_uri(distance_uri),
                                                     transition_nodata,
                                                     cell_size,
                                                     "union",
                                                     vectorize_op = False)
 
-                    raster_utils.calculate_raster_stats_uri(fdistance_uri)
-                    minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+                    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(fdistance_uri)
+                    minimum, maximum, _, _ = pygeoprocessing.geoprocessing.get_statistics_from_uri(fdistance_uri)
 
                     def normalize_op(value):
                         diff = float(maximum - minimum)
@@ -789,7 +789,7 @@ def execute(args):
                             ((distance_scale - 1) - (((value - minimum) / \
                                 diff) * (distance_scale - 1))) + 1)
 
-                    raster_utils.vectorize_datasets([fdistance_uri],
+                    pygeoprocessing.geoprocessing.vectorize_datasets([fdistance_uri],
                                                     normalize_op,
                                                     normalized_uri,
                                                     transition_type,
@@ -804,12 +804,12 @@ def execute(args):
                     raise ValueError, "Invalid geometry type %i." % shape_type
 
                 # Apply nodata to the factors raster
-                landcover_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
-                temp_uri = raster_utils.temporary_filename()
+                landcover_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(landcover_uri)
+                temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
                 def apply_nodata_op(landcover, value):
                     return numpy.where(landcover == landcover_uri, 0, value)
 
-                raster_utils.vectorize_datasets( \
+                pygeoprocessing.geoprocessing.vectorize_datasets( \
                     [landcover_uri,
                     factor_uri_dict[(factor_stem, suitability_field_name, distance)]],
                     apply_nodata_op,
@@ -823,7 +823,7 @@ def execute(args):
                 def identity_op(x):
                     return x
 
-                raster_utils.vectorize_datasets( \
+                pygeoprocessing.geoprocessing.vectorize_datasets( \
                     [temp_uri],
                     identity_op,
                     factor_uri_dict[(factor_stem, suitability_field_name, distance)],
@@ -861,7 +861,7 @@ def execute(args):
                     return result
 
 #                print('------files:', uri_list, weights_list)
-                raster_utils.vectorize_datasets(list(uri_list),
+                pygeoprocessing.geoprocessing.vectorize_datasets(list(uri_list),
                                                 weighted_op,
                                                 ds_uri,
                                                 suitability_type,
@@ -884,7 +884,7 @@ def execute(args):
                     ds_uri = os.path.join(workspace, factors_name % cover_id)
 
                     print('cover_ids', suitability_dict.keys())
-                    raster_utils.vectorize_datasets([suitability_transition_dict[cover_id],
+                    pygeoprocessing.geoprocessing.vectorize_datasets([suitability_transition_dict[cover_id],
                                                      suitability_factors_dict[cover_id]],
                                                     suitability_op,
                                                     ds_uri,
@@ -924,8 +924,8 @@ def execute(args):
         burn_value = [0]
         constraints_field = ["ATTRIBUTE=%s" % constraints_field_name]
         gdal_format = gdal.GDT_Float64
-        raster_utils.new_raster_from_base_uri(landcover_uri, constraints_ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
-        raster_utils.rasterize_layer_uri(constraints_ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(landcover_uri, constraints_ds_uri, raster_format, transition_nodata, gdal_format, fill_value = 1)
+        pygeoprocessing.geoprocessing.rasterize_layer_uri(constraints_ds_uri, constraints_uri, burn_value, option_list=option_list + constraints_field)
         # Check that the values make sense
         raster = gdal.Open(constraints_ds_uri)
         band = raster.GetRasterBand(1)
@@ -949,11 +949,11 @@ def execute(args):
                 reclass_dict[cover_id] = 0
 
                 ds_uri = os.path.join(workspace, cover_name % cover_id)
-                distance_uri = raster_utils.temporary_filename()
+                distance_uri = pygeoprocessing.geoprocessing.temporary_filename()
                 fdistance_uri = os.path.join(workspace, proximity_name % cover_id)
                 normalized_uri = os.path.join(workspace, normalized_proximity_name % cover_id)
 
-                raster_utils.reclassify_dataset_uri(landcover_uri,
+                pygeoprocessing.geoprocessing.reclassify_dataset_uri(landcover_uri,
                                                   reclass_dict,
                                                   ds_uri,
                                                   transition_type,
@@ -967,15 +967,18 @@ def execute(args):
                         return transition_nodata
                     return value
 
-                raster_utils.vectorize_datasets([distance_uri],
+                pygeoprocessing.geoprocessing.vectorize_datasets([distance_uri],
                                               threshold,
                                               fdistance_uri,
-                                              raster_utils.get_datatype_from_uri(distance_uri),
+                                              pygeoprocessing.geoprocessing.get_datatype_from_uri(distance_uri),
                                               transition_nodata,
                                               cell_size,
                                               "union")
 
-                minimum, maximum, _, _ = raster_utils.get_statistics_from_uri(fdistance_uri)
+                minimum, maximum, _, _ = pygeoprocessing.geoprocessing.get_statistics_from_uri(fdistance_uri)
+
+                assert minimum < maximum, "Wrong distance (min, max) = (" + \
+                    str(minimum) + ", " + str(maximum) + ") in " + fdistance_uri
 
                 def normalize_op(value):
                     if value == transition_nodata:
@@ -987,7 +990,7 @@ def execute(args):
                                  * (distance_scale - 1))) \
                                  + 1
 
-                raster_utils.vectorize_datasets([fdistance_uri],
+                pygeoprocessing.geoprocessing.vectorize_datasets([fdistance_uri],
                                                 normalize_op,
                                                 normalized_uri,
                                                 transition_type,
@@ -1026,7 +1029,7 @@ def execute(args):
                             constraints_ds_uri,
                             proximity_dict[cover_id]]
                 LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
-                raster_utils.vectorize_datasets(uri_list,
+                pygeoprocessing.geoprocessing.vectorize_datasets(uri_list,
                                                 constraint_proximity_op,
                                                 suitability_uri,
                                                 transition_type,
@@ -1041,7 +1044,7 @@ def execute(args):
                             constraints_ds_uri]
 #                print('------suitability and constraint files:', uri_list)
                 LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
-                raster_utils.vectorize_datasets(uri_list,
+                pygeoprocessing.geoprocessing.vectorize_datasets(uri_list,
                                                 constraint_op,
                                                 suitability_uri,
                                                 transition_type,
@@ -1055,7 +1058,7 @@ def execute(args):
             uri_list = [suitability_dict[cover_id],
                         proximity_dict[cover_id]]
             LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
-            raster_utils.vectorize_datasets(uri_list,
+            pygeoprocessing.geoprocessing.vectorize_datasets(uri_list,
                                             proximity_op,
                                             suitability_uri,
                                             transition_type,
@@ -1104,7 +1107,8 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((priorities_dict[cover_id],
                                     cover_id,
-                                    int(math.ceil(area_change / cell_size))))
+                                    10000 * int(math.ceil(area_change \
+                                        / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
     else:
@@ -1119,7 +1123,8 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((transition_dict[cover_id][args["priority_field"]],
                                    cover_id,
-                                   int(math.ceil(area_change / cell_size))))
+                                   10000 * int(math.ceil(area_change \
+                                        / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
 
@@ -1360,7 +1365,7 @@ def execute(args):
     
     cover_names_dict = {}
 
-    transition_dict = raster_utils.get_lookup_from_csv(args["transition"], args["transition_id"])
+    transition_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(args["transition"], args["transition_id"])
     cover_names_dict = {}
     for cover in transition_dict:
         cover_names_dict[cover] =  transition_dict[cover]["Name"] 

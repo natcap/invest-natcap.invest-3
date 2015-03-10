@@ -18,14 +18,14 @@
           "label": "Workspace",
           "defaultValue": "../Carbon",
           "required": true,
-          "helpText": "A directory that will contain the intermediate and output files for this run."
+          "helpText": "This is a test <br><br>The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
         {
           "id": "results_suffix",
           "args_id": "suffix",
           "type": "text",
           "dataType": "string",
-          "label": "Results Suffix (optional)",
+          "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"
@@ -42,7 +42,7 @@
         {
           "id": "top_label",
           "type": "label",
-          "label": "You can choose to run the biophysical model, the valuation model, or both. In order to run the valuation model, you must either run the biophysical model with sequestration analysis, or provide your own carbon sequestration map."
+          "label": "The biophysical model and valuation model may be run independently or together. In order to run the valuation model, either the biophysical model must be run with 'Calculate Sequestration' checked, or inputs must be provided under the 'Sequestration Data' section below."
         }
       ]
     },
@@ -52,7 +52,7 @@
       "collapsible": true,
       "defaultValue": true,
       "args_id": "do_biophysical",
-      "label": "Run biophysical model",
+      "label": "Run Biophysical Model",
       "elements": [
         {
           "id": "biophysical_first_list",
@@ -61,17 +61,17 @@
             {
               "id": "calc_sequestration",
               "type": "checkbox",
-              "label": "Calculate sequestration",
-              "helpText": "Check to enable sequestration analysis. This requires inputs of LULC maps for both current and future scenarios.",
+              "label": "Calculate Sequestration",
+              "helpText": "Check to enable sequestration analysis. This requires inputs of Land Use/Land Cover maps for both current and future scenarios.",
               "defaultValue": false,
               "required": false
             },
             {
               "id": "redd",
               "type": "checkbox",
-              "label": "REDD scenario analysis",
+              "label": "REDD Scenario Analysis",
               "enabledBy": "calc_sequestration",
-              "helpText": "Check to enable REDD scenario analysis. This requires three LULC maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
+              "helpText": "Check to enable REDD scenario analysis. This requires three Land Use/Land Cover maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
               "defaultValue": false,
               "required": false
             }
@@ -81,7 +81,7 @@
           "id": "cur_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Current land use/land cover",
+          "label": "Current Land Use/Land Cover",
           "elements": [
             {
               "id": "cur_lulc_list",
@@ -91,13 +91,13 @@
                   "id": "cur_lulc_raster",
                   "args_id": "lulc_cur_uri",
                   "type": "file",
-                  "label": "Raster location",
+                  "label": "Current Land Use/Land Cover (Raster)",
                   "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                   "required": true,
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the current scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the current scenario."
                 },
                 {
                   "id": "cur_lulc_year",
@@ -106,7 +106,7 @@
                   "validText": "-?[0-9]+",
                   "dataType": "int",
                   "args_id": "lulc_cur_year",
-                  "label": "Year of land cover",
+                  "label": "Year of Land Cover",
                   "required": false,
                   "enabledBy": "calc_sequestration",
                   "requiredIf": [
@@ -124,7 +124,7 @@
           "id": "fut_lulc_box",
           "type": "container",
           "collapsible": false,
-          "label": "Future land use/land cover",
+          "label": "Future Land Use/Land Cover",
           "elements": [
             {
               "id": "fut_lulc_list",
@@ -133,7 +133,7 @@
                 {
                   "id": "fut_lulc_raster",
                   "type": "file",
-                  "label": "Baseline raster",
+                  "label": "Baseline (Raster)",
                   "args_id": "lulc_fut_uri",
                   "required": false,
                   "enabledBy": "calc_sequestration",
@@ -144,12 +144,12 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the future scenario. <br><br>If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
                 },
                 {
                   "id": "redd_lulc_raster",
                   "type": "file",
-                  "label": "REDD policy raster",
+                  "label": "REDD Policy (Raster)",
                   "args_id": "lulc_redd_uri",
                   "required": false,
                   "enabledBy": "redd",
@@ -160,7 +160,7 @@
                   "validateAs": {
                     "type": "GDAL"
                   },
-                  "helpText": "Location of the landcover map for the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
+                  "helpText": "A GDAL-supported raster representing the land-cover of the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
                 },
                 {
                   "id": "fut_lulc_year",
@@ -168,7 +168,7 @@
                   "width": 70,
                   "validText": "-?[0-9]+",
                   "dataType": "int",
-                  "label": "Year of land cover",
+                  "label": "Year of Land Cover",
                   "args_id": "lulc_fut_year",
                   "required": false,
                   "defaultValue": "2030",
@@ -189,7 +189,7 @@
             {
               "id": "carbon_pools",
               "type": "file",
-              "label": "Carbon pools",
+              "label": "Carbon Pools",
               "defaultValue": "../Carbon/Input/carbon_pools_samp.csv",
               "args_id": "carbon_pools_uri",
               "required": true,
@@ -204,12 +204,12 @@
                   "C_Dead"
                 ]
               },
-              "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
+              "helpText": "A table that maps the land-cover IDs to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the User's Guide.  The values in LULC must at least include the LULC IDs in the land cover maps."
             },
             {
               "id": "cur_harvest_map",
               "type": "file",
-              "label": "Current harvest rate map",
+              "label": "Current Harvest Rate Map (Optional)",
               "args_id": "hwp_cur_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_cur.shp",
@@ -237,12 +237,12 @@
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "A shapefile to indicate harvested wood products for the current scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+              "helpText": "An OGR-supported shapefile containing information about harvested wood products for the current scenario.  The field is optional.  If supplied, the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
             },
             {
               "id": "fut_harvest_map",
               "type": "file",
-              "label": "Future harvest rate map",
+              "label": "Future Harvest Rate Map (Optional)",
               "args_id": "hwp_fut_shape_uri",
               "required": false,
               "defaultValue": "../Carbon/Input/harv_samp_fut.shp",
@@ -269,7 +269,7 @@
               "returns": {
                 "ifEmpty": "pass"
               },
-              "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+              "helpText": "An OGR-supported shapefile containing information about harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
             }
           ]
         },
@@ -278,7 +278,7 @@
           "type": "container",
           "collapsible": true,
           "args_id": "do_uncertainty",
-          "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
+          "label": "Data for Uncertainty Analysis (enable to trigger uncertainty analysis)",
           "elements": [
             {
               "id": "uncertainty_list",
@@ -305,7 +305,7 @@
                       "C_dead_sd"
                     ]
                   },
-                  "helpText": "A table that maps the land cover ids to probability distributions for carbon pools. Each probability distribution must be specified by a mean and a standard deviation. The table must contain columns of 'LULC', 'C_above_mean', 'C_above_sd', 'C_below_mean', 'C_below_sd', 'C_soil_mean', 'C_soil_sd', 'C_dead_mean', and 'C_dead_sd' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
+                  "helpText": "A table that maps the land cover ids to probability distributions for carbon pools. Each probability distribution must be specified by a mean and a standard deviation. The table must contain columns of 'LULC', 'C_above_mean', 'C_above_sd', 'C_below_mean', 'C_below_sd', 'C_soil_mean', 'C_soil_sd', 'C_dead_mean', and 'C_dead_sd' as described in the user's guide.  The values in LULC must at least include the LULC IDs in the land cover maps."
                 },
                 {
                   "id": "confidence_threshold",
@@ -315,7 +315,7 @@
                   "defaultValue": "90",
                   "dataType": "float",
                   "args_id": "confidence_threshold",
-                  "label": "Confidence threshold",
+                  "label": "Confidence Threshold",
                   "requiredIf": [
                     "carbon_pools_uncertain"
                   ],
@@ -340,7 +340,7 @@
             {
               "id": "sequest_uri",
               "type": "file",
-              "label": "Sequestration raster",
+              "label": "Sequestration Raster",
               "args_id": "sequest_uri",
               "validateAs": {
                 "type": "GDAL"
@@ -353,7 +353,7 @@
               "args_id": "yr_cur",
               "type": "text",
               "width": 70,
-              "label": "Start year of sequestration measurement",
+              "label": "Start Year of Sequestration Measurement",
               "required": true,
               "dataType": "int",
               "validText": "-?[0-9]+",
@@ -368,7 +368,7 @@
               "args_id": "yr_fut",
               "type": "text",
               "width": 70,
-              "label": "Final year of sequestration measurement",
+              "label": "Final Year of Sequestration Measurement",
               "required": true,
               "dataType": "int",
               "validText": "-?[0-9]+",
@@ -387,7 +387,7 @@
       "type": "container",
       "collapsible": true,
       "args_id": "do_valuation",
-      "label": "Run valuation model",
+      "label": "Run Valuation Model",
       "elements": [
         {
           "id": "valuation_label_list",
@@ -396,7 +396,7 @@
             {
               "id": "valuation_label",
               "type": "label",
-              "label": "In order to run valuation, you must either run the biophysical model with sequestration analysis, or provide your own sequestration data above."
+              "label": "In order to run valuation, either the biophysical model must be run with 'Calculate Sequestration' checked, or inputs must be provided under the 'Sequestration Data' section above."
             }
           ]
         },
@@ -408,7 +408,7 @@
               "id": "carbon_price_units",
               "args_id": "carbon_price_units",
               "type": "dropdown",
-              "label": "Price in terms of metric tons of",
+              "label": "Price in Terms of Metric Tons of",
               "options": [
                 "Carbon (C)",
                 "Carbon Dioxide (CO2)"
@@ -422,7 +422,7 @@
               "args_id": "V",
               "type": "text",
               "width": 70,
-              "label": "Value of Carbon (USD/metric ton)",
+              "label": "Value of Carbon (Price/Metric Ton)",
               "required": true,
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
@@ -437,7 +437,7 @@
               "args_id": "r",
               "type": "text",
               "width": 70,
-              "label": "Market discount in price of Carbon (%)",
+              "label": "Market Discount in Price of Carbon (%)",
               "required": true,
               "dataType": "int",
               "validText": "-?([0-9]+)?\\.[0-9]+",
@@ -452,7 +452,7 @@
               "args_id": "c",
               "type": "text",
               "width": 70,
-              "label": "Annual rate of change in price of Carbon (%)",
+              "label": "Annual Rate of Change in Price of Carbon (%)",
               "required": true,
               "dataType": "float",
               "validText": "-?([0-9]+)?\\.[0-9]+",

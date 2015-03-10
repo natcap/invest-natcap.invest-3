@@ -6,7 +6,7 @@ import logging
 from osgeo import gdal
 import numpy
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('carbon_utils')
 
@@ -36,7 +36,7 @@ def setup_dirs(workspace_dir, *dirnames):
 def sum_pixel_values_from_uri(uri):
     '''Return the sum of the values of all pixels in the given file.'''
     dataset = gdal.Open(uri)
-    band, nodata = raster_utils.extract_band_and_nodata(dataset)
+    band, nodata = pygeoprocessing.geoprocessing.extract_band_and_nodata(dataset)
     total_sum = 0.0
     # Loop over each row in out_band
     for row_index in range(band.YSize):

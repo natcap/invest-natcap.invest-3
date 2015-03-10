@@ -9,7 +9,7 @@ import csv
 from osgeo import ogr
 import numpy as np
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap import reporting
 
 LOGGER = logging.getLogger('FISHERIES')
@@ -17,22 +17,20 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-class MissingParameter(Exception):
+class MissingParameter(StandardError):
     '''
-    A broad exception class that is raised when a necessary parameter is not
-    provided.
+    An exception class that may be raised when a necessary parameter is not
+    provided by the user.
     '''
     def __init__(self, msg):
         self.msg = msg
 
 
 # Fetch and Verify Arguments
-def fetch_args(args):
+def fetch_args(args, create_outputs=True):
     '''
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
-
-    This function receives an unmodified 'args' dictionary from the user
 
     Args:
         args (dictionary): arguments from the user
@@ -41,7 +39,7 @@ def fetch_args(args):
         model_list (list): set of variable dictionaries for each
             model
 
-    Example Returned Model List of Verified Arguments::
+    Example Returns::
 
         model_list = [
             {
@@ -51,6 +49,7 @@ def fetch_args(args):
                 'total_timesteps': 100,
                 'population_type': 'Stage-Based',
                 'sexsp': 2,
+                'harvest_units': 'Individuals',
                 'do_batch': False,
                 'spawn_units': 'Weight',
                 'total_init_recruits': 100.0,
@@ -59,8 +58,7 @@ def fetch_args(args):
                 'beta': 54.2,
                 'total_recur_recruits': 92.1,
                 'migr_cont': True,
-                'harv_cont': True,
-                'harvest_units': 'Individuals',
+                'val_cont': True,
                 'frac_post_process': 0.5,
                 'unit_price': 5.0,
 
@@ -83,17 +81,26 @@ def fetch_args(args):
                 'Migration': [np.matrix, np.matrix, ...]
             },
             {
-                ...
+                ...  # additional dictionary doesn't exist when 'do_batch'
+                     # is false
             }
         ]
 
+    Note:
+        This function receives an unmodified 'args' dictionary from the user
+
     '''
+    try:
+        args['results_suffix']
+    except:
+        args['results_suffix'] = ''
+
     if args['sexsp'].lower() == 'yes':
         args['sexsp'] = 2
     else:
         args['sexsp'] = 1
 
-    params_dict = _verify_single_params(args)
+    params_dict = _verify_single_params(args, create_outputs=create_outputs)
 
     # Implement Single / Batch Here
     pop_list = read_population_csvs(args)
@@ -122,7 +129,7 @@ def read_population_csvs(args):
         pop_list (list): list of dictionaries containing verified population
             arguments
 
-    Example Returned Population List::
+    Example Returns::
 
         pop_list = [
             {
@@ -184,7 +191,7 @@ def read_population_csv(args, uri):
         pop_dict (dictionary): dictionary containing verified population
             arguments
 
-    Example Returned Population Dictionary::
+    Example Returns::
 
         pop_dict = {
             'population_csv_uri': 'path/to/csv',
@@ -259,7 +266,7 @@ def read_population_csv(args, uri):
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
         num_regions = len(pop_dict['Regions'])
-        pop_dict['Larvaldispersal'] = (np.ndarray(np.ones(num_regions) /
+        pop_dict['Larvaldispersal'] = (np.array(np.ones(num_regions) /
                                        num_regions))
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
@@ -311,10 +318,14 @@ def _parse_population_csv(uri, sexsp):
     Keys: Survnaturalfrac, Vulnfishing, Maturity, Duration, Weight, Fecundity,
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
+    Args:
+        uri (string): uri to population parameters csv file
+        sexsp (int): indicates whether classes are distinguished by sex
+
     Returns:
         pop_dict (dictionary): verified population arguments
 
-    Example:
+    Example Returns:
 
         pop_dict = {
             'Survnaturalfrac': np.array(
@@ -386,12 +397,23 @@ def read_migration_tables(args, class_list, region_list):
     Parses, verifies and orders list of migration matrices necessary for
     program.
 
-    If migration matrices are not provided for all classes, the function will
-    generate identity matrices for missing classes
+    Args:
+        args (dictionary): same args as model entry point
+        class_list (list): list of class names
+        region_list (list): list of region names
 
-    Example:
+    Returns:
+        mig_dict (dictionary): see example below
 
-        mig_dict = {'Migration': [np.matrix, np.matrix, ...]}
+    Example Returns::
+
+        mig_dict = {
+            'Migration': [np.matrix, np.matrix, ...]
+        }
+
+    Note:
+        If migration matrices are not provided for all classes, the function will
+        generate identity matrices for missing classes
     '''
     migration_dict = {}
 
@@ -413,7 +435,7 @@ def read_migration_tables(args, class_list, region_list):
 
     # Check migration regions are equal across matrices
     if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
-        LOGGER.error("Shape of m igration matrices are not equal across \
+        LOGGER.error("Shape of migration matrices are not equal across \
             lifecycle classes")
         raise ValueError
 
@@ -442,9 +464,13 @@ def _parse_migration_tables(args, class_list):
     Returns:
         mig_dict (dictionary)
 
-    Example::
+    Example Returns::
 
-        mig_dict = {{'stage1': np.matrix}, {'stage2': np.matrix}, ...}
+        mig_dict = {
+            {'stage1': np.matrix},
+            {'stage2': np.matrix},
+            # ...
+        }
     '''
     mig_dict = {}
 
@@ -478,8 +504,8 @@ def _parse_migration_tables(args, class_list):
                     mig_dict[class_name] = Migration
                 else:
                     # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The %s class in the Migration Directory \
-                        did not match any class in the Population Parameters \
+                    LOGGER.warning("The suffix '%s' in the Migration Directory \
+                        did not match any class name in the Population Parameters \
                         File. This could result in no migration for a class \
                         with expected migration.", class_name.capitalize())
 
@@ -489,7 +515,7 @@ def _parse_migration_tables(args, class_list):
     return mig_dict
 
 
-def _verify_single_params(args):
+def _verify_single_params(args, create_outputs=True):
     '''
     Example Returned Parameters Dictionary::
 
@@ -501,6 +527,10 @@ def _verify_single_params(args):
             'total_timesteps': 100,
             'population_type': 'Stage-Based',
             'sexsp': 2,
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_dir': ''            
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
             'recruitment_type': 'Ricker',
@@ -508,43 +538,44 @@ def _verify_single_params(args):
             'beta': 54.2,
             'total_recur_recruits': 92.1,
             'migr_cont': True,
-            'harv_cont': True,
-            'harvest_units': 'Individuals',
+            'val_cont': True,
             'frac_post_process': 0.5,
             'unit_price': 5.0,
             # ...
             'output_dir': 'path/to/output_dir',
+            'intermediate_dir': 'path/to/intermediate_dir',
         }
     '''
     params_dict = args
 
-    # Check that workspace directory exists, if not, try to create directory
-    if not os.path.isdir(args['workspace_dir']):
-        try:
-            os.makedirs(args['workspace_dir'])
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
+    if create_outputs:
+        # Check that workspace directory exists, if not, try to create directory
+        if not os.path.isdir(args['workspace_dir']):
+            try:
+                os.makedirs(args['workspace_dir'])
+            except:
+                LOGGER.error("Cannot create Workspace Directory")
+                raise OSError
 
-    # Create output directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Output Directory")
-            raise OSError
-    params_dict['output_dir'] = output_dir
+        # Create output directory
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        if not os.path.isdir(output_dir):
+            try:
+                os.makedirs(output_dir)
+            except:
+                LOGGER.error("Cannot create Output Directory")
+                raise OSError
+        params_dict['output_dir'] = output_dir
 
-    # Create output directory
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    if not os.path.isdir(intermediate_dir):
-        try:
-            os.makedirs(intermediate_dir)
-        except:
-            LOGGER.error("Cannot create Intermediate Directory")
-            raise OSError
-    params_dict['intermediate_dir'] = intermediate_dir
+        # Create intermediate directory
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+        if not os.path.isdir(intermediate_dir):
+            try:
+                os.makedirs(intermediate_dir)
+            except:
+                LOGGER.error("Cannot create Intermediate Directory")
+                raise OSError
+        params_dict['intermediate_dir'] = intermediate_dir
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
@@ -555,7 +586,13 @@ def _verify_single_params(args):
 
     # Check total_init_recruits for non-negative float
     total_init_recruits = args['total_init_recruits']
-    if type(total_init_recruits) != float or total_init_recruits < 0:
+    if type(total_init_recruits) != float:
+        try:
+            total_timesteps = float(total_init_recruits)
+        except:
+            LOGGER.error("Total Initial Recruits value must be non-negative float")
+            raise ValueError
+    if total_init_recruits < 0:
         LOGGER.error("Total Initial Recruits value must be non-negative float")
         raise ValueError
 
@@ -578,7 +615,7 @@ def _verify_single_params(args):
             raise ValueError
 
     # If Harvest:
-    if args['harv_cont']:
+    if args['val_cont']:
         frac_post_process = args['frac_post_process']
         unit_price = args['unit_price']
         if frac_post_process is None or unit_price is None:
@@ -619,9 +656,6 @@ def _listdir(path):
 
 # Helper functions for navigating CSV files
 def _get_col(lsts, col):
-    # print "LSTS"
-    # print lsts
-    # print "Column:", col
     l = []
     for row in range(0, len(lsts)):
         if lsts[row][col] != '':
@@ -710,9 +744,11 @@ def _vectorize_reg_attribute(lst):
     return d
 
 
-# Generate Outputs
-def generate_outputs(vars_dict):
-    '''Generates outputs from a fisheries model run
+# Create Outputs
+def create_outputs(vars_dict):
+    '''
+    Creates outputs from variables generated in the run_population_model()
+    function in the fisheries_model module
 
     Creates the following:
 
@@ -722,27 +758,34 @@ def generate_outputs(vars_dict):
         + Intermediate CSV File
 
     Args:
-        vars_dict (dictionary)
+        vars_dict (dictionary): contains variables generated by model run
 
     '''
     # CSV results page
-    _generate_intermediate_csv(vars_dict)
-    _generate_results_csv(vars_dict)
+    _create_intermediate_csv(vars_dict)
+    _create_results_csv(vars_dict)
     # HTML results page
-    _generate_results_html(vars_dict)
+    _create_results_html(vars_dict)
     # Append Results to Shapefile
     if vars_dict['aoi_uri']:
-        _generate_results_aoi(vars_dict)
+        _create_results_aoi(vars_dict)
 
 
-def _generate_intermediate_csv(vars_dict):
+def _create_intermediate_csv(vars_dict):
     '''
-    Generates an intermediate output that gives the number of
+    Creates an intermediate output that gives the number of
     individuals within each area for each time step for each age/stage.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_population_by_time_step.csv'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = 'population_by_time_step_' + basename + '.csv'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'population_by_time_step_' + vars_dict[
+            'results_suffix'] + '.csv'
+    else:
+        filename = 'population_by_time_step.csv'
     uri = os.path.join(
         vars_dict['intermediate_dir'], filename)
 
@@ -782,16 +825,23 @@ def _generate_intermediate_csv(vars_dict):
                         c_file.write(line)
 
 
-def _generate_results_csv(vars_dict):
+def _create_results_csv(vars_dict):
     '''
     Generates a CSV file that contains a summary of all harvest totals
     for each subregion.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_results_table.csv'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = 'results_table_' + basename + '.csv'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'results_table_' + vars_dict['results_suffix'] + '.csv'
+    else:
+        filename = 'results_table.csv'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
+    recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -810,39 +860,57 @@ def _generate_results_csv(vars_dict):
         csv_writer.writerow([])
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
-        sum_headers_row = ['Subregion', 'Harvest', 'Valuation']
+        sum_headers_row = ['Subregion', 'Harvest']
+        if vars_dict['val_cont']:
+            sum_headers_row.append('Valuation')
         csv_writer.writerow(sum_headers_row)
         for i in range(0, len(H_tx[-1])):  # i is a cycle
-            line = [Regions[i], "%.2f" % H_tx[-1, i], "%.2f" % V_tx[-1, i]]
+            line = [Regions[i], "%.2f" % H_tx[-1, i]]
+            if vars_dict['val_cont']:
+                line.append("%.2f" % V_tx[-1, i])
             csv_writer.writerow(line)
-        line = ['Total', "%.2f" % H_tx[-1].sum(), "%.2f" % V_tx[-1].sum()]
+        line = ['Total', "%.2f" % H_tx[-1].sum()]
+        if vars_dict['val_cont']:
+            line.append("%.2f" % V_tx[-1].sum())
         csv_writer.writerow(line)
+        csv_writer.writerow([])
 
         # Give Total Harvest for Each Cycle
-        csv_writer.writerow([])
         csv_writer.writerow(['Time Step Breakdown'])
         csv_writer.writerow([])
-        csv_writer.writerow(
-            ['Time Step', 'Spawners', 'Harvest', 'Equilibrated?'])
+        line = ['Time Step', 'Equilibrated?', 'Spawners', 'Harvest']
+        csv_writer.writerow(line)
 
         for i in range(0, len(H_tx)):  # i is a cycle
-            line = [i, "%.2f" % Spawners_t[i], "%.2f" % H_tx[i].sum()]
-            # This can be more rigorously checked
+            line = [i]
             if equilibrate_timestep and i >= equilibrate_timestep:
                 line.append('Y')
             else:
                 line.append('N')
+            if i == 0:
+                line.append("(none)")
+            elif recruitment_type == 'Fixed':
+                line.append("(fixed recruitment)")
+            else:
+                line.append("%.2f" % Spawners_t[i])
+            line.append("%.2f" % H_tx[i].sum())
             csv_writer.writerow(line)
 
 
-def _generate_results_html(vars_dict):
+def _create_results_html(vars_dict):
     '''
-    Generates an HTML file that contains a summary of all harvest totals
+    Creates an HTML file that contains a summary of all harvest totals
     for each subregion.
     '''
-    basename = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))[0]
-    filename = basename + '_results_page.html'
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = 'results_page_' + basename + '.html'
+    elif vars_dict['results_suffix'] != '':
+        filename = 'results_page_' + vars_dict['results_suffix'] + '.html'
+    else:
+        filename = 'results_page.html'
     uri = os.path.join(vars_dict['output_dir'], filename)
 
     recruitment_type = vars_dict['recruitment_type']
@@ -854,7 +922,7 @@ def _generate_results_html(vars_dict):
 
     # Set Reporting Arguments
     rep_args = {}
-    rep_args['title'] = "Fishieries Results Page"
+    rep_args['title'] = "Fisheries Results Page"
     rep_args['out_uri'] = uri
     rep_args['sortable'] = True  # JS Functionality
     rep_args['totals'] = True  # JS Functionality
@@ -879,23 +947,27 @@ def _generate_results_html(vars_dict):
     # Create Final Cycle Harvest Summary Table
     final_cycle_columns = [
         {'name': 'Subregion', 'total': False},
-        {'name': 'Harvest', 'total': True},
-        {'name': 'Valuation', 'total': True}]
+        {'name': 'Harvest', 'total': True}]
+
+    if vars_dict['val_cont']:
+        final_cycle_columns.append(
+            {'name': 'Valuation', 'total': True})
 
     final_timestep_body = []
     for i in range(0, len(H_tx[-1])):  # i is a cycle
         sub_dict = {}
         sub_dict['Subregion'] = Regions[i]
         sub_dict['Harvest'] = "%.2f" % H_tx[-1, i]
-        sub_dict['Valuation'] = "%.2f" % V_tx[-1, i]
+        if vars_dict['val_cont']:
+            sub_dict['Valuation'] = "%.2f" % V_tx[-1, i]
         final_timestep_body.append(sub_dict)
 
     # Create Harvest Time Step Table
     timestep_breakdown_columns = [
         {'name': 'Time Step', 'total': False},
+        {'name': 'Equilibrated?', 'total': False},
         {'name': 'Spawners', 'total': True},
-        {'name': 'Harvest', 'total': True},
-        {'name': 'Equilibrated?', 'total': False}]
+        {'name': 'Harvest', 'total': True}]
 
     timestep_breakdown_body = []
     for i in range(0, total_timesteps):
@@ -984,17 +1056,26 @@ def _generate_results_html(vars_dict):
             'input_type': 'Text'
         }]
 
+    equilibrium_warning = [{
+        'type': 'text',
+        'section': 'body',
+        'text': '<h2 style="color:red">Warning: Population Did Not Reach Equilibrium State</h2>'
+    }]
+
+    if not bool(vars_dict['equilibrate_timestep']):
+        elements = equilibrium_warning + elements
+
     rep_args['elements'] = elements
 
     reporting.generate_report(rep_args)
 
 
-def _generate_results_aoi(vars_dict):
+def _create_results_aoi(vars_dict):
     '''
     Appends the final harvest and valuation values for each region to an
-    input shapefile.  The 'NAME' attributes of each region in the input
-    shapefile must exactly match the names of each region in the population
-    parameters file.
+    input shapefile.  The 'Name' attributes (case-sensitive) of each region
+    in the input shapefile must exactly match the names of each region in the
+    population parameters file.
 
     '''
     aoi_uri = vars_dict['aoi_uri']
@@ -1002,11 +1083,21 @@ def _generate_results_aoi(vars_dict):
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
     basename = os.path.splitext(os.path.basename(aoi_uri))[0]
-    output_aoi_uri = os.path.join(
-        vars_dict['output_dir'], basename + '_results_aoi.shp')
+    do_batch = vars_dict['do_batch']
+    if do_batch:
+        basename2 = os.path.splitext(os.path.basename(
+            vars_dict['population_csv_uri']))[0]
+        filename = basename + '_results_aoi_' + basename2 + '.shp'
+    elif vars_dict['results_suffix'] != '':
+        filename = basename + '_results_aoi_' + vars_dict[
+            'results_suffix'] + '.shp'
+    else:
+        filename = basename + '_results_aoi.shp'
+
+    output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
 
     # Copy AOI file to outputs directory
-    raster_utils.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
     ds = ogr.Open(output_aoi_uri, update=1)
@@ -1021,8 +1112,9 @@ def _generate_results_aoi(vars_dict):
         harv_reg_dict[Regions[i]] = H_tx[-1][i]
 
     # Set Valuation
-    val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
-    layer.CreateField(val_field)
+    if vars_dict['val_cont']:
+        val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        layer.CreateField(val_field)
 
     val_reg_dict = {}
     for i in range(0, len(Regions)):
@@ -1030,9 +1122,15 @@ def _generate_results_aoi(vars_dict):
 
     # Add Information to Shapefile
     for feature in layer:
-        region_name = str(feature.items()['NAME'])
-        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-        feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
-        layer.SetFeature(feature)
+        try:
+            region_name = str(feature.items()['Name'])
+            feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+            if vars_dict['val_cont']:
+                feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+            layer.SetFeature(feature)
+        except:
+            LOGGER.warning("A feature in the given AOI shapefile either does \
+                not have a 'Name' attribute (case-sensitive) or does not match \
+                any of the given sub-regions. Skipping feature.")
 
     layer.ResetReading()

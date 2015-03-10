@@ -9,7 +9,7 @@ from datetime import datetime
 from invest_natcap.carbon import carbon_biophysical
 from invest_natcap.carbon import carbon_valuation
 from invest_natcap.carbon import carbon_utils
-from invest_natcap.report_generation import html
+from invest_natcap.reporting import html
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -145,6 +145,12 @@ def _package_valuation_args(args, biophysical_outputs):
     args['sequest_uri'] = biophysical_outputs['sequest_fut']
     args['yr_cur'] = args['lulc_cur_year']
     args['yr_fut'] = args['lulc_fut_year']
+
+    if args['yr_cur'] >= args['yr_fut']:
+        raise Exception(
+            'The current year must be earlier than the future year. '
+            'The values for current/future year are: %d/%d' %
+            (args['yr_cur'], args['yr_fut']))
 
     biophysical_to_valuation = {
         'uncertainty': 'uncertainty_data',

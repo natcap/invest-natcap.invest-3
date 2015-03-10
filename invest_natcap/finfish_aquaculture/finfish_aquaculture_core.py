@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 
-from invest_natcap.report_generation import html
+from invest_natcap.reporting import html
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -29,57 +29,60 @@ def execute(args):
     ''''
     Runs the biophysical and valuation parts of the finfish aquaculture model.
     This will output:
-    1. a shape file showing farm locations w/ addition of # of harvest cycles, total
-        processed weight at that farm, and if valuation is true, total discounted net
-        revenue at each farm location.
-    2. Three HTML tables summarizing all model I/O- summary of user-provided data,
-        summary of each harvest cycle, and summary of the outputs/farm
-    3. A .txt file that is named according to the date and time the model is run, which
-        lists the values used during that run
+    1. a shape file showing farm locations w/ addition of # of harvest cycles,
+        total processed weight at that farm, and if valuation is true, total
+        discounted net revenue at each farm location.
+    2. Three HTML tables summarizing all model I/O- summary of user-provided
+        data, summary of each harvest cycle, and summary of the outputs/farm
+    3. A .txt file that is named according to the date and time the model is
+        run, which lists the values used during that run
 
     Data in args should include the following:
     --Biophysical Arguments--
     args: a python dictionary containing the following data:
     args['workspace_dir']- The directory in which to place all result files.
-    args['ff_farm_file']- An open shape file containing the locations of individual
-                        fisheries
-    args['farm_ID']- column heading used to describe individual farms. Used to link
-                            GIS location data to later inputs.
+    args['ff_farm_file']- An open shape file containing the locations of
+        individual fisheries
+    args['farm_ID']- column heading used to describe individual farms. Used to
+        link GIS location data to later inputs.
     args['g_param_a']- Growth parameter alpha, used in modeling fish growth,
-                            should be int or a float.
+        should be int or a float.
     args['g_param_b']- Growth parameter beta, used in modeling fish growth,
-                            should be int or a float.
-    args['water_temp_dict']- A dictionary which links a specific date to the farm numbers,
-                        and their temperature values on that day. (Note: in this case, the
-                        outer keys 1 and 2 are calendar days out of 365, starting
-                        with January 1 (day 0), and the inner 1, 2, and 3 are farm numbers.)
+        should be int or a float.
+    args['water_temp_dict']- A dictionary which links a specific date to the
+        farm numbers, and their temperature values on that day. (Note: in this
+        case, the outer keys 1 and 2 are calendar days out of 365, starting
+        with January 1 (day 0), and the inner 1, 2, and 3 are farm numbers.)
 
-                        Format: {'0': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
-                                 '1': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
-                                .                        .                    .
-                                .                        .                    .
-                                .                        .                    .       }
-    args['farm_op_dict']- Dictionary which links a specific farm ID # to another
-                        dictionary containing operating parameters mapped to their value
-                        for that particular farm (Note: in this case, the 1 and 2
-                        are farm ID's, not dates out of 365.)
+            Format: {'0': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
+                     '1': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
+                    .                        .                    .
+                    .                        .                    .
+                    .                        .                    .       }
+    args['farm_op_dict']- Dictionary which links a specific farm ID # to
+        another dictionary containing operating parameters mapped to their
+        value for that particular farm (Note: in this case, the 1 and 2
+        are farm ID's, not dates out of 365.)
 
-                        Format: {'1': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
-                                '2': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
-                                .                        .                    .
-                                .                        .                    .
-                                .                        .                    .       }
-    args['frac_post_process']- the fraction of edible fish left after processing is done to
-                        remove undesirable parts
-    args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
+            Format: {'1': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
+                    '2': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
+                    .                        .                    .
+                    .                        .                    .
+                    .                        .                    .       }
+    args['frac_post_process']- the fraction of edible fish left after
+        processing is done to remove undesirable parts
+    args['mort_rate_daily']- mortality rate among fish  in a year, divided by
+        365
     args['duration']- duration of the simulation, in years
-    args['outplant_buffer'] - This value will allow the outplant start day to be flexible
-       plus or minus the number of days specified here.
+    args['outplant_buffer'] - This value will allow the outplant start day to
+        be flexible plus or minus the number of days specified here.
 
     --Valuation arguments--
-    args['do_valuation']- boolean indicating whether or not to run the valuation process
+    args['do_valuation']- boolean indicating whether or not to run the
+        valuation process
     args['p_per_kg']: Market price per kilogram of processed fish
-    args['frac_p']: Fraction of market price that accounts for costs rather than profit
+    args['frac_p']: Fraction of market price that accounts for costs rather
+        than profit
     args['discount']: Daily market discount rate
 
     returns nothing
@@ -171,26 +174,29 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
                      farm_op_dict, dur):
     '''
     Input:
-        outplant_buffer: The number of days surrounding the outplant day during which
-            the fish growth cycle can still be started.
-        a: Growth parameter alpha. Float used as a scaler in the fish growth equation.
-        b: Growth paramater beta. Float used as an exponential multiplier in the
-            fish growth equation.
-        water_temp_dict: 2D dictionary which contains temperature values for farms. The
-            outer keys are calendar days as strings, and the inner are farm numbers as
-            strings.
-        farm_op_dict: 2D dictionary which contains individual operating parameters for
-            each farm. The outer key is farm number as a stting, and the inner is string
-            descriptors of each parameter.
-        dur: Float which describes the length for the growth simulation to run in years.
+        outplant_buffer: The number of days surrounding the outplant day during
+            which the fish growth cycle can still be started.
+        a: Growth parameter alpha. Float used as a scaler in the fish growth
+            equation.
+        b: Growth paramater beta. Float used as an exponential multiplier in
+            the fish growth equation.
+        water_temp_dict: 2D dictionary which contains temperature values for
+            farms. The outer keys are calendar days as strings, and the inner
+            are farm numbers as strings.
+        farm_op_dict: 2D dictionary which contains individual operating
+            parameters for each farm. The outer key is farm number as a string,
+            and the inner is string descriptors of each parameter.
+        dur: Float which describes the length for the growth simulation to run
+            in years.
 
-     Returns cycle_history where:
+    Returns cycle_history where:
 
-         cycle_history: Dictionary which contains mappings from farms to a history of
-             growth for each cycle completed on that farm. These entries are formatted
-             as follows...
+        cycle_history: Dictionary which contains mappings from farms to a
+            history of growth for each cycle completed on that farm. These
+            entries are formatted as follows...
 
-            Farm->List of Type (day of outplanting,day of harvest, fish weight (grams))
+            Farm->List of Type (day of outplanting,day of harvest, fish weight
+                (grams))
     '''
 
     cycle_history = {}
@@ -247,8 +253,9 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
             #function that maps an incoming day to the same day % 365, then
             #creates a list to check against +/- buffer days from the start day
 
-            elif (day % 365) in map (lambda x: x % 365, range(start_day - outplant_buffer,
-                                                    start_day + outplant_buffer + 1)):
+            elif (day % 365) in map(
+                lambda x: x % 365, range(start_day - outplant_buffer,
+                                         start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
 
@@ -260,19 +267,23 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
 def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
     '''
     Input:
-        farm_op_dict: 2D dictionary which contains individual operating parameters for
-            each farm. The outer key is farm number as a string, and the inner is string
-            descriptors of each parameter.
-        frac: A float representing the fraction of the fish that remains after processing.
-        mort: A float referring to the daily mortality rate of fishes on an aquaculture farm.
+        farm_op_dict: 2D dictionary which contains individual operating
+            parameters for each farm. The outer key is farm number as a string,
+            and the inner is string descriptors of each parameter.
+        frac: A float representing the fraction of the fish that remains after
+            processing.
+        mort: A float referring to the daily mortality rate of fishes on an
+            aquaculture farm.
         cycle_history: Farm->List of Type (day of outplanting,
-                                      day of harvest, fish weight (grams))
+            day of harvest, fish weight (grams))
 
     Returns a tuple (curr_cycle_totals,indiv_tpw_totals) where:
-        curr_cycle_totals_: dictionary which will hold a mapping from every farm
-                (as identified by farm_ID) to the total processed weight of each farm
-        indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list
-                holds the individual tpw for all cycles that the farm completed
+        curr_cycle_totals_: dictionary which will hold a mapping from every
+            farm (as identified by farm_ID) to the total processed weight of
+            each farm
+        indiv_tpw_totals: dictionary which will hold a farm->list mapping,
+            where the list holds the individual tpw for all cycles that the
+            farm completed
     '''
 
     curr_cycle_totals = {}
@@ -314,7 +325,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
             #This equation comes from total weight of fish produced per farm
             #from the user's guide
             curr_cy_tpw = (fish_weight / 1000) * frac * f_num_fish * \
-                            math.exp(e_exponent)
+                math.exp(e_exponent)
             curr_cy_tpw = curr_cy_tpw
 
             indiv_tpw_totals[f].append(curr_cy_tpw)
@@ -327,16 +338,17 @@ def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
               cycle_history):
     '''
     This performs the valuation calculations, and returns tuple containing a
-    dictionary with a farm-> float mapping, where each float is the net processed
-    value of the fish processed on that farm, in $1000s of dollars, and a dictionary
-    containing a farm-> list mapping, where each entry in the list is a tuple of
-    (Net Revenue, Net Present Value) for every cycle on that farm.
+    dictionary with a farm-> float mapping, where each float is the net
+    processed value of the fish processed on that farm, in $1000s of dollars,
+    and a dictionary containing a farm-> list mapping, where each entry in the
+    list is a tuple of (Net Revenue, Net Present Value) for every cycle on that
+    farm.
 
     Inputs:
         price_per_kg: Float representing the price per kilogram of finfish for
                 valuation purposes.
-        frac_mrkt_price: Float that represents the fraction of market price that
-                is attributable to costs.
+        frac_mrkt_price: Float that represents the fraction of market price
+            that is attributable to costs.
         discount: Float that is the daily market discount rate.
         cycle_hisory: Farm->List of Type (day of outplanting,
                                           day of harvest, fish weight (grams))
@@ -346,11 +358,11 @@ def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
 
     Returns a tuple (val_history, valuations):
         val_history: dictionary which will hold a farm->list mapping, where the
-                list holds tuples containing (Net Revenue, Net Present Value) for
-                each cycle completed by that farm
-        valuations: dictionary with a farm-> float mapping, where each float is the
-                net processed value of the fish processed on that farm
-        '''
+            list holds tuples containing (Net Revenue, Net Present Value) for
+            each cycle completed by that farm
+        valuations: dictionary with a farm-> float mapping, where each float is
+            the net processed value of the fish processed on that farm
+    '''
     val_history = {}
     valuations = {}
 
@@ -415,7 +427,9 @@ def compute_uncertainty_data(args, output_dir):
 
 
 def do_monte_carlo_simulation(args):
-    '''Performs a Monte Carlo simulation and returns the results.'''
+    '''
+    Performs a Monte Carlo simulation and returns the results.
+    '''
     def sample_param(param):
         '''Samples the normal distribution for the given growth parameter.
 
@@ -486,7 +500,8 @@ def do_monte_carlo_simulation(args):
 
 
 def make_histograms(farm, results, output_dir, total_num_runs):
-    '''Makes a histogram for the given farm and data.
+    '''
+    Makes a histogram for the given farm and data.
 
     Returns a dict mapping type (e.g. 'value', 'weight') to the relative
     file path for the respective histogram.
@@ -539,35 +554,40 @@ def make_histograms(farm, results, output_dir, total_num_runs):
 def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
                       hrv_weight, farms_npv, value_history, histogram_paths,
                       uncertainty_stats):
-    '''Inputs:
-        output_dir: The directory in which we will be creating our .html file output.
-        cycle_history: dictionary mapping farm ID->list of tuples, each of which
-                contains 3 things- (day of outplanting, day of harvest, harvest weight of
-                a single fish in grams)
-        sum_hrv_weight: dictionary which holds a mapping from farm ID->total processed
-                weight of each farm
-        hrv_weight: dictionary which holds a farm->list mapping, where the list holds
-                the individual tpw for all cycles that the farm completed
-        do_valuation: boolean variable that says whether or not valuation is desired
-        farms_npv: dictionary with a farm-> float mapping, where each float is the
-                net processed value of the fish processed on that farm, in $1000s
-                of dollars.
+    '''
+    Inputs:
+        output_dir: The directory in which we will be creating our .html file
+            output.
+        cycle_history: dictionary mapping farm ID->list of tuples, each of
+            which contains 3 things- (day of outplanting, day of harvest,
+                harvest weight of a single fish in grams)
+        sum_hrv_weight: dictionary which holds a mapping from farm ID->total
+            processed weight of each farm
+        hrv_weight: dictionary which holds a farm->list mapping, where the list
+            holds the individual tpw for all cycles that the farm completed
+        do_valuation: boolean variable that says whether or not valuation is
+            desired
+        farms_npv: dictionary with a farm-> float mapping, where each float is
+            the net processed value of the fish processed on that farm, in
+            $1000s of dollars.
         value_history: dictionary which holds a farm->list mapping, where the
-                list holds tuples containing (Net Revenue, Net Present Value) for
-                each cycle completed by that farm
+            list holds tuples containing (Net Revenue, Net Present Value) for
+            each cycle completed by that farm
 
-       Output:
-        HTML file: contains 3 tables that summarize inputs and outputs for the duration
-            of the model.
-            - Input Table: Farm Operations provided data, including Farm ID #, Cycle
-                    Number, weight of fish at start, weight of fish at harvest, number
-                    of fish in farm, start day for growing, and length of fallowing period
-            - Output Table 1: Farm Harvesting data, including a summary table for each
-                    harvest cycle of each farm. Will show Farm ID, cycle number, days
-                    since outplanting date, harvested weight, net revenue, outplant day,
-                    and year.
-            - Output Table 2: Model outputs for each farm, including Farm ID, net present
-                    value, number of completed harvest cycles, and total volume harvested.
+    Output:
+        HTML file: contains 3 tables that summarize inputs and outputs for the
+            duration of the model.
+            - Input Table: Farm Operations provided data, including Farm ID #,
+                Cycle Number, weight of fish at start, weight of fish at
+                harvest, number of fish in farm, start day for growing, and
+                length of fallowing period
+            - Output Table 1: Farm Harvesting data, including a summary table
+                for each harvest cycle of each farm. Will show Farm ID, cycle
+                number, days since outplanting date, harvested weight, net
+                revenue, outplant day, and year.
+            - Output Table 2: Model outputs for each farm, including Farm ID,
+                net present value, number of completed harvest cycles, and
+                total volume harvested.
 
         Returns nothing.
     '''
@@ -609,15 +629,16 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
 
     doc.write_header('Farm Harvesting (output)')
     harvest_table = doc.add(html.Table(id='harvest_table'))
-    harvest_table.add_row(['Farm ID Number', 'Cycle Number',
-                 'Days Since Outplanting Date (Including Fallowing Period)',
-                 'Length of Given Cycle',
-                 'Harvested Weight After Processing (kg/cycle)',
-                 'Net Revenue (Thousands of $)',
-                 'Net Present Value (Thousands of $)',
-                 'Outplant Day (Julian Day)',
-                 'Outplant Year'],
-                 is_header=True)
+    harvest_table.add_row([
+        'Farm ID Number', 'Cycle Number',
+        'Days Since Outplanting Date (Including Fallowing Period)',
+        'Length of Given Cycle',
+        'Harvested Weight After Processing (kg/cycle)',
+        'Net Revenue (Thousands of $)',
+        'Net Present Value (Thousands of $)',
+        'Outplant Day (Julian Day)',
+        'Outplant Year'],
+        is_header=True)
 
     for farm_id in cycle_history:
         for cycle in range(0, len(cycle_history[farm_id])):
@@ -653,11 +674,12 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
         'attribute table of the netpens feature class.')
 
     totals_table = doc.add(html.Table(id='totals_table'))
-    totals_table.add_row(['Farm ID Number',
-                          'Net Present Value (Thousands of $) (For Duration of Model Run)',
-                          'Number of Completed Harvest Cycles',
-                          'Total Volume Harvested (kg)(After Processing Occurs)'],
-                         is_header=True)
+    totals_table.add_row([
+        'Farm ID Number',
+        'Net Present Value (Thousands of $) (For Duration of Model Run)',
+        'Number of Completed Harvest Cycles',
+        'Total Volume Harvested (kg)(After Processing Occurs)'],
+        is_header=True)
 
     for farm_id in cycle_history:
         if args['do_valuation']:

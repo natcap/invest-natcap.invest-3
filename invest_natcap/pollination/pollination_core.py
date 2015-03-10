@@ -1,17 +1,16 @@
 """InVEST Pollination model core function  module"""
 
-from invest_natcap import raster_utils
-
-from osgeo import gdal
-
 import shutil
 import os
 import logging
 
+import gdal
+import osr
 import numpy
 
-LOGGER = logging.getLogger('pollination_core')
+import pygeoprocessing.geoprocessing
 
+LOGGER = logging.getLogger('pollination_core')
 
 def execute_model(args):
     """Execute the biophysical component of the pollination model.
@@ -75,18 +74,18 @@ def execute_model(args):
     # Create the necessary sum rasters by reclassifying the ag map so that all
     # pixels that are not nodata have a value of 0.0.
     ag_map = gdal.Open(args['ag_map'])
-    raster_utils.reclassify_by_dictionary(ag_map, {},
+    pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map, {},
         args['foraging_average'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    raster_utils.reclassify_by_dictionary(ag_map, {},
+    pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map, {},
         args['abundance_total'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
     # We only need to create these rasters if we're doing valuation.
     if args['do_valuation'] == True:
-        raster_utils.reclassify_by_dictionary(ag_map,
+        pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map,
             {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-        raster_utils.reclassify_by_dictionary(ag_map,
+        pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map,
             {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32,
             0.0)
 
@@ -231,7 +230,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     nodata = -1.0
 
 
-    floral_raster_temp_uri = raster_utils.temporary_filename()
+    floral_raster_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
     LOGGER.debug('Mapping floral attributes to landcover, writing to %s',
         floral_raster_temp_uri)
@@ -246,15 +245,16 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     pixel_size = abs(lulc_ds.GetGeoTransform()[1])
     lulc_ds = None
     expected_distance = guild['alpha'] / pixel_size
-    kernel = make_exponential_kernel(expected_distance)
+    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('expected distance: %s ', expected_distance)
 
     # Fetch the floral resources raster and matrix from the args dictionary
     # apply an exponential convolution filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    raster_utils.convolve_2d(floral_raster_temp_uri, kernel, uris['floral'])
-    
+    pygeoprocessing.geoprocessing.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
+    os.remove(kernel_uri)
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
     # Rickett's reply to see if this is correct.
@@ -268,7 +268,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         # species weights should be equal (1.0).
         species_weight = 1.0
 
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         [uris['nesting'], uris['floral']],
         lambda x, y: numpy.where(x != nodata, numpy.multiply(numpy.multiply(x,
             y), species_weight), nodata),
@@ -293,7 +293,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     LOGGER.debug('Starting to calculate farm abundance')
 
-    farm_abundance_temp_uri = raster_utils.temporary_filename()
+    farm_abundance_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
     LOGGER.debug('Farm abundance temp file saved to %s',
         farm_abundance_temp_uri)
 
@@ -302,10 +302,13 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     expected_distance = alpha / pixel_size
-    kernel = make_exponential_kernel(expected_distance)
+    
+    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     
     LOGGER.debug('Calculating foraging/farm abundance index')
-    raster_utils.convolve_2d(species_abundance_uri, kernel, farm_abundance_temp_uri)
+    pygeoprocessing.geoprocessing.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
+    os.remove(kernel_uri)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
     LOGGER.debug('Using nodata value %s from species abundance raster', nodata)
@@ -314,7 +317,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
     LOGGER.debug('Setting all agricultural pixels to 0')
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[farm_abundance_temp_uri, ag_map],
         dataset_pixel_op=lambda x, y: numpy.where(y == 1.0, x, nodata),
         dataset_out_uri=uri,
@@ -351,7 +354,7 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
         default_value = 1.0
 
     LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
-    raster_utils.reclassify_by_dictionary(landuse,
+    pygeoprocessing.geoprocessing.reclassify_by_dictionary(landuse,
         reclass_rules, uri, 'GTiff', nodata, gdal.GDT_Float32,
         default_value=default_value)
 
@@ -374,14 +377,14 @@ def add_two_rasters(raster_1, raster_2, out_uri):
     if out_uri in [raster_1, raster_2]:
         old_out_uri = out_uri
         temp_dir = True
-        out_uri = raster_utils.temporary_filename()
+        out_uri = pygeoprocessing.geoprocessing.temporary_filename()
         LOGGER.debug('Sum will be saved to temp file %s', out_uri)
 
-    nodata = raster_utils.get_nodata_from_uri(raster_1)
-    min_pixel_size = min(map(raster_utils.get_cell_size_from_uri, [raster_1,
+    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_1)
+    min_pixel_size = min(map(pygeoprocessing.geoprocessing.get_cell_size_from_uri, [raster_1,
         raster_2]))
 
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[raster_1, raster_2],
         dataset_pixel_op=lambda x, y: numpy.where(y != nodata, numpy.add(x, y),
             nodata),
@@ -432,10 +435,10 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
     # Open the species foraging matrix and then divide
     # the yield matrix by the foraging matrix for this pollinator.
     LOGGER.debug('Calculating pollinator value to farms')
-    min_pixel_size = min(map(raster_utils.get_cell_size_from_uri,
+    min_pixel_size = min(map(pygeoprocessing.geoprocessing.get_cell_size_from_uri,
         [rasters['farm_value'], rasters['farm_abundance']]))
 
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[rasters['farm_value'], rasters['farm_abundance']],
         dataset_pixel_op=lambda x, y: numpy.where(x != nodata, numpy.divide(x,
             y), nodata),
@@ -447,19 +450,20 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
         vectorize_op=False)
 
     expected_distance = alpha / min_pixel_size
-    kernel = make_exponential_kernel(expected_distance)
-    
+    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('Exponetial decay on ratio raster')
-    raster_utils.convolve_2d(
-        out_uris['species_value'], kernel, out_uris['species_value_blurred'])
-
+    pygeoprocessing.geoprocessing.convolve_2d_uri(
+        out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
+    os.remove(kernel_uri)
+    
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
-    temp_service_uri = raster_utils.temporary_filename()
+    temp_service_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
     LOGGER.debug('Saving service value raster to %s', temp_service_uri)
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         [rasters['species_abundance'], out_uris['species_value_blurred']],
         lambda x, y: numpy.where(x != nodata, numpy.multiply(part_wild,
             numpy.multiply(x, y)), nodata),
@@ -472,7 +476,7 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
 
     # Set all agricultural pixels to 0.  This is according to issue 761.
     LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[rasters['ag_map'], temp_service_uri],
         dataset_pixel_op=lambda x, y: numpy.where(x == 0, 0.0, y),
         dataset_out_uri=out_uris['service_value'],
@@ -503,7 +507,7 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     kappa_c = float(half_sat)
     nu_c = float(wild_poll)
     nu_c_invert = 1.0 - nu_c
-    in_nodata = raster_utils.get_nodata_from_uri(in_raster)
+    in_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(in_raster)
 
     # This function is a vectorize-compatible implementation of the yield
     # function from the documentation.
@@ -517,13 +521,13 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
             frm_avg + kappa_c)))
 
     # Apply the yield calculation to the foraging_average raster
-    raster_utils.vectorize_datasets(
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[in_raster],
         dataset_pixel_op=calc_yield,
         dataset_out_uri=out_uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=out_nodata,
-        pixel_size_out=raster_utils.get_cell_size_from_uri(in_raster),
+        pixel_size_out=pygeoprocessing.geoprocessing.get_cell_size_from_uri(in_raster),
         bounding_box_mode='intersection',
         vectorize_op=False)
 
@@ -542,18 +546,18 @@ def divide_raster(raster, divisor, uri):
     if raster == uri:
         old_out_uri = uri
         temp_dir = True
-        uri = raster_utils.temporary_filename()
+        uri = pygeoprocessing.geoprocessing.temporary_filename()
         LOGGER.debug('Quotient raster will be saved to temp file %s', uri)
 
-    nodata = raster_utils.get_nodata_from_uri(raster)
-    raster_utils.vectorize_datasets(
+    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
         dataset_uri_list=[raster],
         dataset_pixel_op=lambda x: numpy.where(x == nodata, nodata,
             x / divisor),
         dataset_out_uri=uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
-        pixel_size_out=raster_utils.get_cell_size_from_uri(raster),
+        pixel_size_out=pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster),
         bounding_box_mode='intersection',
         vectorize_op=False)
 
@@ -580,7 +584,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         returns nothing."""
 
     # Get the input raster's nodata value
-    base_nodata = raster_utils.get_nodata_from_uri(base_raster)
+    base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_raster)
 
     # Get the output raster's nodata value
 
@@ -595,24 +599,43 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         reclass_rules[lulc] = list_op(resource_values)
 
     # Use the rules dictionary to reclassify the LULC accordingly.  This
-    # calls the cythonized functionality in raster_utils.
-    raster_utils.reclassify_by_dictionary(gdal.Open(base_raster),
+    # calls the cythonized functionality in pygeoprocessing.geoprocessing.
+    pygeoprocessing.geoprocessing.reclassify_by_dictionary(gdal.Open(base_raster),
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
 
 
-def make_distance_kernel(max_distance):
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
-    for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            distance_kernel[row_index, col_index] = numpy.sqrt(
-                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
-    return distance_kernel
-
-
-def make_exponential_kernel(expected_distance):
+def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     max_distance = expected_distance * 5
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, numpy.exp(-distance_kernel / expected_distance))
-    return kernel / numpy.sum(kernel)
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)

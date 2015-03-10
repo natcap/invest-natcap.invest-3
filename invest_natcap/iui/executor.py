@@ -18,8 +18,8 @@ from types import StringType
 import invest_natcap
 import invest_natcap.iui
 from invest_natcap.iui import fileio as iui_fileio
-from invest_natcap.invest_core import fileio as fileio
-from invest_natcap import raster_utils
+from invest_natcap import fileio as fileio
+import pygeoprocessing.geoprocessing
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()
@@ -539,7 +539,7 @@ class Executor(threading.Thread):
             if '_process_pool' in args:
                 raise Exception("There's already a process_pool, aborting!")
             args['_process_pool'] = None
-#            process_pool = raster_utils.PoolNoDaemon()
+#            process_pool = pygeoprocessing.geoprocessing.PoolNoDaemon()
 #            args['_process_pool'] = process_pool
 
             # If we're including metadata, add per-run metadata here.
@@ -590,6 +590,13 @@ class Executor(threading.Thread):
             #Quit the rest of the function
             return
 
+        # clean up the temporary folder, but only if we've completed the model
+        # successfully.
+        try:
+            shutil.rmtree(temporary_path)
+        except Exception as error:
+            LOGGER.warn(error)
+
         if workspace != None:
             #Try opening up a file explorer to see the results.
             try:
@@ -598,7 +605,7 @@ class Executor(threading.Thread):
                     # Try to launch a windows file explorer to visit the workspace
                     # directory now that the operation has finished executing.
                     LOGGER.info('Using windows explorer to view files')
-                    subprocess.Popen('explorer "%s"' % workspace)
+                    subprocess.Popen('explorer "%s"' % os.path.normpath(workspace))
                 else:
                     # Assume we're on linux.  No biggie, just use xdg-open to use the
                     # default file opening scheme.

@@ -87,7 +87,7 @@ class ModelUI(base_widgets.ExecRoot):
             # Thrown if attributes['localDocURI'] is not present
             print 'Attribute localDocURI not found for this model; skipping.'
 
-        feedback_uri = 'http://ncp-yamato.stanford.edu/natcapforums/'
+        feedback_uri = 'http://forums.naturalcapitalproject.org/'
         links.append('<a href=\"%s\">Report an issue</a>' % feedback_uri)
 
         self.links.setText(' | '.join(links))

@@ -9,7 +9,7 @@ from osgeo import gdal
 from osgeo import osr
 import numpy as np
 
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -78,7 +78,7 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    raster_utils.create_directories([inter_dir, out_dir])
+    pygeoprocessing.geoprocessing.create_directories([inter_dir, out_dir])
 
     # if the input directory is not present in the workspace then throw an
     # exception because the threat rasters can't be located.
@@ -166,26 +166,19 @@ def execute(args):
 
     out_nodata = -1.0
 
-    #Create raster of habitat based on habitat field
-    habitat_uri = os.path.join(inter_dir, 'habitat%s.tif' % suffix)
-
-    map_raster_to_dict_values(
-        cur_landuse_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
-        'none')
-
     # If access_lyr: convert to raster, if value is null set to 1,
     # else set to value
     try:
         LOGGER.debug('Handling Access Shape')
         access_dataset_uri = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
-        raster_utils.new_raster_from_base_uri(
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
             cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata,
             gdal.GDT_Float32, fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
 
-        raster_utils.rasterize_layer_uri(
+        pygeoprocessing.geoprocessing.rasterize_layer_uri(
             access_dataset_uri, args['access_uri'],
             option_list=['ATTRIBUTE=ACCESS'])
 
@@ -203,6 +196,14 @@ def execute(args):
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_ds_uri in landuse_uri_dict.iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
+
+        #Create raster of habitat based on habitat field
+        habitat_uri = os.path.join(
+            inter_dir, 'habitat_%s_%s.tif' % (lulc_key, suffix))
+
+        map_raster_to_dict_values(
+            lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
+            'none')
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -234,7 +235,7 @@ def execute(args):
 
             # get the cell size from LULC to use for intermediate / output
             # rasters
-            cell_size = raster_utils.get_cell_size_from_uri(
+            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
                 args['landuse_cur_uri'])
 
             # convert max distance (given in KM) to meters
@@ -245,20 +246,21 @@ def execute(args):
             dr_pixel = dr_max / cell_size
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
-            filtered_threat_uri = \
-               os.path.join(inter_dir, threat + '_filtered%s.tif' % suffix)
+            filtered_threat_uri = os.path.join(
+                inter_dir, threat + '_filtered_%s_%s.tif' % (lulc_key, suffix))
 
             # blur the threat raster based on the effect of the threat over
             # distance
             decay_type = threat_data['DECAY']
+            kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
             if decay_type == 'linear':
-                kernel = make_linear_kernel(dr_pixel)
+                make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                kernel = make_exponential_kernel(dr_pixel)
+                make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
-            raster_utils.convolve_2d(threat_dataset_uri, kernel, filtered_threat_uri)
-
+            pygeoprocessing.geoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
+            os.remove(kernel_uri)
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
@@ -329,7 +331,7 @@ def execute(args):
 
         LOGGER.debug('Starting vectorize on total_degradation')
 
-        raster_utils.vectorize_datasets(
+        pygeoprocessing.geoprocessing.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
             gdal.GDT_Float32, out_nodata, cell_size, "intersection",
             vectorize_op=False)
@@ -367,7 +369,7 @@ def execute(args):
 
         LOGGER.debug('Starting vectorize on quality_op')
 
-        raster_utils.vectorize_datasets(
+        pygeoprocessing.geoprocessing.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
             gdal.GDT_Float32, out_nodata, cell_size, "intersection",
             vectorize_op = False)
@@ -381,8 +383,8 @@ def execute(args):
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
-        base_area = raster_utils.get_cell_size_from_uri(lulc_base_uri) ** 2
-        base_nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
+        base_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_base_uri) ** 2
+        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_base_uri)
         rarity_nodata = -64329.0
 
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
@@ -393,8 +395,8 @@ def execute(args):
                 lulc_x = landuse_uri_dict[lulc_cover]
 
                 # get the area of a cur/fut pixel
-                lulc_area = raster_utils.get_cell_size_from_uri(lulc_x) ** 2
-                lulc_nodata = raster_utils.get_nodata_from_uri(lulc_x)
+                lulc_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_x) ** 2
+                lulc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_x)
 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata)
@@ -424,7 +426,7 @@ def execute(args):
                 # set the current/future land cover to be masked to the base
                 # land cover
 
-                raster_utils.vectorize_datasets(
+                pygeoprocessing.geoprocessing.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
                     gdal.GDT_Int32, base_nodata, cell_size, "intersection",
                     vectorize_op = False)
@@ -455,7 +457,7 @@ def execute(args):
 
                 LOGGER.debug('Starting vectorize on map_ratio')
 
-                raster_utils.reclassify_dataset_uri(
+                pygeoprocessing.geoprocessing.reclassify_dataset_uri(
                         new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
                         rarity_nodata)
 
@@ -672,29 +674,79 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
-    raster_utils.reclassify_dataset_uri(
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
 
 
-def make_distance_kernel(max_distance):
+def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
+    max_distance = expected_distance * 5
     kernel_size = int(numpy.round(max_distance * 2 + 1))
-    distance_kernel = numpy.empty((kernel_size, kernel_size), dtype=numpy.float)
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
     for row_index in xrange(kernel_size):
-        for col_index in xrange(kernel_size):
-            distance_kernel[row_index, col_index] = numpy.sqrt(
-                (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2)
-    return distance_kernel
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-def make_linear_kernel(max_distance):
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, 1 - distance_kernel / max_distance)
-    return kernel / numpy.sum(kernel)
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-def make_exponential_kernel(max_distance):
-    distance_kernel = make_distance_kernel(max_distance)
-    kernel = numpy.where(
-        distance_kernel > max_distance, 0.0, numpy.exp(-2.99 / max_distance * distance_kernel))
-    return kernel / numpy.sum(kernel)
+def make_linear_decay_kernel_uri(max_distance, kernel_uri):
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    kernel_dataset.SetProjection( srs.ExportToWkt() )
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0, (max_distance - distance_kernel_row) / max_distance)
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
