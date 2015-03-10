@@ -7,7 +7,7 @@ import logging
 import os
 import pprint as pp
 
-import pygeoprocessing.geoprocessing as ru
+import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -167,7 +167,7 @@ def read_crop_lookup_table(vars_dict):
             }
         }
     '''
-    input_dict = ru.get_lookup_from_csv(
+    input_dict = pygeo.get_lookup_from_csv(
         vars_dict['crop_lookup_table_uri'], 'code')
 
     crop_lookup_dict = {}
@@ -396,7 +396,7 @@ def read_percentile_yield_tables(vars_dict):
         basename = os.path.basename(table_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
-            percentile_yield_dict[cropname] = ru.get_lookup_from_csv(
+            percentile_yield_dict[cropname] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
 
     # Add Assertion Statements?
@@ -450,7 +450,7 @@ def read_regression_model_yield_tables(vars_dict):
         basename = os.path.basename(table_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
-            modeled_yield_dict[cropname] = ru.get_lookup_from_csv(
+            modeled_yield_dict[cropname] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
 
     # Clean Data? (e.g. make sure empty args are initializeD or set to None)
@@ -534,7 +534,7 @@ def read_nutrition_table(vars_dict):
             },
         }
     '''
-    input_dict = ru.get_lookup_from_csv(
+    input_dict = pygeo.get_lookup_from_csv(
         vars_dict['nutrition_table_uri'], 'crop')
 
     # Add Assertion Statements?
@@ -572,7 +572,7 @@ def read_economics_table(vars_dict):
             },
         }
     '''
-    input_dict = ru.get_lookup_from_csv(
+    input_dict = pygeo.get_lookup_from_csv(
         vars_dict['economics_table_uri'], 'crop')
 
     # Add Assertion Statements?

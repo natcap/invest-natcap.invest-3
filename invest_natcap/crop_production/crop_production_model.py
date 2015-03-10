@@ -2,9 +2,10 @@
 The Crop Production Model module contains functions for running the model
 '''
 
+import os
 import logging
 
-import pygeoprocessing.geoprocessing as ru
+import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -25,21 +26,71 @@ def create_observed_yield_maps(vars_dict):
             # ...
 
             'lulc_map_uri': 'path/to/lulc_map_uri',
+            'crop_lookup_dict': {
+                'code': 'crop_name',
+                ...
+            },
             'observed_yields_maps_dict': {
                 'crop': 'path/to/crop_climate_bin_map',
                 ...
             },
-            'tmp_observed_dir': '/path/to/tmp_observed_yield_dir',
+            'tmp_observed_dir': '/path/to/tmp_observed_dir',
         }
+
+    Outputs:
+
+    .
+    └── tmp
+        └── observed
+            └── yield
+                └── [crop]_yield_map (*.tif)
     '''
-    # Get List of Crops in LULC Crop Map
+    def lulc_mask_over_yield_map():
+        pass
+
+    # Make yield folder
+
+    lulc_map_uri = vars_dict['lulc_map_uri']
+    # AOI from lulc_map
+    lulc_map_aoi = pygeo.get_bounding_box(lulc_map_uri)  # Will this work?
+
+    for crop in vars_dict['observed_yields_maps_dict'].keys():
+        observed_yield_map_uri = vars_dict['observed_yields_maps_dict'][crop]
+
+        # Transform lulc_map AOI into observed_yield_map projection
+        pygeo.reproject_dataset_uri()
+
+        # Clip observed_yields_map over AOI: clipped_observed_yield_map_uri
+
+        # Reproject and resample clipped_observed_yield_map to match lulc_map
+
+        # Perform masked operation to produce observed_yields_map
+        dataset_uri_list = [lulc_map_uri, clipped_observed_yield_map_uri]
+        dataset_pixel_op = lulc_mask_over_yield_map
+        dataset_out_uri = os.path.join(
+            tmp_observed_dir,
+            'yield/' + crop + '_yield_map.tif')
+        gdal_dtype = pygeo.get_datatype_from_uri(observed_yield_map_uri)
+        nodata = -1
+        cell_size = pygeo.get_cell_size_from_uri(lulc_map_uri)
+
+        pygeo.vectorize_datasets(
+            dataset_uri_list,
+            dataset_pixel_op,
+            dataset_out_uri,
+            gdal_dtype,
+            nodata,
+            cell_size,
+            "union")
+
+    # For crop in observed_yields_maps_dict:
+    #    
 
     # For Each Crop, Clip Corresponding Observed Crop Yield Map over AOI and Reproject
-    #   Save to tmp_climate_percentile_yield_intermediate_dir
+    #   Save to temporary directory
 
     # Create Crop Production Maps by Multiplying Yield by Cell Size Area
     #   Output: Crop Production Maps
-    #   If 'create_crop_production_maps' selected, save to output folder
 
     # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
     #   Output: Crop Production Dictionary?
@@ -238,18 +289,18 @@ def clip_raster_over_aoi():
         }
     '''
     # Check that datasets are in same projection
-    ru.assert_datasets_in_same_projection()
+    pygeo.assert_datasets_in_same_projection()
 
     # Reproject AOI onto Raster, find bounding box
-    ru.reproject_dataset_uri()
+    pygeo.reproject_dataset_uri()
 
     # Clip raster around bounding box
-    ru.clip_dataset_uri()
+    pygeo.clip_dataset_uri()
 
     # Reproject Clipped Raster onto AOI
-    ru.reproject_dataset_uri()
+    pygeo.reproject_dataset_uri()
 
-    ru.align_dataset_list()
+    pygeo.align_dataset_list()
 
     # Save/return clipped raster
     pass
@@ -314,7 +365,7 @@ def element_wise_operation():
             ...
         }
     '''
-    ru.vectorize_datasets(
+    pygeo.vectorize_datasets(
         dataset_uri_list,
         dataset_pixel_op,
         dataset_out_uri,
