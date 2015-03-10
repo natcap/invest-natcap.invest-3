@@ -20,6 +20,11 @@ LOGGER = logging.getLogger('carbon_biophysical')
 
 NUM_MONTE_CARLO_RUNS = 10000
 
+class MapCarbonPoolError(Exception):
+    """A custom error for catching lulc codes from a raster that do not
+        match the carbon pools data file"""
+    pass
+
 def execute(args):
     return execute_30(**args)
 
@@ -108,11 +113,17 @@ def execute_30(**args):
 
             pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args[lulc_uri])
             # Create a raster that models total carbon storage per pixel.
-            pygeoprocessing.geoprocessing.vectorize_datasets(
-                [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
-                gdal.GDT_Float32, nodata_out, pixel_size_out,
-                "intersection", dataset_to_align_index=0,
-                process_pool=args['_process_pool'])
+            try:
+                pygeoprocessing.geoprocessing.vectorize_datasets(
+                    [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
+                    gdal.GDT_Float32, nodata_out, pixel_size_out,
+                    "intersection", dataset_to_align_index=0,
+                    process_pool=args['_process_pool'])
+            except KeyError:
+                raise MapCarbonPoolError('There was a KeyError when mapping '
+                    'land cover ids to carbon pools. This can happen when '
+                    'there is a land cover id that does not exist in the '
+                    'carbon pool data file.')
 
             if do_uncertainty:
                 def map_carbon_pool_variance(lulc):
@@ -168,7 +179,7 @@ def execute_30(**args):
 
                     _calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
-                        vol_hwp_uri, args['lulc_cur_year'], 
+                        vol_hwp_uri, args['lulc_cur_year'],
                         args['lulc_fut_year'], args['_process_pool'])
 
                     temp_c_fut_uri = pygeoprocessing.geoprocessing.temporary_filename()
@@ -200,7 +211,7 @@ def execute_30(**args):
                 fut_clean = numpy.where(fut_nodata, 0, c_fut)
                 seq = fut_clean - cur_clean
                 return numpy.where(fut_nodata & cur_nodata, nodata_out, seq)
-                
+
             pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['lulc_cur_uri'])
             outputs['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
             pygeoprocessing.geoprocessing.vectorize_datasets(
