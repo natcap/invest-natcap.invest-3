@@ -23,8 +23,8 @@ library(rjson)
 ##
 ##  Debugging
 ##
-
-## to temporarily set sessid, which is passed to this script via argument
+## start R from /usr/local/recreation/public_html and then
+## temporarily set sessid, which is passed to this script via argument
 # sessid = "DEBUGGING"
 # sessid = "r6umkrdde23glvtb8doamdq137/"
 
@@ -231,7 +231,13 @@ tolog("INFO","Performed linear regression")
 ## get the regression coefs
 # vvcoefs <- lapply(c(as.vector(coef(vv))), function(x) x)
 if (scenario=="y") {
-  vvcoefs <- scepar$Estimate
+  scepar[,1] <- tolower(scepar[,1])
+  vvcoefs <- NA
+  vvcoefs[1] <- scepar$Estimate[1]
+  for (i in 2:length(scepar$Estimate)){
+    vvcoefs[i] <- scepar$Estimate[which(scepar[,1] == prenam[i-1])]
+  }
+  # vvcoefs <- scepar$Estimate
 } else {
   vvcoefs <- as.vector(coef(vv))
 }
