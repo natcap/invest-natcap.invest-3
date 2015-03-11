@@ -494,6 +494,7 @@
             },
             {
               "id": "valuation_group",
+              "args_id": "valuation_group",
               "type": "container",
               "label": "Compute Economic Valuation?",
               "collapsible": true,
@@ -526,8 +527,8 @@
                       "helpText": "This is the monetary value of the land, per square meter, that you wish to use in the valuation computation."
                     },
                     {
-                      "id": "return_period_storm",
-                      "args_id": "return_period_storm",
+                      "id": "storm_return_period",
+                      "args_id": "storm_return_period",
                       "type": "text",
                       "label": "Return Period of Storm (years) (Optional)",
                       "defaultValue": "10",
