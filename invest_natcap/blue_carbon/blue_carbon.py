@@ -352,13 +352,13 @@ def execute(args):
 
     carbon_field_key = "Id"
     carbon_field_veg = "Veg Type"
-    carbon_field_above = "Above (Mg / ha)"
-    carbon_field_below = "Below (Mg / ha)"
-    carbon_field_soil = "Soil (Mg / ha)"
-    carbon_field_litter = "Litter (Mg / ha)"
-    carbon_field_depth = "Soil Depth"
-    carbon_acc_bio_field = "Bio_accum_rate (Mg / ha / yr)"
-    carbon_acc_soil_field = "Soil_accum_rate (Mg / ha / yr)"
+    carbon_field_above = "Above (TCO2e / ha)"
+    carbon_field_below = "Below (TCO2e / ha)"
+    carbon_field_soil = "Soil (TCO2e / ha)"
+    carbon_field_litter = "Litter (TCO2e / ha)"
+    carbon_field_depth = "Soil Depth (m)"
+    carbon_acc_bio_field = "Bio_accum_rate (TCO2e / ha-yr)"
+    carbon_acc_soil_field = "Soil_accum_rate (TCO2e / ha-yr)"
 
     # transition matrix
     trans_comment_uri = args["transition_matrix_uri"]

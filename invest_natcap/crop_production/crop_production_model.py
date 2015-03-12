@@ -40,10 +40,10 @@ def create_observed_yield_maps(vars_dict):
     Outputs:
 
     .
-    └── tmp
-        └── observed
-            └── yield
-                └── [crop]_yield_map (*.tif)
+    |-- tmp
+        |-- observed
+            |-- yield
+                |-- [crop]_yield_map (*.tif)
     '''
     def lulc_mask_over_yield_map():
         pass
