@@ -354,7 +354,7 @@ def execute(args):
     carbon_field_veg = "Veg Type"
     carbon_field_above = "Above (TCO2e / ha)"
     carbon_field_below = "Below (TCO2e / ha)"
-    carbon_field_soil = "Soil (TCO2e / ha)"
+    carbon_field_soil = "Soil (TCO2e / ha-m)"
     carbon_field_litter = "Litter (TCO2e / ha)"
     carbon_field_depth = "Soil Depth (m)"
     carbon_acc_bio_field = "Bio_accum_rate (TCO2e / ha-yr)"
