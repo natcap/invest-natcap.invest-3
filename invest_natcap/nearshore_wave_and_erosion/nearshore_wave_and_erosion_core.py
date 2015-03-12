@@ -886,6 +886,9 @@ def compute_nearshore_and_wave_erosion(args):
     Undertow=numpy.zeros((transect_count,transect_length))+nodata
     SedTrsprt=numpy.zeros((transect_count,transect_length))+nodata
 
+    MErodeLens1 = []    # eroded areas
+    Retreats1 = []      # areas of retreat
+    transect_ids = []   # transects where erosion and retreat happened
 
     #Read data for each transect, one at a time
 #    for transect in range(2000, 2500): # Debug
@@ -1189,6 +1192,10 @@ def compute_nearshore_and_wave_erosion(args):
                         MErodeVol1=0
                     MErodeVol1=round(MErodeVol1,2)
                     gp.addmessage('MudScour_Present='+str(MErodeVol1)+' m^3/m')
+
+                    MErodeLens1.append(MErodeLen1)
+                    Retreats1.append(MErodeLen1)
+                    transect_ids.append(transect)
         
             if Struct==1:
                 #Current conditions
@@ -1199,7 +1206,23 @@ def compute_nearshore_and_wave_erosion(args):
                 Fp=ForceSeawall(Hp[-1],To,-Z1[-1])
                 Fp=round(Fp,2);Hwp=round(Hwp,2)
                 gp.addmessage('Wall_Present='+str(Hwp)+' m; Force on wall='+str(Fp)+' kN/m')
-        
+    print('')    
+
+    # If the user chose to do valuation
+    if args['valuation_group']:
+
+        # Convert types:
+        MErodeLens1 = np.array(MErodeLens1)
+        Retreats1 = np.array(Retreats1)
+        transect_ids = np.array(transect_ids)
+
+        # Fake values for MErodeLen2 and Retreat2:
+        MErodeLens2 = numpy.ones(MErodeLens1.size) * -9999
+        Retreats2 = numpy.ones(Retreats1.size) * -9999
+
+        # Compute valuation
+        compute_valuation( \
+            args, MErodeLens1, MErodeLens2, Retreats1, Retreats2, transect_ids)
 
     # Saving data in HDF5
     args['biophysical_data_uri'] = \
@@ -1244,6 +1267,138 @@ def compute_nearshore_and_wave_erosion(args):
 
     return args['biophysical_data_uri']
 
+
+def compute_valuation(args, MErodeLens1, MErodeLens2, Retreats1, Retreats2, transect_ids):
+    """ Computes valuation. Tis is Greg's code, unchanged.
+
+        Inputs:
+            -args['longshore_extent']: Used to obtain an approximate area of
+                land loss associated with retreat/erosion. This is the along 
+                shore length where the natural habitat types, coverage, 
+                and management actions, topo/bathy and forcing conditions 
+                are approximately uniform. Integer number, unit is meter.
+            
+            -args['property_value']: Land $ value per square meter (integer)
+            
+            -args['storm_return_period']: Return period of storm (int, years)
+            
+            -args['discount_rate']: integer percentage point. discount rate to 
+                adjust the monetary benefits of the natural habitats in future 
+                years to the present time.
+            
+            -args['time_horizon']: integer. Years over which valuation is 
+                performed.
+            
+            -MErodeLens1: numpy array. Length of profile with significant 
+                erosion from scenario 1, in meters. One value per transect
+            
+            -MErodeLens2: Same thing as MErodeLens1, for scenario 2
+            
+            -Retreats1: numpy array. Amount of shore retreat, for each transect
+                in meters, from scenario 1
+            
+            -Retreats2: Same thing as Retreats1, for scenario 2
+
+            -transect_ids: transect indices that correspond to the data points
+
+
+        Returns a dictionary of numpy arrays from args['valuation'] where:
+            -args['valuation']['Eav'][t]: avoided erosion for transect 't'
+            -args['valuation']['Dav'][t]: damage value for transect 't'
+            -args['valuation']['EPV'][t]: projected habitat value for 't'
+    """
+    assert MErodeLens1.size == transect_ids.size, \
+        "Wrong size for profile erosion array for scenario 1 (" + \
+            str(MErodeLens1.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert MErodeLens2.size == transect_ids.size, \
+        "Wrong size for profile erosion array for scenario 2 (" + \
+            str(MErodeLens2.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert Retreats1.size == transect_ids.size, \
+        "Wrong size for shore retreat array for scenario 1 (" + \
+            str(MErodeLens1.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert Retreats2.size == transect_ids.size, \
+        "Wrong size for shore retreat array for scenario 2 (" + \
+            str(MErodeLens2.size) + " vs " + str(transect_ids.size) + ")"
+
+
+    # function to split thousands with commas
+    def splitthousands(s, sep=','):
+        if len(s) <= 3:
+            return s
+        return splitthousands(s[:-3], sep) + sep + s[-3:]
+
+
+    LOGGER.debug("Computing economic valuation for %i transects...", \
+        transect_ids.size)
+
+    
+    # Initialize valuation data structure
+    args['valuation'] = {}
+    valuation = args['valuation']
+    
+    transect_count = transect_ids.size
+
+    valuation['Eav'] = numpy.ones(transect_count) * -9999
+    valuation['Dav'] = numpy.ones(transect_count) * -9999
+    valuation['EPV'] = numpy.ones(transect_count) * -9999
+
+    
+    progress_step = max(transect_count / 50, 1)
+    for transect in range(transect_count):
+        if transect % progress_step == 0:
+            print '.',
+
+        MErodeLen1 = MErodeLens1[transect]
+        MErodeLen2 = MErodeLens2[transect]
+        Retreat1 = Retreat1[transect]
+        Retreat2 = Retreat2[transect]
+
+
+        if MErodeLen2==-9999 and Retreat2==-9999: # there's no management action
+            message = "You haven't defined a management action." + \
+                " We cannot compute an avoided damage value."
+            LOGGER.debug(message)
+        else:
+            if sand==1:
+                E1=max([Retreat1,Retreat2])
+                E2=min([Retreat1,Retreat2])
+            elif mud==1:
+                E1=max([MErodeLen1,MErodeLen2])
+                E2=min([MErodeLen1,MErodeLen2])
+
+            if E2<0:
+                message = "We cannot compute an avoided damage cost " + \
+                    " because the retreat amount for one of your scenario" + \
+                    " is negative. The biophysical model did not run appropriately."
+                LOGGER.debug(message)
+            else:
+                Eav = valuation['Eav'][transect]
+                Dav = valuation['Dav'][transect]
+                EPV = valuation['EPV'][transect]
+
+
+                E1=E1*Longshore;
+                E2=E2*Longshore;
+                Eav=E1-E2; # avoided erosion
+                D1=E1*PropValue;
+                D2=E2*PropValue;
+                Dav=D1-D2; # avoided erosion
+                p=1.0/Tr # return frequency
+                temp1=1.0+disc;
+                temp2=[(1.0/temp1)**t for t in range(1,int(TimeHoriz)+1)]
+                EPV=p*Dav*sum(temp2)
+#                LOGGER.debug("...Avoided Erosion between scenarios is %d meters squared.", \
+#                    round(Eav))
+#                LOGGER.debug("...Avoided Damage Value is $%s (in your local currency)...", \
+#                    splitthousands(str(int(Dav))))
+#                LOGGER.debug("Expected Projected Value of habitat is $%s (in your local currency)", \
+#                    splitthousands(str(int(EPV))))
+    print('')    
+
+                
 
 def reconstruct_2D_shore_map(args):
     LOGGER.debug('Reconstructing 2D shore maps...')
