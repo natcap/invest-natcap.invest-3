@@ -53,7 +53,6 @@ class ZipCommand(Command):
         zip = zipfile.ZipFile(self.zip_file, 'w',
             compression=zipfile.ZIP_DEFLATED)
         dir = self.zip_dir
-        root_len = len(os.path.abspath(dir))
         print dir
         for root, dirs, files in os.walk(dir):
             for f in files:
@@ -64,10 +63,7 @@ class ZipCommand(Command):
 
 console = []
 py2exe_args = {}
-data_files = [('invest_natcap/scenario_generator',
-    ['invest_natcap/scenario_generator/jquery-1.6.2.min.js',
-     'invest_natcap/scenario_generator/highcharts.js'])]
-
+data_files = []
 lib_path = ''
 CMD_CLASSES = {
     'build_ext': build_ext,
@@ -201,6 +197,9 @@ if platform.system() == 'Windows':
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json',
                      'invest_natcap/recreation/server_list.json']),
+                ('invest_natcap/scenario_generator',
+                    ['invest_natcap/scenario_generator/jquery-1.6.2.min.js',
+                     'invest_natcap/scenario_generator/highcharts.js']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
                 ('invest_natcap/reporting/reporting_data',
@@ -242,6 +241,10 @@ if platform.system() == 'Windows':
                 ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
             self.distribution.data_files.append(('lib',
                 ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            self.distribution.data_files.append(
+                ('lib/site-packages/invest_natcap/scenario_generator',
+                    ['invest_natcap/scenario_generator/jquery-1.6.2.min.js',
+                        'invest_natcap/scenario_generator/highcharts.js']))
             bdist_wininst.run(self)
 
     # Now the we've declared our custom Py2exe command, we need to let the
