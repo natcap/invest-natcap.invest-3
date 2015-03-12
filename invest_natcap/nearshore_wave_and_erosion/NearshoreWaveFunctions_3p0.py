@@ -19,6 +19,12 @@ import CPf_SignalSmooth as SignalSmooth
 g=9.81
 
 def Fast_k(T,h):
+    if not (h >= 0.05).all():
+        too_shallow = np.where(h >= 0.05)
+        print('Some depths are too shallow in h of size', h.size)
+        for i in too_shallow:
+            print(i, h[i])
+
     assert (h >= 0.05).all(), \
         'Detected depths that are too shallow'
     g=9.81;

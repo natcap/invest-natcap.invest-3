@@ -759,60 +759,8 @@ def execute(args):
 
     shapefile_required_fields = args['shapefile_required_fields']
 
-    # Assign a positional index to every habitat field
-    args['field_index'] = {}
-    for shapefile in shapefile_required_fields:
-        
-        # Group natural habitats together, keep the other fields 
-        # in their own category
-
-        # Known habitat => use natural habitats category
-        if shapefile in args['habitat_shapefiles']:
-            # Start by creating a habitat if necessary
-            if 'natural habitats' not in args['field_index']:
-                args['field_index']['natural habitats'] = {}
-
-            destination = args['field_index']['natural habitats']
-        
-        # Otherwise => put the shapefile in its own category
-        else:
-            args['field_index'][shapefile] = {}
-            
-            destination = args['field_index'][shapefile]
-
-        # Create priority keys (numerical) for natural habitats:
-        if shapefile in args['habitat_shapefiles']:
-            
-            # Find the natural habitat in habitat information
-            for habitat_name in args['habitat_priority']:
-                if habitat_name == shapefile:
-                    priority = args['habitat_priority'][habitat_name]
-
-                    destination[priority] = {}
-
-                    destination = destination[priority]
-
-                    destination['name'] = shapefile
-
-                    break
-
-
-        # Gather all the fields for this shapefile type
-        required_fields = shapefile_required_fields[shapefile]
-        
-        # And create an entry when they will be stored
-        destination['fields'] = {}
-
-        field_id = 0
-        for field_name in required_fields:                
-        
-            # Only add if field is not 'type'
-            if field_name.lower() != 'type':
-        
-                # Field name is set to its index in the required fields array
-                destination['fields'][field_name.lower()] = field_id
-
-                field_id += 1
+    # Assign a positional index to every shapefile field
+    assign_shapefile_field_index(shapefile_required_fields, args)
 
 #    print("args['field_index']")
 #    for category in args['field_index']:
@@ -1384,6 +1332,76 @@ def execute(args):
     # We're done with boiler-plate code, now we can delve into core processing
     nearshore_wave_and_erosion_core.execute(args)
 
+    # Assign a positional index to every habitat field
+def assign_shapefile_field_index(shapefile_required_fields, args):
+    """ Assign a positional index to every field of the known shapefiles
+
+        Inputs:
+            -shapefile_required_fields: a dictionary of all the required fields
+                stored for each known shapefile
+            -args: the argument dictionary where the field indices are going 
+                to be stored.
+            -args['habitat_shapefiles']: the set of habitat shapefiles
+
+        Creates a 'field_index' entry in 'args' and stores the shapefile fields
+            per category and per shapefile name, e.g.:
+        
+        ID = args['field_index']['natural habitats']['coral reef']['SLRKeepUp']
+    """
+    
+    args['field_index'] = {}
+    for shapefile in shapefile_required_fields:
+        
+        # Group natural habitats together, keep the other fields 
+        # in their own category
+
+        # Found a known habitat => put it in 'natural habitats' category
+        if shapefile in args['habitat_shapefiles']:
+            # Start by creating a habitat if necessary
+            if 'natural habitats' not in args['field_index']:
+                args['field_index']['natural habitats'] = {}
+
+            destination = args['field_index']['natural habitats']
+        
+        # Otherwise => put the shapefile in its own category
+        else:
+            args['field_index'][shapefile] = {}
+            
+            destination = args['field_index'][shapefile]
+
+        # Create priority keys (numerical) for natural habitats:
+        if shapefile in args['habitat_shapefiles']:
+            
+            # Find the natural habitat in habitat information
+            for habitat_name in args['habitat_priority']:
+                if habitat_name == shapefile:
+                    priority = args['habitat_priority'][habitat_name]
+
+                    destination[priority] = {}
+
+                    destination = destination[priority]
+
+                    destination['name'] = shapefile
+
+                    break
+
+
+        # Gather all the fields for this shapefile type
+        required_fields = shapefile_required_fields[shapefile]
+        
+        # And create an entry when they will be stored
+        destination['fields'] = {}
+
+        field_id = 0
+        for field_name in required_fields:                
+        
+            # Only add if field is not 'type'
+            if field_name.lower() != 'type':
+        
+                # Field name is set to its index in the required fields array
+                destination['fields'][field_name.lower()] = field_id
+
+                field_id += 1
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary

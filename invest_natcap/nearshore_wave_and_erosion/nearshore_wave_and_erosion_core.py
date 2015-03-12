@@ -1093,6 +1093,9 @@ def compute_nearshore_and_wave_erosion(args):
             H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
         
             #Compute maximum wave height
+            bath_sm[bath_sm > -0.05] = -0.05
+
+            assert (bath_sm <= -0.05).all()
             k,C,Cg=Fast_k(To,-bath_sm)
             Hmx=0.1*(2.0*pi/k)*tanh((-bath_sm+Surge)*k);#Max wave height - Miche criterion
         
@@ -1635,6 +1638,13 @@ def reconstruct_2D_shore_map(args):
             coord = (coordinates[0][index], coordinates[1][index])
 
             # Check if the point is not too far off
+            if (coord[0] < 0 ) or (coord[0] >= transect_mask.shape[0]):
+                continue
+
+            if (coord[1] < 0 ) or (coord[1] >= transect_mask.shape[1]):
+                continue
+
+
             if transect_mask[coord]:
 
                 # Check if it's a new point
