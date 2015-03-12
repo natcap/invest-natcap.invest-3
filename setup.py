@@ -64,7 +64,10 @@ class ZipCommand(Command):
 
 console = []
 py2exe_args = {}
-data_files = []
+data_files = [('invest_natcap/scenario_generator',
+    ['invest_natcap/scenario_generator/jquery-1.6.2.min.js',
+     'invest_natcap/scenario_generator/highcharts.js'])]
+
 lib_path = ''
 CMD_CLASSES = {
     'build_ext': build_ext,
@@ -198,9 +201,6 @@ if platform.system() == 'Windows':
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json',
                      'invest_natcap/recreation/server_list.json']),
-                ('invest_natcap/scenario_generator',
-                    ['invest_natcap/scenario_generator/jquery-1.6.2.min.js',
-                     'invest_natcap/scenario_generator/highcharts.js']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
                 ('invest_natcap/reporting/reporting_data',
