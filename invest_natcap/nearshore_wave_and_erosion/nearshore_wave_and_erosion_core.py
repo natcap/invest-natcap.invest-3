@@ -39,15 +39,19 @@ def execute(args):
         returns nothing"""
     logging.info('executing coastal_protection_core')
 
-    # Default transect data URI
-    args['transect_data_uri'] = \
-        os.path.join(args['output_dir'], 'transect_data.h5')
+    # User-specified transect data URI 
+    if 'cross_shore_profile_uri' in args:
+        args['transect_data_uri'] = args['cross_shore_profile_uri']
+    # Default transect data URI.
+    else:
+        args['transect_data_uri'] = \
+            os.path.join(args['output_dir'], 'transect_data.h5')
     
     # Run the profile generator
     if 'Profile generator' in args['modules_to_run']: 
         compute_transects(args)
         export_transect_coordinates_to_CSV(args['transect_data_uri'])
-
+    
     # Run the nearshore wave and erosion model
     if 'wave & erosion' in args['modules_to_run']:
         compute_nearshore_and_wave_erosion(args)
