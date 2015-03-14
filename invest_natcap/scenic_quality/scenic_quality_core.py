@@ -6,7 +6,7 @@ import logging
 
 from osgeo import gdal
 
-from invest_natcap import raster_utils
+from pygeoprocessing import geoprocessing
 import scenic_quality_cython_core
 
 
@@ -18,17 +18,17 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
-    
+
         Inputs:
             -array_shape: a shape tuple (rows, cols) as is created from
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             -max_dist: maximum viewing distance
-            
-        returns a tuple (min, center, max, I, J) with min, center and max 
-        Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
-        angles and coords as two Nx1 numpy arrays of row and column of the 
+
+        returns a tuple (min, center, max, I, J) with min, center and max
+        Nx1 numpy arrays of each raster cell's minimum, center, and maximum
+        angles and coords as two Nx1 numpy arrays of row and column of the
         coordinate of each point.
     """
     viewpoint = np.array(viewpoint_coords)
@@ -90,7 +90,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             # Use the offset to compute extreme angles
             min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = np.arctan2(-min_corner[0], min_corner[1])
-            min_angles.append((min_angle + two_pi) % two_pi) 
+            min_angles.append((min_angle + two_pi) % two_pi)
 
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
@@ -147,7 +147,7 @@ def print_skip_list(sweep_line, skip_nodes):
             None if skip_node['up'] is None else skip_node['up']['distance'], \
             None if skip_node['up'] is None else \
             None if skip_node['up']['next'] is None else \
-            skip_node['up']['next']['distance'], 'down', 
+            skip_node['up']['next']['distance'], 'down',
             None if skip_node['down'] is None else skip_node['down']['distance'], \
             None if skip_node['down'] is None else \
             None if skip_node['down']['next'] is None else \
@@ -155,7 +155,7 @@ def print_skip_list(sweep_line, skip_nodes):
 
 def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Insert an active pixel in the sweep_line and update the skip_nodes.
-    
+
             -sweep_line: a linked list of linked_cell as created by the
                 linked_cell_factory.
             -skip_nodes: an array of linked lists that constitutes the hierarchy
@@ -167,15 +167,15 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
 
     def insert_new_skip_node(node, upper_node, skip_nodes):
         """Add a new skip node after 'node'. Assumes node's span is 4
-        
-            Inputs: 
+
+            Inputs:
                 -node: the overstretched node (span is too large) that needs
                     to be offloaded by a new intermediate node.
                 -upper_node: the upper skip node which span should be updated.
                 The variable is None if no upper node exists.
                 -skip_nodes: dictionary of skip nodes to which the new skip
                 node should be added.
-            
+
             Returns the span at the node above, otherwise 'None'"""
         message = 'Span for node ' + str(node['distance']) + \
         ' expected to be 4, instead is ' + \
@@ -202,21 +202,21 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             span = upper_node['span']
         #else:
             #print('Upper node is None')
-            
+
         #print('returning span of', span)
         return span
 
     def update_skip_node_span(pixel, level, hierarchy, skip_nodes):
-        """Update span for pixel and insert as many skip nodes as necessary. 
+        """Update span for pixel and insert as many skip nodes as necessary.
         Create additional hierarchical levels as necessary.
-        
+
             Inputs:
                 -node: the node right before the place of insertion
                 -level: the level in skip_list where the new node will be
                 -skip_nodes: the skip pointers hierarchy, which is a list of
                 dictionaries containing skip_nodes indexed by the node's
                 'distance' entry.
-                
+
             Returns nothing."""
         #print('updating skip node span')
         if pixel is not None:
@@ -385,8 +385,8 @@ def print_node(node):
     (str(None) if node['next'] is None else node['next']['distance'])))
 
 def find_pixel_before_fast(sweep_line, skip_nodes, distance):
-    """Find the active pixel before the one with distance. 
-        
+    """Find the active pixel before the one with distance.
+
         Inputs:
             -sweep_line: a linked list of linked_cell as created by the
                 linked_cell_factory.
@@ -394,9 +394,9 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 of skip pointers in the skip list. Each cell is defined as ???
             -distance: the key used to search the sweep_line
 
-            Return a tuple (pixel, hierarchy) where: 
-                -pixel is the linked_cell right before 'distance', or None if 
-                it doesn't exist (either 'distance' is the first cell, or the 
+            Return a tuple (pixel, hierarchy) where:
+                -pixel is the linked_cell right before 'distance', or None if
+                it doesn't exist (either 'distance' is the first cell, or the
                 sweep_line is empty).
                 -hierarchy is the list of intermediate skip nodes starting from
                 the bottom node right above the active pixel up to the top node.
@@ -430,7 +430,7 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 previous = pixel
                 pixel = pixel['next']
                 iteration += 1
-            # Went too far, backtrack 
+            # Went too far, backtrack
             if (pixel is None) or (pixel['distance'] >= distance):
                 pixel = previous
             # Try to go down 1 level
@@ -445,8 +445,8 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
         return (None, hierarchy[::-1])
 
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
-    """Find an active pixel based on distance. 
-        
+    """Find an active pixel based on distance.
+
         Inputs:
             -sweep_line: a linked list of linked_cell as created by the
                 linked_cell_factory.
@@ -459,7 +459,7 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Empty sweep_line, nothing to return
     if not sweep_line:
         return None
-        
+
     pixel, _ = find_pixel_before_fast(sweep_line, skip_nodes, distance)
 
     # Sweep-line is non-empty:
@@ -474,7 +474,7 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Can't be a pixel in sweep_line, since it should be after last
     else:
         return None
-    
+
 
 def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
     """Makes simple tests to ensure the the hierarchy is consistent"""
@@ -485,7 +485,7 @@ def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
     ' length of skip_nodes ' + str(len(skip_nodes))
     if len(hierarchy) != len(skip_nodes):
         return (False, message)
-    
+
     # Test each level in the hierarchy
     old_current = -1 # used to avoid repeats
     old_after = -1 # used to avoid repeats
@@ -497,7 +497,7 @@ def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
 
         message = \
         'Repeats in hierarchy levels: ' + str(current) + '-' + str(after)
-        if (current != old_current) and (after != old_after): 
+        if (current != old_current) and (after != old_after):
             return (False, message)
         message = "Current distance of " + str(distance) + \
         " falls on or after the next pixel " + str(after)
@@ -506,23 +506,23 @@ def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
 
         message = "Current distance of " + str(distance) + \
         " falls before hierarchy node " + str(current)
-        if current >= distance: 
+        if current >= distance:
             return (False, message)
 
     return (True, 'Hierarchy is consistent')
-        
+
 def skip_list_is_consistent(linked_list, skip_nodes):
     """Function that checks for skip list inconsistencies.
-    
-        Inputs: 
+
+        Inputs:
             -sweep_line: the container proper which is a dictionary
-                implementing a linked list that contains the items 
+                implementing a linked list that contains the items
                 ordered in increasing distance
-            -skip_nodes: python dict that is the hierarchical structure 
-                that sitting on top of the sweep_line to allow O(log n) 
+            -skip_nodes: python dict that is the hierarchical structure
+                that sitting on top of the sweep_line to allow O(log n)
                 operations.
-        
-        Returns a tuple (is_consistent, message) where is_consistent is 
+
+        Returns a tuple (is_consistent, message) where is_consistent is
             True if list is consistent, False otherwise. If is_consistent
             is False, the string 'message' explains the cause"""
     # 1-Testing the linked_list:
@@ -539,7 +539,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     #   1.11-Last element has 'next' set to None
     if len(linked_list) == 0:
         return (True, 'Empty list is fine')
-    
+
     # 1.1-If len(linked_list) > 0 then len(linked_list) >= 2
     if len(linked_list) < 2:
         return (False, 'Linked list size is not valid: ' + \
@@ -569,7 +569,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
     up_count = 0    # actual number of up pointers
     up_gap = -1     # gap since last up pointer
-    
+
     # Counting the first 'up' pointer
     if pixel['up'] is not None:
         up_count += 1
@@ -741,12 +741,12 @@ def skip_list_is_consistent(linked_list, skip_nodes):
             #
             # level |     nodes
             #   2   |   0------->5----->
-            #   1   |   0->2->3->5->6->8 
+            #   1   |   0->2->3->5->6->8
             #
             # Node 0 at level 2 has a span of 3:
             #  1-From level 2, go down from node 0 until node 3
             #  2-From level 2, go down from node 5
-            # See if node 3's next (from step 1) is the same as the node 
+            # See if node 3's next (from step 1) is the same as the node
             # from step 2.
             if n != ascending_distances[-1]:
                 # Step 1, get the last node of the current higher node
@@ -891,7 +891,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
 def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
-    
+
             Inputs:
                 -active_pixels: a linked list of dictionaries containing the
                 following fields:
@@ -909,7 +909,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
                 -visibility_map: a python array the same size as the DEM
                 with 1s for visible pixels and 0s otherwise. Viewpoint is
                 always visible.
-            
+
             Returns nothing"""
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
@@ -1038,7 +1038,7 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
             observer
             -max_dist: maximum distance in pixels from the center of the array.
             Negative values are ignored (same effect as infinite distance).
-            
+
         Returns a tuple (rows, cols) of the cell rows and columns following
         the convention of numpy.where() where the first cell is immediately
         right to the viewpoint, and the others are enumerated clockwise."""
@@ -1053,7 +1053,7 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     j_min = max(viewpoint[1] - max_dist, 0)
     j_max = min(viewpoint[1] + max_dist, array_shape[1])
     # list all perimeter cell center angles
-    row_count = i_max - i_min 
+    row_count = i_max - i_min
     col_count = j_max - j_min
     # Create top row, except cell (0,0)
     rows = np.zeros(col_count - 1)
@@ -1083,7 +1083,7 @@ def cell_angles(cell_coords, viewpoint):
             from which to compute the angles
             -viewpoint: tuple (row, col) indicating the position of the
             observer. Each of row and col is an integer.
-            
+
         Returns a sorted list of angles"""
     rows, cols = cell_coords
     # List the angles between each perimeter cell
@@ -1097,8 +1097,8 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     coordinates, obs_elev=1.75, tgt_elev=0.0, \
     max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
-        
-        Inputs: 
+
+        Inputs:
             -input_array: numpy array of the elevation raster map
             -cell_size: raster cell size in meters
             -array_shape: input_array_shape as returned from ndarray.shape()
@@ -1109,7 +1109,7 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
             -obs_elev: observer elevation above the raster map.
             -tgt_elev: offset for target elevation above the ground. Applied to
                 every point on the raster
-            -max_dist: maximum visibility radius. By default infinity (-1), 
+            -max_dist: maximum visibility radius. By default infinity (-1),
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
             -alg_version: name of the algorithm to be used. Either 'cython'
             (default) or 'python'.
@@ -1118,7 +1118,7 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     # Compute the viewshed on it
     output_array = compute_viewshed(input_array, nodata, coordinates, \
     obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
-    
+
     # Save the output in the output URI
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
@@ -1127,8 +1127,8 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
 
 def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     tgt_elev, max_dist, cell_size, refraction_coeff, alg_version):
-    """Compute the viewshed for a single observer. 
-        Inputs: 
+    """Compute the viewshed for a single observer.
+        Inputs:
             -input_array: a numpy array of terrain elevations
             -nodata: input_array's nodata value
             -coordinates: tuple (east, north) of coordinates of viewing
@@ -1136,7 +1136,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
             -obs_elev: observer elevation above the raster map.
             -tgt_elev: offset for target elevation above the ground. Applied to
                 every point on the raster
-            -max_dist: maximum visibility radius. By default infinity (-1), 
+            -max_dist: maximum visibility radius. By default infinity (-1),
             -cell_size: cell size in meters (integer)
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
             -alg_version: name of the algorithm to be used. Either 'cython'
@@ -1147,7 +1147,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     visibility_map[input_array == nodata] = 0
     array_shape = input_array.shape
     # 1- get perimeter cells
-    # TODO: Make this function return 10 scalars instead of 2 arrays 
+    # TODO: Make this function return 10 scalars instead of 2 arrays
     perimeter_cells = \
     get_perimeter_cells(array_shape, coordinates, max_dist)
     # 1.1- remove perimeter cell if same coord as viewpoint
@@ -1163,7 +1163,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     col_min = np.amin(perimeter_cells[1])
     # Shape of the viewshed
     viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
-    # Viewer's coordiantes relative to the viewshed 
+    # Viewer's coordiantes relative to the viewshed
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
     scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
@@ -1180,7 +1180,7 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     # From the equation on the ArcGIS website:
     # http://resources.arcgis.com/en/help/main/10.1/index.html#//00q90000008v000000
     D_earth = 12740000 # Diameter of the earth in meters
-    correction = distances_sq*cell_size**2 * (1 - refraction_coeff) / D_earth 
+    correction = distances_sq*cell_size**2 * (1 - refraction_coeff) / D_earth
     #print("refraction coeff", refraction_coeff)
     #print("abs correction", np.sum(np.absolute(correction)), "rel correction", \
     #np.sum(np.absolute(correction))/ np.sum(np.absolute(visibility)))
@@ -1247,7 +1247,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
-    
+
     #print('cell center events', [center_events[e] for e in cell_center_events])
     #print('cell center events', [e for e in cell_center_events])
 
@@ -1297,9 +1297,9 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
 
 def execute(args):
     """Entry point for scenic quality core computation.
-    
+
         Inputs:
-        
+
         Returns
     """
     pass
