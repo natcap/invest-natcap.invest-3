@@ -711,14 +711,16 @@ def _prepare(**args):
                 inputs
     """
 
-    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['dem_uri'])
+    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['dem_uri'])
     intermediate_dir = os.path.join(args['workspace_dir'], 'prepared_data')
 
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
 
     tiled_dem_uri = os.path.join(intermediate_dir, 'tiled_dem.tif')
-    pygeoprocessing.geoprocessing.tile_dataset_uri(args['dem_uri'], tiled_dem_uri, 256)
+    pygeoprocessing.geoprocessing.tile_dataset_uri(
+        args['dem_uri'], tiled_dem_uri, 256)
     aligned_dem_uri = os.path.join(intermediate_dir, 'aligned_dem.tif')
     aligned_erosivity_uri = os.path.join(
         intermediate_dir, 'aligned_erosivity.tif')
@@ -738,8 +740,10 @@ def _prepare(**args):
     original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     thresholded_slope_uri = os.path.join(
         intermediate_dir, 'thresholded_slope.tif')
-    pygeoprocessing.geoprocessing.calculate_slope(aligned_dem_uri, original_slope_uri)
-    slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(original_slope_uri)
+    pygeoprocessing.geoprocessing.calculate_slope(
+        aligned_dem_uri, original_slope_uri)
+    slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        original_slope_uri)
     def threshold_slope(slope):
         '''Convert slope to m/m and clamp at 0.005 and 1.0 as
             desribed in Cavalli et al., 2013. '''
@@ -761,7 +765,8 @@ def _prepare(**args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction.tif')
 
-    pygeoprocessing.routing.flow_direction_d_inf(aligned_dem_uri, flow_direction_uri)
+    pygeoprocessing.routing.flow_direction_d_inf(
+        aligned_dem_uri, flow_direction_uri)
     pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
 
