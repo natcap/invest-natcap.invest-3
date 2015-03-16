@@ -44,6 +44,7 @@ def fetch_args(args, create_outputs=True):
         model_list = [
             {
                 'workspace_dir': 'path/to/workspace_dir',
+                'results_suffix': 'scenario_name',
                 'output_dir': 'path/to/output_dir',
                 'aoi_uri': 'path/to/aoi_uri',
                 'total_timesteps': 100,
@@ -221,47 +222,47 @@ def read_population_csv(args, uri):
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
         LOGGER.error("Population Parameters File does not contain all \
-            necessary parameters. %s" % uri)
+necessary parameters. %s" % uri)
         raise MissingParameter("Population Parameters File does not contain \
-            all necessary parameters")
+all necessary parameters")
 
     if (args['recruitment_type'] != 'Fixed') and (
             'Maturity' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Maturity' \
-            vector when running the given recruitment function. %s" % uri)
+vector when running the given recruitment function. %s" % uri)
         raise MissingParameter("Population Parameters File must contain a \
-            'Maturity' vector when running the given recruitment function")
+'Maturity' vector when running the given recruitment function")
 
     if (args['population_type'] == 'Stage-Based') and (
             'Duration' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Duration' \
-            vector when running Stage-Based models. %s" % uri)
+vector when running Stage-Based models. %s" % uri)
         raise MissingParameter("Population Parameters File must contain a \
-            'Duration' vector when running Stage-Based models")
+'Duration' vector when running Stage-Based models")
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and (
             args['spawn_units'] == 'Weight') and (
             'Weight' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Weight' \
-            vector when Spawners are calulated by weight using the \
-            Beverton-Holt or Ricker recruitment functions. %s" % uri)
+vector when Spawners are calulated by weight using the \
+Beverton-Holt or Ricker recruitment functions. %s" % uri)
         raise MissingParameter("Population Parameters File must contain a \
-            'Weight' vector when Spawners are calulated by weight using the \
-            Beverton-Holt or Ricker recruitment functions")
+'Weight' vector when Spawners are calulated by weight using the \
+Beverton-Holt or Ricker recruitment functions")
 
     if (args['harvest_units'] == 'Weight') and (
             'Weight' not in pop_dict.keys()):
         LOGGER.error("Population Parameters File must contain a 'Weight' \
-            vector when 'Harvest by Weight' is selected. %s" % uri)
+vector when 'Harvest by Weight' is selected. %s" % uri)
         raise MissingParameter("Population Parameters File must contain a \
-            'Weight' vector when 'Harvest by Weight' is selected")
+'Weight' vector when 'Harvest by Weight' is selected")
 
     if (args['recruitment_type'] == 'Fecundity' and (
             'Fecundity' not in pop_dict.keys())):
         LOGGER.error("Population Parameters File must contain a 'Fecundity' \
-            vector when using the Fecundity recruitment function. %s" % uri)
+vector when using the Fecundity recruitment function. %s" % uri)
         raise MissingParameter("Population Parameters File must contain a \
-            'Fecundity' vector when using the Fecundity recruitment function")
+'Fecundity' vector when using the Fecundity recruitment function")
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -278,7 +279,7 @@ def read_population_csv(args, uri):
     # Check that information is correct
     if not np.allclose(pop_dict['Larvaldispersal'].sum(), 1):
         LOGGER.warning("The Larvaldisperal vector does not sum exactly to one\
-            . %s" % uri)
+. %s" % uri)
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
@@ -289,7 +290,7 @@ def read_population_csv(args, uri):
         a = pop_dict[attr]
         if np.any(a > 1) or np.any(a < 0):
             LOGGER.warning("The %s vector has elements that are not decimal \
-                fractions. %s" % (attr, uri))
+fractions. %s" % (attr, uri))
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
@@ -436,14 +437,14 @@ def read_migration_tables(args, class_list, region_list):
     # Check migration regions are equal across matrices
     if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
         LOGGER.error("Shape of migration matrices are not equal across \
-            lifecycle classes")
+lifecycle classes")
         raise ValueError
 
     # Check that all migration vectors approximately sum to one
     if not all([np.allclose(vector.sum(
             ), 1) for matrix in matrix_list for vector in matrix]):
         LOGGER.warning("Elements in at least one migration matrices source \
-            vector do not sum to one")
+vector do not sum to one")
 
     migration_dict['Migration'] = matrix_list
     return migration_dict
@@ -505,9 +506,9 @@ def _parse_migration_tables(args, class_list):
                 else:
                     # Warn user if possible mig matrix isn't being added
                     LOGGER.warning("The suffix '%s' in the Migration Directory \
-                        did not match any class name in the Population Parameters \
-                        File. This could result in no migration for a class \
-                        with expected migration.", class_name.capitalize())
+did not match any class name in the Population Parameters \
+File. This could result in no migration for a class \
+with expected migration.", class_name.capitalize())
 
         except:
             LOGGER.warning("Issue parsing at least one migration table")
@@ -777,7 +778,7 @@ def _create_intermediate_csv(vars_dict):
     individuals within each area for each time step for each age/stage.
     '''
     do_batch = vars_dict['do_batch']
-    if do_batch:
+    if do_batch is True:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
         filename = 'population_by_time_step_' + basename + '.csv'
@@ -831,7 +832,7 @@ def _create_results_csv(vars_dict):
     for each subregion.
     '''
     do_batch = vars_dict['do_batch']
-    if do_batch:
+    if do_batch is True:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
         filename = 'results_table_' + basename + '.csv'
@@ -903,7 +904,7 @@ def _create_results_html(vars_dict):
     for each subregion.
     '''
     do_batch = vars_dict['do_batch']
-    if do_batch:
+    if do_batch is True:
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
         filename = 'results_page_' + basename + '.html'
@@ -1084,7 +1085,7 @@ def _create_results_aoi(vars_dict):
     V_tx = vars_dict['V_tx']
     basename = os.path.splitext(os.path.basename(aoi_uri))[0]
     do_batch = vars_dict['do_batch']
-    if do_batch:
+    if do_batch is True:
         basename2 = os.path.splitext(os.path.basename(
             vars_dict['population_csv_uri']))[0]
         filename = basename + '_results_aoi_' + basename2 + '.shp'
