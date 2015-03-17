@@ -467,7 +467,7 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
-#        print('angle', a, angles[a])
+        print('angle', a, angles[a])
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -479,11 +479,15 @@ def sweep_through_angles( \
         coordL = coord[l]
         coordS = coord[s]
 
+        # Coordinates at the Origin (O)
         Os = viewpoint[s] * sign[s]
         Ol = viewpoint[l] * sign[l]
+        
+        # Coordinates at the End point (E)
         Es = perimeter[s][a] * sign[s]
         El = perimeter[l][a] * sign[l]
 
+        # Sign for the long and short components
         Sl = -1 if Ol>El else 1
         Ss = -1 if Os>Es else 1
 
@@ -500,13 +504,23 @@ def sweep_through_angles( \
             Ds = Ps-Os
             ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
                 if Ds or Dl else 0
-            # Expecting valid pixel: is_active and distance == distances[i]
-            # Move other pixel over otherwise
+            # Expecting location with valid pixel, i.e.: 
+            #   -is_active == True
+            #   -distance == distances[i]
+            #
+            # If not, look at the other location:
+            #   - ID += 1 if ID is even (ID % 2 == 0)
+            #   - ID -= 1 if ID is odd
+            #
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
-                alternate_ID = ID # DEBUG!!!! Remove ASAP
-                ID = ID+1 if (ID/2)*2 == ID else ID-1
+                initial_ID = ID # DEBUG!!!! Remove ASAP
+                ID = ID+1 if ID % 2 == 0 else ID-1
+            # Sanity check
             assert ID>=0 and ID<max_line_length
+            
+            # If pixel is not active, no active pixels exist at this location:
+
             if not active_pixel_array[ID].is_active:
                 print 'Active pixels'
                 totat_active_pixel_count = 0
@@ -518,10 +532,10 @@ def sweep_through_angles( \
                         print (pixel_id, pixel_id - last_active_pixel),
                         last_active_pixel = pixel_id
                 print('count', totat_active_pixel_count, active_pixel_count)
-                print('was active', active_pixel_array[alternate_ID].is_active, \
-                    'distance', active_pixel_array[alternate_ID].distance, \
-                    'difference', active_pixel_array[alternate_ID].distance - distances[i])
-                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
+                print('was active', active_pixel_array[initial_ID].is_active, \
+                    'distance', active_pixel_array[initial_ID].distance, \
+                    'difference', active_pixel_array[initial_ID].distance - distances[i])
+                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(initial_ID)
                 assert active_pixel_array[ID].is_active, message
             active_pixel_array[ID].is_active = False
 
