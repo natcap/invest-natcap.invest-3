@@ -210,4 +210,5 @@ def execute(args, create_outputs=True):
             # Create Model Outputs
             io.create_outputs(model_vars_dict)
 
+    LOGGER.warning(vars_all_models[0]['results_suffix'])
     return vars_all_models

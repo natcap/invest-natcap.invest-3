@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('raster_utils')
+LOGGER = logging.getLogger('pygeoprocessing.geoprocessing')
 
 
 try:

@@ -6,9 +6,9 @@ from osgeo import ogr
 #This craziness is just for development to import a relative link so I can
 #run in the current directory that has a soft link.
 try:
-    from invest_natcap import raster_utils
+    import pygeoprocessing.geoprocessing
 except:
-    import raster_utils
+    import pygeoprocessing.geoprocessing
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     CELL_SIZE = 30
 
     output_dataset = \
-        raster_utils.create_raster_from_vector_extents(CELL_SIZE, CELL_SIZE, 
+        pygeoprocessing.geoprocessing.create_raster_from_vector_extents(CELL_SIZE, CELL_SIZE, 
         gdal.GDT_Float32, -1e10, 'interpolated.tif', aoi_ds)
  
     aoi_layer = aoi_ds.GetLayer()

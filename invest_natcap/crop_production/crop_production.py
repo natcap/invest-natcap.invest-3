@@ -93,9 +93,19 @@ def execute(args, create_outputs=True):
         }
 
     '''
+    args['create_outputs'] = create_outputs
+
+    if all(args['do_yield_observed'],
+           args['do_yield_observed'],
+           args['do_yield_observed']) is False:
+        LOGGER.error('No Yield Function Selected.  Cannot Run Model.')
+        return
 
     # Parse Inputs
-    vars_dict = io.fetch_args(args, create_outputs=create_outputs)
+    vars_dict = io.fetch_args(args)
+
+    # Setup Temporary Folder
+    vars_dict = io.setup_tmp(vars_dict)
 
     # Run Model ...
     observed_vars_dict = {}

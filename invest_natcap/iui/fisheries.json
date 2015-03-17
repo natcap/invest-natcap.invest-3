@@ -31,7 +31,7 @@
         },
         {
           "id": "results_suffix",
-          "args_id": "suffix",
+          "args_id": "results_suffix",
           "type": "text",
           "dataType": "string",
           "label": "Results Suffix (Optional)",
@@ -281,7 +281,7 @@
               "args_id": "migration_dir",
               "type": "folder",
               "label": "Migration Matrix CSV Folder (Optional)",
-              "defaultValue": "../Fisheries/input/migration_folder/",
+              "defaultValue": "",
               "required": false,
               "validateAs": {
                 "type": "folder"

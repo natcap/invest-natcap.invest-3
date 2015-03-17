@@ -117,6 +117,7 @@
           "type": "list",
           "elements": [
             {
+<<<<<<< local
               "id": "yield_percentile_label",
               "type": "label",
               "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
@@ -144,6 +145,35 @@
             {
               "id": "modeled_fertilizer_maps_dir",
               "args_id": "modeled_fertilizer_maps_dir",
+=======
+              "id": "yield_percentile_label",
+              "type": "label",
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "do_yield_regression_model",
+      "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "yield_modeled_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "yield_observed_label",
+              "type": "label",
+              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...). A table named 'yield_climate_regression_table.csv' within a folder named 'yield_climate_regression'.  [Additional requirements here]"
+            },
+            {
+              "id": "modeled_fertilizer_maps_dir",
+              "args_id": "modeled_fertilizer_maps_dir",
+>>>>>>> other
               "type": "folder",
               "label": "Fertilizer Application Rate Maps Folder",
               "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",

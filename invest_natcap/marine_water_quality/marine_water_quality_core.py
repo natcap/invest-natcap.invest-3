@@ -6,13 +6,13 @@ from scipy.sparse.linalg import spsolve
 import numpy as np
 import pyamg
 
-def diffusion_advection_solver(source_point_data, kps, in_water_array, 
-                               tide_e_array, adv_u_array, 
+def diffusion_advection_solver(source_point_data, kps, in_water_array,
+                               tide_e_array, adv_u_array,
                                adv_v_array, nodata, cell_size, layer_depth):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
-    
+
     source_point_data - dictionary of the form:
         { source_point_id_0: {'point': [row_point, col_point] (in gridspace),
                             'WPS': float (loading?),
@@ -27,7 +27,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
        same shape as in_water_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
     cell_size - the length of the side of a cell in meters
-    layer_depth - float indicating the depth of the grid cells in 
+    layer_depth - float indicating the depth of the grid cells in
             meters.
     """
 
@@ -55,12 +55,12 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n_rows * n_cols)
 
-    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #holds the rows for diagonal sparse matrix creation later, row 4 is
     #the diagonal
     a_matrix = np.zeros((9, n_rows * n_cols))
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
-    #Set up a data structure so we can index point source data based on 1D 
+    #Set up a data structure so we can index point source data based on 1D
     #indexes
     source_points = {}
     for source_id, source_data in source_point_data.iteritems():
@@ -70,7 +70,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
         else:
             #There is another point at the same grid point, add the sources
             source_points[source_index]['WPS'] += source_data['WPS']
-    
+
 
     #Build up an array of valid indexes.  These are locations where there is
     #water and well defined E and ADV points.
@@ -209,11 +209,17 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
             if not valid_indexes[a_right_index]:
                 a_matrix[5, a_right_index] = 0
 
-    LOGGER.info('Building sparse matrix from diagonals.')
+    if n_cols <= 2 or n_rows <= 2:
+        raise ValueError(
+            'The number of inferred columns and rows in the output raster'
+            'are less than 2, probably because the Output Pixel size in the UI '
+            'is set too low for the projection of the AOI. '
+            'Try a smaller value. Current n_cols, n_rows (%d, %d)',
+            n_cols, n_rows)
 
-    matrix = scipy.sparse.spdiags(a_matrix,
-        [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
-         n_rows * n_cols, n_rows * n_cols, "csc")
+    matrix = scipy.sparse.spdiags(
+        a_matrix, [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols],
+        n_rows * n_cols, n_rows * n_cols, "csc")
 
     LOGGER.info('generating preconditioner')
     ml = pyamg.smoothed_aggregation_solver(matrix)

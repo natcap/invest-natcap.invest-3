@@ -19,15 +19,15 @@ from osgeo import gdal
 
 import cProfile, pstats
 
-from invest_natcap import raster_utils
+import pygeoprocessing
 import nearshore_wave_and_erosion_core as core
 
 from NearshoreWaveFunctions_3p0 import*
 import CPf_SignalSmooth as SignalSmooth
 
-logging.getLogger("raster_utils").setLevel(logging.WARNING)
+logging.getLogger("pygeoprocessing").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
-LOGGER = logging.getLogger('coastal_vulnerability_core')
+LOGGER = logging.getLogger('nearshore_wave_and_erosion_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -39,15 +39,19 @@ def execute(args):
         returns nothing"""
     logging.info('executing coastal_protection_core')
 
-    # Default transect data URI
-    args['transect_data_uri'] = \
-        os.path.join(args['output_dir'], 'transect_data.h5')
+    # User-specified transect data URI 
+    if 'cross_shore_profile_uri' in args:
+        args['transect_data_uri'] = args['cross_shore_profile_uri']
+    # Default transect data URI.
+    else:
+        args['transect_data_uri'] = \
+            os.path.join(args['output_dir'], 'transect_data.h5')
     
     # Run the profile generator
     if 'Profile generator' in args['modules_to_run']: 
         compute_transects(args)
         export_transect_coordinates_to_CSV(args['transect_data_uri'])
-
+    
     # Run the nearshore wave and erosion model
     if 'wave & erosion' in args['modules_to_run']:
         compute_nearshore_and_wave_erosion(args)
@@ -70,7 +74,7 @@ def compute_transects(args):
     # Store shore and transect information
     shore_nodata = -20000.0
     args['transects_uri'] = os.path.join(args['output_dir'], 'transects.tif')
-    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
         args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
     transect_band = transect_raster.GetRasterBand(1)
@@ -81,7 +85,7 @@ def compute_transects(args):
     # Store transect profiles to reconstruct shore profile
     args['shore_profile_uri'] = os.path.join( \
         os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
-    raster_utils.new_raster_from_base_uri(args['landmass_raster_uri'], \
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
         args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
     shore_band = shore_raster.GetRasterBand(1)
@@ -89,12 +93,14 @@ def compute_transects(args):
         sp.sparse.lil_matrix((shore_band.XSize, shore_band.YSize))
 
     # Landmass
-    landmass = raster_utils.load_memory_mapped_array( \
-        args['landmass_raster_uri'], raster_utils.temporary_filename())
+    landmass = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
+        args['landmass_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
     
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
-    message = 'Cannot open file ' + args['landmass_raster_uri']
-    assert landmass_raster is not None, message
+
+    if landmass_raster is None:
+        raise IOError, 'Cannot open file ' + args['landmass_raster_uri']
+
     fine_geotransform = landmass_raster.GetGeoTransform()
     landmass_band = landmass_raster.GetRasterBand(1)
 
@@ -103,19 +109,23 @@ def compute_transects(args):
 
     # AOI
     aoi_raster = gdal.Open(args['aoi_raster_uri'])
-    message = 'Cannot open file ' + args['aoi_raster_uri']
-    assert aoi_raster is not None, message
+    
+    if aoi_raster is None:
+        raise IOError, 'Cannot open file ' + args['aoi_raster_uri']
+
     aoi_band = aoi_raster.GetRasterBand(1)
     
     # Bathymetry
-    bathymetry = raster_utils.load_memory_mapped_array( \
-        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+    bathymetry = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
 
    # Get the fine and coarse raster cell sizes, ensure consistent signs
     i_side_fine = int( \
         math.sqrt(fine_geotransform[4]**2 + fine_geotransform[5]**2))
     j_side_fine = int( \
         math.sqrt(fine_geotransform[1]**2 + fine_geotransform[2]**2))
+
+#    print('fine_geotransform', fine_geotransform)
 
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
@@ -136,6 +146,8 @@ def compute_transects(args):
     # computing shore orientation
     i_offset = i_side_coarse/i_side_fine + 6
     j_offset = j_side_coarse/j_side_fine + 6
+#    print('(i_side_coarse, i_side_fine)', (i_side_coarse, i_side_fine))
+#    print('(i_offset, j_offset)', (i_offset, j_offset))
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
@@ -185,100 +197,202 @@ def compute_transects(args):
 
             # If land and sea, we have a shore: detect it and store
             if land and land < tile_size:
-                shore_patch = detect_shore(tile, mask, 0, connectedness = 4)
-                shore_pts = np.where(shore_patch == 1)
-                if shore_pts[0].size:
+                    
+#                if tiles > 237:
+#                    continue
 
+                i_first = i_base+3
+                j_first = j_base+3
+                i_last = i_base+i_offset-3
+                j_last = j_base+j_offset-3
+
+#                print('tile', tiles)
+#                print('tile limits', (i_first, j_first, i_last, j_last))
+                #Draw the tile
+#                for row in range(i_first, i_last+1):
+#                    for col in range(j_first, j_last+1):
+#                        transects[(col, row)] = tiles #-12
+#                for left in range(i_first, i_last+1):
+#                    transects[(left, j_first)] = -10
+#                for right in range(i_first, i_last+1):
+#                    transects[(left, j_last)] = -2
+#                for up in range(j_first, j_last+1):
+#                    transects[(i_first, up)] = -10
+#                for down in range(j_first, j_last+1):
+#                    transects[(i_last, down)] = -2
+
+                shore_patch = detect_shore(tile, mask, 0, 3, connectedness = 4)
+                shore_pts = np.where(shore_patch == 1)
+
+
+                if shore_pts[0].size:
                     # Store shore position
-                    transects[(shore_pts[0] + i_base, shore_pts[1] + j_base)] = -1
+                    for p in zip(shore_pts[0], shore_pts[1]):
+                        if p[0] < 3:
+                            continue
+                        elif p[0] > i_offset-3:
+                            continue
+                        if p[1] < 3:
+                            continue
+                        elif p[1] > j_offset-3:
+                            continue
+                        
+                        transects[(p[0] + i_base, p[1] + j_base)] = tiles # -1
 
                     # Estimate shore orientation
                     shore_orientations = \
-                        compute_shore_orientation(shore_patch, \
+                        compute_shore_orientations(shore_patch, \
                             shore_pts, i_base, j_base)
 
                     # Skip if no shore orientation
                     if not shore_orientations:
+#                        print("No valid shore orientations")
                         continue
+#                    for p in shore_orientations:
+#                        transects[(p[0], p[1])] = -2
 
                     # Pick transect position among valid shore points
-                    assert len(shore_pts) == 2, str((i, j)) + ' ' + str(shore_pts)
-                    transect_position = select_transect(shore_orientations.keys())
+                    assert len(shore_pts) == 2, \
+                        "Can't process shore segment " + str((i, j)) + \
+                        ' ' + str(shore_pts)
+                    transect_positions = \
+                        select_transect(shore_orientations.keys(), \
+                            i_base+3, j_base+3, \
+                            i_base+i_offset-3, j_base+j_offset-3)
 
                     # Skip tile if no valid shore points
-                    if not transect_position:
+                    if len(transect_positions) == 0:
+#                        print("No well defined position")
                         continue
+#                    for p in transect_positions:
+#                        transects[(p[0], p[1])] = -3
 
                     # Compute transect orientation
-                    transect_orientation = \
-                        compute_transect_orientation(transect_position, \
-                            shore_orientations[transect_position],landmass)
-
+                    transect_orientations = \
+                        compute_transect_orientations( \
+                            transect_positions, shore_orientations,landmass)
+#                    print('orientations')
+#                    for p in transect_orientations:
+#                        print('position', p, 'orientation', transect_orientations[p])
                     # Skip tile if can't compute valid orientation
-                    if transect_orientation is None:
+                    if len(transect_orientations) == 0:
+#                        print("  No valid transect orientation for", transect_positions)
                         continue
+#                    for p in transect_orientations:
+#                       o = transect_orientations[p]
+#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = tiles
+#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
+#                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -5
+#                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -6
 
-                    # Compute raw transect depths
-                    raw_depths, raw_positions = \
-                        compute_raw_transect_depths(transect_position, \
-                        transect_orientation, bathymetry, args['bathymetry_raster_uri'], \
-                        landmass, args['landmass_raster_uri'], i_side_fine, \
-                        args['max_land_profile_len'], \
-                        args['max_land_profile_height'], \
-                        args['max_profile_length'])
+#                    tiles += 1
 
-                    # The index positions might be outside of valid bathymetry
-                    if raw_depths is None:
-                        continue
+#                    continue
 
-                    # Interpolate transect to the model resolution
-                    interpolated_depths = \
-                        raw_depths if raw_depths.size > 5 else None
-#                        interpolated_depths = \
-#                            interpolate_transect(raw_depths, i_side_fine, \
-#                                args['model_resolution'])
+                    # Look for the first valid transect
+                    for transect_position in transect_orientations:
+#                        print('transect_position', transect_position)
+                        transect_orientation = transect_orientations[transect_position]
+                        # Compute raw transect depths
+                        raw_depths, raw_positions = \
+                            compute_raw_transect_depths(transect_position, \
+                            transect_orientation, bathymetry, \
+                            args['bathymetry_raster_uri'], \
+                            landmass, args['landmass_raster_uri'], \
+                            i_side_fine, \
+                            args['max_land_profile_len'], \
+                            args['max_land_profile_height'], \
+                            args['max_profile_length'])
+                        # The index positions might be outside of valid bathymetry
+                        if raw_depths is None:
+#                            print('  Could not sample transect depth')
+                            continue
+#                        transects[(transect_position[0], transect_position[1])] = -7
 
-                    # Not enough values for interpolation
-                    if interpolated_depths is None:
-                        continue
+#                    tiles += 1
 
-                    # Smooth transect
-                    smoothed_depths = \
-                        smooth_transect(interpolated_depths, \
-                            args['smoothing_percentage'])
+#                    continue
 
-                    # Clip if transect hits land
-                    (clipped_transect, (start, shore, end)) = \
-                        clip_transect(smoothed_depths, args['max_profile_depth'])
 
-                    # Transect could be invalid, skip it
-                    if clipped_transect is None:
-                        continue
-                   
-                    # At this point, the transect is valid: 
-                    
-                    # extract remaining information about it
-                    else:
-#                        print('transect raw positions', raw_positions[0][start:end])
-                        transect_info.append( \
-                            {'raw_positions': \
-                                (raw_positions[0][start:end], \
-                                raw_positions[1][start:end]), \
-                            'depths':smoothed_depths[start:end], \
-                            'clip_limits':(0, shore-start, end-start)})
+                        # Interpolate transect to the model resolution
+                        interpolated_depths = \
+                            raw_depths if raw_depths.size > 5 else None
 
-                    # Update the longest transect length if necessary
-                    if (end - start) > max_transect_length:
-                        max_transect_length = end - start
-                    
-                    tiles += 1
+                        # Not enough values for interpolation
+                        if interpolated_depths is None:
+                            continue
+#                        transects[(transect_position[0], transect_position[1])] = -6
 
-#            if tiles >= 10:
-#                break
+                        # Smooth transect
+                        smoothed_depths = \
+                            smooth_transect(interpolated_depths, \
+                                args['smoothing_percentage'])
+                        
+                        # Apply additional constraints on the smoothed transect
+                        (clipped_transect, (start, shore, end)) = \
+                            clip_transect(smoothed_depths, \
+                                args['max_profile_depth'])
 
+                        # Transect could be invalid, skip it
+                        if clipped_transect is None:
+                            continue
+                       
+
+                        # Perform additional QAQC:
+
+                        # Enforce total profile length
+                        profile_length = end - start
+
+                        profile_length_m = profile_length * i_side_fine
+
+                        if profile_length_m < args['min_profile_length']:
+#                            print('Profile too short (' + str(profile_length_m) + \
+#                                ' < ' + str(args['min_profile_length']))
+                            continue
+
+                        
+                        # Enforce minimum offshore profile length
+                        offshore_length = end - shore
+
+                        offshore_length_m = offshore_length * i_side_fine
+
+                        if offshore_length_m < args['min_offshore_profile_length']:
+#                            print('Offshore portion too short (' + \
+#                                str(offshore_length_m) + \
+#                                ' < ' + str(args['min_offshore_profile_length']))
+                            continue
+
+                        
+                        # Enforce minimum profile depth
+                        averge_depth = \
+                            np.sum(clipped_transect[shore:end]) / offshore_length
+
+                        if averge_depth > args['min_profile_depth']:
+#                            print('Average transect depth too shallow (' + \
+#                                str(averge_depth) + \
+#                                ' < ' + str(args['min_profile_depth']))
+                            continue
+
+
+                        # At this point, the transect is valid: 
+                        else:
+                            # Store important information about it
+                            transect_info.append( \
+                                {'raw_positions': \
+                                    (raw_positions[0][start:end], \
+                                    raw_positions[1][start:end]), \
+                                'depths':smoothed_depths[start:end], \
+                                'clip_limits':(0, shore-start, end-start)})
+
+                            # Update the longest transect length if necessary
+                            if (end - start) > max_transect_length:
+                                max_transect_length = end - start
+                            
+                            tiles += 1
+
+                            # Found valid transect, break out of the loop
+                            break
     print('')
-
-#    sys.exit(0)
 
     # Cleanup
     bathymetry = None
@@ -290,12 +404,14 @@ def compute_transects(args):
     landmass_band = None
     landmass_raster = None
 
+    LOGGER.debug('found %i tiles.' % tiles)
+
+    tiles = len(transect_info)
+
     transect_count = tiles
 
     args['tiles'] = tiles
     args['max_transect_length'] = max_transect_length
-
-    LOGGER.debug('found %i tiles.' % tiles)
 
     habitat_nodata = -99999
 
@@ -364,7 +480,7 @@ def compute_transects(args):
     gt = dataset.GetGeoTransform()
     dataset = None
     
-    for transect in range(transect_count):
+    for transect in range(len(transect_info)):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
         positions_dataset[transect, 0, start:end] = \
@@ -418,7 +534,11 @@ def compute_transects(args):
     for segment in range(shore_points[0].size):
         if segment % progress_step == 0:
             print '.',
-        single_value[0, 0] = -1
+        single_value[0, 0] = \
+            transects[ \
+                shore_points[0][segment], \
+                shore_points[1][segment]]
+
         transect_band.WriteArray( \
             single_value, \
             int(shore_points[1][segment]), \
@@ -439,7 +559,7 @@ def compute_transects(args):
     # Saving transects
     progress_step = max(tiles / 50, 1)
     habitat_type_dataset = transect_data_file['habitat_type']
-    for transect in range(transect_count):
+    for transect in range(tiles):
         if transect % progress_step == 0:
             print '.',
         # Extract important positions
@@ -491,7 +611,7 @@ def compute_transects(args):
     transect_raster.FlushCache()
     gdal.Dataset.__swig_destroy__(transect_raster)
     transect_raster = None
-    raster_utils.calculate_raster_stats_uri(args['transects_uri'])
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(args['transects_uri'])
 
 
     # We're done, we close the file
@@ -573,8 +693,9 @@ def load_excluded_transects(args):
     args['excluded_transects'] = set()
 
     if 'excluded_transects_uri' in args:
-        assert os.path.isfile(args['excluded_transects_uri']), \
-            "Can't open transect exclusion file " + args['excluded_transects_uri']
+        if not os.path.isfile(args['excluded_transects_uri']): 
+            raise IOError, "Can't open transect exclusion file " + \
+            args['excluded_transects_uri']
 
         with open(args['excluded_transects_uri']) as csvfile:
             excluded_transects_reader = csv.reader(csvfile)
@@ -585,25 +706,32 @@ def load_excluded_transects(args):
                     # First, try to cast as int:
                     try:
                         transect = int(item)
-                        assert transect >= 0, \
-                            "A transect ID can't be negative (" + str(item) + ")"
+                        if transect < 0:
+                            raise IndexError, \
+                                "A transect ID can't be negative (" + \
+                                    str(item) + ")" 
                         args['excluded_transects'].add(transect)
 
                     # If it doesn't work, it might be a range:
                     except ValueError:
                         transect_range = item.split('-')
-                        assert len(transect_range) == 2, "Can't interpret CSV token " + item
+                        if len(transect_range) != 2:
+                            raise IndexError, \
+                                "Can't interpret CSV token " + item
 
                         try:
                             start = int(transect_range[0])
                             end = int(transect_range[1])
 
                             # Enforce start >= end
-                            assert start >= 0, \
-                                "A transect ID can't be negative (" + str(item) + ")"
-                            assert end >= start, \
-                                "Invalid range: expected (start >= end), " + \
-                                " got (" + str(start) + "," + str(end) + ")"    
+                            if start < 0:
+                                raise IndexError, \
+                                    "A transect ID can't be negative (" + \
+                                    str(item) + ")"
+                            if end < start:
+                                raise ValueError,  \
+                                    "Invalid range: expected (start >= end), " + \
+                                    " got (" + str(start) + "," + str(end) + ")"    
                             
                             # It is a range, now add the transects to the set:
                             for transect in range(start, end+1):
@@ -628,7 +756,9 @@ def compute_nearshore_and_wave_erosion(args):
 
     LOGGER.debug('Loading HDF5 files...')
 
-    assert os.path.isfile(args['transect_data_uri'])
+    if not os.path.isfile(args['transect_data_uri']):
+        raise IOError, \
+            "Can't open the HDF5 file " + args['transect_data_uri']
 
     f = h5py.File(args['transect_data_uri']) # Open the HDF5 file
 
@@ -638,9 +768,9 @@ def compute_nearshore_and_wave_erosion(args):
     bathymetry_resolution = f['habitat_type'].attrs['bathymetry_resolution']
     model_resolution = f['habitat_type'].attrs['model_resolution']
 
-    print('average space between transects:', transect_spacing, 'm')
-    print('bathymetry resolution:', bathymetry_resolution, 'm')
-    print('model resolution:', model_resolution, 'm')
+#    print('average space between transects:', transect_spacing, 'm')
+#    print('bathymetry resolution:', bathymetry_resolution, 'm')
+#    print('model resolution:', model_resolution, 'm')
 
     # ------------------------------------------------
     # Define file contents
@@ -760,12 +890,18 @@ def compute_nearshore_and_wave_erosion(args):
     Undertow=numpy.zeros((transect_count,transect_length))+nodata
     SedTrsprt=numpy.zeros((transect_count,transect_length))+nodata
 
+    MErodeLens1 = []    # eroded areas
+    Retreats1 = []      # areas of retreat
+    transect_ids = []   # transects where erosion and retreat happened
 
     #Read data for each transect, one at a time
-    for transect in range(2000, 2500): # Debug
-#    for transect in range(transect_count): # Release
+#    for transect in range(2000, 2500): # Debug
+    progress_step = max(transect_count / 50, 1)
+    for transect in range(transect_count): # Release
+        if transect % progress_step == 0:
+            print '.',
 #        print('')
-        LOGGER.debug('Computing nearshore waves and erosion on transect %i', transect) #transect_count - transect)
+#        LOGGER.debug('Computing nearshore waves and erosion on transect %i', transect) #transect_count - transect)
 
         # Extract first and last index of the valid portion of the current transect
         start = indices_limit_dataset[transect,0]   # First index is the most landward point
@@ -830,25 +966,29 @@ def compute_nearshore_and_wave_erosion(args):
                 
                     #Seagrass physical parameters - 'field_indices' dictionary
                     if seagrass_location[0].size:
-                        Sg_diameter_id = field_indices[str(seagrass)]['fields']['stemdiam']
+                        Sg_diameter_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdiam']
                         Sg_diameters = hab_properties[Sg_diameter_id][seagrass_location]
                         mean_stem_diameter = numpy.average(Sg_diameters)
 #                        print('   Seagrass detected. Mean stem diameter: ' + \
 #                            str(mean_stem_diameter) + ' m')
                 
-                        Sg_height_id = field_indices[str(seagrass)]['fields']['stemheight']
+                        Sg_height_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemheight']
                         Sg_height = hab_properties[Sg_height_id][seagrass_location]
                         mean_stem_height = numpy.average(Sg_height)
 #                        print('                                    Mean stem height: ' + \
 #                            str(mean_stem_height) + ' m')
                         
-                        Sg_density_id = field_indices[str(seagrass)]['fields']['stemdensty']
+                        Sg_density_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdensty']
                         Sg_density = hab_properties[Sg_density_id][seagrass_location]
                         mean_stem_density = numpy.average(Sg_density)
 #                        print('                                    Mean stem density: ' + \
 #                              str(mean_stem_density) + ' #/m^2')
                         
-                        Sg_drag_id = field_indices[str(seagrass)]['fields']['stemdrag']
+                        Sg_drag_id = \
+                            field_indices["natural habitats"][str(int(seagrass))]['fields']['stemdrag']
                         Sg_drag = hab_properties[Sg_drag_id][seagrass_location]
                         mean_stem_drag = numpy.average(Sg_drag)
 #                        print('                                    Mean stem drag: ' + \
@@ -957,6 +1097,9 @@ def compute_nearshore_and_wave_erosion(args):
             H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
         
             #Compute maximum wave height
+            bath_sm[bath_sm > -0.05] = -0.05
+
+            assert (bath_sm <= -0.05).all()
             k,C,Cg=Fast_k(To,-bath_sm)
             Hmx=0.1*(2.0*pi/k)*tanh((-bath_sm+Surge)*k);#Max wave height - Miche criterion
         
@@ -1056,6 +1199,10 @@ def compute_nearshore_and_wave_erosion(args):
                         MErodeVol1=0
                     MErodeVol1=round(MErodeVol1,2)
                     gp.addmessage('MudScour_Present='+str(MErodeVol1)+' m^3/m')
+
+                    MErodeLens1.append(MErodeLen1)
+                    Retreats1.append(MErodeLen1)
+                    transect_ids.append(transect)
         
             if Struct==1:
                 #Current conditions
@@ -1066,7 +1213,23 @@ def compute_nearshore_and_wave_erosion(args):
                 Fp=ForceSeawall(Hp[-1],To,-Z1[-1])
                 Fp=round(Fp,2);Hwp=round(Hwp,2)
                 gp.addmessage('Wall_Present='+str(Hwp)+' m; Force on wall='+str(Fp)+' kN/m')
-        
+    print('')    
+
+    # If the user chose to do valuation
+    if args['valuation_group']:
+
+        # Convert types:
+        MErodeLens1 = np.array(MErodeLens1)
+        Retreats1 = np.array(Retreats1)
+        transect_ids = np.array(transect_ids)
+
+        # Fake values for MErodeLen2 and Retreat2:
+        MErodeLens2 = numpy.ones(MErodeLens1.size) * -9999
+        Retreats2 = numpy.ones(Retreats1.size) * -9999
+
+        # Compute valuation
+        compute_valuation( \
+            args, MErodeLens1, MErodeLens2, Retreats1, Retreats2, transect_ids)
 
     # Saving data in HDF5
     args['biophysical_data_uri'] = \
@@ -1112,6 +1275,138 @@ def compute_nearshore_and_wave_erosion(args):
     return args['biophysical_data_uri']
 
 
+def compute_valuation(args, MErodeLens1, MErodeLens2, Retreats1, Retreats2, transect_ids):
+    """ Computes valuation. Tis is Greg's code, unchanged.
+
+        Inputs:
+            -args['longshore_extent']: Used to obtain an approximate area of
+                land loss associated with retreat/erosion. This is the along 
+                shore length where the natural habitat types, coverage, 
+                and management actions, topo/bathy and forcing conditions 
+                are approximately uniform. Integer number, unit is meter.
+            
+            -args['property_value']: Land $ value per square meter (integer)
+            
+            -args['storm_return_period']: Return period of storm (int, years)
+            
+            -args['discount_rate']: integer percentage point. discount rate to 
+                adjust the monetary benefits of the natural habitats in future 
+                years to the present time.
+            
+            -args['time_horizon']: integer. Years over which valuation is 
+                performed.
+            
+            -MErodeLens1: numpy array. Length of profile with significant 
+                erosion from scenario 1, in meters. One value per transect
+            
+            -MErodeLens2: Same thing as MErodeLens1, for scenario 2
+            
+            -Retreats1: numpy array. Amount of shore retreat, for each transect
+                in meters, from scenario 1
+            
+            -Retreats2: Same thing as Retreats1, for scenario 2
+
+            -transect_ids: transect indices that correspond to the data points
+
+
+        Returns a dictionary of numpy arrays from args['valuation'] where:
+            -args['valuation']['Eav'][t]: avoided erosion for transect 't'
+            -args['valuation']['Dav'][t]: damage value for transect 't'
+            -args['valuation']['EPV'][t]: projected habitat value for 't'
+    """
+    assert MErodeLens1.size == transect_ids.size, \
+        "Wrong size for profile erosion array for scenario 1 (" + \
+            str(MErodeLens1.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert MErodeLens2.size == transect_ids.size, \
+        "Wrong size for profile erosion array for scenario 2 (" + \
+            str(MErodeLens2.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert Retreats1.size == transect_ids.size, \
+        "Wrong size for shore retreat array for scenario 1 (" + \
+            str(MErodeLens1.size) + " vs " + str(transect_ids.size) + ")"
+
+    assert Retreats2.size == transect_ids.size, \
+        "Wrong size for shore retreat array for scenario 2 (" + \
+            str(MErodeLens2.size) + " vs " + str(transect_ids.size) + ")"
+
+
+    # function to split thousands with commas
+    def splitthousands(s, sep=','):
+        if len(s) <= 3:
+            return s
+        return splitthousands(s[:-3], sep) + sep + s[-3:]
+
+
+    LOGGER.debug("Computing economic valuation for %i transects...", \
+        transect_ids.size)
+
+    
+    # Initialize valuation data structure
+    args['valuation'] = {}
+    valuation = args['valuation']
+    
+    transect_count = transect_ids.size
+
+    valuation['Eav'] = numpy.ones(transect_count) * -9999
+    valuation['Dav'] = numpy.ones(transect_count) * -9999
+    valuation['EPV'] = numpy.ones(transect_count) * -9999
+
+    
+    progress_step = max(transect_count / 50, 1)
+    for transect in range(transect_count):
+        if transect % progress_step == 0:
+            print '.',
+
+        MErodeLen1 = MErodeLens1[transect]
+        MErodeLen2 = MErodeLens2[transect]
+        Retreat1 = Retreat1[transect]
+        Retreat2 = Retreat2[transect]
+
+
+        if MErodeLen2==-9999 and Retreat2==-9999: # there's no management action
+            message = "You haven't defined a management action." + \
+                " We cannot compute an avoided damage value."
+            LOGGER.debug(message)
+        else:
+            if sand==1:
+                E1=max([Retreat1,Retreat2])
+                E2=min([Retreat1,Retreat2])
+            elif mud==1:
+                E1=max([MErodeLen1,MErodeLen2])
+                E2=min([MErodeLen1,MErodeLen2])
+
+            if E2<0:
+                message = "We cannot compute an avoided damage cost " + \
+                    " because the retreat amount for one of your scenario" + \
+                    " is negative. The biophysical model did not run appropriately."
+                LOGGER.debug(message)
+            else:
+                Eav = valuation['Eav'][transect]
+                Dav = valuation['Dav'][transect]
+                EPV = valuation['EPV'][transect]
+
+
+                E1=E1*Longshore;
+                E2=E2*Longshore;
+                Eav=E1-E2; # avoided erosion
+                D1=E1*PropValue;
+                D2=E2*PropValue;
+                Dav=D1-D2; # avoided erosion
+                p=1.0/Tr # return frequency
+                temp1=1.0+disc;
+                temp2=[(1.0/temp1)**t for t in range(1,int(TimeHoriz)+1)]
+                EPV=p*Dav*sum(temp2)
+#                LOGGER.debug("...Avoided Erosion between scenarios is %d meters squared.", \
+#                    round(Eav))
+#                LOGGER.debug("...Avoided Damage Value is $%s (in your local currency)...", \
+#                    splitthousands(str(int(Dav))))
+#                LOGGER.debug("Expected Projected Value of habitat is $%s (in your local currency)", \
+#                    splitthousands(str(int(EPV))))
+    print('')    
+
+                
+
 def reconstruct_2D_shore_map(args):
     LOGGER.debug('Reconstructing 2D shore maps...')
     
@@ -1126,8 +1421,10 @@ def reconstruct_2D_shore_map(args):
     wave_dataset = biophysical_data['Wave']
 
     # Shapes should agree
-    assert coordinates_dataset.shape[0] == wave_dataset.shape[0]
-    assert coordinates_dataset.shape[2] == wave_dataset.shape[1]
+    assert coordinates_dataset.shape[0] == wave_dataset.shape[0], \
+        "Wave vector and coordinates vector size mismatch (rows)"
+    assert coordinates_dataset.shape[2] == wave_dataset.shape[1], \
+        "Wave vector and coordinates vector size mismatch (columns)"
 
     (transect_count, max_transect_length) = wave_dataset.shape
 
@@ -1197,8 +1494,8 @@ def reconstruct_2D_shore_map(args):
             else:
                 transect_footprint.add(coord)
 
-    print('Detected ' + str(intersection_count) + ' intersections in ' + \
-        str(intersecting_transect_count) + ' transects.')
+#    print('Detected ' + str(intersection_count) + ' intersections in ' + \
+#        str(intersecting_transect_count) + ' transects.')
 
 
     # Adjust the intersecting transects so they all agree with each other
@@ -1210,8 +1507,8 @@ def reconstruct_2D_shore_map(args):
 
     # Build mask to remove transect portions that are too far 
     # from the area we're interested in
-    transect_mask = raster_utils.load_memory_mapped_array( \
-        args['bathymetry_raster_uri'], raster_utils.temporary_filename())
+    transect_mask = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1229,16 +1526,23 @@ def reconstruct_2D_shore_map(args):
 
     transect_footprint.clear() # used to remove coordinate duplicates
 
-    for transect in intersected_transects:
+    LOGGER.info("Processing %i transect intersections:", \
+        len(intersected_transects))
 
-        print('intersected transect', transect)
+    progress_step = max(len(intersected_transects) / 50, 1)
+    counter = 0
+    for transect in intersected_transects:
+        if counter % progress_step == 0:
+            print '.',
+        counter += 1
+#        print('intersected transect', transect)
 
         current_transect = intersected_transects[transect]
 
         start = indices_limit_dataset[transect,0]
         end = indices_limit_dataset[transect,1]
 
-        # Clip the reansect at the first occurence of NaN
+        # Clip the transect at the first occurence of NaN
         wave_array = wave_dataset[transect,start:end]
         first_nan = np.where(np.isnan(wave_array))[0]
         if first_nan.size:
@@ -1272,7 +1576,8 @@ def reconstruct_2D_shore_map(args):
             delta_y.append(0.)
             x.append(end-1)
 
-        assert len(delta_y) == len(x), 'Arrays x and delta_y disagree in size (' + \
+        assert len(delta_y) == len(x), \
+            'Arrays x and delta_y disagree in size (' + \
             str(len(x)) + ' vs ' + str(len(delta_y)) + ')'
 
         if len(delta_y) == 1:
@@ -1337,13 +1642,22 @@ def reconstruct_2D_shore_map(args):
             coord = (coordinates[0][index], coordinates[1][index])
 
             # Check if the point is not too far off
+            if (coord[0] < 0 ) or (coord[0] >= transect_mask.shape[0]):
+                continue
+
+            if (coord[1] < 0 ) or (coord[1] >= transect_mask.shape[1]):
+                continue
+
+
             if transect_mask[coord]:
 
                 # Check if it's a new point
                 if coord not in transect_footprint:
                     X.append(coordinates[0][index])
                     Y.append(coordinates[1][index])
-                    assert not math.isnan(corrected_transect_values[index])
+                    assert not math.isnan(corrected_transect_values[index]), \
+                        'Found NaN at point ' + str(coord) + \
+                        ' while trying removing coordinate duplicates.'
                     Z.append(corrected_transect_values[index])
 
                     transect_footprint.add(coord)
@@ -1354,8 +1668,11 @@ def reconstruct_2D_shore_map(args):
 
     # Now, we're ready to invoke the interpolation function
     # TODO: Fix that...
+    print('')
     print('Building the interpolation function for', X.size, 'points...')
-    assert not np.isnan(Z).any()
+    assert not np.isnan(Z).any(), \
+        'Found NaN in the values from which to interpolate.'
+
     F = interpolate.interp2d(X, Y, Z, kind='linear')
 
     # Build the array of points onto which the function will interpolate:
@@ -1378,9 +1695,9 @@ def reconstruct_2D_shore_map(args):
     print('Saving data to', wave_interpolation_uri)
 
     bathymetry_nodata = \
-        raster_utils.get_nodata_from_uri(args['bathymetry_raster_uri'])
+        pygeoprocessing.geoprocessing.get_nodata_from_uri(args['bathymetry_raster_uri'])
     
-    raster_utils.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
+    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
 
     wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
@@ -1403,7 +1720,7 @@ def reconstruct_2D_shore_map(args):
     gdal.Dataset.__swig_destroy__(wave_raster)
     wave_raster = None
 
-    raster_utils.calculate_raster_stats_uri(wave_interpolation_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(wave_interpolation_uri)
 
 
 
@@ -1429,7 +1746,7 @@ def store_tidal_information(args, transect_data_file):
 
     filenames = args['shapefiles'][category].keys()
 
-    assert len(filenames) == 1, 'Detected more than one climatic forcing file'
+    assert len(filenames) == 1, 'Detected more than one tidal data file'
 
     shp_name = filenames[0]
 
@@ -1450,7 +1767,7 @@ def store_tidal_information(args, transect_data_file):
         raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
 
-        source_nodata = raster_utils.get_nodata_from_uri(tidal_file_uri)
+        source_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tidal_file_uri)
 
         raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
@@ -1536,7 +1853,7 @@ def store_climatic_forcing(args, transect_data_file):
         # Extract the type for this shapefile
         file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = raster_utils.get_nodata_from_uri(file_uri)
+        source_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(file_uri)
 
         raster = gdal.Open(file_uri)
         band = raster.GetRasterBand(1)
@@ -1609,7 +1926,8 @@ def combine_soil_types(args, transect_data_file):
         [field_name.lower() for field_name in \
             args['shapefiles'][category][shp_name].keys()]
 
-    assert 'type' in field_names_lowercase
+    assert 'type' in field_names_lowercase, \
+        "No 'type' field found for soil types."
 
     type_key = None
     for key in args['shapefiles'][category][shp_name].keys():
@@ -1624,7 +1942,7 @@ def combine_soil_types(args, transect_data_file):
     # Extract the type for this shapefile
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
-    shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+    shapefile_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
 
     raster = gdal.Open(type_shapefile_uri)
     band = raster.GetRasterBand(1)
@@ -1792,7 +2110,8 @@ def combine_natural_habitats(args, transect_data_file):
                 habitat_id = int(habitat)
                 break
 
-        assert habitat is not None
+        assert habitat_id is not None, \
+            "No habitat '" + habitat_type_name + "' found for " + shp_name
 
         # Build the list of field names in lower case 
         field_names_lowercase = \
@@ -1815,22 +2134,25 @@ def combine_natural_habitats(args, transect_data_file):
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
         # Store the habitat combinations in a set (remove nodata)
-        shapefile_nodata = raster_utils.get_nodata_from_uri(type_shapefile_uri)
+        shapefile_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
         unique_values = \
-            set(raster_utils.unique_raster_values_uri(type_shapefile_uri))
+            set(pygeoprocessing.geoprocessing.unique_raster_values_uri(type_shapefile_uri))
         if shapefile_nodata in unique_values:
             unique_values.remove(shapefile_nodata)
 
         # Save all the habitat values in this layer to the field index dictionary
         for code in unique_values:
-            # Check the code is not already used 
-            # (2 habitats can't have the same code)
-            assert code not in habitat_name_map, \
-                'code ' + str(code) + ' for ' + habitat_type_name + \
-                ' is already used by ' + habitat_name_map[code]
+#            # Check the code is not already used 
+#            # (2 habitats can't have the same code)
+#            assert code not in habitat_name_map, \
+#                'code ' + str(unique_values) + ' for ' + habitat_type_name + ' ' + \
+#                str(os.path.split(type_shapefile_uri)[1]) + ' ' + \
+#                ' is already used by ' + habitat_name_map[code] + \
+#                ', habitat map: ' + str(habitat_name_map)
 
             # Assign this code to the habitat name
-            habitat_name_map[code] = habitat_type_name
+            if code not in habitat_name_map:
+                habitat_name_map[code] = habitat_type_name
 
         args['field_index']['natural habitats'][habitat]['habitat_values'] = \
             unique_values
@@ -1865,9 +2187,17 @@ def combine_natural_habitats(args, transect_data_file):
 
                 dataset_type = habitat_type_dataset[transect,position]
 
+                # Can't decide which habitat to choose
+                if dataset_type == habitat_type:
+                    raise Exception, \
+                        "Can't decide which habitat code to choose (" + \
+                        str(dataset_type) + ")"
+
+                # Override with nodata
                 if dataset_type == shapefile_nodata:
                     habitat_type_dataset[transect,position] = habitat_nodata
 
+                # Override with higher priority habitat
                 elif dataset_type < habitat_type:
                     habitat_type_dataset[transect,position] = habitat_type
                     habitat_presence += 1
@@ -1985,19 +2315,37 @@ def apply_habitat_constraints(mask, habitat_type, args):
     return habitat
 
 
-def compute_shore_orientation(shore, shore_pts, i_base, j_base):
-    """Compute an estimate of the shore orientation. 
+def compute_shore_orientations(shore, shore_pts, i_base, j_base):
+    """Compute an estimate of the shore orientation. To do so, the algorithm 
+        computes the orientation 'O' from two adjascent neighbors for each 
+        focal shore segment.
+        Then, it computes the average of each pixel orientation 'A' by looking
+        at the orientation of the two neighboring pixels.
+        The orientation at a given pixel is given by the mean: 
+            1/3 * (2*O + A)
+
        Inputs:
-           -shore: 2D numpy shore array (1 for shore, 0 otherwise)
-           -shore_pts: shore ij coordinates in shore array coordinates
+           -shore: small 2D numpy shore array (1 for shore, 0 otherwise)
+           -shore_pts: shore ij coordinates relative to the small shore array
+           -i_base, j_base: row/col offsets used to compute absolute 
+            coordinates from the relative shore array coordinates
 
         Returns a dictionary of {(shore ij):(orientation vector ij)} pairs"""
-    shore = np.copy(shore) # Creating a copy in-place
+    # We don't want to modify the shore passed as argument, so we copy it
+    shore = np.copy(shore)
     max_i, max_j = shore.shape
 
+    # Used to swap shore states between steps i and i+1
     updated_shore = shore.astype(int)
 
-    # Compute orientations
+    # Compute orientations (O) for each pixel
+    # The orientation is undefined if there is less than 1 neighbor or too many:
+    #
+    #   0 neighbors: shore orientation is undefined
+
+#    print('shore before')
+#    print(shore.astype(int))
+
     orientations = {}
     for coord in zip(shore_pts[0], shore_pts[1]):
         row, col = coord
@@ -2009,112 +2357,273 @@ def compute_shore_orientation(shore, shore_pts, i_base, j_base):
             updated_shore[row, col] = 0
             continue
 
+#        print 'shore coord', coord,
+
+        # Compute how many shore pixels there are in the focal pixel's 
+        # neighborhood and try to clean it up so we get as many valid 
+        # transect locations as possible:        
+
+        # Raw neighborhood before it's cleaned up
         neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        # We don't count the focal pixel in the neighborhood
         neighborhood[1, 1] = 0
+        # Number of neighboring pixels. Should be 2 ideally.
         neighbor_count = np.sum(neighborhood)
  
+        # First step: try to fix the shore so we get 2 pixels from which 
+        # to compute a valid orientation:
+        
+#        print('neighborhood before', neighborhood)
+#        print('neighbor count', neighbor_count)
+
+        # 0 neighbors: can't do anything        
+        if neighbor_count == 0:
+#            print('no neighbors, skip')
+            updated_shore[row, col] = 0
+            continue
+        # 2 neighbors: no changes needed, no 'if' condition for this case
+        # 3 and more neighbors: remove the diagonal pixels, it might help.
+        elif neighbor_count > 2:
+#            print('multiple neighbors')
+            neighborhood[0, 0] = 0
+            neighborhood[0, 2] = 0
+            neighborhood[2, 2] = 0
+            neighborhood[2, 0] = 0
+
+        # Update the number of neighbors
+        neighbor_count = np.sum(neighborhood)
+
+       # 1 neighbor: re-instate focal point to compute the orientation 
+        if neighbor_count == 1:
+#            print('one neighbor')
+            neighborhood[1, 1] = 1
+
+#        print('neighborhood after', neighborhood)
+
+        # Second step: recompute the number of neighbors after cleanup step.
+        neighbors = np.where(neighborhood == 1)
+        neighbor_count = np.sum(neighborhood)
+
+        # Skip if not 2 neighbors
         if neighbor_count != 2:
+#            print('wrong number of neighbors', neighbor_count)
             updated_shore[row, col] = 0
             continue
 
-        neighbors = np.where(neighborhood == 1)
-
+        # Otherwise, we're good: let's compute the orientation
         orientations[coord] = \
             (neighbors[0][1] - neighbors[0][0], \
             neighbors[1][1] - neighbors[1][0])
 
-    # Compute average orientations
+#        print('orientation', orientations[coord])
+
+#    print(shore.astype(int))
+#    print('shore after')
+#    print(updated_shore)
+
+    # Compute average orientations 'A' for each pixel  
+    # with a valid orientation 'O'
     shore = np.copy(updated_shore)
     average_orientations = {}
-    for coord in orientations.keys():
+    
+    for coord in orientations:
         row, col = coord
+#        print 'orientations coord', coord,
+
+
+        # Same principle as above, but with pixel with valid orientatons only
+        # Compute how many valid pixels there are in the focal pixel's 
+        # neighborhood and try to clean it up so we get as many pixels 
+        # with valid orientations as possible:        
+
+        # Raw neighborhood before it's cleaned up
         neighborhood = np.copy(shore[row-1:row+2, col-1:col+2])
+        # We don't count the focal pixel in the neighborhood
         neighborhood[1, 1] = 0
+        # Number of neighboring pixels. Should be 2 ideally.
         neighbor_count = np.sum(neighborhood)
              
+        # First step: try to fix the valid pixel shore so we get 2 pixels 
+        # from which to compute a valid orientation:
+        
+        # 0 neighbors: can't do anything        
+        if neighbor_count == 0:
+#            print('no neighbors, skip')
+            updated_shore[row, col] = 0
+            continue
+        # 2 neighbors: no changes needed, no 'if' condition for this case
+        # 3 and more neighbors: remove the diagonal pixels, it might help.
+        elif neighbor_count > 2:
+#            print('multiple neighbors')
+            neighborhood[0, 0] = 0
+            neighborhood[0, 2] = 0
+            neighborhood[2, 2] = 0
+            neighborhood[2, 0] = 0
+
+        # Update the number of neighbors
+        neighbor_count = np.sum(neighborhood)
+
+        # 1 neighbor: re-instate focal point to compute the orientation 
+        if neighbor_count == 1:
+#            print('one neighbor')
+            neighborhood[1, 1] = 1
+
+#        print('neighborhood after', neighborhood)
+
+        # Second step: recompute the number of neighbors after cleanup step.
+        neighbors = np.where(neighborhood == 1)
+        neighbor_count = np.sum(neighborhood)
+
+        # Skip if not 2 neighbors
         if neighbor_count != 2:
-            del orientations[coord]
+#            print('wrong number of neighbors', neighbor_count)
+            updated_shore[row, col] = 0
             continue
 
-        neighbors = np.where(neighborhood == 1)
+        # Make coordinates absolute
         neighbors = (neighbors[0] + row - 1, neighbors[1] + col - 1)
 
+        # Extract points separately
         first = (neighbors[0][0], neighbors[1][0])
         second = (neighbors[0][1], neighbors[1][1])
-        if (first not in orientations) or (second not in orientations):
-            del orientations[coord]
-            continue
+        assert first in orientations
+        assert second in orientations
 
+        # Compute average orientation
         average_orientation = \
             ((orientations[first][0] + orientations[second][0]) / 2,
             (orientations[first][1] + orientations[second][1]) / 2)
             
+        # Store in dictionary
         average_orientations[coord] = average_orientation
+
+#    print('shore at the end')
+#    print(updated_shore)
+
+    # Combine orientation (weight==2) with average orientation (weight==1).
     shore_orientation = {}
-    for segment in orientations.keys():
+    for segment in average_orientations:
         O = orientations[segment]
         A = average_orientations[segment]
+        composite = np.array([float(2 * O[0] + A[0]), float(2 * O[1] + A[1])])
+        norm = (composite[0]**2 + composite[1]**2)**.5
+
+        # Make the key coordiantes absolute
         shore_orientation[(segment[0] + i_base, segment[1] + j_base)] = \
-            (float(2 * O[0] + A[0]) / 3., float(2 * O[1] + A[1]) / 3.)
+            composite / norm
+            
+
+#    print(shore_orientation)
+#    print('')
 
     return shore_orientation
  
-def select_transect(shore_pts):
-    """Select transect postion among shore points"""
+def select_transect(shore_pts, i_start, j_start, i_end, j_end):
+    """Select transect position among shore points, by avoiding positions
+        on the bufferred parts of the transect. Buffers overlap between up to
+        4 tiles, and cause the same positions to be selected multiple times.
+
+        Inputs:
+            -shore_pts: shore point coordinates (absolute rows & cols)
+            -i_start, j_start, i_end, j_end: tile extents without the
+                buffers. i/j refer to row/col, and start/end refer to
+                smallest/largest values.
+
+        Returns a list of [i, j] point coordinates that are not within 
+            the buffer region"""
     if not len(shore_pts):
         return None
     
     # Return the transect with the smallest i first, and j second
     sorted_points = sorted(shore_pts, key = lambda p: p[1])
     sorted_points = sorted(sorted_points, key = lambda p: p[0])
+
+    # Remove points in the buffer to avoid 2 transects appear side-by-side
+    valid_points = []
+    for p in sorted_points:
+#        print 'trying point', p,
+        if p[0] < i_start:
+            continue
+        elif p[1] < j_start:
+            continue
+        elif p[0] > i_end:
+            continue
+        elif p[1] > j_end:
+            continue
+#        print('valid')
+        valid_points.append(p)
+
+#    if not len(valid_points):
+#        print('No valid points in', sorted_points)
+#        print('point limits', (i_start, j_start), (i_end, j_end))
     
-    return sorted_points[0]
+    return valid_points
 
-def compute_transect_orientation(position, orientation, landmass):
+def compute_transect_orientations(positions, orientations, land):
     """Returns transect orientation towards the ocean."""
-    # orientation is perpendicular to the shore
-    orientation = np.array([-orientation[1], orientation[0]]) # pi/2 rotation
+    # Returned list of all the transect orientations
+    transect_orientations = {}
 
-    # Compute the long (l) and the short (s) axes indices
-    l = 0 if abs(orientation[0]) > abs(orientation[1]) else 1
-    s = 1 if abs(orientation[0]) > abs(orientation[1]) else 0
+    for position in positions:
+        # orientation is perpendicular to the shore
+        orientation = orientations[position]
+        orientation = np.array([-orientation[1], orientation[0]])
+        step = np.array([0., 0.])
 
-    # Normalize orientation and extend to 3 pixels to minimize roundoff
-    orientation[s] = round(3 * float(orientation[s]) / orientation[l])
-    orientation[l] = 3.
+        # Scale orientation to 3 pixels for accuracy: minimize roundoff
+        # errors due to looking up integer pixel coordinates.
+        # 3 was chosen because the orientations are multiples of 1/3
+        norm = (np.sum(orientation**2))**.5
+        step = 3. * orientation / norm
 
-    # Orientation points to water: return rescaled vector
-    if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
-        return orientation / 3.
+        # Sample landmass at 1, 2, and 3 pixels away from position
+        water_is_1_px_ahead = \
+            not land[int(round(position[0] +step[0]/3.)), \
+                int(round(position[1] +step[1]/3.))]
+        water_is_1_px_behind = \
+            not land[int(round(position[0] -step[0]/3.)), \
+                int(round(position[1] -step[1]/3.))]
 
-    # Otherwise, check the opposite direction
-    else:
-        orientation *= -1.
+        water_is_2_px_ahead = \
+            not land[int(round(position[0] + 2.*step[0]/3.)), \
+                int(round(position[1] + 2.*step[1]/3.))]
+        water_is_2_px_behind = \
+            not land[int(round(position[0] - 2.*step[0]/3.)), \
+                int(round(position[1] - 2.*step[1]/3.))]
         
-        # Other direction works, return rescaled orientation
-        if not landmass[position[0] +orientation[0], position[1] +orientation[1]]:
-            return orientation / 3.
-        
-        # Other direction does not work: possible overshoot, shorten vector
-        else:
-            # Reduce the vector length
-            step = np.array([round(orientation[0]/3.), round(orientation[1]/3.)])
+        water_is_3_px_ahead = not land[ \
+            int(round(position[0] +step[0])), \
+            int(round(position[1] +step[1]))]
+        water_is_3_px_behind = not land[ \
+            int(round(position[0] -step[0])), \
+            int(round(position[1] -step[1]))]
 
-            # Orientation points to water: return vector as is
-            if not landmass[position[0] + step[0], position[1] + step[1]]:
-                return orientation
+        # Try 3 pixels in the direction ahead
+        if water_is_3_px_ahead:
+            # Check if there is no land along the vector 'step'.
+            if water_is_1_px_ahead and water_is_2_px_ahead:
+                transect_orientations[position] = orientation
+                continue
         
-            # Orientation points to land: check the other direction
-            else:
-                step *= -1 # step in the other direction
-        
-                # Orientation doesn't work, return invalid transect.
-                if landmass[position[0] +step[0], position[1] +step[1]]:
-                    return None
-        
-                # Other direction worked, return orientation
-                return orientation * -1
+        # Try opposite direction
+        elif water_is_3_px_behind:
+            # Same thing as above, but for the opposite direction
+            if water_is_1_px_behind and water_is_2_px_behind:
+                transect_orientations[position] = -orientation
+                continue
 
+        # Couldn't detect water 3 pixels away in either direction, 
+        # look 1 pixel ahead only
+        
+        # No land, all good: we store this direction.
+        if water_is_1_px_ahead:
+            transect_orientations[position] = orientation
+
+        # Still hit land: try the other direction
+        elif water_is_1_px_behind:
+            transect_orientations[position] = -orientation
+
+    return transect_orientations
 
 def compute_raw_transect_depths(shore_point, \
     direction_vector, bathymetry, bathymetry_uri, landmass, landmass_uri, \
@@ -2143,19 +2652,21 @@ def compute_raw_transect_depths(shore_point, \
     
     # Shore point outside bathymetry
     if (p_i < 0) or (p_i >= bathymetry_shape[0]):
+#        print('    shore', shore_point, 'outside bathymetry', bathymetry_shape)
         return (None, None)
 
     p_j = shore_point[1]
 
     # Shore point outside bathymetry
-    if (p_j < 0) or (p_j >= bathymetry_shape[0]):
+    if (p_j < 0) or (p_j >= bathymetry_shape[1]):
+#        print('    shore', shore_point, 'outside bathymetry', bathymetry_shape)
         return (None, None)
 
     d_i = direction_vector[0]
     d_j = direction_vector[1]
 
     initial_elevation = bathymetry[p_i, p_j]
-    depths[max_land_len] = 0
+    depths[max_land_len] = initial_elevation
 
     I[max_land_len] = p_i
     J[max_land_len] = p_j
@@ -2165,29 +2676,54 @@ def compute_raw_transect_depths(shore_point, \
     start_i = p_i - d_i
     start_j = p_j - d_j
 
-    # If no land behind the piece of land, stop there and report 0
-    land = landmass[int(round(start_i)), int(round(start_j))]
-
+    # Offset if the shore is either inland or in the water
+    shore_offset = 0
 
     inland_steps = 0
 
-    # Only compute if there is land
+    # Only compute the landward part of the transect
+    elevation = \
+        bathymetry_band.ReadAsArray( \
+            int(round(p_j)), \
+            int(round(p_i)), 1, 1)[0]
+
+    # If no land behind the shore, stop there and report 0
+    land = landmass[int(round(start_i)), int(round(start_j))]
+
     if land:
         # Stop when maximum inland distance is reached
         for inland_steps in range(1, max_land_len):
-            elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+#            print('    inland_steps', inland_steps)
+            # Save last elevation before updating it
+            last_elevation = elevation 
+            elevation = \
+                bathymetry_band.ReadAsArray( \
+                    int(round(start_j)), int(round(start_i)), 1, 1)[0]
+            
             # Hit either nodata, or some bad data
             if elevation <= -12000:
                 inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
+#                print('    Invalid bathymetry')
                 break
-            # Stop if shore is reached
-            if not elevation:
-                inland_steps -= 1
-                break
+ 
             # Stop at maximum elevation
             if elevation > 20:
                 inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
+#                print('    Hit maximum elevation')
                 break
+
+            # Reached the top of a hill, stop there
+            if last_elevation > elevation:
+                inland_steps -= 1
+                start_i += d_i
+                start_j += d_j
+#                print('    Reached the top of a hill')
+                break
+
             # We can store the depth at this point
             depths[max_land_len - inland_steps] = elevation
             I[max_land_len - inland_steps] = int(round(start_i))
@@ -2200,26 +2736,77 @@ def compute_raw_transect_depths(shore_point, \
             # Stop if outside raster limits
             if (start_i < 0) or (start_j < 0) or \
                 (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
+                # Went too far: backtrack one step
+                start_i += d_i
+                start_j += d_j
+#                print('    Outside raster limits')
                 break
+
+        # If the highest inland point is still underwater, this transect is invalid
+        highest_elevation = bathymetry_band.ReadAsArray( \
+            int(round(start_j)), int(round(start_i)), 1, 1)[0]
+        
+        if highest_elevation < 0.:
+#            print('    All the transect is underwater')
+            return (None, None)
+
+    # No land behind shore, return
+    else:
+#        print('    No land behind shore')
+        return (None, None)
+
 
     # Compute the seaward part of the transect
     start_i = p_i + d_i
     start_j = p_j + d_j
 
-    # Stop when maximum offshore distance is reached
     offshore_steps = 0
+
+    last_elevation = \
+        bathymetry_band.ReadAsArray( \
+            int(round(p_j)), \
+            int(round(p_i)), 1, 1)[0]
+
+    # Stop when maximum offshore distance is reached
     for offshore_steps in range(1, max_sea_len):
-        # Stop if shore is reached
-        if landmass[int(round(start_i)), int(round(start_j))]:
-            offshore_steps -= 1
-            break
-        elevation = bathymetry_band.ReadAsArray(int(round(start_j)), int(round(start_i)), 1, 1)[0]
+#        print('    offshore_steps', offshore_steps)
+
+        last_elevation = elevation 
+        elevation = \
+            bathymetry_band.ReadAsArray( \
+                int(round(start_j)), int(round(start_i)), 1, 1)[0][0]
+        is_land = landmass[int(round(start_i)), int(round(start_j))]
 
         # Hit either nodata, or some bad data
         if elevation <= -12000:
             offshore_steps -= 1
+            start_i -= d_i
+            start_j -= d_j
+#            print('    Invalid bathymetry')
             break
-        # We can store the depth at this point
+
+        # Stop if land is reached
+        if is_land:
+            offshore_steps -= 1
+#            print('    Hit land')
+            break
+
+        # If positive elevation:
+        
+
+        # Looking at slope:
+
+        # We're going up...
+        if elevation > last_elevation:
+            # ...and we're above water: stop there
+            if elevation > 0:
+                offshore_steps -= 1
+                start_i -= d_i
+                start_j -= d_j
+#                print('    Left water')
+                break
+        
+        # We can store the depth (elevation) at this point
         depths[max_land_len + offshore_steps] = elevation
         I[max_land_len + offshore_steps] = int(round(start_i))
         J[max_land_len + offshore_steps] = int(round(start_j))
@@ -2231,6 +2818,7 @@ def compute_raw_transect_depths(shore_point, \
         # Stop if outside raster limits
         if (start_i < 0) or (start_j < 0) or \
             (start_i >= bathymetry_shape[0]) or (start_j >= bathymetry_shape[1]):
+#            print('    Outside raster limits', bathymetry_shape, 'when at', (start_i, start_j))
             break
 
     # If shore borders nodata, offshore_step is -1, set it to 0
@@ -2238,6 +2826,13 @@ def compute_raw_transect_depths(shore_point, \
 
     start = max_land_len - inland_steps
     end = max_land_len + offshore_steps + 1
+
+#    print('(start, end)', (start, end), \
+#        '(inland_steps, offshore_steps)', (inland_steps, offshore_steps), \
+#        'max_land_len', max_land_len)
+#    print('depths', depths[start:end])
+#    print('I', I[start:end])
+#    print('J', J[start:end])
 
     return (depths[start:end], (I[start:end], J[start:end]))
 
@@ -2248,7 +2843,9 @@ def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'
     if depths.size < 3:
         return None
 
-    assert new_resolution < old_resolution, 'New resolution should be finer.'
+    if new_resolution > old_resolution:
+        raise Exception, 'New resolution should be finer.'
+    
     x = np.arange(0, depths.size) * old_resolution
     f = interpolate.interp1d(x, depths, kind)
     x_new = \
@@ -2303,15 +2900,32 @@ def smooth_transect(transect, window_size_pct):
     return y[window_length:-window_length+1] 
 
 def clip_transect(transect, max_depth):
-    """Clip transect using maximum and minimum heights"""
+    """Clip transect further since the depths have been smoothed out.
+
+        Inputs:
+            -transect: numpy array of real-valued depths
+            -max_depth: maximum depth constraint beyond which to clip
+
+        Returns nested tuples (clipped_transect, (start, shore, end)) where:
+            -clipped_transect is a clipped version of the input numpy array
+            -start, end: indices of the transect edges in the array
+            -shore: index where the shore is
+
+            If the transect is invalid, returns (None, (None, None, None))"""
+
     # Transect has to have a minimum size
     if transect.size < 5:
          return (None, (None, None, None))
 
-    # Return if transect is full of zeros, otherwise break
+    # Return if transect is full of zeros, otherwise the transect is invalid
     uniques = np.unique(transect)
     if uniques.size == 1:
-        assert uniques[0] == 0.0
+        # If depth != 0 everywhere, transect is invalid 
+        # (either above water or submerged)
+        if uniques[0] != 0.0:
+            return (None, (None, None, None))
+
+        # Limit case: the transect is valid, but it's really borderline
         return (transect, (0, 0, transect.size))
 
     # If higher point is negative: can't do anything, everything is underwater
@@ -2328,8 +2942,7 @@ def clip_transect(transect, max_depth):
 
     # Find water extent
     water_extent = 1
-#    print('transect size', transect.size)
-#    print('shore', shore)
+
     while transect[shore - 1 + water_extent] <= 0:
         # Stop if reached the end of the transect
         if shore + water_extent == transect.size:
@@ -2341,20 +2954,56 @@ def clip_transect(transect, max_depth):
         water_extent += 1
 
     # Compute the extremes on the valid portion only
-    highest_point = np.argmax(transect[:shore])
-    lowest_point = shore + np.argmin(transect[shore:shore + water_extent])
-#    print('highest, lowest', (highest_point, lowest_point))
+    # Note:
+    #   Numpy's argmin and argmax return the first occurence of the min/max.
+    #   We want the longest transect possible, so since argmin and argmax
+    #   traverse the transect in increasing index, argmax will indeed return 
+    #   the highest segment furthest away from the shore.
+    #   However, argmin will return the shortest offshore portion. To get the
+    #   longest one, we need to revert the offshore transect portion.
 
-    assert highest_point < lowest_point
+    # Highest point is straightforward
+    highest_point = np.argmax(transect[:shore])
+
+    # Lowest point has to be searched in the reversed transect portion 
+    # that is offshore.
+    # Find the boundary indices
+    rbegin = shore + water_extent-1
+    rend = shore-1
+
+    # Extract the offshore slice in reverse order
+    reversed_slice = transect[rbegin:rend:-1]
+    
+    # Index to the lowest point furthest away from the shore
+    lowest_point = np.argmin(reversed_slice)
+    
+    # The index is from the reversed slice, adjust it to the original indexing
+    lowest_point = shore + reversed_slice.size - 1 - lowest_point
+
+#    print('transect', lowest_point, transect)
+
+    # Testing that lowest_point appears before highest_point
+    assert highest_point < lowest_point, \
+        'Highest point ' + str(highest_point) + \
+        ' appears before lowest point ' + str(lowest_point)
+
+    # Testing that highest_point is higher than lowest_point 
+    assert transect[highest_point] >= transect[lowest_point], \
+        'Highest point ' + str(transect[highest_point]) + ' not >= ' \
+        ' lowest point ' + str(transect[lowest_point])
 
     return (transect[highest_point:lowest_point+1], (highest_point, shore, lowest_point+1))
 
 
 # improve this docstring!
-def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
+def detect_shore(land_sea_array, aoi_array, aoi_nodata, buffer_size, connectedness = 8):
     """ Extract the boundary between land and sea from a raster.
     
-        - raster: numpy array with sea, land and nodata values.
+        - land_sea_array: numpy array with sea, land and nodata values.
+        - tile_limits: 4-tuple of type int with row/col coordinate limits 
+            of the tile without the buffers: (i_first, j_first, i_last, j_last)
+            where i/j is the row/col coords, first/last are lowest/largest 
+            coordinate values.
         
         returns a numpy array the same size as the input raster with the shore
         encoded as ones, and zeros everywhere else."""
@@ -2393,9 +3042,6 @@ def detect_shore(land_sea_array, aoi_array, aoi_nodata, connectedness = 8):
         # Real shore = all borders - shore artifacts
         borders = ((borders - aoi_borders) >0 ).astype('int') * 1.
 
-        shore_segment_count = np.sum(borders)
-#        if shore_segment_count == 0:
-#            LOGGER.warning('No shore segment detected')
         return borders
 
 

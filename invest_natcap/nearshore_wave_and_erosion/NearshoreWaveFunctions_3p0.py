@@ -1,6 +1,8 @@
 import sys, os, string, time, datetime, json
 from datetime import datetime
 from math import *
+import warnings
+
 import numpy as num
 from scipy import optimize
 from scipy import stats
@@ -8,28 +10,43 @@ from scipy import interpolate
 from pylab import *
 from pylab import find
 from matplotlib import *
-import CPf_SignalSmooth as SignalSmooth
 import fpformat, operator
+
+import CPf_SignalSmooth as SignalSmooth
+
+#warnings.filterwarnings('error', "invalid value encountered in divide")
 
 g=9.81
 
 def Fast_k(T,h):
+    if not (h >= 0.05).all():
+        too_shallow = np.where(h >= 0.05)
+        print('Some depths are too shallow in h of size', h.size)
+        for i in too_shallow:
+            print(i, h[i])
+
+    assert (h >= 0.05).all(), \
+        'Detected depths that are too shallow'
     g=9.81;
+
     if type(h) is list:
         h=array(h)
-    else:
-        muo=4.0*pi**2*h/(g*T**2) 
-        expt=1.55+1.3*muo+0.216*muo**2
-        Term=1.0+muo**1.09*num.exp(-expt) 
-        mu=muo*Term/num.sqrt(num.tanh(muo))
-        k=mu/h 
-        n=.5*(1.0+(2.0*k*h/sinh(2.0*k*h)))
-        C=2*pi/T/k
-        Cg=C*n ; #Group velocity
-        
-        if type(n) is numpy.ndarray:
-            out=h<.05
-            k[out]=nan;C[out]=nan;Cg[out]=nan
+
+    # Doesn't allow mu0 to be negative
+    muo=4.0*pi**2*h/(g*T**2)
+
+    expt=1.55+1.3*muo+0.216*muo**2
+    Term=1.0+muo**1.09*num.exp(-expt)
+    mu=muo*Term/num.sqrt(num.tanh(muo))
+
+    k=mu/h
+    n=.5*(1.0+(2.0*k*h/sinh(2.0*k*h)))
+    C=2*pi/T/k
+    Cg=C*n ; #Group velocity
+    
+    if type(n) is numpy.ndarray:
+        out=h<.05
+        k[out]=nan;C[out]=nan;Cg[out]=nan
         
     return k,C,Cg
 
@@ -906,7 +923,10 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     
     while O<8: # iterate until convergence of water level
         hi=[ashi[i]+Eta[i] for i in range(lxi)] # water depth        
-        Sxx=[0.5*Ewi[i]*(4.0*ki[i]*hi[i]/num.sinh(2.0*ki[i]*hi[i])+1.0) for i in range(lxi)] # wave radiation stress
+        
+        # Arbitrarily constrain hi to a minimum of -1 meter:
+        hi = numpy.maximum(hi, -1.)
+
         Rxx=[2.0*Eri[i] for i in range(lxi)] # roller radiation stress
         # estimate MWL along Xshore transect
         temp1=[Sxx[i]+Rxx[i] for i in range(lxi)]
@@ -925,6 +945,10 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     Sxx=lxi*[0.0];Rxx=lxi*[0.0];Eta_nv=lxi*[0.0];O=0;
     while O<8: # iterate until convergence of water level
         hi=[ashi[i]+Eta_nv[i] for i in range(lxi)] # water depth        
+
+        # Arbitrarily constrain hi to a minimum of -1 meter:
+        hi = numpy.maximum(hi, -1.)
+
         Sxx=[0.5*Ewi[i]*(4.0*ki[i]*hi[i]/num.sinh(2.0*ki[i]*hi[i])+1.0) for i in range(lxi)] # wave radiation stress
         Rxx=[2.0*Eri[i] for i in range(lxi)] # roller radiation stress
         # estimate MWL along Xshore transect
