@@ -273,7 +273,7 @@ REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
     'osgeo (>=1.9.2)',
-    'pygeoprocessing (>=0.1.4)',
+    'pygeoprocessing (>=0.1.5)',
     ]
 
 #The standard distutils setup command
