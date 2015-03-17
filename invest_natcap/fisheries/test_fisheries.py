@@ -97,7 +97,7 @@ class TestLobster(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': workspace_dir,
-            'results_suffix': '',
+            'results_suffix': 'test',
             'aoi_uri': os.path.join(input_dir, 'shapefile_belize/Lob_Belize_Subregions.shp'),
             'total_timesteps': 100,
             'population_type': 'Age-Based',
@@ -112,7 +112,7 @@ class TestLobster(unittest.TestCase):
             'beta': 2885000.0,
             'total_recur_recruits': 0,
             'migr_cont': True,
-            'migration_dir': os.path.join(input_dir, ''),
+            'migration_dir': os.path.join(input_dir, 'input_lobster/Migrations'),
             'val_cont': True,
             'frac_post_process': 0.28633258,
             'unit_price': 29.93,
