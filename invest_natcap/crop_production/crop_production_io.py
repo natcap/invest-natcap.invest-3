@@ -125,7 +125,7 @@ def fetch_args(args):
                     'cost_seed': <float>,
                     'cost_irrigation': <float>
                 }
-            }
+            },
         }
 
     '''
@@ -685,11 +685,5 @@ def save_production_maps(vars_dict):
 
             ...
         }
-    '''
-    pass
-
-
-def create_outputs(vars_dict):
-    '''
     '''
     pass

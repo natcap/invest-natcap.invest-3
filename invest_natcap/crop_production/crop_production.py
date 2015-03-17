@@ -44,7 +44,7 @@ def execute(args, create_outputs=True):
         on climate-specific distribution of observed yields and creates
         associated outputs
 
-    :param boolean args['do_yield_modeled']: if True, calculates yield based on
+    :param boolean args['do_yield_regression_model']: if True, calculates yield based on
         yield regression model with climate-specific parameters and creates
         associated outputs
 
@@ -83,7 +83,7 @@ def execute(args, create_outputs=True):
             'create_crop_production_maps': True,
             'do_yield_observed': True,
             'do_yield_percentile': True,
-            'do_yield_modeled': True,
+            'do_yield_regression_model': True,
             'modeled_fertilizer_maps_dir': 'path/to/modeled_fertilizer_maps_dir/',
             'modeled_irrigation_map_uri': 'path/to/modeled_irrigation_map_uri/',
             'do_nutrition': True,
@@ -108,60 +108,37 @@ def execute(args, create_outputs=True):
     vars_dict = io.setup_tmp(vars_dict)
 
     # Run Model ...
-    observed_vars_dict = {}
-    percentile_vars_dict = {}
-    modeled_vars_dict = {}
 
-    # Observed Yield Function
+    # Yield Based on Observed Yields within Region
     if vars_dict['do_yield_observed']:
         # Calculate Yield
-        observed_vars_dict = model.calc_yield_observed(vars_dict)
+        vars_dict = model.create_observed_yield_maps(vars_dict)
 
-        # Calculate Nutrition
-        if vars_dict['do_nutrition']:
-            observed_vars_dict = model.calc_nutrition(vars_dict)
-
-        # Calculate Economic Returns
-        if vars_dict['do_economic_returns']:
-            observed_vars_dict = model.calc_economic_returns(vars_dict)
-
-        # Create Outputs
-        if create_outputs:
-            io.create_outputs()
-
-    # Percentile Yield Function
+    # Yield Based on Climate-specific Distribution of Observed Yields
     if vars_dict['do_yield_percentile']:
         # Calculate Yield
-        percentile_vars_dict = model.calc_yield_percentile(vars_dict)
+        vars_dict = model.create_percentile_yield_maps(vars_dict)
 
-        # Calculate Nutrition
-        if vars_dict['do_nutrition']:
-            percentile_vars_dict = model.calc_nutrition(vars_dict)
-
-        # Calculate Economic Returns
-        if vars_dict['do_economic_returns']:
-            percentile_vars_dict = model.calc_economic_returns(vars_dict)
-
-        # Create Outputs
-        if create_outputs:
-            io.create_outputs()
-
-    # Modeled Yield Function
-    if vars_dict['do_yield_modeled']:
+    # Yield Based on Yield Regression Model with Climate-specific Parameters
+    if vars_dict['do_yield_regression_model']:
         # Calculate Yield
-        modeled_vars_dict = model.calc_yield_modeled(vars_dict)
+        vars_dict = model.create_regression_yield_maps(vars_dict)
 
-        # Calculate Nutrition
-        if vars_dict['do_nutrition']:
-            modeled_vars_dict = model.calc_nutrition(vars_dict)
+    # Production Maps for Each Yield Function
+    vars_dict = model.create_production_maps(vars_dict)
 
-        # Calculate Economic Returns
-        if vars_dict['do_economic_returns']:
-            modeled_vars_dict = model.calc_economic_returns(
-                vars_dict)
+    # Output: Economic Returns Map for Each Yield Function
+    if vars_dict['do_economic_returns']:
+        vars_dict = model.create_economic_returns_map(vars_dict)
 
-        # Create Outputs
-        if create_outputs:
-            io.create_outputs()
+    # Output: Results Table for Each Yield Function
+    vars_dict = model.create_results_table(vars_dict)
 
-    return observed_vars_dict, percentile_vars_dict, modeled_vars_dict
+    # Optional Output: Production Maps for Each Yield Function
+    if vars_dict['create_crop_production_maps']:
+        vars_dict = model.save_production_maps(vars_dict)
+
+    # Clean Up Temporary Folder
+    io.clean_up_tmp(vars_dict)
+
+    return vars_dict
