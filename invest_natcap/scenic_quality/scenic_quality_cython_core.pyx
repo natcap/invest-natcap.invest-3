@@ -1,5 +1,8 @@
 import sys
+import os
+import csv
 import math
+
 cimport numpy as np
 import numpy as np
 
@@ -354,7 +357,8 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
-    np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map):
+    np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map,
+    path):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
@@ -381,8 +385,8 @@ def sweep_through_angles( \
     cdef int l = 1 # Active line's long axis (set to J)
     cdef double Os = -viewpoint[s] # Origin's coordinate along short axis O[s]
     cdef double Ol = viewpoint[l] # Origin's coordinate along long axis O[l]
-    cdef np.int32_t Pl = 0
-    cdef np.int32_t Ps = 0
+    cdef np.int32_t Pl = 0 # Coordinate of the point being processed in a loop
+    cdef np.int32_t Ps = 0 # Other coordinate
     cdef double Es = -perimeter[s][0] # End point's coord. along short axis E[s]
     cdef double El = perimeter[l][0] # End point's coord. along long axis E[l]
     cdef double Dl = 0 # Distance along the long component
@@ -420,6 +424,16 @@ def sweep_through_angles( \
     cdef int totat_active_pixel_count = 0
     cdef int last_active_pixel = 0
 
+    # Open file to save debug data
+    try:
+        fp = open(path, 'w')
+    except IOError as err:
+        print("Can't open file " + fp)
+        raise err
+
+    csv_writer = csv.writer(fp)
+    row = []
+
     # 1- add cells at angle 0
     # Collect cell_center events
     while (center_event_id < center_event_count) and \
@@ -442,6 +456,10 @@ def sweep_through_angles( \
         active_pixel_array[ID].offset = o
         center_event_id += 1
         add_pixel_count += 1
+
+        row.append(ID)
+    csv_writer.writerow(row)
+
     # The sweep line is current, now compute pixel visibility
     active_pixel_count = update_visible_pixels_fast( \
         active_pixel_array, coord[0], coord[1], \
@@ -467,7 +485,10 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
     for a in range(angle_count-2):
-        print('angle', a, angles[a])
+        row = []
+#        print('angle', a, angles[a])
+        row.append('angle ' + str(a) + ', ' + str(angles[a]) + ':')
+
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -514,7 +535,7 @@ def sweep_through_angles( \
             #
             if not active_pixel_array[ID].is_active or \
                 active_pixel_array[ID].distance != distances[i]:
-                initial_ID = ID # DEBUG!!!! Remove ASAP
+                alternate_ID = ID # DEBUG!!!! Remove ASAP
                 ID = ID+1 if ID % 2 == 0 else ID-1
             # Sanity check
             assert ID>=0 and ID<max_line_length
@@ -532,10 +553,10 @@ def sweep_through_angles( \
                         print (pixel_id, pixel_id - last_active_pixel),
                         last_active_pixel = pixel_id
                 print('count', totat_active_pixel_count, active_pixel_count)
-                print('was active', active_pixel_array[initial_ID].is_active, \
-                    'distance', active_pixel_array[initial_ID].distance, \
-                    'difference', active_pixel_array[initial_ID].distance - distances[i])
-                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(initial_ID)
+                print('was active', active_pixel_array[alternate_ID].is_active, \
+                    'distance', active_pixel_array[alternate_ID].distance, \
+                    'difference', active_pixel_array[alternate_ID].distance - distances[i])
+                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
                 assert active_pixel_array[ID].is_active, message
             active_pixel_array[ID].is_active = False
 
@@ -614,6 +635,11 @@ def sweep_through_angles( \
 
 #        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
 #            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
+
+        for pixel_id in range(max_line_length):
+            if active_pixel_array[pixel_id].is_active:
+                row.append(pixel_id)
+        csv_writer.writerow(row)
 
         if active_pixel_count != \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:

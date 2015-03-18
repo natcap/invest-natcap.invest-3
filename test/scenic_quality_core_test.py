@@ -1094,6 +1094,13 @@ class TestScenicQuality(unittest.TestCase):
         band.WriteArray(visibility)
 	print('file saved in', os.path.join(os.getcwd(), flat_dem_uri))
 
+
+    def test_pixel_indexing(self):
+        """Test the function that computes a pixel ID as is implemented in 
+            the cython sweep angle function."""
+        pass
+
+
     def tare_down(self):
         """ Clean up code."""
         # Do nothing for now 

@@ -368,7 +368,7 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     arg_min, arg_max, arg_center, \
     coord, distances_sq, distances, visibility, offset_visibility, \
     obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
-    refraction_coeff=None, alg_version='cython'):
+    refraction_coeff=None, alg_version='cython', path = ''):
     """Compute the viewshed for a single observer. 
         Inputs: 
             -input_array: a numpy array of terrain elevations
@@ -382,7 +382,8 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
             -cell_size: cell size in meters (integer)
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
             -alg_version: name of the algorithm to be used. Either 'cython'
-            (default) or 'python'.
+                (default) or 'python'.
+            -path: file path used to save data for debugging purposes
 
         Returns the visibility map for the DEM as a numpy array"""
     if alg_version is 'python':
@@ -399,7 +400,7 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
             add_events, center_events, remove_events, \
             arg_min, arg_center, arg_max, \
             coord, distances, offset_visibility, visibility, \
-            visibility_map)
+            visibility_map, path)
 
     # Set the viewpoint visible as a convention
     visibility_map[coordinates] = 1

@@ -1,13 +1,14 @@
 import os
 import sys
 import math
+import shutil
 
 import numpy as np
 import scipy.stats
-import shutil
 import logging
 import cProfile
 import pstats
+import h5py
 
 from osgeo import gdal
 from osgeo import ogr
@@ -419,6 +420,66 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         visibility /= distances
         offset_visibility /= distances
 
+
+        # Save viewshed function arguments in HDF5
+        # Inputs to save:
+        #   -add_events, center_events, remove_events
+        #   -arg_min, arg_center, arg_max
+        #   -distances, distances_sq
+        #   -visibility, offset_visibility
+        #
+        # Create the paths to the debug data
+        debug_uri = os.path.join(args['intermediate_dir'], \
+            'debug_data_' + str(f) + '.h5')
+
+        debug_data = h5py.File(debug_uri, 'w')
+
+
+        add_events_dataset = debug_data.create_dataset('add_events', 
+            add_events.shape, compression = 'gzip', fillvalue = -1)
+
+        center_events_dataset = debug_data.create_dataset('center_events', 
+            center_events.shape, compression = 'gzip', fillvalue = -1)
+        
+        remove_events_dataset = debug_data.create_dataset('remove_events', 
+            remove_events.shape, compression = 'gzip', fillvalue = -1)
+        
+
+        arg_min_dataset = debug_data.create_dataset('arg_min', 
+            arg_min.shape, compression = 'gzip', fillvalue = -1)
+
+        arg_center_dataset = debug_data.create_dataset('arg_center', 
+            arg_center.shape, compression = 'gzip', fillvalue = -1)
+
+        arg_max_dataset = debug_data.create_dataset('arg_max', 
+            arg_max.shape, compression = 'gzip', fillvalue = -1)
+
+
+        distances_dataset = debug_data.create_dataset('distances', 
+            distances.shape, compression = 'gzip', fillvalue = -1)
+
+        distances_sq_dataset = debug_data.create_dataset('distances_sq', 
+            distances_sq.shape, compression = 'gzip', fillvalue = -1)
+        
+
+        # Store data in the file
+        add_events_dataset[...] = add_events[...]
+        center_events_dataset[...] = center_events[...]
+        remove_events_dataset[...] = remove_events[...]
+        
+        arg_min_dataset[...] = arg_min[...]
+        arg_center_dataset[...] = arg_center[...]
+        arg_max_dataset[...] = arg_max[...]
+
+        distances_dataset[...] = distances[...]
+        distances_sq_dataset[...] = distances_sq[...]
+
+
+        # Close the files
+        debug_data.close()
+
+
+
         # compute viewshed
         visibility_array = scenic_quality_core.viewshed(
             input_array, cell_size, visibility_map, perimeter_cells, \
@@ -426,7 +487,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             add_events, center_events, remove_events, I, J, \
             arg_min, arg_max, arg_center, \
             coord, distances_sq, distances, visibility, offset_visibility, \
-            obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython')
+            obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython', 
+            path = os.path.join(args['intermediate_dir'], \
+                'active_pixels_' + str(dist) + '.txt'))
         
         # apply valuation function
         valuation_function(a, b, c, d, \
@@ -559,31 +622,30 @@ def execute(args):
     """
     LOGGER.info("Start Scenic Quality Model")
 
-    #create copy of args
-    aq_args=args.copy()
-
     #validate input
     LOGGER.debug("Validating parameters.")
     dem_cell_size=pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if "cell_size" in aq_args:
-        if aq_args['cell_size'] < dem_cell_size:
+    if "cell_size" in args:
+        if args['cell_size'] < dem_cell_size:
             raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
     else:
-        aq_args['cell_size'] = dem_cell_size
+        args['cell_size'] = dem_cell_size
 
-    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     if not os.path.isdir(intermediate_dir):
         os.makedirs(intermediate_dir)
+    args['intermediate_dir'] = intermediate_dir
 
-    output_dir = os.path.join(aq_args['workspace_dir'], 'output')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
+    args['output_dir'] = output_dir
 
     #local variables
     LOGGER.debug("Setting local variables.")
     z_factor=1
-    curvature_correction=aq_args['refraction']
+    curvature_correction=args['refraction']
 
     #intermediate files
     aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
@@ -606,7 +668,7 @@ def execute(args):
     overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
 
     #determining best data type for viewshed
-    features = get_count_feature_set_uri(aq_args['structure_uri'])
+    features = get_count_feature_set_uri(args['structure_uri'])
     if features < 2 ** 16:
         viewshed_type = gdal.GDT_UInt16
         viewshed_nodata = (2 ** 16) - 1
@@ -620,17 +682,17 @@ def execute(args):
     LOGGER.info("Clipping DEM by AOI.")
 
     LOGGER.debug("Projecting AOI for DEM.")
-    dem_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
+    dem_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(args['dem_uri'])
+    pygeoprocessing.geoprocessing.reproject_datasource_uri(args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AOI: %s", aq_args['dem_uri'], aoi_dem_uri)
-    pygeoprocessing.geoprocessing.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    LOGGER.debug("DEM: %s, AOI: %s", args['dem_uri'], aoi_dem_uri)
+    pygeoprocessing.geoprocessing.clip_dataset_uri(args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
     LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
 
-    nodata_dem = pygeoprocessing.geoprocessing.get_nodata_from_uri(aq_args['dem_uri'])
+    nodata_dem = pygeoprocessing.geoprocessing.get_nodata_from_uri(args['dem_uri'])
 
     def no_zeros(value):
         if value == nodata_dem:
@@ -645,17 +707,17 @@ def execute(args):
                                     viewshed_dem_reclass_uri,
                                     get_data_type_uri(viewshed_dem_uri),
                                     nodata_dem,
-                                    aq_args["cell_size"],
+                                    args["cell_size"],
                                     "union")
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
     compute_viewshed_uri(viewshed_dem_reclass_uri,
              viewshed_uri,
-             aq_args['structure_uri'],
+             args['structure_uri'],
              curvature_correction,
-             aq_args['refraction'],
-             aq_args)
+             args['refraction'],
+             args)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
@@ -672,20 +734,20 @@ def execute(args):
         #tabulate population impact
         LOGGER.info("Tabulating population impact.")
         LOGGER.debug("Tabulating unaffected population.")
-        nodata_pop = pygeoprocessing.geoprocessing.get_nodata_from_uri(aq_args["pop_uri"])
+        nodata_pop = pygeoprocessing.geoprocessing.get_nodata_from_uri(args["pop_uri"])
         LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
         nodata_viewshed = pygeoprocessing.geoprocessing.get_nodata_from_uri(viewshed_uri)
         LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
 
         #clip population
         LOGGER.debug("Projecting AOI for population raster clip.")
-        pop_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-        pygeoprocessing.geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'],
+        pop_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(args['pop_uri'])
+        pygeoprocessing.geoprocessing.reproject_datasource_uri(args['aoi_uri'],
                                               pop_wkt,
                                               aoi_pop_uri)
 
         LOGGER.debug("Clipping population raster by projected AOI.")
-        pygeoprocessing.geoprocessing.clip_dataset_uri(aq_args['pop_uri'],
+        pygeoprocessing.geoprocessing.clip_dataset_uri(args['pop_uri'],
                                       aoi_pop_uri,
                                       pop_clip_uri,
                                       False)
@@ -711,7 +773,7 @@ def execute(args):
                                        pop_vs_uri,
                                        get_data_type_uri(pop_prj_uri),
                                        nodata_pop,
-                                       aq_args["cell_size"],
+                                       args["cell_size"],
                                        "intersection",
                                        ["bilinear", "bilinear"],
                                        1)
@@ -783,12 +845,12 @@ def execute(args):
                                     viewshed_reclass_uri,
                                     gdal.GDT_Byte,
                                     nodata_vs_bool,
-                                    aq_args["cell_size"],
+                                    args["cell_size"],
                                     "union")
 
-    if "overlap_uri" in aq_args:  
+    if "overlap_uri" in args:  
         LOGGER.debug("Copying overlap analysis features.")
-        pygeoprocessing.geoprocessing.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+        pygeoprocessing.geoprocessing.copy_datasource_uri(args["overlap_uri"], overlap_uri)
 
         LOGGER.debug("Adding id field to overlap features.")
         id_name = "investID"
@@ -805,7 +867,7 @@ def execute(args):
         def calculate_percent(feature):
             if feature.GetFieldAsInteger(id_name) in values:
                 return (values[feature.GetFieldAsInteger(id_name)] * \
-                aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
+                args["cell_size"]) / feature.GetGeometryRef().GetArea()
             else:
                 return 0
             
