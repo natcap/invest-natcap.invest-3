@@ -288,6 +288,10 @@ setup(name='invest_natcap',
         Extension(
             name="scenic_quality_cython_core",
             sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+        Extension(
+            name="ndr_core",
+            sources=['invest_natcap/ndr/ndr_core.pyx'],
+            language="c++"),
         ]),
       **py2exe_args)
 

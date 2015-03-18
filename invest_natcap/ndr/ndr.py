@@ -14,6 +14,7 @@ import pygeoprocessing.geoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
 
+import ndr_core
 
 LOGGER = logging.getLogger('nutrient')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -335,13 +336,13 @@ def execute(args):
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    pygeoprocessing.routing.routing_core.distance_to_stream(
+    ndr_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
 
     LOGGER.info('calculating downstream distance')
     downstream_distance_uri = os.path.join(
         intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
-    pygeoprocessing.routing.routing_core.distance_to_stream(
+    ndr_core.distance_to_stream(
         flow_direction_uri, stream_uri, downstream_distance_uri)
     downstream_distance_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         downstream_distance_uri)
@@ -394,7 +395,7 @@ def execute(args):
                 [lulc_uri], mask_lulc_type, lulc_mask_uri, gdal.GDT_Byte,
                 mask_nodata, out_pixel_size, 'intersection', vectorize_op=False)
 
-            pygeoprocessing.routing.routing_core.distance_to_stream(
+            ndr_core.distance_to_stream(
                 flow_direction_uri, stream_uri, current_l_lulc_uri,
                 factor_uri=lulc_mask_uri)
 
