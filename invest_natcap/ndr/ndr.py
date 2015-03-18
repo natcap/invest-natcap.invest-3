@@ -154,7 +154,8 @@ def execute(args):
     pygeoprocessing.routing.stream_threshold(
         flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), stream_uri)
-    nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(stream_uri)
+    nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        stream_uri)
 
     def map_load_function(load_type):
         """Function generator to map arbitrary nutrient type"""
@@ -187,6 +188,7 @@ def execute(args):
     load_uri = {}
     load_subsurface_uri = {}
     eff_uri = {}
+    crit_len_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
@@ -203,6 +205,13 @@ def execute(args):
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        crit_len_uri[nutrient] = os.path.join(
+            intermediate_dir, 'crit_len_%s%s.tif' % (nutrient, file_suffix))
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [lulc_uri, stream_uri], map_eff_function('crit_len_%s' % nutrient),
+            crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
     field_summaries = {}
@@ -374,33 +383,14 @@ def execute(args):
     l_lulc_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
     for nutrient in nutrients_to_process:
-        #calculate l for each lulc type
-        LOGGER.info('calculating retention_eff_lulc_uri')
-        retention_eff_lulc_uri = os.path.join(
-            intermediate_dir, 'retention_eff_lulc_%s%s.tif' %
-            (nutrient, file_suffix))
-        retention_eff_lulc_nodata = -1.0
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
-            lulc_uri, retention_eff_lulc_uri, 'GTiff',
-            retention_eff_lulc_nodata, gdal.GDT_Float32,
-            fill_value=retention_eff_lulc_nodata)
-
-        LOGGER.info('calculating crit_len_uri')
-        crit_len_uri = os.path.join(
-            intermediate_dir, 'crit_len_%s%s.tif' %
-            (nutrient, file_suffix))
-        crit_len_nodata = -1.0
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
-            lulc_uri, crit_len_uri, 'GTiff',
-            crit_len_nodata, gdal.GDT_Float32,
-            fill_value=crit_len_nodata)
 
         effective_retention_uri = os.path.join(
             intermediate_dir, 'effective_retention_%s%s.tif' %
             (nutrient, file_suffix))
+        LOGGER.info('calculate effective retention')
         ndr_core.ndr_eff_calculation(
-            flow_direction_uri, stream_uri, retention_eff_lulc_uri,
-            crit_len_uri, effective_retention_uri)
+            flow_direction_uri, stream_uri, eff_uri[nutrient],
+            crit_len_uri[nutrient], effective_retention_uri)
         effective_retention_nodata = (
             pygeoprocessing.geoprocessing.get_nodata_from_uri(
                 effective_retention_uri))
@@ -409,6 +399,7 @@ def execute(args):
             intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
         ndr_nodata = -1.0
         def calculate_ndr(effective_retention_array, ic_array):
+            '''calcualte NDR'''
             return numpy.where(
                 (effective_retention_array == effective_retention_nodata)
                 | (ic_array == ic_nodata),
@@ -557,7 +548,8 @@ def _prepare(**args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
 
-    dem_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['dem_uri'])
+    dem_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['dem_uri'])
 
     #Align all the input rasters
     aligned_dem_uri = pygeoprocessing.geoprocessing.temporary_filename()
@@ -583,8 +575,10 @@ def _prepare(**args):
     original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     thresholded_slope_uri = os.path.join(
         intermediate_dir, 'thresholded_slope.tif')
-    pygeoprocessing.geoprocessing.calculate_slope(aligned_dem_uri, original_slope_uri)
-    slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(original_slope_uri)
+    pygeoprocessing.geoprocessing.calculate_slope(
+        aligned_dem_uri, original_slope_uri)
+    slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        original_slope_uri)
     def threshold_slope(slope):
         '''Threshold slope between 0.001 and 1.0'''
         slope_copy = slope.copy()
