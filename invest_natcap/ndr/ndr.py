@@ -197,10 +197,6 @@ def execute(args):
 
         load_subsurface_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
-        #pygeoprocessing.geoprocessing.vectorize_datasets(
-        #    [lulc_uri], map_load_function('load_subsurface_%s' % nutrient),
-        #    load_subsurface_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-        #    "intersection", vectorize_op=False)
 
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
@@ -241,7 +237,6 @@ def execute(args):
     lulc_to_c = dict([
         (lulc_code, float(table['usle_c'])) for
         (lulc_code, table) in lucode_to_parameters.items()])
-    lulc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_uri)
     w_nodata = -1.0
 
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
@@ -269,8 +264,10 @@ def execute(args):
     flow_accumulation_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         flow_accumulation_uri)
 
-    w_accumulation_uri = os.path.join(intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
-    s_accumulation_uri = os.path.join(intermediate_dir, 's_accumulation%s.tif' % file_suffix)
+    w_accumulation_uri = os.path.join(
+        intermediate_dir, 'w_accumulation%s.tif' % file_suffix)
+    s_accumulation_uri = os.path.join(
+        intermediate_dir, 's_accumulation%s.tif' % file_suffix)
     for factor_uri, accumulation_uri in [
             (thresholded_w_factor_uri, w_accumulation_uri),
             (thresholded_slope_uri, s_accumulation_uri)]:
@@ -283,16 +280,19 @@ def execute(args):
     LOGGER.info("calculating w_bar")
 
     w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
-    w_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(w_accumulation_uri)
+    w_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        w_accumulation_uri)
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
-    s_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(s_accumulation_uri)
+    s_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        s_accumulation_uri)
     for bar_nodata, accumulation_uri, bar_uri in [
             (w_bar_nodata, w_accumulation_uri, w_bar_uri),
             (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
         LOGGER.info("calculating %s", accumulation_uri)
         def bar_op(base_accumulation, flow_accumulation):
             return numpy.where(
-                (base_accumulation != bar_nodata) & (flow_accumulation != flow_accumulation_nodata),
+                (base_accumulation != bar_nodata) &
+                (flow_accumulation != flow_accumulation_nodata),
                 base_accumulation / flow_accumulation, bar_nodata)
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [accumulation_uri, flow_accumulation_uri], bar_op, bar_uri,
@@ -330,19 +330,20 @@ def execute(args):
             1.0 / (w_factor * s_factor), ws_nodata)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op, ws_factor_inverse_uri,
-        gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op,
+        ws_factor_inverse_uri, gdal.GDT_Float32, ws_nodata, out_pixel_size,
+        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    ndr_core.distance_to_stream(
-        flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
+    pygeoprocessing.routing.distance_to_stream(
+        flow_direction_uri, stream_uri, d_dn_uri,
+        factor_uri=ws_factor_inverse_uri)
 
     LOGGER.info('calculating downstream distance')
     downstream_distance_uri = os.path.join(
         intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
-    ndr_core.distance_to_stream(
+    pygeoprocessing.routing.distance_to_stream(
         flow_direction_uri, stream_uri, downstream_distance_uri)
     downstream_distance_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         downstream_distance_uri)
@@ -353,7 +354,9 @@ def execute(args):
     d_up_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(d_up_uri)
     d_dn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(d_dn_uri)
     def ic_op(d_up, d_dn):
-        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) | (d_dn == 0)
+        nodata_mask = (
+            (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) |
+            (d_dn == 0))
         return numpy.where(
             nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
     pygeoprocessing.geoprocessing.vectorize_datasets(
@@ -361,7 +364,8 @@ def execute(args):
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-    ic_min, ic_max, _, _ = pygeoprocessing.geoprocessing.get_statistics_from_uri(ic_factor_uri)
+    ic_min, ic_max, _, _ = (
+        pygeoprocessing.geoprocessing.get_statistics_from_uri(ic_factor_uri))
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
 
@@ -371,107 +375,56 @@ def execute(args):
 
     for nutrient in nutrients_to_process:
         #calculate l for each lulc type
-        LOGGER.info('calculating l lulc raster set')
-        l_lulc_uri = os.path.join(
-            intermediate_dir, 'l_lulc_%s%s.tif' % (nutrient, file_suffix))
-        l_lulc_nodata = -1.0
+        LOGGER.info('calculating retention_eff_lulc_uri')
+        retention_eff_lulc_uri = os.path.join(
+            intermediate_dir, 'retention_eff_lulc_%s%s.tif' %
+            (nutrient, file_suffix))
+        retention_eff_lulc_nodata = -1.0
         pygeoprocessing.geoprocessing.new_raster_from_base_uri(
-            lulc_uri, l_lulc_uri, 'GTiff', l_lulc_nodata, gdal.GDT_Float32,
-            fill_value=l_lulc_nodata)
+            lulc_uri, retention_eff_lulc_uri, 'GTiff',
+            retention_eff_lulc_nodata, gdal.GDT_Float32,
+            fill_value=retention_eff_lulc_nodata)
 
-        for lulc_code in get_unique_lulc_codes(lulc_uri):
-            #no reason to process the nodata area, we already mask that out
-            if lulc_code == lulc_nodata:
-                continue
-            LOGGER.info('processing lulc code %d for l_lulc' % lulc_code)
-            mask_nodata = 2
-            def mask_lulc_type(lulc_array):
-                result = numpy.zeros(lulc_array.shape, dtype=numpy.int8)
-                result[lulc_array == lulc_nodata] = mask_nodata
-                result[lulc_array == lulc_code] = 1
-                return result
+        LOGGER.info('calculating crit_len_uri')
+        crit_len_uri = os.path.join(
+            intermediate_dir, 'crit_len_%s%s.tif' %
+            (nutrient, file_suffix))
+        crit_len_nodata = -1.0
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+            lulc_uri, crit_len_uri, 'GTiff',
+            crit_len_nodata, gdal.GDT_Float32,
+            fill_value=crit_len_nodata)
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
-                [lulc_uri], mask_lulc_type, lulc_mask_uri, gdal.GDT_Byte,
-                mask_nodata, out_pixel_size, 'intersection', vectorize_op=False)
-
-            ndr_core.distance_to_stream(
-                flow_direction_uri, stream_uri, current_l_lulc_uri,
-                factor_uri=lulc_mask_uri)
-
-            current_l_lulc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(current_l_lulc_uri)
-            def add_to_l_lulc(current_l_lulc_array, lulc_mask_array, l_lulc_array):
-                result = l_lulc_array.copy()
-                mask = (lulc_mask_array == 1) & (current_l_lulc_array != current_l_lulc_nodata)
-                result[mask] = current_l_lulc_array[mask]
-                return result
-
-            #copy the file to avoid aliasing
-            shutil.copyfile(l_lulc_uri, l_lulc_temp_uri)
-            pygeoprocessing.geoprocessing.vectorize_datasets(
-                [current_l_lulc_uri, lulc_mask_uri, l_lulc_temp_uri],
-                add_to_l_lulc, l_lulc_uri, gdal.GDT_Float32,
-                l_lulc_nodata, out_pixel_size, 'intersection',
-                vectorize_op=False)
-
-        ndr_max_uri = os.path.join(
-            intermediate_dir, 'ndr_max_%s%s.tif' % (nutrient, file_suffix))
-        ndr_max_nodata = -1.0
-
-        def calculate_ndr_max(l_lulc_array, lulc_array):
-            critical_length_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-            critical_length_array[:] = 1
-            eff_lulc_array = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-            for lucode in numpy.unique(lulc_array):
-                if lucode == lulc_nodata:
-                    continue
-                mask = lulc_array == lucode
-                eff_lulc_array[mask] = lucode_to_parameters[lucode]['eff_%s' % nutrient]
-                critical_length_array[mask] = lucode_to_parameters[lucode]['crit_len_%s' % nutrient]
-            return numpy.where(
-                (lulc_array == lulc_nodata) | (l_lulc_array == l_lulc_nodata), ndr_max_nodata,
-                1 - eff_lulc_array * (1 - numpy.exp(-5.0 * l_lulc_array / critical_length_array)))
-
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [l_lulc_uri, lulc_uri],
-            calculate_ndr_max, ndr_max_uri, gdal.GDT_Float32,
-            ndr_max_nodata, out_pixel_size, 'intersection',
-            vectorize_op=False)
-
+        effective_retention_uri = os.path.join(
+            intermediate_dir, 'effective_retention_%s%s.tif' %
+            (nutrient, file_suffix))
+        ndr_core.ndr_eff_calculation(
+            flow_direction_uri, stream_uri, retention_eff_lulc_uri,
+            crit_len_uri, effective_retention_uri)
+        effective_retention_nodata = (
+            pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                effective_retention_uri))
         LOGGER.info('calculate NDR')
         ndr_uri = os.path.join(
             intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
         ndr_nodata = -1.0
-        def calculate_ndr(ndr_max_array, ic_array):
+        def calculate_ndr(effective_retention_array, ic_array):
             return numpy.where(
-                (ndr_max_array == ndr_nodata) | (ic_array == ic_nodata), ndr_nodata,
-                ndr_max_array * 1.0 / (1.0 + numpy.exp((ic_0_param - ic_array) / k_param)))
+                (effective_retention_array == effective_retention_nodata)
+                | (ic_array == ic_nodata),
+                ndr_nodata, (1.0 - effective_retention_array) /
+                (1.0 + numpy.exp((ic_0_param - ic_array) / k_param)))
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [ndr_max_uri, ic_factor_uri], calculate_ndr, ndr_uri,
+            [effective_retention_uri, ic_factor_uri], calculate_ndr, ndr_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
-
-        LOGGER.info('calculate subsurface NDR')
-        ndr_subsurface_uri = os.path.join(
-            intermediate_dir, 'ndr_subsurface_%s%s.tif' % (nutrient, file_suffix))
-
-        subsurface_eff = float(args['subsurface_eff_' + nutrient])
-        crit_subsurface_len = float(args['subsurface_critical_length_' + nutrient])
-
-        def calculate_subsurface_ndr(downstream_distance):
-            return numpy.where(
-                (downstream_distance == downstream_distance_nodata), ndr_nodata,
-                1 - subsurface_eff * (1.0 - numpy.exp(-5 * downstream_distance / crit_subsurface_len)))
-        #pygeoprocessing.geoprocessing.vectorize_datasets(
-        #    [downstream_distance_uri], calculate_subsurface_ndr, ndr_subsurface_uri,
-        #    gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
-        #    vectorize_op=False)
 
         export_uri[nutrient] = os.path.join(
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
 
-        load_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(load_uri[nutrient])
+        load_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            load_uri[nutrient])
         export_nodata = -1.0
         def calculate_export(load_array, ndr_array):
             return numpy.where(
@@ -494,10 +447,12 @@ def execute(args):
         field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] + field_header_order)
+            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] +
+            field_header_order)
 
     LOGGER.info('Writing summaries to output shapefile')
-    add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
+    add_fields_to_shapefile(
+        'ws_id', field_summaries, output_layer, field_header_order)
 
     LOGGER.info('cleaning up temp files')
     for uri in [
