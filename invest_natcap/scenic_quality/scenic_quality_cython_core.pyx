@@ -506,7 +506,7 @@ def sweep_through_angles( \
 
     csv_writer = csv.writer(fp)
     
-    row = ['Initialization:']
+#    row = ['Initialization:']
 
     # 1- add cells at angle 0
     # Collect cell_center events
@@ -531,8 +531,8 @@ def sweep_through_angles( \
         center_event_id += 1
         add_pixel_count += 1
 
-        row.append(ID)
-    csv_writer.writerow(row)
+#        row.append(ID)
+#    csv_writer.writerow(row)
 
     # The sweep line is current, now compute pixel visibility
     active_pixel_count = update_visible_pixels_fast( \
@@ -589,6 +589,9 @@ def sweep_through_angles( \
         slope = (Es-Os)/(El-Ol)
 
         row = ['removals: ']
+        row.append('max_count = ' + str(remove_event_count))
+        row.append('max_angle = ' + str(angles[a+1]))
+
         remove_pixel_count = 0
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -613,9 +616,11 @@ def sweep_through_angles( \
                 alternate_ID = ID # DEBUG!!!! Remove ASAP
                 ID = ID+1 if ID % 2 == 0 else ID-1
 
-                row.append((alternate_ID, ID))
-            else:
-                row.append(ID)
+#                row.append((alternate_ID, ID))
+#            else:
+#                row.append(ID)
+
+            row.append((remove_event_id, remove_events[arg_max[remove_event_id]]))
 
             # Sanity check
             assert ID>=0 and ID<max_line_length
@@ -669,7 +674,7 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        row = ['additions: ']
+#        row = ['additions: ']
         add_pixel_count = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
@@ -704,9 +709,9 @@ def sweep_through_angles( \
                 # Move existing pixel over
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
 
-                row.append((ID, alternate_ID))
-            else:
-                row.append(ID)
+#                row.append((ID, alternate_ID))
+#            else:
+#                row.append(ID)
 
             # Add new pixel
             assert ID>=0 and ID<max_line_length
@@ -720,8 +725,8 @@ def sweep_through_angles( \
             add_event_id += 1
             add_pixel_count += 1
 
-        # Write row in csv
-        csv_writer.writerow(row)
+#        # Write row in csv
+#        csv_writer.writerow(row)
 
         # The sweep line is current, now compute pixel visibility
         active_pixel_count = update_visible_pixels_fast( \
@@ -731,11 +736,11 @@ def sweep_through_angles( \
 #        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
 #            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
 
-        row = ['final:']
-        for pixel_id in range(max_line_length):
-            if active_pixel_array[pixel_id].is_active:
-                row.append(pixel_id)
-        csv_writer.writerow(row)
+#        row = ['final:']
+#        for pixel_id in range(max_line_length):
+#            if active_pixel_array[pixel_id].is_active:
+#                row.append(pixel_id)
+#        csv_writer.writerow(row)
 
         if active_pixel_count != \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:
