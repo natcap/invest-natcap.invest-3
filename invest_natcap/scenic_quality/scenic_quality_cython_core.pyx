@@ -2,6 +2,7 @@ import sys
 import os
 import csv
 import math
+import h5py
 
 cimport numpy as np
 import numpy as np
@@ -358,8 +359,78 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
     np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map,
-    path):
+    path, index):
     """Update the active pixels as the algorithm consumes the sweep angles"""
+
+    # Save viewshed function arguments in HDF5
+    # Inputs to save:
+    #   -add_events, center_events, remove_events
+    #   -arg_min, arg_center, arg_max
+    #   -distances, distances_sq
+    #   -visibility, offset_visibility
+    #
+    # Create the paths to the debug data
+    debug_uri = os.path.join(path, 'debug_data_' + index + '.h5')
+
+    debug_data = h5py.File(debug_uri, 'w')
+
+
+    add_events_dataset = debug_data.create_dataset('add_events', 
+        (add_events.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+    center_events_dataset = debug_data.create_dataset('center_events', 
+        (center_events.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+    
+    remove_events_dataset = debug_data.create_dataset('remove_events', 
+        (remove_events.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+    
+
+    arg_min_dataset = debug_data.create_dataset('arg_min', 
+        (arg_min.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+    arg_center_dataset = debug_data.create_dataset('arg_center', 
+        (arg_center.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+    arg_max_dataset = debug_data.create_dataset('arg_max', 
+        (arg_max.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+
+    distances_dataset = debug_data.create_dataset('distances', 
+        (distances.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+    visibility_dataset = debug_data.create_dataset('visibility', 
+        (visibility.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+    offset_visibility_dataset = debug_data.create_dataset('offset_visibility', 
+        (offset_visibility.shape[0],), \
+        compression = 'gzip', fillvalue = -1)
+
+
+    # Store data in the file
+    add_events_dataset[...] = add_events[...]
+    center_events_dataset[...] = center_events[...]
+    remove_events_dataset[...] = remove_events[...]
+    
+    arg_min_dataset[...] = arg_min[...]
+    arg_center_dataset[...] = arg_center[...]
+    arg_max_dataset[...] = arg_max[...]
+
+    distances_dataset[...] = distances[...]
+    visibility_dataset[...] = visibility[...]
+    offset_visibility_dataset[...] = offset_visibility[...]
+
+    # Close the files
+    debug_data.close()
+
+
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
     cdef int a = 0
@@ -426,7 +497,8 @@ def sweep_through_angles( \
 
     # Open file to save debug data
     try:
-        fp = open(path, 'w')
+        filename = os.path.join(path, 'active_pixels_' + str(index) + '.txt') 
+        fp = open(filename, 'w')
     except IOError as err:
         print("Can't open file " + fp)
         raise err

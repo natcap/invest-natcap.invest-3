@@ -421,62 +421,62 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         offset_visibility /= distances
 
 
-        # Save viewshed function arguments in HDF5
-        # Inputs to save:
-        #   -add_events, center_events, remove_events
-        #   -arg_min, arg_center, arg_max
-        #   -distances, distances_sq
-        #   -visibility, offset_visibility
-        #
-        # Create the paths to the debug data
-        debug_uri = os.path.join(args['intermediate_dir'], \
-            'debug_data_' + str(f) + '.h5')
-
-        debug_data = h5py.File(debug_uri, 'w')
-
-
-        add_events_dataset = debug_data.create_dataset('add_events', 
-            add_events.shape, compression = 'gzip', fillvalue = -1)
-
-        center_events_dataset = debug_data.create_dataset('center_events', 
-            center_events.shape, compression = 'gzip', fillvalue = -1)
-        
-        remove_events_dataset = debug_data.create_dataset('remove_events', 
-            remove_events.shape, compression = 'gzip', fillvalue = -1)
-        
-
-        arg_min_dataset = debug_data.create_dataset('arg_min', 
-            arg_min.shape, compression = 'gzip', fillvalue = -1)
-
-        arg_center_dataset = debug_data.create_dataset('arg_center', 
-            arg_center.shape, compression = 'gzip', fillvalue = -1)
-
-        arg_max_dataset = debug_data.create_dataset('arg_max', 
-            arg_max.shape, compression = 'gzip', fillvalue = -1)
-
-
-        distances_dataset = debug_data.create_dataset('distances', 
-            distances.shape, compression = 'gzip', fillvalue = -1)
-
-        distances_sq_dataset = debug_data.create_dataset('distances_sq', 
-            distances_sq.shape, compression = 'gzip', fillvalue = -1)
-        
-
-        # Store data in the file
-        add_events_dataset[...] = add_events[...]
-        center_events_dataset[...] = center_events[...]
-        remove_events_dataset[...] = remove_events[...]
-        
-        arg_min_dataset[...] = arg_min[...]
-        arg_center_dataset[...] = arg_center[...]
-        arg_max_dataset[...] = arg_max[...]
-
-        distances_dataset[...] = distances[...]
-        distances_sq_dataset[...] = distances_sq[...]
-
-
-        # Close the files
-        debug_data.close()
+#        # Save viewshed function arguments in HDF5
+#        # Inputs to save:
+#        #   -add_events, center_events, remove_events
+#        #   -arg_min, arg_center, arg_max
+#        #   -distances, distances_sq
+#        #   -visibility, offset_visibility
+#        #
+#        # Create the paths to the debug data
+#        debug_uri = os.path.join(args['intermediate_dir'], \
+#            'debug_data_' + str(f) + '.h5')
+#
+#        debug_data = h5py.File(debug_uri, 'w')
+#
+#
+#        add_events_dataset = debug_data.create_dataset('add_events', 
+#            add_events.shape, compression = 'gzip', fillvalue = -1)
+#
+#        center_events_dataset = debug_data.create_dataset('center_events', 
+#            center_events.shape, compression = 'gzip', fillvalue = -1)
+#        
+#        remove_events_dataset = debug_data.create_dataset('remove_events', 
+#            remove_events.shape, compression = 'gzip', fillvalue = -1)
+#        
+#
+#        arg_min_dataset = debug_data.create_dataset('arg_min', 
+#            arg_min.shape, compression = 'gzip', fillvalue = -1)
+#
+#        arg_center_dataset = debug_data.create_dataset('arg_center', 
+#            arg_center.shape, compression = 'gzip', fillvalue = -1)
+#
+#        arg_max_dataset = debug_data.create_dataset('arg_max', 
+#            arg_max.shape, compression = 'gzip', fillvalue = -1)
+#
+#
+#        distances_dataset = debug_data.create_dataset('distances', 
+#            distances.shape, compression = 'gzip', fillvalue = -1)
+#
+#        distances_sq_dataset = debug_data.create_dataset('distances_sq', 
+#            distances_sq.shape, compression = 'gzip', fillvalue = -1)
+#        
+#
+#        # Store data in the file
+#        add_events_dataset[...] = add_events[...]
+#        center_events_dataset[...] = center_events[...]
+#        remove_events_dataset[...] = remove_events[...]
+#        
+#        arg_min_dataset[...] = arg_min[...]
+#        arg_center_dataset[...] = arg_center[...]
+#        arg_max_dataset[...] = arg_max[...]
+#
+#        distances_dataset[...] = distances[...]
+#        distances_sq_dataset[...] = distances_sq[...]
+#
+#
+#        # Close the files
+#        debug_data.close()
 
 
 
@@ -488,8 +488,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             arg_min, arg_max, arg_center, \
             coord, distances_sq, distances, visibility, offset_visibility, \
             obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython', 
-            path = os.path.join(args['intermediate_dir'], \
-                'active_pixels_' + str(dist) + '.txt'))
+            path = args['intermediate_dir'], index = str(dist))
         
         # apply valuation function
         valuation_function(a, b, c, d, \
