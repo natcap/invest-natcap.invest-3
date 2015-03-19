@@ -19,6 +19,7 @@ from libc.math cimport atan2
 from libc.math cimport tan
 from libc.math cimport sqrt
 from libc.math cimport ceil
+from libc.math cimport exp
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -33,7 +34,6 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('ndr core')
 
 cdef double PI = 3.141592653589793238462643383279502884
-cdef double INF = numpy.inf
 cdef int N_BLOCK_ROWS = 16
 cdef int N_BLOCK_COLS = 16
 
@@ -88,8 +88,6 @@ cdef class BlockCache:
                     'a band in BlockCache is not memory blocked, this might '
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
-
-
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -172,12 +170,16 @@ cdef class BlockCache:
                                 yoff=global_row_offset, xoff=global_col_offset)
         for band in self.band_list:
             band.FlushCache()
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def distance_to_stream(
-        flow_direction_uri, stream_uri, distance_uri, factor_uri=None):
-    """This function calculates the flow downhill distance to the stream layers
+def ndr_eff_calculation(
+    flow_direction_uri, stream_uri, retention_eff_lulc_uri, crit_len_uri,
+    effective_retention_uri):
+
+    """This function calculates the flow downhill effective_retention to the stream layers
 
         Args:
             flow_direction_uri (string) - (input) a path to a raster with
@@ -185,28 +187,28 @@ def distance_to_stream(
             stream_uri (string) - (input) a raster where 1 indicates a stream
                 all other values ignored must be same dimensions and projection
                 as flow_direction_uri.
-            distance_uri (string) - (output) a path to the output raster that
-                will be created as same dimensions as the input rasters where
-                each pixel is in linear units the drainage from that point to a
-                stream.
-            factor_uri (string) - (optional input) a floating point raster that
-                is used to multiply the stepsize by for each current pixel,
-                useful for some models to calculate a user defined downstream
-                factor.
+            retention_eff_lulc_uri (string) - (input) a raster indicating the
+                maximum retention efficiency that the landcover on that pixel
+                can accumulate.
+            crit_len_uri (string) - (input) a raster indicating the critical length
+                of the retention efficiency that the landcover on this pixel.
+
+            effective_retention_uri (string) - (output) a raster showing
+                the effective retention on that pixel to the stream.
 
         Returns:
             nothing"""
 
-    cdef float distance_nodata = -9999
+    cdef float effective_retention_nodata = -9999
     pygeoprocessing.new_raster_from_base_uri(
-        flow_direction_uri, distance_uri, 'GTiff', distance_nodata,
-        gdal.GDT_Float32, fill_value=distance_nodata)
+        flow_direction_uri, effective_retention_uri, 'GTiff', effective_retention_nodata,
+        gdal.GDT_Float32, fill_value=effective_retention_nodata)
 
     cdef float processed_cell_nodata = 127
     processed_cell_uri = (
         os.path.join(os.path.dirname(flow_direction_uri), 'processed_cell.tif'))
     pygeoprocessing.new_raster_from_base_uri(
-        distance_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
+        flow_direction_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
         gdal.GDT_Byte, fill_value=0)
 
     processed_cell_ds = gdal.Open(processed_cell_uri, gdal.GA_Update)
@@ -219,7 +221,6 @@ def distance_to_stream(
     cdef int n_rows, n_cols
     n_rows, n_cols = pygeoprocessing.get_row_col_from_uri(
         flow_direction_uri)
-    cdef int INF = n_rows + n_cols
 
     cdef deque[int] visit_stack
 
@@ -229,8 +230,14 @@ def distance_to_stream(
         stream_uri)
     cdef float cell_size = pygeoprocessing.get_cell_size_from_uri(stream_uri)
 
-    distance_ds = gdal.Open(distance_uri, gdal.GA_Update)
-    distance_band = distance_ds.GetRasterBand(1)
+    effective_retention_ds = gdal.Open(effective_retention_uri, gdal.GA_Update)
+    effective_retention_band = effective_retention_ds.GetRasterBand(1)
+
+    retention_eff_lulc_ds = gdal.Open(retention_eff_lulc_uri)
+    retention_eff_lulc_band = retention_eff_lulc_ds.GetRasterBand(1)
+
+    crit_len_ds = gdal.Open(crit_len_uri)
+    crit_len_band = crit_len_ds.GetRasterBand(1)
 
     outflow_weights_uri = pygeoprocessing.temporary_filename()
     outflow_direction_uri = pygeoprocessing.temporary_filename()
@@ -260,31 +267,31 @@ def distance_to_stream(
         numpy.zeros(
             (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
             dtype=numpy.float32))
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] distance_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] effective_retention_block = (
+        numpy.zeros(
+            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+            dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] retention_eff_lulc_block = (
+        numpy.zeros(
+            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+            dtype=numpy.float32))
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] crit_len_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
         dtype=numpy.float32)
+
+
     cdef numpy.ndarray[numpy.npy_int8, ndim=4] processed_cell_block = (
         numpy.zeros(
             (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
             dtype=numpy.int8))
 
     band_list = [stream_band, outflow_direction_band, outflow_weights_band,
-                 distance_band, processed_cell_band]
+                 effective_retention_band, processed_cell_band,
+                 retention_eff_lulc_band, crit_len_band]
     block_list = [stream_block, outflow_direction_block, outflow_weights_block,
-                  distance_block, processed_cell_block]
-    update_list = [False, False, False, True, True]
-
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] factor_block
-    cdef int factor_exists = (factor_uri != None)
-    if factor_exists:
-        factor_block = numpy.zeros(
-            (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
-            dtype=numpy.float32)
-        factor_ds = gdal.Open(factor_uri)
-        factor_band = factor_ds.GetRasterBand(1)
-        band_list.append(factor_band)
-        block_list.append(factor_block)
-        update_list.append(False)
+                  effective_retention_block, processed_cell_block,
+                  retention_eff_lulc_block, crit_len_block]
+    update_list = [False, False, False, True, True, False, False]
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = (
         numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte))
@@ -305,7 +312,6 @@ def distance_to_stream(
     cdef int neighbor_row_block_offset, neighbor_col_block_offset
     cdef int flat_index
 
-    cdef float original_distance
 
     cdef c_set[int] cells_in_queue
 
@@ -336,21 +342,20 @@ def distance_to_stream(
                         visit_stack.push_front(global_row * n_cols + global_col)
                         cells_in_queue.insert(flat_index)
 
-                        distance_block[row_index, col_index,
+                        effective_retention_block[row_index, col_index,
                             row_block_offset, col_block_offset] = 0
                         processed_cell_block[row_index, col_index,
                             row_block_offset, col_block_offset] = 1
                         cache_dirty[row_index, col_index] = 1
 
     cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
-    cdef float neighbor_outflow_weight, current_distance, cell_travel_distance
-    cdef float outflow_weight, neighbor_distance, step_size
-    cdef float factor
+    cdef float neighbor_outflow_weight, current_effective_retention
+    cdef float outflow_weight, neighbor_effective_retention, step_size
+    cdef float downstream_effective_retention, current_stream
+    cdef float original_effective_retention
+    cdef float retention_eff_lulc, crit_len, intermediate_retention
+    cdef float current_step_factor
     cdef int it_flows_here
-    cdef int downstream_index, downstream_calculated
-    cdef float downstream_distance
-    cdef float current_stream
-    cdef int pushed_current = False
 
     while visit_stack.size() > 0:
         flat_index = visit_stack.front()
@@ -364,13 +369,13 @@ def distance_to_stream(
             &row_block_offset, &col_block_offset)
 
         update_downstream = False
-        current_distance = 0.0
+        current_effective_retention = 0.0
 
         time(&current_time)
-        if current_time - last_time > 5.0:
+        if current_time - last_time > 0.0001:
             last_time = current_time
             LOGGER.info(
-                'visit_stack on stream distance size: %d ', visit_stack.size())
+                'visit_stack on stream effective_retention size: %d ', visit_stack.size())
 
         current_stream = stream_block[
             row_index, col_index, row_block_offset, col_block_offset]
@@ -378,26 +383,28 @@ def distance_to_stream(
             row_index, col_index, row_block_offset,
             col_block_offset]
         if current_stream == 1:
-            distance_block[row_index, col_index,
+            effective_retention_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 0
             processed_cell_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 1
             cache_dirty[row_index, col_index] = 1
         elif outflow_direction == outflow_direction_nodata:
-            current_distance = INF
+            current_effective_retention = 1.0
         elif processed_cell_block[row_index, col_index, row_block_offset,
                 col_block_offset] == 0:
-            #add downstream distance to current distance
+            #add downstream effective_retention to current effective_retention
 
             outflow_weight = outflow_weights_block[
                 row_index, col_index, row_block_offset,
                 col_block_offset]
 
-            if factor_exists:
-                factor = factor_block[
-                    row_index, col_index, row_block_offset, col_block_offset]
-            else:
-                factor = 1.0
+            retention_eff_lulc = retention_eff_lulc_block[
+                row_index, col_index, row_block_offset,
+                col_block_offset]
+
+            crit_len = crit_len_block[
+                row_index, col_index, row_block_offset,
+                col_block_offset]
 
             for neighbor_index in xrange(2):
                 #check if downstream neighbors are calcualted
@@ -426,7 +433,7 @@ def distance_to_stream(
                     #out of the valid raster entirely
                     continue
 
-                neighbor_distance = distance_block[
+                neighbor_effective_retention = effective_retention_block[
                     neighbor_row_index, neighbor_col_index,
                     neighbor_row_block_offset, neighbor_col_block_offset]
 
@@ -454,16 +461,27 @@ def distance_to_stream(
                         cells_in_queue.insert(neighbor_flat_index)
 
                     update_downstream = True
-                    neighbor_distance = 0.0
+                    neighbor_effective_retention = 0.0
 
                 if outflow_direction % 2 == 1:
-                    #increase distance by a square root of 2 for diagonal
+                    #increase effective_retention by a square root of 2 for diagonal
                     step_size = cell_size * 1.41421356237
                 else:
                     step_size = cell_size
 
-                current_distance += (
-                    neighbor_distance + step_size * factor) * outflow_weight
+                ############### build up the effective retention value
+                current_step_factor = exp(-5 * step_size / crit_len)
+                if neighbor_effective_retention >= retention_eff_lulc:
+                    current_effective_retention += (
+                        neighbor_effective_retention) * outflow_weight
+                else:
+                    intermediate_retention =  (
+                        neighbor_effective_retention * current_step_factor +
+                        retention_eff_lulc * (1 - current_step_factor))
+                    if intermediate_retention > retention_eff_lulc:
+                        intermediate_retention = retention_eff_lulc
+                    current_effective_retention += (
+                        intermediate_retention * outflow_weight)
 
         if not update_downstream:
             #mark flat_index as processed
@@ -472,11 +490,12 @@ def distance_to_stream(
                 &row_block_offset, &col_block_offset)
             processed_cell_block[row_index, col_index,
                 row_block_offset, col_block_offset] = 1
-            distance_block[row_index, col_index,
-                row_block_offset, col_block_offset] = current_distance
+            effective_retention_block[row_index, col_index,
+                row_block_offset, col_block_offset] = (
+                    current_effective_retention)
             cache_dirty[row_index, col_index] = 1
 
-            #update any upstream neighbors with this distance
+            #update any upstream neighbors with this effective_retention
             for neighbor_index in range(8):
                 neighbor_row = global_row + row_offsets[neighbor_index]
                 neighbor_col = global_col + col_offsets[neighbor_index]
