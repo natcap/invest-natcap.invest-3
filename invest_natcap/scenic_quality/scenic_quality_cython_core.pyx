@@ -499,15 +499,15 @@ def sweep_through_angles( \
     cdef int totat_active_pixel_count = 0
     cdef int last_active_pixel = 0
 
-    # Open file to save debug data
-    try:
-        filename = os.path.join(path, 'active_pixels_' + str(index) + '.txt') 
-        fp = open(filename, 'w')
-    except IOError as err:
-        print("Can't open file " + fp)
-        raise err
-
-    csv_writer = csv.writer(fp)
+#    # Open file to save debug data
+#    try:
+#        filename = os.path.join(path, 'active_pixels_' + str(index) + '.txt') 
+#        fp = open(filename, 'w')
+#    except IOError as err:
+#        print("Can't open file " + fp)
+#        raise err
+#
+#    csv_writer = csv.writer(fp)
     
 #    row = ['Initialization:']
 
@@ -561,10 +561,10 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
-    for a in range(72): #angle_count-2):
+    for a in range(angle_count-2):
 #        print('angle', a, angles[a])
-        row = ['angle ' + str(a) + ', ' + str(angles[a]) + ':']
-        csv_writer.writerow(row)
+#        row = ['angle ' + str(a) + ', ' + str(angles[a]) + ':']
+#        csv_writer.writerow(row)
 
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
@@ -591,9 +591,9 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-        row = ['removals: ']
-        row.append('max_count = ' + str(remove_event_count))
-        row.append('max_angle = ' + str(angles[a+1]))
+#        row = ['removals: ']
+#        row.append('max_count = ' + str(remove_event_count))
+#        row.append('max_angle = ' + str(angles[a+1]))
 
         remove_pixel_count = 0
         while (remove_event_id < remove_event_count) and \
@@ -624,10 +624,10 @@ def sweep_through_angles( \
 #            else:
 #                row.append(ID)
 
-            row.append((remove_events[arg_max[remove_event_id]], \
-                remove_event_id  + 1 < remove_event_count, \
-                remove_events[arg_max[remove_event_id + 1]] <= angles[a+1], \
-                remove_events[arg_max[remove_event_id + 1]] - angles[a+1]))
+#            row.append((remove_events[arg_max[remove_event_id]], \
+#                remove_event_id  + 1 < remove_event_count, \
+#                remove_events[arg_max[remove_event_id + 1]] <= angles[a+1], \
+#                remove_events[arg_max[remove_event_id + 1]] - angles[a+1]))
 
             # Sanity check
             assert ID>=0 and ID<max_line_length
@@ -657,8 +657,8 @@ def sweep_through_angles( \
             remove_event_id += 1
             remove_pixel_count += 1
 
-        # Write row in csv
-        csv_writer.writerow(row)
+#        # Write row in csv
+#        csv_writer.writerow(row)
 
         # 2.1- add cells
         if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
