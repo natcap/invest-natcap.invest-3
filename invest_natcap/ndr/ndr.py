@@ -234,8 +234,8 @@ def execute(args):
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_subsurface_load_function(
                 'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
-            subsurface_load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection", vectorize_op=False)
+            subsurface_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
 
         sub_eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'sub_eff_%s%s.tif' % (nutrient, file_suffix))
@@ -265,8 +265,8 @@ def execute(args):
             intermediate_dir, 'crit_len_%s%s.tif' % (nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('crit_len_%s' % nutrient),
-            crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection", vectorize_op=False)
+            crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
 
     field_summaries = {}
     field_header_order = []
@@ -283,7 +283,8 @@ def execute(args):
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
 
-    add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
+    add_fields_to_shapefile(
+        'ws_id', field_summaries, output_layer, field_header_order)
     field_header_order = []
 
     export_uri = {}
@@ -455,6 +456,31 @@ def execute(args):
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [effective_retention_uri, ic_factor_uri], calculate_ndr, ndr_uri,
+            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
+            vectorize_op=False)
+
+        sub_effective_retention_uri = os.path.join(
+            intermediate_dir, 'sub_effective_retention_%s%s.tif' %
+            (nutrient, file_suffix))
+        LOGGER.info('calculate subsurface effective retention')
+        ndr_core.ndr_eff_calculation(
+            flow_direction_uri, stream_uri, sub_eff_uri[nutrient],
+            sub_crit_len_uri[nutrient], sub_effective_retention_uri)
+        sub_effective_retention_nodata = (
+            pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                sub_effective_retention_uri))
+        LOGGER.info('calculate sub NDR')
+        sub_ndr_uri = os.path.join(
+            intermediate_dir, 'sub_ndr_%s%s.tif' % (nutrient, file_suffix))
+        ndr_nodata = -1.0
+        def calculate_sub_ndr(effective_retention_array):
+            '''calcualte NDR'''
+            return numpy.where(
+                (effective_retention_array == effective_retention_nodata),
+                ndr_nodata, (1.0 - effective_retention_array))
+
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [sub_effective_retention_uri], calculate_sub_ndr, sub_ndr_uri,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
