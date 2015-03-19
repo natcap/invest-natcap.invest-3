@@ -290,9 +290,6 @@ setup(name='invest_natcap',
                    Extension(name="routing_cython_core",
                              sources = ['invest_natcap/routing/routing_cython_core.pyx'],
                              language="c++"),
-                   Extension(name="flood_mitigation_cython_core",
-                             sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
-                             language="c++"),
                    ]),
       **py2exe_args)
 
