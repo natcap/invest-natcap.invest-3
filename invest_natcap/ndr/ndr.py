@@ -215,7 +215,7 @@ def execute(args):
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
-    subsurface_load_uri = {}
+    sub_load_uri = {}
     eff_uri = {}
     crit_len_uri = {}
     sub_eff_uri = {}
@@ -229,12 +229,12 @@ def execute(args):
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
-        subsurface_load_uri[nutrient] = os.path.join(
+        sub_load_uri[nutrient] = os.path.join(
             intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_subsurface_load_function(
                 'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
-            subsurface_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         sub_eff_uri[nutrient] = os.path.join(
@@ -490,15 +490,17 @@ def execute(args):
         load_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
             load_uri[nutrient])
         export_nodata = -1.0
-        def calculate_export(load_array, ndr_array):
+        def calculate_export(
+            load_array, ndr_array, sub_load_array, sub_ndr_array):
+            '''combine ndr and subsurface ndr'''
             return numpy.where(
                 (load_array == load_nodata) | (ndr_array == ndr_nodata),
-                export_nodata, load_array * ndr_array)
+                export_nodata, load_array * ndr_array +
+                sub_load_array * sub_ndr_array)
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri],
-            calculate_export,
-            export_uri[nutrient], gdal.GDT_Float32,
+            [load_uri[nutrient], ndr_uri, sub_load_uri[nutrient], sub_ndr_uri],
+            calculate_export, export_uri[nutrient], gdal.GDT_Float32,
             export_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
         #Summarize the results in terms of watershed:
