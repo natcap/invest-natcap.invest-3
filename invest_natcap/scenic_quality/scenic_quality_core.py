@@ -368,7 +368,7 @@ def viewshed(input_array, cell_size, visibility_map, perimeter_cells, coordinate
     arg_min, arg_max, arg_center, \
     coord, distances_sq, distances, visibility, offset_visibility, \
     obs_elev=1.75, tgt_elev=0.0, max_dist=-1.0, \
-    refraction_coeff=None, alg_version='cython', path = '', index = ''):
+    refraction_coeff=None, alg_version='cython', path = '', index = None):
     """Compute the viewshed for a single observer. 
         Inputs: 
             -input_array: a numpy array of terrain elevations

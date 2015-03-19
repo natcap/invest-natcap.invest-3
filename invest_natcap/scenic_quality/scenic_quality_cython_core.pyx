@@ -358,77 +358,78 @@ def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] distances, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] offset_visibility, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] visibility, \
-    np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map,
-    path, index):
+    np.ndarray[np.float64_t, ndim = 2, mode="c"] visibility_map, \
+    char * path, \
+    int index):
     """Update the active pixels as the algorithm consumes the sweep angles"""
 
-    # Save viewshed function arguments in HDF5
-    # Inputs to save:
-    #   -add_events, center_events, remove_events
-    #   -arg_min, arg_center, arg_max
-    #   -distances, distances_sq
-    #   -visibility, offset_visibility
-    #
-    # Create the paths to the debug data
-    debug_uri = os.path.join(path, 'debug_data_' + index + '.h5')
-
-    debug_data = h5py.File(debug_uri, 'w')
-
-
-    add_events_dataset = debug_data.create_dataset('add_events', 
-        (add_events.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-    center_events_dataset = debug_data.create_dataset('center_events', 
-        (center_events.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-    
-    remove_events_dataset = debug_data.create_dataset('remove_events', 
-        (remove_events.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-    
-
-    arg_min_dataset = debug_data.create_dataset('arg_min', 
-        (arg_min.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-    arg_center_dataset = debug_data.create_dataset('arg_center', 
-        (arg_center.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-    arg_max_dataset = debug_data.create_dataset('arg_max', 
-        (arg_max.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-
-    distances_dataset = debug_data.create_dataset('distances', 
-        (distances.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-    visibility_dataset = debug_data.create_dataset('visibility', 
-        (visibility.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-    offset_visibility_dataset = debug_data.create_dataset('offset_visibility', 
-        (offset_visibility.shape[0],), \
-        compression = 'gzip', fillvalue = -1)
-
-
-    # Store data in the file
-    add_events_dataset[...] = add_events[...]
-    center_events_dataset[...] = center_events[...]
-    remove_events_dataset[...] = remove_events[...]
-    
-    arg_min_dataset[...] = arg_min[...]
-    arg_center_dataset[...] = arg_center[...]
-    arg_max_dataset[...] = arg_max[...]
-
-    distances_dataset[...] = distances[...]
-    visibility_dataset[...] = visibility[...]
-    offset_visibility_dataset[...] = offset_visibility[...]
-
-    # Close the files
-    debug_data.close()
+#    # Save viewshed function arguments in HDF5
+#    # Inputs to save:
+#    #   -add_events, center_events, remove_events
+#    #   -arg_min, arg_center, arg_max
+#    #   -distances, distances_sq
+#    #   -visibility, offset_visibility
+#    #
+#    # Create the paths to the debug data
+#    debug_uri = os.path.join(path, 'debug_data_' + index + '.h5')
+#
+#    debug_data = h5py.File(debug_uri, 'w')
+#
+#
+#    add_events_dataset = debug_data.create_dataset('add_events', 
+#        (add_events.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#    center_events_dataset = debug_data.create_dataset('center_events', 
+#        (center_events.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#    
+#    remove_events_dataset = debug_data.create_dataset('remove_events', 
+#        (remove_events.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#    
+#
+#    arg_min_dataset = debug_data.create_dataset('arg_min', 
+#        (arg_min.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#    arg_center_dataset = debug_data.create_dataset('arg_center', 
+#        (arg_center.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#    arg_max_dataset = debug_data.create_dataset('arg_max', 
+#        (arg_max.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#
+#    distances_dataset = debug_data.create_dataset('distances', 
+#        (distances.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#    visibility_dataset = debug_data.create_dataset('visibility', 
+#        (visibility.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#    offset_visibility_dataset = debug_data.create_dataset('offset_visibility', 
+#        (offset_visibility.shape[0],), \
+#        compression = 'gzip', fillvalue = -1)
+#
+#
+#    # Store data in the file
+#    add_events_dataset[...] = add_events[...]
+#    center_events_dataset[...] = center_events[...]
+#    remove_events_dataset[...] = remove_events[...]
+#    
+#    arg_min_dataset[...] = arg_min[...]
+#    arg_center_dataset[...] = arg_center[...]
+#    arg_max_dataset[...] = arg_max[...]
+#
+#    distances_dataset[...] = distances[...]
+#    visibility_dataset[...] = visibility[...]
+#    offset_visibility_dataset[...] = offset_visibility[...]
+#
+#    # Close the files
+#    debug_data.close()
 
 
     cdef int angle_count = len(angles)
@@ -474,8 +475,8 @@ def sweep_through_angles( \
         <ActivePixel*>malloc(max_line_length*sizeof(ActivePixel))
     assert active_pixel_array is not NULL
     # Deactivate every pixel in the active line
-    for index in range(max_line_length):
-        active_pixel_array[index].is_active = False
+    for pixel in range(max_line_length):
+        active_pixel_array[pixel].is_active = False
     # 4- build event lists
     cdef int add_event_id = 0
     cdef int add_event_count = add_events.size
@@ -504,7 +505,8 @@ def sweep_through_angles( \
         raise err
 
     csv_writer = csv.writer(fp)
-    row = []
+    
+    row = ['Initialization:']
 
     # 1- add cells at angle 0
     # Collect cell_center events
@@ -556,10 +558,10 @@ def sweep_through_angles( \
 
     # 2- loop through line sweep angles:
     #print('sweeping through', angle_count, 'angles')
-    for a in range(angle_count-2):
-        row = []
+    for a in range(72): #angle_count-2):
 #        print('angle', a, angles[a])
-        row.append('angle ' + str(a) + ', ' + str(angles[a]) + ':')
+        row = ['angle ' + str(a) + ', ' + str(angles[a]) + ':']
+        csv_writer.writerow(row)
 
         # 2.2- remove cells
         if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
@@ -586,6 +588,7 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        row = ['removals: ']
         remove_pixel_count = 0
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
@@ -609,6 +612,11 @@ def sweep_through_angles( \
                 active_pixel_array[ID].distance != distances[i]:
                 alternate_ID = ID # DEBUG!!!! Remove ASAP
                 ID = ID+1 if ID % 2 == 0 else ID-1
+
+                row.append((alternate_ID, ID))
+            else:
+                row.append(ID)
+
             # Sanity check
             assert ID>=0 and ID<max_line_length
             
@@ -630,11 +638,16 @@ def sweep_through_angles( \
                     'difference', active_pixel_array[alternate_ID].distance - distances[i])
                 message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
                 assert active_pixel_array[ID].is_active, message
+
             active_pixel_array[ID].is_active = False
 
             arg_max[remove_event_id] = 0
             remove_event_id += 1
             remove_pixel_count += 1
+
+        # Write row in csv
+        csv_writer.writerow(row)
+
         # 2.1- add cells
         if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
             l = 0 # Long component is I (lines)
@@ -656,6 +669,7 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
+        row = ['additions: ']
         add_pixel_count = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
@@ -689,6 +703,11 @@ def sweep_through_angles( \
                     assert not active_pixel_array[alternate_ID].is_active
                 # Move existing pixel over
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
+
+                row.append((ID, alternate_ID))
+            else:
+                row.append(ID)
+
             # Add new pixel
             assert ID>=0 and ID<max_line_length
             active_pixel_array[ID].is_active = True
@@ -700,6 +719,10 @@ def sweep_through_angles( \
             arg_min[add_event_id] = 0
             add_event_id += 1
             add_pixel_count += 1
+
+        # Write row in csv
+        csv_writer.writerow(row)
+
         # The sweep line is current, now compute pixel visibility
         active_pixel_count = update_visible_pixels_fast( \
             active_pixel_array, coord[0], coord[1], \
@@ -708,6 +731,7 @@ def sweep_through_angles( \
 #        print(str(active_pixel_count) + ' = ' + str(previous_pixel_count) + \
 #            ' + ' + str(add_pixel_count) + ' - ' + str(remove_pixel_count))
 
+        row = ['final:']
         for pixel_id in range(max_line_length):
             if active_pixel_array[pixel_id].is_active:
                 row.append(pixel_id)

@@ -488,7 +488,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
             arg_min, arg_max, arg_center, \
             coord, distances_sq, distances, visibility, offset_visibility, \
             obs_elev, tgt_elev, max_dist, refr_coeff, alg_version='cython', 
-            path = args['intermediate_dir'], index = str(dist))
+            path = args['intermediate_dir'], index = dist)
         
         # apply valuation function
         valuation_function(a, b, c, d, \
