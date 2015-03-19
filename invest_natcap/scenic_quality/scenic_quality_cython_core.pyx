@@ -620,7 +620,9 @@ def sweep_through_angles( \
 #            else:
 #                row.append(ID)
 
-            row.append((remove_event_id, remove_events[arg_max[remove_event_id]]))
+            row.append((remove_event_id, \
+                remove_events[arg_max[remove_event_id]], \
+                remove_events[arg_max[remove_event_id + 1]]))
 
             # Sanity check
             assert ID>=0 and ID<max_line_length
