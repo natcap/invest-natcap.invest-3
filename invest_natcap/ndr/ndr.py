@@ -157,7 +157,7 @@ def execute(args):
     nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         stream_uri)
 
-    def map_load_function(load_type):
+    def map_load_function(load_type, subsurface_proportion_type):
         """Function generator to map arbitrary nutrient type"""
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
@@ -166,9 +166,35 @@ def execute(args):
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
                     result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] * cell_area_ha)
+                        lucode_to_parameters[lucode][load_type] *
+                        (1 - lucode_to_parameters[lucode] \
+                            [subsurface_proportion_type]) *
+                        cell_area_ha)
             return result
         return map_load
+    def map_subsurface_load_function(load_type, subsurface_proportion_type):
+        """Function generator to map arbitrary nutrient type"""
+        def map_load(lucode_array):
+            """converts unit load to total load & handles nodata"""
+            result = numpy.empty(lucode_array.shape)
+            result[:] = nodata_load
+            for lucode in numpy.unique(lucode_array):
+                if lucode != nodata_landuse:
+                    result[lucode_array == lucode] = (
+                        lucode_to_parameters[lucode][load_type] *
+                        (lucode_to_parameters[lucode] \
+                            [subsurface_proportion_type]) *
+                        cell_area_ha)
+            return result
+        return map_load
+    def map_const_value(const_value, nodata):
+        """Function generator to map arbitrary efficiency type"""
+        def map_const(lucode_array):
+            """maps efficiencies from lulcs, handles nodata, and is aware that
+                streams have no retention"""
+            return numpy.where(
+                lucode_array == nodata_landuse, nodata, const_value)
+        return map_const
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
         def map_eff(lucode_array, stream_array):
@@ -179,26 +205,54 @@ def execute(args):
             for lucode in numpy.unique(lucode_array):
                 if lucode == nodata_landuse:
                     continue
-                mask = (lucode_array == lucode) & (stream_array != nodata_stream)
-                result[mask] = lucode_to_parameters[lucode][load_type] * (1 - stream_array[mask])
+                mask = (
+                    (lucode_array == lucode) & (stream_array != nodata_stream))
+                result[mask] = (
+                    lucode_to_parameters[lucode][load_type] *
+                    (1 - stream_array[mask]))
             return result
         return map_eff
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
-    load_subsurface_uri = {}
+    subsurface_load_uri = {}
     eff_uri = {}
     crit_len_uri = {}
+    sub_eff_uri = {}
+    sub_crit_len_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [lulc_uri], map_load_function('load_%s' % nutrient),
+            [lulc_uri], map_load_function(
+                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
-        load_subsurface_uri[nutrient] = os.path.join(
-            intermediate_dir, 'load_subsurface_%s%s.tif' % (nutrient, file_suffix))
+        subsurface_load_uri[nutrient] = os.path.join(
+            intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [lulc_uri], map_subsurface_load_function(
+                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
+            subsurface_load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        sub_eff_uri[nutrient] = os.path.join(
+            intermediate_dir, 'sub_eff_%s%s.tif' % (nutrient, file_suffix))
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [lulc_uri], map_const_value(
+                args['subsurface_eff_%s' % nutrient], nodata_load),
+            sub_eff_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        sub_crit_len_uri[nutrient] = os.path.join(
+            intermediate_dir, 'sub_crit_len_%s%s.tif' % (nutrient, file_suffix))
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [lulc_uri], map_const_value(
+                args['subsurface_critical_length_%s' % nutrient], nodata_load),
+            sub_crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
 
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
@@ -443,7 +497,6 @@ def execute(args):
             zero_absorption_source_uri, loss_uri, lulc_mask_uri,
             current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
-
 
 def add_fields_to_shapefile(
         key_field, field_summaries, output_layer, field_header_order=None):
