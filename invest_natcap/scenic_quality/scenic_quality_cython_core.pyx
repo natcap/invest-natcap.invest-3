@@ -432,6 +432,8 @@ def sweep_through_angles( \
 #    debug_data.close()
 
 
+    cdef double epsilon = 1e-8
+
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
     cdef int a = 0
@@ -469,6 +471,7 @@ def sweep_through_angles( \
     cdef double dbl = 0
     cdef int ID = 0 # active pixel index
     cdef int alternate_ID = 0
+    
     # Active line container: an array that can contain twice the pixels in
     # a straight unobstructed line of sight aligned with the I or J axis.
     cdef ActivePixel *active_pixel_array = \
@@ -594,7 +597,8 @@ def sweep_through_angles( \
 
         remove_pixel_count = 0
         while (remove_event_id < remove_event_count) and \
-            (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
+            (remove_events[arg_max[remove_event_id]] <= \
+                angles[a+1] + epsilon):
             i = arg_max[remove_event_id]
             d = distances[i]
             Pl = coordL[i]*sign[l]
@@ -680,7 +684,8 @@ def sweep_through_angles( \
 #        row = ['additions: ']
         add_pixel_count = 0
         while (add_event_id < add_event_count) and \
-            (add_events[arg_min[add_event_id]] < angles[a+1]):
+            (add_events[arg_min[add_event_id]] < \
+                angles[a+1] + epsilon):
             i = arg_min[add_event_id]
             d = distances[i]
             v = visibility[i]
