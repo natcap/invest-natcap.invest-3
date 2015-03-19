@@ -484,43 +484,6 @@ def add_fields_to_shapefile(
         #Save back to datasource
         output_layer.SetFeature(feature)
 
-def get_unique_lulc_codes(dataset_uri):
-    """Find all the values in the input raster and return a list of unique
-        values in that raster
-
-        dataset_uri - uri to a land cover map that has integer values
-
-        returns a unique list of codes in dataset_uri"""
-
-    dataset = gdal.Open(dataset_uri)
-    dataset_band = dataset.GetRasterBand(1)
-    block_size = dataset_band.GetBlockSize()
-
-    n_rows, n_cols = dataset.RasterYSize, dataset.RasterXSize
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    unique_codes = set()
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-            result = dataset_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset,
-                win_xsize=col_block_width,
-                win_ysize=row_block_width)
-            unique_codes.update(numpy.unique(result))
-
-    return unique_codes
-
 
 def _prepare(**args):
     """A function to preprocess the static data that goes into the NDR model
