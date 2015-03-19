@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../Nutrient_Retention",
+          "defaultValue": "../NDR",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
@@ -93,48 +93,7 @@
           "validateAs": {
             "type": "CSV",
             "fieldsExist": [
-              "lucode",
-              "Kc",
-              "root_depth",
-              "LULC_veg"
-            ],
-            "restrictions": [
-              {
-                "field": "lucode",
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^[0-9]+$"
-                  }
-                }
-              },
-              {
-                "field": "Kc",
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^[-+]?[0-9]*\\.?[0-9]+$"
-                  }
-                }
-              },
-              {
-                "field": "LULC_veg",
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^[01]"
-                  }
-                }
-              },
-              {
-                "field": "root_depth",
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^[-+]?[0-9]*\\.?[0-9]+$"
-                  }
-                }
-              }
+              "lucode"
             ]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
