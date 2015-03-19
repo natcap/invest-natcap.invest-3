@@ -264,16 +264,17 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     #calculate W_bar
-    zero_absorption_source_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    zero_absorption_source_uri = (
+        pygeoprocessing.geoprocessing.temporary_filename())
     loss_uri = pygeoprocessing.geoprocessing.temporary_filename()
     #need this for low level route_flux function
     pygeoprocessing.geoprocessing.make_constant_raster_from_base_uri(
         aligned_dem_uri, 0.0, zero_absorption_source_uri)
 
-    flow_accumulation_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        flow_accumulation_uri)
+    flow_accumulation_nodata = (
+        pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            flow_accumulation_uri))
 
-    w_accumulation_uri = flow_accumulation_uri
     s_accumulation_uri = os.path.join(
         intermediate_dir, 's_accumulation%s.tif' % file_suffix)
 
@@ -283,42 +284,35 @@ def execute(args):
         zero_absorption_source_uri, loss_uri, s_accumulation_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'])
 
-    LOGGER.info("calculating w_bar")
-
-    w_bar_uri = os.path.join(intermediate_dir, 'w_bar%s.tif' % file_suffix)
-    w_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        w_accumulation_uri)
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         s_accumulation_uri)
-    for bar_nodata, accumulation_uri, bar_uri in [
-            (w_bar_nodata, w_accumulation_uri, w_bar_uri),
-            (s_bar_nodata, s_accumulation_uri, s_bar_uri)]:
-        LOGGER.info("calculating %s", accumulation_uri)
-        def bar_op(base_accumulation, flow_accumulation):
-            return numpy.where(
-                (base_accumulation != bar_nodata) &
-                (flow_accumulation != flow_accumulation_nodata),
-                base_accumulation / flow_accumulation, bar_nodata)
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [accumulation_uri, flow_accumulation_uri], bar_op, bar_uri,
-            gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
-            dataset_to_align_index=0, vectorize_op=False)
+    LOGGER.info("calculating %s", s_bar_uri)
+    def bar_op(base_accumulation, flow_accumulation):
+        """Calcualtes the bar operation"""
+        return numpy.where(
+            (base_accumulation != s_bar_nodata) &
+            (flow_accumulation != flow_accumulation_nodata),
+            base_accumulation / flow_accumulation, s_bar_nodata)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [s_accumulation_uri, flow_accumulation_uri], bar_op, s_bar_uri,
+        gdal.GDT_Float32, s_bar_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculating d_up')
     d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
     cell_area = out_pixel_size ** 2
     d_up_nodata = -1.0
-    def d_up(w_bar, s_bar, flow_accumulation):
+    def d_up(s_bar, flow_accumulation):
         """Calculate the d_up index
             w_bar * s_bar * sqrt(upstream area) """
-        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        d_up_array = s_bar * numpy.sqrt(flow_accumulation * cell_area)
         return numpy.where(
-            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
+            (s_bar != s_bar_nodata) &
             (flow_accumulation != flow_accumulation_nodata), d_up_array,
             d_up_nodata)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [w_bar_uri, s_bar_uri, flow_accumulation_uri], d_up, d_up_uri,
+        [s_bar_uri, flow_accumulation_uri], d_up, d_up_uri,
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
@@ -330,7 +324,8 @@ def execute(args):
         thresholded_slope_uri)
 
     def ws_op(w_factor, s_factor):
-        #calculating the inverse so we can use the distance to stream factor function
+        """calcualtes the inverse of the ws factor so we can multiply it like
+            a factor"""
         return numpy.where(
             (w_factor != w_nodata) & (s_factor != slope_nodata),
             1.0 / (w_factor * s_factor), ws_nodata)
@@ -351,15 +346,16 @@ def execute(args):
         intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
     pygeoprocessing.routing.distance_to_stream(
         flow_direction_uri, stream_uri, downstream_distance_uri)
-    downstream_distance_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        downstream_distance_uri)
 
     LOGGER.info('calculate ic')
-    ic_factor_uri = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
+    ic_factor_uri = os.path.join(
+        intermediate_dir, 'ic_factor%s.tif' % file_suffix)
     ic_nodata = -9999.0
     d_up_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(d_up_uri)
     d_dn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(d_dn_uri)
+
     def ic_op(d_up, d_dn):
+        """calc the ic factor"""
         nodata_mask = (
             (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) |
             (d_dn == 0))
