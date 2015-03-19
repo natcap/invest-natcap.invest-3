@@ -583,8 +583,8 @@ def _prepare(**args):
         '''Threshold slope between 0.001 and 1.0'''
         slope_copy = slope / 100
         nodata_mask = slope == slope_nodata
-        slope_copy[slope < 0.001] = 0.001
-        slope_copy[slope > 1.0] = 1.0
+        slope_copy[slope_copy < 0.005] = 0.005
+        slope_copy[slope_copy > 1.0] = 1.0
         slope_copy[nodata_mask] = slope_nodata
         return slope_copy
     pygeoprocessing.geoprocessing.vectorize_datasets(
