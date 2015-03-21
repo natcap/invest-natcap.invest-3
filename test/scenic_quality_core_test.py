@@ -586,7 +586,7 @@ class TestScenicQuality(unittest.TestCase):
         elevation = np.zeros((DEM_size, DEM_size))
         viewpoint = (DEM_size/2+2, DEM_size/2-2)
         radius = 3
-	perimeter = sqc.get_perimeter_cells(elevation.shape, viewpoint, radius)
+        perimeter = sqc.get_perimeter_cells(elevation.shape, viewpoint, radius)
         #print('perimeter', perimeter)
         elevation[perimeter] = 1
         elevation[viewpoint[0], viewpoint[1]] = 2
@@ -1020,7 +1020,7 @@ class TestScenicQuality(unittest.TestCase):
         refraction_coeff = 0.13
         base_dem_uri = "../../AQ_Rob/Block_Island_fast_alg/SQ/bi_100meters/hdr.adf"
         base_dem_nodata = raster_utils.get_nodata_from_uri(base_dem_uri)
-	raster = gdal.Open(base_dem_uri)
+        raster = gdal.Open(base_dem_uri)
         band = raster.GetRasterBand(1)
         base_array = band.ReadAsArray()
         (rows, cols) = base_array.shape
