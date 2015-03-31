@@ -194,7 +194,8 @@ if platform.system() == 'Windows':
             # executeables and otherwise muck up our other distributions.
             self.distribution.data_files += [
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.json')),
-                ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll']),
+                ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll',
+                       'msvcr90.dll', 'msvcp90.dll']),
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json',
                      'invest_natcap/recreation/server_list.json']),
