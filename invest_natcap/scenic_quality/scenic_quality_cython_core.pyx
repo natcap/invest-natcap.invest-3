@@ -496,7 +496,7 @@ def sweep_through_angles( \
     cdef int previous_pixel_count = 0
     cdef int add_pixel_count = 0
     cdef int remove_pixel_count = 0
-    cdef int totat_active_pixel_count = 0
+    cdef int total_active_pixel_count = 0
     cdef int last_active_pixel = 0
 
     # Used to test the active line consistency. Debug only.
@@ -504,153 +504,186 @@ def sweep_through_angles( \
     cdef int max_active_ID = 0
 
     
-#    # ----------------------------------------------------------------
-#    # Track pixel addition/removal history only for debug purposes
-#    # ----------------------------------------------------------------
-#
-#    # Open file to save debug data
-#    try:
-#        filename = os.path.join(path, 'history_' + str(index) + '.txt')
-#        fp = open(filename, 'w')
-#        print('Saving file to', filename)
-#    except IOError as err:
-#        print("Can't open file " + fp)
-#        raise err
-#
-#    csv_writer = csv.writer(fp)
-#
-#    cdef np.ndarray history = np.zeros([max_line_length/2]).astype(int)
-#
-#    row = []
-#    while (center_event_id < center_event_count) and \
-#        (center_events[arg_center[center_event_id]] < angles[1]):
-#        i = arg_center[center_event_id]
-#        Pl = coordL[i] * sign[l]
-#        Ps = coordS[i] * sign[s]
-#        Dl = Pl-Ol
-#        Ds = Ps-Os
-#        ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
-#            if Ds or Dl else 0
-#        history[ID/2] += 1
-#        row.append(int(history[ID/2]))
-##        row.append((ID, center_events[arg_center[center_event_id]]))
-#        center_event_id += 1
-##    csv_writer.writerow(['initialisation']+sorted(row))
-#    csv_writer.writerow(['initialisation']+row)
-#
-#
-#    print('')
-#
-#
-#    for a in range(220): #angle_count-2):
-#        print('angle', a, [angles[a], angles[a+1]])
-#        row = ['angle ' + str(a) + ', ' + str(angles[a]) + ':']
-##        row = ['angle', a, [angles[a], angles[a+1]]]
-#        csv_writer.writerow(row)
-#
-#        # Removals
-#        if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
-#            l = 0 # Long component is I (lines)
-#            s = 1 # Short component is J (columns)
-#        else:
-#            l = 1 # Long component is J (columns)
-#            s = 0 # Short component is I (lines)
-#          
-#        coordL = coord[l]
-#        coordS = coord[s]
-#        Os = viewpoint[s] * sign[s]
-#        Ol = viewpoint[l] * sign[l]
-#        Es = perimeter[s][a] * sign[s]
-#        El = perimeter[l][a] * sign[l]
-#        Sl = -1 if Ol>El else 1
-#        Ss = -1 if Os>Es else 1
-#        slope = (Es-Os)/(El-Ol)
-#
-#        row = []
-##        print('Removing', remove_event_id, 'pixels')
-#        while (remove_event_id < remove_event_count) and \
-#            (remove_events[arg_max[remove_event_id]] <= \
-#                angles[a+1] + epsilon):
-#            i = arg_max[remove_event_id]
-#            Pl = coordL[i]*sign[l]
-#            Ps = coordS[i]*sign[s]
-#            Dl = Pl-Ol
-#            Ds = Ps-Os
-#            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
-#                if Ds or Dl else 0
-#            history[ID/2] -= 1
-##            print '('+str(ID)+', '+str(history[ID/2])+')',
-#            row.append(history[ID/2])
-##            row.append((ID, remove_events[arg_max[remove_event_id]]))
-#            remove_event_id += 1
-#        csv_writer.writerow(['removal:']+row)
-##        csv_writer.writerow(['removal:']+sorted(row))
-#
-#
-##        print('')
-#
-#
-#        # Additions
-#        if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
-#            l = 0 # Long component is I (lines)
-#            s = 1 # Short component is J (columns)
-#        else:
-#            l = 1 # Long component is J (columns)
-#            s = 0 # Short component is I (lines)
-#
-#        coordL = coord[l]
-#        coordS = coord[s]
-#        Os = viewpoint[s] * sign[s]
-#        Ol = viewpoint[l] * sign[l]
-#        Es = perimeter[s][a+1] * sign[s]
-#        El = perimeter[l][a+1] * sign[l]
-#        Sl = -1 if Ol>El else 1
-#        Ss = -1 if Os>Es else 1
-#        slope = (Es-Os)/(El-Ol)
-#
-#        row = []
-#        max_active_ID = 0
-##        print('Adding', add_event_id, 'pixels')
-#        while (add_event_id < add_event_count) and \
-#            (add_events[arg_min[add_event_id]] < \
-#                angles[a+1] - epsilon):
-#            i = arg_min[add_event_id]
-#            Pl = coordL[i] * sign[l]
-#            Ps = coordS[i] * sign[s]
-#            Dl = Pl-Ol
-#            Ds = Ps-Os
-#            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
-#                if Ds or Dl else 0
-#            history[ID/2] += 1
-##            print '('+str(ID)+', '+str(history[ID/2])+')',
-#            row.append(history[ID/2])
-##            row.append((ID, add_events[arg_min[add_event_id]]))
-#            add_event_id += 1
-#            max_active_ID = ID if ID > max_active_ID else max_active_ID
-#        csv_writer.writerow(['additions:']+row)
-##        csv_writer.writerow(['additions:']+sorted(row))
-#
-#
-#
-##        print('')
-##        print('Final:')
-##        for p in range(1, history.size):
-##            if history[p] == 0:
-##                break
-##            print (p, history[p]),
-##        print('')
-#
-#
-#        row = []
-#        for ID in range(2, max_line_length):
-#            row.append(history[ID/2])
-##        csv_writer.writerow(['final:']+row)
-#
-#    center_event_id = 0
-#    add_event_id = 0
-#    remove_event_id = 0
-#
-#    sys.exit(0)
+    # ----------------------------------------------------------------
+    # Track pixel addition/removal history only for debug purposes
+    # ----------------------------------------------------------------
+
+    # Open file to save debug data
+    try:
+        filename = os.path.join(path, 'history_' + str(index) + '.txt')
+        fp = open(filename, 'w')
+        print('Saving file to', filename)
+    except IOError as err:
+        print("Can't open file " + fp)
+        raise err
+
+    csv_writer = csv.writer(fp)
+
+    cdef np.ndarray history = np.zeros([max_line_length/2, 2]).astype(int)
+
+    row = []
+    while (center_event_id < center_event_count) and \
+        (center_events[arg_center[center_event_id]] < angles[1]):
+        i = arg_center[center_event_id]
+        Pl = coordL[i] * sign[l]
+        Ps = coordS[i] * sign[s]
+        Dl = Pl-Ol
+        Ds = Ps-Os
+        ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+            if Ds or Dl else 0
+        
+        assert history[ID/2][0] + history[ID/2][1] == 0
+
+        history[ID/2][ID%2] += 1
+#        row.append(ID)
+        row.append((ID, history[ID/2][ID%2]))
+#        row.append((ID, center_events[arg_center[center_event_id]]))
+        center_event_id += 1
+#    csv_writer.writerow(['initialisation']+sorted(row))
+    csv_writer.writerow(['initialisation']+row)
+
+
+    print('')
+
+
+    for a in range(angle_count-2):
+        print('angle', a, [angles[a], angles[a+1]])
+        row = ['angle ' + str(a) + ', ' + str(angles[a]) + ':']
+#        row = ['angle', a, [angles[a], angles[a+1]]]
+        csv_writer.writerow(row)
+
+        # Removals
+        if abs(perimeter[0][a]-viewpoint[0])>abs(perimeter[1][a]-viewpoint[1]):
+            l = 0 # Long component is I (lines)
+            s = 1 # Short component is J (columns)
+        else:
+            l = 1 # Long component is J (columns)
+            s = 0 # Short component is I (lines)
+          
+        coordL = coord[l]
+        coordS = coord[s]
+        Os = viewpoint[s] * sign[s]
+        Ol = viewpoint[l] * sign[l]
+        Es = perimeter[s][a] * sign[s]
+        El = perimeter[l][a] * sign[l]
+        Sl = -1 if Ol>El else 1
+        Ss = -1 if Os>Es else 1
+        slope = (Es-Os)/(El-Ol)
+
+        row = []
+#        print('Removing', remove_event_id, 'pixels')
+        while (remove_event_id < remove_event_count) and \
+            (remove_events[arg_max[remove_event_id]] <= \
+                angles[a+1] + epsilon):
+            i = arg_max[remove_event_id]
+            Pl = coordL[i]*sign[l]
+            Ps = coordS[i]*sign[s]
+            Dl = Pl-Ol
+            Ds = Ps-Os
+            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+                if Ds or Dl else 0
+            
+
+            assert history[ID/2][0] + history[ID/2][1] > 0
+
+            if history[ID/2][ID%2] == 0:
+                ID = ID+1 if ID%2==0 else ID-1
+                print("Trying to remove from other ID")
+
+            assert history[ID/2][ID%2] == 1
+
+            history[ID/2][ID%2] -= 1
+#            print '('+str(ID)+', '+str(history[ID/2])+')',
+
+#            row = []
+#            row.append((ID, Sl, Dl, Ss, Ds, slope))
+#            row.append((ID, slope, (coordL[i], coordS[i])))
+            row.append((ID, history[ID/2][ID%2]))
+#            row.append((ID, remove_events[arg_max[remove_event_id]]))
+            remove_event_id += 1
+#            csv_writer.writerow(['removal:']+row)
+        csv_writer.writerow(['removal:']+row)
+#        csv_writer.writerow(['removal:']+sorted(row))
+
+
+#        print('')
+
+
+        # Additions
+        if abs(perimeter[0][a+1]-viewpoint[0])>abs(perimeter[1][a+1]-viewpoint[1]):
+            l = 0 # Long component is I (lines)
+            s = 1 # Short component is J (columns)
+        else:
+            l = 1 # Long component is J (columns)
+            s = 0 # Short component is I (lines)
+
+        coordL = coord[l]
+        coordS = coord[s]
+        Os = viewpoint[s] * sign[s]
+        Ol = viewpoint[l] * sign[l]
+        Es = perimeter[s][a+1] * sign[s]
+        El = perimeter[l][a+1] * sign[l]
+        Sl = -1 if Ol>El else 1
+        Ss = -1 if Os>Es else 1
+        slope = (Es-Os)/(El-Ol)
+
+        row = []
+        max_active_ID = 0
+#        print('Adding', add_event_id, 'pixels')
+        while (add_event_id < add_event_count) and \
+            (add_events[arg_min[add_event_id]] < \
+                angles[a+1] - epsilon):
+            i = arg_min[add_event_id]
+            Pl = coordL[i] * sign[l]
+            Ps = coordS[i] * sign[s]
+            Dl = Pl-Ol
+            Ds = Ps-Os
+            ID = <int>(Sl*2*Dl+(Ss*Ds-(<int>(Ss*slope*(Dl-Sl*.5)+.5)))) \
+                if Ds or Dl else 0
+
+            assert history[ID/2][0] + history[ID/2][1] < 2
+
+            if history[ID/2][ID%2] == 1:
+                ID = ID+1 if ID%2==0 else ID-1
+                print("Trying to add to other ID")
+
+            assert history[ID/2][ID%2] == 0
+
+            history[ID/2][ID%2] += 1
+#            print '('+str(ID)+', '+str(history[ID/2])+')',
+
+#            row = []
+            row.append((ID, history[ID/2][ID%2]))
+#            row.append((ID, Sl, Dl, Ss, Ds, slope))
+#            row.append((ID, slope, (coordL[i], coordS[i])))
+#            row.append((ID, add_events[arg_min[add_event_id]]))
+            add_event_id += 1
+            max_active_ID = ID if ID > max_active_ID else max_active_ID
+#            csv_writer.writerow(['additions:']+row)
+        csv_writer.writerow(['additions:']+row)
+#        csv_writer.writerow(['additions:']+sorted(row))
+
+
+
+#        print('')
+#        print('Final:')
+#        for p in range(1, history.size):
+#            if history[p] == 0:
+#                break
+#            print (p, history[p]),
+#        print('')
+
+
+        row = []
+        for ID in range(2, max_line_length):
+            row.append((ID, history[ID/2]))
+#        csv_writer.writerow(['final:']+row)
+
+    center_event_id = 0
+    add_event_id = 0
+    remove_event_id = 0
+
+    sys.exit(0)
 
 
     # ----------------------------------------------------------------
@@ -668,7 +701,7 @@ def sweep_through_angles( \
 
     csv_writer = csv.writer(fp)
 
-    cdef np.ndarray history = np.zeros([max_line_length/2]).astype(int)
+#    cdef np.ndarray history = np.zeros([max_line_length/2]).astype(int)
 
 #    row = ['Initialization:']
 
@@ -698,9 +731,11 @@ def sweep_through_angles( \
         center_event_id += 1
         add_pixel_count += 1
 
-        row.append(history[ID/2])
+#        row.append(ID)
+        row.append((ID, history[ID/2]))
 #        row.append((ID, center_events[arg_center[center_event_id]]))
-    csv_writer.writerow(['initialisation']+sorted(row))
+    csv_writer.writerow(['initialisation']+row)
+#    csv_writer.writerow(['initialisation']+sorted(row))
 
 #        row.append(ID)
 #    csv_writer.writerow(sorted(row))
@@ -789,9 +824,6 @@ def sweep_through_angles( \
 
         slope = (Es-Os)/(El-Ol)
 
-#        row = ['removals: ']
-#        row.append('max_count = ' + str(remove_event_count))
-#        row.append('max_angle = ' + str(angles[a+1]))
 
         row = [] 
         remove_pixel_count = 0
@@ -809,7 +841,7 @@ def sweep_through_angles( \
             
             # Sanity check
             assert history[ID/2] > 0, \
-                'ID, # = ' + str(ID) + ', ' + str(history[ID/2])
+                'ID slots already empty (ID, #): ' + str(ID) + ', ' + str(history[ID/2])
 
             history[ID/2] -= 1
             
@@ -821,10 +853,11 @@ def sweep_through_angles( \
             #   - ID += 1 if ID is even (ID % 2 == 0)
             #   - ID -= 1 if ID is odd
             #
-            if not active_pixel_array[ID].is_active or \
-                active_pixel_array[ID].distance != distances[i]:
+#            if not active_pixel_array[ID].is_active or \
+#                active_pixel_array[ID].distance != distances[i]:
+            if not active_pixel_array[ID].is_active:
                 alternate_ID = ID # DEBUG!!!! Remove ASAP
-                ID = ID+1 if ID % 2 == 0 else ID-1
+                ID = ID+1 if ID%2==0 else ID-1
 
 #                row.append((alternate_ID, ID))
 #            else:
@@ -838,33 +871,18 @@ def sweep_through_angles( \
             # Sanity check
             assert ID>=0 and ID<max_line_length
             
-            # If pixel is not active, no active pixels exist at this location:
-
-            if not active_pixel_array[ID].is_active:
-                print 'Active pixels'
-                totat_active_pixel_count = 0
-                last_active_pixel = 0
-                for pixel_id in range(max_line_length):
-                    # Inactive pixel: either we skip or we exit
-                    if active_pixel_array[pixel_id].is_active:
-                        totat_active_pixel_count += 1
-                        print (pixel_id, pixel_id - last_active_pixel),
-                        last_active_pixel = pixel_id
-                print('count', totat_active_pixel_count, active_pixel_count)
-                print('was active', active_pixel_array[alternate_ID].is_active, \
-                    'distance', active_pixel_array[alternate_ID].distance, \
-                    'difference', active_pixel_array[alternate_ID].distance - distances[i])
-                message = 'Removing inactive pixel ' + str(ID) + ', was ' + str(alternate_ID)
-                assert active_pixel_array[ID].is_active, message
-
             active_pixel_array[ID].is_active = False
 
             arg_max[remove_event_id] = 0
             remove_event_id += 1
             remove_pixel_count += 1
 
-            row.append(history[ID/2])
+#            row = []
+#            row.append((ID, Sl, Dl, Ss, Ds, slope))
+            row.append((ID, history[ID/2]))
 #            row.append((ID, remove_events[arg_max[remove_event_id]]))
+
+#            csv_writer.writerow(['removal:']+row)
 #        csv_writer.writerow(['removal:']+sorted(row))
         csv_writer.writerow(['removal:']+row)
 
@@ -916,29 +934,14 @@ def sweep_through_angles( \
             
             # Sanity check
             assert history[ID/2] < 2, \
-                'ID, # = ' + str(ID) + ', ' + str(history[ID/2])
+                'ID slots already full (ID, #): ' + str(ID) + ', ' + str(history[ID/2])
 
             history[ID/2] += 1
 
-
             # Active pixels could collide. If so, compute offset
             if active_pixel_array[ID].is_active:
-                alternate_ID = ID+1 if (ID/2)*2 == ID else ID-1
-                if active_pixel_array[alternate_ID].is_active:
-                    print 'Active pixels'
-                    totat_active_pixel_count = 0
-                    last_active_pixel = 0
-                    for pixel_id in range(max_line_length):
-                        # Inactive pixel: either we skip or we exit
-                        if active_pixel_array[pixel_id].is_active:
-                            totat_active_pixel_count += 1
-                            print (pixel_id, pixel_id - last_active_pixel),
-                            last_active_pixel = pixel_id
-                    print('count', totat_active_pixel_count, active_pixel_count)
-                    message = 'Overwriting active pixel ' + \
-                        str(alternate_ID) + ' changed from ' + str(ID)
-                    assert not active_pixel_array[alternate_ID].is_active, \
-                        message
+                alternate_ID = ID+1 if ID%2==0 else ID-1
+
                 # Move existing pixel over
                 active_pixel_array[alternate_ID] = active_pixel_array[ID]
                 active_pixel_array[ID].is_active = False
@@ -959,8 +962,12 @@ def sweep_through_angles( \
             add_event_id += 1
             add_pixel_count += 1
 
-            row.append(history[ID/2])
-            #row.append((ID, add_events[arg_min[add_event_id]]))
+#            row = []
+            row.append((ID, history[ID/2]))
+#            row.append((ID, Sl, Dl, Ss, Ds, slope))
+#            row.append((ID, slope, (coordL[i], coordS[i])))
+#            row.append((ID, add_events[arg_min[add_event_id]]))
+#            csv_writer.writerow(['additions:']+row)
 #        csv_writer.writerow(['additions:']+sorted(row))
         csv_writer.writerow(['additions:']+row)
 
@@ -1013,7 +1020,7 @@ def sweep_through_angles( \
 
         row = []
         for ID in range(2, max_line_length):
-            row.append(history[ID/2])
+            row.append((ID, history[ID/2]))
 #        csv_writer.writerow(['final:']+row)
 
 
@@ -1021,15 +1028,15 @@ def sweep_through_angles( \
         if active_pixel_count != \
                 previous_pixel_count + add_pixel_count - remove_pixel_count:
             print 'Active pixels'
-            totat_active_pixel_count = 0
+            total_active_pixel_count = 0
             last_active_pixel = 0
             for pixel_id in range(max_line_length):
                 # Inactive pixel: either we skip or we exit
                 if active_pixel_array[pixel_id].is_active:
-                    totat_active_pixel_count += 1
+                    total_active_pixel_count += 1
                     print (pixel_id, pixel_id - last_active_pixel),
                     last_active_pixel = pixel_id
-            print('count', totat_active_pixel_count, active_pixel_count)
+            print('count', total_active_pixel_count, active_pixel_count)
 
         message = str(active_pixel_count) + ' = ' + \
             str(previous_pixel_count) + ' + ' + \
@@ -1039,6 +1046,8 @@ def sweep_through_angles( \
             previous_pixel_count + add_pixel_count - remove_pixel_count, message
 
         previous_pixel_count = active_pixel_count
+
+    sys.exit(0)
 
     # clean up
     free(active_pixel_array)
