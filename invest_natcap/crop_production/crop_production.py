@@ -112,20 +112,17 @@ def execute(args, create_outputs=True):
     # Yield Based on Observed Yields within Region
     if vars_dict['do_yield_observed']:
         # Calculate Yield
-        vars_dict = model.create_observed_yield_maps(vars_dict)
+        vars_dict = model.create_observed_production_maps(vars_dict)
 
     # Yield Based on Climate-specific Distribution of Observed Yields
     if vars_dict['do_yield_percentile']:
         # Calculate Yield
-        vars_dict = model.create_percentile_yield_maps(vars_dict)
+        vars_dict = model.create_percentile_production_maps(vars_dict)
 
     # Yield Based on Yield Regression Model with Climate-specific Parameters
     if vars_dict['do_yield_regression_model']:
         # Calculate Yield
-        vars_dict = model.create_regression_yield_maps(vars_dict)
-
-    # Production Maps for Each Yield Function
-    vars_dict = model.create_production_maps(vars_dict)
+        vars_dict = model.create_regression_production_maps(vars_dict)
 
     # Output: Economic Returns Map for Each Yield Function
     if vars_dict['do_economic_returns']:
@@ -133,12 +130,5 @@ def execute(args, create_outputs=True):
 
     # Output: Results Table for Each Yield Function
     vars_dict = model.create_results_table(vars_dict)
-
-    # Optional Output: Production Maps for Each Yield Function
-    if vars_dict['create_crop_production_maps']:
-        vars_dict = model.save_production_maps(vars_dict)
-
-    # Clean Up Temporary Folder
-    io.clean_up_tmp(vars_dict)
 
     return vars_dict

@@ -42,13 +42,18 @@ def create_observed_yield_maps(vars_dict):
     Outputs:
 
     .
-    |-- tmp
-        |-- observed
-            |-- yield
-                |-- [crop]_yield_map (*.tif)
+    |-- outputs
+        |-- observed_yield_[results_suffix]
+            |-- crop_production_maps
+                |-- [crop]_production_map (*.tif)
     '''
+    folder_name = 'observed_yield'
+    create_output_folder(vars_dict, folder_name)
+
+    crop_production_dict = {}
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = lulc_raster.get_aoi_as_vector()
+
     for crop in vars_dict['observed_yields_maps_dict'].keys():
         global_crop_raster = Raster.from_file(
             vars_dict['observed_yields_maps_dict'][crop])
@@ -62,22 +67,30 @@ def create_observed_yield_maps(vars_dict):
         reproj_crop_raster = clipped_global_crop_raster.reproject(
             lulc_raster.get_projection(), 'nearest')
 
-        crop_raster = reproj_crop_raster.align_to(lulc_raster)
+        crop_raster = reproj_crop_raster.align_to(lulc_raster, 'nearest')
 
-        reclass
-    # For crop in observed_yields_maps_dict:
-    #
+        reclass_table = {
+            'crop': 1,
+            'non-crop': 0
+        }
+        reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
 
-    # For Each Crop, Clip Corresponding Observed Crop Yield Map over AOI and Reproject
-    #   Save to temporary directory
+        crop_yield_per_ha_raster = reclassed_lulc_raster * crop_raster
+        ha_per_cell = crop_yield_per_ha_raster.get_cell_area()
+        crop_production_raster = crop_yield_per_ha_raster * ha_per_cell
 
-    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
-    #   Output: Crop Production Maps
+        if vars_dict['create_crop_production_maps']:
+            filename = crop + '_production_map.tif'
+            dst_uri = os.path.join(vars_dict['output_dir'], filename)
+            crop_production_raster.save_raster(dst_uri)
 
-    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
-    #   Output: Crop Production Dictionary?
+        total_production = crop_production_raster.get_band(1).sum()
+        crop_production_dict[crop] = total_production
 
-    pass
+        # Clean up rasters (del)
+
+    vars_dict['observed_crop_production_dict'] = crop_production_dict
+    return vars_dict
 
 
 def create_percentile_yield_maps(vars_dict):
@@ -123,6 +136,9 @@ def create_percentile_yield_maps(vars_dict):
         # Output: Crop Production Dictionary?
 
     # Generate Yield Results
+
+    if vars_dict['create_crop_production_maps']:
+        pass
 
     pass
 
@@ -241,3 +257,11 @@ def create_results_table(vars_dict):
         }
     '''
     pass
+
+
+def create_output_folder(vars_dict, folder_name):
+    if vars_dict['results_suffix']:
+        folder_name = folder_name + '_' + vars_dict['results_suffix']
+    folder_path = os.path.join(vars_dict['output_dir'], folder_name)
+    os.path.makedirs(folder_path)
+    vars_dict['']
