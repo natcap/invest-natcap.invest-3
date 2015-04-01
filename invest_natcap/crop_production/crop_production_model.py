@@ -5,6 +5,8 @@ The Crop Production Model module contains functions for running the model
 import os
 import logging
 
+from raster import Raster
+from vector import Vector
 import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
@@ -45,46 +47,26 @@ def create_observed_yield_maps(vars_dict):
             |-- yield
                 |-- [crop]_yield_map (*.tif)
     '''
-    def lulc_mask_over_yield_map():
-        pass
-
-    # Make yield folder
-
-    lulc_map_uri = vars_dict['lulc_map_uri']
-    # AOI from lulc_map
-    lulc_map_aoi = pygeo.get_bounding_box(lulc_map_uri)  # Will this work?
-
+    lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
+    aoi_vector = lulc_raster.get_aoi_as_vector()
     for crop in vars_dict['observed_yields_maps_dict'].keys():
-        observed_yield_map_uri = vars_dict['observed_yields_maps_dict'][crop]
+        global_crop_raster = Raster.from_file(
+            vars_dict['observed_yields_maps_dict'][crop])
 
-        # Transform lulc_map AOI into observed_yield_map projection
-        pygeo.reproject_dataset_uri()
+        reprojected_aoi = aoi_vector.reproject(
+            global_crop_raster.get_projection())
 
-        # Clip observed_yields_map over AOI: clipped_observed_yield_map_uri
+        clipped_global_crop_raster = global_crop_raster.clip(
+            reprojected_aoi.uri)
 
-        # Reproject and resample clipped_observed_yield_map to match lulc_map
+        reproj_crop_raster = clipped_global_crop_raster.reproject(
+            lulc_raster.get_projection(), 'nearest')
 
-        # Perform masked operation to produce observed_yields_map
-        dataset_uri_list = [lulc_map_uri, clipped_observed_yield_map_uri]
-        dataset_pixel_op = lulc_mask_over_yield_map
-        dataset_out_uri = os.path.join(
-            tmp_observed_dir,
-            'yield/' + crop + '_yield_map.tif')
-        gdal_dtype = pygeo.get_datatype_from_uri(observed_yield_map_uri)
-        nodata = -1
-        cell_size = pygeo.get_cell_size_from_uri(lulc_map_uri)
+        crop_raster = reproj_crop_raster.align_to(lulc_raster)
 
-        pygeo.vectorize_datasets(
-            dataset_uri_list,
-            dataset_pixel_op,
-            dataset_out_uri,
-            gdal_dtype,
-            nodata,
-            cell_size,
-            "union")
-
+        reclass
     # For crop in observed_yields_maps_dict:
-    #    
+    #
 
     # For Each Crop, Clip Corresponding Observed Crop Yield Map over AOI and Reproject
     #   Save to temporary directory
@@ -258,119 +240,4 @@ def create_results_table(vars_dict):
             ...
         }
     '''
-    pass
-
-
-# Raster Utils Wrapper for High-level Functions
-def clip_raster_over_aoi():
-    '''
-    About
-
-    var_name (type): desc
-
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-    '''
-    # Check that datasets are in same projection
-    pygeo.assert_datasets_in_same_projection()
-
-    # Reproject AOI onto Raster, find bounding box
-    pygeo.reproject_dataset_uri()
-
-    # Clip raster around bounding box
-    pygeo.clip_dataset_uri()
-
-    # Reproject Clipped Raster onto AOI
-    pygeo.reproject_dataset_uri()
-
-    pygeo.align_dataset_list()
-
-    # Save/return clipped raster
-    pass
-
-
-def sum_cells_in_raster():
-    '''
-    About
-
-    var_name (type): desc
-
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-    '''
-    # Option 1: use sum or mean in GDAL's raster stats
-    # Option 2: extract numpy array using GDAL
-    # Option 3: use Raster_Utils functionality memmap for large rasters
-
-    pass
-
-
-def element_wise_operation():
-    '''
-    About
-
-    var_name (type): desc
-
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-    '''
-    pygeo.vectorize_datasets(
-        dataset_uri_list,
-        dataset_pixel_op,
-        dataset_out_uri,
-        datatype_out,
-        nodata_out,
-        pixel_size_out,
-        bounding_box_mode)
     pass
