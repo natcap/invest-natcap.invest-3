@@ -16,7 +16,7 @@ import pygeoprocessing.geoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('sediment')
+LOGGER = logging.getLogger('invest_natcap.habitat_suitability.habitat_suitability')
 
 
 def execute(args):
@@ -99,11 +99,11 @@ def execute(args):
 
     #build up the interpolation functions for the habitat
     biophysical_to_table = {
-        'salinity_biophysical_uri': 
+        'salinity_biophysical_uri':
             ('oyster_habitat_suitability_salinity_table_uri', 'salinity'),
-        'temperature_biophysical_uri': 
+        'temperature_biophysical_uri':
             ('oyster_habitat_suitability_temperature_table_uri', 'temperature'),
-        'depth_biophysical_uri': 
+        'depth_biophysical_uri':
             ('oyster_habitat_suitability_depth_table_uri', 'depth'),
         }
     biophysical_to_interp = {}
@@ -139,7 +139,7 @@ def execute(args):
             """reclasses a value into an interpolated value"""
             nodata_mask = values == biophysical_nodata
             return numpy.where(
-                nodata_mask, reclass_nodata, 
+                nodata_mask, reclass_nodata,
                 interpolator(values))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [aligned_raster_stack[biophysical_uri_key]], reclass_op,

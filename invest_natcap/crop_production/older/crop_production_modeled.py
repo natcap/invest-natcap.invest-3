@@ -6,7 +6,7 @@ import sys
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('crop_production_modeled')
+LOGGER = logging.getLogger('invest_natcap.crop_production.older.modeled')
 
 def execute(args):
     pass

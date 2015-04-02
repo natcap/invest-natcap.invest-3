@@ -8,7 +8,7 @@ from osgeo import gdal
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('blue_carbon_preprocessor')
+LOGGER = logging.getLogger('invest_natcap.blue_carbon.preprocessor')
 
 
 def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
@@ -18,15 +18,15 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
     cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri_list[0])
     lulc_nodata = int(pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
-    
+
     #reclass rasters to compact bit space
     lulc_codes = set()
     unique_raster_values_count = {}
-    
+
     for dataset_uri in dataset_uri_list:
         unique_raster_values_count[dataset_uri] = pygeoprocessing.geoprocessing.unique_raster_values_count(dataset_uri)
         lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
-        
+
     lulc_codes = list(lulc_codes)
     lulc_codes.sort()
 
@@ -79,7 +79,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                                         nodata,
                                         cell_size,
                                         "union")
-    
+
         #get unique counts
         counts[i]=pygeoprocessing.geoprocessing.unique_raster_values_count(multi_uri, False)
 
@@ -101,7 +101,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                 dest = restore_classes[k >> shift]
             except KeyError:
                 dest = lulc_nodata
-                
+
             try:
                 transitions[key][orig][dest] = counts[key][k]
             except KeyError:

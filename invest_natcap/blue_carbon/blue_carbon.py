@@ -19,7 +19,7 @@ import numpy
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('blue_carbon')
+LOGGER = logging.getLogger('invest_natcap.blue_carbon.blue_carbon')
 
 
 def transition_soil_carbon(area_final, carbon_final, depth_final,
@@ -430,7 +430,7 @@ def execute(args):
     em_bio_value_name = os.path.join(intermediate_dir, "%i_%i_em_bio_npv.tif")
     em_soil_value_name = os.path.join(intermediate_dir, "%i_%i_em_soil_npv.tif")
     value_name = "%i_%i_npv.tif"
-    
+
 
     em_name = os.path.join(intermediate_dir, "%i_%i_em.tif")
 
@@ -777,10 +777,10 @@ def execute(args):
     ## loop over lulc years
 
     # create extent shapefile
-    datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)        
+    datasource_from_dataset_bounding_box_uri(this_uri, extent_uri)
     # print veg_trans_acc_dict
     totals = {}
-    stock_uri_dict = {}    
+    stock_uri_dict = {}
     for this_year, next_year in zip(lulc_years, lulc_years[1:]+[analysis_year]):
         this_total_carbon_uri = os.path.join(workspace_dir, carbon_name % this_year)
         this_total_carbon_uri_list = []
@@ -808,11 +808,11 @@ def execute(args):
 
         for veg_type in veg_type_list:
             totals[this_year][veg_type] = {}
-            
+
             LOGGER.info("Processing vegetation type %i.", veg_type)
             # litter URI's
             this_veg_litter_uri = os.path.join(workspace_dir, veg_litter_name % (this_year, veg_type))
-            
+
             # disturbance and accumulation URI's
             this_veg_acc_bio_uri = os.path.join(workspace_dir, veg_acc_bio_name % (this_year, next_year, veg_type))
             this_veg_acc_soil_uri = os.path.join(workspace_dir, veg_acc_soil_name % (this_year, next_year, veg_type))
@@ -1100,7 +1100,7 @@ def execute(args):
 
                     period_op_dict[start_year]["biomass_half_life"][this_year][veg_type] = c
                     # row.append(str(totals[start_year][veg_type][veg_em_bio_name] * c))
-                    
+
                     emissions += totals[start_year][veg_type][veg_em_bio_name] * c
 
                 period_op_dict[start_year]["soil_half_life"][this_year] = {}
@@ -1221,7 +1221,7 @@ def execute(args):
             em_soil_value_uri = os.path.join(workspace_dir, em_soil_value_name  % (this_year, next_year))
             vectorize_carbon_datasets(em_uri_list,
                                       em_op_closure(em_uri_veg_type_list, emission_soil_veg_factor_dict),
-                                      em_soil_value_uri)            
+                                      em_soil_value_uri)
 
             LOGGER.debug("Calculating sequestration value raster.")
             value_uri = os.path.join(workspace_dir, value_name  % (this_year, next_year))

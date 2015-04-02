@@ -16,7 +16,7 @@ from invest_natcap.carbon import carbon_utils
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('carbon_biophysical')
+LOGGER = logging.getLogger('invest_natcap.carbon.biophysical')
 
 NUM_MONTE_CARLO_RUNS = 10000
 

@@ -10,7 +10,7 @@ import numpy
 
 import pygeoprocessing.geoprocessing
 
-LOGGER = logging.getLogger('pollination_core')
+LOGGER = logging.getLogger('invest_natcap.pollination.core')
 
 def execute_model(args):
     """Execute the biophysical component of the pollination model.
@@ -302,10 +302,10 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     expected_distance = alpha / pixel_size
-    
+
     kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
     make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
-    
+
     LOGGER.debug('Calculating foraging/farm abundance index')
     pygeoprocessing.geoprocessing.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
     os.remove(kernel_uri)
@@ -456,7 +456,7 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
     pygeoprocessing.geoprocessing.convolve_2d_uri(
         out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
     os.remove(kernel_uri)
-    
+
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
@@ -607,7 +607,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     max_distance = expected_distance * 5
     kernel_size = int(numpy.round(max_distance * 2 + 1))
-    
+
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,

@@ -12,7 +12,7 @@ from osgeo import ogr
 
 import pygeoprocessing.geoprocessing
 
-LOGGER = logging.getLogger('hydropower_water_yield')
+LOGGER = logging.getLogger('invest_natcap.hydropower.hydropower_water_yield')
 
 def execute(args):
     """Executes the hydropower/water_yield model

@@ -10,7 +10,7 @@ import copy
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('crop_production_core')
+LOGGER = logging.getLogger('invest_natcap.crop_production.older.core')
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     """Creates a shapefile with the bounding box from a raster.
@@ -116,7 +116,7 @@ def calculate_nutrition(crop_uri,
         reclass_table = {}
         if invest_crops == {}:
             raise ValueError, "I need to make a call to unique values here."
-        
+
         for crop in invest_crops:
             try:
                 reclass_table[crop] = nutrient_table[crop][nutrient]
@@ -235,7 +235,7 @@ def crop_production_existing_projected(reclass_crop_cover_uri,
 
 def calculate_production_existing(reclass_crop_cover_uri,
                                   raster_table,
-                                  raster_path,                                  
+                                  raster_path,
                                   raster_table_field_yield,
                                   raster_table_field_area,
                                   extent_4326_uri,
@@ -309,7 +309,7 @@ def calculate_production_existing(reclass_crop_cover_uri,
                                                output_wkt,
                                                gdal_type_float,
                                                nodata_float)
-            
+
 
             output_list.extend([yield_uri, area_uri,
                                 clip_yield_uri,
@@ -356,7 +356,7 @@ def calculate_valuation(crop_uri,
 
     if cell_size == None:
         cell_size = raster_utils.get_cell_from_uri(crop_uri)
-    
+
     def valuation_closure_op(field_key):
         def valuation_op(crop, subregion, quantity):
             if nodata in [crop, subregion, quantity]:
@@ -384,11 +384,11 @@ def calculate_valuation(crop_uri,
 
     for component_label, componet_uri, component_field, cost_uri in valuation_list:
 
-        
+
         if component_field != None:
             LOGGER.debug("Calculating %s cost using valuation table field %s.",
                          component_label,
-                         component_field)        
+                         component_field)
             raster_utils.vectorize_datasets([crop_uri, subregion_uri, component_uri],
                                         valuation_closure_op(component_field),
                                         cost_uri,
@@ -457,7 +457,7 @@ def mosaic_by_attribute_uri(key_uri,
         raster_list = [labeled_raster_uri] + [uri_dict[l] for l in labels]
         raster_index = dict(zip(labels, range(len(labels))))
         raster_nodata_list = [raster_utils.get_nodata_from_uri(uri) for uri in raster_list]
-        
+
         def extract_op(*values):
             array = numpy.ones(values[0].shape) * nodata
             for v in labels:
@@ -466,10 +466,10 @@ def mosaic_by_attribute_uri(key_uri,
                 nodata_mask = new_array_values == raster_nodata_list[raster_index[int(v)]+1]
                 new_array_values[nodata_mask] = nodata
                 array[v_mask] = new_array_values
-                               
+
                 #array = numpy.where(values[0] == v, values[raster_index[int(v)]+1], array)
                 #array = numpy.where(array == raster_nodata_list[raster_index[int(v)]+1], nodata, array)
-            array = numpy.where(array == ignore_key_value, nodata, array)                    
+            array = numpy.where(array == ignore_key_value, nodata, array)
 
             return array
 
@@ -491,14 +491,14 @@ def mosaic_by_attribute_uri(key_uri,
             try:
                 LOGGER.debug("Clipping %s for type %i.", raster_collection_field, key)
                 dataset_in_uri = os.path.join(raster_path_prefix, raster_collection_dict[key][raster_collection_field])
-                
+
                 clip_uri = raster_utils.temporary_filename()
 
                 raster_utils.clip_dataset_uri(dataset_in_uri,
                                               extent_uri,
                                               clip_uri,
                                               assert_projections=False)
-                
+
                 LOGGER.debug ("Projecting %s for type %i.", raster_collection_field, key)
                 clip_prj_uri = raster_utils.temporary_filename()
 
@@ -515,12 +515,12 @@ def mosaic_by_attribute_uri(key_uri,
                 e = sys.exc_info()[1]
 
                 if str(e) == "The datasets' intersection is empty (i.e., not all the datasets touch each other).":
-                    LOGGER.warning("Data is not available for type %i.", key)                
+                    LOGGER.warning("Data is not available for type %i.", key)
                     raster_dict[key] = nodata_uri
-                    
+
                 else:
                     raise e
-        
+
     LOGGER.info("Mosaicing raster.")
     raster_list, extract_op = extract_closure(key_uri, raster_dict)
 
@@ -661,8 +661,8 @@ def clip_project_align_dataset_uri(unclipped_uri, reference_uri, clipped_uri, al
     cell_size = raster_utils.get_cell_size_from_uri(reference_uri)
 
     datasource_from_dataset_bounding_box_uri(reference_uri, extent_uri)
-    raster_utils.reproject_datasource_uri(extent_uri, input_wkt, projected_extent_uri)    
-    
+    raster_utils.reproject_datasource_uri(extent_uri, input_wkt, projected_extent_uri)
+
     #clip
     raster_utils.clip_dataset_uri(unclipped_uri,
                                   projected_extent_uri,
@@ -699,14 +699,14 @@ def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignor
     reference_cumulative_counts = [0]
     for v in reference_counts[:-1]:
         reference_cumulative_counts.append(reference_cumulative_counts[-1] + v)
-    
+
     #arg sort refernce raster
     reference_dataset = gdal.Open(reference_dataset_uri)
     reference_band = reference_dataset.GetRasterBand(1)
     reference_array = reference_band.ReadAsArray().flatten()
     index = numpy.argsort(reference_array)
 
-    #sum up value raster    
+    #sum up value raster
     value_dataset = gdal.Open(value_dataset_uri)
     value_band = value_dataset.GetRasterBand(1)
     value_array = value_band.ReadAsArray().flatten()
@@ -719,7 +719,7 @@ def unique_raster_mask_value_sum(reference_dataset_uri, value_dataset_uri, ignor
             nodata_sums[v] = 2
         elif nodata in u:
             nodata_sums[v] = 1
-            
+
         value_sums[v] = numpy.sum(value_array[index[i:i+n]][value_array[index[i:i+n]] != nodata])
 
     return value_sums, nodata_sums
@@ -755,7 +755,7 @@ def yield_closer(reclass_crop_cover_uri,
 
     Notes:
         Google Style comments supported in Sphinx through sphinxcontrib.napoleon
-    """    
+    """
     LOGGER.debug("Yield closure yield id field %s.", income_climate_field_key)
 
     #load data index

@@ -16,7 +16,7 @@ import pygeoprocessing.routing.routing_core
 
 import ndr_core
 
-LOGGER = logging.getLogger('nutrient')
+LOGGER = logging.getLogger('invest_natcap.ndr.ndr')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
