@@ -56,17 +56,17 @@ class DynamicElement(QtGui.QWidget):
         IUI classes, but is instead used as a base class for almost all classes
         in the UI interpreter.  A diagram of this class heirarchy can be found
         at https://docs.google.com/drawings/d/13QZ6SsUwvoBPjvr0gf_X1X20sc35tLTr9oedX1vaUh8/edit
-        
-        DynamicElement serves as a base class for DynamicGroup and 
+
+        DynamicElement serves as a base class for DynamicGroup and
         DynamicPrimitive.  The functions and object data it declares are shared
         by all subclasses."""
 
     def __init__(self, attributes):
         """This is the constructor for the DynamicElement object.
-        
+
             attributes - a Python dictionary with the attributes of the element
                 taken from the input JSON file.
-                
+
             returns a DynamicElement object
             """
 
@@ -86,12 +86,12 @@ class DynamicElement(QtGui.QWidget):
 
         self.LOGGER.debug('Initializing element %s', attributes['id'])
         #save a copy of the user-defined attributes for this element.  Based
-        # on the specification of the JSON config file, the attributes array 
+        # on the specification of the JSON config file, the attributes array
         #may contain the attributes for other, to-be-created, elements.
         self.attributes = attributes
 
         #We initialize self.required as False here, since some widgets may not
-        #actually be input elements.  This ensures that all widgets will be 
+        #actually be input elements.  This ensures that all widgets will be
         #marked optional unless specified by the user.
         if 'required' in self.attributes:
             self.required = self.attributes['required']
@@ -113,7 +113,7 @@ class DynamicElement(QtGui.QWidget):
         """Search up the Qt widget tree until we find the root element, which
             is by definition an instance of the class DynamicUI.  A pointer to
             the root is usually saved to the local object as self.root.
-            
+
             returns a pointer to the instance of DynamicUI"""
 
         parent = self.parentWidget()
@@ -127,8 +127,8 @@ class DynamicElement(QtGui.QWidget):
 
     def updateLinks(self, rootPointer):
         """Update dependency links for this element.
-        
-            All elements (although usually only subclasses of DynamicPrimitive) 
+
+            All elements (although usually only subclasses of DynamicPrimitive)
             have the ability to be enabled by other elements"""
 
         self.root = rootPointer
@@ -153,11 +153,11 @@ class DynamicElement(QtGui.QWidget):
 
     def isRequired(self):
         """Check to see if this element is required.
-        
+
             An element is required if element.required == True or if the element
-            has a 'requiredIf' attribute list and at least one of the elements 
+            has a 'requiredIf' attribute list and at least one of the elements
             in the 'requiredIf' list is required.
-                    
+
             returns a boolean"""
 
         if hasattr(self, 'required'):
@@ -231,20 +231,20 @@ class DynamicElement(QtGui.QWidget):
 
 class DynamicGroup(DynamicElement):
     """Creates an object intended for grouping other elements together.
-    
-        DynamicGroup is a subclass of DynamicElement and thus inherits all 
+
+        DynamicGroup is a subclass of DynamicElement and thus inherits all
         attributes and functions of the DynamicElement class.
-        
+
         DynamicUI, Container, CollapsibleContainer and List are all
         subclasses of DynamicGroup.
-    
+
         The DynamicGroup object allows other elements to be grouped together
         using any arbitrary layout mechanism compatible with Qt.  If a custom
         layout manager is used, it may be necessary to revisit the
         DynamicGroup.createElements() function to define exactly how the
         elements created are to be added to the new layout.
-        
-        As all possible grouping objects in this Interpreter subclass 
+
+        As all possible grouping objects in this Interpreter subclass
         DynamicGroup, if a new widget is to be added, it must likewise be added
         to the if-elif block in createElements.  The element will not be created
         if there is no corresponding entry in createElements()
@@ -256,49 +256,49 @@ class DynamicGroup(DynamicElement):
             class.  The defining feature of a DynamicGroup from a DynamicElement
             is that a DynamicGroup has a layout and can contain elements if
             they have been defined by the user.
-        
+
             attributes - a python dictionary with the attributes for this group
                 parsed from the user-defined JSON object.
-            layout - a layout mechanism compatible with Qt4 or a subclass of 
+            layout - a layout mechanism compatible with Qt4 or a subclass of
                 such a layout manager.
-            registrar=None - An (optional) instance of 
-                base_widgets.ElementRegistrar.  Required if creating elements 
+            registrar=None - An (optional) instance of
+                base_widgets.ElementRegistrar.  Required if creating elements
                 within this DynamicGroup.
-        
+
             returns an instance of DynamicGroup"""
 
         #create the object by initializing its superclass, DynamicElement.
         DynamicElement.__init__(self, attributes)
 
         #set the layout for this group(a subclass of DynamicElement, which
-        #itself is a subclass of QtGui.QWidget) so that we can add widgets 
+        #itself is a subclass of QtGui.QWidget) so that we can add widgets
         #as necessary.
         self.setLayout(layout)
-       
+
         self.registrar = registrar
         if registrar != None:
             self.createElements(attributes['elements'])
 
     def createElements(self, elementsArray, start_index=0):
-        """Create the elements defined in elementsArray as widgets within 
+        """Create the elements defined in elementsArray as widgets within
             this current grouping widget.  All elements are created as widgets
             within this grouping widget's layout.
-            
+
             elementsArray - a python array of elements, where each element is a
                 python dictionary with string keys to each of its attributes as
                 defined in the input JSON file.
             start_index=0 - a python int representing the row to start appending
                 to.
-                
+
             no return value"""
 
         #We initialize a counter here to keep track of which row we occupy
         # in this iteration of the loop.  Used excluseively when the layout
         #manager is an instance of QtGui.QGridLayout(), as both the row and
-        #column indices are required in QGridLayout's addWidget() method.    
+        #column indices are required in QGridLayout's addWidget() method.
         i = start_index
 
-        #loop through all entries in the input elementsArray and create the 
+        #loop through all entries in the input elementsArray and create the
         #appropriate elements.  As new element classes are created, they must
         #likewise be entered here to be created.
         for values in elementsArray:
@@ -311,7 +311,7 @@ class DynamicGroup(DynamicElement):
             if widget.sizeHint().isValid():
                 widget.setMinimumSize(widget.sizeHint())
 
-            #If an unusual layoutManager has been declared, it may be necessary 
+            #If an unusual layoutManager has been declared, it may be necessary
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
@@ -322,7 +322,7 @@ class DynamicGroup(DynamicElement):
                     j += 1
             else:
                 self.layout().addWidget(widget)
-                
+
 
             #the self.elements array is used for maintaining a list of pointers
             #to elements associated with this group.
@@ -331,15 +331,15 @@ class DynamicGroup(DynamicElement):
 
     def getElementsDictionary(self):
         """Assemble a flat dictionary of all elements contained in this group.
-            
-            This function loops through the self.elements array and attempts to 
+
+            This function loops through the self.elements array and attempts to
             retrieve a dictionary for each sub-element.  If a sub-element
-            dictionary can be retrieved, it is concatenated with the existing 
+            dictionary can be retrieved, it is concatenated with the existing
             dictionary.
-            
-            Such a flat dictionary structure is convenient for iterating over 
+
+            Such a flat dictionary structure is convenient for iterating over
             all elements in the UI.
-            
+
             returns a python dictionary mapping widget id (a string) to an
                 element pointer."""
 
@@ -370,46 +370,46 @@ class DynamicGroup(DynamicElement):
 
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
-        individually in the JSON file that themselves cannot group other 
-        elements.  As such, DynamicPrimitive is the superclass of all input 
+        individually in the JSON file that themselves cannot group other
+        elements.  As such, DynamicPrimitive is the superclass of all input
         elements.
-        
+
         DynamicText and CheckBox inherit DynamicPrimitive, and FileEntry,
         YearEntry inherit DynamicText (thus also inheriting DynamicPrimitive).
-        
+
         There are two defining attributes of DynamicPrimitive:
          - self.elements (a python Array)
          - self.attributes['args_id'] (a string)
-         
+
         self.elements is an array of the widgets that make up this element.  By
-        default, this is set to [self], implying that a subclass has at least 
+        default, this is set to [self], implying that a subclass has at least
         one widget.  In cases where a subclass of DynamicPrimitive has multiple
-        widgets, the elements array is used to determine the order in which the 
+        widgets, the elements array is used to determine the order in which the
         elements are added to the GUI in DynamicGroup.createElements().
-        
-        self.attributes['args_id'] is an optional string provided by the user 
+
+        self.attributes['args_id'] is an optional string provided by the user
         that enables the construction of an arguments dictionary in python that
-        will be passed to the specified python program.  The args_id must 
+        will be passed to the specified python program.  The args_id must
         conform with the API specified by the desired model.
-        
+
         Note that all implemented instances of DynamicPrimitive must implement
         their own setValue(value) function, specific to the target QWidget.
          - self.setValue(value) is a function that allows a developer to specify
              the value of the current element, depending on how the value needs
-             to be set based on the class and class elements and the type of 
+             to be set based on the class and class elements and the type of
              the value.
         """
 
     def __init__(self, attributes):
         """Constructor for the DynamicPrimitive class.
             Because DynamicPrimitive inherits DynamicElement, most of the obect
-            construction has been abstracted away to the DynamicElement 
+            construction has been abstracted away to the DynamicElement
             constructor or to the superclass of DynamicElement, QWidget.
-            
+
             attributes - a python dictionary with attributes for this element.
-                Attribute keys are defined in the JSON schema declaration in 
+                Attribute keys are defined in the JSON schema declaration in
                 this python file.
-        
+
             returns an instance of DynamicPrimitive"""
 
         super(DynamicPrimitive, self).__init__(attributes)
@@ -450,7 +450,7 @@ class DynamicPrimitive(DynamicElement):
     def resetValue(self):
         """If a default value has been specified, reset this element to its
             default.  Otherwise, leave the element alone.
-            
+
             returns nothing."""
 
         if 'defaultValue' in self.attributes:
@@ -465,13 +465,13 @@ class DynamicPrimitive(DynamicElement):
     def getElementsDictionary(self):
         """Assemble a python dictionary mapping this object's string ID to its
             pointer.
-            
+
             self.getElementsDictionary is called to build a flat dictionary of
-            all elements in the entire UI.  Considering that subclasses of 
+            all elements in the entire UI.  Considering that subclasses of
             DynamicPrimitive are the most atomic elements the user can control
-            in the JSON file, it follows that subclasses of DynamicPrimitive 
+            in the JSON file, it follows that subclasses of DynamicPrimitive
             should return the most primitive such dictionary.
-            
+
             returns a python dict mapping string ID -> this object's pointer."""
 
         return {self.attributes['id'] : self}
@@ -741,13 +741,13 @@ class LabeledElement(DynamicPrimitive):
         if len(self.elements) == 0:
             return self.elements[0].isEnabled
         return self.elements[1].isEnabled()
-    
+
     def setBGcolorSatisfied(self, satisfied=True):
         """Color the background of this element's label.
-            
+
             satisfied=True - a boolean, indicating whether this element's
                 requirements have been satisfied.
-            
+
             returns nothing"""
 
         if satisfied:
@@ -776,14 +776,14 @@ class Label(QtGui.QLabel, StaticReturn):
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
         user input.
-        
+
         DynamicText is a subclass of DynamicPrimitive and thus inherits all its
         methods and attributes.
-        
+
         FileEntry and YearEntry inherit DynamicText.
-        
-        As the superclass to a number of text-based elements, DynamicText 
-        implements a text-only option, namely validText.  DynamicText also 
+
+        As the superclass to a number of text-based elements, DynamicText
+        implements a text-only option, namely validText.  DynamicText also
         implements the attribute defaultValue.
         """
 
@@ -843,15 +843,15 @@ class DynamicText(LabeledElement):
             The defining features for this class have primarily to do with user
             interaction: a child of DynamicText can be required, can have
             defaultValue and can have valid text.
-            
+
             attributes -a python dictionary of element attributes.
 
             returns a constructed DynamicText object."""
 
-        #create the object by initializing its superclass, DynamicElement.    
+        #create the object by initializing its superclass, DynamicElement.
         super(DynamicText, self).__init__(attributes)
 
-        #create the new Label widget and save it locally.  This label is 
+        #create the new Label widget and save it locally.  This label is
         #consistent across all included subclasses of DynamicText.
 #        self.label = QtGui.QLabel(attributes['label'])
 
@@ -869,7 +869,7 @@ class DynamicText(LabeledElement):
         if "required" in attributes:
             self.required = attributes['required']
 
-        #If the user has defined some default text for this text field, insert 
+        #If the user has defined some default text for this text field, insert
         #it into the text field.
         if "defaultValue" in attributes:
             self.setValue(attributes['defaultValue'])
@@ -902,12 +902,12 @@ class DynamicText(LabeledElement):
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
-            regular expression.  Validation takes place continuously, so the 
+            regular expression.  Validation takes place continuously, so the
             user will be unable to enter text in this field unless it conforms
             to the regexp.
-            
+
             regexp - a string regular expression
-            
+
             returns nothing"""
 
         regexpObj = QtCore.QRegExp(regexp)
@@ -919,10 +919,10 @@ class DynamicText(LabeledElement):
             This is used to determine whether a dependent element should be
             enabled or disabled and may need to be reimplemented for a subclass
             as new text-based elements arise.
-            
-            As a basic form of completion, we assume that this field is 
+
+            As a basic form of completion, we assume that this field is
             satisfied when some text (any text) has been entered.
-            
+
             returns a boolean"""
 
         try:
@@ -939,10 +939,10 @@ class DynamicText(LabeledElement):
 
     def setBGcolorSatisfied(self, satisfied=True):
         """Color the background of this element's label.
-            
+
             satisfied=True - a boolean, indicating whether this element's
                 requirements have been satisfied.
-            
+
             returns nothing"""
 
         if satisfied:
@@ -954,36 +954,36 @@ class DynamicText(LabeledElement):
 
     def parentWidget(self):
         """Return the parent widget of one of the QWidgets of this object.
-        
+
             Because DynamicText objects by definition have at least two widgets
-            which individually could be added to separate layouts of separate 
-            widgets, it is necessary to specify which local widget we wish to 
+            which individually could be added to separate layouts of separate
+            widgets, it is necessary to specify which local widget we wish to
             identify as having the parent.
-            
+
             In this case, self.textField has been selected.
-            
+
             returns a pointer to an instance of a QWidget."""
 
         return self.textField.parentWidget()
 
     def isEnabled(self):
         """Check to see if this element is 'enabled'.
-        
-            This status is commonly used to determine whether other fields 
-            should be enabled or disabled (to allow or prevent the user from 
+
+            This status is commonly used to determine whether other fields
+            should be enabled or disabled (to allow or prevent the user from
             interacting with the widget)
-        
-            This is tested by checking the length of the string entered into 
+
+            This is tested by checking the length of the string entered into
             self.textField.  Specific implementations may differ as appropriate
             to the subclass.
-            
+
             returns a boolean."""
 
         return self.textField.isEnabled()
 
     def value(self):
         """Fetch the value of the user's input, stored in self.textField.
-        
+
             returns a string."""
         value = self.textField.text()
         try:
@@ -995,9 +995,9 @@ class DynamicText(LabeledElement):
 
     def setValue(self, text):
         """Set the value of self.textField.
-        
+
             text - a string, the text to be inserted into self.textField.
-            
+
             returns nothing."""
 
         self.textField.setText(text)
@@ -1006,16 +1006,16 @@ class DynamicText(LabeledElement):
 
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
-        'fieldset'.  It has a Vertical layout, but may be subclassed if a 
+        'fieldset'.  It has a Vertical layout, but may be subclassed if a
         different layout is needed."""
 
     def __init__(self, attributes, registrar=None):
         """Constructor for the Container class.
-            
+
             attributes - a python dictionary containing all attributes of this
                 container, including its elements.  Elements are initialized in
                 DynamicGroup.createElements().
-                
+
             returns an instance of Container."""
 
         super(Container, self).__init__(attributes, QtGui.QVBoxLayout(), registrar)
@@ -1296,16 +1296,16 @@ class MultiElement(Container):
                 self.add_element(user_value)
 
 class GridList(DynamicGroup):
-    """Class GridList represents a DynamicGroup that has a QGridLayout as a 
+    """Class GridList represents a DynamicGroup that has a QGridLayout as a
         layout manager."""
 
     def __init__(self, attributes, registrar=None):
         """Constructor for the GridList class.
-        
-            attributes -a python dictionary containing all attributes of this 
+
+            attributes -a python dictionary containing all attributes of this
                 DynamicGroup, including the elements it contains.  Elements are
                 initialized in DynamicGroup.createElements().
-            
+
             returns an instance of the GridList class."""
 
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
@@ -1334,7 +1334,7 @@ class FileEntry(DynamicText):
     """This object represents a file.  It has three components, all of which
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
-        (a custom FileButton object ... Qt doesn't have a 'FileWidget' to 
+        (a custom FileButton object ... Qt doesn't have a 'FileWidget' to
         do this for us, hence the custom implementation).
 
         Note that the FileEntry object is also used for folder elements.  The
@@ -1402,10 +1402,10 @@ class FileEntry(DynamicText):
 
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
-            path, set the textfield to its value.  If parameter 'text' is a 
+            path, set the textfield to its value.  If parameter 'text' is a
             relative path, set the textfield to be the absolute path of the
             input text, relative to the invest root.
-            
+
             returns nothing."""
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
@@ -1442,7 +1442,7 @@ class FileButton(QtGui.QPushButton):
         pressed, will open a file dialog (QtGui.QFileDialog).  The string URI
         returned by the QFileDialog will be set as the text of the provided
         URIField.
-        
+
         Arguments:
         text - the string text title of the popup window.
         URIField - a QtGui.QLineEdit.  This object will receive the string URI
@@ -1480,12 +1480,12 @@ class FileButton(QtGui.QPushButton):
 
     def getFileName(self, filetype='file'):
         """Get the URI from the QFileDialog.
-        
+
             If the user presses OK in the QFileDialog, the dialog returns the
             URI to the selected file.
-            
+
             If the user presses 'Cancel' in the QFileDialog, the dialog returns
-            ''.  As a result, we must first save the previous contents of the 
+            ''.  As a result, we must first save the previous contents of the
             QLineEdit before we open the dialog.  Then, if the user presses
             'Cancel', we can restore the previous field contents."""
 
@@ -1587,7 +1587,7 @@ class HideableElement(LabeledElement):
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
-        
+
         self.toggleHiding(False)
 
     def toggleHiding(self, checked):
@@ -1691,15 +1691,15 @@ class Dropdown(LabeledElement):
         return self.dropdown.currentIndex()
 
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
-    """This class represents a checkbox for our UI interpreter.  It has the 
+    """This class represents a checkbox for our UI interpreter.  It has the
         ability to enable and disable other elements."""
 
     def __init__(self, attributes):
         """Constructor for the CheckBox class.
- 
-            attributes - a python dictionary containing all attributes of this 
+
+            attributes - a python dictionary containing all attributes of this
                 checkbox as defined by the user in the json configuration file.
-            
+
             returns an instance of CheckBox"""
 
 #        super(CheckBox, self).__init__(attributes)
@@ -1724,21 +1724,21 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
 
     def toggle(self, event=None):
         """Enable/disable all elements controlled by this element.
-        
+
             returns nothing."""
 
         self.setState(self.value(), includeSelf=False)
 
 #    def isEnabled(self):
 #        """Check to see if this element is checked.
-#        
+#
 #            returns a boolean"""
 #
 #        return self.isChecked()
 
     def value(self):
         """Get the value of this checkbox.
-        
+
             returns a boolean."""
 
         check_state = self.isChecked()
@@ -1753,9 +1753,9 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
 
     def setValue(self, value):
         """Set the value of this element to value.
-            
+
             value - a string or boolean representing
-            
+
             returns nothing"""
 
         if isinstance(value, unicode) or isinstance(value, str):
@@ -1857,14 +1857,14 @@ class OGRFieldDropdown(TableHandler):
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
-        interacting with the main UI window while the model is processing and 
+        interacting with the main UI window while the model is processing and
         provides status updates for the model.
-        
+
         This window is not configurable through the JSON configuration file."""
 
     def __init__(self, root):
         """Constructor for the ModelDialog class.
-            
+
             root - a pointer to the parent window
 
             returns an instance of ModelDialog."""
@@ -1883,7 +1883,7 @@ class OperationDialog(QtGui.QDialog):
 
         self.cancel = False
 
-        #create statusArea-related widgets for the window.        
+        #create statusArea-related widgets for the window.
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
@@ -1892,8 +1892,8 @@ class OperationDialog(QtGui.QDialog):
         #set the background color of the statusArea widget to be white.
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
 
-        #create an indeterminate progress bar.  According to the Qt 
-        #documentation, an indeterminate progress bar is created when a 
+        #create an indeterminate progress bar.  According to the Qt
+        #documentation, an indeterminate progress bar is created when a
         #QProgressBar's minimum and maximum are both set to 0.
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
@@ -1910,7 +1910,7 @@ class OperationDialog(QtGui.QDialog):
         self.layout().addWidget(self.progressBar)
 
 
-        #create Quit and Cancel buttons for the window        
+        #create Quit and Cancel buttons for the window
 #        self.quitButton = QtGui.QPushButton(' Quit')
 #        self.quitButton.setToolTip('Quit the application')
         self.backButton = QtGui.QPushButton(' Back')
@@ -1941,7 +1941,7 @@ class OperationDialog(QtGui.QDialog):
 #        self.quitButton.clicked.connect(sys.exit)
 #        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
 
-        #add the buttonBox to the window.        
+        #add the buttonBox to the window.
         self.layout().addWidget(self.buttonBox)
 
         self.timer = QtCore.QTimer()
@@ -1982,7 +1982,7 @@ class OperationDialog(QtGui.QDialog):
 #        self.cancelButton.setDisabled(True)
 
     def write(self, text):
-        """Write text.  If printing to the status area, also scrolls to the end 
+        """Write text.  If printing to the status area, also scrolls to the end
             of the text region after writing to it.  Otherwise, print to stdout.
 
             text - a string to be written to self.statusArea.
@@ -2021,7 +2021,7 @@ class OperationDialog(QtGui.QDialog):
         event.ignore()
 
     def okPressed(self):
-        """When self.runButton is pressed, halt the statusbar and close the 
+        """When self.runButton is pressed, halt the statusbar and close the
             window with a siccessful status code.
 
             returns nothing."""
@@ -2045,7 +2045,7 @@ class ElementAssembler(iui_validator.ValidationAssembler):
     def __init__(self, elements_ptr):
         iui_validator.ValidationAssembler.__init__(self)
         self.elements = elements_ptr
-    
+
     def _get_value(self, element_id):
         """Takes a string element_id, returns the element's value, either strin
         g or int or boolean."""
@@ -2053,8 +2053,8 @@ class ElementAssembler(iui_validator.ValidationAssembler):
             value = self.elements[element_id].value()
         else:
             value = element_id
-    
-        return value    
+
+        return value
 
 class ScrollArea(QtGui.QScrollArea):
     def __init__(self, attributes, layout=QtGui.QVBoxLayout(), registrar=None):
@@ -2188,11 +2188,11 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-        
+
         if not hasattr(self, 'super'):
             print(self, 'setting super to None')
             self.super = None
-        
+
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -2200,14 +2200,14 @@ class Root(DynamicElement):
         DynamicElement.__init__(self, attributes)
         self.type_registrar = registrar.DatatypeRegistrar()
         self.setLayout(layout)
-        
+
         self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), object_registrar)
 
         if 'scrollable' in self.attributes:
             make_scrollable = self.attributes['scrollable']
         else:
             make_scrollable = True
-            
+
         if make_scrollable:
             self.scrollArea = QtGui.QScrollArea()
             self.layout().addWidget(self.scrollArea)
@@ -2239,7 +2239,7 @@ class Root(DynamicElement):
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
-        self.assembler = ElementAssembler(self.allElements)        
+        self.assembler = ElementAssembler(self.allElements)
 
         self.embedded_uis = []
 
@@ -2250,24 +2250,24 @@ class Root(DynamicElement):
         """Initiates a recursive search and replace of the attributes
             dictionary according to the 'inheritFrom' capabilities of the JSON
             definition.
-            
+
             attributes - a python dictionary representation of the JSON
                          configuration.
-                         
+
         Returns the rendered attributes dictionary."""
-        
+
         self.attributes = attributes
         return self.find_inherited_elements(attributes)
 
     def find_value(self, inherit, current_dict=None):
         """Searches the given dictionary for values described in inherit.
-        
+
             inherit - a python dictionary confirming to the attribute
                       inheritance properties of the JSON definition.
             current_dict - a python dictionary of the current scope of the
                            search.  if None (the default value), self.attributes
                            is used for the current_dict.
-                           
+
             Returns the value object requested by inherit if found.  Returns
             None if the requested object is not found."""
 
@@ -2282,12 +2282,12 @@ class Root(DynamicElement):
                     value = self.find_value(inherit, element)
                     if value != None:
                         return value
-        
+
     def find_inherited_elements(self, attributes):
         """Searches the input attributes dictionary for an inheritance object
             and initializes a search for the value requested by the inheritance
             object.
-    
+
             attributes - a python dictionary representing an element.
 
             Returns the rendered attributes dictionary."""
@@ -2338,7 +2338,7 @@ class Root(DynamicElement):
 
     def resetParametersToDefaults(self):
         """Reset all parameters to defaults provided in the configuration file.
-        
+
             returns nothing"""
 
         for id, element in self.allElements.iteritems():
@@ -2351,7 +2351,7 @@ class Root(DynamicElement):
 
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
-        
+
            returns a list of tuples, where the first tuple entry is the element
            label and the second tuple entry is the element's error message.."""
 
@@ -2373,7 +2373,7 @@ class Root(DynamicElement):
 
     def warnings_exist(self):
         """Check to see if any elements in this UI have warnings.
-        
+
            returns a list of tuples, where the first tuple entry is the element
            label and the second tuple entry is the element's error message.."""
 
@@ -2393,12 +2393,12 @@ class Root(DynamicElement):
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
-        
+
             Saves a python dictionary to self.outputDict.  This dictionary has
             the mapping: element args_id -> element value.  Values are converted
             to their appropriate dataType where specified in the JSON config
             file.
-        
+
             returns a python dictionary"""
 
         #initialize the outputDict, in case it has been already written to
@@ -2742,9 +2742,9 @@ class ExecRoot(Root):
 
 
     def saveLastRun(self):
-        """Saves the current values of all input elements to a JSON object on 
+        """Saves the current values of all input elements to a JSON object on
             disc.
-            
+
             returns nothing"""
 
         self.last_run_handler.write_to_disk(self.get_element_state())
@@ -2760,9 +2760,9 @@ class ExecRoot(Root):
                     '%s to %s'), e, value, str(id))
 
     def initElements(self):
-        """Set the enabled/disabled state and text from the last run for all 
+        """Set the enabled/disabled state and text from the last run for all
             elements
-        
+
             returns nothing"""
 
         if self.lastRun == {}:
@@ -2843,13 +2843,13 @@ class ExecRoot(Root):
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
-        
+
             returns nothing."""
 
         errors = self.errors_exist()
         if len(errors) == 0:
             warnings = self.warnings_exist()
-            
+
             if len(warnings) > 0:
                 self.warning_dialog.set_messages(warnings)
                 exit_code = self.warning_dialog.exec_()
@@ -2859,7 +2859,7 @@ class ExecRoot(Root):
                 if exit_code == 0:
                     return
 
-            #Check if workspace has an output directory, prompt the user that 
+            #Check if workspace has an output directory, prompt the user that
             #it will be overwritten
             try:
                 uri = self.allElements['workspace'].textField.text()
@@ -2874,12 +2874,12 @@ class ExecRoot(Root):
                     dialog.setWindowTitle('Output Exists')
                     dialog.set_title('Output Exists')
                     dialog.set_icon('dialog-information-2.png')
-                    dialog.body.setText('The directory workspace/output ' + 
-                        'exists.  Are you sure you want overwrite output ' + 
+                    dialog.body.setText('The directory workspace/output ' +
+                        'exists.  Are you sure you want overwrite output ' +
                         'from previous model run? %s' % str())
 
                     dialog.ok_button.setText('Run Model')
-                    dialog.ok_button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 
+                    dialog.ok_button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
                         'dialog-ok.png')))
                     exit_code = dialog.exec_()
                     # An exit code of 0 means go back.
@@ -2889,8 +2889,8 @@ class ExecRoot(Root):
             except KeyError:
                 #A keyerror means that 'workspace' isn't in the ui elements
                 #concievable since this is a general framework.  Since this is
-                #a little hacky this serves as a mechansim to handle the 
-                #workspace #cases as well as a point of reference if we 
+                #a little hacky this serves as a mechansim to handle the
+                #workspace #cases as well as a point of reference if we
                 #ever try to refactor
                 pass
 
@@ -2924,7 +2924,7 @@ class ExecRoot(Root):
 
     def closeWindow(self):
         """Terminates the application.
-        
+
             This function is called when the user closes the window by any of
             Qt's recognized methods (often including closing the window via the
             little x in the corner of the window and/or pressing the Esc key).
@@ -2954,7 +2954,7 @@ class ExecRoot(Root):
 
     def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.
-        
+
             returns nothing."""
 
         self.runButton = QtGui.QPushButton(' Run')
@@ -2980,7 +2980,7 @@ class ExecRoot(Root):
         self.cancelButton.clicked.connect(self.closeWindow)
         self.resetButton.clicked.connect(self.resetParametersToDefaults)
 
-        #add the buttonBox to the window.        
+        #add the buttonBox to the window.
         self.layout().addWidget(self.buttonBox)
 
 class InfoDialog(QtGui.QDialog):
@@ -3023,7 +3023,7 @@ class InfoDialog(QtGui.QDialog):
 
     def set_title(self, title):
         self.title.setText(title)
-    
+
     def set_messages(self, message_list):
         self.messages = message_list
 
@@ -3037,7 +3037,7 @@ class WarningDialog(InfoDialog):
         self.no_button = QtGui.QPushButton('Back')
         self.no_button.clicked.connect(self.reject)
         self.button_box.addButton(self.no_button, QtGui.QDialogButtonBox.RejectRole)
-    
+
 class ErrorDialog(InfoDialog):
     def __init__(self):
         InfoDialog.__init__(self)
@@ -3082,7 +3082,7 @@ class ElementRegistrar(registrar.Registrar):
                    'tab': Tab
                    }
         self.update_map(updates)
-        
+
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
         if (issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI)
