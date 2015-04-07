@@ -421,7 +421,7 @@ class DynamicPrimitive(DynamicElement):
         try:
             help_text = self.attributes['helpText']
         except KeyError:
-            help_text = 'See this model\'s documentation for more information.'
+            help_text = None
 
         try:
             label = self.attributes['label']
@@ -430,7 +430,11 @@ class DynamicPrimitive(DynamicElement):
         self.info_button = InformationButton(label, help_text)
         self.error_button = ErrorButton(label)
 
-        self.elements = [self.error_button, self.info_button, self]
+        self.elements = [self.error_button]
+        if help_text is not None:
+            self.elements.append(self.info_button)
+        self.elements.append(self)
+
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
             self.validator = iui_validator.Validator(validator_type)
