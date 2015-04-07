@@ -10,7 +10,7 @@ import disk_sort
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('scenario_generator')
+LOGGER = logging.getLogger('invest_natcap.scenario_generator.despeckle')
 
 def temporary_filename():
     """Returns a temporary filename using mkstemp. The file is deleted
@@ -125,7 +125,7 @@ def filter_fragments(src_array, value, patch_size, pixel_count, replace=None):
     mask = src_array == value # You get a mask with the polygons only
     ones_in_mask = numpy.sum(mask)
 ##    LOGGER.debug("Found %i pixels of value %i.", ones_in_mask, value)
-    
+
     label_im, nb_labels = scipy.ndimage.label(mask)
     LOGGER.debug("Found %i patches of %i.", nb_labels, value)
     src_array[mask] = 1
@@ -162,11 +162,11 @@ def filter_fragments(src_array, value, patch_size, pixel_count, replace=None):
             pixels_to_remove = numpy.array(zip(pixels_to_remove[0], pixels_to_remove[1]))
             pixels_to_remove = pixels_to_remove[tmp_index]
             pixels_to_remove = apply(zip, pixels_to_remove)
-            
+
             dst_array[pixels_to_remove] = replace
-            
+
             break
-        
+
         dst_array[pixels_to_remove] = replace
         removed_pixels += pixels_to_remove[0].size
         LOGGER.debug("Removed patch %i of %i pixel(s).", label, pixels_to_remove[0].size)

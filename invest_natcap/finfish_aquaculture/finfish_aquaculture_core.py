@@ -18,7 +18,7 @@ from scipy.stats import norm
 
 from invest_natcap.reporting import html
 
-LOGGER = logging.getLogger('finfish_aquaculture_test')
+LOGGER = logging.getLogger('invest_natcap.finfish_aquaculture.core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

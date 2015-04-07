@@ -24,7 +24,7 @@ import shutil
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('scenario_generator')
+LOGGER = logging.getLogger('invest_natcap.scenario_generator.scenario_generator')
 
 
 def calculate_weights(arr, rounding=4):
@@ -71,7 +71,7 @@ def calculate_priority(table_uri):
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
     # Compute pixel distance
     pygeoprocessing.geoprocessing.distance_transform_edt(dataset_in_uri, dataset_out_uri)
-    
+
     # Convert to meters
     def pixel_to_meters_op(x):
         x[x != nodata] *= cell_size
@@ -90,7 +90,7 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
         cell_size, \
         'union', \
         vectorize_op = False)
-    
+
     def identity_op(x):
         return x
 
@@ -244,25 +244,25 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
     cover_id_list = cover_dict.keys()
     cover_id_list.sort()
-    
+
     cover_id_list_chart = cover_names_dict.keys()
     cover_id_list_chart.sort()
-    
+
     pixcount = 0
     for cover_id in cover_id_list:
         pixcount += cover_dict[cover_id][0]
     pixcount = float(pixcount)
 
     for cover_id in cover_id_list:
-    
-    
+
+
        html += "\n<TR><td>%i</td><td>%i</td><td>%i</td></TR>" % (cover_id,
                                                                  (cover_dict[cover_id][0] / pixcount) * 100,
                                                                  (cover_dict[cover_id][1] / pixcount) * 100 )
     html += "\n<table>"
 
-    
-    
+
+
     #create three charts for original, final and change
     thecharts = [
         ['Original',0],
@@ -281,7 +281,7 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
     haall = []
     initialcover = []
     finalcover = []
-    
+
     for cover_id in cover_id_list_chart:
         try:
             initialcover.append((cover_dict[cover_id][0] / pixcount) * 100)
@@ -290,12 +290,12 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
         try:
             finalcover.append((cover_dict[cover_id][1] / pixcount) * 100)
         except KeyError:
-            finalcover.append(0)        
+            finalcover.append(0)
     #return html
     html += "<style type='text/css'>"
     html += "body {font-family: Arial, Helvetica, sans-serif; font-size: 0.9em;}"
     html += "table#results {margin: 20px auto}"
-    html += "table#results th {text-align: left}"    
+    html += "table#results th {text-align: left}"
     html += "</style>"
     html += "<script type='text/javascript'>\n"
     html += "var chart,\n"
@@ -365,7 +365,7 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
         thecharts[0][2] = thecharts[1][2]
         thecharts[2][2] = thecharts[1][2]
 
-    
+
 
     for x in thecharts:
         if x[0] == 'Change':
@@ -383,7 +383,7 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
         html += "series: [{name: '',"
         html += "data: ["+haall[x[1]][0]+"]}, {"
         html += "name: '',"
-        html += "data: ["+haall[x[1]][1]+"]}]});\n"        
+        html += "data: ["+haall[x[1]][1]+"]}]});\n"
     html += "});\n"
     html += "</script>\n"
 
@@ -462,7 +462,7 @@ def sum_uri(dataset_uri, datasource_uri):
     """
     total = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
-    
+
 def execute(args):
     ###
     #overiding, non-standard field names
@@ -491,7 +491,7 @@ def execute(args):
     args["distance_field"] = "Dist"
 
     args["suitability_cover_id"] = "Cover ID"
-    
+
     #exercise fields
     args["returns_cover_id"] = "Cover ID"
     args["returns_layer"] = "/Users/olwero/Dropbox/Work/Ecosystem_Services/NatCap/Olympics/2014/Scenarios/Exercise/inputtest/returns.csv"
@@ -503,7 +503,7 @@ def execute(args):
 
     if not os.path.exists(workspace):
         os.makedirs(workspace)
-    
+
     landcover_uri = args["landcover"]
 
     if len(args["suffix"]) > 0:
@@ -784,7 +784,7 @@ def execute(args):
                         diff = float(maximum - minimum)
 
                         return numpy.where(
-                            value == transition_nodata, 
+                            value == transition_nodata,
                             suitability_nodata,
                             ((distance_scale - 1) - (((value - minimum) / \
                                 diff) * (distance_scale - 1))) + 1)
@@ -1153,7 +1153,7 @@ def execute(args):
         #open suitability raster
         src_ds = gdal.Open(suitability_dict[cover_id], 1)
         src_band = src_ds.GetRasterBand(1)
-        src_array = src_band.ReadAsArray()                
+        src_array = src_band.ReadAsArray()
 
         pixels_changed = 0
         suitability_values = list(numpy.unique(src_array))
@@ -1165,7 +1165,7 @@ def execute(args):
             if abs(suitability_score - 50) > 50:
                 print('suitability_values:', suitability_dict[cover_id])
                 for v in suitability_values:
-                    print v, ' ', 
+                    print v, ' ',
 
             assert abs(suitability_score - 50) <= 50, \
                 'Invalid suitability score ' + str(suitability_score)
@@ -1180,7 +1180,7 @@ def execute(args):
 
             #label patches
             label_im, nb_labels = scipy.ndimage.label(mask)
-            
+
             #get patch sizes
             patch_sizes = scipy.ndimage.sum(mask, label_im, range(1, nb_labels + 1))
             patch_labels = numpy.array(range(1, nb_labels + 1))
@@ -1227,7 +1227,7 @@ def execute(args):
                     #scenario_array[pixels_to_change] = cover_id
                     target[pixels_to_change] = cover_id
 
-                    pixels_changed = count                                        
+                    pixels_changed = count
 
                     #alter other suitability rasters to prevent double conversion
                     for _, update_id, _ in change_list[index+1:]:
@@ -1301,7 +1301,7 @@ def execute(args):
 
     htm = open(landcover_htm_uri,'w')
     htm.write("<html><head><title>Scenario Generator Report</title>")
-    
+
     htm.write("<style type='text/css'>")
     htm.write("table {border-collapse: collapse; font-size: 1em;}")
     htm.write("td {padding: 10px;}")
@@ -1329,7 +1329,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[landcover_uri][cover_id]) for cover_id in initial_cover_id_list]))
     htm.write("\n</td></tr>")
-    
+
     htm.write("\n</table>")
 
 
@@ -1345,7 +1345,7 @@ def execute(args):
     htm.write("\n<tr><td>Count</td><td>")
     htm.write("</td><td>".join([str(unique_raster_values_count[scenario_uri][cover_id]) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
-    
+
     htm.write("\n</table>")
 
     cover_dict = {}
@@ -1361,19 +1361,19 @@ def execute(args):
         cover_dict[cover_id] = (before, after)
 
     htm.write("<h2>Change Table</h2>")
-    
-    
+
+
     cover_names_dict = {}
 
     transition_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(args["transition"], args["transition_id"])
     cover_names_dict = {}
     for cover in transition_dict:
-        cover_names_dict[cover] =  transition_dict[cover]["Name"] 
+        cover_names_dict[cover] =  transition_dict[cover]["Name"]
 
     htm.write(generate_chart_html(cover_dict, cover_names_dict, workspace))
 
     htm.write("<h2>Transition Matrix</h2>")
-    htm.write("\n<table BORDER=1>")    
+    htm.write("\n<table BORDER=1>")
     htm.write("\n<tr><td>ID</td><td>")
     htm.write("</td><td>".join([str(cover_id) for cover_id in scenario_cover_id_list]))
     htm.write("\n</td></tr>")
@@ -1387,7 +1387,7 @@ def execute(args):
                 htm.write("<td><FONT COLOR=lightgray>%i</FONT></td>" % 0)
 
         htm.write("\n</tr>")
-       
+
     htm.write("\n</table>")
 
     unconverted_cover_id_list = unconverted_pixels.keys()
@@ -1414,7 +1414,7 @@ def execute(args):
 
     if args["calculate_factors"]:
         input_csv_list.append((args["suitability"], "Factors Table"))
-    
+
     htm.write("<h1>Input Tables</h1>")
     for csv_uri, name in input_csv_list:
         table = "\n<table BORDER=1><tr><td>" + open(csv_uri).read().strip().replace(",","</td><td>").replace("\n","</td></tr><tr><td>") + "</td></tr></table>"

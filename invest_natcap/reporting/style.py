@@ -15,7 +15,7 @@ import pygeoprocessing.geoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('raster_stylizing')
+LOGGER = logging.getLogger('invest_natcap.reporting.style')
 
 def grayscale_raster(raster_in_uri, raster_out_uri):
     """Create a grayscale image from 'raster_in_uri' by using linear

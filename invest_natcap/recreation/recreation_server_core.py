@@ -14,7 +14,7 @@ from psycopg2.extensions import register_adapter, AsIs
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('recreation_server_core')
+LOGGER = logging.getLogger('invest_natcap.recreation.server_core')
 
 
 class NoQuotes(object):
@@ -1166,7 +1166,7 @@ def raster_table(cur, in_file_name, table_name, srid=-1):
             raise ValueError("The raster should contain exactly 1 band")
 
         sql = "CREATE TEMPORARY TABLE %s (pixel integer, way geometry)" % (table_name)
-        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))        
+        LOGGER.debug("Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
         cur.execute(sql)
 
         band = dataset.GetRasterBand(1)
@@ -1985,7 +1985,7 @@ def destination_srid(cur, aoi_name):
            "WHERE ST_Covers(projections.geom, aoi.way)")
     sql = sql % ("srid_geom", aoi_name)
     LOGGER.debug(
-        "Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))    
+        "Executing SQL: %s." % sql.replace(".", "||").replace(",", "|"))
     cur.execute(sql)
     srid, = cur.fetchone()
 

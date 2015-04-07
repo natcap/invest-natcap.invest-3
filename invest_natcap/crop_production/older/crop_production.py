@@ -22,7 +22,7 @@ import crop_production_core
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('crop_production')
+LOGGER = logging.getLogger('invest_natcap.crop_production.older.crop_production')
 
 #logging.getLogger("root").setLevel(logging.WARNING)
 logging.getLogger("raster_utils").setLevel(logging.ERROR)
@@ -141,7 +141,7 @@ def execute(args):
     crop_production_core.datasource_from_dataset_bounding_box_uri(crop_cover_uri, extent_uri)
 
     raster_utils.reproject_datasource_uri(extent_uri, wkt, extent_4326_uri)
-         
+
     nodata_name = os.path.join(intermediate_uri, "nodata_%i.tif")
 
     #data validation and setup
@@ -278,7 +278,7 @@ def execute(args):
         ##generate fertilizer rasters if necessary
         #nitrogen
         if args["valuation_override_quantities"] and args["nitrogen_uri"]!= "":
-            nitrogen_uri = args["nitrogen_uri"]            
+            nitrogen_uri = args["nitrogen_uri"]
         else:
             LOGGER.debug("Creating nitrogen fertilizer raster.")
             nitrogen_uri = os.path.join(intermediate_uri, nitrogen_name)
@@ -321,7 +321,7 @@ def execute(args):
                                         "dataset",
                                         dataset_to_bound_index=0)
 
-        #phosphorus            
+        #phosphorus
         if args["valuation_override_quantities"] and args["phosphorus_uri"] != "":
             phosphorus_uri = args["phosphorus_uri"]
         else:
@@ -451,7 +451,7 @@ def execute(args):
                                             dataset_to_bound_index=0,
                                             dataset_to_align_index=0)
 
-        ##seed raster            
+        ##seed raster
         if args["valuation_override_prices"] and args["seed_uri"] != "":
             seed_uri = args["seed_uri"]
         else:
@@ -497,7 +497,7 @@ def execute(args):
                         return keyerror_value
 
                 return reclass_no_keyerror_op
-                    
+
             #load nutrition table
             nutrition_table_dict = raster_utils.get_lookup_from_csv(args["nutrition_table"],
                                                                     config["nutrition_table"]["id_field"])
@@ -510,7 +510,7 @@ def execute(args):
                     LOGGER.info("Including nutrient %s in analysis.", nutrient)
                     if args[args_id] == "":
                         nutrient_100g_uri = os.path.join(intermediate_uri, nutrient_100g_name % nutrient)
-                        
+
                         LOGGER.debug("Nutrient %s will be determined by nutrition CSV.", nutrient)
                         nutrient_selection[nutrient] = True
                         nutrient_aliases[nutrient] = config["nutrition_table"]["columns"][nutrient]["formatting"]["abbreviation"]
@@ -530,14 +530,14 @@ def execute(args):
                                                         "dataset",
                                                         dataset_to_bound_index=0,
                                                         dataset_to_align_index=0)
-                        
+
                     else:
                         uri = args[args_id]
                         LOGGER.info("Overriding nutrient %s table values with raster %s.", nutrient, uri)
 
             for nutrient in nutrient_selection:
                 LOGGER.debug("Creating %s nutrient raster.", nutrient)
-             
+
            # calculate_nutrition(reclass_crop_cover_uri,
            #                     yield_type,
            #                     nutrition_table_dict,
@@ -551,7 +551,7 @@ def execute(args):
     LOGGER.info("Calculating existing yield.")
 
     yield_uri = os.path.join(intermediate_uri, "yield_existing.tif")
-    
+
     crop_production_core.mosaic_by_attribute_uri(reclass_crop_cover_uri,
                       invest_crops,
                       cell_size,
@@ -591,15 +591,15 @@ def execute(args):
     #file_index_field_income_climate = "CBI_yield"
     file_index_field_income_climate = "Income_Climate"
     income_climate_field_key = "ClimateBin"
-    
+
     for income_climate_field_income in ["HiIncomeYield",
                                         "MedIncomeYield",
                                         "LowIncomeYield",
                                         "AllAreaYield"]:
-        
+
         LOGGER.debug("Creating yield using %s.",
                      income_climate_field_income)
-        
+
         yield_uri = os.path.join(intermediate_uri,
                                  yield_percentile_name % income_climate_field_income)
 
@@ -627,7 +627,7 @@ def execute(args):
                                         cell_size,
                                         "dataset",
                                         dataset_to_bound_index=0,
-                                        dataset_to_align_index=0)                                        
+                                        dataset_to_align_index=0)
 
    # if args["enable_tab_modeled"]:
    #     LOGGER.debug("Testing file.")
@@ -749,7 +749,7 @@ def execute(args):
    #                                     cell_size,
    #                                     "dataset",
    #                                     dataset_to_bound_index=0,
-   #                                     dataset_to_align_index=0)    
+   #                                     dataset_to_align_index=0)
 
     ##reporting
     LOGGER.info("Generating report.")
@@ -884,7 +884,7 @@ def execute(args):
 
     #economic table
     economic_component_list = ["Labor", "Machine", "Seed", "Nitrogen", "Phosphorus", "Potassium", "Sale"]
-        
+
     economic_columns = [{'name': 'Short Name', 'total':False, 'attr' : {'align':'right'}, 'td_class' : '\" align=\"right\"'},
                         {'name': 'Component', 'total':False, 'attr' : {'align':'left'}, 'td_class' : '\" align=\"center\"'},
                         {'name': 'Existing Yield', 'total':True, 'td_class' : '\" align=\"right\"'}]
@@ -1017,7 +1017,7 @@ def execute(args):
 ##                    'key':'Crop Id',
                     'data': economic_data,
                     'attributes': {'id':'Short Name', 'border':1, 'style':'border-collapse:collapse;'}},
-                
+
                 ],
             'out_uri': report_uri}
 

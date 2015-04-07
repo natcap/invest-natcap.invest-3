@@ -14,7 +14,7 @@ import pygeoprocessing.geoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('habitat_quality')
+LOGGER = logging.getLogger('invest_natcap.habitat_quality.habitat_quality')
 
 
 def execute(args):

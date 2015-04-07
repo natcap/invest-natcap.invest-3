@@ -19,7 +19,7 @@ import nearshore_wave_and_erosion_core
 
 logging.getLogger("pygeoprocessing").setLevel(logging.WARNING)
 logging.getLogger("raster_cython_utils").setLevel(logging.WARNING)
-LOGGER = logging.getLogger('nearshore_wave_and_erosion')
+LOGGER = logging.getLogger('invest_natcap.nearshore_wave_and_erosion')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -45,7 +45,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     elif os.path.isdir(output_uri):
         shutil.rmtree(output_uri)
 
-    # Create a new shapefile from the orginal_datasource 
+    # Create a new shapefile from the orginal_datasource
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
@@ -55,13 +55,13 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     # Create the new layer for output_datasource using same name and geometry
     # type from original_datasource as well as spatial reference
     output_layer = output_datasource.CreateLayer(
-            original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
+            original_layer_dfn.GetName(), orig_layer.GetSpatialRef(),
             original_layer_dfn.GetGeomType())
 
     # Get the number of fields in original_layer
     original_field_count = original_layer_dfn.GetFieldCount()
 
-    # For every field, create a duplicate field and add it to the new 
+    # For every field, create a duplicate field and add it to the new
     # shapefiles layer
     for fld_index in range(original_field_count):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
@@ -90,7 +90,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
         intersect_geom = aoi_geom.Intersection(orig_geom)
-       
+
         if not intersect_geom == None and not intersect_geom.IsEmpty():
             # Copy original_datasource's feature and set as new shapes feature
             output_feature = ogr.Feature(
@@ -115,16 +115,16 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
 
 # TODO: write a unit test for this function
 def projections_match(projection_list, silent_mode = True):
-    """Check that two gdal datasets are projected identically. 
-       Functionality adapted from Doug's 
-       biodiversity_biophysical.check_projections 
+    """Check that two gdal datasets are projected identically.
+       Functionality adapted from Doug's
+       biodiversity_biophysical.check_projections
 
         Inputs:
             - projection_list: list of wkt projections to compare
             - silent_mode: id True (default), don't output anything, otherwise
               output if and why some projections are not the same.
 
-        Output: 
+        Output:
             - False the datasets are not projected identically.
     """
     assert len(projection_list) > 1
@@ -147,7 +147,7 @@ def projections_match(projection_list, silent_mode = True):
             #LOGGER.debug('Different proj.: Proj units do not match %s:%s', \
             #         srs_1.GetLinearUnits(), srs_2.GetLinearUnits())
             return False
-    
+
         if srs_1.GetAttrValue("PROJECTION") != srs_2.GetAttrValue("PROJECTION"):
             #LOGGER.debug('Projections are not the same')
             return False
@@ -162,20 +162,20 @@ def projections_match(projection_list, silent_mode = True):
 
 def raster_wkt(raster):
     """ Return the projection of a raster in the OpenGIS WKT format.
-    
-        Input: 
+
+        Input:
             - raster: raster file
-        
+
         Output:
             - a projection encoded as a WKT-compliant string."""
     return raster.GetProjection()
 
 def shapefile_wkt(shapefile):
     """ Return the projection of a shapefile in the OpenGIS WKT format.
-    
-        Input: 
+
+        Input:
             - raster: raster file
-        
+
         Output:
             - a projection encoded as a WKT-compliant string."""
     layer = shapefile.GetLayer()
@@ -186,10 +186,10 @@ def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
     out_dataset_uri):
     """Adjust in_dataset_uri to match aoi_dataset_uri's extents, cell size and
     projection.
-    
+
         Inputs:
             - in_dataset_uri: the uri of the dataset to adjust
-            - aoi_dataset_uri: uri to the aoi we want to use to adjust 
+            - aoi_dataset_uri: uri to the aoi we want to use to adjust
                 in_dataset_uri
             - out_dataset_uri: uri to the adjusted dataset
 
@@ -225,21 +225,21 @@ def adjust_raster_to_aoi(in_dataset_uri, aoi_datasource_uri, cell_size, \
     pygeoprocessing.geoprocessing.reproject_dataset_uri(clipped_dataset_uri, \
         cell_size, aoi_wkt, 'bilinear', out_dataset_uri)
     # Done, return the dataset uri
-    return out_dataset_uri    
+    return out_dataset_uri
 
 # TODO: write a unit test for this function
 def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
     empty_raster_allowed = False):
     """Adjust the shapefile's data to the aoi, i.e.reproject & clip data points.
-    
+
         Inputs:
             - data_uri: uri to the shapefile to adjust
             - aoi_uri: uir to a single polygon shapefile
             - base_path: directory where the intermediate files will be saved
-            - output_uri: dataset that is clipped and/or reprojected to the 
+            - output_uri: dataset that is clipped and/or reprojected to the
             aoi if necessary.
-            - empty_raster_allowed: boolean flag that, if False (default), 
-              causes the function to break if output_uri is empty, or return 
+            - empty_raster_allowed: boolean flag that, if False (default),
+              causes the function to break if output_uri is empty, or return
               an empty raster otherwise.
 
         Returns: output_uri
@@ -262,7 +262,7 @@ def adjust_shapefile_to_aoi(data_uri, aoi_uri, output_uri, \
     if projections_match([data_wkt, aoi_wkt]):
         # Same projections, just clip
         clip_datasource(aoi, data, output_uri)
-    else:    
+    else:
         # Reproject the aoi to be in data's projection
         projected_aoi_uri = os.path.join(head, base + '_projected_aoi')
         # TODO: include this in raster utils
@@ -334,10 +334,10 @@ def get_layer_and_index_from_field_name(field_name, shapefile):
 
 def combined_rank(R_k):
     """Compute the combined habitats ranks as described in equation (3)
-    
+
         Inputs:
             - R_k: the list of ranks
-            
+
         Output:
             - R_hab as decribed in the user guide's equation 3."""
     R = 4.8 -0.5 *math.sqrt( (1.5 *max(5-R_k))**2 + \
@@ -356,7 +356,7 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
             - aoi_uri: URI to an AOI shapefile
             - cell_size: coarseness of the discretization (in meters)
             - output_uri: uri where the raster will be saved
-            - field: optional field name (string) where to extract the data 
+            - field: optional field name (string) where to extract the data
                 from.
             - all_touched: optional boolean that indicates if we use GDAL's
               ALL_TOUCHED parameter when rasterizing.
@@ -375,7 +375,7 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
         aoi = ogr.Open(aoi_uri)
     # Create the raster that will contain the new data
     raster = \
-        pygeoprocessing.geoprocessing.create_raster_from_vector_extents(cell_size, 
+        pygeoprocessing.geoprocessing.create_raster_from_vector_extents(cell_size,
         cell_size, datatype, nodata, \
         output_uri, aoi)
     layer = shapefile.GetLayer(0)
@@ -391,24 +391,24 @@ def raster_from_shapefile_uri(shapefile_uri, aoi_uri, cell_size, output_uri, \
     else:
         gdal.RasterizeLayer(raster, [1], layer, burn_values = [1], \
             options = options)
-    return output_uri 
-    
+    return output_uri
+
 def preprocess_dataset(dataset_uri, aoi_uri, cell_size, output_uri):
     """Function that preprocesses an input dataset (clip,
     reproject, resample) so that it is ready to be used in the model
-        
+
         Inputs:
             -dataset_uri: uri to the input dataset to be pre-processed
             -aoi_uri: uri to an aoi polygon datasource that is used for
                 clipping and reprojection.
             -cell_size: output dataset cell size in meters (integer)
             -output_uri: uri to the pre-processed output dataset.
-        
+
         Returns output_uri
     """
     # Adjust the dataset to the aoi and save the result
     adjust_raster_to_aoi(dataset_uri, aoi_uri, cell_size, output_uri)
-    
+
     return output_uri
 
 def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
@@ -416,7 +416,7 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     empty_raster_allowed = False):
     """Function that converts a polygon shapefile to a dataset by clipping,
     reprojecting, resampling, burning, and extrapolating burnt values.
-    
+
         Inputs:
             -datasource_uri: uri to the datasource to be pre-processed
             -aoi_uri: uri to an aoi polygon datasource that is used for
@@ -425,13 +425,13 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
             -output_uri: uri to the pre-processed output dataset.
             -field_name: name of the field in the attribute table to get the
             values from. If a number, use it as a constant. If Null, use 1.
-            -all_touched: boolean flag used in gdal's vectorize_rasters 
+            -all_touched: boolean flag used in gdal's vectorize_rasters
             options flag
             -nodata: float used as nodata in the output raster
             -empty_raster_allowed: flag that allows the function to return an
             empty raster if set to True, or break if set to False. False is the
             default.
-        
+
         Returns output_uri"""
     # Split the path apart from the filename
     head, tail = os.path.split(output_uri)
@@ -446,7 +446,7 @@ def preprocess_polygon_datasource(datasource_uri, aoi_uri, cell_size, \
     # Burn the adjusted file to a raster
     raster_from_shapefile_uri(aoi_adjusted_uri, aoi_uri, cell_size, \
         output_uri, field_name, all_touched, nodata)
-    
+
     return output_uri
 
 def extract_raster_information(raster_uri):
@@ -457,7 +457,7 @@ def extract_raster_information(raster_uri):
         pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster_uri)
 
     return (raster_nodata, cell_size)
-    
+
 
 def hdf5_is_gzip_capable():
     """Test if the current hdf5 distribution can compress data using gzip.
@@ -472,12 +472,12 @@ def hdf5_is_gzip_capable():
 
 
 def execute(args):
-    """This function invokes the coastal protection model given uri inputs 
+    """This function invokes the coastal protection model given uri inputs
         specified by the user's guide.
-    
-    args - a dictionary object of arguments 
-       
-    args['workspace_dir']     - The file location where the outputs will 
+
+    args - a dictionary object of arguments
+
+    args['workspace_dir']     - The file location where the outputs will
                                 be written (Required)
     """
 
@@ -502,7 +502,7 @@ def execute(args):
         os.path.join(args['workspace_dir'], 'output')
     if not os.path.isdir(args['output_dir']):
         os.makedirs(args['output_dir'])
-    
+
     # Add the intermediate directory as well
     args['intermediate_dir'] = \
         os.path.join(args['workspace_dir'], 'intermediate')
@@ -513,7 +513,7 @@ def execute(args):
     # This is the finest useful scale at which the model can extract bathy data
     args['cell_size'] = max(args['model_resolution'], \
         pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['bathymetry_uri']))
-    
+
     # Look for mis-aligned shore up to 10 pixels inland
     args['max_land_profile_len'] = int(10 * args['cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
@@ -521,14 +521,14 @@ def execute(args):
 
     # Habitats shouldn't overlap. If they do, pick the highest priority one.
     # Habitat information is an array of (habitat_name, habitat_info) tuples
-    # habitat_info is a distionary with all the information necessary to 
+    # habitat_info is a distionary with all the information necessary to
     # resolve habitat_name:
     #   -first entry: ('habitat':habitat_type)
     #   -subsequent entries: ('field_name':field_value)
     #
     # ------- Habitat type values conventions: --------
     #
-    # Each habitat has a type. The habitat type is used in situations where 
+    # Each habitat has a type. The habitat type is used in situations where
     # habitats overlap: there can only be one habitat type at a given location.
     # To resolve the ovrerlap, the model propritizes some habitats over others
     # by assigning them a higher 'type' value.
@@ -537,68 +537,68 @@ def execute(args):
     # The field 'constraints' indicates where a specific layer can be found.
     # The limits are expressed in various units. For instance:
     #
-    #   -for the constraints land/water: the unit is a distance from the shore 
+    #   -for the constraints land/water: the unit is a distance from the shore
     #       in meters
-    #   -for MLLW: the unit is depth, which is expressed as a number of MLLW. 
+    #   -for MLLW: the unit is depth, which is expressed as a number of MLLW.
     #       For instance, a value of 2 for 'MLLW' means twice the MLLW depth.
     #   -For MHHW: the unit is an elevation expressed as a number of MHHW.
-    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an 
+    #       Similarly to 'MLLW', a value of 3 for 'MHHW' indicates an
     #       elevation 3 times that of MHHW.
     #
     # Note: All the distances and elevations/depth are relative to the shore.
-    # 
+    #
     # The values can be either positive or negative:
-    #   -Positive values indicate that the habitat is allowed from the shore 
+    #   -Positive values indicate that the habitat is allowed from the shore
     #       up to a certain distance away from the shore:
     #       'land':10 -> the habitat is allowed to grow from 0 to 10m from the
     #           shore landward.
     #       'water':20 -> the habitat is allowed to grow from 0 to 20m from the
     #           shore seaward.
-    #       'MLLW':2 -> the habitat is allowed to grow within depths that range 
-    #           from 0 to 2 units of MLLW. If MLLW is 1.2, 
+    #       'MLLW':2 -> the habitat is allowed to grow within depths that range
+    #           from 0 to 2 units of MLLW. If MLLW is 1.2,
     #           the depth is 1.2x2=2.4m
-    #       'MHHW':0.5 -> the habitat is allowed to grow within an elevations 
-    #           that range from 0 to 0.5 units of MHHW. If MLLW is 0.2, 
+    #       'MHHW':0.5 -> the habitat is allowed to grow within an elevations
+    #           that range from 0 to 0.5 units of MHHW. If MLLW is 0.2,
     #           the depth is 0.2x0.5=0.1m
     #
-    # Negative values are the opposite: instead of specifying an area FROM 
+    # Negative values are the opposite: instead of specifying an area FROM
     #   the shore out, it specifies an area UP TO the shore. In other words,
-    #   The area 
-    #       'land':-10 -> the habitat is allowed to grow from 10m inland from 
+    #   The area
+    #       'land':-10 -> the habitat is allowed to grow from 10m inland from
     #           the shore up to infinity landward.
-    #       'MLLW':-2 -> the habitat cannot grow at depths shallower 
+    #       'MLLW':-2 -> the habitat cannot grow at depths shallower
     #           than 2 units of MLLW. If MLLW is 1.2, the depth is 1.2x2=2.4m
     #
     args['habitat_information'] = [
         ('kelp',
-            {'shapefile type':'seagrass', 'type':1},           
-            {'constraints':{'land':0.}}), 
-        ('seagrass',              
-            {'shapefile type':'seagrass', 'type':2},           
-            {'constraints':{'land':0.}}), 
-        # underwater structures: 'type' doesn't exist in the 
+            {'shapefile type':'seagrass', 'type':1},
+            {'constraints':{'land':0.}}),
+        ('seagrass',
+            {'shapefile type':'seagrass', 'type':2},
+            {'constraints':{'land':0.}}),
+        # underwater structures: 'type' doesn't exist in the
         # 'underwater structures' dictionary, will be assigned a default value
         # based on the habitat positional index in the 'habitat_information'
-        ('underwater structures', 
-            {'shapefile type':'underwater structures'},        
-            {'constraints':{'land':0.}}), 
-        ('coral reef',            
-            {'shapefile type':'coral reef'},                   
-            {'constraints':{'land':0.}}), 
-        ('levee',                 
-            {'shapefile type':'man-made structure', 'type':5}, 
+        ('underwater structures',
+            {'shapefile type':'underwater structures'},
+            {'constraints':{'land':0.}}),
+        ('coral reef',
+            {'shapefile type':'coral reef'},
+            {'constraints':{'land':0.}}),
+        ('levee',
+            {'shapefile type':'man-made structure', 'type':5},
             {'constraints':{'land':-50.0, 'water':0.}}),
-        ('beach',                 
-            {'shapefile type':'beach'},                        
+        ('beach',
+            {'shapefile type':'beach'},
             {'constraints':{'MHHW':1, 'MLLW':1}}),
-        ('seawall',               
-            {'shapefile type':'man-made structure', 'type':7}, 
+        ('seawall',
+            {'shapefile type':'man-made structure', 'type':7},
             {'constraints':{'land':25.0, 'water':25.0}}),
-        ('marsh',                 
-            {'shapefile type':'marsh'},                        
+        ('marsh',
+            {'shapefile type':'marsh'},
             {'constraints':{'MLLW':2}}),
-        ('mangrove',              
-            {'shapefile type':'mangrove'},                     
+        ('mangrove',
+            {'shapefile type':'mangrove'},
             {'constraints':{'MLLW':2}})
         ]
 
@@ -610,24 +610,24 @@ def execute(args):
     args['shapefile_priorities'] = {} # Per-shapefile habitat priorities
 
     for i in range(len(args['habitat_information'])):
-        
+
         habitat_name = args['habitat_information'][i][0]
         shapefile_type = args['habitat_information'][i][1]['shapefile type']
-        
+
         # Build the 'shapefile type':habitat_priority dictionary
         # The lowest the habitat priority, the more susceptible it will be replaced
         # by a habitat of higher priority
         args['habitat_priority'][habitat_name] = i + 1
-        
+
         # List of shapefile types that are natural habitats
         args['habitat_shapefiles'].add(shapefile_type)
-        
+
         # Dictionary that stores the set of all valid habitat codes (priority)
         # for every habitat shapefile
         if shapefile_type in args['shapefile_priorities']:
             args['shapefile_priorities'][shapefile_type].add( \
                 args['habitat_priority'][habitat_name])
-        else: 
+        else:
             args['shapefile_priorities'][shapefile_type] = set([ \
                 args['habitat_priority'][habitat_name]])
 
@@ -649,7 +649,7 @@ def execute(args):
 
     # Process each habitat
     args['shapefile_required_fields'] = { \
-        # MHHW >= MSL >= MLLW, all floating point numbers 
+        # MHHW >= MSL >= MLLW, all floating point numbers
         'tidal information': set([ \
             'MHHW', \
             'MSL', \
@@ -814,7 +814,7 @@ def execute(args):
 
 
     # Only does this for the profile generator...
-    if 'Profile generator' in args['modules_to_run']: 
+    if 'Profile generator' in args['modules_to_run']:
         detect_shapefile_types(args)
         build_habitat_constraints(args)
         combine_habitat_contraints(args)
@@ -829,13 +829,13 @@ def detect_shapefile_types(args):
     """Detect the shapefile types.
 
         Inputs:
-            -args['intermediate_dir']:  path to the current run's intermediate 
+            -args['intermediate_dir']:  path to the current run's intermediate
                 directory
             -args['aoi_uri']: URI of the original aoi shapefile
             -args['aoi_raster_uri']: URI of the rasterized aoi layer
             -args['cell_size']: Size of the bathymetry raster cell, in meters
-            -args['shapefile_required_fields']: dictionary of the fields 
-                required to make the model interpret a shapefile as a given 
+            -args['shapefile_required_fields']: dictionary of the fields
+                required to make the model interpret a shapefile as a given
                 habitat. An example is:
 
                 'seagrass': set([ \
@@ -847,11 +847,11 @@ def detect_shapefile_types(args):
 
             -args['habitat_priority']: priority value for every habitat.
                 args['habitat_priority'][habitat_name] = 1 (kelp), 2 (seagrass),...
-            
-            -args['shapefile_priorities']: set of priority values expected in a 
+
+            -args['shapefile_priorities']: set of priority values expected in a
                 specific shapefile: 8 for marsh, 1 and 2 for seagrass, etc.
 
-            -args['in_raster_list']: list of allthe rasters created so far 
+            -args['in_raster_list']: list of allthe rasters created so far
 
 
         Create the following entries:
@@ -898,7 +898,7 @@ def detect_shapefile_types(args):
         shapefile_type_checksum[field_signature] = shapefile_type
 
 
-    # Looking at fields in shapefiles and compute their checksum to see if 
+    # Looking at fields in shapefiles and compute their checksum to see if
     # they're of a known type
     known_shapefiles = set() # Set of known shapefiles that will be rasterized
     in_raster_list.append(args['aoi_raster_uri'])
@@ -930,12 +930,12 @@ def detect_shapefile_types(args):
 
             # Check if the recognized fields fit a type of shapefile
             is_known_shapefile = False # Used to notify that a shapefile is unknown
-            
+
             missing_fields = {} # Stores missing fields for each habitat
 
             for shapefile_type in args['shapefile_required_fields']:
 
-                # All the necessary fields for this shapefile have been identified 
+                # All the necessary fields for this shapefile have been identified
                 if args['shapefile_required_fields'][shapefile_type] <= recognized_fields:
 
                     is_known_shapefile = True
@@ -962,7 +962,7 @@ def detect_shapefile_types(args):
 #                    LOGGER.info('Processing %s...', file_uri)
                     for field_name in args['shapefile_required_fields'][shapefile_type]:
                         # Rasterize the shapefile's field
-                        # If this habitat has subtypes, then the field 'type' 
+                        # If this habitat has subtypes, then the field 'type'
                         # is used to determine priority.
                         output_uri = os.path.join(args['intermediate_dir'], \
                             basename + '_' + field_name.lower() + '.tif')
@@ -978,7 +978,7 @@ def detect_shapefile_types(args):
                                 args['aoi_uri'], args['cell_size'], \
                                 output_uri, field_name = field_name, \
                                 all_touched = True, nodata = -99999.0)
-                        
+
                         # Keep this raster uri
                         args['shapefiles'][category][basename][field_name] = \
                             output_uri
@@ -1020,15 +1020,15 @@ def detect_shapefile_types(args):
 
                         expected_uniques = \
                             args['shapefile_priorities'][shapefile_type]
-                        
+
                         message = 'Unexpected types in ' + \
                             str(detected_uniques) + \
                             ' found for habitat ' + str(shapefile_type) + \
                             '. Expected ' + str(expected_uniques)
-                        
+
                         assert detected_uniques <= expected_uniques, message
 
-                    # This shapefile was recognized and processed, 
+                    # This shapefile was recognized and processed,
                     # now stop and move on to the next shapefile
                     break
 
@@ -1054,33 +1054,33 @@ def build_habitat_constraints(args):
 
         Inputs:
             -args['habitat_information']: List of Habitath information, like:
-                ('kelp', 
-                {'shapefile type':'seagrass', 'type':1}, 
+                ('kelp',
+                {'shapefile type':'seagrass', 'type':1},
                 {'constraints':{'land':0.}})
 
-            -args['shapefile types']['natural habitats']: dictionary of all 
+            -args['shapefile types']['natural habitats']: dictionary of all
                 the habitat shapefile types:
 
                 args['shapefile types'][category][basename] = shapefile_type
 
-                where: 
+                where:
                     -category is 'natural habitats'
                     -basename is the habitat filename on disk (no path)
                     -shapefile_type: keys of args['shapefile_required_fields']
-                        examples are 'seagrass', 'coral reef', 'beach', 
+                        examples are 'seagrass', 'coral reef', 'beach',
                         'marsh', 'mangroves', 'underwater structures' etc.
 
-            -args['intermediate_dir']: path to the current run's intermediate 
+            -args['intermediate_dir']: path to the current run's intermediate
                 directory
-            -args['bathymetry_raster_uri']: URI of the rasterized bathymetry 
+            -args['bathymetry_raster_uri']: URI of the rasterized bathymetry
                 layer
             -args['aoi_raster_uri']: URI of the rasterized aoi layer
-            -args['in_raster_list']: list of allthe rasters created so far 
+            -args['in_raster_list']: list of allthe rasters created so far
 
 
-        Create the args dictionary entry args['constraints_type'] 
+        Create the args dictionary entry args['constraints_type']
             of constraint URIs.
-            
+
             Example keys are 'land', 'water', MHHW', 'MLLW'.
 
             args['constraints_type']['land'] = constraint_raster_uri
@@ -1088,7 +1088,7 @@ def build_habitat_constraints(args):
             where constraint_raster_uri is a raster that has been scaled
             so that the constraint threshold ('value' in the code) can
             directly be applied to get the mask.
-        
+
         Returns nothing.
 
     """
@@ -1139,14 +1139,14 @@ def build_habitat_constraints(args):
         os.remove(raster_uri)
         os.rename(temp_uri, raster_uri)
 
-    # Computing constraints rasters so they can directly be used as masks 
+    # Computing constraints rasters so they can directly be used as masks
     # for the habitats that have spatial constraints.
 #    print("args['shapefile types']", args['shapefile types'])
-    
+
     # TODO: Should remove this limitation
     assert 'natural habitats' in args['shapefile types'], \
         "No natural habitats detected."
-    
+
     for detected_habitat in args['shapefile types']['natural habitats']:
 
         detected_habitat_type = args['shapefile types']['natural habitats'][detected_habitat]
@@ -1167,11 +1167,11 @@ def build_habitat_constraints(args):
                 # Create the constraint raster if it doesn't exist already
     #            if not os.path.isfile(constraint_uri):
     #                print('Creating land constraint', constraint_uri)
-                    
+
                 land_distance_mask_uri = \
                     os.path.join(args['intermediate_dir'], \
                         'land_distance_mask.tif')
-                
+
                 pygeoprocessing.geoprocessing.vectorize_datasets( \
                     [args['bathymetry_raster_uri'], args['aoi_raster_uri']], \
                     keep_land, land_distance_mask_uri, gdal.GDT_Float32, \
@@ -1254,7 +1254,7 @@ def build_habitat_constraints(args):
                     (MHHW_min, MHHW_max) = MHHW_band.ComputeRasterMinMax()
                     MHHW_band = None
                     MHHW_raster = None
-                    
+
                     mean_MHHW = (MHHW_min + MHHW_max) / 2.
 
                     assert mean_MHHW > 0, "MHHW can't be negative"
@@ -1325,27 +1325,27 @@ def build_habitat_constraints(args):
 def combine_habitat_contraints(args):
     """Build maps that will be used to constrain where habitats can be placed:
 
-        Every constraint can be expressed as a mask that follows the same 
+        Every constraint can be expressed as a mask that follows the same
         pattern:
             1- Compute masks with limits dictated by the threshold's sign
-            2- Take the masks intersection 
+            2- Take the masks intersection
 
         Inputs:
             -args['habitat_information']: List of Habitath information, like:
-                ('kelp', 
-                {'shapefile type':'seagrass', 'type':1}, 
+                ('kelp',
+                {'shapefile type':'seagrass', 'type':1},
                 {'constraints':{'land':0.}})
 
-            -args['shapefile types']['natural habitats']: dictionary of all 
+            -args['shapefile types']['natural habitats']: dictionary of all
                 the habitat shapefile types:
 
                 args['shapefile types'][category][basename] = shapefile_type
 
-                where: 
+                where:
                     -category is 'natural habitats'
                     -basename is the habitat filename on disk (no path)
                     -shapefile_type: keys of args['shapefile_required_fields']
-                        examples are 'seagrass', 'coral reef', 'beach', 
+                        examples are 'seagrass', 'coral reef', 'beach',
                         'marsh', 'mangroves', 'underwater structures' etc.
 
             -args['constraints_type']: Dictionary of the constraint URIs.
@@ -1358,18 +1358,18 @@ def combine_habitat_contraints(args):
                 directly be applied to get the mask.
 
 
-        Appends the constraints masks URI to each constrained habitat in 
+        Appends the constraints masks URI to each constrained habitat in
         args['habitat_information']. For instance, the entry
 
-            ('kelp', 
-            {'shapefile type':'seagrass', 'type':1}, 
+            ('kelp',
+            {'shapefile type':'seagrass', 'type':1},
             {'constraints':{'land':0.}})
 
         could be updated witht he following information:
 
-            ('kelp', 
-            {'shapefile type':'seagrass', 'type':1}, 
-            {'constraints':{'land':0.}, 
+            ('kelp',
+            {'shapefile type':'seagrass', 'type':1},
+            {'constraints':{'land':0.},
             'constraints_uri':'full_path_to_constraint_raster'})
 
 
@@ -1382,14 +1382,14 @@ def combine_habitat_contraints(args):
             result = numpy.logical_or(result, x[i])
         return result
 
-    
+
     def set_threshold_and_nodata(T, nodata):
         """Closure to store the threshold and nodata used to compute the mask."""
 
 
         def apply_positive_threshold(x):
             """Apply the threshold to the vector x"""
-            
+
             # First step: value between 0 and T
             result = numpy.logical_and(x > 0, x <= T)
 
@@ -1400,7 +1400,7 @@ def combine_habitat_contraints(args):
 
         def apply_negative_threshold(x):
             """Apply the threshold to the vector x"""
-            
+
             # Mask out for T and nodata in a single step
             result = numpy.logical_and(x < T, x != nodata)
 
@@ -1426,11 +1426,11 @@ def combine_habitat_contraints(args):
         current_habitat_was_detected = False
 
         for detected_habitat in args['shapefile types']['natural habitats']:
-            
+
             if habitat_name ==  \
                 args['shapefile types']['natural habitats'][detected_habitat]:
                 current_habitat_was_detected = True
-                continue                
+                continue
 
         if not current_habitat_was_detected:
             continue
@@ -1439,13 +1439,13 @@ def combine_habitat_contraints(args):
         constraint_uri_list = []
         for constraint_type in habitat_info[2]['constraints'].keys():
             # Retreive constraint URI
-            constraint_uri = args['constraints_type'][constraint_type] 
+            constraint_uri = args['constraints_type'][constraint_type]
             constraint_nodata = \
                 pygeoprocessing.geoprocessing.get_nodata_from_uri(constraint_uri)
 
             # -Extract the constraint value
             value = habitat_info[2]['constraints'][constraint_type]
-            
+
             # Get the masking function:
             mask_function = set_threshold_and_nodata(value, constraint_nodata)
 
@@ -1462,10 +1462,10 @@ def combine_habitat_contraints(args):
                 cell_size, \
                 'intersection', \
                 vectorize_op = False)
-                        
+
             # -Add constraint to constraint_list
             constraint_uri_list.append(output_uri)
-        
+
         # Where the habitat constraint mask raster will be stored
         habitat_info[2]['constraint_uri'] = \
             os.path.join(args['intermediate_dir'], \
@@ -1484,14 +1484,14 @@ def uniformize_input_rasters(args):
 
         Inputs:
             -args['in_raster_list']: list of rasters which size is to be uniformized
-            -args['landmass_raster_uri']: raster URI for the landmass 
+            -args['landmass_raster_uri']: raster URI for the landmass
             -args['bathymetry_uri']: raster URI for the bathymetry
 
-        Returns nothing. 
+        Returns nothing.
     """
-    
+
     LOGGER.debug('Uniformizing the input raster sizes...')
-    
+
     # Need to uniformize the size of land and bathymetry rasters
     in_raster_list = args['in_raster_list']
 
@@ -1503,7 +1503,7 @@ def uniformize_input_rasters(args):
     out_raster_list = []
     for uri in in_raster_list:
         out_raster_list.append(pygeoprocessing.geoprocessing.temporary_filename())
-    
+
     # Gather info for aligning rasters properly
     cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['landmass_raster_uri'])
     resample_method_list = ['bilinear'] * len(out_raster_list)
@@ -1511,7 +1511,7 @@ def uniformize_input_rasters(args):
     mode = 'intersection'
     dataset_to_align_index = 0
     dataset_to_bound_index = 0
-    
+
     # Invoke raster alignment function
     pygeoprocessing.geoprocessing.align_dataset_list( \
         in_raster_list, out_raster_list, resample_method_list,
@@ -1536,28 +1536,28 @@ def assign_shapefile_field_index(args):
     """ Assign a positional index to every field of the known shapefiles
 
         Inputs:
-            -args: the argument dictionary where the field indices are going 
+            -args: the argument dictionary where the field indices are going
                 to be stored.
-            
+
             -args['shapefile_required_fields']: a dictionary of all the required fields
                 stored for each known shapefile
-            
+
             -args['habitat_shapefiles']: the set of habitat shapefiles
-            
+
             -args['habitat_priority']: priority value for every habitat.
                 args['habitat_priority'][habitat_name] = 1 (kelp), 2 (seagrass),...
 
 
         Creates a 'field_index' entry in 'args' and stores the shapefile fields
             per category and per shapefile name, e.g.:
-        
+
         ID = args['field_index']['natural habitats']['coral reef']['SLRKeepUp']
     """
-    
+
     args['field_index'] = {}
     for shapefile in args['shapefile_required_fields']:
-        
-        # Group natural habitats together, keep the other fields 
+
+        # Group natural habitats together, keep the other fields
         # in their own category
 
         # Found a known habitat => put it in 'natural habitats' category
@@ -1567,16 +1567,16 @@ def assign_shapefile_field_index(args):
                 args['field_index']['natural habitats'] = {}
 
             destination = args['field_index']['natural habitats']
-        
+
         # Otherwise => put the shapefile in its own category
         else:
             args['field_index'][shapefile] = {}
-            
+
             destination = args['field_index'][shapefile]
 
         # Create priority keys (numerical) for natural habitats:
         if shapefile in args['habitat_shapefiles']:
-            
+
             # Find the natural habitat in habitat information
             for habitat_name in args['habitat_priority']:
                 if habitat_name == shapefile:
@@ -1593,16 +1593,16 @@ def assign_shapefile_field_index(args):
 
         # Gather all the fields for this shapefile type
         required_fields = args['shapefile_required_fields'][shapefile]
-        
+
         # And create an entry when they will be stored
         destination['fields'] = {}
 
         field_id = 0
-        for field_name in required_fields:                
-        
+        for field_name in required_fields:
+
             # Only add if field is not 'type'
             if field_name.lower() != 'type':
-        
+
                 # Field name is set to its index in the required fields array
                 destination['fields'][field_name.lower()] = field_id
 

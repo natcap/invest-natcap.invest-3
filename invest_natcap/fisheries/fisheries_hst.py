@@ -16,7 +16,7 @@ except:
 
 pp = pprint.PrettyPrinter(indent=4)
 
-LOGGER = logging.getLogger('FISHERIES')
+LOGGER = logging.getLogger('invest_natcap.fisheries.hst')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

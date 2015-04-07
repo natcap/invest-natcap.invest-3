@@ -22,7 +22,7 @@ import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('wave_energy')
+LOGGER = logging.getLogger('invest_natcap.wave_energy.wave_energy')
 
 GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Byte: np.uint8,

@@ -8,7 +8,7 @@ import numpy
 
 import pygeoprocessing.geoprocessing
 
-LOGGER = logging.getLogger('carbon_utils')
+LOGGER = logging.getLogger('invest_natcap.carbon.utils')
 
 def make_suffix(model_args):
     '''Return the suffix from the args (prepending '_' if necessary).'''
