@@ -93,49 +93,95 @@ class Raster(object):
         return self.band_count()
 
     def __mul__(self, raster):
-        def mul_closure(nodata):
-            def mul(x, y):
-                if nodata in [x, y]:
-                    return nodata
-                return x * y
-            return mul
-        return self.local_op(raster, mul_closure)
+        if type(raster) in [float, int]:
+            def mul_closure(nodata):
+                def mul(x):
+                    if nodata in [x]:
+                        return nodata
+                    return x * raster
+                return mul
+            return self.local_op(raster, mul_closure, broadcast=True)
+        else:
+            def mul_closure(nodata):
+                def mul(x, y):
+                    if nodata in [x, y]:
+                        return nodata
+                    return x * y
+                return mul
+            return self.local_op(raster, mul_closure)
 
     def __div__(self, raster):
-        def div_closure(nodata):
-            def div(x, y):
-                if nodata in [x, y]:
-                    return nodata
-                return x / y
-            return div
-        return self.local_op(raster, div_closure)
+        if type(raster) in [float, int]:
+            def div_closure(nodata):
+                def div(x):
+                    if nodata in [x]:
+                        return nodata
+                    return x / raster
+                return div
+            return self.local_op(raster, div_closure, broadcast=True)
+        else:
+            def div_closure(nodata):
+                def div(x, y):
+                    if nodata in [x, y]:
+                        return nodata
+                    return x / y
+                return div
+            return self.local_op(raster, div_closure)
 
     def __add__(self, raster):
-        def add_closure(nodata):
-            def add(x, y):
-                if nodata in [x, y]:
-                    return nodata
-                return x + y
-            return add
-        return self.local_op(raster, add_closure)
+        if type(raster) in [float, int]:
+            def add_closure(nodata):
+                def add(x):
+                    if nodata in [x]:
+                        return nodata
+                    return x + raster
+                return add
+            return self.local_op(raster, add_closure, broadcast=True)
+        else:
+            def add_closure(nodata):
+                def add(x, y):
+                    if nodata in [x, y]:
+                        return nodata
+                    return x + y
+                return add
+            return self.local_op(raster, add_closure)
 
     def __sub__(self, raster):
-        def sub_closure(nodata):
-            def sub(x, y):
-                if nodata in [x, y]:
-                    return nodata
-                return x - y
-            return sub
-        return self.local_op(raster, sub_closure)
+        if type(raster) in [float, int]:
+            def sub_closure(nodata):
+                def sub(x):
+                    if nodata in [x]:
+                        return nodata
+                    return x - raster
+                return sub
+            return self.local_op(raster, sub_closure, broadcast=True)
+        else:
+            def sub_closure(nodata):
+                def sub(x, y):
+                    if nodata in [x, y]:
+                        return nodata
+                    return x - y
+                return sub
+            return self.local_op(raster, sub_closure)
 
     def __pow__(self, raster):
-        def pow_closure(nodata):
-            def pow(x, y):
-                if nodata in [x, y]:
-                    return nodata
-                return x**y
-            return pow
-        return self.local_op(raster, pow_closure)
+        if type(raster) in [float, int]:
+            # Implement broadcast operation
+            def pow_closure(nodata):
+                def powe(x):
+                    if nodata in [x]:
+                        return nodata
+                    return x**raster
+                return powe
+            return self.local_op(raster, pow_closure, broadcast=True)
+        else:
+            def pow_closure(nodata):
+                def powe(x, y):
+                    if nodata in [x, y]:
+                        return nodata
+                    return x**y
+                return powe
+            return self.local_op(raster, pow_closure)
 
     def __eq__(self, raster):
         if self.is_aligned(raster) and (self.get_shape() == raster.get_shape()):
@@ -306,7 +352,20 @@ class Raster(object):
         u_y = max(bb[1::2])
         l_y = min(bb[1::2])
         aoi = Polygon([(l_x, l_y), (l_x, u_y), (u_x, u_y), (u_x, l_y)])
-        #######
+        # wkb = aoi.wkb
+
+        # shpDriver = ogr.GetDriverByName("ESRI Shapefile")
+        # if os.path.exists(uri):
+        #     shpDriver.DeleteDataSource(uri)
+        # outDataSource = shpDriver.CreateDataSource(uri)
+        # outLayer = outDataSource.CreateLayer(uri, geom_type=ogr.wkbPolygon)
+        # featureDefn = outLayer.GetLayerDefn()
+        # outFeature = ogr.Feature(featureDefn)
+        # outFeature.SetGeometry(wkb)
+        # outLayer.CreateFeature(outFeature)
+
+    def get_cell_area(self):
+        raise NotImplementedError
 
     def set_band(self, masked_array):
         '''Currently works for rasters with only one band'''
@@ -317,6 +376,21 @@ class Raster(object):
         raise NotImplementedError
 
     def set_bands(self, array):
+        # if self.exists:
+        #     self._open_dataset()
+        #     band_count = self.dataset.RasterCount
+        #     self._close_dataset()
+
+        #     if band_count == 1 and len(array.shape) == 2:
+        #         assert(len(array) == self.get_rows)
+        #         assert(len(array[0]) == self.get_cols)
+        #         self.set_band(1, array)
+
+        #     elif len(array.shape) == 3 and array.shape[0] == band_count:
+        #         for band_num in range(band_count):
+        #             self.set_band(band_num + 1, array[band_num])
+        # else:
+        #     raise Exception
         raise NotImplementedError
 
     def copy(self, uri):
@@ -361,6 +435,9 @@ class Raster(object):
             vectorize_op=False)
 
         return Raster.from_tempfile(dataset_out_uri)
+        # temp_raster = Raster.from_tempfile(dataset_out_uri)
+        # temp_raster.copy(raster.uri)
+        # os.remove(dataset_out_uri)
 
     def align_to(self, raster, resample_method):
         '''Currently aligns other raster to this raster - later: union/intersection
@@ -448,19 +525,25 @@ class Raster(object):
     def to_vector(self):
         raise NotImplementedError
 
-    def local_op(self, raster, pixel_op_closure):
-        assert(self.is_aligned(raster))
-        assert(self.get_nodata(1) == raster.get_nodata(1))
+    def local_op(self, raster, pixel_op_closure, broadcast=False):
+        bounding_box_mode = "dataset"
+        resample_method = "nearest"
+
+        if not broadcast:
+            assert(self.is_aligned(raster))
+            assert(self.get_nodata(1) == raster.get_nodata(1))
+            dataset_uri_list = [self.uri, raster.uri]
+            resample_list = [resample_method]*2
+        else:
+            dataset_uri_list = [self.uri]
+            resample_list = [resample_method]
 
         nodata = self.get_nodata(1)
         pixel_op = pixel_op_closure(nodata)
-        dataset_uri_list = [self.uri, raster.uri]
         dataset_out_uri = pygeo.geoprocessing.temporary_filename()
         datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
         nodata_out = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
         pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
-        bounding_box_mode = "dataset"
-        resample_method = "nearest"
 
         pygeo.geoprocessing.vectorize_datasets(
             dataset_uri_list,
@@ -470,7 +553,7 @@ class Raster(object):
             nodata_out,
             pixel_size_out,
             bounding_box_mode,
-            resample_method_list=[resample_method]*2,
+            resample_method_list=resample_list,
             dataset_to_align_index=0,
             dataset_to_bound_index=0,
             assert_datasets_projected=False,
@@ -483,3 +566,55 @@ class Raster(object):
 
     def _close_dataset(self):
         self.dataset = None
+
+
+class RasterFactory(object):
+
+    def __init__(self, proj, datatype, nodata_val, rows, cols, affine=Affine.identity):
+        self.proj = proj
+        self.datatype = datatype
+        self.nodata_val = nodata_val
+        self.rows = rows
+        self.cols = cols
+        self.affine = affine
+
+    def get_metadata(self):
+        meta = {}
+        meta['proj'] = self.proj
+        meta['datatype'] = self.datatype
+        meta['nodata_val'] = self.nodata_val
+        meta['rows'] = self.rows
+        meta['cols'] = self.cols
+        meta['affine'] = self.affine
+        return meta
+
+    def _create_raster(self, array):
+        return Raster.from_array(
+            array, self.affine, self.proj, self.datatype, self.nodata_val)
+
+    def uniform(self, val):
+        a = np.ones((self.rows, self.cols)) * val
+        return self._create_raster(a)
+
+    def alternating(self, val1, val2):
+        a = np.ones((self.rows, self.cols)) * val2
+        a[::2, ::2] = val1
+        a[1::2, 1::2] = val1
+        return self._create_raster(a)
+
+    def random(self):
+        a = np.random.rand(self.rows, self.cols)
+        return self._create_raster(a)
+
+    def horizontal_ramp(self, val1, val2):
+        a = np.zeros((self.rows, self.cols))
+        col_vals = np.linspace(val1, val2, self.cols)
+        a[:] = col_vals
+        return self._create_raster(a)
+
+    def vertical_ramp(self, val1, val2):
+        a = np.zeros((self.cols, self.rows))
+        row_vals = np.linspace(val1, val2, self.rows)
+        a[:] = row_vals
+        a = a.T
+        return self._create_raster(a)

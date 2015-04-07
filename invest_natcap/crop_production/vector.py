@@ -3,10 +3,14 @@ Raster Class
 '''
 
 import os
+import tempfile
 import shutil
 
+import gdal
 import ogr
 import osr
+import numpy as np
+from affine import Affine
 from shapely.geometry import *
 import shapely.wkt
 import pygeoprocessing as pygeo
@@ -54,12 +58,14 @@ class Vector(object):
 
     @classmethod
     def from_file(self, uri, driver='ESRI Shapefile'):
-        datasource_uri = pygeo.geoprocessing.temporary_filename()
+        dst_uri = pygeo.geoprocessing.temporary_filename()
         if not os.path.isabs(uri):
             uri = os.path.join(os.getcwd(), uri)
-        # assert existence
-        shutil.copyfile(uri, datasource_uri)
-        return Vector(datasource_uri, driver)
+        src_uri = os.path.splitext(uri)[0]
+        for ext in ['.shp', '.shx', '.dbf', '.prj']:
+            if os.path.exists(src_uri+ext):
+                shutil.copyfile(src_uri+ext, dst_uri+ext)
+        return Vector(dst_uri, driver)
 
     @classmethod
     def from_tempfile(self, uri, driver='ESRI Shapefile'):
@@ -88,10 +94,10 @@ class Vector(object):
         raise NotImplementedError
 
     def __getitem__(self):
-        pass
+        pass  # return numpy slice?  Raster object with sliced numpy array?
 
     def __setitem__(self):
-        pass
+        pass  # set numpy values to raster
 
     def __getslice__(self):
         pass
@@ -100,10 +106,10 @@ class Vector(object):
         pass
 
     def __iter__(self):
-        pass
+        pass  # iterate over bands?
 
     def __contains__(self):
-        pass
+        pass  # test numpy raster against all bands?
 
     def __repr__(self):
         raise NotImplementedError
@@ -112,10 +118,11 @@ class Vector(object):
         raise NotImplementedError
 
     def save_vector(self, uri):
-        fp = os.path.splitext(self.uri)[0]
+        src_uri = os.path.splitext(self.uri)[0]
+        dst_uri = os.path.splitext(uri)[0]
         for ext in ['.shp', '.shx', '.dbf', '.prj']:
-            if os.path.exists(fp+ext):
-                shutil.copyfile(fp+ext, uri+ext)
+            if os.path.exists(src_uri+ext):
+                shutil.copyfile(src_uri+ext, dst_uri+ext)
 
     def feature_count(self):
         self._open_datasource()
@@ -153,6 +160,16 @@ class Vector(object):
 
     def get_projection(self):
         raise NotImplementedError
+        # self._open_datasource()
+        # layer = self.datasource.GetLayer()
+        # print layer.GetSpatialRef().GetAuthorityCode(0)
+        # wkt = layer.GetSpatialRef().ExportToWkt()
+        # layer = None
+        # self._close_datasource()
+        # return wkt
+        # RasterSRS = osr.SpatialReference()
+        # RasterSRS.ImportFromWkt(layer.GetSpatialRef().ExportToWkt())
+        # return int(RasterSRS.GetAttrValue("AUTHORITY", 1))
 
     def get_projection_wkt(self):
         self._open_datasource()
@@ -161,6 +178,9 @@ class Vector(object):
         layer = None
         self._close_datasource()
         return wkt
+        # RasterSRS = osr.SpatialReference()
+        # RasterSRS.ImportFromWkt(layer.GetSpatialRef().ExportToWkt())
+        # return int(RasterSRS.GetAttrValue("AUTHORITY", 1))
 
     def get_aoi(self):
         raise NotImplementedError
@@ -199,10 +219,20 @@ class Vector(object):
     def overlay(self, raster):
         raise NotImplementedError
 
+    # Operations
+    #   attribute data and tables
+    #   buffer
+    #   densify
+    #   union
+    #   intersection
+    #   symetric difference
+    #
+
     def to_raster(self):
         raise NotImplementedError
 
     def _open_datasource(self):
+        # driver = ogr.GetDriverByName(self.driver)
         self.datasource = ogr.Open(self.uri)
 
     def _close_datasource(self):

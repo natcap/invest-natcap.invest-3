@@ -14,7 +14,38 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-def create_observed_yield_maps(vars_dict):
+def create_yield_func_output_folder(vars_dict, folder_name):
+    '''
+    Example Returns::
+
+        vars_dict = {
+            # ...
+
+            'output_yield_func_dir': '/path/to/outputs/yield_func/',
+            'output_production_maps_dir': '/path/to/outputs/yield_func/production/'
+        }
+
+    Output:
+        .
+        |-- [yield_func]
+            |-- production
+
+    '''
+    if vars_dict['results_suffix']:
+        folder_name = folder_name + '_' + vars_dict['results_suffix']
+    output_yield_func_dir = os.path.join(vars_dict['output_dir'], folder_name)
+    os.path.makedirs(output_yield_func_dir)
+    vars_dict['output_yield_func_dir'] = output_yield_func_dir
+
+    if vars_dict['create_crop_production_maps']:
+        output_production_maps_dir = os.path.join(
+            output_yield_func_dir, 'crop_production_maps')
+        vars_dict['output_production_maps_dir'] = output_production_maps_dir
+
+    return vars_dict
+
+
+def calc_observed_yield(vars_dict):
     '''
     Creates yield maps from observed data and stores in the temporary yield
         folder
@@ -27,32 +58,30 @@ def create_observed_yield_maps(vars_dict):
         vars_dict = {
             # ...
 
-            'lulc_map_uri': 'path/to/lulc_map_uri',
+            'lulc_map_uri': '/path/to/lulc_map_uri',
             'crop_lookup_dict': {
                 'code': 'crop_name',
                 ...
             },
             'observed_yields_maps_dict': {
-                'crop': 'path/to/crop_climate_bin_map',
+                'crop': '/path/to/crop_climate_bin_map',
                 ...
             },
-            'tmp_observed_dir': '/path/to/tmp_observed_dir',
+            'economics_table_dict': {
+                'crop': 2.3,
+                ...
+            },
         }
-
-    Outputs:
-
-    .
-    |-- outputs
-        |-- observed_yield_[results_suffix]
-            |-- crop_production_maps
-                |-- [crop]_production_map (*.tif)
     '''
-    folder_name = 'observed_yield'
-    create_output_folder(vars_dict, folder_name)
+    vars_dict = create_yield_func_output_folder(
+        vars_dict, "observed_yield")
 
     crop_production_dict = {}
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = lulc_raster.get_aoi_as_vector()
+    economics_table = vars_dict['economics_table_dict']
+    if vars_dict['do_economic_returns']:
+        revenue_raster = None  # ALL ZEROS
 
     for crop in vars_dict['observed_yields_maps_dict'].keys():
         global_crop_raster = Raster.from_file(
@@ -81,187 +110,128 @@ def create_observed_yield_maps(vars_dict):
 
         if vars_dict['create_crop_production_maps']:
             filename = crop + '_production_map.tif'
-            dst_uri = os.path.join(vars_dict['output_dir'], filename)
+            dst_uri = os.path.join(vars_dict[
+                'output_production_maps_dir'], filename)
             crop_production_raster.save_raster(dst_uri)
 
         total_production = crop_production_raster.get_band(1).sum()
         crop_production_dict[crop] = total_production
 
-        # Clean up rasters (del)
+        if vars_dict['do_economic_returns']:
+            revenue_raster += calc_crop_revenue(
+                crop_production_raster,
+                economics_table[crop])
 
-    vars_dict['observed_crop_production_dict'] = crop_production_dict
+        # Clean up rasters (del)
+        del global_crop_raster
+        del reprojected_aoi
+        del clipped_global_crop_raster
+        del reproj_crop_raster
+        del crop_raster
+        del reclassed_lulc_raster
+        del crop_yield_per_ha_raster
+        del crop_production_raster
+
+    vars_dict['crop_production_dict'] = crop_production_dict
+
+    # Economics map
+    if vars_dict['do_economic_returns']:
+        cost_per_ton_input_raster = 0
+        if vars_dict['modeled_fertilizer_maps_dir']:
+            cost_per_ton_input_raster = calc_cost_of_per_ton_inputs(
+                vars_dict, lulc_raster)
+
+        cost_per_hectare_input_raster = calc_cost_of_per_hectare_inputs()
+
+        cost_raster = cost_per_hectare_input_raster + cost_per_ton_input_raster
+        economic_returns_raster = revenue_raster - cost_raster
+
+        economic_returns_map_uri = os.path.join(
+            vars_dict['output_yield_func_dir'], 'economic_returns_map.tif')
+        economic_returns_raster.save_raster(economic_returns_map_uri)
+
+        del economic_returns_raster
+        del cost_per_ton_input_raster
+        del cost_per_hectare_input_raster
+        del cost_raster
+        del revenue_raster
+
+    # Results Table
+    create_results_table(vars_dict)
+
     return vars_dict
 
 
-def create_percentile_yield_maps(vars_dict):
+def calc_cost_of_per_ton_inputs(): pass
+def calc_cost_of_per_hectare_inputs(): pass
+def calc_crop_revenue(): pass
+
+
+def calc_percentile_yield(vars_dict):
     '''
-    About
-
-    var_name (type): desc
-
     Example Args::
 
         vars_dict = {
             ...
 
             '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
         }
     '''
-    # Get List of Crops in LULC Crop Map
-
-    # Create Raster of Climate Bin Indices
-
-    # For Each Yield Column in Percentile Yield Table:
-
-    # For Each Crop, Create Crop Yield Map over AOI
-        # Output: Crop Yield Maps
-
-    # Create Crop Production Maps by Multiplying Yield by Cell Size Area
-        # Output: Crop Production Maps
-        # If 'create_crop_production_maps' selected, save to output folder
-
-    # Find Total Production for Given Crop by Summing Cells in Crop Production Maps
-        # Output: Crop Production Dictionary?
-
-    # Generate Yield Results
-
-    if vars_dict['create_crop_production_maps']:
-        pass
-
+    vars_dict = create_yield_func_output_folder(
+        vars_dict, "climate_percentile_yield")
     pass
 
 
-def create_regression_yield_maps(vars_dict):
+def calc_regression_yield(vars_dict):
     '''
-    About
-
-    var_name (type): desc
-
     Example Args::
 
         vars_dict = {
             ...
 
             '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
         }
     '''
+    vars_dict = create_yield_func_output_folder(
+        vars_dict, "climate_regression_yield")
     pass
 
 
-def create_production_maps(vars_dict):
+def calc_economic_returns(crop_production_raster, crop_economics_dict):
     '''
-    About
-
-    var_name (type): desc
-
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
     '''
-    pass
 
+    # per ton
+    price = crop_economics_dict['price']
 
-def create_economic_returns_map(vars_dict):
-    '''
-    About
+    cost_nitrogen = crop_economics_dict['cost_nitrogen']
+    cost_phosphorous = crop_economics_dict['cost_phosphorous']
+    cost_potash = crop_economics_dict['cost_potash']
 
-    var_name (type): desc
+    # per hectare
+    cost_labor = crop_economics_dict['cost_labor']
+    cost_machine = crop_economics_dict['cost_machine']
+    cost_seed = crop_economics_dict['cost_seed']
+    cost_irrigation = crop_economics_dict['cost_irrigation']
 
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-    '''
-    pass
+    # 
+    crop_returns_raster = crop_production_raster
+    economic_returns_raster = economic_returns_raster_next
 
 
 def create_results_table(vars_dict):
     '''
-    About
-
-    var_name (type): desc
-
     Example Args::
 
         vars_dict = {
             ...
 
+            'crop_production_dict': {
+                'corn': 12.3,
+                'soy': 13.4,
+                ...
+            },
             '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
         }
     '''
     pass
-
-
-def create_output_folder(vars_dict, folder_name):
-    if vars_dict['results_suffix']:
-        folder_name = folder_name + '_' + vars_dict['results_suffix']
-    folder_path = os.path.join(vars_dict['output_dir'], folder_name)
-    os.path.makedirs(folder_path)
-    vars_dict['']
