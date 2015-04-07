@@ -5,8 +5,7 @@ The Crop Production Model module contains functions for running the model
 import os
 import logging
 
-from raster import Raster
-from vector import Vector
+from raster import Raster, RasterFactory
 import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
@@ -34,12 +33,13 @@ def create_yield_func_output_folder(vars_dict, folder_name):
     if vars_dict['results_suffix']:
         folder_name = folder_name + '_' + vars_dict['results_suffix']
     output_yield_func_dir = os.path.join(vars_dict['output_dir'], folder_name)
-    os.path.makedirs(output_yield_func_dir)
+    os.makedirs(output_yield_func_dir)
     vars_dict['output_yield_func_dir'] = output_yield_func_dir
 
     if vars_dict['create_crop_production_maps']:
         output_production_maps_dir = os.path.join(
             output_yield_func_dir, 'crop_production_maps')
+        os.makedirs(output_production_maps_dir)
         vars_dict['output_production_maps_dir'] = output_production_maps_dir
 
     return vars_dict

@@ -194,6 +194,7 @@ class TestIOFetchArgs(unittest.TestCase):
         assert('economics_table_dict' in keys)
         assert('modeled_fertilizer_maps_dict' in keys)
         assert('crop_lookup_dict' in keys)
+        pp.pprint(guess)
 
 
 class TestIOSetupTmp(unittest.TestCase):
