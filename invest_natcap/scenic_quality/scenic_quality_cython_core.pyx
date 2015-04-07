@@ -274,7 +274,7 @@ cdef int update_visible_pixels_fast(ActivePixel *active_pixel_array, \
     cdef ActivePixel p
     cdef double max_visibility = -1000000.
     cdef double visibility = 0
-    cdef int index = -1
+    cdef int index = active_pixel_array[0].index
     cdef int pixel_id
     cdef int active_pixel_count = 0
     cdef int last_active_pixel = 1
@@ -303,7 +303,7 @@ cdef int update_visible_pixels_fast(ActivePixel *active_pixel_array, \
         active_pixel_count += 1
         last_active_pixel = pixel_id 
 
-    visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
+    #visibility_map[I[index], J[index]] = a # Debug purposes only!!!!
 
     return active_pixel_count
 
@@ -708,9 +708,6 @@ def sweep_through_angles( \
     # 1- add cells at angle 0
     # Collect cell_center events
     row = []
-    
-    print 'MaxID', max_line_length/2 +1,
-    
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1] - epsilon):
         i = arg_center[center_event_id]
