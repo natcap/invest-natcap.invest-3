@@ -708,8 +708,11 @@ def sweep_through_angles( \
     # 1- add cells at angle 0
     # Collect cell_center events
     row = []
+    
+    print 'MaxID', max_line_length/2 +1,
+    
     while (center_event_id < center_event_count) and \
-        (center_events[arg_center[center_event_id]] < angles[1] + epsilon):
+        (center_events[arg_center[center_event_id]] < angles[1] - epsilon):
         i = arg_center[center_event_id]
         d = distances[i]
         v = visibility[i]
@@ -722,6 +725,14 @@ def sweep_through_angles( \
             if Ds or Dl else 0
 
         
+        #print 'ID', ID, '(first, second)', \
+        #    (history[ID/2][0], history[ID/2][1]), \
+        #    '(I, J)', (coord[0][i], coord[1][i]), \
+        #    center_events[arg_center[center_event_id]], \
+        #    ' - ', angles[1], '=', \
+        #    center_events[arg_center[center_event_id]] - angles[1], \
+        #    ' < ', -epsilon
+
         assert history[ID/2][0] + history[ID/2][1] == 0
 
         history[ID/2][ID%2] += 1
@@ -735,6 +746,7 @@ def sweep_through_angles( \
         center_event_id += 1
         add_pixel_count += 1
 
+    print('')
 
 #        row.append((ID, history[ID/2][0], history[ID/2][1]))
 #    csv_writer.writerow(['initialisation']+row)
