@@ -12,7 +12,7 @@ from numpy import testing
 import numpy as np
 from affine import Affine
 
-from raster import Raster, RasterFactory
+from ..raster import Raster, RasterFactory
 import crop_production_model as model
 
 workspace_dir = '../../test/invest-data/test/data/crop_production/'
@@ -26,7 +26,7 @@ proj = 4326
 datatype = gdal.GDT_Float64
 nodata_val = -9999
 
-global_factory = RasterFactory(
+global_raster_factory = RasterFactory(
     proj,
     datatype,
     nodata_val,
@@ -37,6 +37,8 @@ global_factory = RasterFactory(
 
 class TestCreateYieldFuncOutputFolder(unittest.TestCase):
     def setUp(self):
+        corn_observed = global_raster_factory.horizontal_ramp(1.0, 10.0)
+
         self.vars_dict = {
             'output_dir': tempfile.mkdtemp(),
             'results_suffix': 'scenario1',
@@ -54,11 +56,33 @@ class TestCreateYieldFuncOutputFolder(unittest.TestCase):
 class TestCreateResultsTableObserved(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
-            'crop_production_dict': {
-                'corn': ''
-            },
-            '': '',
-
+            'observed_yield_maps_dir': 'path/to/dir',
+            'percentile_yield_tables_dir': 'path/to/dir',
+            'percentile_yield_dict': {},
+            'crop_lookup_dict': {},
+            'crop_lookup_table_uri': 'path/to/file',
+            'economics_table_dict': {},
+            'climate_bin_maps_dir': 'path/to/dir',
+            'lulc_map_uri': 'path/to/file',
+            'modeled_fertilizer_maps_dir': 'path/to/dir',
+            'do_nutrition': True,
+            'do_yield_observed': True,
+            'workspace_dir': 'path/to/dir',
+            'modeled_irrigation_map_uri': 'path/to/file',
+            'spatial_dataset_dir': 'path/to/dir',
+            'modeled_fertilizer_maps_dict': {},
+            'modeled_yield_tables_dir': 'path/to/dir',
+            'modeled_yield_dict': {},
+            'economics_table_uri': 'path/to/file',
+            'do_yield_regression_model': True,
+            'observed_yields_maps_dict': {},
+            'nutrition_table_dict': {},
+            'do_economic_returns': True,
+            'create_crop_production_maps': True,
+            'climate_bin_maps_dict': {},
+            'results_suffix': 'scenario_1',
+            'nutrition_table_uri': 'path/to/file',
+            'do_yield_percentile': True
         }
 
     def test_run1(self):

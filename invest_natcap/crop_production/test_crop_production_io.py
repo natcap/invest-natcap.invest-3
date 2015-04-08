@@ -11,6 +11,7 @@ from numpy import testing
 import numpy as np
 
 import crop_production_io as io
+import test_data as cp_data
 
 workspace_dir = '../../test/invest-data/test/data/crop_production/'
 input_dir = os.path.join(workspace_dir, 'input')
@@ -160,28 +161,29 @@ class TestIOFetchModeledFertilizerMaps(unittest.TestCase):
 
 class TestIOFetchArgs(unittest.TestCase):
     def setUp(self):
-        self.args = {
-            'workspace_dir': workspace_dir,
-            'results_suffix': 'scenario_name',
-            'lulc_map_uri': os.path.join(input_dir, 'lulc_map.tif'),
-            'crop_lookup_table_uri': os.path.join(
-                input_dir, 'crop_lookup_table.csv'),
-            'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
-            'create_crop_production_maps': True,
-            'do_yield_observed': True,
-            'do_yield_percentile': True,
-            'do_yield_regression_model': True,
-            'modeled_fertilizer_maps_dir': os.path.join(
-                input_dir, 'fertilizer_maps'),
-            'modeled_irrigation_map_uri':  os.path.join(
-                input_dir, 'irrigation_map.tif'),
-            'do_nutrition': True,
-            'nutrition_table_uri': os.path.join(
-                input_dir, 'nutrition_table.csv'),
-            'do_economic_returns': True,
-            'economics_table_uri': os.path.join(
-                input_dir, 'economics_table.csv'),
-        }
+        # self.args = {
+        #     'workspace_dir': workspace_dir,
+        #     'results_suffix': 'scenario_name',
+        #     'lulc_map_uri': os.path.join(input_dir, 'lulc_map.tif'),
+        #     'crop_lookup_table_uri': os.path.join(
+        #         input_dir, 'crop_lookup_table.csv'),
+        #     'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
+        #     'create_crop_production_maps': True,
+        #     'do_yield_observed': True,
+        #     'do_yield_percentile': True,
+        #     'do_yield_regression_model': True,
+        #     'modeled_fertilizer_maps_dir': os.path.join(
+        #         input_dir, 'fertilizer_maps'),
+        #     'modeled_irrigation_map_uri':  os.path.join(
+        #         input_dir, 'irrigation_map.tif'),
+        #     'do_nutrition': True,
+        #     'nutrition_table_uri': os.path.join(
+        #         input_dir, 'nutrition_table.csv'),
+        #     'do_economic_returns': True,
+        #     'economics_table_uri': os.path.join(
+        #         input_dir, 'economics_table.csv'),
+        # }
+        self.args = cp_data.get_args()
 
     def test_fetch_args(self):
         guess = io.fetch_args(self.args)
@@ -194,40 +196,41 @@ class TestIOFetchArgs(unittest.TestCase):
         assert('economics_table_dict' in keys)
         assert('modeled_fertilizer_maps_dict' in keys)
         assert('crop_lookup_dict' in keys)
-        pp.pprint(guess)
+        l = [i for i in guess.keys() if i not in self.args.keys()]
+        pp.pprint(l)
 
 
-class TestIOSetupTmp(unittest.TestCase):
-    def setUp(self):
-        workspace_dir = tempfile.mkdtemp()
-        os.mkdir(os.path.join(workspace_dir, 'tmp'))
+# class TestIOSetupTmp(unittest.TestCase):
+#     def setUp(self):
+#         workspace_dir = tempfile.mkdtemp()
+#         os.mkdir(os.path.join(workspace_dir, 'tmp'))
 
-        self.vars_dict = {
-            'workspace_dir': workspace_dir
-        }
+#         self.vars_dict = {
+#             'workspace_dir': workspace_dir
+#         }
 
-    def test_run(self):
-        guess = io.setup_tmp(self.vars_dict)
-        # pp.pprint(guess)
-        tmp_dir = guess['tmp_dir']
-        assert(os.path.basename(tmp_dir) == 'tmp')
+#     def test_run(self):
+#         guess = io.setup_tmp(self.vars_dict)
+#         # pp.pprint(guess)
+#         tmp_dir = guess['tmp_dir']
+#         assert(os.path.basename(tmp_dir) == 'tmp')
 
 
-class TestIOCleanUpTmp(unittest.TestCase):
-    def setUp(self):
-        workspace_dir = tempfile.mkdtemp()
-        tmp_dir = os.path.join(workspace_dir, 'tmp')
-        os.mkdir(tmp_dir)
+# class TestIOCleanUpTmp(unittest.TestCase):
+#     def setUp(self):
+#         workspace_dir = tempfile.mkdtemp()
+#         tmp_dir = os.path.join(workspace_dir, 'tmp')
+#         os.mkdir(tmp_dir)
 
-        self.vars_dict = {
-            'workspace_dir': workspace_dir,
-            'tmp_dir': tmp_dir
-        }
+#         self.vars_dict = {
+#             'workspace_dir': workspace_dir,
+#             'tmp_dir': tmp_dir
+#         }
 
-    def test_run(self):
-        io.clean_up_tmp(self.vars_dict)
-        # pp.pprint(self.vars_dict)
-        assert(not os.path.exists(self.vars_dict['tmp_dir']))
+#     def test_run(self):
+#         io.clean_up_tmp(self.vars_dict)
+#         # pp.pprint(self.vars_dict)
+#         assert(not os.path.exists(self.vars_dict['tmp_dir']))
 
 
 # class TestIOCreateOutputs(unittest.TestCase):

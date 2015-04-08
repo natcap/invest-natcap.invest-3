@@ -1,0 +1,4 @@
+crop,percent_refuse,protein,lipid,energy,ca,fe,mg,ph
+corn,0.5,10,11,12,13,14,15,16
+soy,0.2,20,21,22,23,24,25,26
+rice,0.7,30,31,32,33,34,35,36

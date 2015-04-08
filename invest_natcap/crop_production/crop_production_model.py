@@ -84,53 +84,56 @@ def calc_observed_yield(vars_dict):
         revenue_raster = None  # ALL ZEROS
 
     for crop in vars_dict['observed_yields_maps_dict'].keys():
-        global_crop_raster = Raster.from_file(
+        # Wrangle Data...
+        crop_observed_yield_raster = Raster.from_file(
             vars_dict['observed_yields_maps_dict'][crop])
 
         reprojected_aoi = aoi_vector.reproject(
-            global_crop_raster.get_projection())
+            crop_observed_yield_raster.get_projection())
 
-        clipped_global_crop_raster = global_crop_raster.clip(
+        clipped_crop_raster = crop_observed_yield_raster.clip(
             reprojected_aoi.uri)
 
-        reproj_crop_raster = clipped_global_crop_raster.reproject(
+        reproj_crop_raster = clipped_crop_raster.reproject(
             lulc_raster.get_projection(), 'nearest')
 
-        crop_raster = reproj_crop_raster.align_to(lulc_raster, 'nearest')
+        aligned_crop_raster = reproj_crop_raster.align_to(
+            lulc_raster, 'nearest')
 
-        reclass_table = {
-            'crop': 1,
-            'non-crop': 0
-        }
+        reclass_table = {}
+        for key in vars_dict['observed_yields_maps_dict'].keys():
+            reclass_table[key] = 0.0
+        reclass_table[crop] = 1.0
         reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
 
-        crop_yield_per_ha_raster = reclassed_lulc_raster * crop_raster
-        ha_per_cell = crop_yield_per_ha_raster.get_cell_area()
-        crop_production_raster = crop_yield_per_ha_raster * ha_per_cell
+        # Operations as Noted in User's Guide...
+        ObservedLocalYield_raster = reclassed_lulc_raster * aligned_crop_raster
+        ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
+        Production_raster = ObservedLocalYield_raster * ha_per_cell
 
         if vars_dict['create_crop_production_maps']:
             filename = crop + '_production_map.tif'
             dst_uri = os.path.join(vars_dict[
                 'output_production_maps_dir'], filename)
-            crop_production_raster.save_raster(dst_uri)
+            Production_raster.save_raster(dst_uri)
 
-        total_production = crop_production_raster.get_band(1).sum()
-        crop_production_dict[crop] = total_production
+        ProductionTotal_float = Production_raster.get_band(1).sum()
+        crop_production_dict[crop] = ProductionTotal_float
 
         if vars_dict['do_economic_returns']:
             revenue_raster += calc_crop_revenue(
-                crop_production_raster,
+                Production_raster,
                 economics_table[crop])
 
-        # Clean up rasters (del)
-        del global_crop_raster
+        # Clean Up Rasters...
         del reprojected_aoi
-        del clipped_global_crop_raster
+        del crop_observed_yield_raster
+        del clipped_crop_raster
         del reproj_crop_raster
-        del crop_raster
+        del aligned_crop_raster
         del reclassed_lulc_raster
-        del crop_yield_per_ha_raster
-        del crop_production_raster
+        del ObservedLocalYield_raster
+        del Production_raster
 
     vars_dict['crop_production_dict'] = crop_production_dict
 
@@ -162,8 +165,22 @@ def calc_observed_yield(vars_dict):
     return vars_dict
 
 
-def calc_cost_of_per_ton_inputs(): pass
-def calc_cost_of_per_hectare_inputs(): pass
+def calc_cost_of_per_ton_inputs():
+    '''
+    sum_across_fert(FertAppRate_fert * LULCCropCellArea * CostPerTon_fert)
+
+    Example Args::
+
+        args = {
+
+        }
+    '''
+    pass
+def calc_cost_of_per_hectare_inputs():
+    '''
+
+    '''
+    pass
 def calc_crop_revenue(): pass
 
 
