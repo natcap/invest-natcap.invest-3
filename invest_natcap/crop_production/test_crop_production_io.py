@@ -11,7 +11,7 @@ from numpy import testing
 import numpy as np
 
 import crop_production_io as io
-import test_data as cp_data
+import test_data
 
 workspace_dir = '../../test/invest-data/test/data/crop_production/'
 input_dir = os.path.join(workspace_dir, 'input')
@@ -183,11 +183,11 @@ class TestIOFetchArgs(unittest.TestCase):
         #     'economics_table_uri': os.path.join(
         #         input_dir, 'economics_table.csv'),
         # }
-        self.args = cp_data.get_args()
+        self.args = test_data.get_args()
 
     def test_fetch_args(self):
         guess = io.fetch_args(self.args)
-        # pp.pprint(guess)
+        pp.pprint(guess)
         keys = guess.keys()
         assert('percentile_yield_dict' in keys)
         assert('observed_yields_maps_dict' in keys)
@@ -196,8 +196,8 @@ class TestIOFetchArgs(unittest.TestCase):
         assert('economics_table_dict' in keys)
         assert('modeled_fertilizer_maps_dict' in keys)
         assert('crop_lookup_dict' in keys)
-        l = [i for i in guess.keys() if i not in self.args.keys()]
-        pp.pprint(l)
+        # l = [i for i in guess.keys() if i not in self.args.keys()]
+        # pp.pprint(l)
 
 
 # class TestIOSetupTmp(unittest.TestCase):

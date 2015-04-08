@@ -5,10 +5,11 @@ import numpy as np
 from affine import Affine
 import gdal
 
+import crop_production_io as io
 from raster import *
 
 workspace_dir = '../../../test/invest-data/test/data/crop_production/'
-input_dir = os.path.join(os.path.realpath(__file__), 'data/')
+input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
 # AOI Parameters
 aoi_dict = {
@@ -30,11 +31,10 @@ def create_lulc_map(aoi_dict):
     return Raster.from_array(array, affine, proj, datatype, nodata_val)
 
 
-def create_global_map():
+def create_global_raster_factory(datatype):
     shape = (180, 360)
     affine = Affine(1, 0, -180, 0, -1, 90)
     proj = 4326
-    datatype = gdal.GDT_Float64
     nodata_val = -9999
 
     global_raster_factory = RasterFactory(
@@ -45,21 +45,47 @@ def create_global_map():
         shape[1],
         affine=affine)
 
-    return global_raster_factory.horizontal_ramp(1.0, 10.0)
+    return global_raster_factory
 
 
 def create_observed_yield_maps_dir():
-    temp_dir = tempfile.mkdtemp()
+    observed_yield_dir = os.path.join(
+        input_dir, 'spatial_dataset/observed_yield/')
 
-    corn_raster = create_global_map()
-    rice_raster = create_global_map()
-    soy_raster = create_global_map()
+    global_raster_factory = create_global_raster_factory(gdal.GDT_Float64)
 
-    corn_raster.save_raster(os.path.join(temp_dir, 'corn_yield.tif'))
-    rice_raster.save_raster(os.path.join(temp_dir, 'rice_yield.tif'))
-    soy_raster.save_raster(os.path.join(temp_dir, 'soy_yield.tif'))
+    corn_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
+    rice_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
+    soy_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
 
-    return temp_dir
+    corn_raster.save_raster(os.path.join(
+        observed_yield_dir, 'corn_yield.tif'))
+    rice_raster.save_raster(os.path.join(
+        observed_yield_dir, 'rice_yield.tif'))
+    soy_raster.save_raster(os.path.join(
+        observed_yield_dir, 'soy_yield.tif'))
+
+    return observed_yield_dir
+
+
+def create_climate_bin_maps_dir():
+    climate_bin_dir = os.path.join(
+        input_dir, 'spatial_dataset/climate_bin_maps/')
+
+    global_raster_factory = create_global_raster_factory(gdal.GDT_Int32)
+
+    corn_raster = global_raster_factory.alternating(1, 10)
+    rice_raster = global_raster_factory.alternating(1, 10)
+    soy_raster = global_raster_factory.alternating(1, 10)
+
+    corn_raster.save_raster(os.path.join(
+        climate_bin_dir, 'corn_climate_bin.tif'))
+    rice_raster.save_raster(os.path.join(
+        climate_bin_dir, 'rice_climate_bin.tif'))
+    soy_raster.save_raster(os.path.join(
+        climate_bin_dir, 'soy_climate_bin.tif'))
+
+    return climate_bin_dir
 
 
 def create_irrigation_map(aoi_dict):
@@ -87,17 +113,20 @@ def create_fertilizer_map(aoi_dict):
 
 
 def create_fertilizer_maps_dir(aoi_dict):
-    temp_dir = tempfile.mkdtemp()
+    fertilizer_maps_dir = os.path.join(input_dir, 'fertilizer_maps/')
 
     nitrogen_raster = create_fertilizer_map(aoi_dict)
     phosphorous_raster = create_fertilizer_map(aoi_dict)
     potash_raster = create_fertilizer_map(aoi_dict)
 
-    nitrogen_raster.save_raster(os.path.join(temp_dir, 'nitrogen.tif'))
-    phosphorous_raster.save_raster(os.path.join(temp_dir, 'phosphorous.tif'))
-    potash_raster.save_raster(os.path.join(temp_dir, 'potash.tif'))
+    nitrogen_raster.save_raster(os.path.join(
+        fertilizer_maps_dir, 'nitrogen.tif'))
+    phosphorous_raster.save_raster(os.path.join(
+        fertilizer_maps_dir, 'phosphorous.tif'))
+    potash_raster.save_raster(os.path.join(
+        fertilizer_maps_dir, 'potash.tif'))
 
-    return temp_dir
+    return fertilizer_maps_dir
 
 
 def get_args():
@@ -128,23 +157,26 @@ def get_vars_dict():
 
     args = get_args()
 
-    derived_vars = {
+    derived_vars = io.fetch_args(self.args)
+
+    generated_vars = {
         'observed_yield_maps_dir': create_observed_yield_maps_dir(),
         'percentile_yield_tables_dir': os.path.join(
             input_dir, 'climate_percentile_yield'),
-        'percentile_yield_dict': {},
-        'crop_lookup_dict': {},
-        'economics_table_dict': {},
+        'percentile_yield_dict': derived_vars['percentile_yield_dict'],
+        'crop_lookup_dict': derived_vars['crop_lookup_dict'],
+        'economics_table_dict': derived_vars['economics_table_dict'],
         'climate_bin_maps_dir': os.path.join(input_dir, 'climate_bin_maps'),
-        'modeled_fertilizer_maps_dict': {},
+        'modeled_fertilizer_maps_dict': derived_vars[
+            'modeled_fertilizer_maps_dict'],
         'modeled_yield_tables_dir': os.path.join(
             input_dir, 'climate_regression_yield'),
-        'modeled_yield_dict': {},
-        'observed_yields_maps_dict': {},
-        'nutrition_table_dict': {},
-        'climate_bin_maps_dict': {}
+        'modeled_yield_dict': derived_vars['modeled_yield_dict'],
+        'observed_yields_maps_dict': derived_vars['observed_yields_maps_dict'],
+        'nutrition_table_dict': derived_vars['nutrition_table_dict'],
+        'climate_bin_maps_dict': create_climate_bin_maps_dir()
     }
 
-    vars_dict = dict(args.items() + derived_vars.items())
+    vars_dict = dict(args.items() + generated_vars.items())
 
     return vars_dict
