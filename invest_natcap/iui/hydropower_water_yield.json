@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.hydropower.hydropower_water_yield",
   "modelName": "hydropower_water_yield",
   "localDocURI": "../documentation/reservoirhydropowerproduction.html",
-  "height": 900,
+  "height": 685,
   "width": 900,
   "elements": [
     {
