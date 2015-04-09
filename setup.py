@@ -1,9 +1,14 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
-
-from distutils.core import setup
-from distutils.extension import Extension
-from distutils.core import Command
-import distutils.sysconfig
+try:
+    from setuptools.core import setup
+    from setuptools.extension import Extension
+    from setuptools.core import Command
+    import setuptools.sysconfig as sysconfig
+except:
+    from distutils.core import setup
+    from distutils.extension import Extension
+    from distutils.core import Command
+    import distutils.sysconfig as sysconfig
 import platform
 import os
 import sys
@@ -16,7 +21,7 @@ import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
-SITE_PACKAGES = distutils.sysconfig.get_python_lib()
+SITE_PACKAGES = sysconfig.get_python_lib()
 
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(
