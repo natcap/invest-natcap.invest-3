@@ -143,6 +143,23 @@ def fetch_args(args):
     if vars_dict['do_economic_returns']:
         vars_dict = read_economics_table(vars_dict)
 
+    if not os.path.isdir(args['workspace_dir']):
+        try:
+            os.makedirs(args['workspace_dir'])
+        except:
+            LOGGER.error("Cannot create Workspace Directory")
+            raise OSError
+
+    # Create output directory
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    if not os.path.isdir(output_dir):
+        try:
+            os.makedirs(output_dir)
+        except:
+            LOGGER.error("Cannot create Output Directory")
+            raise OSError
+    vars_dict['output_dir'] = output_dir
+
     return vars_dict
 
 
@@ -491,7 +508,7 @@ def fetch_modeled_fertilizer_maps(vars_dict):
     for map_uri in map_uris:
         # could check here to make sure file is raster
 
-        basename = os.path.basename(map_uri)
+        basename = os.path.splitext(os.path.basename(map_uri))[0]
         fertilizer_name = basename.split('_')[0]
         if fertilizer_name in ['nitrogen', 'phosphorous', 'potash']:
             modeled_fertilizer_maps_dict[fertilizer_name] = map_uri
@@ -599,91 +616,3 @@ def _listdir(path):
     uris = map(lambda x: os.path.join(path, x), file_names)
 
     return uris
-
-
-# Temporary Folder Functions
-def setup_tmp(vars_dict):
-    '''
-    Creates temporary folder in workspace to save temporary files and folders
-
-    Args:
-        workspace_dir (str): descr
-
-    Returns:
-        tmp_dir (str): descr
-
-    Example Returns::
-
-        vars_dict = {
-            # ...
-            'tmp_dir': '/path/to/tmp_dir',
-            'tmp_climate_percentile_dir': '/path/to/tmp_climate_percentile_dir',
-            'tmp_climate_regression_dir': '/path/to/tmp_climate_regression_dir',
-            'tmp_observed_dir': '/path/to/tmp_observed_dir',
-        }
-    '''
-    workspace_dir = vars_dict['workspace_dir']
-    tmp_dir = os.path.join(workspace_dir, 'tmp')
-
-    # Remove tmp_dir if exists
-    if os.path.exists(tmp_dir):
-        os.rmdir(tmp_dir)
-
-    # Create tmp_dir
-    os.mkdir(tmp_dir)
-    vars_dict['tmp_dir'] = tmp_dir
-
-    # Create sub-directories
-    sub_dirs = ['climate_percentile',
-                'climate_regression',
-                'observed']
-
-    for i in sub_dirs:
-        filepath = os.path.join(tmp_dir, (i))
-        os.makedirs(filepath)
-        var_name = 'tmp_' + i + '_dir'
-        vars_dict[var_name] = filepath
-
-    return vars_dict
-
-
-def clean_up_tmp(vars_dict):
-    '''
-    Removes temporary folder from workspace
-
-    Args:
-        workspace_dir (str): descr
-        tmp_dir (str): descr
-    '''
-    tmp_dir = vars_dict['tmp_dir']
-    os.rmdir(tmp_dir)
-
-
-# Output Function
-def save_production_maps(vars_dict):
-    '''
-    About
-
-    var_name (type): desc
-
-    Example Args::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-
-    Example Returns::
-
-        vars_dict = {
-            ...
-
-            '': '',
-
-            ...
-        }
-    '''
-    pass

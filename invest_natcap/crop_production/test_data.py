@@ -8,14 +8,16 @@ import gdal
 import crop_production_io as io
 from raster import *
 
-workspace_dir = '../../../test/invest-data/test/data/crop_production/'
-input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
+workspace_dir = '../../test/invest-data/test/data/crop_production/'
+input_dir = '../../test/invest-data/test/data/crop_production/input/'
+# input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
 # AOI Parameters
+pixel_size = 100000
 aoi_dict = {
     'shape': (3, 3),
-    'affine': Affine.identity(),
-    'proj': 32633
+    'affine': Affine(pixel_size, 0, 0, 0, pixel_size, 0),
+    'proj': 32610
 }
 
 
@@ -24,11 +26,15 @@ def create_lulc_map(aoi_dict):
     array = np.ones(aoi_dict['shape'])
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
-    datatype = gdal.GDT_Float64
+    datatype = gdal.GDT_Int16
     nodata_val = -9999.0
 
     # initialize raster
-    return Raster.from_array(array, affine, proj, datatype, nodata_val)
+    r = Raster.from_array(array, affine, proj, datatype, nodata_val)
+
+    lulc_map_uri = os.path.join(input_dir, 'lulc_map.tif')
+    r.save_raster(lulc_map_uri)
+    return lulc_map_uri
 
 
 def create_global_raster_factory(datatype):
@@ -97,7 +103,11 @@ def create_irrigation_map(aoi_dict):
     nodata_val = -1
 
     # initialize raster
-    return Raster.from_array(array, affine, proj, datatype, nodata_val)
+    r = Raster.from_array(array, affine, proj, datatype, nodata_val)
+
+    irrigation_uri = os.path.join(input_dir, 'irrigation.tif')
+    r.save_raster(irrigation_uri)
+    return irrigation_uri
 
 
 def create_fertilizer_map(aoi_dict):
@@ -134,7 +144,7 @@ def get_args():
     args = {
         'workspace_dir': workspace_dir,
         'results_suffix': 'scenario_name',
-        'lulc_map_uri': create_lulc_map(aoi_dict).uri,
+        'lulc_map_uri': create_lulc_map(aoi_dict),
         'crop_lookup_table_uri': os.path.join(
             input_dir, 'crop_lookup_table.csv'),
         'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
@@ -143,7 +153,7 @@ def get_args():
         'do_yield_percentile': True,
         'do_yield_regression_model': True,
         'modeled_fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
-        'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict).uri,
+        'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
         'do_nutrition': True,
         'nutrition_table_uri': os.path.join(input_dir, 'nutrition_table.csv'),
         'do_economic_returns': True,
@@ -157,7 +167,7 @@ def get_vars_dict():
 
     args = get_args()
 
-    derived_vars = io.fetch_args(self.args)
+    derived_vars = io.fetch_args(args)
 
     generated_vars = {
         'observed_yield_maps_dir': create_observed_yield_maps_dir(),
@@ -167,16 +177,20 @@ def get_vars_dict():
         'crop_lookup_dict': derived_vars['crop_lookup_dict'],
         'economics_table_dict': derived_vars['economics_table_dict'],
         'climate_bin_maps_dir': os.path.join(input_dir, 'climate_bin_maps'),
-        'modeled_fertilizer_maps_dict': derived_vars[
-            'modeled_fertilizer_maps_dict'],
         'modeled_yield_tables_dir': os.path.join(
             input_dir, 'climate_regression_yield'),
         'modeled_yield_dict': derived_vars['modeled_yield_dict'],
         'observed_yields_maps_dict': derived_vars['observed_yields_maps_dict'],
         'nutrition_table_dict': derived_vars['nutrition_table_dict'],
-        'climate_bin_maps_dict': create_climate_bin_maps_dir()
+        'climate_bin_maps_dir': create_climate_bin_maps_dir(),
+        'output_dir': derived_vars['output_dir']
     }
 
     vars_dict = dict(args.items() + generated_vars.items())
+
+    derived_vars = io.fetch_args(args)
+    for i in derived_vars.keys():
+        if i not in vars_dict.keys():
+            vars_dict[i] = derived_vars[i]
 
     return vars_dict

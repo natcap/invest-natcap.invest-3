@@ -4,13 +4,18 @@ The Crop Production Model module contains functions for running the model
 
 import os
 import logging
+import pprint
+import gdal
 
 from raster import Raster, RasterFactory
+from vector import Vector
 import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+pp = pprint.PrettyPrinter(indent=4)
 
 
 def create_yield_func_output_folder(vars_dict, folder_name):
@@ -26,20 +31,22 @@ def create_yield_func_output_folder(vars_dict, folder_name):
 
     Output:
         .
-        |-- [yield_func]
+        |-- [yield_func]_[results_suffix]
             |-- production
 
     '''
     if vars_dict['results_suffix']:
         folder_name = folder_name + '_' + vars_dict['results_suffix']
     output_yield_func_dir = os.path.join(vars_dict['output_dir'], folder_name)
-    os.makedirs(output_yield_func_dir)
+    if not os.path.exists(output_yield_func_dir):
+        os.makedirs(output_yield_func_dir)
     vars_dict['output_yield_func_dir'] = output_yield_func_dir
 
     if vars_dict['create_crop_production_maps']:
         output_production_maps_dir = os.path.join(
             output_yield_func_dir, 'crop_production_maps')
-        os.makedirs(output_production_maps_dir)
+        if not os.path.exists(output_production_maps_dir):
+            os.makedirs(output_production_maps_dir)
         vars_dict['output_production_maps_dir'] = output_production_maps_dir
 
     return vars_dict
@@ -73,99 +80,105 @@ def calc_observed_yield(vars_dict):
             },
         }
     '''
+    # pp.pprint(vars_dict)
     vars_dict = create_yield_func_output_folder(
         vars_dict, "observed_yield")
 
     crop_production_dict = {}
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
-    aoi_vector = lulc_raster.get_aoi_as_vector()
+    aoi_vector = Vector.from_shapely(
+        lulc_raster.get_aoi(), lulc_raster.get_projection())
     economics_table = vars_dict['economics_table_dict']
     if vars_dict['do_economic_returns']:
-        revenue_raster = None  # ALL ZEROS
+        revenue_raster = lulc_raster.change_datatype_and_nodata(gdal.GDT_Float32, -1.0)
 
     for crop in vars_dict['observed_yields_maps_dict'].keys():
         # Wrangle Data...
         crop_observed_yield_raster = Raster.from_file(
             vars_dict['observed_yields_maps_dict'][crop])
 
-        reprojected_aoi = aoi_vector.reproject(
+        reproj_aoi_vector = aoi_vector.reproject(
             crop_observed_yield_raster.get_projection())
 
         clipped_crop_raster = crop_observed_yield_raster.clip(
-            reprojected_aoi.uri)
+            reproj_aoi_vector.uri)
+        print clipped_crop_raster.get_band(1)
 
-        reproj_crop_raster = clipped_crop_raster.reproject(
-            lulc_raster.get_projection(), 'nearest')
+        # print clipped_crop_raster
 
-        aligned_crop_raster = reproj_crop_raster.align_to(
-            lulc_raster, 'nearest')
+        # reproj_crop_raster = clipped_crop_raster.reproject(
+        #     lulc_raster.get_projection(), 'nearest')
 
-        reclass_table = {}
-        for key in vars_dict['observed_yields_maps_dict'].keys():
-            reclass_table[key] = 0.0
-        reclass_table[crop] = 1.0
-        reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
+        # aligned_crop_raster = reproj_crop_raster.align_to(
+        #     lulc_raster, 'nearest')
 
-        # Operations as Noted in User's Guide...
-        ObservedLocalYield_raster = reclassed_lulc_raster * aligned_crop_raster
-        ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
-        Production_raster = ObservedLocalYield_raster * ha_per_cell
+        # reclass_table = {}
+        # for key in vars_dict['observed_yields_maps_dict'].keys():
+        #     reclass_table[key] = 0.0
+        # reclass_table[crop] = 1.0
+        # reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
+        # print reclassed_lulc_raster
 
-        if vars_dict['create_crop_production_maps']:
-            filename = crop + '_production_map.tif'
-            dst_uri = os.path.join(vars_dict[
-                'output_production_maps_dir'], filename)
-            Production_raster.save_raster(dst_uri)
+    #     # Operations as Noted in User's Guide...
+    #     ObservedLocalYield_raster = reclassed_lulc_raster * aligned_crop_raster
+    #     ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
+    #     Production_raster = ObservedLocalYield_raster * ha_per_cell
 
-        ProductionTotal_float = Production_raster.get_band(1).sum()
-        crop_production_dict[crop] = ProductionTotal_float
+    #     if vars_dict['create_crop_production_maps']:
+    #         filename = crop + '_production_map.tif'
+    #         dst_uri = os.path.join(vars_dict[
+    #             'output_production_maps_dir'], filename)
+    #         Production_raster.save_raster(dst_uri)
 
-        if vars_dict['do_economic_returns']:
-            revenue_raster += calc_crop_revenue(
-                Production_raster,
-                economics_table[crop])
+    #     ProductionTotal_float = Production_raster.get_band(1).sum()
+    #     crop_production_dict[crop] = ProductionTotal_float
 
-        # Clean Up Rasters...
-        del reprojected_aoi
-        del crop_observed_yield_raster
-        del clipped_crop_raster
-        del reproj_crop_raster
-        del aligned_crop_raster
-        del reclassed_lulc_raster
-        del ObservedLocalYield_raster
-        del Production_raster
+    #     if vars_dict['do_economic_returns']:
+    #         revenue_raster += _calc_crop_revenue(
+    #             Production_raster,
+    #             economics_table[crop])
 
-    vars_dict['crop_production_dict'] = crop_production_dict
+    #     # Clean Up Rasters...
+    #     del reprojected_aoi
+    #     del crop_observed_yield_raster
+    #     del clipped_crop_raster
+    #     del reproj_crop_raster
+    #     del aligned_crop_raster
+    #     del reclassed_lulc_raster
+    #     del ObservedLocalYield_raster
+    #     del Production_raster
 
-    # Economics map
-    if vars_dict['do_economic_returns']:
-        cost_per_ton_input_raster = 0
-        if vars_dict['modeled_fertilizer_maps_dir']:
-            cost_per_ton_input_raster = calc_cost_of_per_ton_inputs(
-                vars_dict, lulc_raster)
+    # vars_dict['crop_production_dict'] = crop_production_dict
 
-        cost_per_hectare_input_raster = calc_cost_of_per_hectare_inputs()
+    # # Economics map
+    # if vars_dict['do_economic_returns']:
+    #     cost_per_ton_input_raster = 0
+    #     if vars_dict['modeled_fertilizer_maps_dir']:
+    #         cost_per_ton_input_raster = _calc_cost_of_per_ton_inputs(
+    #             vars_dict, lulc_raster)
 
-        cost_raster = cost_per_hectare_input_raster + cost_per_ton_input_raster
-        economic_returns_raster = revenue_raster - cost_raster
+    #     cost_per_hectare_input_raster = _calc_cost_of_per_hectare_inputs()
 
-        economic_returns_map_uri = os.path.join(
-            vars_dict['output_yield_func_dir'], 'economic_returns_map.tif')
-        economic_returns_raster.save_raster(economic_returns_map_uri)
+    #     cost_raster = cost_per_hectare_input_raster + cost_per_ton_input_raster
+    #     economic_returns_raster = revenue_raster - cost_raster
 
-        del economic_returns_raster
-        del cost_per_ton_input_raster
-        del cost_per_hectare_input_raster
-        del cost_raster
-        del revenue_raster
+    #     economic_returns_map_uri = os.path.join(
+    #         vars_dict['output_yield_func_dir'], 'economic_returns_map.tif')
+    #     economic_returns_raster.save_raster(economic_returns_map_uri)
 
-    # Results Table
-    create_results_table(vars_dict)
+    #     del economic_returns_raster
+    #     del cost_per_ton_input_raster
+    #     del cost_per_hectare_input_raster
+    #     del cost_raster
+    #     del revenue_raster
+
+    # # Results Table
+    # create_results_table(vars_dict)
 
     return vars_dict
 
 
-def calc_cost_of_per_ton_inputs():
+def _calc_cost_of_per_ton_inputs():
     '''
     sum_across_fert(FertAppRate_fert * LULCCropCellArea * CostPerTon_fert)
 
@@ -176,12 +189,16 @@ def calc_cost_of_per_ton_inputs():
         }
     '''
     pass
-def calc_cost_of_per_hectare_inputs():
+
+
+def _calc_cost_of_per_hectare_inputs():
     '''
 
     '''
     pass
-def calc_crop_revenue(): pass
+
+
+def _calc_crop_revenue(): pass
 
 
 def calc_percentile_yield(vars_dict):

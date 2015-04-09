@@ -6,14 +6,16 @@ import unittest
 import os
 import pprint
 import tempfile
+import shutil
 
 import gdal
 from numpy import testing
 import numpy as np
 from affine import Affine
 
-from ..raster import Raster, RasterFactory
 import crop_production_model as model
+from raster import Raster, RasterFactory
+import test_data
 
 workspace_dir = '../../test/invest-data/test/data/crop_production/'
 input_dir = '../../test/invest-data/test/data/crop_production/input/'
@@ -40,10 +42,11 @@ class TestCreateYieldFuncOutputFolder(unittest.TestCase):
         corn_observed = global_raster_factory.horizontal_ramp(1.0, 10.0)
 
         self.vars_dict = {
-            'output_dir': tempfile.mkdtemp(),
-            'results_suffix': 'scenario1',
+            'output_dir': os.path.join(workspace_dir, 'output'),
+            'results_suffix': 'test_output_folder_generation',
             'create_crop_production_maps': True,
         }
+        # self.output_yield_func_dir = None
 
     def test_run1(self):
         guess = model.create_yield_func_output_folder(
@@ -51,6 +54,11 @@ class TestCreateYieldFuncOutputFolder(unittest.TestCase):
 
         assert(os.path.exists(guess['output_yield_func_dir']))
         assert(os.path.exists(guess['output_production_maps_dir']))
+
+        self.output_yield_func_dir = guess['output_yield_func_dir']
+
+    def tearDown(self):
+        shutil.rmtree(self.output_yield_func_dir)
 
 
 class TestCreateResultsTableObserved(unittest.TestCase):
@@ -82,33 +90,27 @@ class TestCreateResultsTableObserved(unittest.TestCase):
             'climate_bin_maps_dict': {},
             'results_suffix': 'scenario_1',
             'nutrition_table_uri': 'path/to/file',
-            'do_yield_percentile': True
+            'do_yield_percentile': True,
+            'output_dir': os.path.join(workspace_dir, 'output')
         }
 
     def test_run1(self):
-        guess = model.create_yield_func_output_folder(self.vars_dict, 'observed')
+        guess = model.create_results_table(self.vars_dict)
         pass
 
 
 class TestCalcObservedYield(unittest.TestCase):
     def setUp(self):
-        self.vars_dict = {
-            'lulc_map_uri': os.path.join(input_dir, 'lulc_map.tif'),
-            'crop_lookup_dict': {
-                1: 'corn',
-            },
-            'observed_yields_maps_dict': {
-                'corn': os.path.join(  # global raster of 5's
-                    input_dir,
-                    'spatial_dataset/observed_yield/corn_yield_map.tif'),
-            },
-            'tmp_observed_dir': tempfile.mkdtemp(),
-        }
+        self.vars_dict = test_data.get_vars_dict()
+        self.output_dir = self.vars_dict['output_dir']
 
     def test_run1(self):
-        guess = model.calc_observed_yield(self.vars_dict, 'observed')
-        pass
+        guess = model.calc_observed_yield(self.vars_dict)
 
+
+    def tearDown(self):
+        # shutil.rmtree(self.output_dir)
+        pass
 
 if __name__ == '__main__':
     unittest.main()

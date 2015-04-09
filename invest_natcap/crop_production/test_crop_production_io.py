@@ -18,7 +18,7 @@ input_dir = os.path.join(workspace_dir, 'input')
 pp = pprint.PrettyPrinter(indent=4)
 
 
-class TestIOReadCropLookupTable(unittest.TestCase):
+class TestReadCropLookupTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'crop_lookup_table_uri': os.path.join(
@@ -33,7 +33,7 @@ class TestIOReadCropLookupTable(unittest.TestCase):
         assert(all(map(lambda x: (type(x) is int), keys)))
 
 
-class TestIOReadNutritionTable(unittest.TestCase):
+class TestReadNutritionTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'nutrition_table_uri': os.path.join(
@@ -47,7 +47,7 @@ class TestIOReadNutritionTable(unittest.TestCase):
         assert(type(nutrition_table_dict[keys[0]]['energy']) in [float, int])
 
 
-class TestIOReadEconomicsTable(unittest.TestCase):
+class TestReadEconomicsTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'economics_table_uri': os.path.join(
@@ -61,7 +61,7 @@ class TestIOReadEconomicsTable(unittest.TestCase):
         assert(type(economics_table_dict[keys[0]]['price']) in [float, int])
 
 
-class TestIOReadPercentileYieldTables(unittest.TestCase):
+class TestReadPercentileYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'percentile_yield_tables_dir': os.path.join(
@@ -78,7 +78,7 @@ class TestIOReadPercentileYieldTables(unittest.TestCase):
         assert(type(percentile_table_dict[keys[0]][1]['yield_25th']) in [float, int])
 
 
-class TestIOReadRegressionModelYieldTables(unittest.TestCase):
+class TestReadRegressionModelYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'modeled_yield_tables_dir': os.path.join(input_dir, 'spatial_dataset/climate_regression_yield/'),
@@ -93,7 +93,7 @@ class TestIOReadRegressionModelYieldTables(unittest.TestCase):
         assert(type(modeled_yield_dict[keys[0]][1]['yield_ceiling']) in [float, int])
 
 
-class TestIOFetchObservedYieldMaps(unittest.TestCase):
+class TestFetchObservedYieldMaps(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'observed_yield_maps_dir': os.path.join(
@@ -108,7 +108,7 @@ class TestIOFetchObservedYieldMaps(unittest.TestCase):
         assert(type(observed_yield_maps_dict[keys[0]]) is str)
 
 
-class TestIOFetchClimateBinMaps(unittest.TestCase):
+class TestFetchClimateBinMaps(unittest.TestCase):
     def setUp(self):
         # Create Spatial Dataset Directory
 
@@ -124,7 +124,7 @@ class TestIOFetchClimateBinMaps(unittest.TestCase):
         assert(type(climate_bin_maps_dict[keys[0]]) is str)
 
 
-class TestIOFetchSpatialDataset(unittest.TestCase):
+class TestFetchSpatialDataset(unittest.TestCase):
     def setUp(self):
         # Create Spatial Dataset Directory
 
@@ -145,7 +145,7 @@ class TestIOFetchSpatialDataset(unittest.TestCase):
         assert('percentile_yield_dict' in keys)
 
 
-class TestIOFetchModeledFertilizerMaps(unittest.TestCase):
+class TestFetchModeledFertilizerMaps(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'modeled_fertilizer_maps_dir':  os.path.join(
@@ -159,35 +159,13 @@ class TestIOFetchModeledFertilizerMaps(unittest.TestCase):
         assert(type(modeled_fertilizer_maps_dict[keys[0]]) is str)
 
 
-class TestIOFetchArgs(unittest.TestCase):
+class TestFetchArgs(unittest.TestCase):
     def setUp(self):
-        # self.args = {
-        #     'workspace_dir': workspace_dir,
-        #     'results_suffix': 'scenario_name',
-        #     'lulc_map_uri': os.path.join(input_dir, 'lulc_map.tif'),
-        #     'crop_lookup_table_uri': os.path.join(
-        #         input_dir, 'crop_lookup_table.csv'),
-        #     'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
-        #     'create_crop_production_maps': True,
-        #     'do_yield_observed': True,
-        #     'do_yield_percentile': True,
-        #     'do_yield_regression_model': True,
-        #     'modeled_fertilizer_maps_dir': os.path.join(
-        #         input_dir, 'fertilizer_maps'),
-        #     'modeled_irrigation_map_uri':  os.path.join(
-        #         input_dir, 'irrigation_map.tif'),
-        #     'do_nutrition': True,
-        #     'nutrition_table_uri': os.path.join(
-        #         input_dir, 'nutrition_table.csv'),
-        #     'do_economic_returns': True,
-        #     'economics_table_uri': os.path.join(
-        #         input_dir, 'economics_table.csv'),
-        # }
         self.args = test_data.get_args()
 
     def test_fetch_args(self):
         guess = io.fetch_args(self.args)
-        pp.pprint(guess)
+        # pp.pprint(guess)
         keys = guess.keys()
         assert('percentile_yield_dict' in keys)
         assert('observed_yields_maps_dict' in keys)
@@ -200,48 +178,6 @@ class TestIOFetchArgs(unittest.TestCase):
         # pp.pprint(l)
 
 
-# class TestIOSetupTmp(unittest.TestCase):
-#     def setUp(self):
-#         workspace_dir = tempfile.mkdtemp()
-#         os.mkdir(os.path.join(workspace_dir, 'tmp'))
-
-#         self.vars_dict = {
-#             'workspace_dir': workspace_dir
-#         }
-
-#     def test_run(self):
-#         guess = io.setup_tmp(self.vars_dict)
-#         # pp.pprint(guess)
-#         tmp_dir = guess['tmp_dir']
-#         assert(os.path.basename(tmp_dir) == 'tmp')
-
-
-# class TestIOCleanUpTmp(unittest.TestCase):
-#     def setUp(self):
-#         workspace_dir = tempfile.mkdtemp()
-#         tmp_dir = os.path.join(workspace_dir, 'tmp')
-#         os.mkdir(tmp_dir)
-
-#         self.vars_dict = {
-#             'workspace_dir': workspace_dir,
-#             'tmp_dir': tmp_dir
-#         }
-
-#     def test_run(self):
-#         io.clean_up_tmp(self.vars_dict)
-#         # pp.pprint(self.vars_dict)
-#         assert(not os.path.exists(self.vars_dict['tmp_dir']))
-
-
-# class TestIOCreateOutputs(unittest.TestCase):
-#     def setUp(self):
-#         self.vars_dict = {
-
-#         }
-
-#     def test_run(self):
-#         guess = io.create_outputs(self.vars_dict)
-#         pp.pprint(guess)
-
 if __name__ == '__main__':
+    test_data.get_vars_dict()
     unittest.main()
