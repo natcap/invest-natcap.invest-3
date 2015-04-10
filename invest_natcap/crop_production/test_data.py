@@ -16,7 +16,7 @@ input_dir = '../../test/invest-data/test/data/crop_production/input/'
 pixel_size = 100000
 aoi_dict = {
     'shape': (3, 3),
-    'affine': Affine(pixel_size, 0, 0, 0, pixel_size, 0),
+    'affine': Affine(pixel_size, 0, 0, 0, -pixel_size, pixel_size*3),
     'proj': 32610
 }
 
@@ -24,6 +24,9 @@ aoi_dict = {
 def create_lulc_map(aoi_dict):
     # set arguments
     array = np.ones(aoi_dict['shape'])
+    array[0] = 1
+    array[1] = 2
+    array[2] = 3
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int16

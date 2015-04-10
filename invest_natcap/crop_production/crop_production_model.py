@@ -100,29 +100,44 @@ def calc_observed_yield(vars_dict):
         reproj_aoi_vector = aoi_vector.reproject(
             crop_observed_yield_raster.get_projection())
 
+        ### NEED WORK HERE - want to get any pixel touching aoi
         clipped_crop_raster = crop_observed_yield_raster.clip(
             reproj_aoi_vector.uri)
-        print clipped_crop_raster.get_band(1)
+        ####################
 
         # print clipped_crop_raster
 
-        # reproj_crop_raster = clipped_crop_raster.reproject(
-        #     lulc_raster.get_projection(), 'nearest')
+        reproj_crop_raster = clipped_crop_raster.reproject(
+            lulc_raster.get_projection(), 'nearest', lulc_raster.get_affine().a)
 
-        # aligned_crop_raster = reproj_crop_raster.align_to(
-        #     lulc_raster, 'nearest')
+        # print reproj_crop_raster
 
-        # reclass_table = {}
-        # for key in vars_dict['observed_yields_maps_dict'].keys():
-        #     reclass_table[key] = 0.0
-        # reclass_table[crop] = 1.0
-        # reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
+        aligned_crop_raster = reproj_crop_raster.align_to(
+            revenue_raster, 'nearest')
+
+        # print aligned_crop_raster
+
+        crop_lookup_dict = vars_dict['crop_lookup_dict']
+        inv_crop_lookup_dict = {v: k for k, v in crop_lookup_dict.items()}
+        # print inv_crop_lookup_dict
+
+        reclass_table = {}
+        for key in vars_dict['observed_yields_maps_dict'].keys():
+            reclass_table[inv_crop_lookup_dict[key]] = 0
+        reclass_table[inv_crop_lookup_dict[crop]] = 1
+
+        reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
+        masked_lulc_raster = reclassed_lulc_raster.change_datatype_and_nodata(
+            gdal.GDT_Float32, aligned_crop_raster.get_nodata(1))
+
         # print reclassed_lulc_raster
 
-    #     # Operations as Noted in User's Guide...
-    #     ObservedLocalYield_raster = reclassed_lulc_raster * aligned_crop_raster
-    #     ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
-    #     Production_raster = ObservedLocalYield_raster * ha_per_cell
+        # Operations as Noted in User's Guide...
+        ObservedLocalYield_raster = masked_lulc_raster * aligned_crop_raster
+        # ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
+        # Production_raster = ObservedLocalYield_raster * ha_per_cell
+
+        print ObservedLocalYield_raster
 
     #     if vars_dict['create_crop_production_maps']:
     #         filename = crop + '_production_map.tif'

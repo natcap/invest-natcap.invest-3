@@ -490,7 +490,7 @@ class Raster(object):
 
         return Raster.from_tempfile(dataset_out_uri)
 
-    def reproject(self, proj, resample_method, pixel_size=None):
+    def reproject(self, proj, resample_method, pixel_size):
         if pixel_size is None:
             pixel_size = self.get_affine().a
 
