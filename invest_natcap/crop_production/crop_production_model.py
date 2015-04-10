@@ -133,35 +133,39 @@ def calc_observed_yield(vars_dict):
         # print reclassed_lulc_raster
 
         # Operations as Noted in User's Guide...
+        ha_per_m2 = 0.0001
         ObservedLocalYield_raster = masked_lulc_raster * aligned_crop_raster
-        # ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
-        # Production_raster = ObservedLocalYield_raster * ha_per_cell
+        ha_per_cell = ObservedLocalYield_raster.get_cell_area() * ha_per_m2  # or pass units into raster method?
+        Production_raster = ObservedLocalYield_raster * ha_per_cell
 
-        print ObservedLocalYield_raster
+        # print Production_raster
 
-    #     if vars_dict['create_crop_production_maps']:
-    #         filename = crop + '_production_map.tif'
-    #         dst_uri = os.path.join(vars_dict[
-    #             'output_production_maps_dir'], filename)
-    #         Production_raster.save_raster(dst_uri)
+        if vars_dict['create_crop_production_maps']:
+            filename = crop + '_production_map.tif'
+            dst_uri = os.path.join(vars_dict[
+                'output_production_maps_dir'], filename)
+            Production_raster.save_raster(dst_uri)
 
-    #     ProductionTotal_float = Production_raster.get_band(1).sum()
-    #     crop_production_dict[crop] = ProductionTotal_float
+        ProductionTotal_float = Production_raster.get_band(1).sum()
+        crop_production_dict[crop] = ProductionTotal_float
 
-    #     if vars_dict['do_economic_returns']:
-    #         revenue_raster += _calc_crop_revenue(
-    #             Production_raster,
-    #             economics_table[crop])
+        # print crop_production_dict
 
-    #     # Clean Up Rasters...
-    #     del reprojected_aoi
-    #     del crop_observed_yield_raster
-    #     del clipped_crop_raster
-    #     del reproj_crop_raster
-    #     del aligned_crop_raster
-    #     del reclassed_lulc_raster
-    #     del ObservedLocalYield_raster
-    #     del Production_raster
+        if vars_dict['do_economic_returns']:
+            revenue_raster += _calc_crop_revenue(
+                Production_raster,
+                economics_table[crop])
+
+        print revenue_raster
+
+        # Clean Up Rasters...
+        del crop_observed_yield_raster
+        del clipped_crop_raster
+        del reproj_crop_raster
+        del aligned_crop_raster
+        del reclassed_lulc_raster
+        del ObservedLocalYield_raster
+        del Production_raster
 
     # vars_dict['crop_production_dict'] = crop_production_dict
 
@@ -193,17 +197,40 @@ def calc_observed_yield(vars_dict):
     return vars_dict
 
 
-def _calc_cost_of_per_ton_inputs():
+def _calc_crop_revenue(production_raster, economics_table):
     '''
-    sum_across_fert(FertAppRate_fert * LULCCropCellArea * CostPerTon_fert)
-
-    Example Args::
-
-        args = {
-
-        }
+    Revenue_crop = Production_crop * Price_crop
     '''
     pass
+
+
+def _calc_cost_of_per_ton_inputs(revenue_raster, fert_maps_dict, economics_table_crop):
+    '''
+    sum_across_fert(FertAppRate_fert * LULCCropCellArea * CostPerTon_fert)
+    '''
+    CostPerTonInputTotal_raster = revenue_raster * 0
+    try:
+        cost_nitrogen_per_ton = economics_table_crop['cost_nitrogen_per_ton']
+        Nitrogen_raster = Raster.from_file(fert_maps_dict['nitrogen'])
+        NitrogenCost_raster = Nitrogen_raster * cost_nitrogen_per_ton
+        CostPerTonInputTotal_raster += NitrogenCost_raster
+    except:
+        pass
+    try:
+        cost_phosphorous_per_ton = economics_table_crop['cost_phosphorous_per_ton']
+        PhosphorousCost_raster = Phosphorous_raster * cost_phosphorous_per_ton
+        CostPerTonInputTotal_raster += PhosphorousCost_raster
+    except:
+        pass
+    try:
+        cost_potash_per_ton = economics_table_crop['cost_potash_per_ton']
+        Potash_raster = Raster.from_file(fert_maps_dict['potash'])
+        PotashCost_raster = Potash_raster * cost_potash_per_ton
+        CostPerTonInputTotal_raster += PotashCost_raster
+    except:
+        pass
+
+    return CostPerTonInputTotal_raster
 
 
 def _calc_cost_of_per_hectare_inputs():
@@ -212,8 +239,12 @@ def _calc_cost_of_per_hectare_inputs():
     '''
     pass
 
+def _calc_returns():
+    '''
+    Cost_crop = CostPerTonTotalInput_crop + CostPerHectareInputTotal_crop
+    Returns_crop = Revenue_crop - Cost_crop
 
-def _calc_crop_revenue(): pass
+    '''
 
 
 def calc_percentile_yield(vars_dict):

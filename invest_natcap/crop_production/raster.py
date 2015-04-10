@@ -373,7 +373,8 @@ class Raster(object):
         # outLayer.CreateFeature(outFeature)
 
     def get_cell_area(self):
-        raise NotImplementedError
+        affine = self.get_affine()
+        return abs((affine.a * affine.e))
 
     def set_band(self, masked_array):
         '''Currently works for rasters with only one band'''
@@ -490,7 +491,7 @@ class Raster(object):
 
         return Raster.from_tempfile(dataset_out_uri)
 
-    def reproject(self, proj, resample_method, pixel_size):
+    def reproject(self, proj, resample_method, pixel_size=None):
         if pixel_size is None:
             pixel_size = self.get_affine().a
 
