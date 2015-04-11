@@ -342,7 +342,7 @@ def _compute_cell_area_ha(args):
         cell_area_in_scenario = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri) ** 2
 
         if abs(cell_area_cur - cell_area_in_scenario) <= sys.float_info.epsilon:
-            raise Exception(
+            LOGGER.warn(
                 'The LULC map for the %s scenario has a different cell area '
                 'than the LULC map for the current scenario. Please '
                 'ensure that all LULC maps have the same cell area.' % scenario)
