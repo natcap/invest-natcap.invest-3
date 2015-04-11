@@ -1,5 +1,6 @@
 """InVEST Carbon biophysical module at the "uri" level"""
 
+import sys
 import os
 import math
 import logging
@@ -340,7 +341,7 @@ def _compute_cell_area_ha(args):
 
         cell_area_in_scenario = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri) ** 2
 
-        if cell_area_cur != cell_area_in_scenario:
+        if abs(cell_area_cur - cell_area_in_scenario) <= sys.float_info.epsilon:
             raise Exception(
                 'The LULC map for the %s scenario has a different cell area '
                 'than the LULC map for the current scenario. Please '
