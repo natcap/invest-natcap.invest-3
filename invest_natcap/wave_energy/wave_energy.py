@@ -1,6 +1,4 @@
 """InVEST Wave Energy Model Core Code"""
-import sys
-import array
 import heapq
 import math
 import os
@@ -13,11 +11,9 @@ import numpy as np
 from osgeo import gdal
 import osgeo.osr as osr
 from osgeo import ogr
-from scipy import stats
 from bisect import bisect
 import scipy
 
-from invest_natcap.dbfpy import dbf
 import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
