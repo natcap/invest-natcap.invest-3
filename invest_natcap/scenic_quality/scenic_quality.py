@@ -388,6 +388,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         arg_max = np.argsort(remove_events).astype(np.int64)
         arg_center = np.argsort(center_events).astype(np.int64)
 
+        # Debug -- Testing the new memory efficient algorithm
+        scenic_quality_cython_core.memory_efficient_event_stream(viewshed_shape, \
+            v, max_dist)
+
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
         J += col_min

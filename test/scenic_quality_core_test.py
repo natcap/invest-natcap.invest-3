@@ -977,8 +977,8 @@ class TestScenicQuality(unittest.TestCase):
         computed_band = computed_raster.GetRasterBand(1)
         computed_array = computed_band.ReadAsArray()
         difference = np.sum(np.absolute(reference_array - computed_array))
-        #if difference:
-        #    computed_band.WriteArray(reference_array - computed_array)
+        if difference:
+            computed_band.WriteArray(reference_array - computed_array)
         message = "Computed viewshed " + computed_uri + \
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)

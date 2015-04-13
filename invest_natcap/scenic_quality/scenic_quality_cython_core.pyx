@@ -19,6 +19,196 @@ cdef extern from "stdlib.h":
     void* malloc(size_t size)
     void free(void* ptr)
 
+def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
+    """Create a memory efficient event stream for cell addition/removal.
+    
+        Inputs:
+            -array_shape: a shape tuple (rows, cols) as is created from
+                calling numpy.ndarray.shape()
+            -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
+            where the sweep line originates
+            -max_dist: maximum viewing distance in pixels
+            
+        returns a uri to an hdf5 file that contains the cell addition/removal
+            event stream.
+    """
+    cdef:
+        # constants
+        double pi = 3.141592653589793238462643
+        double two_pi = 2. * pi
+        double max_dist_sq = max_dist**2 if max_dist >= 0 else 1000000000
+        # viewpoint coordinates
+        int viewpoint_row = viewpoint_coords[0]
+        int viewpoint_col = viewpoint_coords[1]
+        # vector from viewpoint to currently processed cell
+        int viewpoint_to_cell_row
+        int viewpoint_to_cell_col
+        # array sizes
+        int array_rows = array_shape[0]
+        int array_cols = array_shape[1]
+        # Number of cells processed
+        int cell_count = 0
+        # This array stores the offset coordinates to recover the first 
+        # and last corners of a cell reached by the sweep line. Since the 
+        # line sweeps from angle 0 to angle 360, the first corner 
+        # is associated with the lowest sweep line angle (min angle), and the
+        # last corner with the highest angle (max angle). 
+        # Each group of 4 values is the coordinate of a pair of points 
+        # that sit on the cell corners associated to the lowest and highest 
+        # angles. These corners change depending on the quadrant 
+        # (angular sector) the point is in:
+        # -row 0: cell centers at angle a = 0 (east of viewpoint)
+        # -row 1: cell centers at angle 0 < a < 90
+        # -row 2: cell centers at angle a = 90 (north of viewpoint)
+        # -row 3: cell centers at angle 90 < a < 180
+        # -row 4: cell centers at angle a = 180 (west of viewpoint)
+        # -row 5: cell centers at angle 180 < a < 270
+        # -row 6: cell centers at angle a = 270 (south of viewpoint)
+        # -row 7: cell centers at angle 270 < a < 360
+        # The 4 values encode 2 pairs of offsets:
+        #   -first 2 values: [row, col] first corner offset coordinates 
+        #   -last 2 values: [row, col] last corner offset coordinates 
+        double *extreme_cell_points = [ \
+        0.5, -0.5, -0.5, -0.5, \
+        0.5, 0.5, -0.5, -0.5, \
+        0.5, 0.5, 0.5, -0.5, \
+        -0.5, 0.5, 0.5, -0.5, \
+        -0.5, 0.5, 0.5, 0.5, \
+        -0.5, -0.5, 0.5, 0.5, \
+        -0.5, -0.5, -0.5, 0.5, \
+        0.5, -0.5, -0.5, 0.5]
+        np.float64_t angle = 0.
+        # constants for fast axess of extreme_cell_points
+        size_t SECTOR_SIZE = 4 # 4 values in a row
+        size_t POINT_SIZE = 2 # 2 coordinates per point per point
+        size_t min_point_id # first corner base index
+        size_t max_point_id # last corner base index
+        # row of the first corner met by the sweep line
+        double min_corner_row
+        double min_corner_col
+        # row of the last corner met by the sweep line
+        double max_corner_row
+        double max_corner_col
+        # offset from the cell center to the first corner
+        double min_corner_offset_row
+        double min_corner_offset_col
+        # offset from the cell center to the last corner
+        double max_corner_offset_row
+        double max_corner_offset_col
+        
+        # variables used in the loop
+        int cell_id = 0 # processed cell counter
+        np.int32_t row # row counter
+        np.int32_t col # column counter
+        int sector # current sector
+
+
+        # Uppes bound of the array size of the largest possible viewshed area
+        int *max_size = \
+            [2*min(max_dist, array_shape[0]), 2*min(max_dist, array_shape[1])]
+
+    # Create an hdf5 intermediate file to store the line's active pixels:
+#    print('------------------- CWD:', os.getcwd(), '-------------------------')
+    active_pixels_file_path = 'active_pixels.h5'
+    f = h5py.File(active_pixels_file_path, 'w')
+    dataset = f.create_dataset('active_pixels', \
+        (max_size[0] + max_size[1], 2*max_dist), \
+        compression = 'gzip', fillvalue = -1)
+
+    # 1-Draw horizontal line from center to edge of visible area
+    # 2-Add fringe line above it
+    # 3-Until there are no more angles to process:
+    # 4-Find fringe pixel from focal point
+    # 5-Until there are no more fringe pixels:
+    #   5.1-Check if fringe pixel should be an active pixel
+    #   5.2-If fringe pixel should be an active pixel:
+    #       5.2.1-Extract neighboring pixels
+    #       5.2.2-Mark as fringe pixels (if not too far)
+    #   5.3-Move to next fringe pixel + see if not too far
+    # 6-Move on to next angle
+
+    f.close()
+
+    os.remove(active_pixels_file_path)
+
+    return
+
+    # Count size of arrays before allocating
+    # Loop through the rows
+    for row in range(array_rows):
+        viewpoint_to_cell_row = row - viewpoint_row
+        # Loop through the columns    
+        for col in range(array_cols):
+            viewpoint_to_cell_col = col - viewpoint_col
+            # Skip if cell is too far
+            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
+            if d > max_dist_sq:
+                continue
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint_row) and (col == viewpoint_col):
+                continue
+            cell_count += 1
+    # Allocate the arrays
+    min_angles = np.ndarray(cell_count, dtype = np.float64)
+    angles = np.ndarray(cell_count, dtype = np.float64)
+    max_angles = np.ndarray(cell_count, dtype = np.float64)
+    I = np.ndarray(cell_count, dtype = np.int32)
+    J = np.ndarray(cell_count, dtype = np.int32)
+
+
+    # Fill out the arrays
+    # Loop through the rows
+    for row in range(array_rows):
+        viewpoint_to_cell_row = row - viewpoint_row
+        # Loop through the columns    
+        for col in range(array_cols):
+            viewpoint_to_cell_col = col - viewpoint_col
+            # Skip if cell is too far
+            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
+            if d > max_dist_sq:
+                continue
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint_row) and (col == viewpoint_col):
+                continue
+            # cell coordinates
+            # Update list of rows and list of cols
+            I[cell_id] = row
+            J[cell_id] = col
+            # Compute the angle of the cell center
+            angle = <np.float64_t>(atan2(-(row - viewpoint_row), col - viewpoint_col) + \
+                two_pi) % two_pi
+            angles[cell_id] = angle
+            # find index in extreme_cell_points that corresponds to the current
+            # angle to compute the offset from cell center
+            # This line only discriminates between 4 axis-aligned angles
+            sector = <int>(4. * angle / two_pi) * 2
+            # The if statement adjusts for all the 8 angles
+            if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
+                sector += 1
+            # compute extreme corners
+            min_point_id = sector * SECTOR_SIZE # Beginning of a row
+            max_point_id = min_point_id + POINT_SIZE # Skip a point
+            # offset from current cell center to first corner
+            min_corner_offset_row = extreme_cell_points[min_point_id]
+            min_corner_offset_col = extreme_cell_points[min_point_id + 1]
+            # offset from current cell center to last corner
+            max_corner_offset_row = extreme_cell_points[max_point_id]
+            max_corner_offset_col = extreme_cell_points[max_point_id + 1]
+            # Compute the extreme corners from the offsets
+            min_corner_row = viewpoint_to_cell_row + min_corner_offset_row
+            min_corner_col = viewpoint_to_cell_col + min_corner_offset_col
+            max_corner_row = viewpoint_to_cell_row + max_corner_offset_row
+            max_corner_col = viewpoint_to_cell_col + max_corner_offset_col
+            # Compute the angles associated with the extreme corners
+            min_angle = atan2(-min_corner_row, min_corner_col)
+            max_angle = atan2(-max_corner_row, max_corner_col)
+            # Save the angles in the fast C arrays
+            min_angles[cell_id] = (min_angle + two_pi) % two_pi 
+            max_angles[cell_id] = (max_angle + two_pi) % two_pi
+            cell_id += 1
+
+    return (min_angles, angles, max_angles, I, J)
+
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
@@ -57,8 +247,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         # line sweeps from angle 0 to angle 360, the first corner 
         # is associated with the lowest sweep line angle (min angle), and the
         # last corner with the highest angle (max angle). 
-        # Each group of 4 values correspond to a sweep line-related angular 
-        # sector:
+        # Each group of 4 values is the coordinate of a pair of points 
+        # that sit on the cell corners associated to the lowest and highest 
+        # angles. These corners change depending on the quadrant 
+        # (angular sector) the point is in:
         # -row 0: cell centers at angle a = 0 (east of viewpoint)
         # -row 1: cell centers at angle 0 < a < 90
         # -row 2: cell centers at angle a = 90 (north of viewpoint)
