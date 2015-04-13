@@ -89,8 +89,22 @@ def calc_observed_yield(vars_dict):
     aoi_vector = Vector.from_shapely(
         lulc_raster.get_aoi(), lulc_raster.get_projection())
     economics_table = vars_dict['economics_table_dict']
+
+    # setup useful base rasters
+    base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
+    base_raster_float_neg1 = base_raster_float.set_nodata(-1)
+    base_raster_zeros_float_neg1 = base_raster_float_neg1.zeros()
+    base_raster_ones_float_neg1 = base_raster_zeros_float_neg1.ones()
+
+    print base_raster_float_neg1
+    print base_raster_zeros_float_neg1
+    print base_raster_ones_float_neg1
+    return
+
+    ### NEED TO REWORK RASTERS BELOW
+
     if vars_dict['do_economic_returns']:
-        revenue_raster = lulc_raster.change_datatype_and_nodata(gdal.GDT_Float32, -1.0)
+        revenue_raster = zero_float_raster.copy()
 
     for crop in vars_dict['observed_yields_maps_dict'].keys():
         # Wrangle Data...
@@ -100,26 +114,31 @@ def calc_observed_yield(vars_dict):
         reproj_aoi_vector = aoi_vector.reproject(
             crop_observed_yield_raster.get_projection())
 
-        ### NEED WORK HERE - want to get any pixel touching aoi
         clipped_crop_raster = crop_observed_yield_raster.clip(
             reproj_aoi_vector.uri)
-        ####################
 
         # print clipped_crop_raster
+        # continue
 
-        reproj_crop_raster = clipped_crop_raster.reproject(
-            lulc_raster.get_projection(), 'nearest', lulc_raster.get_affine().a)
+        if clipped_crop_raster.get_shape() == (1, 1):
+            observed_yield_val = float(clipped_crop_raster.get_band(1).data[0, 0])
+            aligned_crop_raster = revenue_raster.ones() * observed_yield_val
+        else:
+            # this reprojection could result in very long computation times
+            reproj_crop_raster = clipped_crop_raster.reproject(
+                lulc_raster.get_projection(), 'nearest', lulc_raster.get_affine().a)
 
-        # print reproj_crop_raster
-
-        aligned_crop_raster = reproj_crop_raster.align_to(
-            revenue_raster, 'nearest')
+            aligned_crop_raster = reproj_crop_raster.align_to(
+                revenue_raster, 'nearest')
 
         # print aligned_crop_raster
+        # continue
 
         crop_lookup_dict = vars_dict['crop_lookup_dict']
         inv_crop_lookup_dict = {v: k for k, v in crop_lookup_dict.items()}
+        
         # print inv_crop_lookup_dict
+        # continue
 
         reclass_table = {}
         for key in vars_dict['observed_yields_maps_dict'].keys():
@@ -127,10 +146,11 @@ def calc_observed_yield(vars_dict):
         reclass_table[inv_crop_lookup_dict[crop]] = 1
 
         reclassed_lulc_raster = lulc_raster.reclass(reclass_table)
-        masked_lulc_raster = reclassed_lulc_raster.change_datatype_and_nodata(
-            gdal.GDT_Float32, aligned_crop_raster.get_nodata(1))
+        masked_lulc_raster = zero_float_raster.set_nodata(
+            aligned_crop_raster.get_nodata(1))
 
-        # print reclassed_lulc_raster
+        print masked_lulc_raster * aligned_crop_raster
+        continue
 
         # Operations as Noted in User's Guide...
         ha_per_m2 = 0.0001

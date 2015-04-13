@@ -13,7 +13,7 @@ input_dir = '../../test/invest-data/test/data/crop_production/input/'
 # input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
 # AOI Parameters
-pixel_size = 100000
+pixel_size = 100
 aoi_dict = {
     'shape': (3, 3),
     'affine': Affine(pixel_size, 0, 0, 0, -pixel_size, pixel_size*3),
@@ -63,9 +63,9 @@ def create_observed_yield_maps_dir():
 
     global_raster_factory = create_global_raster_factory(gdal.GDT_Float64)
 
-    corn_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
-    rice_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
-    soy_raster = global_raster_factory.horizontal_ramp(1.0, 10.0)
+    corn_raster = global_raster_factory.horizontal_ramp(0.0, 1.0)
+    rice_raster = global_raster_factory.horizontal_ramp(1.0, 2.0)
+    soy_raster = global_raster_factory.horizontal_ramp(2.0, 3.0)
 
     corn_raster.save_raster(os.path.join(
         observed_yield_dir, 'corn_yield.tif'))
