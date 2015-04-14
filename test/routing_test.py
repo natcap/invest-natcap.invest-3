@@ -22,7 +22,7 @@ def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
     out_dataset = raster_utils.new_raster_from_base(
         base_dataset, out_uri, 'GTiff', constant_value-1,
         gdal.GDT_Float32)
-    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
+    out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(constant_value)
 
 
@@ -42,7 +42,7 @@ class TestRasterUtils(unittest.TestCase):
         #routing_cython_core.flow_direction_inf(in_dem_uri,flow_direction_out_uri)
         flux_out_uri = os.path.join(workspace_dir, 'flux.tif')
         routing_utils.flow_accumulation(in_dem_uri, flux_out_uri)
-        
+
         in_absorption_rate_uri = os.path.join(workspace_dir, 'absorption_rate.tif')
         in_source_uri = os.path.join(workspace_dir, 'source.tif')
         make_constant_raster_from_base(in_dem_uri, 1.0, in_source_uri)

@@ -34,7 +34,7 @@ class TestRasterUtils(unittest.TestCase):
 
         #If we turn on the exception flag, we should get an exception
         self.assertRaises(raster_utils.UndefinedValue,
-            raster_utils.reclassify_dataset, dataset, value_map, output_uri, 
+            raster_utils.reclassify_dataset, dataset, value_map, output_uri,
             gdal.GDT_Float32, -1.0, exception_flag = 'values_required')
 
     def test_aggregate_raster_values_uri(self):
@@ -42,9 +42,9 @@ class TestRasterUtils(unittest.TestCase):
         shapefile_uri = os.path.join(
             'invest-data/test/data', 'hydropower_data', 'test_input', 'watersheds.shp')
         shapefile_field = 'ws_id'
-        
+
         result_dict = raster_utils.aggregate_raster_values_uri(
-            raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True, 
+            raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True,
             threshold_amount_lookup=None)
 
         #I did these by hand.  Better than nothing:
@@ -74,14 +74,14 @@ class TestRasterUtils(unittest.TestCase):
         rat_dict = raster_utils.get_rat_as_dictionary(ds)
 
         unit_dict = {
-            'Max Transition': ['agricultural_vegetation_managment', 
-                               'fertilizer_management', 
-                               'keep_native_vegetation', 
-                               'increase_native_vegetation_assisted', 
-                               'ditching', 
-                               'pasture_management', 
-                               'irrigation_management', 
-                               'increase_native_vegetation_unassisted'], 
+            'Max Transition': ['agricultural_vegetation_managment',
+                               'fertilizer_management',
+                               'keep_native_vegetation',
+                               'increase_native_vegetation_assisted',
+                               'ditching',
+                               'pasture_management',
+                               'irrigation_management',
+                               'increase_native_vegetation_unassisted'],
             'Value': [0, 1, 2, 3, 4, 5, 6, 7]}
 
         self.assertEqual(unit_dict, rat_dict)
@@ -91,7 +91,7 @@ class TestRasterUtils(unittest.TestCase):
         unique_vals = raster_utils.unique_raster_values(dataset)
         LOGGER.debug(unique_vals)
 
-    
+
     def test_vectorize_points(self):
         base_dir = 'invest-data/test/data/test_out/raster_utils'
 
@@ -120,7 +120,7 @@ class TestRasterUtils(unittest.TestCase):
         aoi_uri = 'invest-data/test/data/hydropower_data/test_input/watersheds.shp'
         dem = gdal.Open(dem_uri)
         aoi = ogr.Open(aoi_uri)
-        
+
         clip_dataset = os.path.join(base_dir, 'lulc_clipped.tif')
         raster_utils.clip_dataset(dem, aoi, clip_dataset)
         invest_test_core.assertTwoDatasetEqualURI(self, clip_dataset, clip_regression_dataset)
@@ -141,7 +141,7 @@ class TestRasterUtils(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = 'invest-data/test/data/raster_slope_regression_data/raster_dem.tif'
-        
+
         slope_uri = os.path.join(base_dir, 'raster_slope.tif')
         raster_utils.calculate_slope(dem_uri, slope_uri)
 
@@ -166,7 +166,7 @@ class TestRasterUtils(unittest.TestCase):
 
         ds = gdal.Open('invest-data/test/data/calculate_value_not_in_array_regression_data/HAB_03_kelp_influence_on_shore.tif')
         value = raster_utils.calculate_value_not_in_dataset(ds)
-        _, _, array = raster_utils.extract_band_and_nodata(ds, get_array = True)
+        array = ds.GetRasterBand(1).ReadAsArray()
         self.assertFalse(value in array)
 
 
@@ -176,11 +176,11 @@ class TestRasterUtils(unittest.TestCase):
 
         if not os.path.isdir(test_out):
             os.makedirs(test_out)
-        
+
         dr = gdal.GetDriverByName('GTiff')
- 
+
         ds = dr.Create(out_uri, 5, 5, 1, gdal.GDT_Int32)
-        
+
         srs = osr.SpatialReference()
         srs.SetUTM(11,1)
         srs.SetWellKnownGeogCS('NAD27')
@@ -200,7 +200,7 @@ class TestRasterUtils(unittest.TestCase):
 
         tmp_dict = {11:'farm', 23:'swamp', 13:'marsh', 22:'forest', 3:'river'}
         field_1 = 'DESC'
-       
+
         known_results = np.array([[3, 'river'],
                                   [11, 'farm'],
                                   [13, 'marsh'],
@@ -217,12 +217,12 @@ class TestRasterUtils(unittest.TestCase):
         for row in range(row_count):
             for col in range(col_count):
                 self.assertEqual(str(known_results[row][col]), rat.GetValueAsString(row, col))
-        
+
         band = None
         rat = None
         ds = None
         ds_rat = None
-        
+
     def test_get_raster_properties(self):
         """Test get_raster_properties against a known raster saved on disk"""
         data_dir = './invest-data/test/data/raster_utils_data'
@@ -237,7 +237,7 @@ class TestRasterUtils(unittest.TestCase):
         self.assertEqual(result_dict, expected_dict)
 
     def test_get_raster_properties_unit_test(self):
-        """Test get_raster_properties against a hand created raster with set 
+        """Test get_raster_properties against a hand created raster with set
             properties"""
         driver = gdal.GetDriverByName('MEM')
         ds_type = gdal.GDT_Int32
@@ -250,7 +250,7 @@ class TestRasterUtils(unittest.TestCase):
         dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
         dataset.GetRasterBand(1).SetNoDataValue(-1)
         dataset.GetRasterBand(1).Fill(5)
-        
+
         result_dict = raster_utils.get_raster_properties(dataset)
 
         expected_dict = {'width':30, 'height':-30, 'x_size':112, 'y_size':142}
@@ -260,7 +260,7 @@ class TestRasterUtils(unittest.TestCase):
     def test_reproject_datasource(self):
         """A regression test using some of Nicks sample data that didn't work on
             his machine"""
-        
+
         data_dir = './invest-data/test/data/raster_utils_data'
         barkclay_uri = os.path.join(data_dir, 'AOI_BarkClay.shp')
         lat_long_uri = os.path.join(data_dir, 'lat_long_file.shp')
@@ -271,7 +271,7 @@ class TestRasterUtils(unittest.TestCase):
         lat_long_wkt = lat_long_srs.ExportToWkt()
 
         out_dir = './invest-data/test/data/test_out/raster_utils/reproject_datasource'
-        
+
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
@@ -357,7 +357,7 @@ class TestRasterUtils(unittest.TestCase):
 
         #These are in the same projection, so no exception expected
         raster_utils.assert_datasets_in_same_projection([raster_1, raster_2])
-        
+
         raster_3 = 'invest-data/test/data/clip_data/global_clipped.tif'
         #Raster 3 is unprojected, so I expect an unprojected error
         self.assertRaises(raster_utils.DatasetUnprojected,raster_utils.assert_datasets_in_same_projection,[raster_3])
@@ -421,7 +421,7 @@ class TestRasterUtils(unittest.TestCase):
         dataset_noaoi_union_out_uri = os.path.join(base_dir, 'vectorized_union_datasets_noaoi.tif')
         raster_utils.vectorize_datasets(
             dataset_uri_list, vector_op, dataset_noaoi_union_out_uri, datatype_out, nodata_out,
-            pixel_size_out, bounding_box_mode, resample_method_list=["nearest", "bilinear", "cubic", "cubic_spline", "lanczos"], 
+            pixel_size_out, bounding_box_mode, resample_method_list=["nearest", "bilinear", "cubic", "cubic_spline", "lanczos"],
             dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
         dataset_noaoi_union_regression_uri = os.path.join(regression_dir, 'vectorized_union_datasets_noaoi.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, dataset_noaoi_union_out_uri, dataset_noaoi_union_regression_uri)
@@ -444,7 +444,7 @@ class TestRasterUtils(unittest.TestCase):
             dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
         dataset_intersection_regression_uri = os.path.join(regression_dir, 'vectorized_intersection_datasets.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, dataset_intersection_out_uri, dataset_intersection_regression_uri)
-    
+
     def test_dictionary_to_point_shapefile(self):
         """A regression test for making a point shapefile from a dictionary.
             This test uses a file path for an output."""
@@ -475,7 +475,7 @@ class TestRasterUtils(unittest.TestCase):
 
         invest_test_core.assertTwoShapesEqualURI(
                 self, expected_uri, out_uri)
-    
+
     def test_dictionary_to_point_shapefile_2(self):
         """A regression test for making a point shapefile from a dictionary.
             This test uses a directory path for an output."""
@@ -501,11 +501,11 @@ class TestRasterUtils(unittest.TestCase):
 
         invest_test_core.assertTwoShapesEqualURI(
                 self, expected_uri, out_dir)
-    
+
     def test_reproject_dataset(self):
         """A regression test using some data that Martin and Nic were having
             trouble reprojecting"""
-       
+
         #raise SkipTest
 
         data_dir = './invest-data/test/data/raster_utils_data'
@@ -517,7 +517,7 @@ class TestRasterUtils(unittest.TestCase):
         out_wkt = barkclay_layer.GetSpatialRef().ExportToWkt()
 
         out_dir = './invest-data/test/data/test_out/raster_utils/exp_reproject_dataset'
-        
+
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
