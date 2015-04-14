@@ -20,16 +20,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('invest_natcap.wave_energy.wave_energy')
 
-GDAL_TO_NUMPY_TYPE = {
-    gdal.GDT_Byte: np.uint8,
-    gdal.GDT_Int16: np.int16,
-    gdal.GDT_Int32: np.int32,
-    gdal.GDT_UInt16: np.uint16,
-    gdal.GDT_UInt32: np.uint32,
-    gdal.GDT_Float32: np.float32,
-    gdal.GDT_Float64: np.float64
-    }
-
 def execute(args):
     """
     Executes both the biophysical and valuation parts of the
@@ -1463,8 +1453,6 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
             from the percentiles list
     """
     raster = gdal.Open(raster_uri, gdal.GA_ReadOnly)
-    raster_type = pygeoprocessing.geoprocessing.get_datatype_from_uri(raster_uri)
-    np_type = GDAL_TO_NUMPY_TYPE[raster_type]
 
     def numbers_from_file(fle):
         """Generates an iterator from a file by loading all the numbers
@@ -1506,7 +1494,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()
         # Remove nodata values from array and thus percentile calculation
-        arr = np.delete(arr, np.where(arr==nodata))
+        arr = np.delete(arr, np.where(arr == nodata))
         # Tally the number of values relevant for calculating percentiles
         n_elements += len(arr)
         # Sort array before saving
@@ -1533,12 +1521,12 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     # Setup a list of zeros to replace with percentile results
     results = [0] * len(rank_list)
 
-    LOGGER.debug('Percentile Rank List: %s' % rank_list)
+    LOGGER.debug('Percentile Rank List: %s', rank_list)
 
     for num in heapq.merge(*iters):
         # If a percentile rank has been hit, grab percentile value
         if counter in rank_list:
-            LOGGER.debug('percentile value is : %s' % num)
+            LOGGER.debug('percentile value is : %s', num)
             results[rank_list.index(counter)] = int(num)
         counter += 1
 
