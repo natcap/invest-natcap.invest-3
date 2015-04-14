@@ -164,11 +164,6 @@ class TestRasterUtils(unittest.TestCase):
         print value
         self.assertFalse(value in array)
 
-        ds = gdal.Open('invest-data/test/data/calculate_value_not_in_array_regression_data/HAB_03_kelp_influence_on_shore.tif')
-        value = raster_utils.calculate_value_not_in_dataset(ds)
-        array = ds.GetRasterBand(1).ReadAsArray()
-        self.assertFalse(value in array)
-
 
     def test_create_rat_with_no_rat(self):
         test_out = './invest-data/test/data/test_out/raster_utils/create_rat/'
