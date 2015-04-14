@@ -34,7 +34,7 @@ def setup_dirs(workspace_dir, *dirnames):
 def sum_pixel_values_from_uri(uri):
     '''Return the sum of the values of all pixels in the given file.'''
     dataset = gdal.Open(uri)
-    band = dataset.GetRasteBand(1)
+    band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     total_sum = 0.0
     # Loop over each row in out_band
