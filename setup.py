@@ -15,6 +15,7 @@ import sys
 import glob
 import matplotlib
 import zipfile
+import scipy
 
 
 import numpy as np
@@ -143,9 +144,9 @@ if platform.system() == 'Windows':
             }
          }
 
-    # When building py2exe binaries on windows server, the built application
+    # When building py2exe binaries with scipy >= 0.13.0, the built application
     # won't run unless we import _ufuncs_cxx.
-    if platform.uname()[2] == '2008ServerR2':
+    if tuple([int(x) for x in scipy.__version__.split('.')])[1] >= 13:
         py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
 
     #These are the exes that will get built
