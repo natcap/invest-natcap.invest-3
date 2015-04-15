@@ -104,7 +104,96 @@ class TestGetYieldGivenLULC(unittest.TestCase):
         check_total = observed_yield * lulc_raster.get_shape()[0]
         assert(guess_total == check_total)
 
-# class Test
+
+class TestCalculateProductionForCrop(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        observed_yield = 2.0
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        observed_yield_over_aoi_raster = lulc_raster.ones().set_datatype(
+            gdal.GDT_Float32) * observed_yield
+        crop = "corn"
+
+        vars_dict = {
+            'crop_lookup_dict': test_data.get_crop_lookup_table(
+                os.path.join(input_dir, 'crop_lookup_table.csv')),
+            'observed_yields_maps_dict': test_data.get_observed_yield_maps_dict(),
+            'create_crop_production_maps': False,
+            'output_production_maps_dir': None
+        }
+
+        ObservedLocalYield_raster = model._get_yield_given_lulc(
+            vars_dict,
+            crop,
+            lulc_raster,
+            observed_yield_over_aoi_raster)
+
+        guess_Production_raster = model._calculate_production_for_crop(
+            vars_dict,
+            crop,
+            ObservedLocalYield_raster)
+
+        guess_total = guess_Production_raster.get_band(1).sum()
+        check_total = observed_yield * lulc_raster.get_shape(
+            )[0] * 0.0001 * lulc_raster.get_cell_area()
+        assert(guess_total == np.float32(check_total))
+
+
+class TestCalculateCostOfPerTonInputs(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        vars_dict = test_data.get_vars_dict()
+        crop = 'corn'
+        econ_table = vars_dict['economics_table_dict'][crop]
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        production_raster = lulc_raster.set_datatype(gdal.GDT_Float32) * 2.0
+
+        CostPerTonInputTotal_raster = model._calc_cost_of_per_ton_inputs(
+            vars_dict,
+            crop,
+            production_raster)
+
+        check = econ_table['cost_nitrogen_per_ton'] + econ_table[
+            'cost_phosphorous_per_ton'] + econ_table['cost_potash_per_ton']
+
+        assert(CostPerTonInputTotal_raster.get_band(
+                1)[0, 0] == np.float32(check))
+
+
+class TestCalculateCostOfPerHectareInputs(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        vars_dict = test_data.get_vars_dict()
+        crop = 'corn'
+        econ_table = vars_dict['economics_table_dict'][crop]
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        production_raster = lulc_raster.set_datatype(gdal.GDT_Float32) * 2.0
+
+        CostPerHectareInputTotal_raster = model._calc_cost_of_per_hectare_inputs(
+            vars_dict,
+            crop,
+            lulc_raster)
+
+        check = econ_table['cost_labor_per_ha'] + econ_table[
+            'cost_machine_per_ha'] + econ_table[
+            'cost_seed_per_ha'] + econ_table['cost_irrigation_per_ha']
+
+        assert(CostPerHectareInputTotal_raster.get_band(
+                1)[0, 0] == np.float32(check))
+
+
+class TestCalculateCropReturns(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        pass
 
 
 class TestCreateResultsTableObserved(unittest.TestCase):

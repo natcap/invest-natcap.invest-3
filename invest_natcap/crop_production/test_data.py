@@ -39,6 +39,7 @@ def create_lulc_map(aoi_dict):
     r.save_raster(lulc_map_uri)
     return lulc_map_uri
 
+
 def create_lulc_map2(aoi_dict):
     # set arguments
     array = np.ones(aoi_dict['shape'])
@@ -54,6 +55,7 @@ def create_lulc_map2(aoi_dict):
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
 
     return r
+
 
 def create_global_raster_factory(datatype):
     pixel_size = 0.083333
@@ -73,9 +75,13 @@ def create_global_raster_factory(datatype):
 
     return global_raster_factory
 
+
 def create_observed_yield_maps_dir():
     observed_yield_dir = os.path.join(
         input_dir, 'spatial_dataset/observed_yield/')
+
+    if not os.path.exists(observed_yield_dir):
+        os.makedirs(observed_yield_dir)
 
     global_raster_factory = create_global_raster_factory(gdal.GDT_Float64)
 
@@ -96,6 +102,9 @@ def create_observed_yield_maps_dir():
 def create_climate_bin_maps_dir():
     climate_bin_dir = os.path.join(
         input_dir, 'spatial_dataset/climate_bin_maps/')
+
+    if not os.path.exists(climate_bin_dir):
+        os.makedirs(climate_bin_dir)
 
     global_raster_factory = create_global_raster_factory(gdal.GDT_Int32)
 
@@ -143,6 +152,9 @@ def create_fertilizer_map(aoi_dict):
 
 def create_fertilizer_maps_dir(aoi_dict):
     fertilizer_maps_dir = os.path.join(input_dir, 'fertilizer_maps/')
+
+    if not os.path.exists(fertilizer_maps_dir):
+        os.makedirs(fertilizer_maps_dir)
 
     nitrogen_raster = create_fertilizer_map(aoi_dict)
     phosphorous_raster = create_fertilizer_map(aoi_dict)
