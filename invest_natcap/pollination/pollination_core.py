@@ -350,10 +350,17 @@ def reclass_ag_raster(landuse_uri, out_uri, ag_classes, nodata):
         reclass_rules = {}
         default_value = 1.0
 
+    lulc_values = pygeoprocessing.geoprocessing.unique_raster_values_uri(
+        landuse_uri)
+
+    for lucode in lulc_values:
+        if lucode not in reclass_rules:
+            reclass_rules[lucode] = default_value
+
     LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         landuse_uri, reclass_rules, out_uri, gdal.GDT_Float32, nodata,
-        exception_flag='none', default_value=default_value)
+        exception_flag='values_required')
 
 
 def add_two_rasters(raster_1, raster_2, out_uri):
