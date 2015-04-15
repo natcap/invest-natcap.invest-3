@@ -159,16 +159,17 @@ def execute_30(**args):
 
                     hwp_cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
-                        if hwp_cur == hwp_cur_nodata:
-                            return tmp_c_cur
-                        return tmp_c_cur + hwp_cur
+                        """add two rasters and in nodata in the second, return
+                            the first"""
+                        return numpy.where(
+                            hwp_cur == hwp_cur_nodata, tmp_c_cur,
+                            tmp_c_cur + hwp_cur)
 
                     pygeoprocessing.geoprocessing.vectorize_datasets(
                         [temp_c_cur_uri, c_hwp_uri], add_op,
                         outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection",
-                        dataset_to_align_index=0,
-                        process_pool=args['_process_pool'])
+                        dataset_to_align_index=0, vectorize_op=False)
 
                 elif scenario_type == 'fut':
                     hwp_shapes = {}
@@ -188,16 +189,16 @@ def execute_30(**args):
 
                     hwp_fut_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
-                        if hwp_fut == hwp_fut_nodata:
-                            return tmp_c_fut
-                        return tmp_c_fut + hwp_fut
+                        return numpy.where(
+                            hwp_fut == hwp_fut_nodata, tmp_c_fut,
+                            tmp_c_fut + hwp_fut)
 
                     pygeoprocessing.geoprocessing.vectorize_datasets(
                         [temp_c_fut_uri, c_hwp_uri], add_op,
                         outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection",
                         dataset_to_align_index=0,
-                        process_pool=args['_process_pool'])
+                        vectorize_op=False)
 
 
     for fut_type in ['fut', 'redd']:
@@ -701,19 +702,23 @@ def _calculate_hwp_storage_fut(
 
             #add temp_raster and raster cur raster into the output raster
             nodata = -1.0
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_uri)
-            cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cur_raster_uri)
+            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                raster_uri)
+            cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                cur_raster_uri)
             def add_op(base, current):
-                if base == base_nodata or current == cur_nodata:
-                    return nodata
-                return base + current
+                """add two rasters"""
+                nodata_mask = (base == base_nodata) | (current == cur_nodata)
+                return numpy.where(nodata_mask, nodata, base+current)
 
-            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster_uri)
+            pixel_size_out = (
+                pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+                    raster_uri))
             pygeoprocessing.geoprocessing.vectorize_datasets(
                 [cur_raster_uri, temp_filename], add_op, raster_uri,
                 gdal.GDT_Float32, nodata,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
-                process_pool=process_pool)
+                vectorize_op=False)
 
 
 def _get_fields(feature):

@@ -68,27 +68,28 @@ def execute_model(args):
     nodata = -1.0
     LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
 
-    reclass_ag_raster(args['landuse'], args['ag_map'],
-        args['ag_classes'], nodata)
+    reclass_ag_raster(
+        args['landuse'], args['ag_map'], args['ag_classes'], nodata)
 
     # Create the necessary sum rasters by reclassifying the ag map so that all
     # pixels that are not nodata have a value of 0.0.
-    ag_map = gdal.Open(args['ag_map'])
-    pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map, {},
-        args['foraging_average'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map, {},
-        args['abundance_total'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
+    output_uri_list = [args['foraging_average'], args['abundance_total']]
+    if args['do_valuation']:
+        output_uri_list.extend(
+            [args['farm_value_sum'], args['service_value_sum']])
 
-    # We only need to create these rasters if we're doing valuation.
-    if args['do_valuation'] == True:
-        pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map,
-            {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
-
-        pygeoprocessing.geoprocessing.reclassify_by_dictionary(ag_map,
-            {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32,
-            0.0)
-
+    ag_map_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        args['ag_map'])
+    def mask_op(ag_value):
+        """return 0.0 where not original nodata, and 0.0 otherwise"""
+        return numpy.where(ag_value == ag_map_nodata, nodata, 0.0)
+    pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['ag_map'])
+    for out_uri in output_uri_list:
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [args['ag_map']], mask_op, out_uri, gdal.GDT_Float32, nodata,
+            pixel_size_out, 'intersection', vectorize_op=False)
 
     # Loop through all species and perform the necessary calculations.
     for species, species_dict in args['species'].iteritems():
@@ -327,12 +328,12 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
         bounding_box_mode='intersection',
         vectorize_op=False)
 
-def reclass_ag_raster(landuse, uri, ag_classes, nodata):
+def reclass_ag_raster(landuse_uri, out_uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
         state of a given pixel.  The reclassed ag raster will be saved to uri.
 
         landuse - a GDAL dataset.  The land use/land cover raster.
-        uri - the uri of the output, reclassified ag raster.
+        out_uri - the uri of the output, reclassified ag raster.
         ag_classes - a list of landuse classes that are agricultural.  If an
             empty list is provided, all landcover classes are considered to be
             agricultural.
@@ -340,23 +341,26 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
 
         Returns nothing."""
 
-    # mask agricultural classes to ag_map.
-    landuse = gdal.Open(landuse)
-    LOGGER.debug('Starting to create an ag raster at %s. Nodata=%s',
-        uri, nodata)
+    LOGGER.info(
+        'Starting to create an ag raster at %s. Nodata=%s', out_uri, nodata)
     if len(ag_classes) > 0:
-        LOGGER.debug('Agricultural classes: %s', ag_classes)
         reclass_rules = dict((r, 1) for r in ag_classes)
         default_value = 0.0
     else:
-        LOGGER.debug('User did not define ag classes.')
         reclass_rules = {}
         default_value = 1.0
 
+    lulc_values = pygeoprocessing.geoprocessing.unique_raster_values_uri(
+        landuse_uri)
+
+    for lucode in lulc_values:
+        if lucode not in reclass_rules:
+            reclass_rules[lucode] = default_value
+
     LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
-    pygeoprocessing.geoprocessing.reclassify_by_dictionary(landuse,
-        reclass_rules, uri, 'GTiff', nodata, gdal.GDT_Float32,
-        default_value=default_value)
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        landuse_uri, reclass_rules, out_uri, gdal.GDT_Float32, nodata,
+        exception_flag='values_required')
 
 
 def add_two_rasters(raster_1, raster_2, out_uri):
@@ -594,14 +598,12 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 
     reclass_rules = {base_nodata: -1}
     for lulc in lu_table_dict.keys():
-        resource_values = [value_list[r] * lu_table_dict[lulc][r] for r in
-            resource_fields]
+        resource_values = [
+            value_list[r] * lu_table_dict[lulc][r] for r in resource_fields]
         reclass_rules[lulc] = list_op(resource_values)
 
-    # Use the rules dictionary to reclassify the LULC accordingly.  This
-    # calls the cythonized functionality in pygeoprocessing.geoprocessing.
-    pygeoprocessing.geoprocessing.reclassify_by_dictionary(gdal.Open(base_raster),
-        reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        base_raster, reclass_rules, out_uri, gdal.GDT_Float32, -1)
 
 
 def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
