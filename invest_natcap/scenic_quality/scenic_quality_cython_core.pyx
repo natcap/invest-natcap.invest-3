@@ -102,34 +102,182 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         np.int32_t col # column counter
         int sector # current sector
 
+        # pixel addition/removal event
+        size_t add = 0
+        size_t drop = 1
 
-        # Uppes bound of the array size of the largest possible viewshed area
+
+        # Upper bound of the array size of the largest possible viewshed area
         int *max_size = \
-            [2*min(max_dist, array_shape[0]), 2*min(max_dist, array_shape[1])]
+            [2*min(max_dist, array_shape[0]), \
+            2*min(max_dist, array_shape[1])]
+
+        int *center = [array_shape[0]/2, array_shape[1]/2]
 
     # Create an hdf5 intermediate file to store the line's active pixels:
 #    print('------------------- CWD:', os.getcwd(), '-------------------------')
     active_pixels_file_path = 'active_pixels.h5'
     f = h5py.File(active_pixels_file_path, 'w')
-    dataset = f.create_dataset('active_pixels', \
-        (max_size[0] + max_size[1], 2*max_dist), \
-        compression = 'gzip', fillvalue = -1)
+    # Active pixels array size: 
+    # active_pixels[angle][x/y][add/drop][pixel_id]
+    active_pixels = f.create_dataset('active_pixels', \
+        (2*(max_size[0] + max_size[1]), 2, 2, 2*max_dist), \
+        compression = 'gzip', fillvalue = -1.0)
 
+    pixel_map_file_path = 'pixel_map.h5'
+    g = h5py.File(pixel_map_file_path, 'w')
+    pixel_map = g.create_dataset('pixel_map', \
+        (max_size[0], max_size[1]), \
+        compression = 'gzip', fillvalue = -1.0)
+
+    # Enumerate perimeter pixels + compute their angles
+    i_min = 0
+    i_max = max_size[0]
+    j_min = 0
+    j_max = max_size[1]
+    # list all perimeter cell center angles
+    row_count = i_max - i_min 
+    col_count = j_max - j_min
+    # Create top row, except cell (0,0)
+    rows = np.zeros(col_count - 1)
+    cols = np.array(range(col_count-1, 0, -1))
+    # Create left side, avoiding repeat from top row
+    rows = np.concatenate((rows, np.array(range(row_count -1))))
+    cols = np.concatenate((cols, np.zeros(row_count - 1)))
+    # Create bottom row, avoiding repat from left side
+    rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
+    cols = np.concatenate((cols, np.array(range(col_count - 1))))
+    # Create last part of the right side, avoiding repeat from bottom row
+    rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
+    cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
+    # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+    rows = np.roll(rows, viewpoint_row - i_min).astype(np.int64)
+    cols = np.roll(cols, viewpoint_col - i_min).astype(np.int64)
+
+    p_rows = np.zeros_like(rows)
+    p_cols = np.zeros_like(p_rows)
+
+    for r in range(len(rows)):
+        p_rows[r] = rows[r] - viewpoint_row
+        p_cols[r] = cols[r] - viewpoint_col
+
+    angles = (np.arctan2(-p_rows, p_cols) + two_pi) % two_pi
+    
+
+#    I, J = np.meshgrid(range(3), range(3), indexing='ij')
+    
     # 1-Draw horizontal line from center to edge of visible area
+    for p in range(max_dist):
+        pixel_map[center[0], center[1] + p] = 0.0
+        active_pixels[0, 0, add, p] = center[0]
+        active_pixels[0, 1, add, p] = center[1] + p
+
     # 2-Add fringe line above it
+    for p in range(1, max_dist):
+        pixel_map[center[0]+1, center[1] + p] = angles[1]
+        active_pixels[1, 0, add, p] = center[0]+1
+        active_pixels[1, 1, add, p] = center[1] + p
+
+    cdef int iteration = 1
+
     # 3-Until there are no more angles to process:
-    # 4-Find fringe pixel from focal point
-    # 5-Until there are no more fringe pixels:
-    #   5.1-Check if fringe pixel should be an active pixel
-    #   5.2-If fringe pixel should be an active pixel:
-    #       5.2.1-Extract neighboring pixels
-    #       5.2.2-Mark as fringe pixels (if not too far)
-    #   5.3-Move to next fringe pixel + see if not too far
-    # 6-Move on to next angle
+    for i in range(angles.size-1):
+        print('i', i)
+        a = angles[i]
+        # 4-Find fringe pixel from focal point
+        pixel_mask = \
+            pixel_map[center[0]-1:center[0]+2, center[1]-1:center[1]+2]
+
+        fringe_pixel = np.where(pixel_mask > 0)
+
+        assert fringe_pixel[0].size == 1, 'Unexpected fringe pixel count: ' + \
+            str(fringe_pixel[0].size)
+
+        fringe_pixel = \
+            (fringe_pixel[0][0] + center[0] - 1, \
+            fringe_pixel[1][0] + center[1] - 1)
+
+        # 5-Until there are no more fringe pixels:
+        pixel = 0
+        while fringe_pixel[0].size == 1:
+            # Compute the angle of the cell center
+            row = fringe_pixel[0]
+            col = fringe_pixel[1]
+
+            center_angle = \
+                <np.float64_t>(atan2(-p_rows[i], p_cols[i]) +two_pi) %two_pi
+            
+            #   5.1-Check if fringe pixel should be an active pixel
+            # find index in extreme_cell_points that corresponds to the current
+            # angle to compute the offset from cell center
+            # This line only discriminates between 4 axis-aligned angles
+            sector = <int>(4. * a / two_pi) * 2
+            # The if statement adjusts for all the 8 angles
+            if abs(p_rows[i] * p_cols[i]) > 0:
+                sector += 1
+
+            # Compute offset
+            # Compute offset ID
+            min_point_id = sector * SECTOR_SIZE # Beginning of a row
+            max_point_id = min_point_id + POINT_SIZE # Skip a point
+            # Compute offset from current cell center to first corner
+            min_corner_offset_row = extreme_cell_points[min_point_id]
+            min_corner_offset_col = extreme_cell_points[min_point_id + 1]
+            # Compute corner angle
+            min_corner_row = row + min_corner_offset_row
+            min_corner_col = col + min_corner_offset_col
+            # Compute the angles associated with the extreme corners
+            min_angle = atan2(-min_corner_row, min_corner_col)
+
+            
+            # 5.2-If fringe pixel should be an active pixel:
+            if min_angle < angles[i+1]:
+                # Mark fringe pixel as active pixel
+                pixel_map[row, col] = 0.0
+                active_pixels[1, 0, add, pixel] = row
+                active_pixels[1, 1, add, pixel] = col
+
+                # 5.2.1-Extract neighboring pixels
+                pixel_mask = pixel_map[row-1:row+2, col-1:col+2]
+                fringe_pixels = \
+                    np.where((pixel_mask > 0) & (pixel_mask < angles[i]))
+
+                # 5.2.2-Mark fringe pixels (if not too far)
+                for i in range(fringe_pixels[0].size):
+                    new_row = fringe_pixels[0][i] + row - 1
+                    new_col = fringe_pixels[1][i] + col - 1
+                    
+                    distance = \
+                        ((viewpoint_row-new_row)**2 + \
+                        (viewpoint_col-new_col)**2)**.5
+                    
+                    if distance < max_dist:
+                        pixel_map[row, col] = angles[i]
+
+            # 5.3-Move to next fringe pixel + see if not too far
+            pixel_mask = pixel_map[row-1:row+2, col-1:col+2]
+
+            fringe_pixel = np.where((pixel_mask > 0) & (pixel_mask < angles[i]))
+
+            # No more fringe pixels, move on to next angle
+            if fringe_pixel[0].size == 0:
+                break
+
+            fringe_pixel = \
+                (fringe_pixel[0][0] + row - 1, \
+                fringe_pixel[1][0] + col - 1)
+
+            break
+
+        # 6-Move on to next angle
+        iteration += 1
+
 
     f.close()
+    g.close()
 
     os.remove(active_pixels_file_path)
+    os.remove(pixel_map_file_path)
 
     return
 
