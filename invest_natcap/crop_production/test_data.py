@@ -39,10 +39,27 @@ def create_lulc_map(aoi_dict):
     r.save_raster(lulc_map_uri)
     return lulc_map_uri
 
+def create_lulc_map2(aoi_dict):
+    # set arguments
+    array = np.ones(aoi_dict['shape'])
+    array[0] = 1
+    array[1] = 2
+    array[2] = 3
+    affine = aoi_dict['affine']
+    proj = aoi_dict['proj']
+    datatype = gdal.GDT_Int16
+    nodata_val = -9999.0
+
+    # initialize raster
+    r = Raster.from_array(array, affine, proj, datatype, nodata_val)
+
+    return r
 
 def create_global_raster_factory(datatype):
-    shape = (180, 360)
-    affine = Affine(1, 0, -180, 0, -1, 90)
+    pixel_size = 0.083333
+    size = 180/pixel_size
+    shape = (size, size*2)
+    affine = Affine(pixel_size, 0, -180, 0, -pixel_size, 90)
     proj = 4326
     nodata_val = -9999
 
@@ -55,7 +72,6 @@ def create_global_raster_factory(datatype):
         affine=affine)
 
     return global_raster_factory
-
 
 def create_observed_yield_maps_dir():
     observed_yield_dir = os.path.join(
@@ -140,6 +156,15 @@ def create_fertilizer_maps_dir(aoi_dict):
         fertilizer_maps_dir, 'potash.tif'))
 
     return fertilizer_maps_dir
+
+
+def get_crop_lookup_table(uri):
+    vars_dict = {'crop_lookup_table_uri': uri}
+    return io.read_crop_lookup_table(vars_dict)['crop_lookup_dict']
+
+
+def get_observed_yield_maps_dict():
+    return get_vars_dict()['observed_yields_maps_dict']
 
 
 def get_args():

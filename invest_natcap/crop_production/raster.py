@@ -3,8 +3,8 @@ Raster Class
 '''
 
 import os
-import tempfile
 import shutil
+import functools
 
 import gdal
 import ogr
@@ -13,6 +13,9 @@ import numpy as np
 from affine import Affine
 from shapely.geometry import Polygon
 import shapely
+import pyproj
+import PIL
+
 import pygeoprocessing as pygeo
 
 
@@ -75,7 +78,7 @@ class Raster(object):
         return Raster(uri, driver)
 
     @classmethod
-    def simple_affine(self, top_left_x, top_left_y, pix_width, pix_height):
+    def create_simple_affine(self, top_left_x, top_left_y, pix_width, pix_height):
         return Affine(pix_width, 0, top_left_x, 0, -(pix_height), top_left_y)
 
     def __del__(self):
@@ -193,10 +196,13 @@ class Raster(object):
             return self.local_op(raster, pow_closure)
 
     def __eq__(self, raster):
-        if self.is_aligned(raster) and (self.get_shape() == raster.get_shape()):
-            return (self.get_bands() == raster.get_bands())
+        if type(raster) in [float, int]:
+            return (self.get_bands() == raster)
         else:
-            return False
+            if self.is_aligned(raster) and (self.get_shape() == raster.get_shape()):
+                return (self.get_bands() == raster.get_bands())
+            else:
+                return False
 
     def __getitem__(self):
         pass  # return numpy slice?  Raster object with sliced numpy array?
@@ -224,6 +230,16 @@ class Raster(object):
 
     def save_raster(self, uri):
         shutil.copyfile(self.uri, uri)
+
+    def get_grayscale_image(self):
+        ma = self.get_band(1)
+        a_min = ma.min()
+        a_max = ma.max() - a_min
+        new_ma = (ma - a_min) * (255/a_max)
+        return PIL.Image.fromarray(new_ma)
+
+    def get_heatmap_image(self):
+        raise NotImplementedError
 
     def ones(self):
         return self.zeros() + 1
@@ -314,7 +330,7 @@ class Raster(object):
         self._close_dataset()
         return cols
 
-    def get_pixel_value(self, x, y):
+    def get_pixel_value_at_pixel_indices(self, px, py):
         '''
         Position relative to origin regardless of affine transform
         '''
@@ -324,23 +340,47 @@ class Raster(object):
         try:
             # Assertions
             band = self.dataset.GetRasterBand(1)
-            pix = band.ReadAsArray(x, y, 1, 1)
+            pix = band.ReadAsArray(px, py, 1, 1)
         finally:
             self._close_dataset()
 
         return pix
 
-    def get_pixel_coords_at_point(self, shapely_point):
-        mx, my = shapely_point.x, shapely_point.y
-        gt = self.get_geotransform()
-        px = int((mx - gt[0]) / gt[1])
-        py = int((my - gt[3]) / gt[5])
+    def get_georef_point_at_pixel_indices(self, px, py):
+        '''
+        Georeferenced point of pixel center
+        '''
+        a = self.get_affine()
+        gx = (a.a * (px + 0.5)) + (a.b * (py + 0.5)) + a.c
+        gy = (a.e * (py + 0.5)) + (a.d * (px + 0.5)) + a.f
+        return (gx, gy)
 
+    def get_shapely_point_at_pixel_indices(self, px, py):
+        '''
+        Georeferenced point of pixel center
+        '''
+        gx, gy = self.get_georef_point_at_pixel_indices(px, py)
+        return shapely.geometry.point.Point(gx, gy)
+
+    def get_pixel_indices_at_georef_point(self, gx, gy):
+        '''this may only apply to non-rotated rasters'''
+        gt = self.get_geotransform()
+        px = int((gx - gt[0]) / gt[1])
+        py = int((gy - gt[3]) / gt[5])
         return (px, py)
 
-    def get_pixel_value_at_point(self, shapely_point):
-        px, py = self.get_pixel_coords_at_point(shapely_point)
-        return self.get_pixel_value(px, py)
+    def get_pixel_indices_at_shapely_point(self, shapely_point):
+        '''this may only apply to non-rotated rasters'''
+        return self.get_pixel_indices_at_georef_point(
+            shapely_point.x, shapely_point.y)
+
+    def get_pixel_value_at_georef_point(self, gx, gy):
+        px, py = self.get_pixel_indices_at_georef_point(gx, gy)
+        return self.get_pixel_value_at_pixel_indices(px, py)
+
+    def get_pixel_value_at_shapely_point(self, shapely_point):
+        gx, gy = shapely_point.x, shapely_point.y
+        return self.get_pixel_value_at_georef_point(gx, gy)
 
     def get_shape(self):
         rows = self.get_rows()
@@ -377,11 +417,12 @@ class Raster(object):
         geotransform = self.get_geotransform()
         return Affine.from_gdal(*geotransform)
 
-    def get_bbox(self):
+    def get_bounding_box(self):
         return pygeo.geoprocessing.get_bounding_box(self.uri)
 
     def get_aoi(self):
-        bb = self.get_bbox()
+        '''May only be suited for non-rotated rasters'''
+        bb = self.get_bounding_box()
         u_x = max(bb[0::2])
         l_x = min(bb[0::2])
         u_y = max(bb[1::2])
@@ -389,7 +430,9 @@ class Raster(object):
         return Polygon([(l_x, l_y), (l_x, u_y), (u_x, u_y), (u_x, l_y)])
 
     def get_aoi_as_shapefile(self, uri):
-        bb = self.get_bbox()
+        '''May only be suited for non-rotated rasters'''
+        raise NotImplementedError
+        bb = self.get_bounding_box()
         u_x = max(bb[0::2])
         l_x = min(bb[0::2])
         u_y = max(bb[1::2])
@@ -408,15 +451,10 @@ class Raster(object):
         # outLayer.CreateFeature(outFeature)
 
     def get_cell_area(self):
-        affine = self.get_affine()
-        return abs((affine.a * affine.e))
+        a = self.get_affine()
+        return abs((a.a * a.e))
 
     def set_band(self, masked_array):
-        '''Currently works for rasters with only one band'''
-        assert(len(masked_array) == self.get_rows())
-        assert(len(masked_array[0]) == self.get_cols())
-        assert(self.band_count() == 1)
-
         raise NotImplementedError
 
     def set_bands(self, array):
@@ -480,9 +518,6 @@ class Raster(object):
             vectorize_op=False)
 
         return Raster.from_tempfile(dataset_out_uri)
-        # temp_raster = Raster.from_tempfile(dataset_out_uri)
-        # temp_raster.copy(raster.uri)
-        # os.remove(dataset_out_uri)
 
     def align_to(self, raster, resample_method):
         '''Currently aligns other raster to this raster - later: union/intersection
@@ -547,12 +582,12 @@ class Raster(object):
             wkt = geom.ExportToWkt()
             shapely_object = shapely.wkt.loads(wkt)
             centroid = shapely_object.centroid
-            value = self.get_pixel_value_at_point(centroid)
+            value = self.get_pixel_value_at_shapely_point(centroid)
 
             if value is None:
                 return None
 
-            px, py = self.get_pixel_coords_at_point(centroid)
+            px, py = self.get_pixel_indices_at_shapely_point(centroid)
             src_af = self.get_affine()
             mx1 = src_af.c
             my1 = src_af.f
@@ -589,6 +624,56 @@ class Raster(object):
             self.uri, pixel_size, wkt, resample_method, dataset_out_uri)
 
         return Raster.from_tempfile(dataset_out_uri)
+
+    def reproject_georef_point(self, x, y, dst_proj):
+        reproj = functools.partial(
+            pyproj.transform,
+            pyproj.Proj(init="epsg:%i" % self.get_projection()),
+            pyproj.Proj(init="epsg:%i" % dst_proj))
+
+        return reproj(x, y)
+
+    def reproject_shapely_object(self, shapely_object, dst_proj):
+        reproj = functools.partial(
+            pyproj.transform,
+            pyproj.Proj(init="epsg:%i" % self.get_projection()),
+            pyproj.Proj(init="epsg:%i" % dst_proj))
+
+        return shapely.ops.transform(reproj, shapely_object)
+
+    def resize_pixels(self, pixel_size, resample_method):
+        bounding_box = self.get_bounding_box()
+        output_uri = pygeo.geoprocessing.temporary_filename()
+
+        pygeo.geoprocessing.resize_and_resample_dataset_uri(
+            self.uri,
+            bounding_box,
+            pixel_size,
+            output_uri,
+            resample_method)
+
+        return Raster.from_tempfile(output_uri)
+
+    def sample_from_raster(self, raster):
+        '''way too slow!'''
+        shape = self.get_shape()
+        a = np.zeros(shape)
+        dst_idxs = [(i, j) for i in range(shape[0]) for j in range(shape[1])]
+        src_raster = raster.get_band(1).data
+        for dst_idx in dst_idxs:
+            p = self.get_georef_point_at_pixel_indices(*dst_idx)
+            p2 = self.reproject_georef_point(
+                p[0], p[1], raster.get_projection())
+            src_idx = self.get_pixel_indices_at_georef_point(*p2)
+            a[dst_idx] = src_raster[src_idx]
+
+        r = Raster.from_array(
+            a,
+            self.get_affine(),
+            self.get_projection(),
+            raster.get_datatype(1),
+            raster.get_nodata(1))
+        return r
 
     def reclass(self, reclass_table, out_nodata=None):
         if out_nodata is None:

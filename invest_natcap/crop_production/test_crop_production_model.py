@@ -15,31 +15,18 @@ from affine import Affine
 
 import crop_production_model as model
 from raster import Raster, RasterFactory
+from vector import Vector
 import test_data
 
 workspace_dir = '../../test/invest-data/test/data/crop_production/'
 input_dir = '../../test/invest-data/test/data/crop_production/input/'
 pp = pprint.PrettyPrinter(indent=4)
 
-# set arguments
-shape = (180, 360)
-affine = Affine(1, 0, -180, 0, -1, 90)
-proj = 4326
-datatype = gdal.GDT_Float64
-nodata_val = -9999
-
-global_raster_factory = RasterFactory(
-    proj,
-    datatype,
-    nodata_val,
-    shape[0],
-    shape[1],
-    affine=affine)
-
 
 class TestCreateYieldFuncOutputFolder(unittest.TestCase):
     def setUp(self):
-        corn_observed = global_raster_factory.horizontal_ramp(1.0, 10.0)
+        corn_observed = test_data.create_global_raster_factory(
+            gdal.GDT_Float32).horizontal_ramp(1.0, 10.0)
 
         self.vars_dict = {
             'output_dir': os.path.join(workspace_dir, 'output'),
@@ -49,7 +36,7 @@ class TestCreateYieldFuncOutputFolder(unittest.TestCase):
         # self.output_yield_func_dir = None
 
     def test_run1(self):
-        guess = model.create_yield_func_output_folder(
+        guess = model._create_yield_func_output_folder(
             self.vars_dict, 'observed')
 
         assert(os.path.exists(guess['output_yield_func_dir']))
@@ -59,6 +46,65 @@ class TestCreateYieldFuncOutputFolder(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.output_yield_func_dir)
+
+
+class TestGetObservedYieldFromDataset(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        crop = 'corn'
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        aoi_vector = Vector.from_shapely(
+            lulc_raster.get_aoi(),
+            lulc_raster.get_projection())
+        base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
+        observed_yield = 1.0
+        corn_observed = test_data.create_global_raster_factory(
+            gdal.GDT_Float32).uniform(observed_yield)
+
+        vars_dict = {
+            'observed_yields_maps_dict': {crop: corn_observed.uri}
+        }
+        guess_yield_over_aoi = model._get_observed_yield_from_dataset(
+            vars_dict,
+            crop,
+            aoi_vector,
+            base_raster_float)
+        assert((guess_yield_over_aoi == observed_yield).all())
+
+
+class TestGetYieldGivenLULC(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        observed_yield = 2.0
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        observed_yield_over_aoi_raster = lulc_raster.ones().set_datatype(
+            gdal.GDT_Float32) * observed_yield
+        crop = "corn"
+
+        vars_dict = {
+            'crop_lookup_dict': test_data.get_crop_lookup_table(
+                os.path.join(input_dir, 'crop_lookup_table.csv')),
+            'observed_yields_maps_dict': test_data.get_observed_yield_maps_dict()
+        }
+
+        # print lulc_raster
+        # print observed_yield_over_aoi_raster
+        # print vars_dict['crop_lookup_dict'].items()
+        guess_yield_over_aoi = model._get_yield_given_lulc(
+            vars_dict,
+            crop,
+            lulc_raster,
+            observed_yield_over_aoi_raster)
+
+        guess_total = guess_yield_over_aoi.get_band(1).sum()
+        check_total = observed_yield * lulc_raster.get_shape()[0]
+        assert(guess_total == check_total)
+
+# class Test
 
 
 class TestCreateResultsTableObserved(unittest.TestCase):
@@ -95,7 +141,7 @@ class TestCreateResultsTableObserved(unittest.TestCase):
         }
 
     def test_run1(self):
-        guess = model.create_results_table(self.vars_dict)
+        guess = model._create_results_table(self.vars_dict)
         pass
 
 

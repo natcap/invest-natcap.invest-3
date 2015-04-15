@@ -58,7 +58,7 @@ class TestReadEconomicsTable(unittest.TestCase):
         guess = io.read_economics_table(self.vars_dict)
         economics_table_dict = guess['economics_table_dict']
         keys = economics_table_dict.keys()
-        assert(type(economics_table_dict[keys[0]]['price']) in [float, int])
+        assert(type(economics_table_dict[keys[0]]['price_per_ton']) in [float, int])
 
 
 class TestReadPercentileYieldTables(unittest.TestCase):
