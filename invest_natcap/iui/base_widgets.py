@@ -1715,7 +1715,10 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 
-        self.elements.remove(self.info_button)
+        try:
+            self.elements.remove(self.info_button)
+        except ValueError:
+            print "warning attempted to remove helpbutton that wasn't defined"
         self.elements.append(QtGui.QWidget())
         self.elements.append(QtGui.QWidget())
         self.elements.append(self.info_button)
