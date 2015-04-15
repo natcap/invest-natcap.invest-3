@@ -76,7 +76,8 @@ def calc_observed_yield(vars_dict):
         observed_yield_over_aoi_raster = _get_observed_yield_from_dataset(
             vars_dict,
             crop,
-            aoi_vector)
+            aoi_vector,
+            base_raster_float_neg1)
 
         ObservedLocalYield_raster = _get_yield_given_lulc(
             vars_dict,
@@ -160,8 +161,9 @@ def _get_observed_yield_from_dataset(vars_dict, crop, aoi_vector, base_raster_fl
     reproj_aoi_vector = aoi_vector.reproject(
         crop_observed_yield_raster.get_projection())
 
-    clipped_crop_raster = crop_observed_yield_raster.clip(
+    clipped_crop_raster_unkwn_nodata = crop_observed_yield_raster.clip(
         reproj_aoi_vector.uri)
+    clipped_crop_raster = clipped_crop_raster_unkwn_nodata.set_nodata(-1)
 
     if clipped_crop_raster.get_shape() == (1, 1):
         observed_yield_val = float(clipped_crop_raster.get_band(1).data[0, 0])
@@ -169,7 +171,9 @@ def _get_observed_yield_from_dataset(vars_dict, crop, aoi_vector, base_raster_fl
     else:
         # this reprojection could result in very long computation times
         reproj_crop_raster = clipped_crop_raster.reproject(
-            lulc_raster.get_projection(), 'nearest', lulc_raster.get_affine().a)
+            base_raster_float.get_projection(),
+            'nearest',
+            base_raster_float.get_affine().a)
 
         aligned_crop_raster = reproj_crop_raster.align_to(
             base_raster_float, 'nearest')
@@ -221,35 +225,45 @@ def _calc_crop_returns(vars_dict, crop, lulc_raster, production_raster, returns_
     Returns_crop = Revenue_crop - Cost_crop
     '''
     cost_per_ton_input_raster = 0
-    if vars_dict['modeled_fertilizer_maps_dir']:
-        cost_per_ton_input_raster = _calc_cost_of_per_ton_inputs(
-            vars_dict, crop, production_raster)
-
     cost_per_hectare_input_raster = _calc_cost_of_per_hectare_inputs(
         vars_dict, crop, lulc_raster)
 
-    cost_raster = cost_per_hectare_input_raster + cost_per_ton_input_raster
+    if vars_dict['modeled_fertilizer_maps_dir']:
+        cost_per_ton_input_raster = _calc_cost_of_per_ton_inputs(
+            vars_dict, crop, lulc_raster)
+
+        cost_raster = cost_per_hectare_input_raster + cost_per_ton_input_raster
+    else:
+        cost_raster = cost_per_hectare_input_raster
 
     price = vars_dict['economics_table_dict'][crop]['price_per_ton']
+    print production_raster
+    print price
     revenue_raster = production_raster * price
     returns_raster = revenue_raster - cost_raster
 
     return returns_raster
 
 
-def _calc_cost_of_per_ton_inputs(vars_dict, crop, production_raster):
+def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
     '''
     sum_across_fert(FertAppRate_fert * LULCCropCellArea * CostPerTon_fert)
     '''
+
     economics_table_crop = vars_dict['economics_table_dict'][crop]
     fert_maps_dict = vars_dict['modeled_fertilizer_maps_dict']
-    CostPerTonInputTotal_raster = production_raster * 0
+
+    masked_lulc_raster = _get_masked_lulc_raster(vars_dict, crop, lulc_raster)
+    masked_lulc_raster_float = masked_lulc_raster.set_datatype(
+        gdal.GDT_Float32).set_nodata(-1)
+
+    CostPerTonInputTotal_raster = masked_lulc_raster_float.zeros()
 
     try:
         cost_nitrogen_per_ton = economics_table_crop['cost_nitrogen_per_ton']
         Nitrogen_raster = Raster.from_file(fert_maps_dict['nitrogen'])
         NitrogenCost_raster = Nitrogen_raster * cost_nitrogen_per_ton
-        CostPerTonInputTotal_raster += NitrogenCost_raster
+        CostPerTonInputTotal_raster += NitrogenCost_raster.set_nodata(-1)
     except:
         pass
     try:
@@ -257,18 +271,18 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, production_raster):
             'cost_phosphorous_per_ton']
         Phosphorous_raster = Raster.from_file(fert_maps_dict['nitrogen'])
         PhosphorousCost_raster = Phosphorous_raster * cost_phosphorous_per_ton
-        CostPerTonInputTotal_raster += PhosphorousCost_raster
+        CostPerTonInputTotal_raster += PhosphorousCost_raster.set_nodata(-1)
     except:
         pass
     try:
         cost_potash_per_ton = economics_table_crop['cost_potash_per_ton']
         Potash_raster = Raster.from_file(fert_maps_dict['potash'])
         PotashCost_raster = Potash_raster * cost_potash_per_ton
-        CostPerTonInputTotal_raster += PotashCost_raster
+        CostPerTonInputTotal_raster += PotashCost_raster.set_nodata(-1)
     except:
         pass
 
-    return CostPerTonInputTotal_raster
+    return CostPerTonInputTotal_raster * masked_lulc_raster_float
 
 
 def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):

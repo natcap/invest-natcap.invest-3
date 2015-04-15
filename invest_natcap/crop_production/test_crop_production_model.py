@@ -155,7 +155,9 @@ class TestCalculateCostOfPerTonInputs(unittest.TestCase):
         CostPerTonInputTotal_raster = model._calc_cost_of_per_ton_inputs(
             vars_dict,
             crop,
-            production_raster)
+            lulc_raster)
+
+        print CostPerTonInputTotal_raster
 
         check = econ_table['cost_nitrogen_per_ton'] + econ_table[
             'cost_phosphorous_per_ton'] + econ_table['cost_potash_per_ton']
@@ -173,7 +175,8 @@ class TestCalculateCostOfPerHectareInputs(unittest.TestCase):
         crop = 'corn'
         econ_table = vars_dict['economics_table_dict'][crop]
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
-        production_raster = lulc_raster.set_datatype(gdal.GDT_Float32) * 2.0
+        production_raster = lulc_raster.set_datatype(
+            gdal.GDT_Float32).set_nodata(-1) * 2.0
 
         CostPerHectareInputTotal_raster = model._calc_cost_of_per_hectare_inputs(
             vars_dict,
@@ -188,12 +191,41 @@ class TestCalculateCostOfPerHectareInputs(unittest.TestCase):
                 1)[0, 0] == np.float32(check))
 
 
-class TestCalculateCropReturns(unittest.TestCase):
+class TestCalcCropReturns(unittest.TestCase):
     def setUp(self):
         pass
 
     def test_run1(self):
-        pass
+        vars_dict = test_data.get_vars_dict()
+        crop = 'corn'
+        econ_table = vars_dict['economics_table_dict'][crop]
+        lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
+        masked_lulc_float = model._get_masked_lulc_raster(
+            vars_dict, crop, lulc_raster).set_datatype(
+            gdal.GDT_Float32).set_nodata(-1)
+        production_raster = lulc_raster.set_datatype(
+            gdal.GDT_Float32).set_nodata(-1) * 2.0 * masked_lulc_float
+        returns_raster = production_raster * 0.0
+
+        returns_raster = model._calc_crop_returns(
+            vars_dict,
+            crop,
+            lulc_raster,
+            production_raster,
+            returns_raster,
+            econ_table)
+
+        cost_per_ha = econ_table['cost_labor_per_ha'] + econ_table[
+            'cost_machine_per_ha'] + econ_table[
+            'cost_seed_per_ha'] + econ_table['cost_irrigation_per_ha']
+        cost_per_ton = econ_table['cost_nitrogen_per_ton'] + econ_table[
+            'cost_phosphorous_per_ton'] + econ_table['cost_potash_per_ton']
+        cost = cost_per_ha + cost_per_ton
+        revenue = econ_table['price_per_ton'] * 2.0
+        check_returns = revenue - cost
+
+        assert(returns_raster.get_band(
+                1)[0, 0] == np.float32(check_returns))
 
 
 class TestCreateResultsTableObserved(unittest.TestCase):
