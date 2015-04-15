@@ -16,7 +16,7 @@ import glob
 import matplotlib
 import zipfile
 import scipy
-
+import osgeo #used to trigger the os.environ['GDAL_DATA']
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -213,6 +213,12 @@ if platform.system() == 'Windows':
                 ('invest_natcap/reporting/reporting_data',
                     glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
+
+            #GDAL_DATA environment variable should always exist on a windows
+            #py2exe build and is a bug if it doesn't
+            for root_dir, sub_folders, file_list in os.walk(os.environ['GDAL_DATA']):
+                self.distribution.data_files.append(
+                  ('osgeo/data/gdal', [os.path.join(root_dir, x) for x in  file_list]))
 
             # These are the GDAL DLLs.  They are absolutely required for running the
             # Windows executeables on XP.  For whatever reason, they do not appear to be
