@@ -163,25 +163,34 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     angles = (np.arctan2(-p_rows, p_cols) + two_pi) % two_pi
     
+    # Container for all the fringe pixels to process in the current iteration
+    fringe_pixels = []
+    # Fringe pixels to compute in the next iteration
+    new_fringe_pixels = []
+
+
 
 #    I, J = np.meshgrid(range(3), range(3), indexing='ij')
     
     # 1-Draw horizontal line from center to edge of visible area
     for p in range(max_dist):
-        pixel_map[center[0], center[1] + p] = 0.0
-        active_pixels[0, 0, add, p] = center[0]
-        active_pixels[0, 1, add, p] = center[1] + p
+        abs_row = center[0]
+        abs_col = center[1] + p
+        pixel_map[abs_row, abs_col] = 0.0   # Active pixel code
+        active_pixels[0, 0, add, p] = abs_row
+        active_pixels[0, 1, add, p] = abs_col
 
-    # 2-Add fringe line above it
+    # 2-Add fringe line above line at angle 0
     for p in range(1, max_dist):
-        pixel_map[center[0]+1, center[1] + p] = angles[1]
-        active_pixels[1, 0, add, p] = center[0]+1
-        active_pixels[1, 1, add, p] = center[1] + p
-
-    cdef int iteration = 1
+        abs_row = center[0] - 1 # 1 pixel above, i.e. 1 row in negative dir.
+        abs_col = center[1] + p
+        pixel_map[abs_row, abs_col] = angles[1] # Fringe pixel code: cur. angle
+        active_pixels[1, 0, add, p] = abs_row
+        active_pixels[1, 1, add, p] = abs_col
 
     # 3-Until there are no more angles to process:
-    for i in range(angles.size-1):
+    # Done with initialization of iteration 0, start from iteration 1:
+    for i in range(1, angles.size-1):
         print('i', i)
         a = angles[i]
         # 4-Find fringe pixel from focal point
@@ -190,30 +199,36 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
         fringe_pixel = np.where(pixel_mask > 0)
 
+        print('pixel_mask', pixel_mask)            
+        print('fringe_pixel', zip(fringe_pixel[0], fringe_pixel[1]))
+
         assert fringe_pixel[0].size == 1, 'Unexpected fringe pixel count: ' + \
             str(fringe_pixel[0].size)
 
-        fringe_pixel = \
-            (fringe_pixel[0][0] + center[0] - 1, \
-            fringe_pixel[1][0] + center[1] - 1)
+        fringe_pixels.append((fringe_pixel[0][0] -1, fringe_pixel[1][0] -1))
 
-        # 5-Until there are no more fringe pixels:
-        pixel = 0
-        while fringe_pixel[0].size == 1:
+        # 5-As long as there remain fringe pixels to process:
+        active_pixel_id = 0
+        while fringe_pixels:
+            fringe_pixel = fringe_pixels.pop()
+            print('computing fringe pixel', fringe_pixel)
             # Compute the angle of the cell center
-            row = fringe_pixel[0]
-            col = fringe_pixel[1]
+            rel_row = fringe_pixel[0]   # row relative to center
+            rel_col = fringe_pixel[1]   # col relative to center
+            abs_row = rel_row + center[0]   # absolute row
+            abs_col = rel_col + center[1]   # absolute column
 
-            center_angle = \
-                <np.float64_t>(atan2(-p_rows[i], p_cols[i]) +two_pi) %two_pi
+            center_angle = <np.float64_t>( \
+                atan2(-rel_row, rel_col) +two_pi) %two_pi
             
+            print('center_angle', center_angle)
             #   5.1-Check if fringe pixel should be an active pixel
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = <int>(4. * a / two_pi) * 2
+            sector = <int>(4. * center_angle / two_pi) * 2
             # The if statement adjusts for all the 8 angles
-            if abs(p_rows[i] * p_cols[i]) > 0:
+            if abs(rel_row * rel_col) > 0:
                 sector += 1
 
             # Compute offset
@@ -230,44 +245,74 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             min_angle = atan2(-min_corner_row, min_corner_col)
 
             
-            # 5.2-If fringe pixel should be an active pixel:
+            print('sector', sector)
+            print('min_corner', (min_corner_row, min_corner_col), min_angle)
+            print('angle', angles[i], angles[i+1])
+
+            # 5.2-Check if fringe pixel should be an active pixel:
             if min_angle < angles[i+1]:
-                # Mark fringe pixel as active pixel
-                pixel_map[row, col] = 0.0
-                active_pixels[1, 0, add, pixel] = row
-                active_pixels[1, 1, add, pixel] = col
+                print('fringe pixel becomes active')
+                
+                # Mark fringe pixel as active pixel + store it
+                pixel_map[abs_row, abs_col] = 0.0
+                active_pixels[i, 0, add, active_pixel_id] = abs_row
+                active_pixels[i, 1, add, active_pixel_id] = abs_col
+                active_pixel_id += 1
 
                 # 5.2.1-Extract neighboring pixels
-                pixel_mask = pixel_map[row-1:row+2, col-1:col+2]
-                fringe_pixels = \
+                pixel_mask = \
+                    pixel_map[abs_row-1:abs_row+2, abs_col-1:abs_col+2]
+                new_fringe_pixels = \
                     np.where((pixel_mask > 0) & (pixel_mask < angles[i]))
 
-                # 5.2.2-Mark fringe pixels (if not too far)
-                for i in range(fringe_pixels[0].size):
-                    new_row = fringe_pixels[0][i] + row - 1
-                    new_col = fringe_pixels[1][i] + col - 1
+                return
+                # 5.2.2-Add new fringe pixels (if not too far)
+                for i in range(new_fringe_pixels[0].size):
+                    new_abs_row = fringe_pixels[0][i] + abs_row - 1
+                    new_abs_col = fringe_pixels[1][i] + abs_col - 1
+
+                    new_rel_row = new_abs_row -center[0]
+                    new_rel_col = new_abs_col -center[1]
                     
-                    distance = \
-                        ((viewpoint_row-new_row)**2 + \
-                        (viewpoint_col-new_col)**2)**.5
+                    # Use relative coordinates to compute distance to center
+                    fringe_pixel_distance = \
+                        (new_rel_row**2 + new_rel_col**2)**.5
                     
-                    if distance < max_dist:
-                        pixel_map[row, col] = angles[i]
+                    if fringe_pixel_distance < max_dist:
+                        # We use absolute coordinates to sore in pixel map
+                        pixel_map[new_abs_row, new_abs_col] = angles[i]
+                        # We use relative coordinates in fringe pixel coord.
+                        new_fringe_pixels.append((new_rel_row, new_rel_col))
+            else:
+                print('fringe pixel stays inactive')
 
-            # 5.3-Move to next fringe pixel + see if not too far
-            pixel_mask = pixel_map[row-1:row+2, col-1:col+2]
+            # 5.3-Add neighboring fringe pixels if not too far
+            pixel_mask = pixel_map[abs_row-1:abs_row+2, abs_col-1:abs_col+2]
 
-            fringe_pixel = np.where((pixel_mask > 0) & (pixel_mask < angles[i]))
+            neighboring_fringe_pixels = \
+                np.where((pixel_mask > 0) & (pixel_mask < angles[i]))
 
-            # No more fringe pixels, move on to next angle
+            for i in range(neighboring_fringe_pixels[0].size):
+                new_abs_row = neighboring_fringe_pixels[0][i] + abs_row - 1
+                new_abs_col = neighboring_fringe_pixels[1][i] + abs_col - 1
+
+                new_rel_row = new_abs_row -center[0]
+                new_rel_col = new_abs_col -center[1]
+                
+                # Use relative coordinates to compute distance to center
+                fringe_pixel_distance = \
+                    (new_rel_row**2 + new_rel_col**2)**.5
+                
+                if fringe_pixel_distance < max_dist:
+                    # We use absolute coordinates to sore in pixel map
+                    pixel_map[new_abs_row, new_abs_col] = angles[i]
+                    # We use relative coordinates in fringe pixel coord.
+                    new_fringe_pixels.append((new_rel_row, new_rel_col))
+
+            # No more fringe pixels, swap to process new fringe pixels
             if fringe_pixel[0].size == 0:
-                break
-
-            fringe_pixel = \
-                (fringe_pixel[0][0] + row - 1, \
-                fringe_pixel[1][0] + col - 1)
-
-            break
+                next_fringe_pixels, fringe_pixels = \
+                    fringe_pixels, neighboring_fringe_pixels
 
         # 6-Move on to next angle
         iteration += 1
