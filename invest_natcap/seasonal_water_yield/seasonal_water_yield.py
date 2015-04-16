@@ -104,13 +104,14 @@ def calculate_quick_flow(
         vectorize_op=False)
 
 def calculate_slow_flow(
-        precip_uri_list, eto_uri_list, dem_uri, lulc_uri, kc_lookup,
+        precip_uri_list, et0_uri_list, dem_uri, lulc_uri, kc_lookup,
         alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri):
     """calculate slow flow index"""
 
     #reclass lulc to KC
-    #PETm = kc*eto_m
+    #PETm = kc*et0_m
+    #AETm = min(PETm; Pim - QFim + alpha*beta * sum of all pixels draining to pixel j)
 
     pass
 
@@ -118,7 +119,7 @@ def calculate_slow_flow(
 def main():
     """main entry point"""
 
-    eto_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\eto"
+    et0_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\et0"
     precip_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\precip"
 
 
@@ -126,9 +127,9 @@ def main():
     cn_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\cn.csv"
     rain_events_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Number of events.csv"
     precip_uri_list = []
-    eto_uri_list = []
+    et0_uri_list = []
 
-    eto_dir_list = [os.path.join(eto_dir, f) for f in os.listdir(eto_dir)]
+    et0_dir_list = [os.path.join(et0_dir, f) for f in os.listdir(et0_dir)]
     precip_dir_list = [
         os.path.join(precip_dir, f) for f in os.listdir(precip_dir)]
 
@@ -136,7 +137,7 @@ def main():
         month_file_match = re.compile('.*[^\d]%d\.[^.]+$' % month_index)
 
         for data_type, dir_list, uri_list in [
-                ('eto', eto_dir_list, eto_uri_list),
+                ('et0', et0_dir_list, et0_uri_list),
                 ('Precip', precip_dir_list, precip_uri_list)]:
 
             file_list = [x for x in dir_list if month_file_match.match(x)]
@@ -149,7 +150,7 @@ def main():
                     (month_index, file_list))
             uri_list.append(file_list[0])
 
-    print eto_uri_list
+    print et0_uri_list
     print precip_uri_list
 
     output_dir = r"C:\Users\rich\Documents\delete_seasonal_water_yield_output"
@@ -180,7 +181,7 @@ def main():
     recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
     vri_uri = os.path.join(output_dir, 'vri.tif')
     calculate_slow_flow(
-        precip_uri_list, eto_uri_list, dem_uri, lulc_uri, kc_lookup,
+        precip_uri_list, et0_uri_list, dem_uri, lulc_uri, kc_lookup,
         alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri)
 
