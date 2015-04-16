@@ -1,9 +1,9 @@
 {
   "id": "window",
-  "label": "Monthly Water Yield",
-  "targetScript": "invest_natcap.monthly_water_yield.monthly_water_yield",
+  "label": "Seasonal Water Yield",
+  "targetScript": "invest_natcap.seasonal_water_yield.seasonal_water_yield",
   "modelName": "monthly_water_yield",
-  "localDocURI": "../documentation/monthlywateryield.html",
+  "localDocURI": "../documentation/seasonalwateryield.html",
   "height": 700,
   "width": 900,
   "elements": [
