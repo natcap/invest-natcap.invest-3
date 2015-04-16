@@ -103,11 +103,22 @@ def calculate_quick_flow(
         gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
         vectorize_op=False)
 
+def calculate_slow_flow(
+        precip_uri_list, eto_uri_list, dem_uri, lulc_uri, kc_lookup,
+        alpha_m, beta_i, gamma, qfi_uri,
+        recharge_uri, recharge_avail_uri, vri_uri):
+    """calculate slow flow index"""
+
+    #reclass lulc to KC
+    #PETm = kc*eto_m
+
+    pass
+
 
 def main():
     """main entry point"""
 
-    pet_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\pet"
+    eto_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\eto"
     precip_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\precip"
 
 
@@ -115,9 +126,9 @@ def main():
     cn_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\cn.csv"
     rain_events_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Number of events.csv"
     precip_uri_list = []
-    pet_uri_list = []
+    eto_uri_list = []
 
-    pet_dir_list = [os.path.join(pet_dir, f) for f in os.listdir(pet_dir)]
+    eto_dir_list = [os.path.join(eto_dir, f) for f in os.listdir(eto_dir)]
     precip_dir_list = [
         os.path.join(precip_dir, f) for f in os.listdir(precip_dir)]
 
@@ -125,7 +136,7 @@ def main():
         month_file_match = re.compile('.*[^\d]%d\.[^.]+$' % month_index)
 
         for data_type, dir_list, uri_list in [
-                ('PET', pet_dir_list, pet_uri_list),
+                ('eto', eto_dir_list, eto_uri_list),
                 ('Precip', precip_dir_list, precip_uri_list)]:
 
             file_list = [x for x in dir_list if month_file_match.match(x)]
@@ -138,7 +149,7 @@ def main():
                     (month_index, file_list))
             uri_list.append(file_list[0])
 
-    print pet_uri_list
+    print eto_uri_list
     print precip_uri_list
 
     output_dir = r"C:\Users\rich\Documents\delete_seasonal_water_yield_output"
@@ -153,6 +164,25 @@ def main():
     calculate_quick_flow(
         precip_uri_list, rain_events_table_uri, lulc_uri, soil_group_uri,
         cn_table_uri, aoi_uri, cn_uri, qfi_uri, output_dir)
+
+    dem_uri = None
+    alpha_m = 1./12
+    beta_i = 1.
+    gamma = 1.
+    biophysical_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\biophysical_Cape_Fear.csv"
+    biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
+        biophysical_table_uri, 'lucode')
+    kc_lookup = dict([
+        (lucode, biophysical_table[lucode]['Kc']) for lucode in
+        biophysical_table])
+
+    recharge_uri = os.path.join(output_dir, 'recharge.tif')
+    recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
+    vri_uri = os.path.join(output_dir, 'vri.tif')
+    calculate_slow_flow(
+        precip_uri_list, eto_uri_list, dem_uri, lulc_uri, kc_lookup,
+        alpha_m, beta_i, gamma, qfi_uri,
+        recharge_uri, recharge_avail_uri, vri_uri)
 
 if __name__ == '__main__':
     main()
