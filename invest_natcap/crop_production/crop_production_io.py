@@ -5,6 +5,7 @@ outputs
 
 import logging
 import os
+import csv
 import pprint as pp
 
 import pygeoprocessing.geoprocessing as pygeo
@@ -408,13 +409,13 @@ def read_percentile_yield_tables(vars_dict):
 
     percentile_yield_dict = {}
     for table_uri in table_uris:
-        # could check here to make sure file is raster
-
         basename = os.path.basename(table_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
             percentile_yield_dict[cropname] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
+            for c_bin in percentile_yield_dict[cropname].keys():
+                del percentile_yield_dict[cropname][c_bin][u'climate_bin']
 
     # Add Assertion Statements?
 
@@ -553,6 +554,10 @@ def read_nutrition_table(vars_dict):
     '''
     input_dict = pygeo.get_lookup_from_csv(
         vars_dict['nutrition_table_uri'], 'crop')
+    for c in input_dict.keys():
+        src = input_dict[c]
+        del src['crop']
+        input_dict[c] = src
 
     # Add Assertion Statements?
 
@@ -616,3 +621,64 @@ def _listdir(path):
     uris = map(lambda x: os.path.join(path, x), file_names)
 
     return uris
+
+
+
+def create_results_table(vars_dict, percentile=None):
+    '''
+    Example Args::
+
+        vars_dict = {
+            'crop_production_dict': {
+                'corn': 12.3,
+                'soy': 13.4,
+                ...
+            },
+            'economics_table_dict': {
+                'corn': {
+                    'total_cost': <float>,
+                    'total_revenue': <float>,
+                    'total_returns': <float>,
+                    ...
+                }
+            },
+            'crop_total_nutrition_dict': {
+                'corn': {...},
+                ...
+            },
+        }
+    '''
+    crop_production_dict = vars_dict['crop_production_dict']
+    economics_table_dict = vars_dict['economics_table_dict']
+    crop_total_nutrition_dict = vars_dict['crop_total_nutrition_dict']
+
+    # Build list of fieldnames
+    fieldnames = ['crop', 'production']
+    if percentile is not None:
+        pass
+    if ['do_economic_returns']:
+        fieldnames += ['total_returns', 'total_revenue', 'total_cost']
+    nutrition_headers = crop_total_nutrition_dict[
+        crop_total_nutrition_dict.iterkeys().next()].keys()
+    fieldnames += nutrition_headers
+
+    results_table_uri = os.path.join(
+        vars_dict['output_dir'], 'results_table.csv')
+    csvfile = open(results_table_uri, 'w+')
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+
+    for crop in crop_production_dict.keys():
+        row = {}
+        row['crop'] = crop
+        row['production'] = crop_production_dict[crop]
+        if percentile is not None:
+            pass
+        if ['do_economic_returns']:
+            row['total_returns'] = economics_table_dict[crop]['total_returns']
+            row['total_revenue'] = economics_table_dict[crop]['total_revenue']
+            row['total_cost'] = economics_table_dict[crop]['total_cost']
+        row = dict(row.items() + crop_total_nutrition_dict[crop].items())
+        writer.writerow(row)
+
+    csvfile.close()

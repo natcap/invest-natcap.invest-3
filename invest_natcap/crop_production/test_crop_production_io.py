@@ -178,6 +178,65 @@ class TestFetchArgs(unittest.TestCase):
         # pp.pprint(l)
 
 
+class TestCreateResultsTable(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_run1(self):
+        vars_dict = test_data.get_vars_dict()
+        vars_dict['crop_production_dict'] = {
+            'corn': 1.0,
+            'soy': 2.0,
+            'rice': 3.0
+        }
+        vars_dict['crop_total_nutrition_dict'] = {
+            'corn': {
+                'ca': 13,
+                'energy': 12,
+                'fe': 14,
+                'lipid': 11,
+                'mg': 15,
+                'percent_refuse': 0.5,
+                'ph': 16,
+                'protein': 10},
+            'rice': {
+                'ca': 33,
+                'energy': 32,
+                'fe': 34,
+                'lipid': 31,
+                'mg': 35,
+                'percent_refuse': 0.7,
+                'ph': 36,
+                'protein': 30},
+            'soy': {
+                'ca': 23,
+                'energy': 22,
+                'fe': 24,
+                'lipid': 21,
+                'mg': 25,
+                'percent_refuse': 0.2,
+                'ph': 26,
+                'protein': 20}}
+        vars_dict['economics_table_dict'] = {
+            'corn': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            },
+            'soy': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            },
+            'rice': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            }
+        }
+        guess = io.create_results_table(vars_dict)
+
+
 if __name__ == '__main__':
     test_data.get_vars_dict()
     unittest.main()

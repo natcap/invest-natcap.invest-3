@@ -23,6 +23,7 @@ input_dir = '../../test/invest-data/test/data/crop_production/input/'
 pp = pprint.PrettyPrinter(indent=4)
 
 
+# Function 1
 class TestCreateYieldFuncOutputFolder(unittest.TestCase):
     def setUp(self):
         corn_observed = test_data.create_global_raster_factory(
@@ -228,42 +229,19 @@ class TestCalcCropReturns(unittest.TestCase):
                 1)[0, 0] == np.float32(check_returns))
 
 
-class TestCreateResultsTableObserved(unittest.TestCase):
+class TestCalcNutrition(unittest.TestCase):
     def setUp(self):
-        self.vars_dict = {
-            'observed_yield_maps_dir': 'path/to/dir',
-            'percentile_yield_tables_dir': 'path/to/dir',
-            'percentile_yield_dict': {},
-            'crop_lookup_dict': {},
-            'crop_lookup_table_uri': 'path/to/file',
-            'economics_table_dict': {},
-            'climate_bin_maps_dir': 'path/to/dir',
-            'lulc_map_uri': 'path/to/file',
-            'modeled_fertilizer_maps_dir': 'path/to/dir',
-            'do_nutrition': True,
-            'do_yield_observed': True,
-            'workspace_dir': 'path/to/dir',
-            'modeled_irrigation_map_uri': 'path/to/file',
-            'spatial_dataset_dir': 'path/to/dir',
-            'modeled_fertilizer_maps_dict': {},
-            'modeled_yield_tables_dir': 'path/to/dir',
-            'modeled_yield_dict': {},
-            'economics_table_uri': 'path/to/file',
-            'do_yield_regression_model': True,
-            'observed_yields_maps_dict': {},
-            'nutrition_table_dict': {},
-            'do_economic_returns': True,
-            'create_crop_production_maps': True,
-            'climate_bin_maps_dict': {},
-            'results_suffix': 'scenario_1',
-            'nutrition_table_uri': 'path/to/file',
-            'do_yield_percentile': True,
-            'output_dir': os.path.join(workspace_dir, 'output')
-        }
+        pass
 
     def test_run1(self):
-        guess = model._create_results_table(self.vars_dict)
-        pass
+        vars_dict = test_data.get_vars_dict()
+        vars_dict['crop_production_dict'] = {
+            'corn': 1.0,
+            'soy': 2.0,
+            'rice': 3.0
+        }
+        guess = model._calc_nutrition(vars_dict)
+        print guess['crop_total_nutrition_dict']
 
 
 class TestCalcObservedYield(unittest.TestCase):
@@ -272,12 +250,22 @@ class TestCalcObservedYield(unittest.TestCase):
         self.output_dir = self.vars_dict['output_dir']
 
     def test_run1(self):
+        # pp.pprint(self.vars_dict)
         guess = model.calc_observed_yield(self.vars_dict)
+        # pp.pprint(guess)
+        assert('total_cost' in guess['economics_table_dict']['corn'].keys())
 
 
-    def tearDown(self):
-        # shutil.rmtree(self.output_dir)
-        pass
+# Function 2
+class TestCalcPercentileYield(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = test_data.get_vars_dict()
+        self.output_dir = self.vars_dict['output_dir']
+
+    def test_run1(self):
+        # pp.pprint(self.vars_dict)
+        guess = model.calc_percentile_yield(self.vars_dict)
+        # pp.pprint(guess)
 
 if __name__ == '__main__':
     unittest.main()

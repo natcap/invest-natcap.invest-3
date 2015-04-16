@@ -675,11 +675,11 @@ class Raster(object):
             raster.get_nodata(1))
         return r
 
-    def reclass(self, reclass_table, out_nodata=None):
+    def reclass(self, reclass_table, out_nodata=None, out_datatype=None):
         if out_nodata is None:
             out_nodata = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
-
-        out_datatype = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
+        if out_datatype is None:
+            out_datatype = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
         dataset_out_uri = pygeo.geoprocessing.temporary_filename()
 
         pygeo.geoprocessing.reclassify_dataset_uri(

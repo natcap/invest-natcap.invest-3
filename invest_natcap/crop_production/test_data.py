@@ -108,9 +108,9 @@ def create_climate_bin_maps_dir():
 
     global_raster_factory = create_global_raster_factory(gdal.GDT_Int32)
 
-    corn_raster = global_raster_factory.alternating(1, 10)
-    rice_raster = global_raster_factory.alternating(1, 10)
-    soy_raster = global_raster_factory.alternating(1, 10)
+    corn_raster = global_raster_factory.alternating(1, 3)
+    rice_raster = global_raster_factory.alternating(2, 1)
+    soy_raster = global_raster_factory.alternating(3, 2)
 
     corn_raster.save_raster(os.path.join(
         climate_bin_dir, 'corn_climate_bin.tif'))
