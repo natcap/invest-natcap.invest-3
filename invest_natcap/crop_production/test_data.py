@@ -58,7 +58,7 @@ def create_lulc_map2(aoi_dict):
 
 
 def create_global_raster_factory(datatype):
-    pixel_size = 0.083333
+    pixel_size = 1  # 0.083333
     size = 180/pixel_size
     shape = (size, size*2)
     affine = Affine(pixel_size, 0, -180, 0, -pixel_size, 90)

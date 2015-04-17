@@ -31,7 +31,7 @@
         },
         {
           "id": "results_suffix",
-          "args_id": "suffix",
+          "args_id": "results_suffix",
           "type": "text",
           "dataType": "string",
           "label": "Results Suffix (Optional)",
@@ -75,10 +75,10 @@
           "helpText": ""
         },
         {
-          "id": "generate_crop_production_maps",
-          "args_id": "generate_crop_production_maps",
+          "id": "create_crop_production_maps",
+          "args_id": "create_crop_production_maps",
           "type": "checkbox",
-          "label": "Generate Crop Production Maps",
+          "label": "Create Crop Production Maps",
           "required": true,
           "defaultValue": false,
           "helpText": ""
@@ -87,6 +87,7 @@
     },
     {
       "id": "do_yield_observed",
+      "args_id": "do_yield_observed",
       "label": "Calculate Yield based on Observed Yields within Region",
       "type": "container",
       "defaultValue": false,
@@ -107,6 +108,7 @@
     },
     {
       "id": "do_yield_percentile",
+      "args_id": "do_yield_percentile",
       "label": "Calculate Yield based on Climate-specific Distribution of Observed Yields",
       "type": "container",
       "defaultValue": false,
@@ -127,6 +129,7 @@
     },
     {
       "id": "do_yield_regression_model",
+      "args_id": "do_yield_regression_model",
       "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
       "type": "container",
       "defaultValue": false,
@@ -146,13 +149,13 @@
               "args_id": "modeled_fertilizer_maps_dir",
               "type": "folder",
               "label": "Fertilizer Application Rate Maps Folder",
-              "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",
+              "defaultValue": "../CropProduction/input/fertilizer_maps/",
               "required": true,
               "helpText": ""
             },
             {
-              "id": "irrigation_map_uri",
-              "args_id": "irrigation_map_uri",
+              "id": "modeled_irrigation_map_uri",
+              "args_id": "modeled_irrigation_map_uri",
               "type": "file",
               "label": "Irrigation Map (Raster)",
               "defaultValue": "../CropProduction/input/irrigation_map.tif",
@@ -168,6 +171,7 @@
     },
     {
       "id": "do_nutrition",
+      "args_id": "do_nutrition",
       "label": "Calculate Nutrition Contents from Yield",
       "type": "container",
       "defaultValue": false,
@@ -195,6 +199,7 @@
     },
     {
       "id": "do_economic_returns",
+      "args_id": "do_economic_returns",
       "label": "Calculate Economic Returns from Yield",
       "type": "container",
       "defaultValue": false,

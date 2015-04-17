@@ -13,8 +13,8 @@ import numpy as np
 from affine import Affine
 from shapely.geometry import Polygon
 import shapely
-import pyproj
-import PIL
+# import pyproj
+# import PIL
 
 import pygeoprocessing as pygeo
 

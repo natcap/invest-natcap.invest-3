@@ -59,7 +59,6 @@ def calc_observed_yield(vars_dict):
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = Vector.from_shapely(
         lulc_raster.get_aoi(), lulc_raster.get_projection())
-    economics_table = vars_dict['economics_table_dict']
 
     # setup useful base rasters
     base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
@@ -94,6 +93,7 @@ def calc_observed_yield(vars_dict):
         vars_dict['crop_production_dict'][crop] = Production_raster.get_band(1).sum()
 
         if vars_dict['do_economic_returns']:
+            economics_table = vars_dict['economics_table_dict']
             returns_raster += _calc_crop_returns(
                 vars_dict,
                 crop,
@@ -113,7 +113,8 @@ def calc_observed_yield(vars_dict):
     # print "Final returns raster"
     # print returns_raster
 
-    vars_dict = _calc_nutrition(vars_dict)
+    if vars_dict['do_nutrition']:
+        vars_dict = _calc_nutrition(vars_dict)
 
     # Results Table
     io.create_results_table(vars_dict)
@@ -374,7 +375,6 @@ def calc_percentile_yield(vars_dict):
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = Vector.from_shapely(
         lulc_raster.get_aoi(), lulc_raster.get_projection())
-    economics_table = vars_dict['economics_table_dict']
     percentile_yield_dict = vars_dict['percentile_yield_dict']
 
     # setup useful base rasters
@@ -391,6 +391,7 @@ def calc_percentile_yield(vars_dict):
     for percentile in percentiles:
         vars_dict['crop_production_dict'] = {}
         if vars_dict['do_economic_returns']:
+            economics_table = vars_dict['economics_table_dict']
             returns_raster = base_raster_zeros_float_neg1.copy()
 
         for crop in crops:
@@ -433,6 +434,7 @@ def calc_percentile_yield(vars_dict):
             del yield_raster
             del Production_raster
 
+    if vars_dict['do_nutrition']:
         vars_dict = _calc_nutrition(vars_dict)
 
         # Results Table
@@ -498,7 +500,6 @@ def calc_regression_yield(vars_dict):
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = Vector.from_shapely(
         lulc_raster.get_aoi(), lulc_raster.get_projection())
-    economics_table = vars_dict['economics_table_dict']
 
     # setup useful base rasters
     base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
@@ -507,6 +508,7 @@ def calc_regression_yield(vars_dict):
 
     vars_dict['crop_production_dict'] = {}
     if vars_dict['do_economic_returns']:
+        economics_table = vars_dict['economics_table_dict']
         returns_raster = base_raster_zeros_float_neg1.copy()
 
     for crop in vars_dict['modeled_yield_dict'].keys():
@@ -554,7 +556,8 @@ def calc_regression_yield(vars_dict):
 
     # print "RETURNS RASTER"
     # print returns_raster
-    vars_dict = _calc_nutrition(vars_dict)
+    if vars_dict['do_nutrition']:
+        vars_dict = _calc_nutrition(vars_dict)
 
     # Results Table
     io.create_results_table(vars_dict)

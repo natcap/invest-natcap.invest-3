@@ -649,18 +649,19 @@ def create_results_table(vars_dict, percentile=None, first=True):
         }
     '''
     crop_production_dict = vars_dict['crop_production_dict']
-    economics_table_dict = vars_dict['economics_table_dict']
-    crop_total_nutrition_dict = vars_dict['crop_total_nutrition_dict']
 
     # Build list of fieldnames
     fieldnames = ['crop', 'production']
     if percentile is not None:
         fieldnames += ['percentile']
-    if ['do_economic_returns']:
+    if vars_dict['do_economic_returns']:
+        economics_table_dict = vars_dict['economics_table_dict']
         fieldnames += ['total_returns', 'total_revenue', 'total_cost']
-    nutrition_headers = crop_total_nutrition_dict[
-        crop_total_nutrition_dict.iterkeys().next()].keys()
-    fieldnames += nutrition_headers
+    if vars_dict['do_nutrition']:
+        crop_total_nutrition_dict = vars_dict['crop_total_nutrition_dict']
+        nutrition_headers = crop_total_nutrition_dict[
+            crop_total_nutrition_dict.iterkeys().next()].keys()
+        fieldnames += nutrition_headers
 
     results_table_uri = os.path.join(
         vars_dict['output_yield_func_dir'], 'results_table.csv')
@@ -679,11 +680,12 @@ def create_results_table(vars_dict, percentile=None, first=True):
         row['production'] = crop_production_dict[crop]
         if percentile is not None:
             row['percentile'] = percentile
-        if ['do_economic_returns']:
+        if vars_dict['do_economic_returns']:
             row['total_returns'] = economics_table_dict[crop]['total_returns']
             row['total_revenue'] = economics_table_dict[crop]['total_revenue']
             row['total_cost'] = economics_table_dict[crop]['total_cost']
-        row = dict(row.items() + crop_total_nutrition_dict[crop].items())
+        if vars_dict['do_nutrition']:
+            row = dict(row.items() + crop_total_nutrition_dict[crop].items())
         writer.writerow(row)
 
     csvfile.close()
