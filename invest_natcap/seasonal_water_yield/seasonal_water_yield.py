@@ -3,7 +3,6 @@
 import os
 import logging
 import re
-import sys
 
 import numpy
 import gdal
@@ -15,6 +14,8 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger(
     'invest_natcap.seasonal_water_yield.seasonal_water_yield')
 
+N_MONTHS = 12
+
 def execute(args):
     """This function invokes the seasonal water yield model given
         URI inputs of files. It may write log, warning, or error messages to
@@ -24,12 +25,24 @@ def execute(args):
     LOGGER.debug(args)
 
 def calculate_quick_flow(
-        precip_uri_list, rain_events_table_uri, lulc_uri, soil_group_uri,
+        precip_uri_list, rain_events_table_uri, lulc_uri,
         cn_table_uri, aoi_uri, cn_uri, qfi_uri, intermediate_dir):
     """Calculates quick flow """
 
-    output_wkt = gdal.Open(lulc_uri).GetProjection()
-    LOGGER.info(output_wkt)
+    #pre align all the datasets
+    precip_uri_aligned_list = [
+        pygeoprocessing.geoprocessing.temporary_filename() for _ in
+        range(len(precip_uri_list))]
+    lulc_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri)
+
+    LOGGER.info('Aligning and clipping dataset list')
+    pygeoprocessing.geoprocessing.align_dataset_list(
+        precip_uri_list + [lulc_uri],
+        precip_uri_aligned_list + [lulc_uri_aligned],
+        ['nearest'] * (len(precip_uri_list) + 1),
+        pixel_size, 'intersection', 0, aoi_uri=aoi_uri,
+        assert_datasets_projected=True)
 
     LOGGER.info('loading number of monthly events')
     rain_events_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
@@ -46,7 +59,7 @@ def calculate_quick_flow(
 
     cn_nodata = -1
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, cn_lookup, cn_uri, gdal.GDT_Float32, cn_nodata,
+        lulc_uri_aligned, cn_lookup, cn_uri, gdal.GDT_Float32, cn_nodata,
         exception_flag='values_required')
 
     si_nodata = -1
@@ -57,22 +70,14 @@ def calculate_quick_flow(
 
     LOGGER.info('calculating Si')
     si_uri = os.path.join(intermediate_dir, 'si.tif')
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [cn_uri], si_op, si_uri, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
-        aoi_uri=aoi_uri, datasets_are_pre_aligned=True)
+        datasets_are_pre_aligned=True)
 
     qf_nodata = -1.0
     qf_monthly_uri_list = []
-    for m in range(1, 13):
-        projected_precip_uri = os.path.join(
-            intermediate_dir, 'precip_%d.tif' % m)
-        LOGGER.info('projecting precip %d' % m)
-        pygeoprocessing.geoprocessing.reproject_dataset_uri(
-            precip_uri_list[m-1], pixel_size, output_wkt, 'nearest',
-            projected_precip_uri)
-
+    for m in range(1, N_MONTHS + 1):
         qf_monthly_uri_list.append(
             os.path.join(intermediate_dir, 'qf_%d.tif' % m))
 
@@ -86,22 +91,25 @@ def calculate_quick_flow(
                 (Pm == P_nodata) | (S == si_nodata) | (denominator == 0),
                 qf_nodata, numerator / denominator)
 
-        LOGGER.info('calculating QFim')
+        LOGGER.info('calculating QFi_%d of %d' % (m, N_MONTHS))
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [projected_precip_uri, si_uri], qf_op, qf_monthly_uri_list[m-1],
-            gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
-            vectorize_op=False, aoi_uri=aoi_uri)
+            [precip_uri_aligned_list[m-1], si_uri], qf_op,
+            qf_monthly_uri_list[m-1], gdal.GDT_Float32, qf_nodata, pixel_size,
+            'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
     LOGGER.info('calculating QFi')
-
     def qfi_sum(*qf_values):
         """sum the monthly qfis"""
-        return numpy.where(
-            qf_values[0] == qf_nodata, numpy.add(qf_values), qf_nodata)
+        qf_sum = qf_values[0].copy()
+        for index in range(1, len(qf_values)):
+            qf_sum += qf_values[index]
+        qf_sum[qf_values[0] == qf_nodata] = qf_nodata
+        return qf_sum
     pygeoprocessing.geoprocessing.vectorize_datasets(
         qf_monthly_uri_list, qfi_sum, qfi_uri,
         gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
-        vectorize_op=False)
+        vectorize_op=False, datasets_are_pre_aligned=True)
+
 
 def calculate_slow_flow(
         precip_uri_list, et0_uri_list, dem_uri, lulc_uri, kc_lookup,
@@ -120,10 +128,10 @@ def main():
     """main entry point"""
 
     et0_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\et0"
-    precip_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\precip"
+    precip_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\precip_proj"
 
 
-    aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\MonthlyWaterYield\input\Subwatershed1\subws_id1.shp"
+    aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Subwatershed7\subws_id7.shp"
     cn_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\cn.csv"
     rain_events_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Number of events.csv"
     precip_uri_list = []
@@ -133,8 +141,8 @@ def main():
     precip_dir_list = [
         os.path.join(precip_dir, f) for f in os.listdir(precip_dir)]
 
-    for month_index in range(1, 13):
-        month_file_match = re.compile('.*[^\d]%d\.[^.]+$' % month_index)
+    for month_index in range(1, N_MONTHS + 1):
+        month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
 
         for data_type, dir_list, uri_list in [
                 ('et0', et0_dir_list, et0_uri_list),
@@ -150,9 +158,6 @@ def main():
                     (month_index, file_list))
             uri_list.append(file_list[0])
 
-    print et0_uri_list
-    print precip_uri_list
-
     output_dir = r"C:\Users\rich\Documents\delete_seasonal_water_yield_output"
 
     pygeoprocessing.geoprocessing.create_directories([output_dir])
@@ -160,10 +165,9 @@ def main():
     qfi_uri = os.path.join(output_dir, 'qf.tif')
     cn_uri = os.path.join(output_dir, 'cn.tif')
     lulc_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\nass_sw_lulc.tif"
-    soil_group_uri = None
 
     calculate_quick_flow(
-        precip_uri_list, rain_events_table_uri, lulc_uri, soil_group_uri,
+        precip_uri_list, rain_events_table_uri, lulc_uri,
         cn_table_uri, aoi_uri, cn_uri, qfi_uri, output_dir)
 
     dem_uri = None
@@ -173,8 +177,9 @@ def main():
     biophysical_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\biophysical_Cape_Fear.csv"
     biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
         biophysical_table_uri, 'lucode')
+
     kc_lookup = dict([
-        (lucode, biophysical_table[lucode]['Kc']) for lucode in
+        (lucode, biophysical_table[lucode]['kc']) for lucode in
         biophysical_table])
 
     recharge_uri = os.path.join(output_dir, 'recharge.tif')
