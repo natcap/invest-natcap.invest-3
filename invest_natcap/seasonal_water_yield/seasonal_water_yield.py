@@ -6,10 +6,12 @@ import re
 
 import numpy
 import gdal
+
+import seasonal_water_yield_core
+
 import pygeoprocessing
 import pygeoprocessing.routing
 
-from invest_natcap.seasonal_water_yield import seasonal_water_yield_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -25,7 +27,7 @@ def execute(args):
         stdout.
     """
 
-    LOGGER.debug(args)
+    main()
 
 def calculate_quick_flow(
         precip_uri_list, rain_events_table_uri, lulc_uri,
@@ -107,14 +109,15 @@ def calculate_quick_flow(
 
 
 def calculate_slow_flow(
-        precip_uri_list, et0_uri_list, flow_dir_uri, lulc_uri, kc_lookup,
-        alpha_m, beta_i, gamma, qfi_uri,
+        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
+        kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri):
     """calculate slow flow index"""
-    seasonal_water_yield_core.calculate_recharge(
-        precip_uri_list, et0_uri_list, flow_dir_uri, lulc_uri, kc_lookup,
-        alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, vri_uri)
+    pass
+    #seasonal_water_yield_core.calculate_recharge(
+    #    precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
+    #    alpha_m, beta_i, gamma, qfi_uri,
+    #    recharge_uri, recharge_avail_uri, vri_uri)
 
 
 
@@ -208,8 +211,5 @@ def main():
 
     calculate_slow_flow(
         precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
-        lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, vri_uri)
-
-if __name__ == '__main__':
-    main()
+        dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
+        qfi_uri, recharge_uri, recharge_avail_uri, vri_uri)
