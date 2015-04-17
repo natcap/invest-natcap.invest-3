@@ -297,12 +297,17 @@ setup(name='invest_natcap',
       packages=packages,
       cmdclass=CMD_CLASSES,
       requires=REQUIRES_LIST,
-      include_dirs = [np.get_include()],
+      include_dirs=[np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([
-        Extension(
+          Extension(
             name="scenic_quality_cython_core",
-            sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+            sources=[
+              'invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+        Extension(
+            name="invest_natcap.seasonal_water_yield.seasonal_water_yield_core",
+            sources=['invest_natcap/seasonal_water_yield/seasonal_water_yield_core.pyx'],
+            language="c++"),
         Extension(
             name="ndr_core",
             sources=['invest_natcap/ndr/ndr_core.pyx'],
