@@ -132,6 +132,7 @@ def main():
 
 
     aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Subwatershed7\subws_id7.shp"
+    #aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Subwatershed1\subws_id1.shp"
     cn_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\cn.csv"
     rain_events_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Number of events.csv"
     precip_uri_list = []
