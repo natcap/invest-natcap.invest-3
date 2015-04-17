@@ -265,7 +265,19 @@ class TestCalcPercentileYield(unittest.TestCase):
     def test_run1(self):
         # pp.pprint(self.vars_dict)
         guess = model.calc_percentile_yield(self.vars_dict)
-        # pp.pprint(guess)
+        assert('total_cost' in guess['economics_table_dict']['corn'].keys())
+
+# Function 3
+class TestCalcRegressionYield(unittest.TestCase):
+    def setUp(self):
+        self.vars_dict = test_data.get_vars_dict()
+        self.output_dir = self.vars_dict['output_dir']
+
+    def test_run1(self):
+        # pp.pprint(self.vars_dict)
+        guess = model.calc_regression_yield(self.vars_dict)
+        # assert('total_cost' in guess['economics_table_dict']['corn'].keys())
+
 
 if __name__ == '__main__':
     unittest.main()

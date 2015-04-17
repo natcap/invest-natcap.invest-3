@@ -7,6 +7,7 @@ import logging
 import os
 import csv
 import pprint as pp
+import collections
 
 import pygeoprocessing.geoprocessing as pygeo
 
@@ -75,8 +76,8 @@ def fetch_args(args):
                 }
                 ...
             },
-            'modeled_yield_table_uri': 'path/to/modeled_yield_table_uri',
-            'modeled_yield_table_dict': {
+            'modeled_yield_tables_dir': 'path/to/modeled_yield_tables_dir',
+            'modeled_yield_dict': {
                 'crop': {
                     <climate_bin>: {
                         'yield_ceiling': '<float>',
@@ -197,7 +198,7 @@ def read_crop_lookup_table(vars_dict):
     assert(all(map(lambda x: (type(x) is int), keys)))
     assert(all(map(lambda x: (x >= 0), keys)))
 
-    vars_dict['crop_lookup_dict'] = crop_lookup_dict
+    vars_dict['crop_lookup_dict'] = convert_unicode_to_ascii(crop_lookup_dict)
     return vars_dict
 
 
@@ -240,8 +241,8 @@ def fetch_spatial_dataset(vars_dict):
                 }
                 ...
             },
-            'modeled_yield_table_uri': 'path/to/modeled_yield_table_uri',
-            'modeled_yield_table_dict': {
+            'modeled_yield_tables_uri': 'path/to/modeled_yield_tables_uri',
+            'modeled_yield_dict': {
                 'crop': {
                     'climate_bin': {
                         'yield_ceiling': '<float>',
@@ -367,7 +368,7 @@ def fetch_climate_bin_maps(vars_dict):
         if cropname != '':
             climate_bin_maps_dict[cropname] = map_uri
 
-    vars_dict['climate_bin_maps_dict'] = climate_bin_maps_dict
+    vars_dict['climate_bin_maps_dict'] = convert_unicode_to_ascii(climate_bin_maps_dict)
 
     return vars_dict
 
@@ -419,7 +420,7 @@ def read_percentile_yield_tables(vars_dict):
 
     # Add Assertion Statements?
 
-    vars_dict['percentile_yield_dict'] = percentile_yield_dict
+    vars_dict['percentile_yield_dict'] = convert_unicode_to_ascii(percentile_yield_dict)
 
     return vars_dict
 
@@ -475,7 +476,7 @@ def read_regression_model_yield_tables(vars_dict):
 
     # Add Assertion Statements?
 
-    vars_dict['modeled_yield_dict'] = modeled_yield_dict
+    vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(modeled_yield_dict)
 
     return vars_dict
 
@@ -561,7 +562,7 @@ def read_nutrition_table(vars_dict):
 
     # Add Assertion Statements?
 
-    vars_dict['nutrition_table_dict'] = input_dict
+    vars_dict['nutrition_table_dict'] = convert_unicode_to_ascii(input_dict)
     return vars_dict
 
 
@@ -599,7 +600,7 @@ def read_economics_table(vars_dict):
 
     # Add Assertion Statements?
 
-    vars_dict['economics_table_dict'] = input_dict
+    vars_dict['economics_table_dict'] = convert_unicode_to_ascii(input_dict)
     return vars_dict
 
 
@@ -623,8 +624,7 @@ def _listdir(path):
     return uris
 
 
-
-def create_results_table(vars_dict, percentile=None):
+def create_results_table(vars_dict, percentile=None, first=True):
     '''
     Example Args::
 
@@ -655,7 +655,7 @@ def create_results_table(vars_dict, percentile=None):
     # Build list of fieldnames
     fieldnames = ['crop', 'production']
     if percentile is not None:
-        pass
+        fieldnames += ['percentile']
     if ['do_economic_returns']:
         fieldnames += ['total_returns', 'total_revenue', 'total_cost']
     nutrition_headers = crop_total_nutrition_dict[
@@ -663,17 +663,22 @@ def create_results_table(vars_dict, percentile=None):
     fieldnames += nutrition_headers
 
     results_table_uri = os.path.join(
-        vars_dict['output_dir'], 'results_table.csv')
-    csvfile = open(results_table_uri, 'w+')
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
+        vars_dict['output_yield_func_dir'], 'results_table.csv')
+
+    if first:
+        csvfile = open(results_table_uri, 'w')
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+    else:
+        csvfile = open(results_table_uri, 'a')
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
     for crop in crop_production_dict.keys():
         row = {}
         row['crop'] = crop
         row['production'] = crop_production_dict[crop]
         if percentile is not None:
-            pass
+            row['percentile'] = percentile
         if ['do_economic_returns']:
             row['total_returns'] = economics_table_dict[crop]['total_returns']
             row['total_revenue'] = economics_table_dict[crop]['total_revenue']
@@ -682,3 +687,14 @@ def create_results_table(vars_dict, percentile=None):
         writer.writerow(row)
 
     csvfile.close()
+
+
+def convert_unicode_to_ascii(data):
+    if isinstance(data, basestring):
+        return str(data)
+    elif isinstance(data, collections.Mapping):
+        return dict(map(convert_unicode_to_ascii, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(convert_unicode_to_ascii, data))
+    else:
+        return data

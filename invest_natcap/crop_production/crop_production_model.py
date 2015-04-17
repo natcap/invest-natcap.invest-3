@@ -208,7 +208,7 @@ def _get_masked_lulc_raster(vars_dict, crop, lulc_raster):
     return lulc_raster.reclass(reclass_table)
 
 
-def _calculate_production_for_crop(vars_dict, crop, yield_raster):
+def _calculate_production_for_crop(vars_dict, crop, yield_raster, percentile=None):
     '''
     '''
     ha_per_m2 = 0.0001
@@ -216,8 +216,14 @@ def _calculate_production_for_crop(vars_dict, crop, yield_raster):
 
     Production_raster = yield_raster * ha_per_cell
 
-    if vars_dict['create_crop_production_maps']:
+    if vars_dict['create_crop_production_maps'] and percentile is None:
         filename = crop + '_production_map.tif'
+        dst_uri = os.path.join(vars_dict[
+            'output_production_maps_dir'], filename)
+        Production_raster.save_raster(dst_uri)
+
+    elif vars_dict['create_crop_production_maps']:
+        filename = crop + '_production_map_' + percentile + '.tif'
         dst_uri = os.path.join(vars_dict[
             'output_production_maps_dir'], filename)
         Production_raster.save_raster(dst_uri)
@@ -374,14 +380,12 @@ def calc_percentile_yield(vars_dict):
     base_raster_float_neg1 = base_raster_float.set_nodata(-1)
     base_raster_zeros_float_neg1 = base_raster_float_neg1.zeros()
 
-    if vars_dict['do_economic_returns']:
-        returns_raster = base_raster_zeros_float_neg1.copy()
-
     crops = percentile_yield_dict.keys()
     crop = percentile_yield_dict.keys()[0]
     c_bin = percentile_yield_dict[crop].keys()[0]
     percentiles = percentile_yield_dict[crop][c_bin].keys()
 
+    percentile_count = 1
     for percentile in percentiles:
         vars_dict['crop_production_dict'] = {}
         if vars_dict['do_economic_returns']:
@@ -389,9 +393,9 @@ def calc_percentile_yield(vars_dict):
 
         for crop in crops:
             # ...
-            print "Yield for:", percentile, crop
+            # print "Yield for:", percentile, crop
             climate_bin_raster = _get_climate_bin_over_lulc(
-                vars_dict, crop, aoi_vector, base_raster_float)
+                vars_dict, crop, aoi_vector, base_raster_float).set_nodata(-1)
 
             reclass_dict = {}
             bins = percentile_yield_dict[crop].keys()
@@ -404,13 +408,12 @@ def calc_percentile_yield(vars_dict):
             masked_lulc_raster = _get_masked_lulc_raster(
                 vars_dict, crop, lulc_raster)
 
-            yield_raster = crop_yield_raster * masked_lulc_raster
+            yield_raster = crop_yield_raster * masked_lulc_raster.set_nodata(-1)
 
             Production_raster = _calculate_production_for_crop(
-                vars_dict, crop, yield_raster)
-            print Production_raster
+                vars_dict, crop, yield_raster, percentile=percentile)
 
-            vars_dict['crop_production_dict'][percentile][crop] = Production_raster.get_band(1).sum()
+            vars_dict['crop_production_dict'][crop] = Production_raster.get_band(1).sum()
 
             if vars_dict['do_economic_returns']:
                 returns_raster += _calc_crop_returns(
@@ -431,15 +434,19 @@ def calc_percentile_yield(vars_dict):
         vars_dict = _calc_nutrition(vars_dict)
 
         # Results Table
-        io.create_results_table(vars_dict, percentile=percentile)
+        if percentile_count == 1:
+            io.create_results_table(vars_dict, percentile=percentile)
+        else:
+            io.create_results_table(vars_dict, percentile=percentile, first=False)
+        percentile_count += 1
 
-        if all([vars_dict['do_economic_returns'], vars_dict['create_crop_production_maps']]):
+        if all([vars_dict['do_economic_returns'], vars_dict[
+                'create_crop_production_maps']]):
             output_observed_yield_dir = vars_dict['output_yield_func_dir']
             returns_uri = os.path.join(
                 output_observed_yield_dir,
                 'economic_returns_map_' + percentile + '.tif')
             returns_raster.save_raster(returns_uri)
-
 
     return vars_dict
 
@@ -483,8 +490,85 @@ def calc_regression_yield(vars_dict):
             '': '',
         }
     '''
-    vars_dict = create_yield_func_output_folder(
+    vars_dict = _create_yield_func_output_folder(
         vars_dict, "climate_regression_yield")
+
+    modeled_yield_dict = vars_dict['modeled_yield_dict']
+    lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
+    aoi_vector = Vector.from_shapely(
+        lulc_raster.get_aoi(), lulc_raster.get_projection())
+    economics_table = vars_dict['economics_table_dict']
+
+    # setup useful base rasters
+    base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
+    base_raster_float_neg1 = base_raster_float.set_nodata(-1)
+    base_raster_zeros_float_neg1 = base_raster_float_neg1.zeros()
+
+    vars_dict['crop_production_dict'] = {}
+    if vars_dict['do_economic_returns']:
+        returns_raster = base_raster_zeros_float_neg1.copy()
+
+    for crop in vars_dict['modeled_yield_dict'].keys():
+        print "Yield for:", crop
+        # Check that crop is in LULC map, if not, skip
+
+        # Wrangle data...
+        climate_bin_raster = _get_climate_bin_over_lulc(
+            vars_dict, crop, aoi_vector, base_raster_float).set_nodata(-1)
+
+        modeled_yield_crop_dict = _calc_regression_yield_for_crop(
+            vars_dict,
+            crop,
+            climate_bin_raster)
+        print modeled_yield_crop_dict
+        continue
+
+        reclass_dict = {}
+        bins = modeled_yield_dict[crop].keys()
+        for c_bin in bins:
+            reclass_dict[c_bin] = modeled_yield_dict[
+                crop][c_bin]
+
+        crop_yield_raster = climate_bin_raster.reclass(reclass_dict)
+
+        masked_lulc_raster = _get_masked_lulc_raster(
+            vars_dict, crop, lulc_raster)
+
+        yield_raster = crop_yield_raster * masked_lulc_raster.set_nodata(-1)
+
+        Production_raster = _calculate_production_for_crop(
+            vars_dict, crop, yield_raster)
+
+        vars_dict['crop_production_dict'][crop] = Production_raster.get_band(1).sum()
+
+        if vars_dict['do_economic_returns']:
+            returns_raster += _calc_crop_returns(
+                vars_dict,
+                crop,
+                lulc_raster,
+                Production_raster,
+                returns_raster,
+                economics_table[crop])
+
+        # Clean Up Rasters...
+        del climate_bin_raster
+        del crop_yield_raster
+        del masked_lulc_raster
+        del yield_raster
+        del Production_raster
+
+
+def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
+    '''returns crop_yield_raster'''
+    yield_params = vars_dict['modeled_yield_dict'][crop]
+    pp.pprint(yield_params)
+    b_K2O = yield_params['b_K2O']
+    b_nut = yield_params['b_nut']
+    c_K2O = yield_params['c_K2O']
+    c_N = yield_params['c_N']
+    c_P2O5 = yield_params['c_P2O5']
+    yc = yield_params['yc']
+    yc_rf = yield_params['yc_rf']
     pass
 
 
