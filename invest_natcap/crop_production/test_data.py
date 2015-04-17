@@ -125,6 +125,7 @@ def create_climate_bin_maps_dir():
 def create_irrigation_map(aoi_dict):
     # set arguments
     array = np.ones(aoi_dict['shape'])
+    array[:, 0] = 0
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int32

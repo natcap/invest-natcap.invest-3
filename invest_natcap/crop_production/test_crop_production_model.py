@@ -158,7 +158,7 @@ class TestCalculateCostOfPerTonInputs(unittest.TestCase):
             crop,
             lulc_raster)
 
-        print CostPerTonInputTotal_raster
+        # print CostPerTonInputTotal_raster
 
         check = econ_table['cost_nitrogen_per_ton'] + econ_table[
             'cost_phosphorous_per_ton'] + econ_table['cost_potash_per_ton']
@@ -241,7 +241,7 @@ class TestCalcNutrition(unittest.TestCase):
             'rice': 3.0
         }
         guess = model._calc_nutrition(vars_dict)
-        print guess['crop_total_nutrition_dict']
+        assert('soy' in  guess['crop_total_nutrition_dict'].keys())
 
 
 class TestCalcObservedYield(unittest.TestCase):
@@ -276,7 +276,7 @@ class TestCalcRegressionYield(unittest.TestCase):
     def test_run1(self):
         # pp.pprint(self.vars_dict)
         guess = model.calc_regression_yield(self.vars_dict)
-        # assert('total_cost' in guess['economics_table_dict']['corn'].keys())
+        assert('total_cost' in guess['economics_table_dict']['corn'].keys())
 
 
 if __name__ == '__main__':

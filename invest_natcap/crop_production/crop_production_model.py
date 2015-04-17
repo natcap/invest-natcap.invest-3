@@ -5,7 +5,9 @@ The Crop Production Model module contains functions for running the model
 import os
 import logging
 import pprint
+
 import gdal
+import numpy as np
 
 import crop_production_io as io
 from raster import Raster, RasterFactory
@@ -493,7 +495,6 @@ def calc_regression_yield(vars_dict):
     vars_dict = _create_yield_func_output_folder(
         vars_dict, "climate_regression_yield")
 
-    modeled_yield_dict = vars_dict['modeled_yield_dict']
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     aoi_vector = Vector.from_shapely(
         lulc_raster.get_aoi(), lulc_raster.get_projection())
@@ -509,35 +510,29 @@ def calc_regression_yield(vars_dict):
         returns_raster = base_raster_zeros_float_neg1.copy()
 
     for crop in vars_dict['modeled_yield_dict'].keys():
-        print "Yield for:", crop
+        # print "Yield for:", crop
         # Check that crop is in LULC map, if not, skip
 
         # Wrangle data...
         climate_bin_raster = _get_climate_bin_over_lulc(
-            vars_dict, crop, aoi_vector, base_raster_float).set_nodata(-1)
+            vars_dict, crop, aoi_vector, base_raster_float).set_nodata(-9999)
 
-        modeled_yield_crop_dict = _calc_regression_yield_for_crop(
+        Yield_raster = _calc_regression_yield_for_crop(
             vars_dict,
             crop,
             climate_bin_raster)
-        print modeled_yield_crop_dict
-        continue
-
-        reclass_dict = {}
-        bins = modeled_yield_dict[crop].keys()
-        for c_bin in bins:
-            reclass_dict[c_bin] = modeled_yield_dict[
-                crop][c_bin]
-
-        crop_yield_raster = climate_bin_raster.reclass(reclass_dict)
+        # print crop_yield_raster
 
         masked_lulc_raster = _get_masked_lulc_raster(
             vars_dict, crop, lulc_raster)
 
-        yield_raster = crop_yield_raster * masked_lulc_raster.set_nodata(-1)
+        Yield_given_lulc_raster = Yield_raster * masked_lulc_raster.set_nodata(-9999)
 
         Production_raster = _calculate_production_for_crop(
-            vars_dict, crop, yield_raster)
+            vars_dict, crop, Yield_given_lulc_raster)
+
+        # print "PRODUCTION RASTER"
+        # print Production_raster
 
         vars_dict['crop_production_dict'][crop] = Production_raster.get_band(1).sum()
 
@@ -546,30 +541,94 @@ def calc_regression_yield(vars_dict):
                 vars_dict,
                 crop,
                 lulc_raster,
-                Production_raster,
+                Production_raster.set_nodata(-1),
                 returns_raster,
                 economics_table[crop])
 
         # Clean Up Rasters...
         del climate_bin_raster
-        del crop_yield_raster
+        del Yield_raster
         del masked_lulc_raster
-        del yield_raster
+        del Yield_given_lulc_raster
         del Production_raster
+
+    # print "RETURNS RASTER"
+    # print returns_raster
+    vars_dict = _calc_nutrition(vars_dict)
+
+    # Results Table
+    io.create_results_table(vars_dict)
+
+    if all([vars_dict['do_economic_returns'], vars_dict['create_crop_production_maps']]):
+        output_observed_yield_dir = vars_dict['output_yield_func_dir']
+        returns_uri = os.path.join(
+            output_observed_yield_dir, 'economic_returns_map.tif')
+        returns_raster.save_raster(returns_uri)
+
+    return vars_dict
 
 
 def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
     '''returns crop_yield_raster'''
+    climate_bin_raster = climate_bin_raster.set_nodata(-9999)
+    # Fetch Fertilizer Maps
+    fert_maps_dict = vars_dict['modeled_fertilizer_maps_dict']
+    NitrogenAppRate_raster = Raster.from_file(
+        fert_maps_dict['nitrogen']).set_nodata(-9999)
+    PhosphorousAppRate_raster = Raster.from_file(
+        fert_maps_dict['phosphorous']).set_nodata(-9999)
+    PotashAppRate_raster = Raster.from_file(
+        fert_maps_dict['potash']).set_nodata(-9999)
+    Irrigation_raster = Raster.from_file(
+        vars_dict['modeled_irrigation_map_uri']).set_nodata(-9999)
+
+    irrigated_lulc_mask = Irrigation_raster
+    rainfed_lulc_mask = -Irrigation_raster + 1
+
+    # Create Rasters of Yield Parameters
     yield_params = vars_dict['modeled_yield_dict'][crop]
-    pp.pprint(yield_params)
-    b_K2O = yield_params['b_K2O']
-    b_nut = yield_params['b_nut']
-    c_K2O = yield_params['c_K2O']
-    c_N = yield_params['c_N']
-    c_P2O5 = yield_params['c_P2O5']
-    yc = yield_params['yc']
-    yc_rf = yield_params['yc_rf']
-    pass
+    b_K2O = _create_reg_yield_reclass_dict(yield_params, 'b_K2O')
+
+    b_nut = _create_reg_yield_reclass_dict(yield_params, 'b_nut')
+    c_N = _create_reg_yield_reclass_dict(yield_params, 'c_N')
+    c_P2O5 = _create_reg_yield_reclass_dict(yield_params, 'c_P2O5')
+    c_K2O = _create_reg_yield_reclass_dict(yield_params, 'c_K2O')
+    yc = _create_reg_yield_reclass_dict(yield_params, 'yield_ceiling')
+    yc_rf = _create_reg_yield_reclass_dict(yield_params, 'yield_ceiling_rf')
+
+    b_K2O_raster = climate_bin_raster.reclass(b_K2O)
+    b_nut_raster = climate_bin_raster.reclass(b_nut)
+    c_N_raster = climate_bin_raster.reclass(c_N)
+    c_P2O5_raster = climate_bin_raster.reclass(c_P2O5)
+    c_K2O_raster = climate_bin_raster.reclass(c_K2O)
+    YieldCeiling_raster = climate_bin_raster.reclass(yc)
+    YieldCeilingRainfed_raster = climate_bin_raster.reclass(yc_rf)
+
+    # Operations as Noted in User's Guide...
+    PercentMaxYieldNitrogen_raster = 1 - (
+        b_nut_raster * (np.e ** -c_N_raster) * NitrogenAppRate_raster)
+    PercentMaxYieldPhosphorous_raster = 1 - (
+        b_nut_raster * (np.e ** -c_P2O5_raster) * PhosphorousAppRate_raster)
+    PercentMaxYieldPotassium_raster = 1 - (
+        b_K2O_raster * (np.e ** -c_K2O_raster) * PotashAppRate_raster)
+
+    PercentMaxYield_raster = (PercentMaxYieldNitrogen_raster.minimum(
+        PercentMaxYieldPhosphorous_raster.minimum(
+            PercentMaxYieldPotassium_raster)))
+
+    MaxYield_raster = PercentMaxYield_raster * YieldCeiling_raster
+    Yield_irrigated_raster = MaxYield_raster * irrigated_lulc_mask
+    Yield_rainfed_raster = YieldCeilingRainfed_raster.minimum(MaxYield_raster) * rainfed_lulc_mask
+    Yield_raster = Yield_irrigated_raster + Yield_rainfed_raster
+
+    return Yield_raster
+
+
+def _create_reg_yield_reclass_dict(dictionary, nested_key):
+    reclass_dict = {}
+    for k in dictionary.keys():
+        reclass_dict[k] = dictionary[k][nested_key]
+    return reclass_dict
 
 
 def _calc_nutrition(vars_dict):

@@ -96,6 +96,7 @@ class Raster(object):
         string += '\nBand 1:\n' + self.get_band(1).__repr__()
         string += self.get_affine().__repr__()
         string += '\nNoData for Band 1: ' + str(self.get_nodata(1))
+        string += '\nDatatype for Band 1: ' + str(self.get_band(1).dtype)
         string += '\nProjection (EPSG): ' + str(self.get_projection())
         string += '\nuri: ' + self.uri
         string += '\n'
@@ -104,21 +105,38 @@ class Raster(object):
     def __len__(self):
         return self.band_count()
 
+    def __neg__(self):
+        def neg_closure(nodata):
+            def neg(x):
+                return np.where((np.not_equal(x, nodata)), np.negative(x), nodata)
+            return neg
+        return self.local_op(None, neg_closure, broadcast=True)
+
     def __mul__(self, raster):
         if type(raster) in [float, int]:
             def mul_closure(nodata):
                 def mul(x):
-                    if nodata in [x]:
-                        return nodata
-                    return x * raster
+                    return np.where((np.not_equal(x, nodata)), np.multiply(x, raster), nodata)
                 return mul
             return self.local_op(raster, mul_closure, broadcast=True)
         else:
             def mul_closure(nodata):
                 def mul(x, y):
-                    if nodata in [x, y]:
-                        return nodata
-                    return x * y
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.multiply(x, y), nodata)
+                return mul
+            return self.local_op(raster, mul_closure)
+
+    def __rmul__(self, raster):
+        if type(raster) in [float, int]:
+            def mul_closure(nodata):
+                def mul(x):
+                    return np.where((np.not_equal(x, nodata)), np.multiply(raster, x), nodata)
+                return mul
+            return self.local_op(raster, mul_closure, broadcast=True)
+        else:
+            def mul_closure(nodata):
+                def mul(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.multiply(y, x), nodata)
                 return mul
             return self.local_op(raster, mul_closure)
 
@@ -126,17 +144,27 @@ class Raster(object):
         if type(raster) in [float, int]:
             def div_closure(nodata):
                 def div(x):
-                    if nodata in [x]:
-                        return nodata
-                    return x / raster
+                    return np.where((np.not_equal(x, nodata)), np.divide(x, raster), nodata)
                 return div
             return self.local_op(raster, div_closure, broadcast=True)
         else:
             def div_closure(nodata):
                 def div(x, y):
-                    if nodata in [x, y]:
-                        return nodata
-                    return x / y
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.divide(x, y), nodata)
+                return div
+            return self.local_op(raster, div_closure)
+
+    def __rdiv__(self, raster):
+        if type(raster) in [float, int]:
+            def div_closure(nodata):
+                def div(x):
+                    return np.where((np.not_equal(x, nodata)), np.divide(raster, x), nodata)
+                return div
+            return self.local_op(raster, div_closure, broadcast=True)
+        else:
+            def div_closure(nodata):
+                def div(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.divide(y, x), nodata)
                 return div
             return self.local_op(raster, div_closure)
 
@@ -144,17 +172,27 @@ class Raster(object):
         if type(raster) in [float, int]:
             def add_closure(nodata):
                 def add(x):
-                    if nodata in [x]:
-                        return nodata
-                    return x + raster
+                    return np.where((np.not_equal(x, nodata)), np.add(x, raster), nodata)
                 return add
             return self.local_op(raster, add_closure, broadcast=True)
         else:
             def add_closure(nodata):
                 def add(x, y):
-                    if nodata in [x, y]:
-                        return nodata
-                    return x + y
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.add(x, y), nodata)
+                return add
+            return self.local_op(raster, add_closure)
+
+    def __radd__(self, raster):
+        if type(raster) in [float, int]:
+            def add_closure(nodata):
+                def add(x):
+                    return np.where((np.not_equal(x, nodata)), np.add(raster, x), nodata)
+                return add
+            return self.local_op(raster, add_closure, broadcast=True)
+        else:
+            def add_closure(nodata):
+                def add(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.add(y, x), nodata)
                 return add
             return self.local_op(raster, add_closure)
 
@@ -162,17 +200,27 @@ class Raster(object):
         if type(raster) in [float, int]:
             def sub_closure(nodata):
                 def sub(x):
-                    if nodata in [x]:
-                        return nodata
-                    return x - raster
+                    return np.where((np.not_equal(x, nodata)), np.subtract(x, raster), nodata)
                 return sub
             return self.local_op(raster, sub_closure, broadcast=True)
         else:
             def sub_closure(nodata):
                 def sub(x, y):
-                    if nodata in [x, y]:
-                        return nodata
-                    return x - y
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.subtract(x, y), nodata)
+                return sub
+            return self.local_op(raster, sub_closure)
+
+    def __rsub__(self, raster):
+        if type(raster) in [float, int]:
+            def sub_closure(nodata):
+                def sub(x):
+                    return np.where((np.not_equal(x, nodata)), np.subtract(raster, x), nodata)
+                return sub
+            return self.local_op(raster, sub_closure, broadcast=True)
+        else:
+            def sub_closure(nodata):
+                def sub(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.subtract(y, x), nodata)
                 return sub
             return self.local_op(raster, sub_closure)
 
@@ -181,19 +229,45 @@ class Raster(object):
             # Implement broadcast operation
             def pow_closure(nodata):
                 def powe(x):
-                    if nodata in [x]:
-                        return nodata
-                    return x**raster
+                    return np.where((np.not_equal(x, nodata)), np.power(x, raster), nodata)
                 return powe
             return self.local_op(raster, pow_closure, broadcast=True)
         else:
             def pow_closure(nodata):
                 def powe(x, y):
-                    if nodata in [x, y]:
-                        return nodata
-                    return x**y
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.power(x, y), nodata)
                 return powe
             return self.local_op(raster, pow_closure)
+
+    def __rpow__(self, raster):
+        if type(raster) in [float, int]:
+            # Implement broadcast operation
+            def pow_closure(nodata):
+                def powe(x):
+                    return np.where((np.not_equal(x, nodata)), np.power(raster, x), nodata)
+                return powe
+            return self.local_op(raster, pow_closure, broadcast=True)
+        else:
+            def pow_closure(nodata):
+                def powe(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.power(y, x), nodata)
+                return powe
+            return self.local_op(raster, pow_closure)
+
+    def __mod__(self, raster):
+        if type(raster) in [float, int]:
+            # Implement broadcast operation
+            def mod_closure(nodata):
+                def mod(x):
+                    return np.where((np.not_equal(x, nodata)), np.mod(x, raster), nodata)
+                return mod
+            return self.local_op(raster, mod_closure, broadcast=True)
+        else:
+            def mod_closure(nodata):
+                def mod(x, y):
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), np.mod(x, y), nodata)
+                return mod
+            return self.local_op(raster, mod_closure)
 
     def __eq__(self, raster):
         if type(raster) in [float, int]:
@@ -203,6 +277,23 @@ class Raster(object):
                 return (self.get_bands() == raster.get_bands())
             else:
                 return False
+
+    def minimum(self, raster):
+        if type(raster) in [float, int]:
+            # Implement broadcast operation
+            def min_closure(nodata):
+                def mini(x):
+                    def f(x): return np.where((np.less(x, raster)), x, raster)
+                    return np.where((np.not_equal(x, nodata)), f(x), nodata)
+                return mini
+            return self.local_op(raster, min_closure, broadcast=True)
+        else:
+            def min_closure(nodata):
+                def mini(x, y):
+                    def f(x, y): return np.where((np.less(x, y)), x, y)
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), f(x, y), nodata)
+                return mini
+            return self.local_op(raster, min_closure)
 
     def __getitem__(self):
         pass  # return numpy slice?  Raster object with sliced numpy array?
@@ -729,7 +820,7 @@ class Raster(object):
             dataset_to_align_index=0,
             dataset_to_bound_index=0,
             assert_datasets_projected=False,
-            vectorize_op=True)
+            vectorize_op=False)
 
         return Raster.from_tempfile(dataset_out_uri)
 
