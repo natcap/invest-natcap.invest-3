@@ -7,6 +7,8 @@ import re
 import numpy
 import gdal
 import pygeoprocessing
+import pygeoprocessing.routing
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -104,11 +106,12 @@ def calculate_quick_flow(
 
 
 def calculate_slow_flow(
-        precip_uri_list, et0_uri_list, dem_uri, lulc_uri, kc_lookup,
+        precip_uri_list, et0_uri_list, flow_dir_uri, lulc_uri, kc_lookup,
         alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri):
     """calculate slow flow index"""
-    pass
+
+
 
 
 def main():
@@ -180,7 +183,6 @@ def main():
         precip_uri_aligned_list, rain_events_table_uri, lulc_uri_aligned,
         cn_table_uri, cn_uri, qfi_uri, output_dir)
 
-    dem_uri = None
     alpha_m = 1./12
     beta_i = 1.
     gamma = 1.
@@ -195,8 +197,13 @@ def main():
     recharge_uri = os.path.join(output_dir, 'recharge.tif')
     recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
     vri_uri = os.path.join(output_dir, 'vri.tif')
+
+    flow_dir_uri = os.path.join(output_dir, 'flow_dir.tif')
+    pygeoprocessing.routing.flow_direction_d_inf(
+        dem_uri_aligned, flow_dir_uri)
+
     calculate_slow_flow(
-        precip_uri_aligned_list, et0_uri_aligned_list, dem_uri_aligned,
+        precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
         lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri)
 
