@@ -178,6 +178,10 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
 #    I, J = np.meshgrid(range(3), range(3), indexing='ij')
     
+    # Starting point of each angle iteratio is from the furthest pixel
+    furthest_pixel = (0, 0)
+    furthest_pixel_distance = 0
+
     # 1-Draw horizontal line from center to edge of visible area
     for p in range(max_dist+1):
         abs_row = center[0]
@@ -188,12 +192,22 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     # 2-Add fringe line above line at angle 0
     for p in range(1, max_dist+1):
-        abs_row = center[0] - 1 # 1 pixel above, i.e. 1 row in negative dir.
-        abs_col = center[1] + p
-        # Fringe pixel code: current angle (epsilon for numerical consistency)
-        pixel_map[abs_row, abs_col] = 1
-        active_pixels[1, 0, add, p] = abs_row
-        active_pixels[1, 1, add, p] = abs_col
+        # Add pixel as long as it's within the max distance
+        distance = (p**2+1)**.5
+        if distance <= max_dist - epsilon:
+            abs_row = center[0] - 1 # 1 pixel above, i.e. 1 row in negative dir.
+            abs_col = center[1] + p
+            # Fringe pixel code: current angle (epsilon for numerical consistency)
+            pixel_map[abs_row, abs_col] = 1
+            active_pixels[1, 0, add, p] = abs_row
+            active_pixels[1, 1, add, p] = abs_col
+
+            # Update furthest pixel if needed
+            if distance > furthest_pixel_distance + epsilon:
+                furthest_pixel = (-1, p)
+                furthest_pixel_distance = distance
+        else:
+            break
 
     p_map = np.copy(pixel_map[...])
     print('pixel map')
@@ -201,25 +215,17 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     # 3-Until there are no more angles to process:
     # Done with initialization of iteration 0, start from iteration 1:
-    for i in range(1, angles.size):
+    for i in range(1, 4): #angles.size):
         a = angles[i]
         print('angle', i, a)
-        # 4-Find fringe pixel from focal point
+        
+        # 4-Set first fringe pixel
+        fringe_pixels = []
+        fringe_pixels.append((furthest_pixel[0], furthest_pixel[1]))
 
-        pixel_mask = \
-            pixel_map[center[0]-1:center[0]+2, center[1]-1:center[1]+2]
-
-        print('pixel_to_choose')
-        pixel_to_choose = (pixel_mask>0).astype(int) * priority_mask
-        pixel_to_choose[pixel_to_choose==0] = np.amax(pixel_to_choose)+1
-        print(pixel_to_choose)
-        print(np.argmin(pixel_to_choose))
-        pixel_to_choose = np.unravel_index(np.argmin(pixel_to_choose), \
-            priority_mask.shape)
-
-        print(pixel_to_choose)
-
-        fringe_pixels.append((pixel_to_choose[0]-1, pixel_to_choose[1]-1))
+        # Reset furthest_pixel
+        furthest_pixel = (0, 0)
+        furthest_pixel_distance = 0
 
         print('first fringe_pixel', fringe_pixels[-1])
 
@@ -267,7 +273,6 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             min_angle = <np.float64_t>( \
                 atan2(-min_corner_row, min_corner_col) +two_pi) %two_pi
 
-
             # 5.2-Check if fringe pixel should be an active pixel:
             if min_angle < angles[i] - epsilon:
                 print('fringe pixel becomes active')
@@ -309,7 +314,11 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                         # We use absolute coordinates to store in pixel map
                         pixel_map[new_abs_row, new_abs_col] = i+1
 
-                        p_map = np.copy(pixel_map[...])
+                        # Update furthest pixel if necessary
+                        if furthest_pixel_distance < fringe_pixel_distance:
+                            furthest_pixel = (new_rel_row, new_rel_col)
+                            furthest_pixel_distance = \
+                                (furthest_pixel[0]**2+furthest_pixel[1]**2)**.5
             else:
                 pixel_map[abs_row, abs_col] = i+1
 
