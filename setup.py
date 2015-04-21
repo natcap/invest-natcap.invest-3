@@ -31,14 +31,12 @@ VERSION = build_utils.invest_version(
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
 from invest_natcap import invest_version
 ARCHITECTURE = invest_version.py_arch
-CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
-                       'invest_natcap/cython_modules/simplequeue.c']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the
 #same version.
-DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
-    ARCHITECTURE)
+DIST_DIR = 'invest_%s_%s' % (
+    VERSION.replace('.', '_').replace(':', '_'), ARCHITECTURE)
 
 class ZipCommand(Command):
     description = 'Custom command to recurseively zip a folder'
@@ -140,15 +138,17 @@ if platform.system() == 'Windows':
             'dist_dir': DIST_DIR,
             'packages': packages,
             'skip_archive': True,
-            'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
-                'msvcp90.dll', 'geos_c.dll'],
+            'dll_excludes': [
+                'POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll', 'msvcp90.dll',
+                'geos_c.dll'],
             }
-         }
+        }
 
     # When building py2exe binaries with scipy >= 0.13.0, the built application
     # won't run unless we import _ufuncs_cxx.
     if tuple([int(x) for x in scipy.__version__.split('.')])[1] >= 13:
-        py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
+        py2exe_args['options']['py2exe']['includes'].append(
+          'scipy.special._ufuncs_cxx')
 
     #These are the exes that will get built
     py2exe_args['console'] = \
