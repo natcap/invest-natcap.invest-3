@@ -33,6 +33,21 @@ class TestReadCropLookupTable(unittest.TestCase):
         assert(all(map(lambda x: (type(x) is int), keys)))
 
 
+class TestCreateCropsInAOIList(unittest.TestCase):
+    def setUp(self):
+        d = {'crop_lookup_table_uri': os.path.join(
+            input_dir, 'crop_lookup_table.csv')}
+
+        self.vars_dict = {
+            'crop_lookup_dict': io.read_crop_lookup_table(d)['crop_lookup_dict'],
+            'lulc_map_uri': test_data.create_lulc_map(test_data.aoi_dict)
+        }
+
+    def test_read_crop_lookup_table(self):
+        guess = io.create_crops_in_aoi_list(self.vars_dict)
+        print guess
+
+
 class TestReadNutritionTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
@@ -159,12 +174,12 @@ class TestFetchModeledFertilizerMaps(unittest.TestCase):
         assert(type(modeled_fertilizer_maps_dict[keys[0]]) is str)
 
 
-class TestFetchArgs(unittest.TestCase):
+class TestGetInputs(unittest.TestCase):
     def setUp(self):
         self.args = test_data.get_args()
 
-    def test_fetch_args(self):
-        guess = io.fetch_args(self.args)
+    def test_get_inputs(self):
+        guess = io.get_inputs(self.args)
         # pp.pprint(guess)
         keys = guess.keys()
         assert('percentile_yield_dict' in keys)

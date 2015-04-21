@@ -5,6 +5,7 @@ Raster Class
 import os
 import shutil
 import functools
+import logging
 
 import gdal
 import ogr
@@ -13,10 +14,14 @@ import numpy as np
 from affine import Affine
 from shapely.geometry import Polygon
 import shapely
-# import pyproj
-# import PIL
+import pyproj
+import PIL
 
 import pygeoprocessing as pygeo
+
+LOGGER = logging.getLogger('RASTER CLASS')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class Raster(object):
@@ -336,7 +341,12 @@ class Raster(object):
         return self.zeros() + 1
 
     def zeros(self):
-        return self * 0
+        array = self.get_band(1).data * 0
+        affine = self.get_affine()
+        proj = self.get_projection()
+        datatype = self.get_datatype(1)
+        nodata_val = self.get_nodata(1)
+        return Raster.from_array(array, affine, proj, datatype, nodata_val)
 
     def band_count(self):
         self._open_dataset()
@@ -559,10 +569,22 @@ class Raster(object):
         return Raster.from_array(array, affine, proj, datatype, nodata_val)
 
     def set_nodata(self, nodata_val):
-        array = self.get_band(1)
+        array = self.get_band(1).data
+        src_nodata_val = self.get_nodata(1)
+        array[array == src_nodata_val] = nodata_val
+
         affine = self.get_affine()
         proj = self.get_projection()
         datatype = self.get_datatype(1)
+        return Raster.from_array(array, affine, proj, datatype, nodata_val)
+
+    def set_datatype_and_nodata(self, datatype, nodata_val):
+        array = self.get_band(1).data
+        src_nodata_val = self.get_nodata(1)
+        array[array == src_nodata_val] = nodata_val
+
+        affine = self.get_affine()
+        proj = self.get_projection()
         return Raster.from_array(array, affine, proj, datatype, nodata_val)
 
     def copy(self, uri=None):
@@ -789,6 +811,7 @@ class Raster(object):
         raise NotImplementedError
 
     def local_op(self, raster, pixel_op_closure, broadcast=False):
+        LOGGER.debug('performing local op')
         bounding_box_mode = "dataset"
         resample_method = "nearest"
 

@@ -93,28 +93,36 @@ def execute(args):
         }
 
     '''
+
     if all([args['do_yield_observed'],
             args['do_yield_percentile'],
             args['do_yield_regression_model']]) is False:
         LOGGER.error('No Yield Function Selected.  Cannot Run Model.')
         return
 
-    # Parse Inputs
-    vars_dict = io.fetch_args(args)
+    LOGGER.info("Beginning Model Run...")
+
+    # Fetch and Parse Inputs
+    LOGGER.info("Fetching Inputs...")
+    vars_dict = io.get_inputs(args)
 
     # Run Model ...
     results_dict = {}
 
     if vars_dict['do_yield_observed']:
+        LOGGER.info("Calculating Yield from Observed Regional Data...")
         observed_vars_dict = model.calc_observed_yield(vars_dict)
         results_dict['observed_vars_dict'] = observed_vars_dict
 
     if vars_dict['do_yield_percentile']:
+        LOGGER.info("Calculating Yield from Climate-based Distribution of Observed Yields...")
         percentile_vars_dict = model.calc_percentile_yield(vars_dict)
         results_dict['percentile_vars_dict'] = percentile_vars_dict
 
     if vars_dict['do_yield_regression_model']:
+        LOGGER.info("Calculating Yield from Regression Model with Climate-based Parameters...")
         regression_vars_dict = model.calc_regression_yield(vars_dict)
         results_dict['regression_vars_dict'] = regression_vars_dict
 
+    LOGGER.info("...Model Run Complete.")
     return results_dict

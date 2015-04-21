@@ -9,6 +9,9 @@ import csv
 import pprint as pp
 import collections
 
+import numpy as np
+
+from raster import Raster
 import pygeoprocessing.geoprocessing as pygeo
 
 LOGGER = logging.getLogger('CROP_PRODUCTION')
@@ -26,9 +29,9 @@ class MissingParameter(StandardError):
 
 
 # Fetch and Verify Arguments
-def fetch_args(args):
+def get_inputs(args):
     '''
-    Fetches input arguments from the user, verifies for correctness and
+    Fetches inputs from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
 
     Args:
@@ -51,6 +54,7 @@ def fetch_args(args):
                 'code': 'crop_name',
                 ...
             },
+            'crops_in_aoi_list': ['crop1', 'crop2', 'crop3'],
 
             # From spatial_dataset_dir
             'observed_yield_maps_dir': 'path/to/observed_yield_maps_dir/',
@@ -134,6 +138,7 @@ def fetch_args(args):
     vars_dict = dict(args.items())
 
     vars_dict = read_crop_lookup_table(vars_dict)
+    vars_dict = create_crops_in_aoi_list(vars_dict)
     vars_dict = fetch_spatial_dataset(vars_dict)
 
     if vars_dict['do_yield_regression_model']:
@@ -199,6 +204,30 @@ def read_crop_lookup_table(vars_dict):
     assert(all(map(lambda x: (x >= 0), keys)))
 
     vars_dict['crop_lookup_dict'] = convert_unicode_to_ascii(crop_lookup_dict)
+    return vars_dict
+
+
+def create_crops_in_aoi_list(vars_dict):
+    '''
+    Example Returns::
+
+        vars_dict = {
+            # ...
+            'crops_in_aoi_list': ['corn', 'rice', 'soy']
+        }
+    '''
+    lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
+    crop_lookup_dict = vars_dict['crop_lookup_dict']
+    array = np.unique(lulc_raster.get_band(1).data)
+
+    crops_in_aoi_list = []
+    for crop_num in array:
+        try:
+            crops_in_aoi_list.append(crop_lookup_dict[crop_num])
+        except:
+            pass
+
+    vars_dict['crops_in_aoi_list'] = crops_in_aoi_list
     return vars_dict
 
 
@@ -416,7 +445,7 @@ def read_percentile_yield_tables(vars_dict):
             percentile_yield_dict[cropname] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
             for c_bin in percentile_yield_dict[cropname].keys():
-                del percentile_yield_dict[cropname][c_bin][u'climate_bin']
+                del percentile_yield_dict[cropname][c_bin]['climate_bin']
 
     # Add Assertion Statements?
 

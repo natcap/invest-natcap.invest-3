@@ -12,6 +12,9 @@ workspace_dir = '../../test/invest-data/test/data/crop_production/'
 input_dir = '../../test/invest-data/test/data/crop_production/input/'
 # input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
+nodata_int = -9999
+nodata_float = 1.0e+18
+
 # AOI Parameters
 pixel_size = 100
 aoi_dict = {
@@ -30,7 +33,7 @@ def create_lulc_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int16
-    nodata_val = -9999.0
+    nodata_val = nodata_int
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -49,21 +52,19 @@ def create_lulc_map2(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int16
-    nodata_val = -9999.0
+    nodata_val = nodata_int
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
-
     return r
 
 
-def create_global_raster_factory(datatype):
+def create_global_raster_factory(datatype, nodata_val):
     pixel_size = 1  # 0.083333
     size = 180/pixel_size
     shape = (size, size*2)
     affine = Affine(pixel_size, 0, -180, 0, -pixel_size, 90)
     proj = 4326
-    nodata_val = -9999
 
     global_raster_factory = RasterFactory(
         proj,
@@ -83,7 +84,8 @@ def create_observed_yield_maps_dir():
     if not os.path.exists(observed_yield_dir):
         os.makedirs(observed_yield_dir)
 
-    global_raster_factory = create_global_raster_factory(gdal.GDT_Float64)
+    global_raster_factory = create_global_raster_factory(
+        gdal.GDT_Float64, nodata_float)
 
     corn_raster = global_raster_factory.horizontal_ramp(0.0, 1.0)
     rice_raster = global_raster_factory.horizontal_ramp(1.0, 2.0)
@@ -106,7 +108,8 @@ def create_climate_bin_maps_dir():
     if not os.path.exists(climate_bin_dir):
         os.makedirs(climate_bin_dir)
 
-    global_raster_factory = create_global_raster_factory(gdal.GDT_Int32)
+    global_raster_factory = create_global_raster_factory(
+        gdal.GDT_Int32, nodata_int)
 
     corn_raster = global_raster_factory.alternating(1, 3)
     rice_raster = global_raster_factory.alternating(2, 1)
@@ -129,7 +132,7 @@ def create_irrigation_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int32
-    nodata_val = -1
+    nodata_val = nodata_int
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -145,7 +148,7 @@ def create_fertilizer_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Float64
-    nodata_val = -9999.0
+    nodata_val = nodata_float
 
     # initialize raster
     return Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -208,7 +211,7 @@ def get_vars_dict():
 
     args = get_args()
 
-    derived_vars = io.fetch_args(args)
+    derived_vars = io.get_inputs(args)
 
     generated_vars = {
         'observed_yield_maps_dir': create_observed_yield_maps_dir(),
@@ -229,7 +232,7 @@ def get_vars_dict():
 
     vars_dict = dict(args.items() + generated_vars.items())
 
-    derived_vars = io.fetch_args(args)
+    derived_vars = io.get_inputs(args)
     for i in derived_vars.keys():
         if i not in vars_dict.keys():
             vars_dict[i] = derived_vars[i]
