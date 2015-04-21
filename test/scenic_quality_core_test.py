@@ -13,13 +13,14 @@ import csv
 import glob
 import shutil
 import json
+import h5py
 
 from osgeo import gdal
 from osgeo import ogr
 from nose.plugins.skip import SkipTest
 
 import invest_test_core
-from invest_natcap import raster_utils
+import pygeoprocessing.geoprocessing
 from invest_natcap.scenic_quality \
     import scenic_quality as sq
 from invest_natcap.scenic_quality \
@@ -823,6 +824,92 @@ class TestScenicQuality(unittest.TestCase):
             assert i == computed, message
 
 
+    def test_memory_efficient_line_update(self):
+        """ Test if memory and non-meory efficient event sorting agree.
+        """
+        viewpoint = (50, 50)
+        max_dist = 3
+        # 1- get perimeter cells
+        perimeter_cells = \
+            sqc.get_perimeter_cells( \
+                (101, 101), viewpoint, max_dist)
+
+        # angles
+        # cell_angles + append the last element (2 PI) automatically
+        angles = sqc.cell_angles(perimeter_cells, viewpoint)
+        angles = np.append(angles, 2.0 * math.pi)
+        
+        # Viewshed information
+        row_max = np.amax(perimeter_cells[0])
+        row_min = np.amin(perimeter_cells[0])
+        col_max = np.amax(perimeter_cells[1])    
+        col_min = np.amin(perimeter_cells[1])
+        
+        # Shape of the viewshed
+        viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
+
+        # Viewer's coordiantes relative to the viewshed 
+        v = (viewpoint[0] - row_min, viewpoint[1] - col_min)
+
+        # add_events, center_events, remove_events
+        add_events, center_events, remove_events, I, J = \
+            scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
+            v, max_dist)
+
+        # arg_min, arg_center, arg_max
+        arg_min = np.argsort(add_events).astype(np.int64)
+        arg_max = np.argsort(remove_events).astype(np.int64)
+        arg_center = np.argsort(center_events).astype(np.int64)
+
+        # Debug -- Testing the new memory efficient algorithm
+        active_pixel_uri = \
+            scenic_quality_cython_core.memory_efficient_event_stream( \
+                viewshed_shape, viewpoint, max_dist)
+
+        f = h5py.File(active_pixel_uri)
+
+        angles_dataset = f['angles']
+        active_pixels_dataset = f['active_pixels']
+
+        print('active_pixels_dataset', active_pixels_dataset.shape)
+        print('angles_dataset', angles_dataset.shape)
+
+        row = 0
+        add = 0
+        add_event_id = 0
+        add_event_count = add_events.size
+
+        for a in range(angles_dataset.size):
+            angle_slice = active_pixels_dataset[a, row, add, :]
+            angle_count = 0
+
+            # -----------------------------------------
+            # Count the number of pixel addition events
+            # -----------------------------------------
+            # Memory efficient:
+            for x in angle_slice:
+                if x != -1:
+                    angle_count += 1
+                else:
+                    break
+            angle_slice = angle_slice[:angle_count]
+
+            # Non-memory efficient
+            add_event_list = []
+            while (add_event_id < add_event_count) and \
+                (add_events[arg_min[add_event_id]] <= \
+                    angles[a+1] + 1e-8):
+                add_event_list.append(I[arg_min[add_event_id]])
+                add_event_id += 1
+
+            print ('angle', a, angles_dataset[a])
+            print(angle_slice)
+            print(add_event_list)
+
+
+        return
+
+
     def test_visibility_basic_array(self):
         return
         DEM_size = 31
@@ -957,7 +1044,7 @@ class TestScenicQuality(unittest.TestCase):
         assert difference == 0.0, message
 
     def test_polynomial_valuation_on_block_island(self):
-        #return
+        return
         args_uri = "../../ScenicQuality/tests/block-island/run_parameters_block-island_polynomial.json"
         with open(args_uri) as args_file:
             args = json.load(args_file)
@@ -979,10 +1066,10 @@ class TestScenicQuality(unittest.TestCase):
         difference = np.sum(np.absolute(reference_array - computed_array))
         if difference:
             computed_band.WriteArray(reference_array - computed_array)
-        message = "Computed viewshed " + computed_uri + \
+            message = "Computed viewshed " + computed_uri + \
             " doesn't correspond to " + reference_uri + '. diff = ' + \
             str(difference)
-        assert difference == 0.0, message
+            assert difference == 0.0, message
 
     def test_logarithmic_valuation_on_block_island(self):
         return
@@ -1077,7 +1164,7 @@ class TestScenicQuality(unittest.TestCase):
             base_dem_uri, flat_dem_uri, 'GTiff', 2., gdal.GDT_Float32, \
             fill_value = base_dem_nodata, n_rows = rows, n_cols = cols)
 
-	raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
+        raster = gdal.Open(flat_dem_uri, gdal.GA_Update)
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
 

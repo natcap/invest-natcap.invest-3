@@ -29,8 +29,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             where the sweep line originates
             -max_dist: maximum viewing distance in pixels
             
-        returns a uri to an hdf5 file that contains the cell addition/removal
-            event stream.
+        returns a uri to an hdf5 file that contains the cell addition & removal
+            event streams.
     """
     cdef:
         # constants
@@ -149,8 +149,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     angles = (np.arctan2(-(rows-center[0]), cols-center[1]) + two_pi) % two_pi
 
-    for i in range(len(angles)):
-        print 'angle', i, (rows[i], cols[i]), angles[i]
+#    for i in range(len(angles)):
+#        print 'angle', i, (rows[i], cols[i]), angles[i]
 
     # Container for all the fringe pixels to process in the current iteration
     fringe_pixels = []
@@ -159,12 +159,15 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     # Create an hdf5 intermediate file to store the line's active pixels:
 #    print('------------------- CWD:', os.getcwd(), '-------------------------')
-    active_pixels_file_path = 'active_pixels.h5'
+    active_pixels_file_path = os.path.join(os.getcwd(), 'active_pixels.h5')
     f = h5py.File(active_pixels_file_path, 'w')
     # Active pixels array size: 
     # active_pixels[angle][x/y][add/drop][active_pixel_id]
     active_pixels = f.create_dataset('active_pixels', \
         (angles.size, 2, 2, 2*max_dist), \
+        compression = 'gzip', fillvalue = -1.0, dtype='f8')
+    angles_dataset = f.create_dataset('angles', \
+        (angles.size,), \
         compression = 'gzip', fillvalue = -1.0, dtype='f8')
 
     pixel_map_file_path = 'pixel_map.h5'
@@ -173,12 +176,10 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         (max_size[0], max_size[1]), \
         compression = 'gzip', fillvalue = -1, dtype='i4')
 
-    # Used to pick the correct 1st fringe pixel (touching the viewpoint)
-    priority_mask = np.array([[4, 3, 2], [5, 0, 1], [6, 7, 8]]).astype(int)
-
-#    I, J = np.meshgrid(range(3), range(3), indexing='ij')
+    # Fill out the angles dataset
+    angles_dataset[...] = angles[:]
     
-    # Starting point of each angle iteratio is from the furthest pixel
+    # Starting point of each angle iteration is from the furthest pixel
     furthest_pixel = (0, 0)
     furthest_pixel_distance = 0
 
@@ -209,24 +210,24 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         else:
             break
 
-    p_map = np.copy(pixel_map[...])
-    print('pixel map')
-    print(p_map)
+#    p_map = np.copy(pixel_map[...])
+#    print('pixel map')
+#    print(p_map)
 
     # 3-Until there are no more angles to process:
     # Done with initialization of iteration 0, start from iteration 1:
     for i in range(1, angles.size):
         a = angles[i]
-        print('angle', i, a)
+        print('angle', angles.size - i, a)
         
         # 4-Set first fringe pixel
         add_event_occured = False #Used to determine if we reset furthest_pixel
         fringe_pixels = []
         fringe_pixels.append((furthest_pixel[0], furthest_pixel[1]))
 
-        print('Initialize fringe pixel to', furthest_pixel)
+#        print('Initialize fringe pixel to', furthest_pixel)
 
-        print('first fringe_pixel', fringe_pixels[-1])
+#        print('first fringe_pixel', fringe_pixels[-1])
 
         # 5-As long as there remain fringe pixels to process:
         active_pixel_id = 0
@@ -239,8 +240,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             abs_row = rel_row + center[0]   # absolute row
             abs_col = rel_col + center[1]   # absolute column
 
-            print('fringe pixel', len(fringe_pixels), 'rel', \
-                (rel_row, rel_col))
+#            print('fringe pixel', len(fringe_pixels), 'rel', \
+#                (rel_row, rel_col))
 
 #            p_map = np.copy(pixel_map[...])
 #            print('pixel map')
@@ -274,9 +275,9 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
             # 5.2-Check if fringe pixel should be an active pixel:
             if min_angle < angles[i] - epsilon:
-                print('fringe pixel becomes active')
-                print(min_angle, '<', angles[i+1] - epsilon)
-                print(min_corner_row, min_corner_col)
+#                print('fringe pixel becomes active')
+#                print(min_angle, '<', angles[i+1] - epsilon)
+#                print(min_corner_row, min_corner_col)
                 
                 # Mark fringe pixel as active pixel + store it
                 pixel_map[abs_row, abs_col] = 0   # Active pixel code
@@ -305,8 +306,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                         (new_rel_row**2 + new_rel_col**2)**.5
                     
                     if fringe_pixel_distance < max_dist + epsilon:
-                        print('Updating fringe at', \
-                            (new_rel_row, new_rel_col), 'as', i+1)
+#                        print('Updating fringe at', \
+#                            (new_rel_row, new_rel_col), 'as', i+1)
                         # We use absolute coordinates to store in pixel map
                         pixel_map[new_abs_row, new_abs_col] = i+1
 
@@ -322,7 +323,7 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                             furthest_pixel = (new_rel_row, new_rel_col)
                             furthest_pixel_distance = \
                                 (furthest_pixel[0]**2+furthest_pixel[1]**2)**.5
-                            print('Updating fringe pixel to', furthest_pixel)
+#                            print('Updating fringe pixel to', furthest_pixel)
             else:
                 pixel_map[abs_row, abs_col] = i+1
 
@@ -364,8 +365,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                     (new_rel_row**2 + new_rel_col**2)**.5
                 
                 if fringe_pixel_distance < max_dist + epsilon:
-                    print('adding', (new_rel_row, new_rel_col), \
-                        'as next fringe pixel')
+#                    print('adding', (new_rel_row, new_rel_col), \
+#                        'as next fringe pixel')
                     # We use absolute coordinates to sore in pixel map
                     pixel_map[new_abs_row, new_abs_col] = i+1
                     # We use relative coordinates in fringe pixel coord.
@@ -376,19 +377,19 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                 extra_fringe_pixels, fringe_pixels = \
                     fringe_pixels, extra_fringe_pixels
 
-        p_map = np.copy(pixel_map[...])
-        print('pixel map')
-        print(p_map)
+#        p_map = np.copy(pixel_map[...])
+#        print('pixel map')
+#        print(p_map)
 
-        print('done with angle', i)
+#        print('done with angle', i)
 
     f.close()
     g.close()
 
-    os.remove(active_pixels_file_path)
+    #os.remove(active_pixels_file_path)
     os.remove(pixel_map_file_path)
 
-    return
+    return active_pixels_file_path
 
     # Count size of arrays before allocating
     # Loop through the rows

@@ -196,18 +196,18 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
         0., gdal.GDT_Float64, fill_value = 0.)
 
     # Call the non-uri version of viewshed.
-    compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-        cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
-        curvature_correction, refr_coeff, args)
-
-#    cProfile.runctx( \
-#        'compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+#    compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 #        cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
-#        curvature_correction, refr_coeff, args)' \
-#        , globals(), locals(), 'stats')
-#    p = pstats.Stats('stats')
-#    p.sort_stats("time").print_stats(20)
-#    p.sort_stats('cumulative').print_stats(20)
+#        curvature_correction, refr_coeff, args)
+
+    cProfile.runctx( \
+        'compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+        cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
+        curvature_correction, refr_coeff, args)' \
+        , globals(), locals(), 'stats')
+    p = pstats.Stats('stats')
+    p.sort_stats("time").print_stats(20)
+    p.sort_stats('cumulative').print_stats(20)
 
     os.remove(I_uri)
     os.remove(J_uri)
@@ -394,9 +394,9 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
         # Debug -- Testing the new memory efficient algorithm
         scenic_quality_cython_core.memory_efficient_event_stream(viewshed_shape, \
-            v, 3)
+            v, max_dist)
 
-        sys.exit(0)
+        return
 
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
