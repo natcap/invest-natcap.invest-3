@@ -113,11 +113,11 @@ def calculate_slow_flow(
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri):
     """calculate slow flow index"""
-    pass
-    #seasonal_water_yield_core.calculate_recharge(
-    #    precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-    #    alpha_m, beta_i, gamma, qfi_uri,
-    #    recharge_uri, recharge_avail_uri, vri_uri)
+
+    seasonal_water_yield_core.calculate_recharge(
+        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
+        alpha_m, beta_i, gamma, qfi_uri,
+        recharge_uri, recharge_avail_uri, vri_uri)
 
 
 
