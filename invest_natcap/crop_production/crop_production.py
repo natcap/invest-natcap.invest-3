@@ -44,7 +44,7 @@ def execute(args):
         on climate-specific distribution of observed yields and creates
         associated outputs
 
-    :param boolean args['do_yield_regression_model']: if True, calculates yield based on
+    :param boolean args['do_yield_regression']: if True, calculates yield based on
         yield regression model with climate-specific parameters and creates
         associated outputs
 
@@ -83,7 +83,7 @@ def execute(args):
             'create_crop_production_maps': True,
             'do_yield_observed': True,
             'do_yield_percentile': True,
-            'do_yield_regression_model': True,
+            'do_yield_regression': True,
             'modeled_fertilizer_maps_dir': 'path/to/modeled_fertilizer_maps_dir/',
             'modeled_irrigation_map_uri': 'path/to/modeled_irrigation_map_uri/',
             'do_nutrition': True,
@@ -94,11 +94,10 @@ def execute(args):
 
     '''
 
-    if all([args['do_yield_observed'],
+    if any([args['do_yield_observed'],
             args['do_yield_percentile'],
-            args['do_yield_regression_model']]) is False:
+            args['do_yield_regression']]) is False:
         LOGGER.error('No Yield Function Selected.  Cannot Run Model.')
-        return
 
     LOGGER.info("Beginning Model Run...")
 
@@ -119,7 +118,7 @@ def execute(args):
         percentile_vars_dict = model.calc_percentile_yield(vars_dict)
         results_dict['percentile_vars_dict'] = percentile_vars_dict
 
-    if vars_dict['do_yield_regression_model']:
+    if vars_dict['do_yield_regression']:
         LOGGER.info("Calculating Yield from Regression Model with Climate-based Parameters...")
         regression_vars_dict = model.calc_regression_yield(vars_dict)
         results_dict['regression_vars_dict'] = regression_vars_dict

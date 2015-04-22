@@ -93,8 +93,9 @@ def calc_observed_yield(vars_dict):
             crop,
             ObservedLocalYield_raster)
 
-        vars_dict['crop_production_dict'][crop] = Production_raster.get_band(
-            1).sum()
+        total_production = float(np.around(
+            Production_raster.get_band(1).sum(), decimals=2))
+        vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
             returns_raster += _calc_crop_returns(
@@ -173,7 +174,7 @@ def _get_observed_yield_from_dataset(vars_dict, crop, aoi_vector, base_raster_fl
         reproj_aoi_vector.uri).set_nodata(nodata_float)
 
     if clipped_crop_raster.get_shape() == (1, 1):
-        observed_yield_val = float(clipped_crop_raster.get_band(1).data[0, 0])
+        observed_yield_val = float(clipped_crop_raster.get_band(1)[0, 0])
         aligned_crop_raster = observed_yield_val * base_raster_float.ones()
     else:
         # this reprojection could result in very long computation times
@@ -272,12 +273,16 @@ def _calc_crop_returns(vars_dict, crop, lulc_raster, production_raster, returns_
 
     returns_raster = revenue_raster - cost_raster
 
-    vars_dict['economics_table_dict'][crop][
-        'total_cost'] = cost_raster.get_band(1).data.sum()
-    vars_dict['economics_table_dict'][crop][
-        'total_revenue'] = revenue_raster.get_band(1).data.sum()
-    vars_dict['economics_table_dict'][crop][
-        'total_returns'] = returns_raster.get_band(1).data.sum()
+    total_cost = float(np.around(
+        cost_raster.get_band(1).sum(), decimals=2))
+    total_revenue = float(np.around(
+        revenue_raster.get_band(1).sum(), decimals=2))
+    total_returns = float(np.around(
+        returns_raster.get_band(1).sum(), decimals=2))
+
+    vars_dict['economics_table_dict'][crop]['total_cost'] = total_cost
+    vars_dict['economics_table_dict'][crop]['total_revenue'] = total_revenue
+    vars_dict['economics_table_dict'][crop]['total_returns'] = total_returns
 
     # print "\n%s production raster" % crop
     # print production_raster
@@ -449,7 +454,9 @@ def calc_percentile_yield(vars_dict):
             Production_raster = _calculate_production_for_crop(
                 vars_dict, crop, yield_raster, percentile=percentile)
 
-            vars_dict['crop_production_dict'][crop] = Production_raster.get_band(1).sum()
+            total_production = float(np.around(
+                Production_raster.get_band(1).sum(), decimals=2))
+            vars_dict['crop_production_dict'][crop] = total_production
 
             if vars_dict['do_economic_returns']:
                 returns_raster += _calc_crop_returns(
@@ -467,8 +474,8 @@ def calc_percentile_yield(vars_dict):
             del yield_raster
             del Production_raster
 
-    if vars_dict['do_nutrition']:
-        vars_dict = _calc_nutrition(vars_dict)
+        if vars_dict['do_nutrition']:
+            vars_dict = _calc_nutrition(vars_dict)
 
         # Results Table
         if percentile_count == 1:
@@ -502,7 +509,7 @@ def _get_climate_bin_over_lulc(vars_dict, crop, aoi_vector, base_raster_float):
 
     if clipped_climate_bin_raster.get_shape() == (1, 1):
         climate_bin_val = float(clipped_climate_bin_raster.get_band(
-            1).data[0, 0])
+            1)[0, 0])
         aligned_climate_bin_raster = base_raster_float.ones() * climate_bin_val
     else:
         # note: this reprojection could result in very long computation times
@@ -566,8 +573,9 @@ def calc_regression_yield(vars_dict):
         Production_raster = _calculate_production_for_crop(
             vars_dict, crop, Yield_given_lulc_raster)
 
-        vars_dict['crop_production_dict'][crop] = Production_raster.get_band(
-            1).sum()
+        total_production = float(np.around(
+            Production_raster.get_band(1).sum(), decimals=2))
+        vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
             returns_raster += _calc_crop_returns(
@@ -728,8 +736,11 @@ def _calc_nutrition(vars_dict):
         nutrition_row_total = {}
         for nutrient in nutrition_row_per_unit.keys():
             nutrient_unit = nutrition_row_per_unit[nutrient]
-            nutrition_row_total[
-                nutrient] = production * nutrient_unit * conversion_unit
+            if type(nutrient_unit) not in [int, float]:
+                nutrient_unit = 0
+            total_nutrient = float(np.around((
+                production * nutrient_unit * conversion_unit), decimals=2))
+            nutrition_row_total[nutrient] = total_nutrient
         crop_total_nutrition_dict[crop] = nutrition_row_total
 
     vars_dict['crop_total_nutrition_dict'] = crop_total_nutrition_dict

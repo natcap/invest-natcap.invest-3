@@ -128,8 +128,8 @@
       ]
     },
     {
-      "id": "do_yield_regression_model",
-      "args_id": "do_yield_regression_model",
+      "id": "do_yield_regression",
+      "args_id": "do_yield_regression",
       "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
       "type": "container",
       "defaultValue": false,

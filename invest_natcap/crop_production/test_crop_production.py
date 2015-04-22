@@ -9,6 +9,7 @@ import pprint
 from numpy import testing
 import numpy as np
 
+import test_data
 import crop_production
 
 workspace_dir = '../../test/invest-data/Crop_Production'
@@ -18,24 +19,21 @@ pp = pprint.PrettyPrinter(indent=4)
 
 class TestOverallModel1(unittest.TestCase):
     def setUp(self):
-        self.args = {
-
-        }
+        self.args = test_data.get_large_dataset_args()
 
     def test_run(self):
-        guess = crop_production.execute(self.args, create_outputs=False)
-        pass
+        guess = crop_production.execute(self.args)
 
 
-class TestOverallModel2(unittest.TestCase):
-    def setUp(self):
-        self.args = {
+# class TestOverallModel2(unittest.TestCase):
+#     def setUp(self):
+#         self.args = {
 
-        }
+#         }
 
-    def test_run(self):
-        guess = crop_production.execute(self.args, create_outputs=False)
-        pass
+#     def test_run(self):
+#         guess = crop_production.execute(self.args, create_outputs=False)
+#         pass
 
 
 if __name__ == '__main__':

@@ -148,7 +148,7 @@ class TestFetchSpatialDataset(unittest.TestCase):
                 input_dir, 'spatial_dataset/'),
             'do_yield_observed': True,
             'do_yield_percentile': True,
-            'do_yield_regression_model': True,
+            'do_yield_regression': True,
         }
 
     def test_fetch_spatial_dataset(self):

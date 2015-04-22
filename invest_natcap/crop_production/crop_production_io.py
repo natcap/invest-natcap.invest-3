@@ -68,7 +68,7 @@ def get_inputs(args):
                 ...
             },
             'percentile_table_uri': 'path/to/percentile_table_uri',
-            'percentile_table_dict': {
+            'percentile_yield_dict': {
                 'crop': {
                     <climate_bin>: {
                         'yield_25th': <float>,
@@ -141,14 +141,23 @@ def get_inputs(args):
     vars_dict = create_crops_in_aoi_list(vars_dict)
     vars_dict = fetch_spatial_dataset(vars_dict)
 
-    if vars_dict['do_yield_regression_model']:
+    if vars_dict['do_yield_observed']:
+        assert_crops_in_list(vars_dict, 'observed_yields_maps_dict')
+
+    if vars_dict['do_yield_percentile']:
+        assert_crops_in_list(vars_dict, 'percentile_yield_dict')
+
+    if vars_dict['do_yield_regression']:
         vars_dict = fetch_modeled_fertilizer_maps(vars_dict)
+        assert_crops_in_list(vars_dict, 'modeled_yield_dict')
 
     if vars_dict['do_nutrition']:
         vars_dict = read_nutrition_table(vars_dict)
+        assert_crops_in_list(vars_dict, 'nutrition_table_dict')
 
     if vars_dict['do_economic_returns']:
         vars_dict = read_economics_table(vars_dict)
+        assert_crops_in_list(vars_dict, 'economics_table_dict')
 
     if not os.path.isdir(args['workspace_dir']):
         try:
@@ -156,6 +165,12 @@ def get_inputs(args):
         except:
             LOGGER.error("Cannot create Workspace Directory")
             raise OSError
+
+    # Validation
+    try:
+        vars_dict['results_suffix']
+    except:
+        vars_dict['results_suffix'] = ''
 
     # Create output directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -168,6 +183,20 @@ def get_inputs(args):
     vars_dict['output_dir'] = output_dir
 
     return vars_dict
+
+
+def assert_crops_in_list(vars_dict, key):
+    crops_in_aoi_list = vars_dict['crops_in_aoi_list']
+    key_dict = vars_dict[key]
+    key_list = key_dict.keys()
+    defined_list = [crop in key_list for crop in crops_in_aoi_list]
+    undefined_crops = []
+    for i in range(len(crops_in_aoi_list)):
+        if defined_list[i] is False:
+            undefined_crops.append(crops_in_aoi_list[i])
+    if len(undefined_crops) > 0:
+        LOGGER.error('%s not in %s' % (undefined_crops, key))
+        raise ValueError
 
 
 def read_crop_lookup_table(vars_dict):
@@ -258,7 +287,7 @@ def fetch_spatial_dataset(vars_dict):
                 ...
             },
             'percentile_table_uri': 'path/to/percentile_table_uri',
-            'percentile_table_dict': {
+            'percentile_yield_dict': {
                 'crop': {
                     <climate_bin>: {
                         'yield_25th': <float>,
@@ -302,7 +331,7 @@ def fetch_spatial_dataset(vars_dict):
 
         vars_dict = fetch_observed_yield_maps(vars_dict)
 
-    if vars_dict['do_yield_percentile'] or vars_dict['do_yield_regression_model']:
+    if vars_dict['do_yield_percentile'] or vars_dict['do_yield_regression']:
         vars_dict['climate_bin_maps_dir'] = os.path.join(
             vars_dict['spatial_dataset_dir'],
             spatial_dataset_dict['climate_bin_maps_dir'])
@@ -316,12 +345,14 @@ def fetch_spatial_dataset(vars_dict):
 
         vars_dict = read_percentile_yield_tables(vars_dict)
 
-    if vars_dict['do_yield_regression_model']:
+    if vars_dict['do_yield_regression']:
         vars_dict['modeled_yield_tables_dir'] = os.path.join(
             vars_dict['spatial_dataset_dir'],
             spatial_dataset_dict['modeled_yield_tables_dir'])
 
         vars_dict = read_regression_model_yield_tables(vars_dict)
+    else:
+        vars_dict['modeled_fertilizer_maps_dir'] = None
 
     return vars_dict
 
