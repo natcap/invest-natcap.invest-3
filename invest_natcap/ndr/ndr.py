@@ -58,6 +58,15 @@ def execute(args):
         returns nothing.
     """
 
+    LOGGER.info(r'  _   _    ____    ____     ')
+    LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
+    LOGGER.info(r'<|  \| |>/| | | |\| |_) |/  ')
+    LOGGER.info(r'U| |\  |uU| |_| |\|  _ <    ')
+    LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
+    LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
+    LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+    LOGGER.debug("pygeoprocessing.__version__ %s", pygeoprocessing.__version__)
+
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by

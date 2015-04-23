@@ -14,9 +14,9 @@ import build_utils
 
 try:
     import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.2.0'
+    REQUIRED_PYGEOPROCESSING_VERSION = '0.2.1'
     if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
-            distutils.version.StrictVersion('0.2.0')):
+            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
         raise Exception(
             "Requires PyGeoprocessing version at least %s.  "
             "Current version %s ",
