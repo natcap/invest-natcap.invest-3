@@ -31,6 +31,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('pygeoprocessing.routing.routing_core')
 
+cdef int N_MONTHS = 12
+
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
 cdef int N_BLOCK_ROWS = 16
@@ -174,53 +176,16 @@ cdef class BlockCache:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, deque[int] &sink_cell_deque,
-        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode,
-        stream_uri=None):
-    """This is a generalized flux transport algorithm that operates
-        on a 2D grid given a per pixel flow direction, per pixel source,
-        and per pixel absorption rate.  It produces a grid of loss per
-        pixel, and amount of outgoing flux per pixel.
-
-        outflow_direction_uri - a uri to a byte dataset that indicates the
-            first counter clockwise outflow neighbor as an index from the
-            following diagram
-
-            3 2 1
-            4 x 0
-            5 6 7
-
-        outflow_weights_uri - a uri to a float32 dataset whose elements
-            correspond to the percent outflow from the current cell to its
-            first counter-clockwise neighbor
-        sink_cell_deque (deque[int])- a deque of flat integer indexes for the
-            cells in flow graph that have no outflow
-        source_uri - a GDAL dataset that has source flux per pixel
-        absorption_rate_uri - a GDAL floating point dataset that has a percent
-            of flux absorbed per pixel
-        loss_uri - an output URI to to the dataset that will output the
-            amount of flux absorbed by each pixel
-        flux_uri - a URI to an output dataset that records the amount of flux
-            travelling through each pixel
-        absorption_mode - either 'flux_only' or 'source_and_flux'. For
-            'flux_only' the outgoing flux is (in_flux * absorption + source).
-            If 'source_and_flux' then the output flux
-            is (in_flux + source) * absorption.
-        stream_uri - (optional) a raster to a stream classification layer that
-            if 1 indicates a stream 0 if not.  If flux hits a stream the total
-            flux is set to zero so that it can't be further routed out of the
-            stream if it diverges later.
-
-        returns nothing"""
-
-    #Calculate flow graph
+cdef route_recharge(
+        precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
+        alpha_m, beta_i, gamma, qfi_uri_list, outflow_direction_uri,
+        outflow_weights_uri, deque[int] &sink_cell_deque):
 
     #Pass transport
     cdef time_t start
     time(&start)
 
-    #Create output arrays for loss and flux
+    #load a base dataset so we can determine the n_rows/cols
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     cdef int n_cols = outflow_direction_dataset.RasterXSize
     cdef int n_rows = outflow_direction_dataset.RasterYSize
@@ -240,21 +205,25 @@ cdef calculate_transport(
     cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
     cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
 
-    #define all the caches
+    #define all the single caches
     cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] source_block =numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] kc_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] absorption_rate_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] recharge_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] loss_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] recharge_avail_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] flux_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
+
+    #these are 12 band blocks
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] precip_block_list = numpy.zeros(
+        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] et0_block_list = numpy.zeros(
+        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] qfi_block_list = numpy.zeros(
+        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
 
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
@@ -262,48 +231,95 @@ cdef calculate_transport(
     cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
         outflow_direction_uri)
 
+    #load the et0 and precip bands
+    et0_dataset_list = []
+    et0_band_list = []
+    precip_datset_list = []
+    precip_band_list = []
+
+    for uri_list, dataset_list, band_list in [
+            (et0_uri_list, et0_dataset_list, et0_band_list),
+            (precip_uri_list, precip_datset_list, precip_band_list)]:
+        for index, uri in enumerate(uri_list):
+            dataset_list.append(gdal.Open(uri))
+            band_list.append(dataset_list[index].GetRasterBand(1))
+
+    cdef float precip_nodata = pygeoprocessing.get_nodata_from_uri(precip_uri_list[0])
+    cdef float et0_nodata = pygeoprocessing.get_nodata_from_uri(et0_uri_list[0])
+
+    qfi_datset_list = []
+    qfi_band_list = []
+
     outflow_weights_dataset = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
-    cdef int outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
         outflow_weights_uri)
-    source_dataset = gdal.Open(source_uri)
-    source_band = source_dataset.GetRasterBand(1)
-    cdef int source_nodata = pygeoprocessing.get_nodata_from_uri(
-        source_uri)
-    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
-    absorption_rate_band = absorption_rate_dataset.GetRasterBand(1)
-    cdef int absorption_rate_nodata = pygeoprocessing.get_nodata_from_uri(
-        absorption_rate_uri)
+    kc_dataset = gdal.Open(kc_uri)
+    kc_band = kc_dataset.GetRasterBand(1)
+    cdef float kc_nodata = pygeoprocessing.get_nodata_from_uri(
+        kc_uri)
 
-    #Create output arrays for loss and flux
-    transport_nodata = -1.0
-    loss_dataset = pygeoprocessing.new_raster_from_base(
-        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
+    #Create output arrays qfi and recharge and recharge_avail
+    cdef float recharge_nodata = -1e10
+    recharge_dataset = pygeoprocessing.new_raster_from_base(
+        outflow_direction_dataset, recharge_uri, 'GTiff', recharge_nodata,
         gdal.GDT_Float32)
-    loss_band = loss_dataset.GetRasterBand(1)
-    flux_dataset = pygeoprocessing.new_raster_from_base(
-        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
+    recharge_band = recharge_dataset.GetRasterBand(1)
+    recharge_avail_dataset = pygeoprocessing.new_raster_from_base(
+        outflow_direction_dataset, recharge_avail_uri, 'GTiff', recharge_nodata,
         gdal.GDT_Float32)
-    flux_band = flux_dataset.GetRasterBand(1)
+    recharge_avail_band = recharge_avail_dataset.GetRasterBand(1)
+
+    qfi_dataset_list = []
+    qfi_band_list = []
+    cdef float qfi_nodata = -1e10
+    for index, qfi_uri in enumerate(qfi_uri_list):
+        qfi_dataset_list.append(pygeoprocessing.new_raster_from_base(
+            outflow_direction_dataset, qfi_uri, 'GTiff', qfi_nodata,
+            gdal.GDT_Float32))
+        qfi_band_list.append(qfi_dataset_list[index].GetRasterBand(1))
+
+    #band and blocks to define
+    #outflow_direction_uri ((in))
+    #outflow_weights_uri (in)
+    #kc_uri (in)
+    #precip_uri_list (in)
+    #et0_uri_list (in)
+    #recharge_uri (out)
+    #recharge_avail_uri (out)
+    #qfi_uri_list (out)
+
+    band_list = ([
+            outflow_direction_band,
+            outflow_weights_band,
+            kc_band,
+        ] + precip_band_list + et0_band_list +
+        [recharge_band,
+         recharge_avail_band
+        ] + qfi_band_list
+    )
+
+    block_list = ([
+            outflow_direction_block,
+            outflow_weights_block,
+            kc_block,] +
+        [precip_block_list[i] for i in xrange(N_MONTHS)] +
+        [et0_block_list[i] for i in xrange(N_MONTHS)] +
+        [recharge_block,
+         recharge_avail_block] +
+        qfi_block_list
+    )
+
+    update_list = (
+        [False] * (3 + len(precip_band_list) + len(et0_band_list)) +
+        [True] * (2 + len(qfi_band_list)))
 
     cache_dirty[:] = 0
-    band_list = [outflow_direction_band, outflow_weights_band, source_band, absorption_rate_band, loss_band, flux_band]
-    block_list = [outflow_direction_block, outflow_weights_block, source_block, absorption_rate_block, loss_block, flux_block]
-    update_list = [False, False, False, False, True, True]
-
-    cdef int stream_nodata = 0
-    if stream_uri != None:
-        stream_dataset = gdal.Open(stream_uri)
-        stream_band = stream_dataset.GetRasterBand(1)
-        stream_nodata = pygeoprocessing.get_nodata_from_uri(stream_uri)
-        band_list.append(stream_band)
-        block_list.append(stream_block)
-        update_list.append(False)
-    else:
-        stream_band = None
 
     cdef BlockCache block_cache = BlockCache(
-        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
+        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
+        block_row_size, block_col_size,
+        band_list, block_list, update_list, cache_dirty)
 
     #Process flux through the grid
     cdef deque[int] cells_to_process
@@ -329,7 +345,6 @@ cdef calculate_transport(
     cdef double in_flux
     cdef int current_neighbor_index
     cdef int current_index
-    cdef int absorb_source = (absorption_mode == 'source_and_flux')
 
     cdef time_t last_time, current_time
     time(&last_time)
