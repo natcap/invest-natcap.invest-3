@@ -13,7 +13,7 @@ input_dir = '../../test/invest-data/test/data/crop_production/input/'
 # input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
 nodata_int = -9999
-nodata_float = 1.0e+18
+nodata_float = -16777216
 
 # AOI Parameters
 pixel_size = 100
@@ -196,7 +196,7 @@ def get_args():
         'do_yield_observed': True,
         'do_yield_percentile': True,
         'do_yield_regression': True,
-        'modeled_fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
+        'fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
         'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
         'do_nutrition': True,
         'nutrition_table_uri': os.path.join(input_dir, 'nutrition_table.csv'),
@@ -256,7 +256,7 @@ def get_large_dataset_args():
         'do_yield_observed': True,
         'do_yield_percentile': True,
         'do_yield_regression': False,
-        # 'modeled_fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
+        # 'fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
         # 'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
         'do_nutrition': True,
         'nutrition_table_uri': os.path.join(

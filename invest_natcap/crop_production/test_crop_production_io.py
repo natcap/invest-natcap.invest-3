@@ -6,9 +6,11 @@ import unittest
 import os
 import pprint
 import tempfile
+import shutil
 
 from numpy import testing
 import numpy as np
+import pygeoprocessing as pygeo
 
 import crop_production_io as io
 import test_data
@@ -45,7 +47,7 @@ class TestCreateCropsInAOIList(unittest.TestCase):
 
     def test_read_crop_lookup_table(self):
         guess = io.create_crops_in_aoi_list(self.vars_dict)
-        print guess
+        # print guess
 
 
 class TestReadNutritionTable(unittest.TestCase):
@@ -73,7 +75,7 @@ class TestReadEconomicsTable(unittest.TestCase):
         guess = io.read_economics_table(self.vars_dict)
         economics_table_dict = guess['economics_table_dict']
         keys = economics_table_dict.keys()
-        assert(type(economics_table_dict[keys[0]]['price_per_ton']) in [float, int])
+        assert(type(economics_table_dict[keys[0]]['price_per_tonne']) in [float, int])
 
 
 class TestReadPercentileYieldTables(unittest.TestCase):
@@ -163,7 +165,7 @@ class TestFetchSpatialDataset(unittest.TestCase):
 class TestFetchModeledFertilizerMaps(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
-            'modeled_fertilizer_maps_dir':  os.path.join(
+            'fertilizer_maps_dir':  os.path.join(
                 input_dir, 'fertilizer_maps'),
         }
 
@@ -195,7 +197,7 @@ class TestGetInputs(unittest.TestCase):
 
 class TestCreateResultsTable(unittest.TestCase):
     def setUp(self):
-        pass
+        self.tempdir = tempfile.mkdtemp()
 
     def test_run1(self):
         vars_dict = test_data.get_vars_dict()
@@ -204,6 +206,7 @@ class TestCreateResultsTable(unittest.TestCase):
             'soy': 2.0,
             'rice': 3.0
         }
+        vars_dict['output_yield_func_dir'] = self.tempdir
         vars_dict['crop_total_nutrition_dict'] = {
             'corn': {
                 'ca': 13,
@@ -250,6 +253,12 @@ class TestCreateResultsTable(unittest.TestCase):
             }
         }
         guess = io.create_results_table(vars_dict)
+        check = pygeo.get_lookup_from_csv(
+            os.path.join(self.tempdir, 'results_table.csv'), 'crop')
+        # pp.pprint(check)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
 
 if __name__ == '__main__':

@@ -40,6 +40,18 @@
           "helpText": "This text will be appended to the end of the output files to help separate outputs from multiple runs."
         },
         {
+          "id": "crop_lookup_table_uri",
+          "args_id": "crop_lookup_table_uri",
+          "type": "file",
+          "label": "Crop Lookup Table (CSV)",
+          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": ""
+        },
+        {
           "id": "lulc_map_uri",
           "args_id": "lulc_map_uri",
           "type": "file",
@@ -52,15 +64,12 @@
           "helpText": ""
         },
         {
-          "id": "crop_lookup_table_uri",
-          "args_id": "crop_lookup_table_uri",
-          "type": "file",
-          "label": "Crop Lookup Table (CSV)",
-          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
+          "id": "fertilizer_maps_dir",
+          "args_id": "fertilizer_maps_dir",
+          "type": "folder",
+          "label": "Fertilizer Application Rate Maps Folder",
+          "defaultValue": "../CropProduction/input/fertilizer_maps/",
           "required": true,
-          "validateAs": {
-            "type": "CSV"
-          },
           "helpText": ""
         },
         {
@@ -143,15 +152,6 @@
               "id": "yield_observed_label",
               "type": "label",
               "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...). A table named 'yield_climate_regression_table.csv' within a folder named 'yield_climate_regression'.  [Additional requirements here]"
-            },
-            {
-              "id": "modeled_fertilizer_maps_dir",
-              "args_id": "modeled_fertilizer_maps_dir",
-              "type": "folder",
-              "label": "Fertilizer Application Rate Maps Folder",
-              "defaultValue": "../CropProduction/input/fertilizer_maps/",
-              "required": true,
-              "helpText": ""
             },
             {
               "id": "modeled_irrigation_map_uri",

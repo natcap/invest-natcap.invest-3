@@ -84,7 +84,7 @@ def execute(args):
             'do_yield_observed': True,
             'do_yield_percentile': True,
             'do_yield_regression': True,
-            'modeled_fertilizer_maps_dir': 'path/to/modeled_fertilizer_maps_dir/',
+            'fertilizer_maps_dir': 'path/to/fertilizer_maps_dir/',
             'modeled_irrigation_map_uri': 'path/to/modeled_irrigation_map_uri/',
             'do_nutrition': True,
             'nutrition_table_uri': 'path/to/nutrition_table_uri',

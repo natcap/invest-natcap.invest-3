@@ -106,7 +106,7 @@ def get_inputs(args):
             # For Nutrition
             'nutrition_table_dict': {
                 'crop': {
-                    'percent_refuse': <float>,
+                    'fraction_refuse': <float>,
                     'protein': <float>,
                     'lipid': <float>,
                     'energy': <float>,
@@ -225,7 +225,7 @@ def read_crop_lookup_table(vars_dict):
 
     crop_lookup_dict = {}
     for i in input_dict:
-        crop_lookup_dict[i] = input_dict[i]['crop']
+        crop_lookup_dict[i] = input_dict[i]['crop'].lower()
 
     # assert codes are non-negative integers?
     keys = crop_lookup_dict.keys()
@@ -352,7 +352,7 @@ def fetch_spatial_dataset(vars_dict):
 
         vars_dict = read_regression_model_yield_tables(vars_dict)
     else:
-        vars_dict['modeled_fertilizer_maps_dir'] = None
+        vars_dict['fertilizer_maps_dir'] = None
 
     return vars_dict
 
@@ -388,7 +388,7 @@ def fetch_observed_yield_maps(vars_dict):
         basename = os.path.basename(map_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
-            observed_yields_maps_dict[cropname] = map_uri
+            observed_yields_maps_dict[cropname.lower()] = map_uri
 
     vars_dict['observed_yields_maps_dict'] = observed_yields_maps_dict
 
@@ -426,9 +426,10 @@ def fetch_climate_bin_maps(vars_dict):
         basename = os.path.basename(map_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
-            climate_bin_maps_dict[cropname] = map_uri
+            climate_bin_maps_dict[cropname.lower()] = map_uri
 
-    vars_dict['climate_bin_maps_dict'] = convert_unicode_to_ascii(climate_bin_maps_dict)
+    vars_dict['climate_bin_maps_dict'] = convert_unicode_to_ascii(
+        climate_bin_maps_dict)
 
     return vars_dict
 
@@ -475,12 +476,13 @@ def read_percentile_yield_tables(vars_dict):
         if cropname != '':
             percentile_yield_dict[cropname] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
-            for c_bin in percentile_yield_dict[cropname].keys():
+            for c_bin in percentile_yield_dict[cropname.lower()].keys():
                 del percentile_yield_dict[cropname][c_bin]['climate_bin']
 
     # Add Assertion Statements?
 
-    vars_dict['percentile_yield_dict'] = convert_unicode_to_ascii(percentile_yield_dict)
+    vars_dict['percentile_yield_dict'] = convert_unicode_to_ascii(
+        percentile_yield_dict)
 
     return vars_dict
 
@@ -529,14 +531,15 @@ def read_regression_model_yield_tables(vars_dict):
         basename = os.path.basename(table_uri)
         cropname = basename.split('_')[0]
         if cropname != '':
-            modeled_yield_dict[cropname] = pygeo.get_lookup_from_csv(
+            modeled_yield_dict[cropname.lower()] = pygeo.get_lookup_from_csv(
                 table_uri, 'climate_bin')
 
     # Clean Data? (e.g. make sure empty args are initializeD or set to None)
 
     # Add Assertion Statements?
 
-    vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(modeled_yield_dict)
+    vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(
+        modeled_yield_dict)
 
     return vars_dict
 
@@ -547,7 +550,7 @@ def fetch_modeled_fertilizer_maps(vars_dict):
         keys.
 
     Args:
-        modeled_fertilizer_maps_dir (str): descr
+        fertilizer_maps_dir (str): descr
 
     Returns:
         modeled_fertilizer_maps_dict (dict): descr
@@ -564,7 +567,7 @@ def fetch_modeled_fertilizer_maps(vars_dict):
             },
         }
     '''
-    map_uris = _listdir(vars_dict['modeled_fertilizer_maps_dir'])
+    map_uris = _listdir(vars_dict['fertilizer_maps_dir'])
 
     modeled_fertilizer_maps_dict = {}
     for map_uri in map_uris:
@@ -572,8 +575,8 @@ def fetch_modeled_fertilizer_maps(vars_dict):
 
         basename = os.path.splitext(os.path.basename(map_uri))[0]
         fertilizer_name = basename.split('_')[0]
-        if fertilizer_name in ['nitrogen', 'phosphorous', 'potash']:
-            modeled_fertilizer_maps_dict[fertilizer_name] = map_uri
+        if fertilizer_name.lower() in ['nitrogen', 'phosphorous', 'potash']:
+            modeled_fertilizer_maps_dict[fertilizer_name.lower()] = map_uri
 
     # Assert that the dictionary contains maps for all three fertilizers?
 
@@ -599,7 +602,7 @@ def read_nutrition_table(vars_dict):
 
             'nutrition_table_dict': {
                 'crop': {
-                    'percent_refuse': <float>,
+                    'fraction_refuse': <float>,
                     'protein': <float>,
                     'lipid': <float>,
                     'energy': <float>,
@@ -615,14 +618,20 @@ def read_nutrition_table(vars_dict):
     '''
     input_dict = pygeo.get_lookup_from_csv(
         vars_dict['nutrition_table_uri'], 'crop')
-    for c in input_dict.keys():
-        src = input_dict[c]
+    nutrition_table_dict = {}
+    for cropname in input_dict.keys():
+        src = input_dict[cropname]
         del src['crop']
-        input_dict[c] = src
+        try:
+            src['fraction_refuse']
+        except:
+            src['fraction_refuse'] = 0
+        nutrition_table_dict[cropname.lower()] = src
 
     # Add Assertion Statements?
 
-    vars_dict['nutrition_table_dict'] = convert_unicode_to_ascii(input_dict)
+    vars_dict['nutrition_table_dict'] = convert_unicode_to_ascii(
+        nutrition_table_dict)
     return vars_dict
 
 
@@ -657,6 +666,12 @@ def read_economics_table(vars_dict):
     '''
     input_dict = pygeo.get_lookup_from_csv(
         vars_dict['economics_table_uri'], 'crop')
+
+    economics_table_dict = {}
+    for cropname in input_dict.keys():
+        src = input_dict[cropname]
+        del src['crop']
+        economics_table_dict[cropname.lower()] = src
 
     # Add Assertion Statements?
 

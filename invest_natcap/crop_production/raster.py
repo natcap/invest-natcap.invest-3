@@ -19,9 +19,9 @@ import PIL
 
 import pygeoprocessing as pygeo
 
-LOGGER = logging.getLogger('RASTER CLASS')
+LOGGER = logging.getLogger('Raster Class')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H/%M/%S')
 
 
 class Raster(object):
@@ -533,23 +533,6 @@ class Raster(object):
     def get_aoi_as_shapefile(self, uri):
         '''May only be suited for non-rotated rasters'''
         raise NotImplementedError
-        bb = self.get_bounding_box()
-        u_x = max(bb[0::2])
-        l_x = min(bb[0::2])
-        u_y = max(bb[1::2])
-        l_y = min(bb[1::2])
-        aoi = Polygon([(l_x, l_y), (l_x, u_y), (u_x, u_y), (u_x, l_y)])
-        # wkb = aoi.wkb
-
-        # shpDriver = ogr.GetDriverByName("ESRI Shapefile")
-        # if os.path.exists(uri):
-        #     shpDriver.DeleteDataSource(uri)
-        # outDataSource = shpDriver.CreateDataSource(uri)
-        # outLayer = outDataSource.CreateLayer(uri, geom_type=ogr.wkbPolygon)
-        # featureDefn = outLayer.GetLayerDefn()
-        # outFeature = ogr.Feature(featureDefn)
-        # outFeature.SetGeometry(wkb)
-        # outLayer.CreateFeature(outFeature)
 
     def get_cell_area(self):
         a = self.get_affine()
@@ -800,7 +783,8 @@ class Raster(object):
             reclass_table,
             dataset_out_uri,
             out_datatype,
-            out_nodata)
+            out_nodata,
+            assert_dataset_projected=False)
 
         return Raster.from_tempfile(dataset_out_uri)
 
@@ -811,21 +795,24 @@ class Raster(object):
         raise NotImplementedError
 
     def local_op(self, raster, pixel_op_closure, broadcast=False):
-        LOGGER.debug('performing local op')
         bounding_box_mode = "dataset"
         resample_method = "nearest"
 
         if not broadcast:
             assert(self.is_aligned(raster))
-            assert(self.get_nodata(1) == raster.get_nodata(1))
+            try:
+                assert(self.get_nodata(1) == raster.get_nodata(1))
+            except:
+                LOGGER.error("Rasters have different nodata values: %f, %f" % (
+                    self.get_nodata(1), raster.get_nodata(1)))
+                raise AssertionError
             dataset_uri_list = [self.uri, raster.uri]
             resample_list = [resample_method]*2
         else:
             dataset_uri_list = [self.uri]
             resample_list = [resample_method]
 
-        nodata = self.get_nodata(1)
-        pixel_op = pixel_op_closure(nodata)
+        pixel_op = pixel_op_closure(self.get_nodata(1))
         dataset_out_uri = pygeo.geoprocessing.temporary_filename()
         datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
         nodata_out = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
@@ -853,6 +840,8 @@ class Raster(object):
     def _close_dataset(self):
         self.dataset = None
 
+
+import random
 
 class RasterFactory(object):
 
@@ -890,6 +879,13 @@ class RasterFactory(object):
 
     def random(self):
         a = np.random.rand(self.rows, self.cols)
+        return self._create_raster(a)
+
+    def random_from_list(self, l):
+        a = np.zeros((self.rows, self.cols))
+        for i in xrange(len(a)):
+            for j in xrange(len(a[0])):
+                a[i, j] = random.choice(l)
         return self._create_raster(a)
 
     def horizontal_ramp(self, val1, val2):
