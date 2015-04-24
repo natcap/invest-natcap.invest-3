@@ -162,9 +162,9 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
     active_pixels_file_path = os.path.join(os.getcwd(), 'active_pixels.h5')
     f = h5py.File(active_pixels_file_path, 'w')
     # Active pixels array size: 
-    # active_pixels[angle][x/y][add/drop][active_pixel_id]
+    # active_pixels[angle][x/y/angle][add/drop][active_pixel_id]
     active_pixels = f.create_dataset('active_pixels', \
-        (angles.size, 2, 2, 2*max_dist), \
+        (angles.size, 3, 2, 2*max_dist), \
         compression = 'gzip', fillvalue = -1.0, dtype='f8')
     angles_dataset = f.create_dataset('angles', \
         (angles.size,), \
@@ -177,31 +177,70 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         compression = 'gzip', fillvalue = -1, dtype='i4')
 
     # Fill out the angles dataset
-    angles_dataset[...] = angles[:]
+    angles_dataset[:-1] = angles[1:]
+    angles_dataset[-1] = two_pi
     
     # Starting point of each angle iteration is from the furthest pixel
     furthest_pixel = (0, 0)
     furthest_pixel_distance = 0
 
+    # Initialixe center pixel
+    pixel_map[center[0], center[1]] = 0   # Active pixel code
+
     # 1-Draw horizontal line from center to edge of visible area
-    for p in range(max_dist+1):
-        abs_row = center[0]
-        abs_col = center[1] + p
+    extra_add_events = []   # Add events that will need to be added later
+    for p in range(max_dist):
+        # Coordinates relative to the center
+        rel_row = 0
+        rel_col = p + 1 # start at 1, stop at max_dist
+        # Absolute pixel_map coordinates
+        abs_row = rel_row + center[0]
+        abs_col = rel_col + center[1]
+        
+        # Compute corner angle
+        min_corner_row = rel_row + extreme_cell_points[0]
+        min_corner_col = rel_col + extreme_cell_points[1]
+        # Compute the angles associated with the extreme corners
+        min_angle = <np.float64_t>( \
+            atan2(-min_corner_row, min_corner_col) +two_pi) %two_pi
+
+#        active_pixels[0, 0, add, p] = rel_row #min_corner_row #abs_row
+#        active_pixels[0, 1, add, p] = rel_col #min_corner_col #abs_col
+#        active_pixels[0, 2, add, p] = min_angle
         pixel_map[abs_row, abs_col] = 0   # Active pixel code
-        active_pixels[0, 0, add, p] = abs_row
-        active_pixels[0, 1, add, p] = abs_col
+
+        extra_add_events.append((rel_row, rel_col, min_angle))
+    
+    # Reverse, so we can use it as a stack
+    extra_add_events = extra_add_events[::-1]
+
 
     # 2-Add fringe line above line at angle 0
-    for p in range(1, max_dist+1):
+    for p in range(max_dist):
         # Add pixel as long as it's within the max distance
-        distance = (p**2+1)**.5
+        distance = ((p+1)**2+1)**.5
         if distance <= max_dist - epsilon:
-            abs_row = center[0] - 1 # 1 pixel above, i.e. 1 row in negative dir.
-            abs_col = center[1] + p
-            # Fringe pixel code: current angle (epsilon for numerical consistency)
+            # Coordinates relative to the center
+            rel_row = - 1 # 1 pixel above, i.e. 1 row in negative i direction
+            rel_col = p + 1  # start at 1, stop at max_dist
+            # Absolute pixel_map coordinates
+            abs_row = rel_row + center[0]
+            abs_col = rel_col + center[1]
+
+            # Compute corner angle
+            min_corner_row = rel_row + extreme_cell_points[SECTOR_SIZE]
+            min_corner_col = rel_col + extreme_cell_points[SECTOR_SIZE + 1]
+            # Compute the angles associated with the extreme corners
+            min_angle = <np.float64_t>( \
+                atan2(-min_corner_row, min_corner_col) +two_pi) %two_pi
+
+            # Fringe pixel code: current angle
             pixel_map[abs_row, abs_col] = 1
-            active_pixels[1, 0, add, p] = abs_row
-            active_pixels[1, 1, add, p] = abs_col
+
+#            active_pixels[1, 0, add, p] = rel_row #min_corner_row #abs_row
+#            active_pixels[1, 1, add, p] = rel_col #min_corner_col #abs_col
+#            print('----- Storing active pixel', (rel_row, rel_col), 'in', (1, p))
+#            active_pixels[1, 2, add, p] = min_angle
 
             # Update furthest pixel if needed
             if distance > furthest_pixel_distance + epsilon:
@@ -216,16 +255,25 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     # 3-Until there are no more angles to process:
     # Done with initialization of iteration 0, start from iteration 1:
-    for i in range(1, angles.size):
-        a = angles[i]
+    for ii in range(angles.size):
+        i = ii + 1
+        a = angles[i] if i < angles.size else two_pi
         print('angle', angles.size - i, a)
+        
         
         # 4-Set first fringe pixel
         add_event_occured = False #Used to determine if we reset furthest_pixel
         fringe_pixels = []
-        fringe_pixels.append((furthest_pixel[0], furthest_pixel[1]))
 
-#        print('Initialize fringe pixel to', furthest_pixel)
+        if furthest_pixel_distance >= epsilon:
+            fringe_pixels.append((furthest_pixel[0], furthest_pixel[1]))
+            #sys.exit(0)
+
+
+        furthest_pixel = (0, 0)
+        furthest_pixel_distance = 0
+
+#        print('Initialize fringe pixel to', fringe_pixels[-1])
 
 #        print('first fringe_pixel', fringe_pixels[-1])
 
@@ -274,16 +322,25 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                 atan2(-min_corner_row, min_corner_col) +two_pi) %two_pi
 
             # 5.2-Check if fringe pixel should be an active pixel:
-            if min_angle < angles[i] - epsilon:
+            if min_angle <= a + epsilon:
 #                print('fringe pixel becomes active')
-#                print(min_angle, '<', angles[i+1] - epsilon)
+                print(min_angle, '<=', a + epsilon, \
+                    (rel_row, rel_col))
 #                print(min_corner_row, min_corner_col)
                 
+                assert pixel_map[abs_row, abs_col] != 0, \
+                    'pixel already zero ' + str((rel_row, rel_col))
+
                 # Mark fringe pixel as active pixel + store it
+                active_pixels[i-1, 0, add, active_pixel_id] = rel_row #min_corner_row #abs_row
+                active_pixels[i-1, 1, add, active_pixel_id] = rel_col #min_corner_col #abs_col
+#                    print('----- Storing active pixel', (rel_row, rel_col), \
+#                        'in', (i, active_pixel_id))
+#                    print('pixel map', (abs_row, abs_col), pixel_map[abs_row, abs_col])
+                active_pixels[i-1, 2, add, active_pixel_id] = min_angle
                 pixel_map[abs_row, abs_col] = 0   # Active pixel code
-                active_pixels[i, 0, add, active_pixel_id] = abs_row
-                active_pixels[i, 1, add, active_pixel_id] = abs_col
                 active_pixel_id += 1
+##                print('set pixel', (rel_row, rel_col), 'to zero')
 
                 # 5.2.1-Extract neighboring pixels
                 pixel_mask = pixel_map[\
@@ -311,19 +368,18 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                         # We use absolute coordinates to store in pixel map
                         pixel_map[new_abs_row, new_abs_col] = i+1
 
-                        # Reset furthest pixel on the first addition event  
-                        if not add_event_occured:
-                            add_event_occured = True
-                            furthest_pixel = (0, 0)
-                            furthest_pixel_distance = 0
-
+#                        # Reset furthest pixel on the first addition event  
+#                        if not add_event_occured:
+#                            add_event_occured = True
+#                            furthest_pixel = (0, 0)
+#                            furthest_pixel_distance = 0
 
                         # Update furthest pixel if necessary
                         if furthest_pixel_distance < fringe_pixel_distance:
                             furthest_pixel = (new_rel_row, new_rel_col)
                             furthest_pixel_distance = \
                                 (furthest_pixel[0]**2+furthest_pixel[1]**2)**.5
-#                            print('Updating fringe pixel to', furthest_pixel)
+##                            print('Updating furthest pixel to', furthest_pixel)
             else:
                 pixel_map[abs_row, abs_col] = i+1
 
@@ -341,14 +397,15 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
 #            print('---pixel_map')
 #            print(pixel_map[...])
+##            print('abs_row, abs_col', (abs_row, abs_col))
 #            print('---pixel_mask')
 #            print(pixel_mask)
-#            print('---neighboring_fringe_pixels', \
-#                zip(neighboring_fringe_pixels[0], \
-#                    neighboring_fringe_pixels[1]), \
-#                zip(neighboring_fringe_pixels[0] + row_min, \
-#                    neighboring_fringe_pixels[1] + col_min))
-#            print('abs_row, abs_col', (abs_row, abs_col))
+#            print('threshold: <= ' + str(i))
+##            print('---neighboring_fringe_pixels', \
+##                zip(neighboring_fringe_pixels[0], \
+##                    neighboring_fringe_pixels[1]), \
+##                zip(neighboring_fringe_pixels[0] + row_min, \
+##                    neighboring_fringe_pixels[1] + col_min))
 #            print('row_min, col_min', (row_min, col_min))
 
             for neighbor in range(neighboring_fringe_pixels[0].size):
@@ -372,16 +429,52 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                     # We use relative coordinates in fringe pixel coord.
                     extra_fringe_pixels.append((new_rel_row, new_rel_col))
 
+#                    # Reset furthest pixel on the first addition event  
+#                    if not add_event_occured:
+#                        add_event_occured = True
+#                        furthest_pixel = (0, 0)
+#                        furthest_pixel_distance = 0
+
+                    # Update furthest pixel if necessary
+                    if furthest_pixel_distance < fringe_pixel_distance:
+                        furthest_pixel = (new_rel_row, new_rel_col)
+                        furthest_pixel_distance = \
+                            (furthest_pixel[0]**2+furthest_pixel[1]**2)**.5
+                        print('Updating furthest pixel to', furthest_pixel)
+
             # No more fringe pixels, swap to process new fringe pixels
+##            print('fringe pixels before swap test', fringe_pixels)
             if not fringe_pixels:
                 extra_fringe_pixels, fringe_pixels = \
                     fringe_pixels, extra_fringe_pixels
+            print('fringe pixels after swap test', fringe_pixels)
+
 
 #        p_map = np.copy(pixel_map[...])
 #        print('pixel map')
 #        print(p_map)
 
 #        print('done with angle', i)
+
+        # Done with fringe pixels: check if we should add from extra_add_events
+        min_angle = 7.0 if not extra_add_events else extra_add_events[-1][2]
+
+        while min_angle <= a + epsilon:
+##            print('extra_add_events', len(extra_add_events))
+##            print(extra_add_events)
+            print('additional event', min_angle, '<= angles['+str(i)+'] =', a)
+##            print('--Adding extra add event', extra_add_events[-1], 'to', i)
+            rel_row = extra_add_events[-1][0]
+            rel_col = extra_add_events[-1][1]
+            extra_add_events.pop()
+            # Mark fringe pixel as active pixel + store it
+            active_pixels[i-1, 0, add, active_pixel_id] = rel_row #min_corner_row #abs_row
+            active_pixels[i-1, 1, add, active_pixel_id] = rel_col #min_corner_col #abs_col
+            active_pixels[i-1, 2, add, active_pixel_id] = min_angle
+            active_pixel_id += 1
+            min_angle = 7.0 if not extra_add_events else extra_add_events[-1][2]
+
+##        print('done with current angle, furthest_pixel:', furthest_pixel)
 
     f.close()
     g.close()
@@ -391,81 +484,6 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
     return active_pixels_file_path
 
-    # Count size of arrays before allocating
-    # Loop through the rows
-    for row in range(array_rows):
-        viewpoint_to_cell_row = row - viewpoint_row
-        # Loop through the columns    
-        for col in range(array_cols):
-            viewpoint_to_cell_col = col - viewpoint_col
-            # Skip if cell is too far
-            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
-            if d > max_dist_sq:
-                continue
-            # Skip if cell falls on the viewpoint
-            if (row == viewpoint_row) and (col == viewpoint_col):
-                continue
-            cell_count += 1
-    # Allocate the arrays
-    min_angles = np.ndarray(cell_count, dtype = np.float64)
-    angles = np.ndarray(cell_count, dtype = np.float64)
-    max_angles = np.ndarray(cell_count, dtype = np.float64)
-    I = np.ndarray(cell_count, dtype = np.int32)
-    J = np.ndarray(cell_count, dtype = np.int32)
-
-
-    # Fill out the arrays
-    # Loop through the rows
-    for row in range(array_rows):
-        viewpoint_to_cell_row = row - viewpoint_row
-        # Loop through the columns    
-        for col in range(array_cols):
-            viewpoint_to_cell_col = col - viewpoint_col
-            # Skip if cell is too far
-            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
-            if d > max_dist_sq:
-                continue
-            # Skip if cell falls on the viewpoint
-            if (row == viewpoint_row) and (col == viewpoint_col):
-                continue
-            # cell coordinates
-            # Update list of rows and list of cols
-            I[cell_id] = row
-            J[cell_id] = col
-            # Compute the angle of the cell center
-            angle = <np.float64_t>(atan2(-(row - viewpoint_row), col - viewpoint_col) + \
-                two_pi) % two_pi
-            angles[cell_id] = angle
-            # find index in extreme_cell_points that corresponds to the current
-            # angle to compute the offset from cell center
-            # This line only discriminates between 4 axis-aligned angles
-            sector = <int>(4. * angle / two_pi) * 2
-            # The if statement adjusts for all the 8 angles
-            if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
-                sector += 1
-            # compute extreme corners
-            min_point_id = sector * SECTOR_SIZE # Beginning of a row
-            max_point_id = min_point_id + POINT_SIZE # Skip a point
-            # offset from current cell center to first corner
-            min_corner_offset_row = extreme_cell_points[min_point_id]
-            min_corner_offset_col = extreme_cell_points[min_point_id + 1]
-            # offset from current cell center to last corner
-            max_corner_offset_row = extreme_cell_points[max_point_id]
-            max_corner_offset_col = extreme_cell_points[max_point_id + 1]
-            # Compute the extreme corners from the offsets
-            min_corner_row = viewpoint_to_cell_row + min_corner_offset_row
-            min_corner_col = viewpoint_to_cell_col + min_corner_offset_col
-            max_corner_row = viewpoint_to_cell_row + max_corner_offset_row
-            max_corner_col = viewpoint_to_cell_col + max_corner_offset_col
-            # Compute the angles associated with the extreme corners
-            min_angle = atan2(-min_corner_row, min_corner_col)
-            max_angle = atan2(-max_corner_row, max_corner_col)
-            # Save the angles in the fast C arrays
-            min_angles[cell_id] = (min_angle + two_pi) % two_pi 
-            max_angles[cell_id] = (max_angle + two_pi) % two_pi
-            cell_id += 1
-
-    return (min_angles, angles, max_angles, I, J)
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a

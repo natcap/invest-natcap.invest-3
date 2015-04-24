@@ -876,13 +876,60 @@ class TestScenicQuality(unittest.TestCase):
 
         row = 0
         add = 0
+
+
+        # -----------------------------------------
+        # Line up pixel addition events
+        # -----------------------------------------
+        # Memory efficient:
+        angle_list_mem_efficient = []
+        for a in range(angles_dataset.size):
+            sub_list = []
+            coord_list_mem_efficient = []
+#            for x in active_pixels_dataset[a, 2, add, :]:   
+            for i in range(active_pixels_dataset[a, 2, add].size):
+                x = active_pixels_dataset[a, 2, add, i]
+                row =  active_pixels_dataset[a, 0, add, i]
+                col =  active_pixels_dataset[a, 1, add, i]
+                if x != -1:
+                    angle_list_mem_efficient.append(x)
+                    sub_list.append(x)
+                    coord_list_mem_efficient.append((row, col))
+                else:
+                    print(a, angles_dataset[a], len(sub_list))
+                    print(sub_list)
+                    print(coord_list_mem_efficient)
+                    break
+            
+        angle_list_mem_efficient.sort()
+
+        print('Memory efficient', len(angle_list_mem_efficient))
+        print(angle_list_mem_efficient)
+        print('Non-memory efficient', add_events[arg_min].size)
+        print(add_events[arg_min])
+
         add_event_id = 0
         add_event_count = add_events.size
 
+        angle_count = 0
+        for x in active_pixels_dataset[0, 0, add, :]:
+            if x != -1:
+                angle_count += 1
+            else:
+                break
+
+        first_i = active_pixels_dataset[0, 0, add, :angle_count]
+        first_j = active_pixels_dataset[0, 1, add, :angle_count]
+        first_angles = active_pixels_dataset[0, 2, add, :angle_count]
+        print('first_angles', first_angles)
+        print(zip(first_i, first_j))
+
+
         for a in range(angles_dataset.size):
-            angle_slice = active_pixels_dataset[a, row, add, :]
+            angle_slice = active_pixels_dataset[a, 2, add, :]
             angle_count = 0
 
+            
             # -----------------------------------------
             # Count the number of pixel addition events
             # -----------------------------------------
@@ -899,12 +946,12 @@ class TestScenicQuality(unittest.TestCase):
             while (add_event_id < add_event_count) and \
                 (add_events[arg_min[add_event_id]] <= \
                     angles[a+1] + 1e-8):
-                add_event_list.append(I[arg_min[add_event_id]])
+                add_event_list.append(add_events[arg_min[add_event_id]])
                 add_event_id += 1
 
             print ('angle', a, angles_dataset[a])
-            print(angle_slice)
-            print(add_event_list)
+            print('  mem-efficient', angle_slice)
+            print('  non-mem efficient', add_event_list)
 
 
         return
