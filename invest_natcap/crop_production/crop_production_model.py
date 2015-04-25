@@ -98,13 +98,15 @@ def calc_observed_yield(vars_dict):
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
-            returns_raster += _calc_crop_returns(
+            returns_raster_crop = _calc_crop_returns(
                 vars_dict,
                 crop,
                 lulc_raster,
                 Production_raster,
                 returns_raster,
                 vars_dict['economics_table_dict'][crop])
+            if not np.isnan(returns_raster_crop.get_band(1).sum()):
+                returns_raster = returns_raster + returns_raster_crop
 
         # Clean Up Rasters...
         del observed_yield_over_aoi_raster
@@ -302,7 +304,7 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
     '''
 
     economics_table_crop = vars_dict['economics_table_dict'][crop]
-    fert_maps_dict = vars_dict['modeled_fertilizer_maps_dict']
+    fert_maps_dict = vars_dict['fertilizer_maps_dict']
 
     masked_lulc_raster = _get_masked_lulc_raster(vars_dict, crop, lulc_raster)
     masked_lulc_raster_float = masked_lulc_raster.set_datatype_and_nodata(
@@ -321,7 +323,7 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
     try:
         cost_phosphorous_per_kg = economics_table_crop[
             'cost_phosphorous_per_kg']
-        Phosphorous_raster = Raster.from_file(fert_maps_dict['nitrogen']).set_nodata(
+        Phosphorous_raster = Raster.from_file(fert_maps_dict['phosphorous']).set_nodata(
             nodata_float)
         PhosphorousCost_raster = Phosphorous_raster * cost_phosphorous_per_kg
         CostPerTonInputTotal_raster += PhosphorousCost_raster
@@ -459,13 +461,14 @@ def calc_percentile_yield(vars_dict):
             vars_dict['crop_production_dict'][crop] = total_production
 
             if vars_dict['do_economic_returns']:
-                returns_raster += _calc_crop_returns(
+                returns_raster_crop = _calc_crop_returns(
                     vars_dict,
                     crop,
                     lulc_raster,
                     Production_raster,
                     returns_raster,
                     economics_table[crop])
+                returns_raster = returns_raster + returns_raster_crop
 
             # Clean Up Rasters...
             del climate_bin_raster
@@ -481,7 +484,8 @@ def calc_percentile_yield(vars_dict):
         if percentile_count == 1:
             io.create_results_table(vars_dict, percentile=percentile)
         else:
-            io.create_results_table(vars_dict, percentile=percentile, first=False)
+            io.create_results_table(
+                vars_dict, percentile=percentile, first=False)
         percentile_count += 1
 
         if all([vars_dict['do_economic_returns'], vars_dict[
@@ -578,13 +582,14 @@ def calc_regression_yield(vars_dict):
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
-            returns_raster += _calc_crop_returns(
+            returns_raster_crop = _calc_crop_returns(
                 vars_dict,
                 crop,
                 lulc_raster,
                 Production_raster.set_nodata(nodata_float),
                 returns_raster,
                 economics_table[crop])
+            returns_raster = returns_raster + returns_raster_crop
 
         # Clean Up Rasters...
         del climate_bin_raster
@@ -615,7 +620,7 @@ def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
     '''returns crop_yield_raster'''
 
     # Fetch Fertilizer Maps
-    fert_maps_dict = vars_dict['modeled_fertilizer_maps_dict']
+    fert_maps_dict = vars_dict['fertilizer_maps_dict']
     NitrogenAppRate_raster = Raster.from_file(
         fert_maps_dict['nitrogen']).set_nodata(nodata_float)
     PhosphorousAppRate_raster = Raster.from_file(
@@ -650,7 +655,6 @@ def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
     yc_rf = _create_reg_yield_reclass_dict(
         yield_params, 'yield_ceiling_rf', nodata)
 
-    print b_K2O
     b_K2O_raster = climate_bin_raster.reclass(b_K2O)
     b_nut_raster = climate_bin_raster.reclass(b_nut)
     c_N_raster = climate_bin_raster.reclass(c_N)
@@ -746,7 +750,7 @@ def _calc_nutrition(vars_dict):
         fraction_refuse = nutrition_row_per_unit['fraction_refuse']
         nutrition_row_total = {}
         for nutrient in nutrition_row_per_unit.keys():
-            if nutrient == 'fraction_refuse':
+            if (nutrient == 'fraction_refuse') or (nutrient == 'crop'):
                 continue
             nutrient_unit = nutrition_row_per_unit[nutrient]
             if type(nutrient_unit) not in [int, float]:

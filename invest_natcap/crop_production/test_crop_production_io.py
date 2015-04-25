@@ -47,7 +47,7 @@ class TestCreateCropsInAOIList(unittest.TestCase):
 
     def test_read_crop_lookup_table(self):
         guess = io.create_crops_in_aoi_list(self.vars_dict)
-        # print guess
+        print guess
 
 
 class TestReadNutritionTable(unittest.TestCase):
@@ -55,11 +55,13 @@ class TestReadNutritionTable(unittest.TestCase):
         self.vars_dict = {
             'nutrition_table_uri': os.path.join(
                 input_dir, 'nutrition_table.csv'),
+            'crops_in_aoi_list': ['corn', 'soy', 'rice']
         }
 
     def test_read_nutrition_table(self):
         guess = io.read_nutrition_table(self.vars_dict)
         nutrition_table_dict = guess['nutrition_table_dict']
+        pp.pprint(nutrition_table_dict)
         keys = nutrition_table_dict.keys()
         assert(type(nutrition_table_dict[keys[0]]['energy']) in [float, int])
 
@@ -74,6 +76,7 @@ class TestReadEconomicsTable(unittest.TestCase):
     def test_read_economics_table(self):
         guess = io.read_economics_table(self.vars_dict)
         economics_table_dict = guess['economics_table_dict']
+        # pp.pprint(economics_table_dict)
         keys = economics_table_dict.keys()
         assert(type(economics_table_dict[keys[0]]['price_per_tonne']) in [float, int])
 
@@ -169,11 +172,11 @@ class TestFetchModeledFertilizerMaps(unittest.TestCase):
                 input_dir, 'fertilizer_maps'),
         }
 
-    def test_fetch_modeled_fertilizer_maps(self):
-        guess = io.fetch_modeled_fertilizer_maps(self.vars_dict)
-        modeled_fertilizer_maps_dict = guess['modeled_fertilizer_maps_dict']
-        keys = modeled_fertilizer_maps_dict.keys()
-        assert(type(modeled_fertilizer_maps_dict[keys[0]]) is str)
+    def test_fetch_fertilizer_maps(self):
+        guess = io.fetch_fertilizer_maps(self.vars_dict)
+        fertilizer_maps_dict = guess['fertilizer_maps_dict']
+        keys = fertilizer_maps_dict.keys()
+        assert(type(fertilizer_maps_dict[keys[0]]) is str)
 
 
 class TestGetInputs(unittest.TestCase):
@@ -189,7 +192,7 @@ class TestGetInputs(unittest.TestCase):
         assert('percentile_yield_dict' in keys)
         assert('nutrition_table_dict' in keys)
         assert('economics_table_dict' in keys)
-        assert('modeled_fertilizer_maps_dict' in keys)
+        assert('fertilizer_maps_dict' in keys)
         assert('crop_lookup_dict' in keys)
         # l = [i for i in guess.keys() if i not in self.args.keys()]
         # pp.pprint(l)
