@@ -262,7 +262,10 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    iGT = gdal.InvGeoTransform(GT)[1]
+    success, iGT = gdal.InvGeoTransform(GT)
+    if not success:
+        raise RuntimeError('Cannot invert transformation')
+
     feature_count = layer.GetFeatureCount()
 
     array_shape = (rows, cols)
@@ -314,6 +317,28 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         y = geometry.GetY()
         viewpoint_col[f] = int((iGT[0] + x*iGT[1] + y*iGT[2]))
         viewpoint_row[f] = int((iGT[3] + x*iGT[4] + y*iGT[5]))
+
+        v_col, v_row = gdal.ApplyGeoTransform(iGT, x, y)
+
+        assert abs(int(v_row) -viewpoint_row[f]) < 1e-8, \
+            "coords don't agree: " + str([v_row, v_col]) + ' vs ' + \
+            str([viewpoint_row[f], viewpoint_col[f]])
+
+        assert abs(int(v_col) -viewpoint_col[f]) < 1e-8, \
+            "coords don't agree: " + str([v_row, v_col]) + ' vs ' + \
+            str([viewpoint_row[f], viewpoint_col[f]])
+
+        assert viewpoint_row[f] >= 0, \
+            'Viewpoint ' +str(f) +"'s row is negative:" + str(viewpoint_row[f])
+        assert viewpoint_row[f] < input_array.shape[0], \
+            'Viewpoint ' +str(f) +"'s row is too large:" + \
+            str(viewpoint_row[f]) + ' raster size is ' + str(input_array.shape)
+        assert viewpoint_col[f] >= 0, \
+            'Viewpoint ' +str(f) +"'s col is negative:" + str(viewpoint_col[f])
+        assert viewpoint_col[f] < input_array.shape[1], \
+            'Viewpoint ' +str(f) +"'s col is too large:" + \
+            str(viewpoint_col[f]) + ' raster size is ' + str(input_array.shape)
+
 
     layer = None
     shapefile = None
@@ -392,11 +417,11 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         arg_max = np.argsort(remove_events).astype(np.int64)
         arg_center = np.argsort(center_events).astype(np.int64)
 
-        # Debug -- Testing the new memory efficient algorithm
-        scenic_quality_cython_core.memory_efficient_event_stream(viewshed_shape, \
-            v, max_dist)
-
-        return
+#        # Debug -- Testing the new memory efficient algorithm
+#        scenic_quality_cython_core.memory_efficient_event_stream(viewshed_shape, \
+#            v, max_dist)
+#
+#        return
 
         # I and J are relative to the viewshed_shape. Make them absolute
         I += row_min
