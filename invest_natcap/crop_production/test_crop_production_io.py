@@ -25,7 +25,6 @@ class TestReadCropLookupTable(unittest.TestCase):
         self.vars_dict = {
             'crop_lookup_table_uri': os.path.join(
                 input_dir, 'crop_lookup_table.csv'),
-
         }
 
     def test_read_crop_lookup_table(self):
@@ -47,7 +46,7 @@ class TestCreateCropsInAOIList(unittest.TestCase):
 
     def test_read_crop_lookup_table(self):
         guess = io.create_crops_in_aoi_list(self.vars_dict)
-        print guess
+        # print guess
 
 
 class TestReadNutritionTable(unittest.TestCase):
@@ -61,7 +60,7 @@ class TestReadNutritionTable(unittest.TestCase):
     def test_read_nutrition_table(self):
         guess = io.read_nutrition_table(self.vars_dict)
         nutrition_table_dict = guess['nutrition_table_dict']
-        pp.pprint(nutrition_table_dict)
+        # pp.pprint(nutrition_table_dict)
         keys = nutrition_table_dict.keys()
         assert(type(nutrition_table_dict[keys[0]]['energy']) in [float, int])
 

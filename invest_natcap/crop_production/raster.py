@@ -11,13 +11,12 @@ import gdal
 import ogr
 import osr
 import numpy as np
-from affine import Affine
+# from affine import Affine
 from shapely.geometry import Polygon
 import shapely
-import pyproj
-import PIL
-
 import pygeoprocessing as pygeo
+
+from affine import Affine
 
 LOGGER = logging.getLogger('Raster Class')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -721,22 +720,6 @@ class Raster(object):
 
         return Raster.from_tempfile(dataset_out_uri)
 
-    def reproject_georef_point(self, x, y, dst_proj):
-        reproj = functools.partial(
-            pyproj.transform,
-            pyproj.Proj(init="epsg:%i" % self.get_projection()),
-            pyproj.Proj(init="epsg:%i" % dst_proj))
-
-        return reproj(x, y)
-
-    def reproject_shapely_object(self, shapely_object, dst_proj):
-        reproj = functools.partial(
-            pyproj.transform,
-            pyproj.Proj(init="epsg:%i" % self.get_projection()),
-            pyproj.Proj(init="epsg:%i" % dst_proj))
-
-        return shapely.ops.transform(reproj, shapely_object)
-
     def resize_pixels(self, pixel_size, resample_method):
         bounding_box = self.get_bounding_box()
         output_uri = pygeo.geoprocessing.temporary_filename()
@@ -812,7 +795,8 @@ class Raster(object):
             dataset_uri_list = [self.uri]
             resample_list = [resample_method]
 
-        pixel_op = pixel_op_closure(self.get_nodata(1))
+        nodata = self.get_nodata(1)
+        pixel_op = pixel_op_closure(nodata)
         dataset_out_uri = pygeo.geoprocessing.temporary_filename()
         datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
         nodata_out = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
