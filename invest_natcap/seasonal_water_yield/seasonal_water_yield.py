@@ -19,6 +19,8 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger(
     'invest_natcap.seasonal_water_yield.seasonal_water_yield')
 
+N_MONTHS = 12
+
 
 def execute(args):
     """This function invokes the seasonal water yield model given
@@ -72,7 +74,7 @@ def calculate_quick_flow(
     p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         precip_uri_list[0])
 
-    for m_index in range(1, seasonal_water_yield_core.N_MONTHS + 1):
+    for m_index in range(1, N_MONTHS + 1):
         qf_monthly_uri_list.append(
             os.path.join(intermediate_dir, 'qf_%d.tif' % m_index))
 
@@ -86,7 +88,7 @@ def calculate_quick_flow(
                 (pm_array == p_nodata) | (s_array == si_nodata) |
                 (denominator == 0), qf_nodata, numerator / denominator)
 
-        LOGGER.info('calculating QFi_%d of %d', m_index, seasonal_water_yield_core.N_MONTHS)
+        LOGGER.info('calculating QFi_%d of %d', m_index, N_MONTHS)
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [precip_uri_list[m_index-1], si_uri], qf_op,
             qf_monthly_uri_list[m_index-1], gdal.GDT_Float32, qf_nodata,
@@ -138,7 +140,7 @@ def main():
     precip_dir_list = [
         os.path.join(precip_dir, f) for f in os.listdir(precip_dir)]
 
-    for month_index in range(1, seasonal_water_yield_core.N_MONTHS + 1):
+    for month_index in range(1, N_MONTHS + 1):
         month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
 
         for data_type, dir_list, uri_list in [

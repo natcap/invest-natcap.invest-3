@@ -35,8 +35,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 16
-cdef int N_BLOCK_COLS = 16
+cdef int N_BLOCK_ROWS = 8
+cdef int N_BLOCK_COLS = 8
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache
@@ -218,11 +218,11 @@ cdef route_recharge(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
 
     #these are 12 band blocks
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] precip_block_list = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=5] precip_block_list = numpy.zeros(
         (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] et0_block_list = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=5] et0_block_list = numpy.zeros(
         (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] qfi_block_list = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=5] qfi_block_list = numpy.zeros(
         (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
 
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
@@ -300,15 +300,21 @@ cdef route_recharge(
     )
 
     block_list = ([
-            outflow_direction_block,
-            outflow_weights_block,
-            kc_block,] +
-        [precip_block_list[i] for i in xrange(N_MONTHS)] +
-        [et0_block_list[i] for i in xrange(N_MONTHS)] +
-        [recharge_block,
-         recharge_avail_block] +
-        qfi_block_list
-    )
+        outflow_direction_block,
+        outflow_weights_block,
+        kc_block])
+    block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
+    block_list.extend([et0_block_list[i] for i in xrange(N_MONTHS)])
+    block_list.append(recharge_block)
+    block_list.append(recharge_avail_block)
+    block_list.extend(qfi_block_list)
+
+        #[precip_block_list[i] for i in xrange(N_MONTHS)] +
+        #[et0_block_list[i] for i in xrange(N_MONTHS)] +
+        #[recharge_block,
+        # recharge_avail_block] +
+        #qfi_block_list
+
 
     update_list = (
         [False] * (3 + len(precip_band_list) + len(et0_band_list)) +
@@ -333,6 +339,8 @@ cdef route_recharge(
     #    3 2 1
     #    4 p 0
     #    5 6 7
+
+    return
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -2654,78 +2662,6 @@ def resolve_flats(
     return True
 
 
-def route_flux(
-        in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri,
-        loss_uri, flux_uri, absorption_mode, aoi_uri=None, stream_uri=None):
-
-    """This function will route flux across a landscape given a dem to
-        guide flow from a d-infinty flow algorithm, and a custom function
-        that will operate on input flux and other user defined arguments
-        to determine nodal output flux.
-
-        in_flow_direction - a URI to a d-infinity flow direction raster
-        in_dem - a uri to the dem that generated in_flow_direction, they
-            should be aligned rasters
-        in_source_uri - a GDAL dataset that has source flux per pixel
-        in_absorption_rate_uri - a GDAL floating point dataset that has a
-            percent of flux absorbed per pixel
-        loss_uri - an output URI to to the dataset that will output the
-            amount of flux absorbed by each pixel
-        flux_uri - a URI to an output dataset that records the amount of flux
-            travelling through each pixel
-        absorption_mode - either 'flux_only' or 'source_and_flux'. For
-            'flux_only' the outgoing flux is (in_flux * absorption + source).
-            If 'source_and_flux' then the output flux
-            is (in_flux + source) * absorption.
-        aoi_uri - an OGR datasource for an area of interest polygon.
-            the routing flux calculation will only occur on those pixels
-            and neighboring pixels will either be raw outlets or
-            non-contibuting inputs depending on the orientation of the DEM.
-        stream_uri - (optional) a GDAL dataset that classifies pixels as stream
-            (1) or not (0).  If during routing we hit a stream pixel, all
-            upstream flux is considered to wash to zero because it will
-            reach the outlet.  The advantage here is that it can't then
-            route out of the stream
-
-        returns nothing"""
-
-    dem_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    flow_direction_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    absorption_rate_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(in_flow_direction)
-
-    pygeoprocessing.align_dataset_list(
-        [in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri],
-        [flow_direction_uri, dem_uri, source_uri, absorption_rate_uri],
-        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
-        "intersection", 0, aoi_uri=aoi_uri, assert_datasets_projected=False)
-
-    outflow_weights_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    outflow_direction_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-
-    cdef deque[int] outlet_cell_deque
-
-    find_outlets(dem_uri, flow_direction_uri, outlet_cell_deque)
-    calculate_flow_weights(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-
-    calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, outlet_cell_deque,
-        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode,
-        stream_uri)
-
-    cleanup_uri_list = [
-        dem_uri, flow_direction_uri, source_uri, absorption_rate_uri,
-        outflow_weights_uri, outflow_direction_uri]
-
-    for ds_uri in cleanup_uri_list:
-        try:
-            os.remove(ds_uri)
-        except OSError as exception:
-            LOGGER.warn("couldn't remove %s because it's still open", ds_uri)
-            LOGGER.warn(exception)
-
 def calculate_recharge(
     precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
     alpha_m, beta_i, gamma, qfi_uri,
@@ -2742,3 +2678,16 @@ def calculate_recharge(
     calculate_flow_weights(
         flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
 
+    kc_uri = os.path.join(out_dir, 'kc_tif')
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        lulc_uri, kc_lookup, kc_uri, gdal.GDT_Float32, -1)
+
+    qfi_uri_list = []
+    for index in xrange(N_MONTHS):
+        qfi_uri_list.append(os.path.join(out_dir, 'qfi_%d.tif' % index))
+
+
+    route_recharge(
+        precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
+        alpha_m, beta_i, gamma, qfi_uri_list, outflow_direction_uri,
+        outflow_weights_uri, outlet_cell_deque)
