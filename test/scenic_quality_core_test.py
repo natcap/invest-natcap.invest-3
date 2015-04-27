@@ -827,8 +827,9 @@ class TestScenicQuality(unittest.TestCase):
     def test_memory_efficient_line_update(self):
         """ Test if memory and non-meory efficient event sorting agree.
         """
+#        return
         viewpoint = (50, 50)
-        max_dist = 3
+        max_dist = 10
         # 1- get perimeter cells
         perimeter_cells = \
             sqc.get_perimeter_cells( \
@@ -887,46 +888,30 @@ class TestScenicQuality(unittest.TestCase):
             sub_list = []
             coord_list_mem_efficient = []
 #            for x in active_pixels_dataset[a, 2, add, :]:   
-            for i in range(active_pixels_dataset[a, 2, add].size):
-                x = active_pixels_dataset[a, 2, add, i]
-                row =  active_pixels_dataset[a, 0, add, i]
-                col =  active_pixels_dataset[a, 1, add, i]
+            for i in range(active_pixels_dataset[a, add].size/3):
+                row =  active_pixels_dataset[a, add, i*3]
+                col =  active_pixels_dataset[a, add, i*3+1]
+                x = active_pixels_dataset[a, add, i*3+2]
                 if x != -1:
                     angle_list_mem_efficient.append(x)
                     sub_list.append(x)
                     coord_list_mem_efficient.append((row, col))
                 else:
-                    print(a, angles_dataset[a], len(sub_list))
-                    print(sub_list)
-                    print(coord_list_mem_efficient)
+#                    print(a, angles_dataset[a], len(sub_list))
+#                    print(sub_list)
+#                    print(coord_list_mem_efficient)
                     break
             
         angle_list_mem_efficient.sort()
 
-        print('Memory efficient', len(angle_list_mem_efficient))
-        print(angle_list_mem_efficient)
-        print('Non-memory efficient', add_events[arg_min].size)
-        print(add_events[arg_min])
 
         add_event_id = 0
         add_event_count = add_events.size
-
-        angle_count = 0
-        for x in active_pixels_dataset[0, 0, add, :]:
-            if x != -1:
-                angle_count += 1
-            else:
-                break
-
-        first_i = active_pixels_dataset[0, 0, add, :angle_count]
-        first_j = active_pixels_dataset[0, 1, add, :angle_count]
-        first_angles = active_pixels_dataset[0, 2, add, :angle_count]
-        print('first_angles', first_angles)
-        print(zip(first_i, first_j))
-
-
         for a in range(angles_dataset.size):
-            angle_slice = active_pixels_dataset[a, 2, add, :]
+            mem_efficient_line = active_pixels_dataset[a, add, :]
+            mem_efficient_r = mem_efficient_line[::3]
+            mem_efficient_c = mem_efficient_line[1::3]
+            mem_efficient_a = mem_efficient_line[2::3]
             angle_count = 0
 
             
@@ -934,24 +919,60 @@ class TestScenicQuality(unittest.TestCase):
             # Count the number of pixel addition events
             # -----------------------------------------
             # Memory efficient:
-            for x in angle_slice:
+#            print('mem_efficient_line')
+#            print(mem_efficient_line)
+#            print('mem_efficient_a')
+#            print(mem_efficient_a)
+
+            for x in mem_efficient_a:
                 if x != -1:
                     angle_count += 1
                 else:
                     break
-            angle_slice = angle_slice[:angle_count]
+
+#            sys.exit(0)
+
+            mem_efficient_r = mem_efficient_r[:angle_count]
+            mem_efficient_c = mem_efficient_c[:angle_count]
+            mem_efficient_a = mem_efficient_a[:angle_count]
+
+            mem_efficient_rows = np.zeros_like(mem_efficient_r)
+            mem_efficient_cols = np.zeros_like(mem_efficient_c)
+            mem_efficient_angles = np.zeros_like(mem_efficient_a)
+
+            sorted_ids = np.argsort(mem_efficient_a)
+
+            mem_efficient_rows = mem_efficient_r[sorted_ids]
+            mem_efficient_cols = mem_efficient_c[sorted_ids]
+            mem_efficient_angles = mem_efficient_a[sorted_ids]
 
             # Non-memory efficient
-            add_event_list = []
+            non_mem_efficient_ids = []
             while (add_event_id < add_event_count) and \
                 (add_events[arg_min[add_event_id]] <= \
                     angles[a+1] + 1e-8):
-                add_event_list.append(add_events[arg_min[add_event_id]])
+                non_mem_efficient_ids.append(arg_min[add_event_id])
                 add_event_id += 1
+            non_mem_efficient_ids = np.array(non_mem_efficient_ids).astype(int)
 
-            print ('angle', a, angles_dataset[a])
-            print('  mem-efficient', angle_slice)
-            print('  non-mem efficient', add_event_list)
+            non_mem_efficient_angles = \
+                np.sort(add_events[non_mem_efficient_ids])
+            non_mem_efficient_rows = I[non_mem_efficient_ids]
+            non_mem_efficient_cols = J[non_mem_efficient_ids]
+
+            if mem_efficient_angles.size == non_mem_efficient_angles.size:
+                difference = \
+                    np.sum(mem_efficient_angles-non_mem_efficient_angles)
+                if abs(difference) > 1e-15:
+                    print ('angle', a, angles_dataset[a])
+                    print('difference:', difference)
+                    print('mem-efficient', mem_efficient_angles)
+                    print('non-mem efficient', non_mem_efficient_angles)
+            else:
+                print ('angle', a, angles_dataset[a])
+                print('mem-efficient', mem_efficient_angles)
+                print('non-mem efficient', non_mem_efficient_angles)
+
 
 
         return
