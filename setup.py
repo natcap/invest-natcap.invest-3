@@ -1,4 +1,5 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
+<<<<<<< local
 try:
     from setuptools.core import setup
     from setuptools.extension import Extension
@@ -10,13 +11,26 @@ except:
     from distutils.core import Command
     import distutils.sysconfig as sysconfig
 
+=======
+try:
+    from setuptools.core import setup
+    from setuptools.extension import Extension
+    from setuptools.core import Command
+    import setuptools.sysconfig as sysconfig
+except:
+    from distutils.core import setup
+    from distutils.extension import Extension
+    from distutils.core import Command
+    import distutils.sysconfig as sysconfig
+>>>>>>> other
 import platform
 import os
 import sys
 import glob
 import matplotlib
 import zipfile
-
+import scipy
+import osgeo #used to trigger the os.environ['GDAL_DATA']
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -144,9 +158,9 @@ if platform.system() == 'Windows':
             }
          }
 
-    # When building py2exe binaries on windows server, the built application
+    # When building py2exe binaries with scipy >= 0.13.0, the built application
     # won't run unless we import _ufuncs_cxx.
-    if platform.uname()[2] == '2008ServerR2':
+    if tuple([int(x) for x in scipy.__version__.split('.')])[1] >= 13:
         py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
 
     #These are the exes that will get built
@@ -214,6 +228,12 @@ if platform.system() == 'Windows':
                     glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
 
+            #GDAL_DATA environment variable should always exist on a windows
+            #py2exe build and is a bug if it doesn't
+            for root_dir, sub_folders, file_list in os.walk(os.environ['GDAL_DATA']):
+                self.distribution.data_files.append(
+                  ('osgeo/data/gdal', [os.path.join(root_dir, x) for x in  file_list]))
+
             # These are the GDAL DLLs.  They are absolutely required for running the
             # Windows executeables on XP.  For whatever reason, they do not appear to be
             # required for running GDAL stuff on Windows 7.  Not sure why that is.
@@ -280,7 +300,7 @@ REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
     'osgeo (>=1.9.2)',
-    'pygeoprocessing (>=0.1.5)',
+    'pygeoprocessing (>=0.2.1)',
     ]
 
 #The standard distutils setup command

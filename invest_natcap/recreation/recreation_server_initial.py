@@ -409,7 +409,7 @@ def execute(args, config):
                 msg = "Custom grids cannot have overlapping polygons."
                 LOGGER.info("The custom grid contains %i intersections." % (intersects - count))
                 LOGGER.error(msg)
-                raise ValueError(msg) 
+                raise ValueError(msg)
 
         #create tables
         LOGGER.info("Importing user supplied predictor variables.")
@@ -538,7 +538,7 @@ def execute(args, config):
         if standard_mask[3] and not user_categorization_dict.has_key(compound_predictors[2]):
             predictors += compound_predictor_classes[2]
        # if standard_mask[5] and not user_categorization_dict.has_key(compound_predictors[3]):
-       #     predictors += compound_predictor_classes[3]            
+       #     predictors += compound_predictor_classes[3]
         predictors += sum([len(user_categorization_dict[category_key]) for category_key in user_categorization_dict])
         if cells <= predictors:
             LOGGER.debug(
@@ -848,7 +848,7 @@ def execute(args, config):
 
 
 if __name__ == "__main__":
-    LOGGER = logging.getLogger("recreation_server_init")
+    LOGGER = logging.getLogger("invest_natcap.recreation.server_init")
     #LOGGER.remove_handler(LOGGER.handlers[0])
     formatter = logging.Formatter(
         "%(asctime)s, %(levelname)s, %(message)s", "%m/%d/%Y %H:%M:%S")

@@ -13,7 +13,7 @@ date_format = '%m/%d/%Y %H:%M:%S '
 
 # Do the basic configuration of logging here.  This is required in addition to
 # adding the streamHandler below.
-logging.basicConfig(format=format_string, level=logging.DEBUG, 
+logging.basicConfig(format=format_string, level=logging.DEBUG,
         datefmt=date_format)
 
 # Create a formatter and streamhandler to format and print messages to stdout.

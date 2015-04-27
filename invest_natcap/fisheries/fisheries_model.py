@@ -12,7 +12,7 @@ import logging
 
 import numpy as np
 
-LOGGER = logging.getLogger('FISHERIES')
+LOGGER = logging.getLogger('invest_natcap.fisheries.model')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -382,7 +382,7 @@ def set_harvest_func(vars_dict):
 
     if vars_dict['val_cont']:
         frac_post_process = vars_dict['frac_post_process']
-        unit_price = vars_dict['unit_price']        
+        unit_price = vars_dict['unit_price']
 
     # Initialize Weight vector according to harvest_units
     if vars_dict['harvest_units'] == "Weight":

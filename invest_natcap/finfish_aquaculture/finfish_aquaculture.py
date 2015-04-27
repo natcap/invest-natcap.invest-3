@@ -8,7 +8,7 @@ from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('finfish_aquaculture_test')
+LOGGER = logging.getLogger('invest_natcap.finfish_aquaculture.finfish_aquaculture')
 
 
 def execute(args):

@@ -14,7 +14,7 @@ import numpy as np
 from raster import Raster
 import pygeoprocessing.geoprocessing as pygeo
 
-LOGGER = logging.getLogger('CROP_PRODUCTION')
+LOGGER = logging.getLogger('invest_natcap.crop_production.io')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

@@ -14,7 +14,7 @@ from raster import Raster
 from vector import Vector
 import pygeoprocessing.geoprocessing as pygeo
 
-LOGGER = logging.getLogger('CROP_PRODUCTION')
+LOGGER = logging.getLogger('invest_natcap.crop_production.model')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -388,7 +388,12 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
     # print "\nCost Per Hectare Input Total Raster"
     # print CostPerHectareInputTotal_masked_raster
 
+<<<<<<< local
     return CostPerHectareInputTotal_masked_raster
+=======
+    # For crop in observed_yields_maps_dict:
+    #
+>>>>>>> other
 
 
 def calc_percentile_yield(vars_dict):

@@ -8,7 +8,7 @@ import logging
 
 from osgeo import ogr
 
-LOGGER = logging.getLogger('overlap_analysis_mz_core')
+LOGGER = logging.getLogger('invest_natcap.overlap_analysis.mz_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -44,7 +44,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
     #Want to run through all polygons in the AOI, and see if any intersect or
-    #contain all shapefiles from all other layers. Little bit gnarly in terms 
+    #contain all shapefiles from all other layers. Little bit gnarly in terms
     #of runtime, but at least doable.
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
