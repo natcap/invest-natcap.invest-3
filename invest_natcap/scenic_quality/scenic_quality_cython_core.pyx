@@ -156,6 +156,10 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
     fringe_pixels = []
     # Fringe pixels to compute in the next iteration
     next_fringe_pixels = []
+    # Active pixels at the current iteration
+    active_pixels = []
+    # Active pixels at the next iteration
+    next_active_pixels = []
 
     # Create an hdf5 intermediate file to store the line's active pixels:
 #    print('------------------- CWD:', os.getcwd(), '-------------------------')
@@ -163,7 +167,7 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
     f = h5py.File(active_pixels_file_path, 'w')
     # Active pixels array size: 
     # active_pixels[angle][add/drop][active_pixel_id]
-    active_pixels = f.create_dataset('active_pixels', \
+    active_pixels_dataset = f.create_dataset('active_pixels', \
         (angles.size, 2, 3*2*max_dist), \
         compression = 'gzip', fillvalue = -1.0, dtype='f8')
     angles_dataset = f.create_dataset('angles', \
@@ -203,6 +207,8 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         pixel_map[abs_row, abs_col] = 0   # Active pixel code
 
         extra_add_events.append((rel_row, rel_col, min_angle))
+
+        next_active_pixels.append((rel_row, rel_col, min_angle))
     
     # Reverse, so we can use it as a stack
     extra_add_events = extra_add_events[::-1]
@@ -241,6 +247,46 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
         print('angle', angles.size - i, a)
       
 
+        # Pixel removal
+        next_active_pixels, active_pixels = [], next_active_pixels
+
+        for active_pixel in active_pixels:
+            # Compute the angle of the cell center
+            rel_row = active_pixel[0]   # row relative to center
+            rel_col = active_pixel[1]   # col relative to center
+            abs_row = rel_row + center[0]   # absolute row
+            abs_col = rel_col + center[1]   # absolute column
+
+            center_angle = <np.float64_t>( \
+                atan2(-rel_row, rel_col) +two_pi) %two_pi
+            
+            #   5.1-Check if fringe pixel should be an active pixel
+            # find index in extreme_cell_points that corresponds to the current
+            # angle to compute the offset from cell center
+            # This line only discriminates between 4 axis-aligned angles
+            sector = <int>(4. * center_angle / two_pi) * 2
+            # The if statement adjusts for all the 8 angles
+            if abs(rel_row * rel_col) > 0:
+                sector += 1
+
+            # Compute offset ID
+            min_point_id = sector * SECTOR_SIZE # Beginning of a row
+            max_point_id = min_point_id + POINT_SIZE # Skip a point
+            # offset from current cell center to last corner
+            max_corner_offset_row = extreme_cell_points[max_point_id]
+            max_corner_offset_col = extreme_cell_points[max_point_id + 1]
+            # Compute corner angle
+            max_corner_row = rel_row + max_corner_offset_row
+            max_corner_col = rel_col + max_corner_offset_col
+            # Compute the angles associated with the extreme corners
+            max_angle = <np.float64_t>( \
+                atan2(-max_corner_row, max_corner_col) +two_pi) %two_pi
+
+            # 5.2-Check if fringe pixel should be an active pixel:
+            if max_angle >= a + epsilon:
+                pass
+
+
         # 5-As long as there remain fringe pixels to process:
         active_pixel_id = 0
         for fringe_pixel in fringe_pixels:
@@ -264,23 +310,15 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
             # Compute offset ID
             min_point_id = sector * SECTOR_SIZE # Beginning of a row
-            max_point_id = min_point_id + POINT_SIZE # Skip a point
             # Compute offset from current cell center to first corner
             min_corner_offset_row = extreme_cell_points[min_point_id]
             min_corner_offset_col = extreme_cell_points[min_point_id + 1]
-            # offset from current cell center to last corner
-            max_corner_offset_row = extreme_cell_points[max_point_id]
-            max_corner_offset_col = extreme_cell_points[max_point_id + 1]
             # Compute corner angle
             min_corner_row = rel_row + min_corner_offset_row
             min_corner_col = rel_col + min_corner_offset_col
-            max_corner_row = rel_row + max_corner_offset_row
-            max_corner_col = rel_col + max_corner_offset_col
             # Compute the angles associated with the extreme corners
             min_angle = <np.float64_t>( \
                 atan2(-min_corner_row, min_corner_col) +two_pi) %two_pi
-            max_angle = <np.float64_t>( \
-                atan2(-max_corner_row, max_corner_col) +two_pi) %two_pi
 
             # 5.2-Check if fringe pixel should be an active pixel:
             if min_angle <= a - epsilon:
@@ -308,10 +346,15 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
                 # Mark fringe pixel as active pixel + store it
                 active_id = active_pixel_id*3
-                active_pixels[i-1, add, active_id:active_id+3] = \
+                active_pixels_dataset[i-1, add, active_id:active_id+3] = \
                     np.array([rel_row, rel_col, min_angle])
                 active_pixel_id += 1
+                
                 pixel_mask[center_row, center_col] = 0    # Active pixel code
+
+                next_active_pixels.append((rel_row, rel_col, min_angle))
+
+
 
                 # 5.2.1-Extract neighboring pixels
                 new_fringe_pixels = np.where(pixel_mask == -1)
@@ -335,7 +378,7 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                             new_fringe_pixels[0][new_pixel], \
                             new_fringe_pixels[1][new_pixel]] = i+1
 
-                        next_fringe_pixels.append((new_rel_row, new_rel_col))
+#                        next_fringe_pixels.append((new_rel_row, new_rel_col))
                 
                 pixel_map[ \
                     min_row:min(abs_row+2, max_size[0]), \
@@ -355,7 +398,7 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             extra_add_events.pop()
             # Mark fringe pixel as active pixel + store it
             active_id = active_pixel_id*3
-            active_pixels[i-1, add, active_id:active_id+3] = \
+            active_pixels_dataset[i-1, add, active_id:active_id+3] = \
                 np.array([rel_row, rel_col, min_angle])
             active_pixel_id += 1
             min_angle = 7.0 if not extra_add_events else extra_add_events[-1][2]

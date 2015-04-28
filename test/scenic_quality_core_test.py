@@ -935,7 +935,7 @@ class TestScenicQuality(unittest.TestCase):
             # Non-memory efficient
             non_mem_efficient_ids = []
             while (add_event_id < add_event_count) and \
-                (add_events[arg_min[add_event_id]] <= \
+                (add_events[arg_min[add_event_id]] < \
                     angles[a+1] - 1e-8):
                 non_mem_efficient_ids.append(arg_min[add_event_id])
                 add_event_id += 1
@@ -994,7 +994,7 @@ class TestScenicQuality(unittest.TestCase):
 #
 #            
 #            # -----------------------------------------
-#            # Count the number of pixel addition events
+#            # Count the number of pixel removal events
 #            # -----------------------------------------
 #            # Memory efficient:
 #            for x in mem_efficient_angles:
@@ -1017,7 +1017,7 @@ class TestScenicQuality(unittest.TestCase):
 #            non_mem_efficient_ids = []
 #            while (remove_event_id < remove_event_count) and \
 #                (remove_events[arg_max[remove_event_id]] <= \
-#                    angles[a+1]  1e-8):
+#                    angles[a+1] + 1e-8):
 #                non_mem_efficient_ids.append(arg_max[remove_event_id])
 #                remove_event_id += 1
 #            non_mem_efficient_ids = np.array(non_mem_efficient_ids).astype(int)
