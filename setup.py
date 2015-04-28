@@ -1,5 +1,5 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
-<<<<<<< local
+
 try:
     from setuptools.core import setup
     from setuptools.extension import Extension
@@ -11,18 +11,6 @@ except:
     from distutils.core import Command
     import distutils.sysconfig as sysconfig
 
-=======
-try:
-    from setuptools.core import setup
-    from setuptools.extension import Extension
-    from setuptools.core import Command
-    import setuptools.sysconfig as sysconfig
-except:
-    from distutils.core import setup
-    from distutils.extension import Extension
-    from distutils.core import Command
-    import distutils.sysconfig as sysconfig
->>>>>>> other
 import platform
 import os
 import sys
