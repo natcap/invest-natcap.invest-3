@@ -857,6 +857,16 @@ class TestScenicQuality(unittest.TestCase):
             scenic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, \
             v, max_dist)
 
+#        cProfile.runctx( \
+#            'compute_viewshed(input_array, visibility_uri, in_structure_uri, \
+#            cell_size, rows, cols, nodata, GT, I_uri, J_uri, \
+#            curvature_correction, refr_coeff, args)' \
+#            , globals(), locals(), 'stats')
+#        p = pstats.Stats('stats')
+#        p.sort_stats("time").print_stats(20)
+#        p.sort_stats('cumulative').print_stats(20)
+
+
         # arg_min, arg_center, arg_max
         arg_min = np.argsort(add_events).astype(np.int64)
         arg_max = np.argsort(remove_events).astype(np.int64)
@@ -955,90 +965,90 @@ class TestScenicQuality(unittest.TestCase):
                     print('add mem-efficient', mem_efficient_angles)
                     print('add non-mem efficient', non_mem_efficient_angles)
             else:
-                print ('angle', a, angles_dataset[a])
+                print('angle', a, angles_dataset[a])
                 print('add mem-efficient', mem_efficient_angles)
                 print('add non-mem efficient', non_mem_efficient_angles)
 
 
-#        # -----------------------------------------
-#        # Line up pixel removal events
-#        # -----------------------------------------
-#        # Memory efficient:
-#        angle_list_mem_efficient = []
-#        for a in range(angles_dataset.size):
-#            sub_list = []
-#            coord_list_mem_efficient = []
-##            for x in active_pixels_dataset[a, 2, remove, :]:   
-#            for i in range(active_pixels_dataset[a, remove].size/3):
-#                row =  active_pixels_dataset[a, remove, i*3]
-#                col =  active_pixels_dataset[a, remove, i*3+1]
-#                x = active_pixels_dataset[a, remove, i*3+2]
-#                if x != -1:
-#                    angle_list_mem_efficient.append(x)
-#                    sub_list.append(x)
-#                    coord_list_mem_efficient.append((row, col))
-#                else:
-#                    break
-#            
-#        angle_list_mem_efficient.sort()
-#
-#
-#        remove_event_id = 0
-#        remove_event_count = remove_events.size
-#        for a in range(angles_dataset.size):
-#            mem_efficient_line = active_pixels_dataset[a, remove, :]
-#            mem_efficient_rows = mem_efficient_line[::3]
-#            mem_efficient_cols = mem_efficient_line[1::3]
-#            mem_efficient_angles = mem_efficient_line[2::3]
-#            angle_count = 0
-#
-#            
-#            # -----------------------------------------
-#            # Count the number of pixel removal events
-#            # -----------------------------------------
-#            # Memory efficient:
-#            for x in mem_efficient_angles:
-#                if x != -1:
-#                    angle_count += 1
-#                else:
-#                    break
-#
-#            mem_efficient_rows = mem_efficient_rows[:angle_count]
-#            mem_efficient_cols = mem_efficient_cols[:angle_count]
-#            mem_efficient_angles = mem_efficient_angles[:angle_count]
-#
-#            sorted_ids = np.argsort(mem_efficient_angles)
-#
-#            mem_efficient_rows = mem_efficient_rows[sorted_ids]
-#            mem_efficient_cols = mem_efficient_cols[sorted_ids]
-#            mem_efficient_angles = mem_efficient_angles[sorted_ids]
-#
-#            # Non-memory efficient
-#            non_mem_efficient_ids = []
-#            while (remove_event_id < remove_event_count) and \
-#                (remove_events[arg_max[remove_event_id]] <= \
-#                    angles[a+1] + 1e-8):
-#                non_mem_efficient_ids.append(arg_max[remove_event_id])
-#                remove_event_id += 1
-#            non_mem_efficient_ids = np.array(non_mem_efficient_ids).astype(int)
-#
-#            non_mem_efficient_angles = \
-#                np.sort(remove_events[non_mem_efficient_ids])
-#            non_mem_efficient_rows = I[non_mem_efficient_ids]
-#            non_mem_efficient_cols = J[non_mem_efficient_ids]
-#
-#            if mem_efficient_angles.size == non_mem_efficient_angles.size:
-#                difference = \
-#                    np.sum(mem_efficient_angles-non_mem_efficient_angles)
-#                if abs(difference) > 1e-15:
-#                    print ('angle', a, angles_dataset[a])
-#                    print('remove difference:', difference)
-#                    print('remove mem-efficient', mem_efficient_angles)
-#                    print('remove non-mem efficient', non_mem_efficient_angles)
-#            else:
-#                print ('angle', a, angles_dataset[a])
-#                print('remove mem-efficient', mem_efficient_angles)
-#                print('remove non-mem efficient', non_mem_efficient_angles)
+        # -----------------------------------------
+        # Line up pixel removal events
+        # -----------------------------------------
+        # Memory efficient:
+        angle_list_mem_efficient = []
+        for a in range(angles_dataset.size):
+            sub_list = []
+            coord_list_mem_efficient = []
+#            for x in active_pixels_dataset[a, 2, remove, :]:   
+            for i in range(active_pixels_dataset[a, remove].size/3):
+                row =  active_pixels_dataset[a, remove, i*3]
+                col =  active_pixels_dataset[a, remove, i*3+1]
+                x = active_pixels_dataset[a, remove, i*3+2]
+                if x != -1:
+                    angle_list_mem_efficient.append(x)
+                    sub_list.append(x)
+                    coord_list_mem_efficient.append((row, col))
+                else:
+                    break
+            
+        angle_list_mem_efficient.sort()
+
+
+        remove_event_id = 0
+        remove_event_count = remove_events.size
+        for a in range(angles_dataset.size):
+            mem_efficient_line = active_pixels_dataset[a, remove, :]
+            mem_efficient_rows = mem_efficient_line[::3]
+            mem_efficient_cols = mem_efficient_line[1::3]
+            mem_efficient_angles = mem_efficient_line[2::3]
+            angle_count = 0
+
+            
+            # -----------------------------------------
+            # Count the number of pixel removal events
+            # -----------------------------------------
+            # Memory efficient:
+            for x in mem_efficient_angles:
+                if x != -1:
+                    angle_count += 1
+                else:
+                    break
+
+            mem_efficient_rows = mem_efficient_rows[:angle_count]
+            mem_efficient_cols = mem_efficient_cols[:angle_count]
+            mem_efficient_angles = mem_efficient_angles[:angle_count]
+
+            sorted_ids = np.argsort(mem_efficient_angles)
+
+            mem_efficient_rows = mem_efficient_rows[sorted_ids]
+            mem_efficient_cols = mem_efficient_cols[sorted_ids]
+            mem_efficient_angles = mem_efficient_angles[sorted_ids]
+
+            # Non-memory efficient
+            non_mem_efficient_ids = []
+            while (remove_event_id < remove_event_count) and \
+                (remove_events[arg_max[remove_event_id]] <= \
+                    angles[a+1] + 1e-8):
+                non_mem_efficient_ids.append(arg_max[remove_event_id])
+                remove_event_id += 1
+            non_mem_efficient_ids = np.array(non_mem_efficient_ids).astype(int)
+
+            non_mem_efficient_angles = \
+                np.sort(remove_events[non_mem_efficient_ids])
+            non_mem_efficient_rows = I[non_mem_efficient_ids]
+            non_mem_efficient_cols = J[non_mem_efficient_ids]
+
+            if mem_efficient_angles.size == non_mem_efficient_angles.size:
+                difference = \
+                    np.sum(mem_efficient_angles-non_mem_efficient_angles)
+                if abs(difference) > 1e-15:
+                    print ('angle', a, angles_dataset[a])
+                    print('remove difference:', difference)
+                    print('remove mem-efficient', mem_efficient_angles)
+                    print('remove non-mem efficient', non_mem_efficient_angles)
+            else:
+                print ('angle', a, angles_dataset[a])
+                print('remove mem-efficient', mem_efficient_angles)
+                print('remove non-mem efficient', non_mem_efficient_angles)
 
 
 
