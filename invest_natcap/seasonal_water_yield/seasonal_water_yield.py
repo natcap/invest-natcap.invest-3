@@ -77,9 +77,12 @@ def calculate_quick_flow(
 
         def qf_op(pm_array, s_array):
             """calculate quickflow"""
-            numerator = (
-                25.4 * n_events[m_index] *
-                (pm_array/float(n_events[m_index])/25.4 - 0.2 * s_array)**2)
+            inner_value = pm_array/float(n_events[m_index])/25.4 - 0.2 * s_array
+            numerator = numpy.where(
+                inner_value > 0,
+                25.4 * n_events[m_index] * inner_value**2, 0.0)
+
+
             denominator = pm_array/float(n_events[m_index])/25.4 +0.8 * s_array
             return numpy.where(
                 (pm_array == p_nodata) | (s_array == si_nodata) |
@@ -109,13 +112,13 @@ def calculate_quick_flow(
 def calculate_slow_flow(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, vri_uri):
+        recharge_uri, recharge_avail_uri, aet_uri, vri_uri):
     """calculate slow flow index"""
 
     seasonal_water_yield_core.calculate_recharge(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
         alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, vri_uri)
+        recharge_uri, recharge_avail_uri, aet_uri, vri_uri)
 
 
 def main():
@@ -207,6 +210,7 @@ def main():
     recharge_uri = os.path.join(output_dir, 'recharge.tif')
     recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
     vri_uri = os.path.join(output_dir, 'vri.tif')
+    aet_uri = os.path.join(output_dir, 'aet.tif')
 
     flow_dir_uri = os.path.join(output_dir, 'flow_dir.tif')
     pygeoprocessing.routing.flow_direction_d_inf(
@@ -215,4 +219,4 @@ def main():
     calculate_slow_flow(
         precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
         dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
-        qfi_uri, recharge_uri, recharge_avail_uri, vri_uri)
+        qfi_uri, recharge_uri, recharge_avail_uri, aet_uri, vri_uri)
