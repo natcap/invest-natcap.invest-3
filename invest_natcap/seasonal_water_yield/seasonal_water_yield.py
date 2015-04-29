@@ -32,7 +32,7 @@ def execute(args):
 
 def calculate_quick_flow(
         precip_uri_list, rain_events_table_uri, lulc_uri,
-        cn_table_uri, cn_uri, qfi_uri, intermediate_dir):
+        cn_table_uri, cn_uri, qfi_uri, qf_monthly_uri_list, intermediate_dir):
     """Calculates quick flow """
 
 
@@ -69,14 +69,11 @@ def calculate_quick_flow(
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
-    qf_nodata = -1.0
-    qf_monthly_uri_list = []
+    qf_nodata = -1
     p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         precip_uri_list[0])
 
     for m_index in range(1, N_MONTHS + 1):
-        qf_monthly_uri_list.append(
-            os.path.join(intermediate_dir, 'qf_%d.tif' % m_index))
 
         def qf_op(pm_array, s_array):
             """calculate quickflow"""
@@ -119,7 +116,6 @@ def calculate_slow_flow(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
         alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, vri_uri)
-
 
 
 def main():
@@ -187,9 +183,15 @@ def main():
         pixel_size, 'intersection', 0, aoi_uri=aoi_uri,
         assert_datasets_projected=True)
 
+
+    qf_monthly_uri_list = []
+    for m_index in range(1, N_MONTHS + 1):
+        qf_monthly_uri_list.append(
+            os.path.join(output_dir, 'qf_%d.tif' % m_index))
+
     calculate_quick_flow(
         precip_uri_aligned_list, rain_events_table_uri, lulc_uri_aligned,
-        cn_table_uri, cn_uri, qfi_uri, output_dir)
+        cn_table_uri, cn_uri, qfi_uri, qf_monthly_uri_list, output_dir)
 
     alpha_m = 1./12
     beta_i = 1.

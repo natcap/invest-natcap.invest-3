@@ -14,6 +14,7 @@ from cython.operator cimport dereference as deref
 from libcpp.set cimport set as c_set
 from libcpp.deque cimport deque
 from libcpp.map cimport map
+from libcpp.stack cimport stack
 from libc.math cimport atan
 from libc.math cimport atan2
 from libc.math cimport tan
@@ -178,7 +179,7 @@ cdef class BlockCache:
 @cython.wraparound(False)
 cdef route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
-        alpha_m, beta_i, gamma, qfi_uri_list, outflow_direction_uri,
+        float alpha_m, float beta_i, float gamma, qfi_uri_list, outflow_direction_uri,
         outflow_weights_uri, deque[int] &sink_cell_deque):
 
     #Pass transport
@@ -272,53 +273,29 @@ cdef route_recharge(
 
     qfi_dataset_list = []
     qfi_band_list = []
-    cdef float qfi_nodata = -1e10
+    cdef float qfi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        qfi_uri_list[0])
     for index, qfi_uri in enumerate(qfi_uri_list):
-        qfi_dataset_list.append(pygeoprocessing.new_raster_from_base(
-            outflow_direction_dataset, qfi_uri, 'GTiff', qfi_nodata,
-            gdal.GDT_Float32))
+        qfi_dataset_list.append(gdal.Open(qfi_uri, gdal.GA_ReadOnly))
         qfi_band_list.append(qfi_dataset_list[index].GetRasterBand(1))
-
-    #band and blocks to define
-    #outflow_direction_uri ((in))
-    #outflow_weights_uri (in)
-    #kc_uri (in)
-    #precip_uri_list (in)
-    #et0_uri_list (in)
-    #recharge_uri (out)
-    #recharge_avail_uri (out)
-    #qfi_uri_list (out)
 
     band_list = ([
             outflow_direction_band,
             outflow_weights_band,
             kc_band,
-        ] + precip_band_list + et0_band_list +
-        [recharge_band,
-         recharge_avail_band
-        ] + qfi_band_list
-    )
+        ] + precip_band_list + et0_band_list + qfi_band_list +
+        [recharge_band, recharge_avail_band])
 
-    block_list = ([
-        outflow_direction_block,
-        outflow_weights_block,
-        kc_block])
+    block_list = [outflow_direction_block, outflow_weights_block, kc_block]
     block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
     block_list.extend([et0_block_list[i] for i in xrange(N_MONTHS)])
+    block_list.extend([qfi_block_list[i] for i in xrange(N_MONTHS)])
     block_list.append(recharge_block)
     block_list.append(recharge_avail_block)
-    block_list.extend(qfi_block_list)
-
-        #[precip_block_list[i] for i in xrange(N_MONTHS)] +
-        #[et0_block_list[i] for i in xrange(N_MONTHS)] +
-        #[recharge_block,
-        # recharge_avail_block] +
-        #qfi_block_list
-
 
     update_list = (
-        [False] * (3 + len(precip_band_list) + len(et0_band_list)) +
-        [True] * (2 + len(qfi_band_list)))
+        [False] * (3 + len(precip_band_list) + len(et0_band_list) + len(qfi_band_list)) +
+        [True, True])
 
     cache_dirty[:] = 0
 
@@ -328,19 +305,18 @@ cdef route_recharge(
         band_list, block_list, update_list, cache_dirty)
 
     #Process flux through the grid
-    cdef deque[int] cells_to_process
+    cdef stack[int] cells_to_process
+    cdef stack[int] cell_neighbor_to_process
+    cdef stack[float] r_sum_stack
     for cell in sink_cell_deque:
-        cells_to_process.push_front(cell)
-    cdef deque[int] cell_neighbor_to_process
-    for _ in range(cells_to_process.size()):
-        cell_neighbor_to_process.push_front(0)
+        cells_to_process.push(cell)
+        cell_neighbor_to_process.push(0)
+        r_sum_stack.push(0)
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
     #    5 6 7
-
-    return
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -353,17 +329,28 @@ cdef route_recharge(
     cdef double in_flux
     cdef int current_neighbor_index
     cdef int current_index
+    cdef float current_r_sum_avail
+    cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(qfi_uri_list[0])
+    cdef int month_index
+    cdef float aet_sum
+    cdef float pet_m
+    cdef float aet_m
+    cdef float p_i
+    cdef float qf_i
+    cdef float qfi_m
+    cdef float p_m
+    cdef float r_i
 
     cdef time_t last_time, current_time
     time(&last_time)
-    while cells_to_process.size() > 0:
+    while not cells_to_process.empty():
         time(&current_time)
         if current_time - last_time > 5.0:
-            LOGGER.info('calculate transport cells_to_process.size() = %d' % (cells_to_process.size()))
+            LOGGER.info('route_recharge work queue size = %d' % (cells_to_process.size()))
             last_time = current_time
 
-        current_index = cells_to_process.front()
-        cells_to_process.pop_front()
+        current_index = cells_to_process.top()
+        cells_to_process.pop()
         with cython.cdivision(True):
             global_row = current_index / n_cols
             global_col = current_index % n_cols
@@ -371,33 +358,16 @@ cdef route_recharge(
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
 
         #Ensure we are working on a valid pixel, if not set everything to 0
-        if source_block[row_index, col_index, row_block_offset, col_block_offset] == source_nodata:
-            flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            #check quickflow nodata? month 0? qfi_nodata
+        if qfi_block_list[0, row_index, col_index, row_block_offset, col_block_offset] == qfi_nodata:
+            recharge_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             cache_dirty[row_index, col_index] = 1
 
-        #We have real data that make the absorption array nodata sometimes
-        #right now the best thing to do is treat it as 0.0 so everything else
-        #routes
-        if absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset] == absorption_rate_nodata:
-            absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-
-        if flux_block[row_index, col_index, row_block_offset, col_block_offset] == transport_nodata:
-            if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 0:
-                flux_block[row_index, col_index, row_block_offset, col_block_offset] = (
-                    source_block[row_index, col_index, row_block_offset, col_block_offset])
-            else:
-                flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            cache_dirty[row_index, col_index] = 1
-            if absorb_source:
-                absorption_rate = absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset]
-                loss_block[row_index, col_index, row_block_offset, col_block_offset] = (
-                    absorption_rate * flux_block[row_index, col_index, row_block_offset, col_block_offset])
-                flux_block[row_index, col_index, row_block_offset, col_block_offset] *= (1 - absorption_rate)
-
-        current_neighbor_index = cell_neighbor_to_process.front()
-        cell_neighbor_to_process.pop_front()
+        current_neighbor_index = cell_neighbor_to_process.top()
+        cell_neighbor_to_process.pop()
+        current_r_sum_avail = r_sum_stack.top()
+        r_sum_stack.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
             neighbor_row = global_row + row_offsets[direction_index]
@@ -427,39 +397,48 @@ cdef route_recharge(
 
             if outflow_weight <= 0.0:
                 continue
-            in_flux = flux_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
-            if in_flux != transport_nodata:
-                absorption_rate = absorption_rate_block[row_index, col_index, row_block_offset, col_block_offset]
-
-                #If it's not a stream, route the flux normally
-                if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 0:
-                    flux_block[row_index, col_index, row_block_offset, col_block_offset] += (
-                        outflow_weight * in_flux * (1.0 - absorption_rate))
-
-                    loss_block[row_index, col_index, row_block_offset, col_block_offset] += (
-                        outflow_weight * in_flux * absorption_rate)
-                else:
-                    #Otherwise if it is a stream, all flux routes to the outlet
-                    #we don't want it absorbed later
-                    flux_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-                    loss_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-                cache_dirty[row_index, col_index] = 1
-            else:
-                #we need to process the neighbor, remember where we were
-                #then add the neighbor to the process stack
-                cells_to_process.push_front(current_index)
-                cell_neighbor_to_process.push_front(direction_index)
-
-                #Calculating the flat index for the neighbor and starting
-                #at it's neighbor index of 0
-                #a global neighbor row needs to be calculated
-                cells_to_process.push_front(neighbor_row * n_cols + neighbor_col)
-                cell_neighbor_to_process.push_front(0)
+            if recharge_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
+                #push current cell and and loop
+                cells_to_process.push(current_index)
+                cell_neighbor_to_process.push(direction_index)
+                r_sum_stack.push(current_r_sum_avail)
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+                cell_neighbor_to_process.push(0)
+                r_sum_stack.push(0.0)
                 break
+            else:
+                #'calculate r_avail_i and r_i'
+                #add the contribution of the upstream to r_avail and r_i
+                current_r_sum_avail =+ recharge_avail_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset] * outflow_weight
+
+        #if we got here current_r_sum_avail is correct
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+        p_i = 0.0
+        qf_i = 0.0
+        aet_sum = 0.0
+        for month_index in xrange(N_MONTHS):
+            p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
+            p_i += p_m
+            pet_m = (
+                kc_block[row_index, col_index, row_block_offset, col_block_offset] *
+                et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
+            qf_i += qfi_m
+            aet_m = min(
+                pet_m, p_m - qfi_m - alpha_m * beta_i * current_r_sum_avail)
+            aet_sum += aet_m
+        r_i = p_i - qf_i - aet_sum
+
+        recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
+        recharge_block[row_index, col_index, row_block_offset, col_block_offset] = r_i
+        cache_dirty[row_index, col_index] = 1
 
     block_cache.flush_cache()
 
+######################################33
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -2678,13 +2657,13 @@ def calculate_recharge(
     calculate_flow_weights(
         flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
 
-    kc_uri = os.path.join(out_dir, 'kc_tif')
+    kc_uri = os.path.join(out_dir, 'kc.tif')
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         lulc_uri, kc_lookup, kc_uri, gdal.GDT_Float32, -1)
 
     qfi_uri_list = []
     for index in xrange(N_MONTHS):
-        qfi_uri_list.append(os.path.join(out_dir, 'qfi_%d.tif' % index))
+        qfi_uri_list.append(os.path.join(out_dir, 'qf_%d.tif' % (index+1)))
 
 
     route_recharge(
