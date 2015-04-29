@@ -460,6 +460,13 @@ def read_percentile_yield_tables(vars_dict):
                 percentile_yield_dict[cropname][c_bin] = _init_empty_items(
                     percentile_yield_dict[cropname][c_bin])
 
+            zero_bin_dict = {}
+            for key in percentile_yield_dict[cropname][percentile_yield_dict[
+                    cropname].keys()[0]].keys():
+                zero_bin_dict[key] = ''
+            percentile_yield_dict[cropname][0] = _init_empty_items(
+                zero_bin_dict)
+
     # Add Assertion Statements?
 
     vars_dict['percentile_yield_dict'] = convert_unicode_to_ascii(
@@ -510,6 +517,13 @@ def read_regression_model_yield_tables(vars_dict):
                 del modeled_yield_dict[cropname][c_bin]['climate_bin']
                 modeled_yield_dict[cropname][c_bin] = _init_empty_items(
                     modeled_yield_dict[cropname][c_bin])
+
+            zero_bin_dict = {}
+            for key in modeled_yield_dict[cropname][modeled_yield_dict[
+                    cropname].keys()[0]].keys():
+                zero_bin_dict[key] = ''
+            modeled_yield_dict[cropname][0] = _init_empty_items(
+                zero_bin_dict)
 
     vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(
         modeled_yield_dict)

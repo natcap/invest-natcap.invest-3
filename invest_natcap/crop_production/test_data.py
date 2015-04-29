@@ -241,16 +241,16 @@ def get_vars_dict():
 
 
 def get_large_dataset_args():
-    sd_dir = '/home/will/Crop_Model/crop_production_global_dataset/'
+    sd_dir = '/home/will/Crop_Model/global_dataset/'
     new_input_dir = '/home/will/workspace/CropProduction/input/'
 
     args = {
         'workspace_dir': '/home/will/workspace/CropProduction',
         'results_suffix': '',
         'lulc_map_uri': os.path.join(
-            sd_dir, 'lulc_map3.tif'),
+            sd_dir, 'sample_user_data/example_maps/lulc_maps/indiana_map_three_model.tif'),
         'crop_lookup_table_uri': os.path.join(
-            sd_dir, 'crop_lookup_table.csv'),
+            sd_dir, 'sample_user_data/crop_lookup_table.csv'),
         'spatial_dataset_dir': sd_dir,
         'create_crop_production_maps': True,
         'do_yield_observed': True,
@@ -260,10 +260,10 @@ def get_large_dataset_args():
         # 'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
         'do_nutrition': True,
         'nutrition_table_uri': os.path.join(
-            sd_dir, 'nutrition_table.csv'),
+            sd_dir, 'nutrient_contents_table.csv'),
         'do_economic_returns': True,
         'economics_table_uri': os.path.join(
-            sd_dir, 'economics_table.csv')
+            sd_dir, 'sample_user_data/example_economics_tables/economics_table.csv')
     }
 
     return args
