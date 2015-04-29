@@ -348,12 +348,6 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
         next_fringe_pixels, fringe_pixels = [], next_fringe_pixels
 
-#        print('after pixel addition')
-#        print(pixel_map[...])
-#        print('Candidate pixels to remove:')
-#        print(fringe_pixels)      
-
-
         # Done with fringe pixels: check if we should add from extra_add_events
         min_angle = 7.0 if not extra_add_events else extra_add_events[-1][2]
 
@@ -371,9 +365,6 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
 
         # Pixel removal
         active_pixels, next_active_pixels = next_active_pixels, []
-#        print('active pixels', len(active_pixels), \
-#            'next_active_pixels', next_active_pixels)
-
         active_pixel_id = 0
         for active_pixel in active_pixels:
             # Compute the angle of the cell center
@@ -385,9 +376,6 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
             center_angle = <np.float64_t>( \
                 atan2(-rel_row, rel_col) +two_pi) %two_pi
             
-            #   5.1-Check if fringe pixel should be an active pixel
-            # find index in extreme_cell_points that corresponds to the current
-            # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
             sector = <int>(4. * center_angle / two_pi) * 2
             # The if statement adjusts for all the 8 angles
@@ -395,15 +383,14 @@ def memory_efficient_event_stream(array_shape, viewpoint_coords, max_dist):
                 sector += 1
 
             # Compute offset ID
-            min_point_id = sector * SECTOR_SIZE # Beginning of a row
-            max_point_id = min_point_id + POINT_SIZE # Skip a point
+            max_point_id = sector * SECTOR_SIZE + POINT_SIZE # Skip a point
             # offset from current cell center to last corner
             max_corner_offset_row = extreme_cell_points[max_point_id]
             max_corner_offset_col = extreme_cell_points[max_point_id + 1]
             # Compute corner angle
             max_corner_row = rel_row + max_corner_offset_row
             max_corner_col = rel_col + max_corner_offset_col
-            # Compute the angles associated with the extreme corners
+            # Compute the angles associated with the extreme corner
             max_angle = <np.float64_t>( \
                 atan2(-max_corner_row, max_corner_col) +two_pi) %two_pi
 
