@@ -446,12 +446,16 @@ def calc_percentile_yield(vars_dict):
 
             # Find Yield and Production
             crop_yield_raster = climate_bin_raster.reclass(reclass_dict)
+            # ^ this now potentially includes nan values
+            # want to reclass nan values in masked area to zero
+            #    and keep unmasked nan values
 
             masked_lulc_raster = _get_masked_lulc_raster(
                 vars_dict, crop, lulc_raster).set_datatype_and_nodata(
                 gdal.GDT_Float64, nodata_float)
 
-            yield_raster = crop_yield_raster * masked_lulc_raster
+            yield_raster = crop_yield_raster.reclass_masked_values(
+                masked_lulc_raster, 0)
 
             Production_raster = _calculate_production_for_crop(
                 vars_dict, crop, yield_raster, percentile=percentile)
@@ -459,6 +463,11 @@ def calc_percentile_yield(vars_dict):
             total_production = float(np.around(
                 Production_raster.get_band(1).sum(), decimals=2))
             vars_dict['crop_production_dict'][crop] = total_production
+
+            # print "PRODUCTION RASTER"
+            # print Production_raster
+            # print "TOTAL PRODUCTION"
+            # print total_production
 
             if vars_dict['do_economic_returns']:
                 returns_raster_crop = _calc_crop_returns(
@@ -676,9 +685,11 @@ def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
             PercentMaxYieldPotassium_raster)))
 
     MaxYield_raster = PercentMaxYield_raster * YieldCeiling_raster
-    Yield_irrigated_raster = MaxYield_raster * irrigated_lulc_mask
+    Yield_irrigated_raster = MaxYield_raster.reclass_masked_values(
+        irrigated_lulc_mask, 0)
     Yield_rainfed_raster = YieldCeilingRainfed_raster.minimum(
-        MaxYield_raster) * rainfed_lulc_mask
+        MaxYield_raster).reclass_masked_values(
+        rainfed_lulc_mask, 0)
     Yield_raster = Yield_irrigated_raster + Yield_rainfed_raster
 
     return Yield_raster

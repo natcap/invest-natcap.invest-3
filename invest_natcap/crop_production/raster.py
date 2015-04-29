@@ -706,6 +706,13 @@ class Raster(object):
                 self.get_nodata(1))
             return r
 
+    def reclass_masked_values(self, mask_raster, new_value):
+        def reclass_masked_closure(nodata):
+            def reclass(x, y):
+                return np.where((np.not_equal(y, 0)), x, new_value)
+            return reclass
+        return self.local_op(mask_raster, reclass_masked_closure)
+
     def reproject(self, proj, resample_method, pixel_size=None):
         if pixel_size is None:
             pixel_size = self.get_affine().a

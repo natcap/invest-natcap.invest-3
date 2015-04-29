@@ -374,12 +374,12 @@ def fetch_observed_yield_maps(vars_dict):
 
     observed_yields_maps_dict = {}
     for map_uri in map_uris:
-        # could check here to make sure file is raster
-
-        basename = os.path.basename(map_uri)
-        cropname = basename.split('_')[0]
-        if cropname != '':
-            observed_yields_maps_dict[cropname.lower()] = map_uri
+        # Checks to make sure it's not a QGIS metadata file
+        if not map_uri.endswith('.aux.xml'):
+            basename = os.path.basename(map_uri)
+            cropname = basename.split('_')[0]
+            if cropname != '':
+                observed_yields_maps_dict[cropname.lower()] = map_uri
 
     vars_dict['observed_yields_maps_dict'] = observed_yields_maps_dict
 
@@ -615,7 +615,7 @@ def _init_empty_items(d):
     # new = {}
     for i in d.keys():
         if d[i] == '':
-            d[i] = 0
+            d[i] = float('nan')
     return d
 
 
