@@ -510,8 +510,8 @@ def execute(args):
 
     # Initializations
     # This is the finest useful scale at which the model can extract bathy data
-    args['cell_size'] = max(args['model_resolution'], \
-        pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['bathymetry_uri']))
+    args['cell_size'] = 
+        pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['bathymetry_uri'])
     # Look for mis-aligned shore up to 10 pixels inland
     args['max_land_profile_len'] = int(10 * args['cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
