@@ -56,7 +56,7 @@
           "args_id": "lulc_map_uri",
           "type": "file",
           "label": "Land Use Map (Raster)",
-          "defaultValue": "../CropProduction/input/lulc_map.tif",
+          "defaultValue": "../CropProduction/input/lulc_raster.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -149,7 +149,7 @@
 		              "args_id": "modeled_irrigation_map_uri",
 		              "type": "file",
 		              "label": "Irrigation Map (Raster)",
-		              "defaultValue": "../CropProduction/input/irrigation_map.tif",
+		              "defaultValue": "../CropProduction/input/irrigation_raster.tif",
 		              "required": true,
 		              "validateAs": {
 		                "type": "GDAL"
@@ -179,7 +179,7 @@
               "args_id": "nutrition_table_uri",
               "type": "file",
               "label": "Nutritional Contents Table (CSV)",
-              "defaultValue": "../CropProduction/input/nutrition_table.csv",
+              "defaultValue": "../CropProduction/input/nutrient_contents_table.csv",
               "required": true,
               "validateAs": {
                 "type": "CSV"
