@@ -406,12 +406,12 @@ def fetch_climate_bin_maps(vars_dict):
 
     climate_bin_maps_dict = {}
     for map_uri in map_uris:
-        # could check here to make sure file is raster
-
-        basename = os.path.basename(map_uri)
-        cropname = basename.split('_')[0]
-        if cropname != '':
-            climate_bin_maps_dict[cropname.lower()] = map_uri
+        # Checks to make sure it's not a QGIS metadata file
+        if not map_uri.endswith('.aux.xml'):
+            basename = os.path.basename(map_uri)
+            cropname = basename.split('_')[0]
+            if cropname != '':
+                climate_bin_maps_dict[cropname.lower()] = map_uri
 
     vars_dict['climate_bin_maps_dict'] = convert_unicode_to_ascii(
         climate_bin_maps_dict)
@@ -511,10 +511,6 @@ def read_regression_model_yield_tables(vars_dict):
                 modeled_yield_dict[cropname][c_bin] = _init_empty_items(
                     modeled_yield_dict[cropname][c_bin])
 
-    # Clean Data? (e.g. make sure empty args are initialized or set to None)
-
-    # Add Assertion Statements?
-
     vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(
         modeled_yield_dict)
 
@@ -538,18 +534,23 @@ def fetch_fertilizer_maps(vars_dict):
             },
         }
     '''
+    fertilizer_list = ['nitrogen', 'phosphorous', 'potash']
     map_uris = _listdir(vars_dict['fertilizer_maps_dir'])
 
     fertilizer_maps_dict = {}
     for map_uri in map_uris:
-        # could check here to make sure file is raster
+        if not map_uri.endswith('.aux.xml'):
+            basename = os.path.splitext(os.path.basename(map_uri))[0]
+            fertilizer_name = basename.split('_')[0]
+            if fertilizer_name.lower() in fertilizer_list:
+                fertilizer_maps_dict[fertilizer_name.lower()] = map_uri
 
-        basename = os.path.splitext(os.path.basename(map_uri))[0]
-        fertilizer_name = basename.split('_')[0]
-        if fertilizer_name.lower() in ['nitrogen', 'phosphorous', 'potash']:
-            fertilizer_maps_dict[fertilizer_name.lower()] = map_uri
-
-    # Assert that the dictionary contains maps for all three fertilizers?
+    # Assert that the dictionary contains maps for all three fertilizers
+    try:
+       assert(not set(fertilizer_list).difference(fertilizer_maps_dict.keys()))
+    except:
+        LOGGER.warning("Issue fetching fertilizer maps.  Please check that the\
+ contents of the fertilizer maps folder are properly formatted")
 
     vars_dict['fertilizer_maps_dict'] = fertilizer_maps_dict
 
@@ -604,15 +605,12 @@ def read_nutrition_table(vars_dict):
         except:
             nutrition_table_dict[cropname.lower()] = template_sub_dict
 
-    # Add Assertion Statements?
-
     vars_dict['nutrition_table_dict'] = convert_unicode_to_ascii(
         nutrition_table_dict)
     return vars_dict
 
 
 def _init_empty_items(d):
-    # new = {}
     for i in d.keys():
         if d[i] == '':
             d[i] = float('nan')
@@ -651,8 +649,6 @@ def read_economics_table(vars_dict):
         del src['crop']
         src = _init_empty_items(src)
         economics_table_dict[cropname.lower()] = src
-
-    # Add Assertion Statements?
 
     vars_dict['economics_table_dict'] = convert_unicode_to_ascii(input_dict)
     return vars_dict
