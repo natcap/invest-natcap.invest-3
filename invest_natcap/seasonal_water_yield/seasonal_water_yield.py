@@ -110,15 +110,36 @@ def calculate_quick_flow(
 
 
 def calculate_slow_flow(
-        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
+        aoi_uri, precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
         recharge_uri, recharge_avail_uri, aet_uri, vri_uri):
     """calculate slow flow index"""
 
     seasonal_water_yield_core.calculate_recharge(
-        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-        alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, aet_uri, vri_uri)
+        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
+        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
+        recharge_avail_uri, aet_uri, vri_uri)
+
+    #calcualte Qb as the sum of recharge_avail over the aoi
+    qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+        recharge_avail_uri, aoi_uri)
+
+    qb = qb_results.total[9999] / qb_results.n_pixels[9999]
+    #9999 is the value used to index fields if no shapefile ID is provided
+    LOGGER.info("Qb = %f", qb)
+
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        recharge_uri)
+    ri_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(recharge_uri)
+
+    def vri_op(ri):
+        """calc vri index"""
+        return numpy.where(ri != ri_nodata, ri / qb, ri_nodata)
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [recharge_uri], vri_op, vri_uri,
+        gdal.GDT_Float32, ri_nodata, pixel_size, 'intersection',
+        vectorize_op=False, datasets_are_pre_aligned=True)
 
 
 def main():
@@ -217,6 +238,6 @@ def main():
         dem_uri_aligned, flow_dir_uri)
 
     calculate_slow_flow(
-        precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
+        aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
         dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
         qfi_uri, recharge_uri, recharge_avail_uri, aet_uri, vri_uri)
