@@ -318,8 +318,8 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
             nodata_float)
         NitrogenCost_raster = Nitrogen_raster * cost_nitrogen_per_kg
         CostPerTonInputTotal_raster += NitrogenCost_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping nitrogen cost because insufficient amount of information provided.")
     try:
         cost_phosphorous_per_kg = economics_table_crop[
             'cost_phosphorous_per_kg']
@@ -327,16 +327,16 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
             nodata_float)
         PhosphorousCost_raster = Phosphorous_raster * cost_phosphorous_per_kg
         CostPerTonInputTotal_raster += PhosphorousCost_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping phosphorous cost because insufficient amount of information provided.")
     try:
         cost_potash_per_kg = economics_table_crop['cost_potash_per_kg']
         Potash_raster = Raster.from_file(fert_maps_dict['potash']).set_nodata(
             nodata_float)
         PotashCost_raster = Potash_raster * cost_potash_per_kg
         CostPerTonInputTotal_raster += PotashCost_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping potash cost because insufficient amount of information provided.")
 
     CostPerTonInputTotal_masked_raster = CostPerTonInputTotal_raster * masked_lulc_raster_float
 
@@ -362,26 +362,26 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
         cost_labor_per_cell = economics_table_crop['cost_labor_per_ha'] * ha_per_cell
         CostLabor_raster = masked_lulc_raster_float * cost_labor_per_cell 
         CostPerHectareInputTotal_raster += CostLabor_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping labor cost because 'cost_labor_per_ha' not provided in economics table.")
     try:
         cost_machine_per_cell = economics_table_crop['cost_machine_per_ha'] * ha_per_cell
         CostMachine_raster = masked_lulc_raster_float * cost_machine_per_cell 
         CostPerHectareInputTotal_raster += CostMachine_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping machine cost because 'cost_machine_per_ha' not provided in economics table.")
     try:
         cost_seed_per_cell = economics_table_crop['cost_seed_per_ha'] * ha_per_cell
         CostSeed_raster = masked_lulc_raster_float * cost_seed_per_cell
         CostPerHectareInputTotal_raster += CostSeed_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping seed cost because 'cost_seed_per_ha' not provided in economics table.")
     try:
         cost_irrigation_per_cell = economics_table_crop['cost_irrigation_per_ha'] * ha_per_cell
         CostIrrigation_raster = masked_lulc_raster_float * cost_irrigation_per_cell
         CostPerHectareInputTotal_raster += CostIrrigation_raster
-    except:
-        pass
+    except KeyError:
+        LOGGER.warning("Skipping irrigation cost because 'cost_irrigation_per_ha' not provided in economics table.")
 
     CostPerHectareInputTotal_masked_raster = CostPerHectareInputTotal_raster * masked_lulc_raster_float
 
