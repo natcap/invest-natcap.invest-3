@@ -178,9 +178,10 @@ cdef class BlockCache:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef route_recharge(
-        precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri, aet_uri,
-        float alpha_m, float beta_i, float gamma, qfi_uri_list, outflow_direction_uri,
-        outflow_weights_uri, deque[int] &sink_cell_deque):
+        precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
+        r_sum_avail_uri, aet_uri, float alpha_m, float beta_i, float gamma,
+        qfi_uri_list, outflow_direction_uri, outflow_weights_uri,
+        deque[int] &sink_cell_deque):
 
     #Pass transport
     cdef time_t start
@@ -216,6 +217,8 @@ cdef route_recharge(
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] recharge_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] recharge_avail_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_sum_avail_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] aet_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
@@ -272,6 +275,11 @@ cdef route_recharge(
         outflow_direction_dataset, recharge_avail_uri, 'GTiff', recharge_nodata,
         gdal.GDT_Float32)
     recharge_avail_band = recharge_avail_dataset.GetRasterBand(1)
+    r_sum_avail_dataset = pygeoprocessing.new_raster_from_base(
+        outflow_direction_dataset, r_sum_avail_uri, 'GTiff', recharge_nodata,
+        gdal.GDT_Float32)
+    r_sum_avail_band = r_sum_avail_dataset.GetRasterBand(1)
+
     cdef float aet_nodata = -1e10
     aet_dataset = pygeoprocessing.new_raster_from_base(
         outflow_direction_dataset, aet_uri, 'GTiff', aet_nodata,
@@ -291,7 +299,7 @@ cdef route_recharge(
             outflow_weights_band,
             kc_band,
         ] + precip_band_list + et0_band_list + qfi_band_list +
-        [recharge_band, recharge_avail_band, aet_band])
+        [recharge_band, recharge_avail_band, r_sum_avail_band, aet_band])
 
     block_list = [outflow_direction_block, outflow_weights_block, kc_block]
     block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
@@ -299,11 +307,12 @@ cdef route_recharge(
     block_list.extend([qfi_block_list[i] for i in xrange(N_MONTHS)])
     block_list.append(recharge_block)
     block_list.append(recharge_avail_block)
+    block_list.append(r_sum_avail_block)
     block_list.append(aet_block)
 
     update_list = (
         [False] * (3 + len(precip_band_list) + len(et0_band_list) + len(qfi_band_list)) +
-        [True, True, True])
+        [True, True, True, True])
 
     cache_dirty[:] = 0
 
@@ -348,6 +357,7 @@ cdef route_recharge(
     cdef float qfi_m
     cdef float p_m
     cdef float r_i
+    cdef int neighbors_calculated = 0
 
     cdef time_t last_time, current_time
     time(&last_time)
@@ -370,6 +380,7 @@ cdef route_recharge(
         if qfi_block_list[0, row_index, col_index, row_block_offset, col_block_offset] == qfi_nodata:
             recharge_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             cache_dirty[row_index, col_index] = 1
             continue
 
@@ -377,6 +388,7 @@ cdef route_recharge(
         cell_neighbor_to_process.pop()
         current_r_sum_avail = r_sum_stack.top()
         r_sum_stack.pop()
+        neighbors_calculated = 1
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
             neighbor_row = global_row + row_offsets[direction_index]
@@ -407,7 +419,7 @@ cdef route_recharge(
             if outflow_weight <= 0.0:
                 continue
 
-            if recharge_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
+            if r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
                 #push current cell and and loop
                 cells_to_process.push(current_index)
                 cell_neighbor_to_process.push(direction_index)
@@ -415,13 +427,19 @@ cdef route_recharge(
                 cells_to_process.push(neighbor_row * n_cols + neighbor_col)
                 cell_neighbor_to_process.push(0)
                 r_sum_stack.push(0.0)
+                neighbors_calculated = 0
                 break
             else:
                 #'calculate r_avail_i and r_i'
                 #add the contribution of the upstream to r_avail and r_i
-                current_r_sum_avail =+ recharge_avail_block[
-                    neighbor_row_index, neighbor_col_index,
-                    neighbor_row_block_offset, neighbor_col_block_offset] * outflow_weight
+                current_r_sum_avail =+ (
+                    r_sum_avail_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] +
+                    recharge_avail_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
+
+        if not neighbors_calculated:
+            continue
 
         #if we got here current_r_sum_avail is correct
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
@@ -437,10 +455,11 @@ cdef route_recharge(
             qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             qf_i += qfi_m
             aet_m = min(
-                pet_m, p_m - qfi_m - alpha_m * beta_i * current_r_sum_avail)
+                pet_m, p_m - qfi_m + alpha_m * beta_i * current_r_sum_avail)
             aet_sum += aet_m
         r_i = p_i - qf_i - aet_sum
 
+        r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
         recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
         recharge_block[row_index, col_index, row_block_offset, col_block_offset] = r_i
         aet_block[row_index, col_index, row_block_offset, col_block_offset] = aet_sum
@@ -2654,7 +2673,7 @@ def resolve_flats(
 def calculate_recharge(
     precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
     alpha_m, beta_i, gamma, qfi_uri,
-    recharge_uri, recharge_avail_uri, aet_uri, vri_uri):
+    recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri):
 
     cdef deque[int] outlet_cell_deque
 
@@ -2678,5 +2697,5 @@ def calculate_recharge(
 
     route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
-        aet_uri, alpha_m, beta_i, gamma, qfi_uri_list, outflow_direction_uri,
-        outflow_weights_uri, outlet_cell_deque)
+        r_sum_avail_uri, aet_uri, alpha_m, beta_i, gamma, qfi_uri_list,
+        outflow_direction_uri, outflow_weights_uri, outlet_cell_deque)

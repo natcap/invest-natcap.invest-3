@@ -35,8 +35,6 @@ def calculate_quick_flow(
         cn_table_uri, cn_uri, qfi_uri, qf_monthly_uri_list, intermediate_dir):
     """Calculates quick flow """
 
-
-
     LOGGER.info('loading number of monthly events')
     rain_events_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
         rain_events_table_uri, 'month')
@@ -82,7 +80,6 @@ def calculate_quick_flow(
                 inner_value > 0,
                 25.4 * n_events[m_index] * inner_value**2, 0.0)
 
-
             denominator = pm_array/float(n_events[m_index])/25.4 +0.8 * s_array
             return numpy.where(
                 (pm_array == p_nodata) | (s_array == si_nodata) |
@@ -112,13 +109,13 @@ def calculate_quick_flow(
 def calculate_slow_flow(
         aoi_uri, precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, aet_uri, vri_uri):
+        recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri):
     """calculate slow flow index"""
 
     seasonal_water_yield_core.calculate_recharge(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
-        recharge_avail_uri, aet_uri, vri_uri)
+        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
@@ -140,6 +137,23 @@ def calculate_slow_flow(
         [recharge_uri], vri_op, vri_uri,
         gdal.GDT_Float32, ri_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+    #calc slow flow index
+
+    constant_flux_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+    zero_absorption_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+    loss_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+
+    pygeoprocessing.make_constant_raster_from_base_uri(
+        dem_uri, 1.0, constant_flux_source_uri)
+    pygeoprocessing.make_constant_raster_from_base_uri(
+        dem_uri, 0.0, zero_absorption_source_uri)
+
+    #route_flux(
+    #    flow_dir_uri, dem_uri, constant_flux_source_uri,
+    #    zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
+    #    aoi_uri=aoi_uri)
 
 
 def main():
@@ -207,7 +221,6 @@ def main():
         pixel_size, 'intersection', 0, aoi_uri=aoi_uri,
         assert_datasets_projected=True)
 
-
     qf_monthly_uri_list = []
     for m_index in range(1, N_MONTHS + 1):
         qf_monthly_uri_list.append(
@@ -230,6 +243,7 @@ def main():
 
     recharge_uri = os.path.join(output_dir, 'recharge.tif')
     recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
+    r_sum_avail_uri = os.path.join(output_dir, 'r_sum_avail.tif')
     vri_uri = os.path.join(output_dir, 'vri.tif')
     aet_uri = os.path.join(output_dir, 'aet.tif')
 
@@ -237,7 +251,12 @@ def main():
     pygeoprocessing.routing.flow_direction_d_inf(
         dem_uri_aligned, flow_dir_uri)
 
+    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
+    pygeoprocessing.routing.flow_accumulation(
+        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+
     calculate_slow_flow(
         aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
         dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
-        qfi_uri, recharge_uri, recharge_avail_uri, aet_uri, vri_uri)
+        qfi_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri,
+        vri_uri)
