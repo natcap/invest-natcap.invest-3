@@ -3,16 +3,14 @@ Vector Class
 '''
 
 import os
-import tempfile
 import shutil
 
 import gdal
 import ogr
 import osr
-import numpy as np
-from affine import Affine
 from shapely.geometry import *
 import shapely.wkt
+
 import pygeoprocessing as pygeo
 
 
@@ -160,16 +158,6 @@ class Vector(object):
 
     def get_projection(self):
         raise NotImplementedError
-        # self._open_datasource()
-        # layer = self.datasource.GetLayer()
-        # print layer.GetSpatialRef().GetAuthorityCode(0)
-        # wkt = layer.GetSpatialRef().ExportToWkt()
-        # layer = None
-        # self._close_datasource()
-        # return wkt
-        # RasterSRS = osr.SpatialReference()
-        # RasterSRS.ImportFromWkt(layer.GetSpatialRef().ExportToWkt())
-        # return int(RasterSRS.GetAttrValue("AUTHORITY", 1))
 
     def get_projection_wkt(self):
         self._open_datasource()
@@ -178,9 +166,6 @@ class Vector(object):
         layer = None
         self._close_datasource()
         return wkt
-        # RasterSRS = osr.SpatialReference()
-        # RasterSRS.ImportFromWkt(layer.GetSpatialRef().ExportToWkt())
-        # return int(RasterSRS.GetAttrValue("AUTHORITY", 1))
 
     def get_aoi(self):
         raise NotImplementedError

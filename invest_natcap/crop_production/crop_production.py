@@ -79,6 +79,7 @@ def execute(args):
             'results_suffix': 'scenario_name',
             'crop_lookup_table_uri': 'path/to/crop_lookup_table_uri',
             'lulc_map_uri': 'path/to/lulc_map_uri',
+            'do_fertilizer_maps': True,
             'fertilizer_maps_dir': 'path/to/fertilizer_maps_dir/',
             'spatial_dataset_dir': 'path/to/spatial_dataset_dir/',
             'create_crop_production_maps': True,
@@ -92,6 +93,28 @@ def execute(args):
             'economics_table_uri': 'path/to/economics_table_uri',
         }
 
+    Example Returns::
+
+        results_dict = {
+            'observed_vars_dict': {
+                # ...
+                'crop_production_dict': {...},
+                'economics_table_dict': {...},
+                'crop_total_nutrition_dict': {...}
+            },
+            'percentile_vars_dict': {
+                # ...
+                'crop_production_dict': {...},
+                'economics_table_dict': {...},
+                'crop_total_nutrition_dict': {...}
+            },
+            'regression_vars_dict': {
+                # ...
+                'crop_production_dict': {...},
+                'economics_table_dict': {...},
+                'crop_total_nutrition_dict': {...}
+            }
+        }
     '''
 
     if any([args['do_yield_observed'],
@@ -114,12 +137,14 @@ def execute(args):
         results_dict['observed_vars_dict'] = observed_vars_dict
 
     if vars_dict['do_yield_percentile']:
-        LOGGER.info("Calculating Yield from Climate-based Distribution of Observed Yields...")
+        LOGGER.info("Calculating Yield from Climate-based Distribution of \
+Observed Yields...")
         percentile_vars_dict = model.calc_percentile_yield(vars_dict)
         results_dict['percentile_vars_dict'] = percentile_vars_dict
 
     if vars_dict['do_yield_regression']:
-        LOGGER.info("Calculating Yield from Regression Model with Climate-based Parameters...")
+        LOGGER.info("Calculating Yield from Regression Model with \
+Climate-based Parameters...")
         regression_vars_dict = model.calc_regression_yield(vars_dict)
         results_dict['regression_vars_dict'] = regression_vars_dict
 

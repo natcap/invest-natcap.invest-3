@@ -1,3 +1,6 @@
+'''
+Affine Matrix Class
+'''
 
 
 class Affine(object):

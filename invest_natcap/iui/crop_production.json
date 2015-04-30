@@ -64,15 +64,6 @@
           "helpText": "A GDAL-supported raster representing a crop management scenario.<br><br>Each cell value in the raster should correspond to a valid crop that can be found in the Crop Lookup Table CSV file inputted below."
         },
         {
-          "id": "fertilizer_maps_dir",
-          "args_id": "fertilizer_maps_dir",
-          "type": "folder",
-          "label": "Fertilizer Application Rate Maps Folder",
-          "defaultValue": "../CropProduction/input/fertilizer_maps/",
-          "required": true,
-          "helpText": "A set of GDAL-supported rasters representing the amount of Nitrogen (N), Phosphorous (P2O5), and Potash (K2O) applied to each area of land in kilograms per hectare.<br><br>These maps are required when running the regression model yield function and are an optional input for all yield functions when calculating economic returns.<br><br>Each cell value in the raster should be a non-negative float value representing the amount of fertilizer applied in units of kilograms per hectare (kg/hectare).  Each file should be prepended with the name of the fertilizer (nitrogen, phosphorous, potash) in lowercase, followed by an underscore to help the program search for the matching file. The Fertilizer Maps must have the same dimensions and projection as the provided Land Use Map."
-        },
-        {
           "id": "spatial_dataset_dir",
           "args_id": "spatial_dataset_dir",
           "type": "folder",
@@ -94,7 +85,31 @@
         }
       ]
     },
-
+    {
+      "id": "do_fertilizer_maps",
+      "args_id": "do_fertilizer_maps",
+      "label": "Use Fertilizer Maps",
+      "type": "container",
+      "defaultValue": true,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "fertilizer_list",
+          "type": "list",
+          "elements": [
+          {
+            "id": "fertilizer_maps_dir",
+            "args_id": "fertilizer_maps_dir",
+            "type": "folder",
+            "label": "Fertilizer Application Rate Maps Folder",
+            "defaultValue": "../CropProduction/input/fertilizer_maps/",
+            "required": false,
+            "helpText": "A set of GDAL-supported rasters representing the amount of Nitrogen (N), Phosphorous (P2O5), and Potash (K2O) applied to each area of land in kilograms per hectare.<br><br>These maps are required when running the regression model yield function and are an optional input for all yield functions when calculating economic returns.<br><br>Each cell value in the raster should be a non-negative float value representing the amount of fertilizer applied in units of kilograms per hectare (kg/hectare).  Each file should be prepended with the name of the fertilizer (nitrogen, phosphorous, potash) in lowercase, followed by an underscore to help the program search for the matching file. The Fertilizer Maps must have the same dimensions and projection as the provided Land Use Map."
+          }
+          ]
+        }
+      ]
+    },
     {
       "id": "yield_functions",
       "label": "Calculate Yield and Production",

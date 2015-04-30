@@ -11,8 +11,8 @@ import collections
 
 import numpy as np
 
-from raster import Raster
 import pygeoprocessing.geoprocessing as pygeo
+from raster import Raster
 
 LOGGER = logging.getLogger('invest_natcap.crop_production.io')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -146,14 +146,16 @@ def get_inputs(args):
     if vars_dict['do_yield_percentile']:
         assert_crops_in_list(vars_dict, 'percentile_yield_dict')
 
-    try:
+    if vars_dict['do_fertilizer_maps']:
         vars_dict = fetch_fertilizer_maps(vars_dict)
-    except:
-        pass
+    else:
+        vars_dict['fertilizer_maps_dict'] = {}
 
     if vars_dict['do_yield_regression']:
         assert_crops_in_list(vars_dict, 'modeled_yield_dict')
-        assert(vars_dict['fertilizer_maps_dict'])
+        if vars_dict['do_fertilizer_maps'] == False:
+            LOGGER.error("Fertilizer maps must be provided to run the yield\
+regression model")
 
     if vars_dict['do_nutrition']:
         vars_dict = read_nutrition_table(vars_dict)
@@ -254,7 +256,8 @@ def create_crops_in_aoi_list(vars_dict):
         except:
             pass
 
-    vars_dict['crops_in_aoi_list'] = crops_in_aoi_list
+    vars_dict['crops_in_aoi_list'] = convert_unicode_to_ascii(
+        crops_in_aoi_list)
     return vars_dict
 
 
@@ -443,8 +446,12 @@ def read_percentile_yield_tables(vars_dict):
             },
         }
     '''
-    # Add information to user here in the case of raised exception
-    assert(os.path.exists(vars_dict['percentile_yield_tables_dir']))
+    try:
+        assert(os.path.exists(vars_dict['percentile_yield_tables_dir']))
+    except:
+        LOGGER.error('A filepath to the directory containing percentile yield \
+tables must be provided to run the percentile yield model.')
+        raise KeyError
 
     table_uris = _listdir(vars_dict['percentile_yield_tables_dir'])
 
@@ -477,7 +484,7 @@ def read_percentile_yield_tables(vars_dict):
 
 def read_regression_model_yield_tables(vars_dict):
     '''
-    (desc)
+    Reads the regression model yield tables and returns a dictionary of values
 
     Example Returns::
 
@@ -501,8 +508,12 @@ def read_regression_model_yield_tables(vars_dict):
             },
         }
     '''
-    # Add information to user here in the case of raised exception
-    assert(os.path.exists(vars_dict['modeled_yield_tables_dir']))
+    try:
+        assert(os.path.exists(vars_dict['modeled_yield_tables_dir']))
+    except:
+        LOGGER.error('A filepath to the directory containing the regresison yield \
+tables must be provided to run the regression yield model.')
+        raise KeyError
 
     table_uris = _listdir(vars_dict['modeled_yield_tables_dir'])
 
@@ -561,7 +572,8 @@ def fetch_fertilizer_maps(vars_dict):
 
     # Assert that the dictionary contains maps for all three fertilizers
     try:
-       assert(not set(fertilizer_list).difference(fertilizer_maps_dict.keys()))
+        assert(not set(fertilizer_list).difference(
+            fertilizer_maps_dict.keys()))
     except:
         LOGGER.warning("Issue fetching fertilizer maps.  Please check that the\
  contents of the fertilizer maps folder are properly formatted")
@@ -573,7 +585,7 @@ def fetch_fertilizer_maps(vars_dict):
 
 def read_nutrition_table(vars_dict):
     '''
-    Reads in the Nutrition Table and returns a dictionary
+    Reads in the Nutrition Table and returns a dictionary of values
 
     Example Returns::
 
@@ -633,7 +645,7 @@ def _init_empty_items(d):
 
 def read_economics_table(vars_dict):
     '''
-    Reads in the Economics Table and returns a dictionary
+    Reads in the Economics Table and returns a dictionary of values
 
     Example Returns::
 
@@ -690,6 +702,10 @@ def _listdir(path):
 
 def create_results_table(vars_dict, percentile=None, first=True):
     '''
+    Creates a table of results for each yield function.  This includes
+        production information as well as economic and nutrition information
+        if the necessary inputs are provided.
+
     Example Args::
 
         vars_dict = {
@@ -756,6 +772,10 @@ def create_results_table(vars_dict, percentile=None, first=True):
 
 
 def convert_unicode_to_ascii(data):
+    '''
+    Converts strings and strings nested in dictionaries and lists
+        from unicode to ascii.
+    '''
     if isinstance(data, basestring):
         return str(data)
     elif isinstance(data, collections.Mapping):

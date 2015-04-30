@@ -1,19 +1,21 @@
-import tempfile
 import os
 
 import numpy as np
-from affine import Affine
 import gdal
 
-import crop_production_io as io
-from raster import *
+from invest_natcap.crop_production.affine import Affine
+import invest_natcap.crop_production.crop_production_io as io
+from invest_natcap.crop_production.raster import *
 
-workspace_dir = '../../test/invest-data/test/data/crop_production/'
-input_dir = '../../test/invest-data/test/data/crop_production/input/'
+current_dir = os.path.dirname(os.path.realpath(__file__))
+workspace_dir = os.path.join(
+    current_dir, '../invest-data/test/data/crop_production/')
+input_dir = os.path.join(
+    current_dir, '../invest-data/test/data/crop_production/input/')
 # input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
-nodata_int = -9999
-nodata_float = -16777216
+NODATA_INT = -9999
+NODATA_FLOAT = -16777216
 
 # AOI Parameters
 pixel_size = 100
@@ -33,7 +35,7 @@ def create_lulc_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int16
-    nodata_val = nodata_int
+    nodata_val = NODATA_INT
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -52,7 +54,7 @@ def create_lulc_map2(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int16
-    nodata_val = nodata_int
+    nodata_val = NODATA_INT
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -85,7 +87,7 @@ def create_observed_yield_maps_dir():
         os.makedirs(observed_yield_dir)
 
     global_raster_factory = create_global_raster_factory(
-        gdal.GDT_Float64, nodata_float)
+        gdal.GDT_Float64, NODATA_FLOAT)
 
     corn_raster = global_raster_factory.horizontal_ramp(0.0, 1.0)
     rice_raster = global_raster_factory.horizontal_ramp(1.0, 2.0)
@@ -109,7 +111,7 @@ def create_climate_bin_maps_dir():
         os.makedirs(climate_bin_dir)
 
     global_raster_factory = create_global_raster_factory(
-        gdal.GDT_Int32, nodata_int)
+        gdal.GDT_Int32, NODATA_INT)
 
     corn_raster = global_raster_factory.alternating(1, 3)
     rice_raster = global_raster_factory.alternating(2, 1)
@@ -132,7 +134,7 @@ def create_irrigation_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Int32
-    nodata_val = nodata_int
+    nodata_val = NODATA_INT
 
     # initialize raster
     r = Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -148,7 +150,7 @@ def create_fertilizer_map(aoi_dict):
     affine = aoi_dict['affine']
     proj = aoi_dict['proj']
     datatype = gdal.GDT_Float64
-    nodata_val = nodata_float
+    nodata_val = NODATA_FLOAT
 
     # initialize raster
     return Raster.from_array(array, affine, proj, datatype, nodata_val)
@@ -196,6 +198,7 @@ def get_args():
         'do_yield_observed': True,
         'do_yield_percentile': True,
         'do_yield_regression': True,
+        'do_fertilizer_maps': True,
         'fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
         'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
         'do_nutrition': True,
@@ -238,32 +241,3 @@ def get_vars_dict():
             vars_dict[i] = derived_vars[i]
 
     return vars_dict
-
-
-def get_large_dataset_args():
-    sd_dir = '/home/will/Crop_Model/global_dataset/'
-    new_input_dir = '/home/will/workspace/CropProduction/input/'
-
-    args = {
-        'workspace_dir': '/home/will/workspace/CropProduction',
-        'results_suffix': '',
-        'lulc_map_uri': os.path.join(
-            sd_dir, 'sample_user_data/example_maps/lulc_maps/indiana_map_three_model.tif'),
-        'crop_lookup_table_uri': os.path.join(
-            sd_dir, 'sample_user_data/crop_lookup_table.csv'),
-        'spatial_dataset_dir': sd_dir,
-        'create_crop_production_maps': True,
-        'do_yield_observed': True,
-        'do_yield_percentile': True,
-        'do_yield_regression': False,
-        # 'fertilizer_maps_dir': create_fertilizer_maps_dir(aoi_dict),
-        # 'modeled_irrigation_map_uri': create_irrigation_map(aoi_dict),
-        'do_nutrition': True,
-        'nutrition_table_uri': os.path.join(
-            sd_dir, 'nutrient_contents_table.csv'),
-        'do_economic_returns': True,
-        'economics_table_uri': os.path.join(
-            sd_dir, 'sample_user_data/example_economics_tables/economics_table.csv')
-    }
-
-    return args

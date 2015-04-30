@@ -5,21 +5,20 @@ python -m unittest test_crop_production_model
 import unittest
 import os
 import pprint
-import tempfile
 import shutil
 
 import gdal
-from numpy import testing
 import numpy as np
-from affine import Affine
 
-import crop_production_model as model
-from raster import Raster, RasterFactory
-from vector import Vector
+import invest_natcap.crop_production.crop_production_model as model
+from invest_natcap.crop_production.vector import Vector
 import test_data
 
-workspace_dir = '../../test/invest-data/test/data/crop_production/'
-input_dir = '../../test/invest-data/test/data/crop_production/input/'
+current_dir = os.path.dirname(os.path.realpath(__file__))
+workspace_dir = os.path.join(
+    current_dir, '../invest-data/test/data/crop_production/')
+input_dir = os.path.join(
+    current_dir, '../invest-data/test/data/crop_production/input/')
 pp = pprint.PrettyPrinter(indent=4)
 
 
@@ -27,7 +26,8 @@ pp = pprint.PrettyPrinter(indent=4)
 class TestCreateYieldFuncOutputFolder(unittest.TestCase):
     def setUp(self):
         corn_observed = test_data.create_global_raster_factory(
-            gdal.GDT_Float32, test_data.nodata_float).horizontal_ramp(1.0, 10.0)
+            gdal.GDT_Float32, test_data.NODATA_FLOAT
+            ).horizontal_ramp(1.0, 10.0)
 
         self.vars_dict = {
             'output_dir': os.path.join(workspace_dir, 'output'),
@@ -62,7 +62,7 @@ class TestGetObservedYieldFromDataset(unittest.TestCase):
         base_raster_float = lulc_raster.set_datatype(gdal.GDT_Float32)
         observed_yield = 1.0
         corn_observed = test_data.create_global_raster_factory(
-            gdal.GDT_Float32, test_data.nodata_float).uniform(observed_yield)
+            gdal.GDT_Float32, test_data.NODATA_FLOAT).uniform(observed_yield)
 
         vars_dict = {
             'observed_yields_maps_dict': {crop: corn_observed.uri}
@@ -83,7 +83,7 @@ class TestGetYieldGivenLULC(unittest.TestCase):
         observed_yield = 2.0
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
         observed_yield_over_aoi_raster = lulc_raster.ones().set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float) * observed_yield
+            gdal.GDT_Float32, test_data.NODATA_FLOAT) * observed_yield
         crop = "corn"
 
         vars_dict = {
@@ -114,7 +114,7 @@ class TestCalculateProductionForCrop(unittest.TestCase):
         observed_yield = 2.0
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
         observed_yield_over_aoi_raster = lulc_raster.ones().set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float) * observed_yield
+            gdal.GDT_Float32, test_data.NODATA_FLOAT) * observed_yield
         crop = "corn"
 
         vars_dict = {
@@ -152,7 +152,7 @@ class TestCalculateCostOfPerTonInputs(unittest.TestCase):
         econ_table = vars_dict['economics_table_dict'][crop]
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
         production_raster = lulc_raster.set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float) * 2.0
+            gdal.GDT_Float32, test_data.NODATA_FLOAT) * 2.0
 
         CostPerTonInputTotal_raster = model._calc_cost_of_per_ton_inputs(
             vars_dict,
@@ -178,7 +178,7 @@ class TestCalculateCostOfPerHectareInputs(unittest.TestCase):
         econ_table = vars_dict['economics_table_dict'][crop]
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
         production_raster = lulc_raster.set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float) * 2.0
+            gdal.GDT_Float32, test_data.NODATA_FLOAT) * 2.0
 
         CostPerHectareInputTotal_raster = model._calc_cost_of_per_hectare_inputs(
             vars_dict,
@@ -204,9 +204,9 @@ class TestCalcCropReturns(unittest.TestCase):
         lulc_raster = test_data.create_lulc_map2(test_data.aoi_dict)
         masked_lulc_float = model._get_masked_lulc_raster(
             vars_dict, crop, lulc_raster).set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float)
+            gdal.GDT_Float32, test_data.NODATA_FLOAT)
         production_raster_inter = lulc_raster.set_datatype_and_nodata(
-            gdal.GDT_Float32, test_data.nodata_float)
+            gdal.GDT_Float32, test_data.NODATA_FLOAT)
         production_raster = production_raster_inter * masked_lulc_float * 2.0
         returns_raster = production_raster * 0.0
 

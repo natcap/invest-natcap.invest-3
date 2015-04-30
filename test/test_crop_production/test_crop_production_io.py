@@ -8,14 +8,14 @@ import pprint
 import tempfile
 import shutil
 
-from numpy import testing
-import numpy as np
 import pygeoprocessing as pygeo
 
-import crop_production_io as io
+import invest_natcap.crop_production.crop_production_io as io
 import test_data
 
-workspace_dir = '../../test/invest-data/test/data/crop_production/'
+current_dir = os.path.dirname(os.path.realpath(__file__))
+workspace_dir = os.path.join(
+    current_dir, '../invest-data/test/data/crop_production/')
 input_dir = os.path.join(workspace_dir, 'input')
 pp = pprint.PrettyPrinter(indent=4)
 
