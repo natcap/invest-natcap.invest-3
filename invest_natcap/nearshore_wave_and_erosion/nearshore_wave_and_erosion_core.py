@@ -125,8 +125,6 @@ def compute_transects(args):
     j_side_fine = int( \
         math.sqrt(fine_geotransform[1]**2 + fine_geotransform[2]**2))
 
-#    print('fine_geotransform', fine_geotransform)
-
     i_side_coarse = int(math.copysign(args['transect_spacing'], i_side_fine))
     j_side_coarse = int(math.copysign(args['transect_spacing'], j_side_fine))
 
@@ -146,8 +144,6 @@ def compute_transects(args):
     # computing shore orientation
     i_offset = i_side_coarse/i_side_fine + 6
     j_offset = j_side_coarse/j_side_fine + 6
-#    print('(i_side_coarse, i_side_fine)', (i_side_coarse, i_side_fine))
-#    print('(i_offset, j_offset)', (i_offset, j_offset))
     mask = np.ones((i_offset, j_offset))
     tile_size = np.sum(mask)
 
@@ -187,9 +183,6 @@ def compute_transects(args):
             if (j_base + j_offset) >= col_count:
                 continue
 
-            # Data under the tile
-            #data = aoi[i_base:i_base+i_offset, j_base:j_base+j_offset]
-
             # Look for landmass cover on tile
             tile = landmass_band.ReadAsArray(j_base, i_base, j_offset, i_offset)
 
@@ -198,28 +191,10 @@ def compute_transects(args):
             # If land and sea, we have a shore: detect it and store
             if land and land < tile_size:
                     
-#                if tiles > 237:
-#                    continue
-
                 i_first = i_base+3
                 j_first = j_base+3
                 i_last = i_base+i_offset-3
                 j_last = j_base+j_offset-3
-
-#                print('tile', tiles)
-#                print('tile limits', (i_first, j_first, i_last, j_last))
-                #Draw the tile
-#                for row in range(i_first, i_last+1):
-#                    for col in range(j_first, j_last+1):
-#                        transects[(col, row)] = tiles #-12
-#                for left in range(i_first, i_last+1):
-#                    transects[(left, j_first)] = -10
-#                for right in range(i_first, i_last+1):
-#                    transects[(left, j_last)] = -2
-#                for up in range(j_first, j_last+1):
-#                    transects[(i_first, up)] = -10
-#                for down in range(j_first, j_last+1):
-#                    transects[(i_last, down)] = -2
 
                 shore_patch = detect_shore(tile, mask, 0, 3, connectedness = 4)
                 shore_pts = np.where(shore_patch == 1)
@@ -246,10 +221,7 @@ def compute_transects(args):
 
                     # Skip if no shore orientation
                     if not shore_orientations:
-#                        print("No valid shore orientations")
                         continue
-#                    for p in shore_orientations:
-#                        transects[(p[0], p[1])] = -2
 
                     # Pick transect position among valid shore points
                     assert len(shore_pts) == 2, \
@@ -262,36 +234,18 @@ def compute_transects(args):
 
                     # Skip tile if no valid shore points
                     if len(transect_positions) == 0:
-#                        print("No well defined position")
                         continue
-#                    for p in transect_positions:
-#                        transects[(p[0], p[1])] = -3
 
                     # Compute transect orientation
                     transect_orientations = \
                         compute_transect_orientations( \
                             transect_positions, shore_orientations,landmass)
-#                    print('orientations')
-#                    for p in transect_orientations:
-#                        print('position', p, 'orientation', transect_orientations[p])
                     # Skip tile if can't compute valid orientation
                     if len(transect_orientations) == 0:
-#                        print("  No valid transect orientation for", transect_positions)
                         continue
-#                    for p in transect_orientations:
-#                       o = transect_orientations[p]
-#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = tiles
-#                       transects[(int(round(p[0]+o[0]*1)), int(round(p[1]+o[1]*1)))] = -4
-#                       transects[(int(round(p[0]+o[0]*2)), int(round(p[1]+o[1]*2)))] = -5
-#                       transects[(int(round(p[0]+o[0]*3)), int(round(p[1]+o[1]*3)))] = -6
-
-#                    tiles += 1
-
-#                    continue
 
                     # Look for the first valid transect
                     for transect_position in transect_orientations:
-#                        print('transect_position', transect_position)
                         transect_orientation = transect_orientations[transect_position]
                         # Compute raw transect depths
                         raw_depths, raw_positions = \
@@ -305,27 +259,11 @@ def compute_transects(args):
                             args['max_profile_length'])
                         # The index positions might be outside of valid bathymetry
                         if raw_depths is None:
-#                            print('  Could not sample transect depth')
                             continue
-#                        transects[(transect_position[0], transect_position[1])] = -7
-
-#                    tiles += 1
-
-#                    continue
-
-
-                        # Interpolate transect to the model resolution
-                        interpolated_depths = \
-                            raw_depths if raw_depths.size > 5 else None
-
-                        # Not enough values for interpolation
-                        if interpolated_depths is None:
-                            continue
-#                        transects[(transect_position[0], transect_position[1])] = -6
 
                         # Smooth transect
                         smoothed_depths = \
-                            smooth_transect(interpolated_depths, \
+                            smooth_transect(raw_depths, \
                                 args['smoothing_percentage'])
                         
                         # Apply additional constraints on the smoothed transect
@@ -337,6 +275,48 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
                        
+                        # Interpolate transect to the model resolution
+                        interpolated_depths = \
+                            interpolate_transect(clipped_transect, \
+                                args['cell_size'], \
+                                min(args['cell_size'], 1))
+
+                        # Smooth transect
+                        smoothed_depths = \
+                            smooth_transect(interpolated_depths, \
+                                args['smoothing_percentage'])
+
+
+                        print('clipped_transect', clipped_transect.size)
+                        print('interpolated_depths', interpolated_depths.size)
+                        print('smoothed_depths', smoothed_depths.size)
+                        print('shore', shore, clipped_transect[shore-1:shore+2])
+                        stretch_coeff = \
+                            args['cell_size'] / min(args['cell_size'], 1)
+                        
+                        i_start = start * stretch_coeff
+                        i_end = end * stretch_coeff
+                        i_shore = shore * stretch_coeff
+                        
+                        print('smoothed', i_shore, \
+                            i_shore-stretch_coeff, i_shore+stretch_coeff, \
+                            smoothed_depths[i_shore-stretch_coeff:i_shore+stretch_coeff+1])
+
+                        # Closest point to zero
+                        shore = np.argmin(abs(smoothed_depths[ \
+                            i_shore-stretch_coeff:i_shore+stretch_coeff+1]))
+
+                        print('closest point to zero', shore, \
+                            smoothed_depths[shore+i_shore-stretch_coeff])
+                        print('extreme points', i_start, i_end)
+                        sys.exit(0)
+
+
+                        # Not enough values for interpolation
+                        if interpolated_depths is None:
+                            continue
+#                        transects[(transect_position[0], transect_position[1])] = -6
+
 
                         # Perform additional QAQC:
 
@@ -2844,13 +2824,12 @@ def interpolate_transect(depths, old_resolution, new_resolution, kind = 'linear'
         return None
 
     if new_resolution > old_resolution:
-        raise Exception, 'New resolution should be finer.'
-    
+        raise RuntimeError, 'New resolution should be finer.'
+
     x = np.arange(0, depths.size) * old_resolution
     f = interpolate.interp1d(x, depths, kind)
-    x_new = \
-        np.arange(0, (depths.size-1) * old_resolution / new_resolution) * \
-            new_resolution
+    x_new = np.arange(0, (depths.size-1) * \
+        old_resolution / new_resolution) * new_resolution
     interpolated = f(x_new)
 
     return interpolated
