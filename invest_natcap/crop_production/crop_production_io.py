@@ -9,8 +9,6 @@ import csv
 import pprint as pp
 import collections
 
-import numpy as np
-
 import pygeoprocessing.geoprocessing as pygeo
 from raster import Raster
 
@@ -232,7 +230,7 @@ def read_crop_lookup_table(vars_dict):
     assert(all(map(lambda x: (type(x) is int), keys)))
     assert(all(map(lambda x: (x >= 0), keys)))
 
-    vars_dict['crop_lookup_dict'] = convert_unicode_to_ascii(crop_lookup_dict)
+    vars_dict['crop_lookup_dict'] = convert_dict_to_unicode(crop_lookup_dict)
     return vars_dict
 
 
@@ -247,16 +245,18 @@ def create_crops_in_aoi_list(vars_dict):
     '''
     lulc_raster = Raster.from_file(vars_dict['lulc_map_uri'])
     crop_lookup_dict = vars_dict['crop_lookup_dict']
-    array = np.unique(lulc_raster.get_band(1).data)
+    # array = np.unique(lulc_raster.get_band(1).data)
+    array = lulc_raster.unique()
 
     crops_in_aoi_list = []
     for crop_num in array:
         try:
             crops_in_aoi_list.append(crop_lookup_dict[crop_num])
-        except:
-            pass
+        except KeyError:
+            LOGGER.warning("Land Use Map contains values not listed in the Crop \
+Lookup Table")
 
-    vars_dict['crops_in_aoi_list'] = convert_unicode_to_ascii(
+    vars_dict['crops_in_aoi_list'] = convert_dict_to_unicode(
         crops_in_aoi_list)
     return vars_dict
 
@@ -384,7 +384,8 @@ def fetch_observed_yield_maps(vars_dict):
             if cropname != '':
                 observed_yields_maps_dict[cropname.lower()] = map_uri
 
-    vars_dict['observed_yields_maps_dict'] = observed_yields_maps_dict
+    vars_dict['observed_yields_maps_dict'] = convert_dict_to_unicode(
+        observed_yields_maps_dict)
 
     return vars_dict
 
@@ -416,7 +417,7 @@ def fetch_climate_bin_maps(vars_dict):
             if cropname != '':
                 climate_bin_maps_dict[cropname.lower()] = map_uri
 
-    vars_dict['climate_bin_maps_dict'] = convert_unicode_to_ascii(
+    vars_dict['climate_bin_maps_dict'] = convert_dict_to_unicode(
         climate_bin_maps_dict)
 
     return vars_dict
@@ -476,7 +477,7 @@ tables must be provided to run the percentile yield model.')
 
     # Add Assertion Statements?
 
-    vars_dict['percentile_yield_dict'] = convert_unicode_to_ascii(
+    vars_dict['percentile_yield_dict'] = convert_dict_to_unicode(
         percentile_yield_dict)
 
     return vars_dict
@@ -536,7 +537,7 @@ tables must be provided to run the regression yield model.')
             modeled_yield_dict[cropname][0] = _init_empty_items(
                 zero_bin_dict)
 
-    vars_dict['modeled_yield_dict'] = convert_unicode_to_ascii(
+    vars_dict['modeled_yield_dict'] = convert_dict_to_unicode(
         modeled_yield_dict)
 
     return vars_dict
@@ -578,7 +579,8 @@ def fetch_fertilizer_maps(vars_dict):
         LOGGER.warning("Issue fetching fertilizer maps.  Please check that the\
  contents of the fertilizer maps folder are properly formatted")
 
-    vars_dict['fertilizer_maps_dict'] = fertilizer_maps_dict
+    vars_dict['fertilizer_maps_dict'] = convert_dict_to_unicode(
+        fertilizer_maps_dict)
 
     return vars_dict
 
@@ -631,7 +633,7 @@ def read_nutrition_table(vars_dict):
         except:
             nutrition_table_dict[cropname.lower()] = template_sub_dict
 
-    vars_dict['nutrition_table_dict'] = convert_unicode_to_ascii(
+    vars_dict['nutrition_table_dict'] = convert_dict_to_unicode(
         nutrition_table_dict)
     return vars_dict
 
@@ -676,7 +678,7 @@ def read_economics_table(vars_dict):
         src = _init_empty_items(src)
         economics_table_dict[cropname.lower()] = src
 
-    vars_dict['economics_table_dict'] = convert_unicode_to_ascii(input_dict)
+    vars_dict['economics_table_dict'] = convert_dict_to_unicode(input_dict)
     return vars_dict
 
 
@@ -771,16 +773,16 @@ def create_results_table(vars_dict, percentile=None, first=True):
     csvfile.close()
 
 
-def convert_unicode_to_ascii(data):
+def convert_dict_to_unicode(data):
     '''
     Converts strings and strings nested in dictionaries and lists
-        from unicode to ascii.
+        to unicode.
     '''
     if isinstance(data, basestring):
-        return str(data)
+        return data.decode('utf-8')
     elif isinstance(data, collections.Mapping):
-        return dict(map(convert_unicode_to_ascii, data.iteritems()))
+        return dict(map(convert_dict_to_unicode, data.iteritems()))
     elif isinstance(data, collections.Iterable):
-        return type(data)(map(convert_unicode_to_ascii, data))
+        return type(data)(map(convert_dict_to_unicode, data))
     else:
         return data

@@ -17,6 +17,7 @@ import shapely
 import pygeoprocessing as pygeo
 
 from affine import Affine
+from vector import Vector
 
 LOGGER = logging.getLogger('Raster Class')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -287,14 +288,31 @@ class Raster(object):
             # Implement broadcast operation
             def min_closure(nodata):
                 def mini(x):
-                    def f(x): return np.where((np.less(x, raster)), x, raster)
+                    def f(x): return np.where(np.not_equal(x, raster), np.minimum(x, raster), np.minimum(x, raster))
                     return np.where((np.not_equal(x, nodata)), f(x), nodata)
                 return mini
             return self.local_op(raster, min_closure, broadcast=True)
         else:
             def min_closure(nodata):
                 def mini(x, y):
-                    def f(x, y): return np.where((np.less(x, y)), x, y)
+                    def f(x, y): return np.where(np.not_equal(x, y), np.minimum(x, y), np.minimum(x, y))
+                    return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), f(x, y), nodata)
+                return mini
+            return self.local_op(raster, min_closure)
+
+    def fminimum(self, raster):
+        if type(raster) in [float, int]:
+            # Implement broadcast operation
+            def min_closure(nodata):
+                def mini(x):
+                    def f(x): return np.where(np.not_equal(x, raster), np.fmin(x, raster), np.fmin(x, raster))
+                    return np.where((np.not_equal(x, nodata)), f(x), nodata)
+                return mini
+            return self.local_op(raster, min_closure, broadcast=True)
+        else:
+            def min_closure(nodata):
+                def mini(x, y):
+                    def f(x, y): return np.where((np.not_equal(x, y)), np.fmin(x, y), np.fmin(x, y))
                     return np.where((np.not_equal(x, nodata)) & (np.not_equal(y, nodata)), f(x, y), nodata)
                 return mini
             return self.local_op(raster, min_closure)
@@ -336,13 +354,41 @@ class Raster(object):
     def get_heatmap_image(self):
         raise NotImplementedError
 
+    def sum(self):
+        vector = Vector.from_shapely(self.get_aoi(), self.get_projection())
+        t = pygeo.aggregate_raster_values_uri(self.uri, vector.uri)
+        return t.total[9999]
+
+    def min(self):
+        pygeo.calculate_raster_stats_uri(self.uri)
+        mini, _, _, _ = pygeo.get_statistics_from_uri(self.uri)
+        return mini
+
+    def max(self):
+        pygeo.calculate_raster_stats_uri(self.uri)
+        _, maxi, _, _ = pygeo.get_statistics_from_uri(self.uri)
+        return maxi
+
+    def mean(self):
+        pygeo.calculate_raster_stats_uri(self.uri)
+        _, _, mean, _ = pygeo.get_statistics_from_uri(self.uri)
+        return mean
+
+    def std(self):
+        pygeo.calculate_raster_stats_uri(self.uri)
+        _, _, _, std = pygeo.get_statistics_from_uri(self.uri)
+        return std
+
+    def unique(self):
+        unique_vals_list = pygeo.unique_raster_values_uri(self.uri)
+        return unique_vals_list
+
     def ones(self):
         def ones_closure(nodata):
             def ones(x):
                 return np.where(x == x, 1, nodata)
             return ones
         return self.local_op(0, ones_closure, broadcast=True)
-
 
     def zeros(self):
         def zeros_closure(nodata):
@@ -932,8 +978,6 @@ class Raster(object):
 
     def _close_dataset(self):
         self.dataset = None
-
-
 
 
 import random

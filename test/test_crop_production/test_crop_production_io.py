@@ -124,7 +124,7 @@ class TestFetchObservedYieldMaps(unittest.TestCase):
         observed_yield_maps_dict = guess['observed_yields_maps_dict']
         # pp.pprint(observed_yield_maps_dict)
         keys = observed_yield_maps_dict.keys()
-        assert(type(observed_yield_maps_dict[keys[0]]) is str)
+        assert(type(observed_yield_maps_dict[keys[0]]) is unicode)
 
 
 class TestFetchClimateBinMaps(unittest.TestCase):
@@ -140,7 +140,7 @@ class TestFetchClimateBinMaps(unittest.TestCase):
         guess = io.fetch_climate_bin_maps(self.vars_dict)
         climate_bin_maps_dict = guess['climate_bin_maps_dict']
         keys = climate_bin_maps_dict.keys()
-        assert(type(climate_bin_maps_dict[keys[0]]) is str)
+        assert(type(climate_bin_maps_dict[keys[0]]) is unicode)
 
 
 class TestFetchSpatialDataset(unittest.TestCase):
@@ -175,7 +175,7 @@ class TestFetchModeledFertilizerMaps(unittest.TestCase):
         guess = io.fetch_fertilizer_maps(self.vars_dict)
         fertilizer_maps_dict = guess['fertilizer_maps_dict']
         keys = fertilizer_maps_dict.keys()
-        assert(type(fertilizer_maps_dict[keys[0]]) is str)
+        assert(type(fertilizer_maps_dict[keys[0]]) is unicode)
 
 
 class TestGetInputs(unittest.TestCase):

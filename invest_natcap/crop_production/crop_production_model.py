@@ -92,7 +92,7 @@ def calc_observed_yield(vars_dict):
             ObservedLocalYield_raster)
 
         total_production = float(np.around(
-            Production_raster.get_band(1).sum(), decimals=2))
+            Production_raster.sum(), decimals=2))
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
@@ -103,7 +103,7 @@ def calc_observed_yield(vars_dict):
                 Production_raster,
                 returns_raster,
                 vars_dict['economics_table_dict'][crop])
-            if not np.isnan(returns_raster_crop.get_band(1).sum()):
+            if not np.isnan(returns_raster_crop.sum()):
                 returns_raster = returns_raster + returns_raster_crop
 
         # Clean Up Rasters...
@@ -276,11 +276,11 @@ def _calc_crop_returns(vars_dict, crop, lulc_raster, production_raster, returns_
     returns_raster = revenue_raster - cost_raster
 
     total_cost = float(np.around(
-        cost_raster.get_band(1).sum(), decimals=2))
+        cost_raster.sum(), decimals=2))
     total_revenue = float(np.around(
-        revenue_raster.get_band(1).sum(), decimals=2))
+        revenue_raster.sum(), decimals=2))
     total_returns = float(np.around(
-        returns_raster.get_band(1).sum(), decimals=2))
+        returns_raster.sum(), decimals=2))
 
     vars_dict['economics_table_dict'][crop]['total_cost'] = total_cost
     vars_dict['economics_table_dict'][crop]['total_revenue'] = total_revenue
@@ -456,7 +456,7 @@ def calc_percentile_yield(vars_dict):
                 vars_dict, crop, yield_raster, percentile=percentile)
 
             total_production = float(np.around(
-                Production_raster.get_band(1).sum(), decimals=2))
+                Production_raster.sum(), decimals=2))
             vars_dict['crop_production_dict'][crop] = total_production
 
             if vars_dict['do_economic_returns']:
@@ -584,7 +584,7 @@ def calc_regression_yield(vars_dict):
             vars_dict, crop, Yield_given_lulc_raster)
 
         total_production = float(np.around(
-            Production_raster.get_band(1).sum(), decimals=2))
+            Production_raster.sum(), decimals=2))
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
@@ -678,8 +678,8 @@ def _calc_regression_yield_for_crop(vars_dict, crop, climate_bin_raster):
     PercentMaxYieldPotassium_raster = 1 - (
         b_K2O_raster * (np.e ** -c_K2O_raster) * PotashAppRate_raster)
 
-    PercentMaxYield_raster = (PercentMaxYieldNitrogen_raster.minimum(
-        PercentMaxYieldPhosphorous_raster.minimum(
+    PercentMaxYield_raster = (PercentMaxYieldNitrogen_raster.fminimum(
+        PercentMaxYieldPhosphorous_raster.fminimum(
             PercentMaxYieldPotassium_raster)))
 
     MaxYield_raster = PercentMaxYield_raster * YieldCeiling_raster
