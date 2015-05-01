@@ -2700,8 +2700,8 @@ def calculate_recharge(
         outflow_direction_uri, outflow_weights_uri, outlet_cell_deque)
 
 
-def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
-    """Calculate how r_sum_avail pours directly into its neighbors"""
+def calculate_r_sum_avail_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):
+    """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
     outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
@@ -2716,10 +2716,10 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
     r_sum_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         r_sum_avail_uri)
 
-    cdef float pour_nodata = -1.0
-    pour_dataset = pygeoprocessing.new_raster_from_base(
-        r_sum_avail_ds, pour_uri, 'GTiff', pour_nodata, gdal.GDT_Float32)
-    pour_band = pour_dataset.GetRasterBand(1)
+    cdef float r_sum_avail_pour_nodata = -1.0
+    r_sum_avail_pour_dataset = pygeoprocessing.new_raster_from_base(
+        r_sum_avail_ds, r_sum_avail_pour_uri, 'GTiff', r_sum_avail_pour_nodata, gdal.GDT_Float32)
+    r_sum_avail_pour_band = r_sum_avail_pour_dataset.GetRasterBand(1)
 
     n_rows = r_sum_avail_band.YSize
     n_cols = r_sum_avail_band.XSize
@@ -2733,7 +2733,7 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_sum_avail_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] pour_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_sum_avail_pour_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
 
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
@@ -2751,10 +2751,10 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
     #make the memory block
     band_list = [
         r_sum_avail_band, outflow_direction_band, outflow_weights_band,
-        pour_band]
+        r_sum_avail_pour_band]
     block_list = [
         r_sum_avail_block, outflow_direction_block, outflow_weights_block,
-        pour_block]
+        r_sum_avail_pour_block]
 
     update_list = [False, False, False, True]
     cache_dirty[:] = 0
@@ -2791,11 +2791,11 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
 
                     block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
                     if r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] == r_sum_nodata:
-                        pour_block[row_index, col_index, row_block_offset, col_block_offset] = pour_nodata
+                        r_sum_avail_pour_block[row_index, col_index, row_block_offset, col_block_offset] = r_sum_avail_pour_nodata
                         cache_dirty[row_index, col_index] = 1
                         continue
 
-                    pour_sum = 0.0
+                    r_sum_avail_pour_sum = 0.0
                     for direction_index in xrange(8):
                         #get percent flow from neighbor to current cell
                         neighbor_row = global_row + row_offsets[direction_index]
@@ -2828,9 +2828,9 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
 
                         if outflow_weight <= 0.0:
                             continue
-                        pour_sum += r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                        r_sum_avail_pour_sum += r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
                     block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-                    pour_block[row_index, col_index, row_block_offset, col_block_offset] = pour_sum
+                    r_sum_avail_pour_block[row_index, col_index, row_block_offset, col_block_offset] = r_sum_avail_pour_sum
                     cache_dirty[row_index, col_index] = 1
     block_cache.flush_cache()
