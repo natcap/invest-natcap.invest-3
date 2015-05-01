@@ -12,13 +12,13 @@ import numpy as np
 
 import invest_natcap.crop_production.crop_production_model as model
 from invest_natcap.crop_production.vector import Vector
-import test_data
+import crop_production_data as test_data
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 workspace_dir = os.path.join(
-    current_dir, '../invest-data/test/data/crop_production/')
+    current_dir, './invest-data/test/data/crop_production/')
 input_dir = os.path.join(
-    current_dir, '../invest-data/test/data/crop_production/input/')
+    current_dir, './invest-data/test/data/crop_production/input/')
 pp = pprint.PrettyPrinter(indent=4)
 
 

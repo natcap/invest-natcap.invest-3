@@ -9,9 +9,9 @@ from invest_natcap.crop_production.raster import *
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 workspace_dir = os.path.join(
-    current_dir, '../invest-data/test/data/crop_production/')
+    current_dir, './invest-data/test/data/crop_production/')
 input_dir = os.path.join(
-    current_dir, '../invest-data/test/data/crop_production/input/')
+    current_dir, './invest-data/test/data/crop_production/input/')
 # input_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/')
 
 NODATA_INT = -9999
