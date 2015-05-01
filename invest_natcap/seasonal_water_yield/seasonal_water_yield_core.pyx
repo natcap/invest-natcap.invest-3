@@ -2671,8 +2671,8 @@ def resolve_flats(
 
 def calculate_recharge(
     precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-    alpha_m, beta_i, gamma, qfi_uri,
-    recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri):
+    alpha_m, beta_i, gamma, qfi_uri, recharge_uri, recharge_avail_uri,
+    r_sum_avail_uri, aet_uri, vri_uri):
 
     cdef deque[int] outlet_cell_deque
 
@@ -2788,6 +2788,13 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
 
             for global_row in xrange(yoff, yoff+win_ysize):
                 for global_col in xrange(xoff, xoff+win_xsize):
+
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    if r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] == r_sum_nodata:
+                        pour_block[row_index, col_index, row_block_offset, col_block_offset] = pour_nodata
+                        cache_dirty[row_index, col_index] = 1
+                        continue
+
                     pour_sum = 0.0
                     for direction_index in xrange(8):
                         #get percent flow from neighbor to current cell
@@ -2802,6 +2809,9 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
                         #if neighbor inflows
                         neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
                         if neighbor_direction == outflow_direction_nodata:
+                            continue
+
+                        if r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == r_sum_nodata:
                             continue
 
                         #check if the cell flows directly, or is one index off

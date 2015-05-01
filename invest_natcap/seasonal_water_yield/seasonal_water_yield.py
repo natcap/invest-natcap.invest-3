@@ -256,9 +256,9 @@ def main():
     pygeoprocessing.routing.flow_direction_d_inf(
         dem_uri_aligned, flow_dir_uri)
 
-    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
-    pygeoprocessing.routing.flow_accumulation(
-        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+    #flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
+    #pygeoprocessing.routing.flow_accumulation(
+    #    flow_dir_uri, dem_uri_aligned, flow_accum_uri)
 
     calculate_slow_flow(
         aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
