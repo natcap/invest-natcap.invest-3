@@ -91,8 +91,8 @@ def calc_observed_yield(vars_dict):
             crop,
             ObservedLocalYield_raster)
 
-        total_production = float(np.round(
-            Production_raster.sum(), decimals=2))
+        total_production = float(round(
+            Production_raster.sum(), 2))
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
@@ -275,12 +275,12 @@ def _calc_crop_returns(vars_dict, crop, lulc_raster, production_raster, returns_
 
     returns_raster = revenue_raster - cost_raster
 
-    total_cost = float(np.round(
-        cost_raster.sum(), decimals=2))
-    total_revenue = float(np.round(
-        revenue_raster.sum(), decimals=2))
-    total_returns = float(np.round(
-        returns_raster.sum(), decimals=2))
+    total_cost = float(round(
+        cost_raster.sum(), 2))
+    total_revenue = float(round(
+        revenue_raster.sum(), 2))
+    total_returns = float(round(
+        returns_raster.sum(), 2))
 
     vars_dict['economics_table_dict'][crop]['total_cost'] = total_cost
     vars_dict['economics_table_dict'][crop]['total_revenue'] = total_revenue
@@ -456,8 +456,8 @@ def calc_percentile_yield(vars_dict):
             Production_raster = _calculate_production_for_crop(
                 vars_dict, crop, yield_raster, percentile=percentile)
 
-            total_production = float(np.round(
-                Production_raster.sum(), decimals=2))
+            total_production = float(round(
+                Production_raster.sum(), 2))
             vars_dict['crop_production_dict'][crop] = total_production
 
             if vars_dict['do_economic_returns']:
@@ -584,8 +584,8 @@ def calc_regression_yield(vars_dict):
         Production_raster = _calculate_production_for_crop(
             vars_dict, crop, Yield_given_lulc_raster)
 
-        total_production = float(np.round(
-            Production_raster.sum(), decimals=2))
+        total_production = float(round(
+            Production_raster.sum(), 2))
         vars_dict['crop_production_dict'][crop] = total_production
 
         if vars_dict['do_economic_returns']:
@@ -770,9 +770,9 @@ def _calc_nutrition(vars_dict):
             nutrient_unit = nutrition_row_per_unit[nutrient]
             if type(nutrient_unit) not in [int, float]:
                 nutrient_unit = 0
-            total_nutrient = float(np.round((
+            total_nutrient = float(round((
                 production * nutrient_unit * (1 - fraction_refuse)),
-                decimals=2))
+                2))
             nutrition_row_total[nutrient] = total_nutrient
         crop_total_nutrition_dict[crop] = nutrition_row_total
 
