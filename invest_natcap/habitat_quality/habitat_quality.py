@@ -358,11 +358,13 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
+            degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
+
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata,
-                    (habitat * (1.0 - ((degradation**scaling_param) /
-                        (degradation**scaling_param + ksq)))))
+                    (habitat * (1.0 - ((degredataion_clamped**scaling_param) /
+                        (degredataion_clamped**scaling_param + ksq)))))
 
         quality_uri = os.path.join(
             out_dir, 'quality_out' + lulc_key + suffix + '.tif')
