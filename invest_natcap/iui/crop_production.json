@@ -123,6 +123,7 @@
 		      "label": "Method 1: Observed Regional Yields",
 		      "type": "container",
 		      "defaultValue": false,
+          "required": true,
 		      "collapsible": true,
 		      "elements": [
 		        {
@@ -138,6 +139,7 @@
 		      "label": "Method 2: Climate-specific Distribution of Observed Yields",
 		      "type": "container",
 		      "defaultValue": false,
+          "required": true,
 		      "collapsible": true,
 		      "elements": [
 		        {
@@ -153,6 +155,7 @@
 		      "label": "Method 3: Yield Regression Model with Climate-specific Parameters",
 		      "type": "container",
 		      "defaultValue": false,
+          "required": true,
 		      "collapsible": true,
 		      "elements": [
 		        {
