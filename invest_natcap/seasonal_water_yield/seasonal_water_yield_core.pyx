@@ -2764,6 +2764,21 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
 
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+
     for global_block_row in xrange(n_global_block_rows):
         for global_block_col in xrange(n_global_block_cols):
             xoff = global_block_col * block_col_size
@@ -2771,6 +2786,41 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
             win_xsize = min(block_col_size, n_cols - xoff)
             win_ysize = min(block_row_size, n_rows - yoff)
 
-            for row_index in xrange(yoff, yoff+win_ysize):
-                for col_index in xrange(xoff, xoff+win_xsize):
-                    pass
+            for global_row in xrange(yoff, yoff+win_ysize):
+                for global_col in xrange(xoff, xoff+win_xsize):
+                    pour_sum = 0.0
+                    for direction_index in xrange(8):
+                        #get percent flow from neighbor to current cell
+                        neighbor_row = global_row + row_offsets[direction_index]
+                        neighbor_col = global_col + col_offsets[direction_index]
+
+                        #See if neighbor out of bounds
+                        if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
+                            continue
+
+                        block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+                        #if neighbor inflows
+                        neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                        if neighbor_direction == outflow_direction_nodata:
+                            continue
+
+                        #check if the cell flows directly, or is one index off
+                        if (inflow_offsets[direction_index] != neighbor_direction and
+                                ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
+                            #then neighbor doesn't inflow into current cell
+                            continue
+
+                        #Calculate the outflow weight
+                        outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+
+                        if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
+                            outflow_weight = 1.0 - outflow_weight
+
+                        if outflow_weight <= 0.0:
+                            continue
+                        pour_sum += r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+
+                    block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+                    pour_block[row_index, col_index, row_block_offset, col_block_offset] = pour_sum
+                    cache_dirty[row_index, col_index] = 1
+    block_cache.flush_cache()
