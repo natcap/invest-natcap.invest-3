@@ -152,8 +152,8 @@ def get_inputs(args):
     if vars_dict['do_yield_regression']:
         assert_crops_in_list(vars_dict, 'modeled_yield_dict')
         if vars_dict['do_fertilizer_maps'] == False:
-            LOGGER.error("Fertilizer maps must be provided to run the yield\
-regression model")
+            LOGGER.error("Fertilizer maps must be provided to run the yield "
+                         "regression model")
 
     if vars_dict['do_nutrition']:
         vars_dict = read_nutrition_table(vars_dict)
@@ -253,8 +253,8 @@ def create_crops_in_aoi_list(vars_dict):
         try:
             crops_in_aoi_list.append(crop_lookup_dict[crop_num])
         except KeyError:
-            LOGGER.warning("Land Use Map contains values not listed in the Crop \
-Lookup Table")
+            LOGGER.warning("Land Use Map contains values not listed in the "
+                           "Crop Lookup Table")
 
     vars_dict['crops_in_aoi_list'] = convert_dict_to_unicode(
         crops_in_aoi_list)
@@ -450,8 +450,9 @@ def read_percentile_yield_tables(vars_dict):
     try:
         assert(os.path.exists(vars_dict['percentile_yield_tables_dir']))
     except:
-        LOGGER.error('A filepath to the directory containing percentile yield \
-tables must be provided to run the percentile yield model.')
+        LOGGER.error("A filepath to the directory containing percentile yield "
+                     "tables must be provided to run the percentile yield "
+                     "model.")
         raise KeyError
 
     table_uris = _listdir(vars_dict['percentile_yield_tables_dir'])
@@ -512,8 +513,9 @@ def read_regression_model_yield_tables(vars_dict):
     try:
         assert(os.path.exists(vars_dict['modeled_yield_tables_dir']))
     except:
-        LOGGER.error('A filepath to the directory containing the regresison yield \
-tables must be provided to run the regression yield model.')
+        LOGGER.error("A filepath to the directory containing the regresison "
+                     "yield tables must be provided to run the regression "
+                     "yield model.")
         raise KeyError
 
     table_uris = _listdir(vars_dict['modeled_yield_tables_dir'])
@@ -576,8 +578,9 @@ def fetch_fertilizer_maps(vars_dict):
         assert(not set(fertilizer_list).difference(
             fertilizer_maps_dict.keys()))
     except:
-        LOGGER.warning("Issue fetching fertilizer maps.  Please check that the\
- contents of the fertilizer maps folder are properly formatted")
+        LOGGER.warning("Issue fetching fertilizer maps.  Please check that "
+                       "the contents of the fertilizer maps folder are "
+                       "properly formatted")
 
     vars_dict['fertilizer_maps_dict'] = convert_dict_to_unicode(
         fertilizer_maps_dict)

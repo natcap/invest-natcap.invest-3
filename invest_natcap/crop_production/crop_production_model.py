@@ -91,7 +91,7 @@ def calc_observed_yield(vars_dict):
             crop,
             ObservedLocalYield_raster)
 
-        total_production = float(np.around(
+        total_production = float(np.round(
             Production_raster.sum(), decimals=2))
         vars_dict['crop_production_dict'][crop] = total_production
 
@@ -275,11 +275,11 @@ def _calc_crop_returns(vars_dict, crop, lulc_raster, production_raster, returns_
 
     returns_raster = revenue_raster - cost_raster
 
-    total_cost = float(np.around(
+    total_cost = float(np.round(
         cost_raster.sum(), decimals=2))
-    total_revenue = float(np.around(
+    total_revenue = float(np.round(
         revenue_raster.sum(), decimals=2))
-    total_returns = float(np.around(
+    total_returns = float(np.round(
         returns_raster.sum(), decimals=2))
 
     vars_dict['economics_table_dict'][crop]['total_cost'] = total_cost
@@ -312,8 +312,8 @@ def _calc_cost_of_per_ton_inputs(vars_dict, crop, lulc_raster):
         NitrogenCost_raster = Nitrogen_raster * cost_nitrogen_per_kg
         CostPerTonInputTotal_raster += NitrogenCost_raster
     except KeyError:
-        LOGGER.warning("Skipping nitrogen cost because insufficient amount \
-of information provided.")
+        LOGGER.warning("Skipping nitrogen cost because insufficient amount "
+                       "of information provided.")
     try:
         cost_phosphorous_per_kg = economics_table_crop[
             'cost_phosphorous_per_kg']
@@ -322,8 +322,8 @@ of information provided.")
         PhosphorousCost_raster = Phosphorous_raster * cost_phosphorous_per_kg
         CostPerTonInputTotal_raster += PhosphorousCost_raster
     except KeyError:
-        LOGGER.warning("Skipping phosphorous cost because insufficient amount \
-of information provided.")
+        LOGGER.warning("Skipping phosphorous cost because insufficient amount "
+                       "of information provided.")
     try:
         cost_potash_per_kg = economics_table_crop['cost_potash_per_kg']
         Potash_raster = Raster.from_file(
@@ -331,8 +331,8 @@ of information provided.")
         PotashCost_raster = Potash_raster * cost_potash_per_kg
         CostPerTonInputTotal_raster += PotashCost_raster
     except KeyError:
-        LOGGER.warning("Skipping potash cost because insufficient amount of \
-information provided.")
+        LOGGER.warning("Skipping potash cost because insufficient amount of "
+                       "information provided.")
 
     CostPerTonInputTotal_masked_raster = CostPerTonInputTotal_raster * masked_lulc_raster_float
 
@@ -355,35 +355,36 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
     try:
         cost_labor_per_cell = economics_table_crop[
             'cost_labor_per_ha'] * ha_per_cell
-        CostLabor_raster = masked_lulc_raster_float * cost_labor_per_cell 
+        CostLabor_raster = masked_lulc_raster_float * cost_labor_per_cell
         CostPerHectareInputTotal_raster += CostLabor_raster
     except KeyError:
-        LOGGER.warning("Skipping labor cost because 'cost_labor_per_ha' not \
-provided in economics table.")
+        LOGGER.warning("Skipping labor cost because 'cost_labor_per_ha' not "
+                       "provided in economics table.")
     try:
         cost_machine_per_cell = economics_table_crop[
             'cost_machine_per_ha'] * ha_per_cell
-        CostMachine_raster = masked_lulc_raster_float * cost_machine_per_cell 
+        CostMachine_raster = masked_lulc_raster_float * cost_machine_per_cell
         CostPerHectareInputTotal_raster += CostMachine_raster
     except KeyError:
-        LOGGER.warning("Skipping machine cost because 'cost_machine_per_ha' \
-not provided in economics table.")
+        LOGGER.warning("Skipping machine cost because 'cost_machine_per_ha' "
+                       "not provided in economics table.")
     try:
         cost_seed_per_cell = economics_table_crop[
             'cost_seed_per_ha'] * ha_per_cell
         CostSeed_raster = masked_lulc_raster_float * cost_seed_per_cell
         CostPerHectareInputTotal_raster += CostSeed_raster
     except KeyError:
-        LOGGER.warning("Skipping seed cost because 'cost_seed_per_ha' not \
-provided in economics table.")
+        LOGGER.warning("Skipping seed cost because 'cost_seed_per_ha' not "
+                       "provided in economics table.")
     try:
         cost_irrigation_per_cell = economics_table_crop[
             'cost_irrigation_per_ha'] * ha_per_cell
         CostIrrigation_raster = masked_lulc_raster_float * cost_irrigation_per_cell
         CostPerHectareInputTotal_raster += CostIrrigation_raster
     except KeyError:
-        LOGGER.warning("Skipping irrigation cost because \
-'cost_irrigation_per_ha' not provided in economics table.")
+        LOGGER.warning("Skipping irrigation cost because "
+                       "'cost_irrigation_per_ha' not provided in economics "
+                       "table.")
 
     CostPerHectareInputTotal_masked_raster = CostPerHectareInputTotal_raster * masked_lulc_raster_float
 
@@ -455,7 +456,7 @@ def calc_percentile_yield(vars_dict):
             Production_raster = _calculate_production_for_crop(
                 vars_dict, crop, yield_raster, percentile=percentile)
 
-            total_production = float(np.around(
+            total_production = float(np.round(
                 Production_raster.sum(), decimals=2))
             vars_dict['crop_production_dict'][crop] = total_production
 
@@ -583,7 +584,7 @@ def calc_regression_yield(vars_dict):
         Production_raster = _calculate_production_for_crop(
             vars_dict, crop, Yield_given_lulc_raster)
 
-        total_production = float(np.around(
+        total_production = float(np.round(
             Production_raster.sum(), decimals=2))
         vars_dict['crop_production_dict'][crop] = total_production
 
@@ -769,7 +770,7 @@ def _calc_nutrition(vars_dict):
             nutrient_unit = nutrition_row_per_unit[nutrient]
             if type(nutrient_unit) not in [int, float]:
                 nutrient_unit = 0
-            total_nutrient = float(np.around((
+            total_nutrient = float(np.round((
                 production * nutrient_unit * (1 - fraction_refuse)),
                 decimals=2))
             nutrition_row_total[nutrient] = total_nutrient

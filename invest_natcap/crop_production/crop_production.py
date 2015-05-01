@@ -137,14 +137,14 @@ def execute(args):
         results_dict['observed_vars_dict'] = observed_vars_dict
 
     if vars_dict['do_yield_percentile']:
-        LOGGER.info("Calculating Yield from Climate-based Distribution of \
-Observed Yields...")
+        LOGGER.info("Calculating Yield from Climate-based Distribution of "
+                    "Observed Yields...")
         percentile_vars_dict = model.calc_percentile_yield(vars_dict)
         results_dict['percentile_vars_dict'] = percentile_vars_dict
 
     if vars_dict['do_yield_regression']:
-        LOGGER.info("Calculating Yield from Regression Model with \
-Climate-based Parameters...")
+        LOGGER.info("Calculating Yield from Regression Model with "
+                    "Climate-based Parameters...")
         regression_vars_dict = model.calc_regression_yield(vars_dict)
         results_dict['regression_vars_dict'] = regression_vars_dict
 
