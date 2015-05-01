@@ -2700,13 +2700,12 @@ def calculate_recharge(
         outflow_direction_uri, outflow_weights_uri, outlet_cell_deque)
 
 
-cdef calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
+def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, pour_uri):
     """Calculate how r_sum_avail pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
     outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
-
 
     calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)

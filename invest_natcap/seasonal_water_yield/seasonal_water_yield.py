@@ -138,17 +138,22 @@ def calculate_slow_flow(
         gdal.GDT_Float32, ri_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
+    out_dir = os.path.dirname(r_sum_avail_uri)
+    pour_uri = os.path.join(out_dir, 'pour.tif')
+
+    seasonal_water_yield_core.calculate_r_sum_avail_pour(
+        r_sum_avail_uri, flow_dir_uri, pour_uri)
 
     #calc slow flow index
 
-    constant_flux_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    zero_absorption_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    loss_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+    #constant_flux_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+    #zero_absorption_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
+    #loss_uri = pygeoprocessing.temporary_filename(suffix='.tif')
 
-    pygeoprocessing.make_constant_raster_from_base_uri(
-        dem_uri, 1.0, constant_flux_source_uri)
-    pygeoprocessing.make_constant_raster_from_base_uri(
-        dem_uri, 0.0, zero_absorption_source_uri)
+    #pygeoprocessing.make_constant_raster_from_base_uri(
+    #    dem_uri, 1.0, constant_flux_source_uri)
+    #pygeoprocessing.make_constant_raster_from_base_uri(
+    #    dem_uri, 0.0, zero_absorption_source_uri)
 
     #route_flux(
     #    flow_dir_uri, dem_uri, constant_flux_source_uri,
