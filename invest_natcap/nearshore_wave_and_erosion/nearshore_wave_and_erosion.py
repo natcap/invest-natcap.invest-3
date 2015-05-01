@@ -555,15 +555,15 @@ def execute(args):
     #       'MLLW':2 -> the habitat is allowed to grow within depths that range 
     #           from 0 to 2 units of MLLW. If MLLW is 1.2, 
     #           the depth is 1.2x2=2.4m
-    #       'MHHW':0.5 -> the habitat is allowed to grow within an elevations 
-    #           that range from 0 to 0.5 units of MHHW. If MLLW is 0.2, 
+    #       'MHHW':0.5 -> the habitat is allowed to grow within elevations 
+    #           that range from 0 to 0.5 x MHHW. If MLLW is 0.2, 
     #           the depth is 0.2x0.5=0.1m
     #
     # Negative values are the opposite: instead of specifying an area FROM 
     #   the shore out, it specifies an area UP TO the shore. In other words,
     #   The area 
-    #       'land':-10 -> the habitat is allowed to grow from 10m inland from 
-    #           the shore up to infinity landward.
+    #       'land':-10 -> the habitat can't to grow inland beyond 10m from
+    #           the shore.
     #       'MLLW':-2 -> the habitat cannot grow at depths shallower 
     #           than 2 units of MLLW. If MLLW is 1.2, the depth is 1.2x2=2.4m
     #
