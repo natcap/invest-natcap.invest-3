@@ -139,26 +139,17 @@ def calculate_slow_flow(
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     out_dir = os.path.dirname(r_sum_avail_uri)
-    pour_uri = os.path.join(out_dir, 'pour.tif')
+    r_sum_avail_pour_uri = os.path.join(out_dir, 'r_sum_avail_pour.tif')
 
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
-        r_sum_avail_uri, flow_dir_uri, pour_uri)
+        r_sum_avail_uri, flow_dir_uri, r_sum_avail_pour_uri)
 
-    #calc slow flow index
+    sf_uri = os.path.join(out_dir, 'sf.tif')
+    sf_down_uri = os.path.join(out_dir, 'sf_down.tif')
 
-    #constant_flux_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    #zero_absorption_source_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-    #loss_uri = pygeoprocessing.temporary_filename(suffix='.tif')
-
-    #pygeoprocessing.make_constant_raster_from_base_uri(
-    #    dem_uri, 1.0, constant_flux_source_uri)
-    #pygeoprocessing.make_constant_raster_from_base_uri(
-    #    dem_uri, 0.0, zero_absorption_source_uri)
-
-    #route_flux(
-    #    flow_dir_uri, dem_uri, constant_flux_source_uri,
-    #    zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only',
-    #    aoi_uri=aoi_uri)
+    seasonal_water_yield_core.route_sf(
+        r_sum_avail_uri, r_sum_avail_pour_uri, flow_dir_uri, sf_uri,
+        sf_down_uri)
 
 
 def main():

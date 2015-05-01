@@ -2700,7 +2700,7 @@ def calculate_recharge(
         outflow_direction_uri, outflow_weights_uri, outlet_cell_deque)
 
 
-def calculate_r_sum_avail_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):
+def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):
     """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
@@ -2833,4 +2833,211 @@ def calculate_r_sum_avail_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, 
                     block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
                     r_sum_avail_pour_block[row_index, col_index, row_block_offset, col_block_offset] = r_sum_avail_pour_sum
                     cache_dirty[row_index, col_index] = 1
+    block_cache.flush_cache()
+
+
+def route_sf(
+    r_sum_avail_uri, r_sum_avail_pour_uri, outflow_direction_uri,
+    outflow_weights_uri, sf_uri, sf_down_uri):
+
+    #Pass transport
+    cdef time_t start
+    time(&start)
+
+    #load a base dataset so we can determine the n_rows/cols
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    cdef int n_cols = outflow_direction_dataset.RasterXSize
+    cdef int n_rows = outflow_direction_dataset.RasterYSize
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = outflow_direction_band.GetBlockSize()
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
+    #define all the single caches
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_sum_avail_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
+
+    cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+        outflow_direction_uri)
+
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+        outflow_weights_uri)
+
+    #Create output arrays qfi and recharge and recharge_avail
+    r_sum_avail_dataset = gdal.Open(r_sum_avail_uri)
+    r_sum_avail_band = r_sum_avail_dataset.GetRasterBand(1)
+
+    band_list = []
+    block_list = []
+    update_list = []
+    cache_dirty[:] = 0
+
+    cdef BlockCache block_cache = BlockCache(
+        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
+        block_row_size, block_col_size,
+        band_list, block_list, update_list, cache_dirty)
+
+    #Process flux through the grid
+    cdef stack[int] cells_to_process
+    cdef stack[int] cell_neighbor_to_process
+    cdef stack[float] r_sum_stack
+    for cell in sink_cell_deque:
+        cells_to_process.push(cell)
+        cell_neighbor_to_process.push(0)
+        r_sum_stack.push(0)
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+
+    cdef int neighbor_direction
+    cdef double absorption_rate
+    cdef double outflow_weight
+    cdef double in_flux
+    cdef int current_neighbor_index
+    cdef int current_index
+    cdef float current_r_sum_avail
+    cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(qfi_uri_list[0])
+    cdef int month_index
+    cdef float aet_sum
+    cdef float pet_m
+    cdef float aet_m
+    cdef float p_i
+    cdef float qf_i
+    cdef float qfi_m
+    cdef float p_m
+    cdef float r_i
+    cdef int neighbors_calculated = 0
+
+    cdef time_t last_time, current_time
+    time(&last_time)
+    while not cells_to_process.empty():
+        time(&current_time)
+        if current_time - last_time > 5.0:
+            LOGGER.info('route_recharge work queue size = %d' % (cells_to_process.size()))
+            last_time = current_time
+
+        current_index = cells_to_process.top()
+        cells_to_process.pop()
+        with cython.cdivision(True):
+            global_row = current_index / n_cols
+            global_col = current_index % n_cols
+        #see if we need to update the row cache
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+
+        #Ensure we are working on a valid pixel, if not set everything to 0
+            #check quickflow nodata? month 0? qfi_nodata
+        if qfi_block_list[0, row_index, col_index, row_block_offset, col_block_offset] == qfi_nodata:
+            recharge_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            cache_dirty[row_index, col_index] = 1
+            continue
+
+        current_neighbor_index = cell_neighbor_to_process.top()
+        cell_neighbor_to_process.pop()
+        current_r_sum_avail = r_sum_stack.top()
+        r_sum_stack.pop()
+        neighbors_calculated = 1
+        for direction_index in xrange(current_neighbor_index, 8):
+            #get percent flow from neighbor to current cell
+            neighbor_row = global_row + row_offsets[direction_index]
+            neighbor_col = global_col + col_offsets[direction_index]
+
+            #See if neighbor out of bounds
+            if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
+                continue
+
+            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+            #if neighbor inflows
+            neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+            if neighbor_direction == outflow_direction_nodata:
+                continue
+
+            #check if the cell flows directly, or is one index off
+            if (inflow_offsets[direction_index] != neighbor_direction and
+                    ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
+                #then neighbor doesn't inflow into current cell
+                continue
+
+            #Calculate the outflow weight
+            outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+
+            if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
+                outflow_weight = 1.0 - outflow_weight
+
+            if outflow_weight <= 0.0:
+                continue
+
+            if r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
+                #push current cell and and loop
+                cells_to_process.push(current_index)
+                cell_neighbor_to_process.push(direction_index)
+                r_sum_stack.push(current_r_sum_avail)
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+                cell_neighbor_to_process.push(0)
+                r_sum_stack.push(0.0)
+                neighbors_calculated = 0
+                break
+            else:
+                #'calculate r_avail_i and r_i'
+                #add the contribution of the upstream to r_avail and r_i
+                current_r_sum_avail =+ (
+                    r_sum_avail_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] +
+                    recharge_avail_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
+
+        if not neighbors_calculated:
+            continue
+
+        #if we got here current_r_sum_avail is correct
+        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+        p_i = 0.0
+        qf_i = 0.0
+        aet_sum = 0.0
+        for month_index in xrange(N_MONTHS):
+            p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
+            p_i += p_m
+            pet_m = (
+                kc_block[row_index, col_index, row_block_offset, col_block_offset] *
+                et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
+            qf_i += qfi_m
+            aet_m = min(
+                pet_m, p_m - qfi_m + alpha_m * beta_i * current_r_sum_avail)
+            aet_sum += aet_m
+        r_i = p_i - qf_i - aet_sum
+
+        r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
+        recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
+        recharge_block[row_index, col_index, row_block_offset, col_block_offset] = r_i
+        aet_block[row_index, col_index, row_block_offset, col_block_offset] = aet_sum
+        cache_dirty[row_index, col_index] = 1
+
     block_cache.flush_cache()
