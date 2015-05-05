@@ -109,7 +109,8 @@ def calculate_quick_flow(
 def calculate_slow_flow(
         aoi_uri, precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
-        recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri):
+        recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri,
+        stream_uri):
     """calculate slow flow index"""
 
     seasonal_water_yield_core.calculate_recharge(
@@ -147,8 +148,17 @@ def calculate_slow_flow(
     sf_uri = os.path.join(out_dir, 'sf.tif')
     sf_down_uri = os.path.join(out_dir, 'sf_down.tif')
 
+    outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
+    outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
+
+    LOGGER.info('calculating flow weights')
+    seasonal_water_yield_core.calculate_flow_weights(
+        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
+
+    LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
-        r_sum_avail_uri, r_sum_avail_pour_uri, flow_dir_uri, sf_uri,
+        dem_uri, recharge_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
+        outflow_direction_uri, outflow_weights_uri, stream_uri, sf_uri,
         sf_down_uri)
 
 
@@ -247,12 +257,16 @@ def main():
     pygeoprocessing.routing.flow_direction_d_inf(
         dem_uri_aligned, flow_dir_uri)
 
-    #flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
-    #pygeoprocessing.routing.flow_accumulation(
-    #    flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
+    pygeoprocessing.routing.flow_accumulation(
+        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+    stream_uri = os.path.join(output_dir, 'stream.tif')
+    threshold_flow_accumulation = 100
+    pygeoprocessing.routing.stream_threshold(
+        flow_accum_uri, threshold_flow_accumulation, stream_uri)
 
     calculate_slow_flow(
         aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
         dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
         qfi_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri,
-        vri_uri)
+        vri_uri, stream_uri)
