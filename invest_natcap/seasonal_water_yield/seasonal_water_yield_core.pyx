@@ -2937,14 +2937,14 @@ def route_sf(
     cdef float sf_down_nodata = -9999.0
     pygeoprocessing.new_raster_from_base_uri(
         outflow_direction_uri, sf_down_uri, 'GTiff', sf_down_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float32, fill_value=sf_down_nodata)
     sf_down_dataset = gdal.Open(sf_down_uri, gdal.GA_Update)
     sf_down_band = sf_down_dataset.GetRasterBand(1)
 
     cdef float sf_nodata = -9999.0
     pygeoprocessing.new_raster_from_base_uri(
         outflow_direction_uri, sf_uri, 'GTiff', sf_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float32, fill_value=sf_nodata)
     sf_dataset = gdal.Open(sf_uri, gdal.GA_Update)
     sf_band = sf_dataset.GetRasterBand(1)
 
@@ -2983,6 +2983,7 @@ def route_sf(
     cdef float neighbor_sf_down
     cdef float neighbor_sf
     cdef float sf_down_sum
+    cdef float sf
     cdef float r_i
     cdef int neighbor_direction
 
@@ -2999,27 +3000,54 @@ def route_sf(
         block_cache.update_cache(
             global_row, global_col, &row_index, &col_index,
             &row_block_offset, &col_block_offset)
+
+        outflow_weight = outflow_weights_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+        outflow_direction = outflow_direction_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+        sf = sf_block[row_index, col_index, row_block_offset, col_block_offset]
+
         time(&current_time)
         if current_time - last_time > 5.0:
             last_time = current_time
             LOGGER.info(
                 'cells_to_process on SF route size: %d',
                 cells_to_process.size())
-            #cell_str = "["
-            #for cell in cells_to_process:
-            #    cell_str += str(cell) + ', '
-            #cell_str += ']'
-            #LOGGER.debug(cell_str)
+            index_str = "[(%d, %d)," % (global_row, global_col)
+            dir_weight_str = "[(%d, %f, %f)," % (outflow_direction, outflow_weight, sf)
+            count = 8
+            for cell in cells_to_process:
+                count -= 1
+                cell_row = cell / n_cols
+                cell_col = cell % n_cols
+                index_str += "(%d, %d)," % (cell_row, cell_col)
+
+                block_cache.update_cache(
+                    cell_row, cell_col, &row_index, &col_index,
+                    &row_block_offset, &col_block_offset)
+
+                outflow_weight = outflow_weights_block[
+                    row_index, col_index, row_block_offset, col_block_offset]
+                outflow_direction = outflow_direction_block[
+                    row_index, col_index, row_block_offset, col_block_offset]
+                sf = sf_block[row_index, col_index, row_block_offset, col_block_offset]
+
+                dir_weight_str += "(%d, %f, %f)," % (outflow_direction, outflow_weight, sf)
+
+                if count == 0: break
+            index_str += '...]'
+            dir_weight_str += '...]'
+            LOGGER.debug(index_str)
+            LOGGER.debug(dir_weight_str)
             block_cache.flush_cache()
 
+
+        block_cache.update_cache(
+            global_row, global_col, &row_index, &col_index,
+            &row_block_offset, &col_block_offset)
         #if cell is processed, then skip
         if sf_block[row_index, col_index, row_block_offset, col_block_offset] != sf_nodata:
             continue
-
-        outflow_weight = outflow_weights_block[
-            row_index, col_index, row_block_offset, col_block_offset]
-        outflow_direction = outflow_direction_block[
-            row_index, col_index, row_block_offset, col_block_offset]
 
         if outflow_direction == outflow_direction_nodata:
             r_sum_avail = r_sum_avail_block[
@@ -3070,7 +3098,7 @@ def route_sf(
                     sf_down_sum += outflow_weight * r_sum_avail / 1000.0 * pixel_area
                 else:
                     if sf_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] != sf_nodata:
+                        neighbor_row_block_offset, neighbor_col_block_offset] == sf_nodata:
                         #push neighbor on stack
                         downstream_calculated = 0
                         neighbor_flat_index = neighbor_row * n_cols + neighbor_col
@@ -3102,6 +3130,8 @@ def route_sf(
                             neighbor_row_block_offset, neighbor_col_block_offset]
                         sf_down_sum += outflow_weight * (neighbor_sf_down - neighbor_sf) * r_sum_avail / neighbor_r_sum_avail_pour
 
+            if global_row == 529 and global_col == 663:
+                LOGGER.debug("%d, %f", downstream_calculated, sf_down_sum)
             if downstream_calculated:
                 block_cache.update_cache(
                     global_row, global_col, &row_index, &col_index,
@@ -3158,7 +3188,7 @@ def route_sf(
 
             neighbor_flat_index = neighbor_row * n_cols + neighbor_col
             if cells_in_queue.find(neighbor_flat_index) == cells_in_queue.end():
-                cells_to_process.push_front(neighbor_flat_index)
+                cells_to_process.push_back(neighbor_flat_index)
                 cells_in_queue.insert(neighbor_flat_index)
                 #LOGGER.debug("inserting neighbor_flat_index %d", neighbor_flat_index)
                 #LOGGER.debug('outflow weight %f', outflow_weight)
