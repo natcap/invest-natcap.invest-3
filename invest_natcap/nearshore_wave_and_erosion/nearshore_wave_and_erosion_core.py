@@ -72,7 +72,7 @@ def compute_transects(args):
     LOGGER.debug('Computing transects...')
 
     # transect resampling resolution
-    resampling_resolution = 30
+    resampling_resolution = 10
 
     # Store shore and transect information
     shore_nodata = -20000.0
@@ -167,9 +167,9 @@ def compute_transects(args):
     #   'raw_positions': numpy array
     #   'clip_limits': tuple (first, last)
     transect_info = []
-    transect_info2 = []
+    transect_info_fine = []
     max_transect_length = 0
-    max_transect_length2 = 0
+    max_transect_length_fine = 0
 
     # Going through the bathymetry raster tile-by-tile.
     LOGGER.debug('Detecting shore')
@@ -309,13 +309,12 @@ def compute_transects(args):
                         
                         transect_cell_size = \
                             min(args['cell_size'], resampling_resolution)
-                        interpolated_depths2 = \
+                        interpolated_depths_fine = \
                             interpolate_transect(clipped_transect, \
                                 args['cell_size'], \
                                 transect_cell_size)
 
-
-                        interpolated_positions = ( \
+                        interpolated_positions_fine = ( \
                             interpolate_transect(clipped_positions[0], \
                                 args['cell_size'], \
                                 transect_cell_size), \
@@ -331,13 +330,13 @@ def compute_transects(args):
 
                         # Smooth transect
                         smoothed_depths = \
-                            smooth_transect(interpolated_depths2, \
+                            smooth_transect(interpolated_depths_fine, \
                                 args['smoothing_percentage'])
 #                            smooth_transect(interpolated_depths, \
 #                                args['smoothing_percentage'])
 
-                        smoothed_depths2 = \
-                            smooth_transect(interpolated_depths2, \
+                        smoothed_depths_fine = \
+                            smooth_transect(interpolated_depths_fine, \
                                 args['smoothing_percentage'])
 
 
@@ -345,49 +344,51 @@ def compute_transects(args):
                             args['cell_size'] / transect_cell_size
                         
 
-                        start2 = int(start * stretch_coeff)
-                        end2 = int(smoothed_depths.size + start2)
-                        shore2 = int(shore * stretch_coeff)
+                        start_fine = int(start * stretch_coeff)
+                        end_fine = int(smoothed_depths.size + start_fine)
+                        shore_fine = int(shore * stretch_coeff)
 
-#                        print('(start, shore, end)', (start, shore, end))
-#                        print('(start2, shore2, end2)', (start2, shore2, end2))
 
-#                        sys.exit(0)
-
-                        start, shore, end = start2, shore2, end2
+                        start, shore, end = \
+                            start_fine, shore_fine, end_fine
 
                         # Closest point to zero
-                        shore3 = np.argmin(abs(smoothed_depths2[ \
-                            shore2-stretch_coeff:shore2+stretch_coeff+1]))
+                        almost_zero = np.argmin(abs(smoothed_depths_fine[ \
+                            shore_fine-stretch_coeff:shore_fine+ \
+                            stretch_coeff+1]))
                         
-                        shore2 = shore3 + shore2 - stretch_coeff
+                        shore_fine = \
+                            almost_zero + shore_fine - stretch_coeff
 
 
                         # Perform additional QAQC:
 
                         # Enforce total profile length
                         profile_length = end - start
-                        profile_length2 = end2 - start2
+                        fine_profile_length = end_fine - start_fine
 
                         profile_length_m = profile_length * i_side_fine
-                        profile_length_m2 = profile_length2 * transect_cell_size
+                        fine_profile_length_m = \
+                            fine_profile_length * transect_cell_size
 
                         if profile_length_m < args['min_profile_length']:
                             continue
-                        if profile_length_m2 < args['min_profile_length']:
+                        if fine_profile_length_m < args['min_profile_length']:
                             continue
 
                        
                         # Enforce minimum offshore profile length
                         offshore_length = end - shore
-                        offshore_length2 = end2 - shore2
+                        fine_offshore_length = end_fine - shore_fine
 
                         offshore_length_m = offshore_length * i_side_fine
-                        offshore_length_m2 = offshore_length2 * transect_cell_size
+                        fine_offshore_length_m = \
+                            fine_offshore_length * transect_cell_size
 
                         if offshore_length_m < args['min_offshore_profile_length']:
                             continue
-                        if offshore_length_m2 < args['min_offshore_profile_length']:
+                        if fine_offshore_length_m < \
+                            args['min_offshore_profile_length']:
                             continue
 
                        
@@ -418,24 +419,24 @@ def compute_transects(args):
 
 
                         # Enforce minimum profile depth
-                        average_depth2 = \
-                            np.sum(smoothed_depths2[shore2:end2]) / offshore_length_m2
+                        average_depth_fine = \
+                            np.sum(smoothed_depths_fine[shore_fine:end_fine]) / fine_offshore_length_m
 
-                        if average_depth2 > args['min_profile_depth']:
+                        if average_depth_fine > args['min_profile_depth']:
                             continue
                         # At this point, the transect is valid: 
                         else:
                             # Store important information about it
-                            transect_info2.append( \
+                            transect_info_fine.append( \
                                 {'raw_positions': \
-                                    (interpolated_positions[0][start2:end2], \
-                                    interpolated_positions[1][start2:end2]), \
-                                'depths':smoothed_depths2[start2:end2], \
-                                'clip_limits':(0, shore2-start2, end2-start2)})
+                                    (interpolated_positions_fine[0][start_fine:end_fine], \
+                                    interpolated_positions_fine[1][start_fine:end_fine]), \
+                                'depths':smoothed_depths_fine[start_fine:end_fine], \
+                                'clip_limits':(0, shore_fine-start_fine, end_fine-start_fine)})
 
                             # Update the longest transect length if necessary
-                            if (end2 - start2) > max_transect_length2:
-                                max_transect_length2 = end2 - start2
+                            if (end_fine - start_fine) > max_transect_length_fine:
+                                max_transect_length_fine = end_fine - start_fine
                            
 #                            tiles += 1
 
@@ -455,7 +456,7 @@ def compute_transects(args):
 
     LOGGER.debug('found %i tiles.' % tiles)
 
-    tiles = len(transect_info)
+    tiles = len(transect_info_fine)
 
     transect_count = tiles
 
@@ -477,20 +478,22 @@ def compute_transects(args):
     transect_data_file = h5py.File(args['transect_data_uri'], 'w')
     
 
+#    print('max_transect_length_fine', max_transect_length_fine)
+
     bathymetry_dataset = \
         transect_data_file.create_dataset('bathymetry', \
-            (tiles, max_transect_length2), \
+            (tiles, max_transect_length_fine), \
             compression = 'gzip', fillvalue = habitat_nodata)
     
     positions_dataset = \
         transect_data_file.create_dataset('ij_positions', \
-            (tiles, 2, max_transect_length2), \
+            (tiles, 2, max_transect_length_fine), \
             compression = 'gzip', fillvalue = habitat_nodata, \
             dtype = 'i4')
     
     xy_positions_dataset = \
         transect_data_file.create_dataset('xy_positions', \
-            (tiles, 2, max_transect_length2), \
+            (tiles, 2, max_transect_length_fine), \
             compression = 'gzip', fillvalue = habitat_nodata)
     
     shore_dataset = \
@@ -529,21 +532,21 @@ def compute_transects(args):
     gt = dataset.GetGeoTransform()
     dataset = None
     
-    for transect in range(len(transect_info)):
-        (start, shore, end) = transect_info[transect]['clip_limits']
+    for transect in range(len(transect_info_fine)):
+        (start, shore, end) = transect_info_fine[transect]['clip_limits']
 
 #        print('start, shore, end', start, shore, end)
 #        print('positions_dataset[transect, 0]', \
 #            positions_dataset[transect, 0].shape)
-#        print("transect_info[transect]['raw_positions'][0]", \
-#            transect_info[transect]['raw_positions'][0].shape)
+#        print("transect_info_fine[transect]['raw_positions'][0]", \
+#            transect_info_fine[transect]['raw_positions'][0].shape)
         
 
         positions_dataset[transect, 0, start:end] = \
-            transect_info[transect]['raw_positions'][0][start:end]
+            transect_info_fine[transect]['raw_positions'][0][start:end]
 
         positions_dataset[transect, 1, start:end] = \
-            transect_info[transect]['raw_positions'][1][start:end]
+            transect_info_fine[transect]['raw_positions'][1][start:end]
 
 
         # We want pixel center, not corner
@@ -551,9 +554,9 @@ def compute_transects(args):
         step = np.array([gt[4]+gt[5], gt[1]+gt[2]])
 
 
-        I = transect_info[transect]['raw_positions'][0][start:end] * \
+        I = transect_info_fine[transect]['raw_positions'][0][start:end] * \
             step[0] + origin[0]
-        J = transect_info[transect]['raw_positions'][1][start:end] * \
+        J = transect_info_fine[transect]['raw_positions'][1][start:end] * \
             step[1] + origin[1]
 
         xy_positions_dataset[transect, 0, start:end] = J[start:end]
@@ -562,12 +565,12 @@ def compute_transects(args):
 #        print('start, end', start, end)
 #        print("bathymetry_dataset[transect, start:end]", \
 #            bathymetry_dataset[transect, start:end].shape)
-#        print("transect_info[transect]['depths'][start:end]", \
-#            transect_info[transect]['depths'][start:end].shape)
+#        print("transect_info_fine[transect]['depths'][start:end]", \
+#            transect_info_fine[transect]['depths'][start:end].shape)
 #        sys.exit(0)
 
         bathymetry_dataset[transect, start:end] = \
-            transect_info[transect]['depths'][start:end]
+            transect_info_fine[transect]['depths'][start:end]
 
 
         indices_limit_dataset[transect] = [start, end]
@@ -575,15 +578,15 @@ def compute_transects(args):
         shore_dataset[transect] = shore
 
         coordinates_limits_dataset[transect] = [ \
-            transect_info[transect]['raw_positions'][0][start], \
-            transect_info[transect]['raw_positions'][1][start], \
-            transect_info[transect]['raw_positions'][0][end-1], \
-            transect_info[transect]['raw_positions'][1][end-1], \
+            transect_info_fine[transect]['raw_positions'][0][start], \
+            transect_info_fine[transect]['raw_positions'][1][start], \
+            transect_info_fine[transect]['raw_positions'][0][end-1], \
+            transect_info_fine[transect]['raw_positions'][1][end-1], \
             ]
         xy_coordinates_limits_dataset[transect] = \
             [J[start], I[start], J[end-1], I[end-1]]
 
-        transect_info[transect] = None
+        transect_info_fine[transect] = None
 
 
     # Going through the bathymetry raster tile-by-tile.
