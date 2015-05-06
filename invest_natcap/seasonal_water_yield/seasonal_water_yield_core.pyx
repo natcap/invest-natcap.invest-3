@@ -3135,9 +3135,9 @@ def route_sf(
                     global_row, global_col, &row_index, &col_index,
                     &row_block_offset, &col_block_offset)
                 #add contribution of neighbors to calculate si_down and si on current pixel
-                sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
                 r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
                 r_sum_avail = r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset]
+                sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
                 sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
                 cache_dirty[row_index, col_index] = 1
 
