@@ -3005,6 +3005,12 @@ def route_sf(
             LOGGER.info(
                 'cells_to_process on SF route size: %d',
                 cells_to_process.size())
+            #cell_str = "["
+            #for cell in cells_to_process:
+            #    cell_str += str(cell) + ', '
+            #cell_str += ']'
+            #LOGGER.debug(cell_str)
+            block_cache.flush_cache()
 
         #if cell is processed, then skip
         if sf_block[row_index, col_index, row_block_offset, col_block_offset] != sf_nodata:
@@ -3027,13 +3033,17 @@ def route_sf(
                 r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
                 sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
             cache_dirty[row_index, col_index] = 1
+        elif stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
+            sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            cache_dirty[row_index, col_index] = 1
         else:
             downstream_calculated = 1
             sf_down_sum = 0.0
             for neighbor_index in xrange(2):
                 if neighbor_index == 1:
                     outflow_direction = (outflow_direction + 1) % 8
-                    outflow_weight = (1.0 - outflow_weight)
+                    outflow_weight = 1.0 - outflow_weight
 
                 if outflow_weight <= 0.0:
                     #doesn't flow here, so skip
@@ -3052,26 +3062,35 @@ def route_sf(
                     &neighbor_col_block_offset)
 
                 if stream_block[
-                    row_index, col_index, row_block_offset, col_block_offset] == 1:
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] == 1:
                     #calc base case
                     r_sum_avail = r_sum_avail_block[
                         row_index, col_index, row_block_offset, col_block_offset]
                     sf_down_sum += outflow_weight * r_sum_avail / 1000.0 * pixel_area
                 else:
-                    neighbor_r_sum_avail = r_sum_avail_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]
-                    if neighbor_r_sum_avail == r_sum_nodata:
+                    if sf_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] != sf_nodata:
                         #push neighbor on stack
                         downstream_calculated = 0
                         neighbor_flat_index = neighbor_row * n_cols + neighbor_col
+                        #push original on the end of the deque
+                        if (cells_in_queue.find(flat_index) ==
+                            cells_in_queue.end()):
+                            cells_to_process.push_back(flat_index)
+                            cells_in_queue.insert(flat_index)
 
+                        #push neighbor on front of deque
                         if (cells_in_queue.find(neighbor_flat_index) ==
                             cells_in_queue.end()):
                             cells_to_process.push_front(neighbor_flat_index)
                             cells_in_queue.insert(neighbor_flat_index)
+
                     else:
                         #calculate downstream contribution
+                        neighbor_r_sum_avail = r_sum_avail_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset, neighbor_col_block_offset]
                         neighbor_r_sum_avail_pour = r_sum_avail_pour_block[
                             neighbor_row_index, neighbor_col_index,
                             neighbor_row_block_offset, neighbor_col_block_offset]
@@ -3132,10 +3151,18 @@ def route_sf(
             if outflow_weight <= 0.0:
                 continue
 
+            #already processed, no need to loop on it again
+            if sf_block[neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset] != sf_nodata:
+                continue
+
             neighbor_flat_index = neighbor_row * n_cols + neighbor_col
             if cells_in_queue.find(neighbor_flat_index) == cells_in_queue.end():
-                #cells_to_process.push_back(neighbor_flat_index)
-                #cells_in_queue.insert(neighbor_flat_index)
+                cells_to_process.push_front(neighbor_flat_index)
+                cells_in_queue.insert(neighbor_flat_index)
+                #LOGGER.debug("inserting neighbor_flat_index %d", neighbor_flat_index)
+                #LOGGER.debug('outflow weight %f', outflow_weight)
+                #LOGGER.debug('neighbor_direction %d', neighbor_direction)
                 pass
 
         #if downstream aren't processed; skip and process those
