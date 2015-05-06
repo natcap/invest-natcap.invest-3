@@ -3058,7 +3058,10 @@ def route_sf(
                 sf_down_sum = r_sum_avail / 1000.0 * pixel_area
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
                 r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
-                sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
+                if r_sum_avail != 0:
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
+                else:
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             cache_dirty[row_index, col_index] = 1
         elif stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
             sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
