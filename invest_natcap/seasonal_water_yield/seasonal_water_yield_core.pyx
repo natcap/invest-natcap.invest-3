@@ -2978,7 +2978,6 @@ def route_sf(
     cdef int flat_index
     cdef float outflow_weight
     cdef float r_sum_avail
-    cdef float neighbor_r_sum_avail
     cdef float neighbor_r_sum_avail_pour
     cdef float neighbor_sf_down
     cdef float neighbor_sf
@@ -3116,22 +3115,18 @@ def route_sf(
 
                     else:
                         #calculate downstream contribution
-                        neighbor_r_sum_avail = r_sum_avail_block[
-                            neighbor_row_index, neighbor_col_index,
-                            neighbor_row_block_offset, neighbor_col_block_offset]
                         neighbor_r_sum_avail_pour = r_sum_avail_pour_block[
                             neighbor_row_index, neighbor_col_index,
                             neighbor_row_block_offset, neighbor_col_block_offset]
-                        neighbor_sf_down = sf_down_block[
-                            neighbor_row_index, neighbor_col_index,
-                            neighbor_row_block_offset, neighbor_col_block_offset]
-                        neighbor_sf = sf_block[
-                            neighbor_row_index, neighbor_col_index,
-                            neighbor_row_block_offset, neighbor_col_block_offset]
-                        sf_down_sum += outflow_weight * (neighbor_sf_down - neighbor_sf) * r_sum_avail / neighbor_r_sum_avail_pour
+                        if neighbor_r_sum_avail_pour != 0:
+                            neighbor_sf_down = sf_down_block[
+                                neighbor_row_index, neighbor_col_index,
+                                neighbor_row_block_offset, neighbor_col_block_offset]
+                            neighbor_sf = sf_block[
+                                neighbor_row_index, neighbor_col_index,
+                                neighbor_row_block_offset, neighbor_col_block_offset]
+                            sf_down_sum += outflow_weight * (neighbor_sf_down - neighbor_sf) * r_sum_avail / neighbor_r_sum_avail_pour
 
-            if global_row == 529 and global_col == 663:
-                LOGGER.debug("%d, %f", downstream_calculated, sf_down_sum)
             if downstream_calculated:
                 block_cache.update_cache(
                     global_row, global_col, &row_index, &col_index,
