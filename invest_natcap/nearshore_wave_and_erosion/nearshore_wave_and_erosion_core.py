@@ -71,11 +71,23 @@ def execute(args):
 def compute_transects(args):
     LOGGER.debug('Computing transects...')
 
+    # transect resampling resolution
+    resampling_resolution = 30
+
     # Store shore and transect information
     shore_nodata = -20000.0
-    args['transects_uri'] = os.path.join(args['output_dir'], 'transects.tif')
+
+    tmp = pygeoprocessing.geoprocessing.temporary_filename()
     pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
-        args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
+        tmp, 'GTIFF', shore_nodata, gdal.GDT_Float64)
+
+    args['transects_uri'] = os.path.join(args['output_dir'], 'transects.tif')
+    bounding_box = pygeoprocessing.geoprocessing.get_bounding_box( \
+        args['landmass_raster_uri'])
+    # Create a resampled raster based on the landmass
+    pygeoprocessing.geoprocessing.resize_and_resample_dataset_uri(tmp, \
+        bounding_box, resampling_resolution, args['transects_uri'], 'nearest')
+    os.remove(tmp)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
     transect_band = transect_raster.GetRasterBand(1)
     block_size = transect_band.GetBlockSize()
@@ -295,7 +307,8 @@ def compute_transects(args):
                         interpolated_depths = \
                             clipped_transect if clipped_transect.size > 5 else None
                         
-                        transect_cell_size = min(args['cell_size'], 1)
+                        transect_cell_size = \
+                            min(args['cell_size'], resampling_resolution)
                         interpolated_depths2 = \
                             interpolate_transect(clipped_transect, \
                                 args['cell_size'], \
@@ -318,8 +331,10 @@ def compute_transects(args):
 
                         # Smooth transect
                         smoothed_depths = \
-                            smooth_transect(interpolated_depths, \
+                            smooth_transect(interpolated_depths2, \
                                 args['smoothing_percentage'])
+#                            smooth_transect(interpolated_depths, \
+#                                args['smoothing_percentage'])
 
                         smoothed_depths2 = \
                             smooth_transect(interpolated_depths2, \
@@ -329,15 +344,23 @@ def compute_transects(args):
                         stretch_coeff = \
                             args['cell_size'] / transect_cell_size
                         
-                        start2 = start * stretch_coeff
-                        end2 = end * stretch_coeff
-                        shore2 = shore * stretch_coeff
-                        
+
+                        start2 = int(start * stretch_coeff)
+                        end2 = int(smoothed_depths.size + start2)
+                        shore2 = int(shore * stretch_coeff)
+
+#                        print('(start, shore, end)', (start, shore, end))
+#                        print('(start2, shore2, end2)', (start2, shore2, end2))
+
+#                        sys.exit(0)
+
+                        start, shore, end = start2, shore2, end2
+
                         # Closest point to zero
                         shore3 = np.argmin(abs(smoothed_depths2[ \
                             shore2-stretch_coeff:shore2+stretch_coeff+1]))
                         
-                        shore3 = shore3 + shore2 - stretch_coeff
+                        shore2 = shore3 + shore2 - stretch_coeff
 
 
                         # Perform additional QAQC:
@@ -509,6 +532,13 @@ def compute_transects(args):
     for transect in range(len(transect_info)):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
+#        print('start, shore, end', start, shore, end)
+#        print('positions_dataset[transect, 0]', \
+#            positions_dataset[transect, 0].shape)
+#        print("transect_info[transect]['raw_positions'][0]", \
+#            transect_info[transect]['raw_positions'][0].shape)
+        
+
         positions_dataset[transect, 0, start:end] = \
             transect_info[transect]['raw_positions'][0][start:end]
 
@@ -528,6 +558,13 @@ def compute_transects(args):
 
         xy_positions_dataset[transect, 0, start:end] = J[start:end]
         xy_positions_dataset[transect, 1, start:end] = I[start:end]
+
+#        print('start, end', start, end)
+#        print("bathymetry_dataset[transect, start:end]", \
+#            bathymetry_dataset[transect, start:end].shape)
+#        print("transect_info[transect]['depths'][start:end]", \
+#            transect_info[transect]['depths'][start:end].shape)
+#        sys.exit(0)
 
         bathymetry_dataset[transect, start:end] = \
             transect_info[transect]['depths'][start:end]
