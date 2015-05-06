@@ -269,7 +269,7 @@ cdef route_recharge(
         kc_uri)
 
     #Create output arrays qfi and recharge and recharge_avail
-    cdef float recharge_nodata = -1e10
+    cdef float recharge_nodata = -99999
     pygeoprocessing.new_raster_from_base_uri(
         outflow_direction_uri, recharge_uri, 'GTiff', recharge_nodata,
         gdal.GDT_Float32)
@@ -286,7 +286,7 @@ cdef route_recharge(
     r_sum_avail_dataset = gdal.Open(r_sum_avail_uri, gdal.GA_Update)
     r_sum_avail_band = r_sum_avail_dataset.GetRasterBand(1)
 
-    cdef float aet_nodata = -1e10
+    cdef float aet_nodata = -99999
     pygeoprocessing.new_raster_from_base_uri(
         outflow_direction_uri, aet_uri, 'GTiff', aet_nodata,
         gdal.GDT_Float32)
@@ -332,10 +332,11 @@ cdef route_recharge(
     cdef stack[int] cells_to_process
     cdef stack[int] cell_neighbor_to_process
     cdef stack[float] r_sum_stack
+
     for cell in sink_cell_deque:
         cells_to_process.push(cell)
         cell_neighbor_to_process.push(0)
-        r_sum_stack.push(0)
+        r_sum_stack.push(0.0)
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -380,6 +381,16 @@ cdef route_recharge(
             global_row = current_index / n_cols
             global_col = current_index % n_cols
         #see if we need to update the row cache
+
+        current_neighbor_index = cell_neighbor_to_process.top()
+        cell_neighbor_to_process.pop()
+        current_r_sum_avail = r_sum_stack.top()
+        r_sum_stack.pop()
+        neighbors_calculated = 1
+
+        if r_sum_stack.size() != cells_to_process.size():
+            LOGGER.error("sizes not equal %d, %d", r_sum_stack.size(), cells_to_process.size())
+
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
 
         #Ensure we are working on a valid pixel, if not set everything to 0
@@ -391,11 +402,6 @@ cdef route_recharge(
             cache_dirty[row_index, col_index] = 1
             continue
 
-        current_neighbor_index = cell_neighbor_to_process.top()
-        cell_neighbor_to_process.pop()
-        current_r_sum_avail = r_sum_stack.top()
-        r_sum_stack.pop()
-        neighbors_calculated = 1
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
             neighbor_row = global_row + row_offsets[direction_index]
@@ -423,9 +429,6 @@ cdef route_recharge(
             if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
                 outflow_weight = 1.0 - outflow_weight
 
-            if outflow_weight <= 0.0:
-                continue
-
             if r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
                 #push current cell and and loop
                 cells_to_process.push(current_index)
@@ -439,7 +442,7 @@ cdef route_recharge(
             else:
                 #'calculate r_avail_i and r_i'
                 #add the contribution of the upstream to r_avail and r_i
-                current_r_sum_avail =+ (
+                current_r_sum_avail += (
                     r_sum_avail_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset, neighbor_col_block_offset] +
                     recharge_avail_block[neighbor_row_index, neighbor_col_index,
