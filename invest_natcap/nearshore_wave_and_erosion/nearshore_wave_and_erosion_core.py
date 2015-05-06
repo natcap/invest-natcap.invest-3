@@ -510,10 +510,10 @@ def compute_transects(args):
         (start, shore, end) = transect_info[transect]['clip_limits']
 
         positions_dataset[transect, 0, start:end] = \
-            transect_info2[transect]['raw_positions'][0][start:end]
+            transect_info[transect]['raw_positions'][0][start:end]
 
         positions_dataset[transect, 1, start:end] = \
-            transect_info2[transect]['raw_positions'][1][start:end]
+            transect_info[transect]['raw_positions'][1][start:end]
 
 
         # We want pixel center, not corner
@@ -521,16 +521,16 @@ def compute_transects(args):
         step = np.array([gt[4]+gt[5], gt[1]+gt[2]])
 
 
-        I = transect_info2[transect]['raw_positions'][0][start:end] * \
+        I = transect_info[transect]['raw_positions'][0][start:end] * \
             step[0] + origin[0]
-        J = transect_info2[transect]['raw_positions'][1][start:end] * \
+        J = transect_info[transect]['raw_positions'][1][start:end] * \
             step[1] + origin[1]
 
         xy_positions_dataset[transect, 0, start:end] = J[start:end]
         xy_positions_dataset[transect, 1, start:end] = I[start:end]
 
         bathymetry_dataset[transect, start:end] = \
-            transect_info2[transect]['depths'][start:end]
+            transect_info[transect]['depths'][start:end]
 
 
         indices_limit_dataset[transect] = [start, end]
@@ -538,15 +538,15 @@ def compute_transects(args):
         shore_dataset[transect] = shore
 
         coordinates_limits_dataset[transect] = [ \
-            transect_info2[transect]['raw_positions'][0][start], \
-            transect_info2[transect]['raw_positions'][1][start], \
-            transect_info2[transect]['raw_positions'][0][end-1], \
-            transect_info2[transect]['raw_positions'][1][end-1], \
+            transect_info[transect]['raw_positions'][0][start], \
+            transect_info[transect]['raw_positions'][1][start], \
+            transect_info[transect]['raw_positions'][0][end-1], \
+            transect_info[transect]['raw_positions'][1][end-1], \
             ]
         xy_coordinates_limits_dataset[transect] = \
             [J[start], I[start], J[end-1], I[end-1]]
 
-        transect_info2[transect] = None
+        transect_info[transect] = None
 
 
     # Going through the bathymetry raster tile-by-tile.
