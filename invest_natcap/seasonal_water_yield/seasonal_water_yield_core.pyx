@@ -3,6 +3,7 @@
 import logging
 import os
 import collections
+import sys
 
 import numpy
 cimport numpy
@@ -2853,7 +2854,7 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_
 @cython.wraparound(False)
 @cython.cdivision(True)
 def route_sf(
-    dem_uri, ri_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
+    dem_uri, r_avail_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
     outflow_direction_uri, outflow_weights_uri, stream_uri, sf_uri,
     sf_down_uri):
 
@@ -2897,7 +2898,7 @@ def route_sf(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] ri_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_avail_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_sum_avail_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
@@ -2922,8 +2923,8 @@ def route_sf(
         outflow_weights_uri)
 
     #Create output arrays qfi and recharge and recharge_avail
-    ri_dataset = gdal.Open(ri_uri)
-    ri_band = ri_dataset.GetRasterBand(1)
+    r_avail_dataset = gdal.Open(r_avail_uri)
+    r_avail_band = r_avail_dataset.GetRasterBand(1)
 
     r_sum_avail_dataset = gdal.Open(r_sum_avail_uri)
     r_sum_avail_band = r_sum_avail_dataset.GetRasterBand(1)
@@ -2951,10 +2952,10 @@ def route_sf(
 
 
     band_list = [
-        outflow_direction_band, outflow_weights_band, ri_band, r_sum_avail_band,
+        outflow_direction_band, outflow_weights_band, r_avail_band, r_sum_avail_band,
         r_sum_avail_pour_band, stream_band, sf_down_band, sf_band]
     block_list = [
-        outflow_direction_block, outflow_weights_block, ri_block, r_sum_avail_block,
+        outflow_direction_block, outflow_weights_block, r_avail_block, r_sum_avail_block,
         r_sum_avail_pour_block, stream_block, sf_down_block, sf_block]
     update_list = [False] * 6 + [True] * 2
     cache_dirty[:] = 0
@@ -2984,7 +2985,8 @@ def route_sf(
     cdef float neighbor_sf
     cdef float sf_down_sum
     cdef float sf
-    cdef float r_i
+    cdef float r_avail
+    cdef float sf_down_frac
     cdef int neighbor_direction
 
 
@@ -3003,6 +3005,7 @@ def route_sf(
 
         outflow_weight = outflow_weights_block[
             row_index, col_index, row_block_offset, col_block_offset]
+
         outflow_direction = outflow_direction_block[
             row_index, col_index, row_block_offset, col_block_offset]
         sf = sf_block[row_index, col_index, row_block_offset, col_block_offset]
@@ -3058,9 +3061,9 @@ def route_sf(
             else:
                 sf_down_sum = r_sum_avail / 1000.0 * pixel_area
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
-                r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
+                r_avail = r_avail_block[row_index, col_index, row_block_offset, col_block_offset]
                 if r_sum_avail != 0:
-                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_avail / (r_avail+r_sum_avail), 0)
                 else:
                     sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             cache_dirty[row_index, col_index] = 1
@@ -3129,20 +3132,33 @@ def route_sf(
                             neighbor_sf = sf_block[
                                 neighbor_row_index, neighbor_col_index,
                                 neighbor_row_block_offset, neighbor_col_block_offset]
-                            sf_down_sum += outflow_weight * (neighbor_sf_down - neighbor_sf) * r_sum_avail / neighbor_r_sum_avail_pour
+                            r_sum_avail = r_sum_avail_block[
+                                row_index, col_index, row_block_offset, col_block_offset]
+                            if neighbor_sf > neighbor_sf_down:
+                                LOGGER.error('%f, %f, %f, %f, %f', neighbor_sf,
+                                    neighbor_sf_down, r_sum_avail, neighbor_r_sum_avail_pour,
+                                    outflow_weight)
+                                sys.exit(-1)
+                            sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
+                            if sf_down_frac > 1.0:
+                                sf_down_frac = 1.0
+                            sf_down_sum +=  (neighbor_sf_down - neighbor_sf) * sf_down_frac
+                            if sf_down_sum < 0:
+                                pass#LOGGER.error(sf_down_sum)
 
             if downstream_calculated:
                 block_cache.update_cache(
                     global_row, global_col, &row_index, &col_index,
                     &row_block_offset, &col_block_offset)
                 #add contribution of neighbors to calculate si_down and si on current pixel
-                r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
+                r_avail = r_avail_block[row_index, col_index, row_block_offset, col_block_offset]
                 r_sum_avail = r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset]
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
                 if r_sum_avail == 0:
                     sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
                 else:
-                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
+                    #could r_sum_avail be < than r_i in this case?
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_avail / (r_avail+r_sum_avail), 0)
                 cache_dirty[row_index, col_index] = 1
 
         #put upstream neighbors on stack for processing
@@ -3192,10 +3208,6 @@ def route_sf(
             if cells_in_queue.find(neighbor_flat_index) == cells_in_queue.end():
                 cells_to_process.push_back(neighbor_flat_index)
                 cells_in_queue.insert(neighbor_flat_index)
-                #LOGGER.debug("inserting neighbor_flat_index %d", neighbor_flat_index)
-                #LOGGER.debug('outflow weight %f', outflow_weight)
-                #LOGGER.debug('neighbor_direction %d', neighbor_direction)
-                pass
 
         #if downstream aren't processed; skip and process those
         #calc current pixel
