@@ -388,9 +388,6 @@ cdef route_recharge(
         r_sum_stack.pop()
         neighbors_calculated = 1
 
-        if r_sum_stack.size() != cells_to_process.size():
-            LOGGER.error("sizes not equal %d, %d", r_sum_stack.size(), cells_to_process.size())
-
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
 
         #Ensure we are working on a valid pixel, if not set everything to 0
@@ -428,6 +425,9 @@ cdef route_recharge(
 
             if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
                 outflow_weight = 1.0 - outflow_weight
+
+            if outflow_weight <= 0.0:
+                continue
 
             if r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == recharge_nodata:
                 #push current cell and and loop
