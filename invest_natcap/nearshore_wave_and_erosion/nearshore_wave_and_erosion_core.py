@@ -749,6 +749,8 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
             # Write it
             writer.writerow(row)
 
+    transect_data_file.close()
+
 
 # ----------------------------------------------------
 # Loading the transects to exclude from a csv, if any
@@ -1305,6 +1307,8 @@ def compute_nearshore_and_wave_erosion(args):
         compute_valuation( \
             args, MErodeLens1, MErodeLens2, Retreats1, Retreats2, transect_ids)
 
+    f.close()
+    
     # Saving data in HDF5
     args['biophysical_data_uri'] = \
         os.path.join(args['output_dir'], 'output.h5')
@@ -1796,7 +1800,8 @@ def reconstruct_2D_shore_map(args):
 
     pygeoprocessing.geoprocessing.calculate_raster_stats_uri(wave_interpolation_uri)
 
-
+    biophysical_data.close()
+    transect_data.close()
 
 def store_tidal_information(args, transect_data_file):
 
