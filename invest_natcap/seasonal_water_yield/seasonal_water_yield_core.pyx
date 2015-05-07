@@ -2843,7 +2843,7 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_
 
                         if outflow_weight <= 0.0:
                             continue
-                        r_sum_avail_pour_sum += r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                        r_sum_avail_pour_sum += r_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] * outflow_weight
 
                     block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
                     r_sum_avail_pour_block[row_index, col_index, row_block_offset, col_block_offset] = r_sum_avail_pour_sum
