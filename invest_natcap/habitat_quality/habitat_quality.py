@@ -199,7 +199,7 @@ def execute(args):
 
         #Create raster of habitat based on habitat field
         habitat_uri = os.path.join(
-            inter_dir, 'habitat_%s_%s.tif' % (lulc_key, suffix))
+            inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
 
         map_raster_to_dict_values(
             lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
@@ -247,7 +247,7 @@ def execute(args):
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_uri = os.path.join(
-                inter_dir, threat + '_filtered_%s_%s.tif' % (lulc_key, suffix))
+                inter_dir, threat + '_filtered_%s%s.tif' % (lulc_key, suffix))
 
             # blur the threat raster based on the effect of the threat over
             # distance
