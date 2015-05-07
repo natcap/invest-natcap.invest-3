@@ -2869,8 +2869,6 @@ def route_sf(
     for cell in cells_to_process:
         cells_in_queue.insert(cell)
 
-
-
     cdef float pixel_area = (
         pygeoprocessing.geoprocessing.get_cell_size_from_uri(dem_uri) ** 2)
 
@@ -3141,7 +3139,10 @@ def route_sf(
                 r_i = ri_block[row_index, col_index, row_block_offset, col_block_offset]
                 r_sum_avail = r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset]
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
-                sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
+                if r_sum_avail == 0:
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+                else:
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_i / r_sum_avail, 0)
                 cache_dirty[row_index, col_index] = 1
 
         #put upstream neighbors on stack for processing
