@@ -157,7 +157,7 @@ def calculate_slow_flow(
 
     LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
-        dem_uri, recharge_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
+        dem_uri, recharge_avail_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
         outflow_direction_uri, outflow_weights_uri, stream_uri, sf_uri,
         sf_down_uri)
 
@@ -261,7 +261,7 @@ def main():
     pygeoprocessing.routing.flow_accumulation(
         flow_dir_uri, dem_uri_aligned, flow_accum_uri)
     stream_uri = os.path.join(output_dir, 'stream.tif')
-    threshold_flow_accumulation = 100
+    threshold_flow_accumulation = 1000
     pygeoprocessing.routing.stream_threshold(
         flow_accum_uri, threshold_flow_accumulation, stream_uri)
 
