@@ -132,7 +132,7 @@ def compute_transects(args):
         args['bathymetry_raster_uri'], \
         pygeoprocessing.geoprocessing.temporary_filename())
 
-   # Get the fine and coarse raster cell sizes, ensure consistent signs
+   # Cell size of the input raster (landmass raster) in the i and j directions
     i_input_cell_size = int(math.sqrt( \
         input_raster_geotransform[4]**2 + \
         input_raster_geotransform[5]**2))
@@ -140,6 +140,7 @@ def compute_transects(args):
         input_raster_geotransform[1]**2 + \
         input_raster_geotransform[2]**2))
 
+    # Transect spacing in the i and j directions in meters
     i_transect_spacing = \
         int(math.copysign(args['transect_spacing'], i_input_cell_size))
     j_transect_spacing = \
@@ -148,7 +149,7 @@ def compute_transects(args):
     args['i_transect_spacing'] = i_transect_spacing
     args['i_input_cell_size'] = i_input_cell_size
 
-    # Start and stop coordinates in meters
+    # Start and stop values in meters
     i_start = int(round(input_raster_geotransform[3]))
     j_start = int(round(input_raster_geotransform[0]))
     i_end = int(round(i_start + i_input_cell_size * row_count))
@@ -160,17 +161,27 @@ def compute_transects(args):
     i_offset = i_transect_spacing/i_input_cell_size + 6
     j_offset = j_transect_spacing/j_input_cell_size + 6
     mask = np.ones((i_offset, j_offset))
-    tile_size = np.sum(mask)
 
+    tile_size = np.sum(mask)
 
     tiles = 0 # Number of valid tiles
 
     # Caching transect information for faster raster information processing:
     # Each entry is a dictionary with the following information:
-    #   'raw_positions': numpy array
+    #   'raw_positions': 2 numpy arrays, first for rows, second for columns
     #   'clip_limits': tuple (first, last)
-    transect_info_tiff = []
-    transect_info_hdf5 = []
+    #
+    # Note: -The "tiff" suffix is about data that is meant to be saved 
+    #       in a raster for visualization (same resolution as input raster)
+    #       -The "hdf5" suffix is data that is saved as hdf5, where the
+    #       resolution is at least 1 meter.
+    #
+    # Cool note:-raster size is ~350MB on disk at 10 m resolution and increases
+    #               quadratically with lower cell size (~35GB for 1m cell size)
+    #           -hdf5 size is ~700KB on disk for Barbados at 10m resolution and
+    #               increases linearly with lower cell size (~7MB at 1m)
+    transect_info_tiff = [] # Transect info that will be saved in a raster
+    transect_info_hdf5 = [] # Transect info saved in a hdf5 (1m resolution)
     max_transect_length_tiff = 0
     max_transect_length_hdf5 = 0
 
@@ -184,7 +195,6 @@ def compute_transects(args):
         ((i_end - i_start)/i_transect_spacing, (j_end - j_start)/j_transect_spacing))
 
 
-#    for i in range(i_start, i_start+10*i_transect_spacing, i_transect_spacing):
     for i in range(i_start, i_end, i_transect_spacing):
         print('i', (i-i_start)/i_transect_spacing)
         
@@ -200,7 +210,6 @@ def compute_transects(args):
             continue
 
         for j in range(j_start, j_end, j_transect_spacing):
-#            print('j', (j-j_start)/j_transect_spacing)
  
             # Left coordinate of the current tile
             j_base = max((j - j_start) / j_input_cell_size - 3, 0)
@@ -302,40 +311,41 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
                        
-                        clipped_positions = ( \
+                        positions_tiff = ( \
                             raw_positions[0][start:end], \
                             raw_positions[1][start:end])
 
                         # Interpolate transect to the model resolution
-                        interpolated_depths = \
+                        interpolated_depths_tiff = \
                             clipped_transect if clipped_transect.size > 5 else None
                         
-                        transect_cell_size = \
+                        hdf5_cell_size = \
                             min(args['cell_size'], resampling_resolution)
+
                         interpolated_depths_hdf5 = \
                             interpolate_transect(clipped_transect, \
                                 args['cell_size'], \
-                                transect_cell_size)
+                                hdf5_cell_size)
 
-                        interpolated_positions_hdf5 = ( \
-                            interpolate_transect(clipped_positions[0], \
+                        positions_hdf5 = ( \
+                            interpolate_transect(positions_tiff[0], \
                                 args['cell_size'], \
-                                transect_cell_size), \
-                            interpolate_transect(clipped_positions[1], \
+                                hdf5_cell_size), \
+                            interpolate_transect(positions_tiff[1], \
                                 args['cell_size'], \
-                                transect_cell_size))
+                                hdf5_cell_size))
 
 
                         # Not enough values for interpolation
-                        if interpolated_depths is None:
+                        if interpolated_depths_tiff is None:
                             continue
 
 
                         # Smooth transect
-                        smoothed_depths = \
+                        smoothed_depths_tiff = \
                             smooth_transect(interpolated_depths_hdf5, \
                                 args['smoothing_percentage'])
-#                            smooth_transect(interpolated_depths, \
+#                            smooth_transect(interpolated_depths_tiff, \
 #                                args['smoothing_percentage'])
 
                         smoothed_depths_hdf5 = \
@@ -344,11 +354,11 @@ def compute_transects(args):
 
 
                         stretch_coeff = \
-                            args['cell_size'] / transect_cell_size
+                            args['cell_size'] / hdf5_cell_size
                         
 
                         start_hdf5 = int(start * stretch_coeff)
-                        end_hdf5 = int(smoothed_depths.size + start_hdf5)
+                        end_hdf5 = int(smoothed_depths_tiff.size + start_hdf5)
                         shore_hdf5 = int(shore * stretch_coeff)
 
 
@@ -367,48 +377,49 @@ def compute_transects(args):
                         # Perform additional QAQC:
 
                         # Enforce total profile length
-                        profile_length = end - start
-                        fine_profile_length = end_hdf5 - start_hdf5
+                        profile_length_tiff = end - start
+                        profile_length_hdf5 = end_hdf5 - start_hdf5
 
-                        profile_length_m = profile_length * i_input_cell_size
-                        fine_profile_length_m = \
-                            fine_profile_length * transect_cell_size
+                        profile_length_tiff_m = \
+                            profile_length_tiff * i_input_cell_size
+                        profile_length_hdf5_m = \
+                            profile_length_hdf5 * hdf5_cell_size
 
-                        if profile_length_m < args['min_profile_length']:
+                        if profile_length_tiff_m < args['min_profile_length']:
                             continue
-                        if fine_profile_length_m < args['min_profile_length']:
+                        if profile_length_hdf5_m < args['min_profile_length']:
                             continue
 
                        
                         # Enforce minimum offshore profile length
-                        offshore_length = end - shore
-                        fine_offshore_length = end_hdf5 - shore_hdf5
+                        offshore_length_tiff = end - shore
+                        offshore_length_hdf5 = end_hdf5 - shore_hdf5
 
-                        offshore_length_m = offshore_length * i_input_cell_size
-                        fine_offshore_length_m = \
-                            fine_offshore_length * transect_cell_size
+                        offshore_length_tiff_m = offshore_length_tiff * i_input_cell_size
+                        offshore_length_hdf5_m = \
+                            offshore_length_hdf5 * hdf5_cell_size
 
-                        if offshore_length_m < args['min_offshore_profile_length']:
+                        if offshore_length_tiff_m < args['min_offshore_profile_length']:
                             continue
-                        if fine_offshore_length_m < \
+                        if offshore_length_hdf5_m < \
                             args['min_offshore_profile_length']:
                             continue
 
                        
                         # Enforce minimum profile depth
-                        average_depth = \
-                            np.sum(smoothed_depths[shore:end]) / offshore_length_m
+                        average_depth_tiff = \
+                            np.sum(smoothed_depths_tiff[shore:end]) / offshore_length_tiff_m
 
-                        if average_depth > args['min_profile_depth']:
+                        if average_depth_tiff > args['min_profile_depth']:
                             continue
                         # At this point, the transect is valid: 
                         else:
                             # Store important information about it
                             transect_info_tiff.append( \
                                 {'raw_positions': \
-                                    (raw_positions[0][start:end], \
-                                    raw_positions[1][start:end]), \
-                                'depths':smoothed_depths[start:end], \
+                                    (positions_tiff[0], \
+                                    positions_tiff[1]), \
+                                'depths':smoothed_depths_tiff[start:end], \
                                 'clip_limits':(0, shore-start, end-start)})
 
                             # Update the longest transect length if necessary
@@ -423,7 +434,7 @@ def compute_transects(args):
 
                         # Enforce minimum profile depth
                         average_depth_hdf5 = \
-                            np.sum(smoothed_depths_hdf5[shore_hdf5:end_hdf5]) / fine_offshore_length_m
+                            np.sum(smoothed_depths_hdf5[shore_hdf5:end_hdf5]) / offshore_length_hdf5_m
 
                         if average_depth_hdf5 > args['min_profile_depth']:
                             continue
@@ -432,8 +443,8 @@ def compute_transects(args):
                             # Store important information about it
                             transect_info_hdf5.append( \
                                 {'raw_positions': \
-                                    (interpolated_positions_hdf5[0][start_hdf5:end_hdf5], \
-                                    interpolated_positions_hdf5[1][start_hdf5:end_hdf5]), \
+                                    (positions_hdf5[0][start_hdf5:end_hdf5], \
+                                    positions_hdf5[1][start_hdf5:end_hdf5]), \
                                 'depths':smoothed_depths_hdf5[start_hdf5:end_hdf5], \
                                 'clip_limits':(0, shore_hdf5-start_hdf5, end_hdf5-start_hdf5)})
 
@@ -538,12 +549,6 @@ def compute_transects(args):
     for transect in range(len(transect_info_hdf5)):
         (start, shore, end) = transect_info_hdf5[transect]['clip_limits']
 
-#        print('start, shore, end', start, shore, end)
-#        print('positions_dataset[transect, 0]', \
-#            positions_dataset[transect, 0].shape)
-#        print("transect_info_hdf5[transect]['raw_positions'][0]", \
-#            transect_info_hdf5[transect]['raw_positions'][0].shape)
-        
 
         positions_dataset[transect, 0, start:end] = \
             transect_info_hdf5[transect]['raw_positions'][0][start:end]
