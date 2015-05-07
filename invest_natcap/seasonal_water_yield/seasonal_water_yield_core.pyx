@@ -184,7 +184,7 @@ cdef class BlockCache:
 cdef route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
         r_sum_avail_uri, aet_uri, float alpha_m, float beta_i, float gamma,
-        qfi_uri_list, outflow_direction_uri, outflow_weights_uri,
+        qfi_uri_list, outflow_direction_uri, outflow_weights_uri, stream_uri,
         deque[int] &sink_cell_deque):
 
     #Pass transport
@@ -226,6 +226,10 @@ cdef route_recharge(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] aet_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] stream_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
+        dtype=numpy.float32)
+
 
     #these are 12 band blocks
     cdef numpy.ndarray[numpy.npy_float32, ndim=5] precip_block_list = numpy.zeros(
@@ -268,6 +272,8 @@ cdef route_recharge(
     kc_band = kc_dataset.GetRasterBand(1)
     cdef float kc_nodata = pygeoprocessing.get_nodata_from_uri(
         kc_uri)
+    stream_dataset = gdal.Open(stream_uri)
+    stream_band = stream_dataset.GetRasterBand(1)
 
     #Create output arrays qfi and recharge and recharge_avail
     cdef float recharge_nodata = -99999
@@ -306,10 +312,11 @@ cdef route_recharge(
             outflow_direction_band,
             outflow_weights_band,
             kc_band,
+            stream_band,
         ] + precip_band_list + et0_band_list + qfi_band_list +
         [recharge_band, recharge_avail_band, r_sum_avail_band, aet_band])
 
-    block_list = [outflow_direction_block, outflow_weights_block, kc_block]
+    block_list = [outflow_direction_block, outflow_weights_block, kc_block, stream_block]
     block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
     block_list.extend([et0_block_list[i] for i in xrange(N_MONTHS)])
     block_list.extend([qfi_block_list[i] for i in xrange(N_MONTHS)])
@@ -319,7 +326,7 @@ cdef route_recharge(
     block_list.append(aet_block)
 
     update_list = (
-        [False] * (3 + len(precip_band_list) + len(et0_band_list) + len(qfi_band_list)) +
+        [False] * (4 + len(precip_band_list) + len(et0_band_list) + len(qfi_band_list)) +
         [True, True, True, True])
 
     cache_dirty[:] = 0
@@ -469,6 +476,11 @@ cdef route_recharge(
                 pet_m, p_m - qfi_m + alpha_m * beta_i * current_r_sum_avail)
             aet_sum += aet_m
         r_i = p_i - qf_i - aet_sum
+
+        #if it's a stream, set recharge to 0 and ae to nodata
+        if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
+            r_i = 0
+            aet_sum = aet_nodata
 
         r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
         recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
@@ -2685,7 +2697,7 @@ def resolve_flats(
 
 def calculate_recharge(
     precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-    alpha_m, beta_i, gamma, qfi_uri, recharge_uri, recharge_avail_uri,
+    alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri, recharge_avail_uri,
     r_sum_avail_uri, aet_uri, vri_uri):
 
     cdef deque[int] outlet_cell_deque
@@ -2711,7 +2723,8 @@ def calculate_recharge(
     route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
         r_sum_avail_uri, aet_uri, alpha_m, beta_i, gamma, qfi_uri_list,
-        outflow_direction_uri, outflow_weights_uri, outlet_cell_deque)
+        outflow_direction_uri, outflow_weights_uri, stream_uri,
+        outlet_cell_deque)
 
 
 def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):

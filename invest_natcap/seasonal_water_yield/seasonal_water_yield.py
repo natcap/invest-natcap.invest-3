@@ -32,7 +32,8 @@ def execute(args):
 
 def calculate_quick_flow(
         precip_uri_list, rain_events_table_uri, lulc_uri,
-        cn_table_uri, cn_uri, qfi_uri, qf_monthly_uri_list, intermediate_dir):
+        cn_table_uri, cn_uri, stream_uri, qfi_uri, qf_monthly_uri_list,
+        intermediate_dir):
     """Calculates quick flow """
 
     LOGGER.info('loading number of monthly events')
@@ -54,16 +55,18 @@ def calculate_quick_flow(
         exception_flag='values_required')
 
     si_nodata = -1
-    def si_op(ci_array):
+    def si_op(ci_array, stream_array):
         """potential maximum retention"""
         si_array = 1000.0 / ci_array - 10
-        return numpy.where(ci_array != cn_nodata, si_array, si_nodata)
+        si_array = numpy.where(ci_array != cn_nodata, si_array, si_nodata)
+        si_array[stream_array == 1] = 0
+        return si_array
 
     LOGGER.info('calculating Si')
     si_uri = os.path.join(intermediate_dir, 'si.tif')
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [cn_uri], si_op, si_uri, gdal.GDT_Float32,
+        [cn_uri, stream_uri], si_op, si_uri, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
@@ -73,7 +76,7 @@ def calculate_quick_flow(
 
     for m_index in range(1, N_MONTHS + 1):
 
-        def qf_op(pm_array, s_array):
+        def qf_op(pm_array, s_array, stream_array):
             """calculate quickflow"""
             inner_value = pm_array/float(n_events[m_index])/25.4 - 0.2 * s_array
             numerator = numpy.where(
@@ -81,13 +84,15 @@ def calculate_quick_flow(
                 25.4 * n_events[m_index] * inner_value**2, 0.0)
 
             denominator = pm_array/float(n_events[m_index])/25.4 +0.8 * s_array
-            return numpy.where(
+            quickflow = numpy.where(
                 (pm_array == p_nodata) | (s_array == si_nodata) |
                 (denominator == 0), qf_nodata, numerator / denominator)
+            quickflow[stream_array == 1] = pm_array[stream_array == 1]
+            return quickflow
 
         LOGGER.info('calculating QFi_%d of %d', m_index, N_MONTHS)
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [precip_uri_list[m_index-1], si_uri], qf_op,
+            [precip_uri_list[m_index-1], si_uri, stream_uri], qf_op,
             qf_monthly_uri_list[m_index-1], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
             datasets_are_pre_aligned=True)
@@ -115,7 +120,7 @@ def calculate_slow_flow(
 
     seasonal_water_yield_core.calculate_recharge(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
+        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri,
         recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
@@ -232,9 +237,22 @@ def main():
         qf_monthly_uri_list.append(
             os.path.join(output_dir, 'qf_%d.tif' % m_index))
 
+    flow_dir_uri = os.path.join(output_dir, 'flow_dir.tif')
+    pygeoprocessing.routing.flow_direction_d_inf(
+        dem_uri_aligned, flow_dir_uri)
+
+    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
+    pygeoprocessing.routing.flow_accumulation(
+        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+    stream_uri = os.path.join(output_dir, 'stream.tif')
+    threshold_flow_accumulation = 1000
+    pygeoprocessing.routing.stream_threshold(
+        flow_accum_uri, threshold_flow_accumulation, stream_uri)
+
     calculate_quick_flow(
         precip_uri_aligned_list, rain_events_table_uri, lulc_uri_aligned,
-        cn_table_uri, cn_uri, qfi_uri, qf_monthly_uri_list, output_dir)
+        cn_table_uri, cn_uri, stream_uri, qfi_uri, qf_monthly_uri_list,
+        output_dir)
 
     alpha_m = 1./12
     beta_i = 1.
@@ -252,18 +270,6 @@ def main():
     r_sum_avail_uri = os.path.join(output_dir, 'r_sum_avail.tif')
     vri_uri = os.path.join(output_dir, 'vri.tif')
     aet_uri = os.path.join(output_dir, 'aet.tif')
-
-    flow_dir_uri = os.path.join(output_dir, 'flow_dir.tif')
-    pygeoprocessing.routing.flow_direction_d_inf(
-        dem_uri_aligned, flow_dir_uri)
-
-    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
-    pygeoprocessing.routing.flow_accumulation(
-        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
-    stream_uri = os.path.join(output_dir, 'stream.tif')
-    threshold_flow_accumulation = 1000
-    pygeoprocessing.routing.stream_threshold(
-        flow_accum_uri, threshold_flow_accumulation, stream_uri)
 
     calculate_slow_flow(
         aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
