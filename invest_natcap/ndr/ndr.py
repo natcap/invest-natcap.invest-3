@@ -387,17 +387,16 @@ def execute(args):
     slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         thresholded_slope_uri)
 
-    def ws_op(w_factor, s_factor):
+    def ws_op(s_factor):
         """calcualtes the inverse of the ws factor so we can multiply it like
             a factor"""
         return numpy.where(
-            (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), ws_nodata)
+            s_factor != slope_nodata, 1.0 / s_factor, ws_nodata)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op,
-        ws_factor_inverse_uri, gdal.GDT_Float32, ws_nodata, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
+        [thresholded_slope_uri], ws_op, ws_factor_inverse_uri, gdal.GDT_Float32,
+        ws_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
