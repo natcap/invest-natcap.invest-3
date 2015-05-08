@@ -231,7 +231,7 @@ def calculate_slow_flow(
     seasonal_water_yield_core.calculate_recharge(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri,
-        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri)
+        recharge_avail_uri, r_sum_avail_uri, aet_uri)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(

@@ -2695,7 +2695,7 @@ def resolve_flats(
 def calculate_recharge(
     precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
     alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri, recharge_avail_uri,
-    r_sum_avail_uri, aet_uri, vri_uri):
+    r_sum_avail_uri, aet_uri):
 
     cdef deque[int] outlet_cell_deque
 
