@@ -28,9 +28,6 @@ cdef extern from "time.h" nogil:
 
 import pygeoprocessing
 
-import faulthandler
-faulthandler.enable()
-
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -40,8 +37,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 8
-cdef int N_BLOCK_COLS = 8
+cdef int N_BLOCK_ROWS = 6
+cdef int N_BLOCK_COLS = 6
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache

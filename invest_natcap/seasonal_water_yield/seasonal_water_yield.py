@@ -3,14 +3,13 @@
 import os
 import logging
 import re
+import fractions
 
 import numpy
 import gdal
-
-import seasonal_water_yield_core
-
 import pygeoprocessing
 import pygeoprocessing.routing
+
 
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -21,14 +20,124 @@ LOGGER = logging.getLogger(
 
 N_MONTHS = 12
 
-
 def execute(args):
     """This function invokes the seasonal water yield model given
         URI inputs of files. It may write log, warning, or error messages to
         stdout.
     """
 
-    main()
+    alpha_m = float(fractions.Fraction(args['alpha_m']))
+    beta_i = float(fractions.Fraction(args['beta_i']))
+    gamma = float(fractions.Fraction(args['gamma']))
+
+    try:
+        file_suffix = args['results_suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
+    precip_uri_list = []
+    et0_uri_list = []
+
+    et0_dir_list = [
+        os.path.join(args['et0_dir'], f) for f in os.listdir(args['et0_dir'])]
+    precip_dir_list = [
+        os.path.join(args['precip_dir'], f) for f in os.listdir(
+            args['precip_dir'])]
+
+    for month_index in range(1, N_MONTHS + 1):
+        month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
+
+        for data_type, dir_list, uri_list in [
+                ('et0', et0_dir_list, et0_uri_list),
+                ('Precip', precip_dir_list, precip_uri_list)]:
+
+            file_list = [x for x in dir_list if month_file_match.match(x)]
+            if len(file_list) == 0:
+                raise ValueError(
+                    "No %s found for month %d" % (data_type, month_index))
+            if len(file_list) > 1:
+                raise ValueError(
+                    "Ambiguous set of files found for month %d: %s" %
+                    (month_index, file_list))
+            uri_list.append(file_list[0])
+
+    pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
+
+    qfi_uri = os.path.join(args['workspace_dir'], 'qf%s.tif' % file_suffix)
+    cn_uri = os.path.join(args['workspace_dir'], 'cn%s.tif' % file_suffix)
+
+    #pre align all the datasets
+    precip_uri_aligned_list = [
+        pygeoprocessing.geoprocessing.temporary_filename() for _ in
+        range(len(precip_uri_list))]
+    et0_uri_aligned_list = [
+        pygeoprocessing.geoprocessing.temporary_filename() for _ in
+        range(len(precip_uri_list))]
+
+    lulc_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
+    dem_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
+
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['lulc_uri'])
+
+    LOGGER.info('Aligning and clipping dataset list')
+    pygeoprocessing.geoprocessing.align_dataset_list(
+        precip_uri_list + et0_uri_list + [args['lulc_uri'], args['dem_uri']],
+        precip_uri_aligned_list + et0_uri_aligned_list +
+        [lulc_uri_aligned, dem_uri_aligned],
+        ['nearest'] * (len(precip_uri_list) + len(et0_uri_aligned_list) + 2),
+        pixel_size, 'intersection', 0, aoi_uri=args['aoi_uri'],
+        assert_datasets_projected=True)
+
+    qf_monthly_uri_list = []
+    for m_index in range(1, N_MONTHS + 1):
+        qf_monthly_uri_list.append(
+            os.path.join(
+                args['workspace_dir'], 'qf_%d%s.tif' % (m_index, file_suffix)))
+
+    flow_dir_uri = os.path.join(
+        args['workspace_dir'], 'flow_dir%s.tif' % file_suffix)
+    pygeoprocessing.routing.flow_direction_d_inf(dem_uri_aligned, flow_dir_uri)
+
+    flow_accum_uri = os.path.join(
+        args['workspace_dir'], 'flow_accum%s.tif' % file_suffix)
+    pygeoprocessing.routing.flow_accumulation(
+        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
+    stream_uri = os.path.join(
+        args['workspace_dir'], 'stream%s.tif' % file_suffix)
+    threshold_flow_accumulation = 1000
+    pygeoprocessing.routing.stream_threshold(
+        flow_accum_uri, threshold_flow_accumulation, stream_uri)
+
+    calculate_quick_flow(
+        precip_uri_aligned_list, args['rain_events_table_uri'],
+        lulc_uri_aligned, args['cn_table_uri'], cn_uri, stream_uri, qfi_uri,
+        qf_monthly_uri_list, args['workspace_dir'])
+
+    biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
+        args['biophysical_table_uri'], 'lucode')
+
+    kc_lookup = dict([
+        (lucode, biophysical_table[lucode]['kc']) for lucode in
+        biophysical_table])
+
+    recharge_uri = os.path.join(
+        args['workspace_dir'], 'recharge%s.tif' % file_suffix)
+    recharge_avail_uri = os.path.join(
+        args['workspace_dir'], 'recharge_avail%s.tif' % file_suffix)
+    r_sum_avail_uri = os.path.join(
+        args['workspace_dir'], 'r_sum_avail%s.tif' % file_suffix)
+    vri_uri = os.path.join(args['workspace_dir'], 'vri%s.tif' % file_suffix)
+    aet_uri = os.path.join(args['workspace_dir'], 'aet%s.tif' % file_suffix)
+
+    calculate_slow_flow(
+        args['aoi_uri'], precip_uri_aligned_list, et0_uri_aligned_list,
+        flow_dir_uri, dem_uri_aligned, lulc_uri_aligned,
+        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
+        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri, stream_uri)
+
 
 def calculate_quick_flow(
         precip_uri_list, rain_events_table_uri, lulc_uri,
@@ -118,6 +227,7 @@ def calculate_slow_flow(
         stream_uri):
     """calculate slow flow index"""
 
+    import seasonal_water_yield_core
     seasonal_water_yield_core.calculate_recharge(
         precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
         kc_lookup, alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri,
@@ -165,114 +275,3 @@ def calculate_slow_flow(
         dem_uri, recharge_avail_uri, r_sum_avail_uri, r_sum_avail_pour_uri,
         outflow_direction_uri, outflow_weights_uri, stream_uri, sf_uri,
         sf_down_uri)
-
-
-def main():
-    """main entry point"""
-
-    et0_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\et0_proj"
-    precip_dir = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\precip_proj"
-
-    dem_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\DEM\fillFinalSaga.tif"
-    aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Subwatershed7\subws_id7.shp"
-    #aoi_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Subwatershed1\subws_id1.shp"
-    cn_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\cn.csv"
-    rain_events_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\Number of events.csv"
-    precip_uri_list = []
-    et0_uri_list = []
-
-    et0_dir_list = [os.path.join(et0_dir, f) for f in os.listdir(et0_dir)]
-    precip_dir_list = [
-        os.path.join(precip_dir, f) for f in os.listdir(precip_dir)]
-
-    for month_index in range(1, N_MONTHS + 1):
-        month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
-
-        for data_type, dir_list, uri_list in [
-                ('et0', et0_dir_list, et0_uri_list),
-                ('Precip', precip_dir_list, precip_uri_list)]:
-
-            file_list = [x for x in dir_list if month_file_match.match(x)]
-            if len(file_list) == 0:
-                raise ValueError(
-                    "No %s found for month %d" % (data_type, month_index))
-            if len(file_list) > 1:
-                raise ValueError(
-                    "Ambiguous set of files found for month %d: %s" %
-                    (month_index, file_list))
-            uri_list.append(file_list[0])
-
-    output_dir = r"C:\Users\rich\Documents\delete_seasonal_water_yield_output"
-
-    pygeoprocessing.geoprocessing.create_directories([output_dir])
-
-    qfi_uri = os.path.join(output_dir, 'qf.tif')
-    cn_uri = os.path.join(output_dir, 'cn.tif')
-    lulc_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\nass_sw_lulc.tif"
-
-    #pre align all the datasets
-    precip_uri_aligned_list = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in
-        range(len(precip_uri_list))]
-    et0_uri_aligned_list = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in
-        range(len(precip_uri_list))]
-
-    lulc_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
-    dem_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
-
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri)
-
-    LOGGER.info('Aligning and clipping dataset list')
-    pygeoprocessing.geoprocessing.align_dataset_list(
-        precip_uri_list + et0_uri_list + [lulc_uri, dem_uri],
-        precip_uri_aligned_list + et0_uri_aligned_list +
-        [lulc_uri_aligned, dem_uri_aligned],
-        ['nearest'] * (len(precip_uri_list) + len(et0_uri_aligned_list) + 2),
-        pixel_size, 'intersection', 0, aoi_uri=aoi_uri,
-        assert_datasets_projected=True)
-
-    qf_monthly_uri_list = []
-    for m_index in range(1, N_MONTHS + 1):
-        qf_monthly_uri_list.append(
-            os.path.join(output_dir, 'qf_%d.tif' % m_index))
-
-    flow_dir_uri = os.path.join(output_dir, 'flow_dir.tif')
-    pygeoprocessing.routing.flow_direction_d_inf(
-        dem_uri_aligned, flow_dir_uri)
-
-    flow_accum_uri = os.path.join(output_dir, 'flow_accum.tif')
-    pygeoprocessing.routing.flow_accumulation(
-        flow_dir_uri, dem_uri_aligned, flow_accum_uri)
-    stream_uri = os.path.join(output_dir, 'stream.tif')
-    threshold_flow_accumulation = 1000
-    pygeoprocessing.routing.stream_threshold(
-        flow_accum_uri, threshold_flow_accumulation, stream_uri)
-
-    calculate_quick_flow(
-        precip_uri_aligned_list, rain_events_table_uri, lulc_uri_aligned,
-        cn_table_uri, cn_uri, stream_uri, qfi_uri, qf_monthly_uri_list,
-        output_dir)
-
-    alpha_m = 1./12
-    beta_i = 1.
-    gamma = 1.
-    biophysical_table_uri = r"C:\Users\rich\Documents\invest-natcap.invest-3\test\invest-data\SeasonalWaterYield\input\biophysical_Cape_Fear.csv"
-    biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
-        biophysical_table_uri, 'lucode')
-
-    kc_lookup = dict([
-        (lucode, biophysical_table[lucode]['kc']) for lucode in
-        biophysical_table])
-
-    recharge_uri = os.path.join(output_dir, 'recharge.tif')
-    recharge_avail_uri = os.path.join(output_dir, 'recharge_avail.tif')
-    r_sum_avail_uri = os.path.join(output_dir, 'r_sum_avail.tif')
-    vri_uri = os.path.join(output_dir, 'vri.tif')
-    aet_uri = os.path.join(output_dir, 'aet.tif')
-
-    calculate_slow_flow(
-        aoi_uri, precip_uri_aligned_list, et0_uri_aligned_list, flow_dir_uri,
-        dem_uri_aligned, lulc_uri_aligned, kc_lookup, alpha_m, beta_i, gamma,
-        qfi_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri,
-        vri_uri, stream_uri)
