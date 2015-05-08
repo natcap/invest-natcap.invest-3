@@ -1,4 +1,5 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
+
 try:
     from setuptools.core import setup
     from setuptools.extension import Extension
@@ -9,6 +10,7 @@ except:
     from distutils.extension import Extension
     from distutils.core import Command
     import distutils.sysconfig as sysconfig
+
 import platform
 import os
 import sys
