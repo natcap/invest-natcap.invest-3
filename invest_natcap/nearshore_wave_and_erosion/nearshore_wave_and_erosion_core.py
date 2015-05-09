@@ -68,7 +68,8 @@ def execute(args):
 
 
 def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
-    field_count, soil_field_count, nodata):
+    field_count, soil_field_count, climatic_forcing_field_count, \
+    tidal_forcing_field_count, nodata):
     """ Create an hdf5 file with all the datasets used in the output
 
         Inputs: -hdf5_uri: uri to where the HDF5 file will be stored
@@ -88,8 +89,6 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             transect_data_file]
     """
     # Creating HDF5 file that will store the transect data
-    LOGGER.debug('Creating HDF5 file %s.' % hdf5_uri)
-
     transect_data_file = h5py.File(hdf5_uri, 'w')
     
 
@@ -113,6 +112,16 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             (transect_count, soil_field_count, max_transect_size), \
             compression = 'gzip', fillvalue = nodata)
 
+    climatic_forcing_dataset = \
+        transect_data_file.create_dataset('climatic_forcing', \
+            (transect_count, climatic_forcing_field_count), \
+            compression = 'gzip', fillvalue = 0)
+
+    tidal_forcing_dataset = \
+        transect_data_file.create_dataset('tidal forcing', \
+            (transect_count, tidal_forcing_field_count), \
+            compression = 'gzip', fillvalue = 0, \
+            dtype = 'i4')
 
     bathymetry_dataset = \
         transect_data_file.create_dataset('bathymetry', \
@@ -159,6 +168,8 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             habitat_properties_dataset, \
             soil_type_dataset, \
             soil_properties_dataset, \
+            climatic_forcing_dataset, \
+            tidal_forcing_dataset, \
             bathymetry_dataset, \
             positions_dataset, \
             xy_positions_dataset, \
@@ -195,7 +206,6 @@ def resample_natural_habitats(transect_data_file_tiff, transect_data_file_hdf5):
     end_hdf5 = indices_limit_dataset_hdf5[0, 1]
 
     ratio = (end_hdf5-start_hdf5) / (end - start - 1)
-    print('ratio', ratio)
 
     # get the datasets
     habitat_type_dataset_tiff = transect_data_file_tiff['habitat_type']
@@ -205,7 +215,10 @@ def resample_natural_habitats(transect_data_file_tiff, transect_data_file_hdf5):
     properties_count = habitat_properties_dataset_tiff.shape[1]
 
 
+    progress_step = max(transect_count / 39, 1)
     for transect in range(transect_count):
+        if transect  % progress_step == 0:
+            print '.',
 
         # Index limits
         start = indices_limit_dataset_tiff[transect, 0]
@@ -236,6 +249,7 @@ def resample_natural_habitats(transect_data_file_tiff, transect_data_file_hdf5):
 
             habitat_properties_dataset_hdf5[transect, p, start_hdf5:end_hdf5] = \
                 habitat_properties_hdf5[start_hdf5:end_hdf5]
+    print('')
 
 
 def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
@@ -264,7 +278,6 @@ def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
     end_hdf5 = indices_limit_dataset_hdf5[0, 1]
 
     ratio = (end_hdf5-start_hdf5) / (end - start - 1)
-    print('ratio', ratio)
 
     # get the datasets
     soil_type_dataset_tiff = transect_data_file_tiff['soil_type']
@@ -274,7 +287,10 @@ def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
     properties_count = soil_properties_dataset_tiff.shape[1]
 
 
+    progress_step = max(transect_count / 39, 1)
     for transect in range(transect_count):
+        if transect  % progress_step == 0:
+            print '.',
 
         # Index limits
         start = indices_limit_dataset_tiff[transect, 0]
@@ -283,7 +299,7 @@ def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
         start_hdf5 = indices_limit_dataset_hdf5[transect, 0]
         end_hdf5 = indices_limit_dataset_hdf5[transect, 1]
 
-        # Interpolate habitat type 
+        # Interpolate soil type 
         soil_type_tiff = soil_type_dataset_tiff[transect, start:end]        
 
         soil_type_hdf5 = \
@@ -293,7 +309,7 @@ def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
             soil_type_hdf5[start_hdf5:end_hdf5]
 
         
-        # Interpolate habitat properties 
+        # Interpolate soil properties 
         for p in range(properties_count):
 
             soil_properties_tiff = \
@@ -305,75 +321,53 @@ def resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5):
 
             soil_properties_dataset_hdf5[transect, p, start_hdf5:end_hdf5] = \
                 soil_properties_hdf5[start_hdf5:end_hdf5]
+    print('')
 
 
-def resample_climatic_forcing(transect_data_file_tiff, transect_data_file_hdf5):
+def transfer_climatic_forcing(transect_data_file_tiff, transect_data_file_hdf5):
     
-    LOGGER.debug('Resampling climatic forcing...')
+    LOGGER.debug('Transfering climatic forcing...')
 
-    limits_group_tiff = transect_data_file_tiff['limits']
-    indices_limit_dataset_tiff = limits_group_tiff['indices']
+    # get the datasets
+    dataset_tiff = transect_data_file_tiff['climatic_forcing']
+    dataset_hdf5 = transect_data_file_hdf5['climatic_forcing']
 
-    limits_group_hdf5 = transect_data_file_hdf5['limits']
-    indices_limit_dataset_hdf5 = limits_group_hdf5['indices']
-
-    # Resample 'habitat_type' and a 'habitat_properties' for the hdf5 data
-    transect_count = transect_data_file_tiff['habitat_type'].shape[0]
 
     # Return if nothing to resample
-    if not transect_count:
-        LOGGER.warning('No climatic forcing transect to resample')
+    if not dataset_tiff.shape[0]:
+        LOGGER.warning('No climatic forcing transect data to transfer')
         return
 
-    # Use the first transect to compute the resampling rate (ratio):
-    start = indices_limit_dataset_tiff[0, 0]
-    end = indices_limit_dataset_tiff[0, 1]
+    # Transfer climatic_forcing properties 
+    progress_step = max(dataset_tiff.shape[0] / 39, 1)
+    for transect in range(dataset_tiff.shape[0]):
+        if transect  % progress_step == 0:
+            print '.',
+        dataset_hdf5[transect, ...] = dataset_tiff[transect, ...]
+    print('')
 
-    start_hdf5 = indices_limit_dataset_hdf5[0, 0]
-    end_hdf5 = indices_limit_dataset_hdf5[0, 1]
 
-    ratio = (end_hdf5-start_hdf5) / (end - start - 1)
-    print('ratio', ratio)
+def transfer_tidal_forcing(transect_data_file_tiff, transect_data_file_hdf5):
+    
+    LOGGER.debug('Transfering tidal forcing...')
 
     # get the datasets
-    soil_type_dataset_tiff = transect_data_file_tiff['soil_type']
-    soil_type_dataset_hdf5 = transect_data_file_hdf5['soil_type']
-    soil_properties_dataset_tiff = transect_data_file_tiff['soil_properties']
-    soil_properties_dataset_hdf5 = transect_data_file_hdf5['soil_properties']
-    properties_count = soil_properties_dataset_tiff.shape[1]
+    dataset_tiff = transect_data_file_tiff['tidal forcing']
+    dataset_hdf5 = transect_data_file_hdf5['tidal forcing']
 
 
-    for transect in range(transect_count):
+    # Return if nothing to resample
+    if not dataset_tiff.shape[0]:
+        LOGGER.warning('No tidal forcing transect data to transfer')
+        return
 
-        # Index limits
-        start = indices_limit_dataset_tiff[transect, 0]
-        end = indices_limit_dataset_tiff[transect, 1]
-
-        start_hdf5 = indices_limit_dataset_hdf5[transect, 0]
-        end_hdf5 = indices_limit_dataset_hdf5[transect, 1]
-
-        # Interpolate habitat type 
-        soil_type_tiff = soil_type_dataset_tiff[transect, start:end]        
-
-        soil_type_hdf5 = \
-            interpolate_transect(soil_type_tiff, ratio, 1, 'nearest')
-
-        soil_type_dataset_hdf5[transect, start_hdf5:end_hdf5] = \
-            soil_type_hdf5[start_hdf5:end_hdf5]
-
-        
-        # Interpolate habitat properties 
-        for p in range(properties_count):
-
-            soil_properties_tiff = \
-                soil_properties_dataset_tiff[transect, p, start:end]
-
-            soil_properties_hdf5 = \
-                interpolate_transect(soil_properties_tiff, \
-                    ratio, 1, 'nearest')
-
-            soil_properties_dataset_hdf5[transect, p, start_hdf5:end_hdf5] = \
-                soil_properties_hdf5[start_hdf5:end_hdf5]
+    # Transfer climatic_forcing properties 
+    progress_step = max(dataset_tiff.shape[0] / 39, 1)
+    for transect in range(dataset_tiff.shape[0]):
+        if transect  % progress_step == 0:
+            print '.',
+        dataset_hdf5[transect, ...] = dataset_tiff[transect, ...]
+    print('')
 
 
 
@@ -501,13 +495,8 @@ def compute_transects(args):
     progress_step = max((i_end - i_start) / i_transect_spacing / 39, 1)
 
 
-    print('start, end', (i_start, j_start), (i_end, j_end))
-    print('step, count', (i_transect_spacing, j_transect_spacing), \
-        ((i_end - i_start)/i_transect_spacing, (j_end - j_start)/j_transect_spacing))
-
     transects_so_far = 0
     for i in range(i_start, i_end, i_transect_spacing):
-#        print('i', (i-i_start)/i_transect_spacing)
         
         if (i / i_transect_spacing)  % progress_step == 0:
             print '.',
@@ -818,10 +807,14 @@ def compute_transects(args):
     tidal_forcing_field_count = args['tidal_forcing_field_count']
 
 
+    LOGGER.debug('Creating HDF5 file %s.' % args['transect_data_uri'])
+
     habitat_type_dataset_hdf5, \
     habitat_properties_dataset_hdf5, \
     soil_type_dataset_hdf5, \
     soil_properties_dataset_hdf5, \
+    climatic_forcing_dataset_hdf5, \
+    tidal_forcing_dataset_hdf5, \
     bathymetry_dataset_hdf5, \
     positions_dataset_hdf5, \
     xy_positions_dataset_hdf5, \
@@ -835,15 +828,19 @@ def compute_transects(args):
         max_transect_length_hdf5, \
         args['habitat_field_count'], \
         args['soil_field_count'], \
+        args['climatic_forcing_field_count'], \
+        args['tidal_forcing_field_count'], \
         habitat_nodata)
 
     tiff_transect_data_uri = \
-        pygeoprocessing.geoprocessing.temporary_filename()
+        os.path.join(args['intermediate_dir'], 'output_raster_transect.h5')
 
     habitat_type_dataset_tiff, \
     habitat_properties_dataset_tiff, \
     soil_type_dataset_tiff, \
     soil_properties_dataset_tiff, \
+    climatic_forcing_dataset_tiff, \
+    tidal_forcing_dataset_tiff, \
     bathymetry_dataset_tiff, \
     positions_dataset_tiff, \
     xy_positions_dataset_tiff, \
@@ -857,13 +854,15 @@ def compute_transects(args):
         max_transect_length_tiff, \
         args['habitat_field_count'], \
         args['soil_field_count'], \
+        args['climatic_forcing_field_count'], \
+        args['tidal_forcing_field_count'], \
         habitat_nodata)
 
 
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
-    LOGGER.debug('Storing transect_info_tiff data')
+#    LOGGER.debug('Storing transect_info_tiff data')
 
     #Todo: Remove this by using datasets directly instead of transect_info_tiff
     dataset = gdal.Open(args['bathymetry_raster_uri'])
@@ -997,18 +996,18 @@ def compute_transects(args):
     args['habitat_nodata'] = habitat_nodata
 
 
+    # Compute data using the input raster resolution
     combine_natural_habitats(args, transect_data_file_tiff, max_transect_length_tiff)
-    resample_natural_habitats(transect_data_file_tiff, transect_data_file_hdf5)
-
     combine_soil_types(args, transect_data_file_tiff, max_transect_length_tiff)
-    resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5)
-
     store_climatic_forcing(args, transect_data_file_tiff)
-    resample_climatic_forcing(transect_data_file_tiff, transect_data_file_hdf5)
+    store_tidal_forcing(args, transect_data_file_tiff)
 
-    sys.exit(0)
+    # Resample/store data at a finer resolution for nearshore wave and erosion
+    resample_natural_habitats(transect_data_file_tiff, transect_data_file_hdf5)
+    resample_soil_types(transect_data_file_tiff, transect_data_file_hdf5)
+    transfer_climatic_forcing(transect_data_file_tiff, transect_data_file_hdf5)
+    transfer_tidal_forcing(transect_data_file_tiff, transect_data_file_hdf5)
 
-    store_tidal_information(args, transect_data_file_tiff)
 
     # Saving transects
     habitat_type_dataset_tiff = transect_data_file_tiff['habitat_type']
@@ -1070,7 +1069,7 @@ def compute_transects(args):
 
 
     # We're done, we close the files
-    os.remove(tiff_transect_data_uri)
+    #os.remove(tiff_transect_data_uri)
     transect_data_file_tiff.close()
     transect_data_file_hdf5.close()
 
@@ -2186,9 +2185,9 @@ def reconstruct_2D_shore_map(args):
     biophysical_data.close()
     transect_data.close()
 
-def store_tidal_information(args, transect_data_file):
+def store_tidal_forcing(args, transect_data_file):
 
-    LOGGER.info('Processing tidal information...')
+    LOGGER.info('Processing tidal forcing...')
 
     # Create new category
     category = 'tidal information'
@@ -2200,11 +2199,7 @@ def store_tidal_information(args, transect_data_file):
         LOGGER.info("Couldn't find any %s data. Skip it.", category)
         return
 
-    tidal_forcing_dataset = \
-        transect_data_file.create_dataset('tidal forcing', \
-            (args['tiles'], args['tidal_forcing_field_count']), \
-            compression = 'gzip', fillvalue = 0, \
-            dtype = 'i4')
+    tidal_forcing_dataset = transect_data_file['tidal forcing']
 
     filenames = args['shapefiles'][category].keys()
 
@@ -2302,10 +2297,7 @@ def store_climatic_forcing(args, transect_data_file):
     indices_limit_dataset = limit_group['indices']
     positions_dataset = transect_data_file['ij_positions']
 
-    climatic_forcing_dataset = \
-        transect_data_file.create_dataset('climatic_forcing', \
-            (args['tiles'], args['climatic_forcing_field_count']), \
-            compression = 'gzip', fillvalue = 0)
+    climatic_forcing_dataset = transect_data_file['climatic_forcing']
 
     for field in args['shapefiles'][category][shp_name]:
 
@@ -2628,7 +2620,6 @@ def combine_natural_habitats(args, transect_data_file, max_transect_length):
         # Store habitat type
         # ---------------------------------
         progress_step = max(tiles / 39, 1)
-        print('progress_step', progress_step )
         for transect in range(tiles):
             if transect % progress_step == 0:
                 print '.',
